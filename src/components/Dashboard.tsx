@@ -14,7 +14,6 @@ import {
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
 import LeadFunnel from './LeadFunnel';
-import InactiveLeadsAlert from './InactiveLeadsAlert';
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -173,9 +172,16 @@ export default function Dashboard() {
     const daysAhead = 30;
     const futureDate = new Date(hoje.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
-    const birthdays: Array<{ nome: string; data_nascimento: string; tipo: 'Titular' | 'Dependente'; contract_id: string }> = [];
+    const birthdays: Array<{
+      nome: string;
+      data_nascimento: string;
+      tipo: 'Titular' | 'Dependente';
+      contract_id: string;
+      contract?: Contract;
+    }> = [];
 
     const activeContractIds = contratosAtivos.map(c => c.id);
+    const contractsMap = new Map(contratosAtivos.map(c => [c.id, c]));
 
     holders
       .filter(h => activeContractIds.includes(h.contract_id))
@@ -184,7 +190,8 @@ export default function Dashboard() {
           nome: h.nome,
           data_nascimento: h.data_nascimento,
           tipo: 'Titular',
-          contract_id: h.contract_id
+          contract_id: h.contract_id,
+          contract: contractsMap.get(h.contract_id)
         });
       });
 
@@ -195,7 +202,8 @@ export default function Dashboard() {
           nome: d.nome,
           data_nascimento: d.data_nascimento,
           tipo: 'Dependente',
-          contract_id: d.contract_id
+          contract_id: d.contract_id,
+          contract: contractsMap.get(d.contract_id)
         });
       });
 
@@ -417,8 +425,6 @@ export default function Dashboard() {
         />
       </div>
 
-      <InactiveLeadsAlert />
-
       <LeadFunnel />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -524,24 +530,36 @@ export default function Dashboard() {
                 return (
                   <div
                     key={`${birthday.contract_id}-${birthday.nome}-${index}`}
-                    className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
+                    className="flex flex-col p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
-                      <p className="text-xs text-slate-600 mt-0.5">
-                        {birthday.tipo}
-                      </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          {birthday.tipo}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-pink-600">
+                          {diasRestantes === 0
+                            ? 'Hoje!'
+                            : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {birthday.nextBirthday.toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-pink-600">
-                        {diasRestantes === 0
-                          ? 'Hoje!'
-                          : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {birthday.nextBirthday.toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
+                    {birthday.contract && (
+                      <div className="pt-2 border-t border-pink-200">
+                        <p className="text-xs text-slate-600">
+                          <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -223,3 +223,53 @@ export type LeadOrigem = {
   ativo: boolean;
   created_at: string;
 };
+
+export type ApiIntegration = {
+  id: string;
+  zapi_instance_id?: string;
+  zapi_token?: string;
+  openai_api_key?: string;
+  openai_model: string;
+  openai_temperature: number;
+  openai_max_tokens: number;
+  zapi_enabled: boolean;
+  openai_enabled: boolean;
+  monthly_cost_limit: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WhatsAppConversation = {
+  id: string;
+  lead_id: string;
+  contract_id?: string;
+  phone_number: string;
+  message_id?: string;
+  message_text: string;
+  message_type: 'sent' | 'received';
+  timestamp: string;
+  read_status: boolean;
+  media_url?: string;
+  created_at: string;
+};
+
+export type AIGeneratedMessage = {
+  id: string;
+  reminder_id: string;
+  lead_id: string;
+  contract_id?: string;
+  prompt_used: string;
+  message_generated: string;
+  message_edited?: string;
+  status: 'draft' | 'approved' | 'sent' | 'failed';
+  tone: 'professional' | 'friendly' | 'urgent' | 'casual';
+  tokens_used: number;
+  cost_estimate: number;
+  conversation_context?: any;
+  generated_by: string;
+  approved_by?: string;
+  sent_at?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+};

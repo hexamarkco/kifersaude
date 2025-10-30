@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { supabase, Reminder, Lead } from '../lib/supabase';
+import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X, MessageCircle
+  ChevronDown, ChevronUp, Tag, X, MessageCircle, Sparkles
 } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
@@ -18,6 +18,7 @@ import {
   ReminderPeriod
 } from '../lib/reminderUtils';
 import RemindersCalendar from './RemindersCalendar';
+import AIMessageGeneratorModal from './AIMessageGeneratorModal';
 
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -37,6 +38,9 @@ export default function RemindersManagerEnhanced() {
   const [customSnoozeDateTime, setCustomSnoozeDateTime] = useState('');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [selectedReminderForAI, setSelectedReminderForAI] = useState<Reminder | null>(null);
+  const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
 
   useEffect(() => {
     loadReminders();
@@ -83,6 +87,20 @@ export default function RemindersManagerEnhanced() {
           const newLeadsMap = new Map();
           leadsData.forEach(lead => newLeadsMap.set(lead.id, lead));
           setLeadsMap(newLeadsMap);
+        }
+      }
+
+      const contractIds = [...new Set((data || []).map(r => r.contract_id).filter(Boolean))];
+      if (contractIds.length > 0) {
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .in('id', contractIds);
+
+        if (contractsData) {
+          const newContractsMap = new Map();
+          contractsData.forEach(contract => newContractsMap.set(contract.id, contract));
+          setContractsMap(newContractsMap);
         }
       }
     } catch (error) {
@@ -415,6 +433,18 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            {reminder.lead_id && leadsMap.get(reminder.lead_id) && !reminder.lido && (
+              <button
+                onClick={() => {
+                  setSelectedReminderForAI(reminder);
+                  setShowAIModal(true);
+                }}
+                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                title="Gerar mensagem com IA"
+              >
+                <Sparkles className="w-5 h-5" />
+              </button>
+            )}
             {reminder.lead_id && leadsMap.get(reminder.lead_id) && (
               <button
                 onClick={() => {
@@ -794,6 +824,21 @@ export default function RemindersManagerEnhanced() {
         <RemindersCalendar
           reminders={reminders}
           onClose={() => setShowCalendar(false)}
+        />
+      )}
+
+      {showAIModal && selectedReminderForAI && selectedReminderForAI.lead_id && (
+        <AIMessageGeneratorModal
+          reminder={selectedReminderForAI}
+          lead={leadsMap.get(selectedReminderForAI.lead_id) || ({} as Lead)}
+          contract={selectedReminderForAI.contract_id ? contractsMap.get(selectedReminderForAI.contract_id) : undefined}
+          onClose={() => {
+            setShowAIModal(false);
+            setSelectedReminderForAI(null);
+          }}
+          onMessageSent={() => {
+            loadReminders();
+          }}
         />
       )}
     </div>

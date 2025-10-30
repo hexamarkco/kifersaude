@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import LeadsManager from './components/LeadsManager';
 import ContractsManager from './components/ContractsManager';
 import RemindersManagerEnhanced from './components/RemindersManagerEnhanced';
+import WhatsAppHistoryTab from './components/WhatsAppHistoryTab';
 import NotificationToast from './components/NotificationToast';
 import LeadNotificationToast from './components/LeadNotificationToast';
 import { notificationService } from './lib/notificationService';
@@ -108,6 +109,8 @@ function App() {
         return <ContractsManager leadToConvert={leadToConvert} onConvertComplete={() => setLeadToConvert(null)} />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
+      case 'whatsapp-history':
+        return <WhatsAppHistoryTab />;
       default:
         return <Dashboard />;
     }

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings, MessageCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,6 +32,7 @@ export default function Layout({
   // Add reminders tab only for non-observers
   if (!isObserver) {
     baseTabs.push({ id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders });
+    baseTabs.push({ id: 'whatsapp-history', label: 'WhatsApp', icon: MessageCircle });
   }
 
   const tabs = isAdmin

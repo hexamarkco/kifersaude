@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings, Users, Building2, AlertCircle } from 'lucide-react';
+import { Settings, Users, Building2, AlertCircle, Zap } from 'lucide-react';
 import SystemSettingsTab from '../components/config/SystemSettingsTab';
 import OperadorasTab from '../components/config/OperadorasTab';
 import UsersTab from '../components/config/UsersTab';
+import ApiIntegrationsTab from '../components/config/ApiIntegrationsTab';
 
-type TabType = 'system' | 'operadoras' | 'users';
+type TabType = 'system' | 'operadoras' | 'users' | 'apis';
 
 export default function ConfigPage() {
   const { isAdmin } = useAuth();
@@ -27,6 +28,7 @@ export default function ConfigPage() {
     { id: 'system' as TabType, label: 'Sistema', icon: Settings },
     { id: 'operadoras' as TabType, label: 'Operadoras', icon: Building2 },
     { id: 'users' as TabType, label: 'Usuários', icon: Users },
+    { id: 'apis' as TabType, label: 'Integrações', icon: Zap },
   ];
 
   return (
@@ -61,6 +63,7 @@ export default function ConfigPage() {
           {activeTab === 'system' && <SystemSettingsTab />}
           {activeTab === 'operadoras' && <OperadorasTab />}
           {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'apis' && <ApiIntegrationsTab />}
         </div>
       </div>
     </div>

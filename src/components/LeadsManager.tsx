@@ -6,6 +6,7 @@ import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
 import FollowUpScheduler from './FollowUpScheduler';
 import LeadKanban from './LeadKanban';
+import Pagination from './Pagination';
 import { ObserverBanner } from './ObserverRestriction';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -29,6 +30,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   useEffect(() => {
     loadLeads();
@@ -73,6 +76,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
 
   useEffect(() => {
     filterLeads();
+    setCurrentPage(1);
   }, [leads, searchTerm, filterStatus, filterResponsavel]);
 
   const loadLeads = async () => {
@@ -113,6 +117,21 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
 
     setFilteredLeads(filtered);
+  };
+
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
   };
 
   const handleArchive = async (id: string) => {
@@ -325,8 +344,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
           onConvertToContract={handleConvertToContract}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredLeads.map((lead) => (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="grid grid-cols-1 gap-4 p-4">
+          {paginatedLeads.map((lead) => (
           <div
             key={lead.id}
             className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all"
@@ -442,6 +462,18 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum lead encontrado</h3>
             <p className="text-slate-600">Tente ajustar os filtros ou adicione um novo lead.</p>
           </div>
+        )}
+        </div>
+
+        {filteredLeads.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredLeads.length}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         )}
         </div>
       )}

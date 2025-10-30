@@ -4,6 +4,7 @@ import { Plus, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
+import Pagination from './Pagination';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -31,6 +32,8 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   const [showForm, setShowForm] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   useEffect(() => {
     loadContracts();
@@ -69,6 +72,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
 
   useEffect(() => {
     filterContracts();
+    setCurrentPage(1);
   }, [contracts, searchTerm, filterStatus, filterResponsavel]);
 
   useEffect(() => {
@@ -138,6 +142,21 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
     }
 
     return holder.nome_completo;
+  };
+
+  const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContracts = filteredContracts.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
   };
 
   const getStatusColor = (status: string) => {
@@ -232,8 +251,9 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {filteredContracts.map((contract) => (
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="grid grid-cols-1 gap-4 p-4">
+        {paginatedContracts.map((contract) => (
           <div
             key={contract.id}
             className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all"
@@ -307,12 +327,24 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       </div>
 
       {filteredContracts.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="text-center py-12">
           <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum contrato encontrado</h3>
           <p className="text-slate-600">Tente ajustar os filtros ou adicione um novo contrato.</p>
         </div>
       )}
+
+      {filteredContracts.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredContracts.length}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+        />
+      )}
+      </div>
 
       {showForm && (
         <ContractForm

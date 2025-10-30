@@ -4,7 +4,8 @@ import { TrendingDown, Users } from 'lucide-react';
 
 const FUNNEL_STAGES = [
   { id: 'Novo', label: 'Novo', color: 'bg-blue-500' },
-  { id: 'Em contato', label: 'Em Contato', color: 'bg-yellow-500' },
+  { id: 'Contato iniciado', label: 'Contato Iniciado', color: 'bg-yellow-500' },
+  { id: 'Em atendimento', label: 'Em Atendimento', color: 'bg-cyan-500' },
   { id: 'Cotando', label: 'Cotando', color: 'bg-orange-500' },
   { id: 'Proposta enviada', label: 'Proposta Enviada', color: 'bg-teal-500' },
   { id: 'Fechado', label: 'Fechado', color: 'bg-green-500' },

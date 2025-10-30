@@ -17,7 +17,21 @@ const FOLLOW_UP_RULES: FollowUpRule[] = [
     priority: 'alta',
   },
   {
-    status: 'Em contato',
+    status: 'Contato iniciado',
+    daysAfter: 2,
+    title: 'Aguardar retorno do lead',
+    description: 'Verificar se o lead retornou o contato inicial',
+    priority: 'alta',
+  },
+  {
+    status: 'Contato iniciado',
+    daysAfter: 5,
+    title: 'Segundo contato de follow-up',
+    description: 'Tentar novo contato caso não tenha obtido retorno',
+    priority: 'media',
+  },
+  {
+    status: 'Em atendimento',
     daysAfter: 3,
     title: 'Acompanhamento de qualificação',
     description: 'Verificar se conseguiu coletar todas informações necessárias para cotação',

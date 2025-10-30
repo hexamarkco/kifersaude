@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -247,6 +247,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               <span className="text-sm font-medium">Kanban</span>
             </button>
           </div>
+          <a
+            href="/api_examples/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+            title="Documentação da API"
+          >
+            <BookOpen className="w-5 h-5" />
+            <span>API Docs</span>
+          </a>
           <button
             onClick={() => {
               setEditingLead(null);
@@ -283,7 +293,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             >
               <option value="todos">Todos os status</option>
               <option value="Novo">Novo</option>
-              <option value="Em contato">Em contato</option>
+              <option value="Contato iniciado">Contato iniciado</option>
+              <option value="Em atendimento">Em atendimento</option>
               <option value="Cotando">Cotando</option>
               <option value="Proposta enviada">Proposta enviada</option>
               <option value="Fechado">Fechado</option>

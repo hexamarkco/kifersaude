@@ -24,14 +24,17 @@ import {
 type Holder = {
   id: string;
   contract_id: string;
-  nome: string;
+  nome_completo: string;
   data_nascimento: string;
+  cnpj?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
 };
 
 type Dependent = {
   id: string;
   contract_id: string;
-  nome: string;
+  nome_completo: string;
   data_nascimento: string;
 };
 
@@ -90,7 +93,7 @@ export default function Dashboard() {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
         supabase.from('contracts').select('*').order('created_at', { ascending: false }),
-        supabase.from('holders').select('*'),
+        supabase.from('contract_holders').select('*'),
         supabase.from('dependents').select('*'),
       ]);
 
@@ -178,20 +181,25 @@ export default function Dashboard() {
       tipo: 'Titular' | 'Dependente';
       contract_id: string;
       contract?: Contract;
+      holder?: Holder;
+      isPJ: boolean;
     }> = [];
 
     const activeContractIds = contratosAtivos.map(c => c.id);
     const contractsMap = new Map(contratosAtivos.map(c => [c.id, c]));
+    const holdersMap = new Map(holders.map(h => [h.contract_id, h]));
 
     holders
       .filter(h => activeContractIds.includes(h.contract_id))
       .forEach(h => {
         birthdays.push({
-          nome: h.nome,
+          nome: h.nome_completo,
           data_nascimento: h.data_nascimento,
           tipo: 'Titular',
           contract_id: h.contract_id,
-          contract: contractsMap.get(h.contract_id)
+          contract: contractsMap.get(h.contract_id),
+          holder: h,
+          isPJ: !!h.cnpj
         });
       });
 
@@ -199,11 +207,13 @@ export default function Dashboard() {
       .filter(d => activeContractIds.includes(d.contract_id))
       .forEach(d => {
         birthdays.push({
-          nome: d.nome,
+          nome: d.nome_completo,
           data_nascimento: d.data_nascimento,
           tipo: 'Dependente',
           contract_id: d.contract_id,
-          contract: contractsMap.get(d.contract_id)
+          contract: contractsMap.get(d.contract_id),
+          holder: holdersMap.get(d.contract_id),
+          isPJ: false
         });
       });
 
@@ -537,7 +547,15 @@ export default function Dashboard() {
                         <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
                         <p className="text-xs text-slate-600 mt-0.5">
                           {birthday.tipo}
+                          {birthday.tipo === 'Dependente' && birthday.holder && (
+                            <span className="text-slate-500"> • Titular: {birthday.holder.nome_completo}</span>
+                          )}
                         </p>
+                        {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
+                          <p className="text-xs text-blue-600 mt-1 font-medium">
+                            {birthday.holder.razao_social || birthday.holder.nome_fantasia}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-pink-600">

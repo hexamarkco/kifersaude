@@ -54,5 +54,11 @@ export function isReminderDue(reminderDate: string, minutesBefore: number = 1): 
 }
 
 export function isOverdue(date: string): boolean {
-  return new Date(date).getTime() < getCurrentTimeBR().getTime();
+  const reminderDate = new Date(date);
+  const now = getCurrentTimeBR();
+
+  const reminderDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return reminderDay.getTime() < today.getTime();
 }

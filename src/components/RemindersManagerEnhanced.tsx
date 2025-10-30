@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { supabase, Reminder } from '../lib/supabase';
+import { supabase, Reminder, Lead } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X
+  ChevronDown, ChevronUp, Tag, X, MessageCircle
 } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
+import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import {
   groupRemindersByPeriod,
   getPeriodLabel,
@@ -33,6 +34,7 @@ export default function RemindersManagerEnhanced() {
   const [openSnoozeMenu, setOpenSnoozeMenu] = useState<string | null>(null);
   const [customSnoozeReminder, setCustomSnoozeReminder] = useState<string | null>(null);
   const [customSnoozeDateTime, setCustomSnoozeDateTime] = useState('');
+  const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
 
   useEffect(() => {
     loadReminders();
@@ -74,6 +76,20 @@ export default function RemindersManagerEnhanced() {
       const { data, error } = await query;
       if (error) throw error;
       setReminders(data || []);
+
+      const leadIds = [...new Set((data || []).map(r => r.lead_id).filter(Boolean))];
+      if (leadIds.length > 0) {
+        const { data: leadsData } = await supabase
+          .from('leads')
+          .select('id, nome_completo, telefone')
+          .in('id', leadIds);
+
+        if (leadsData) {
+          const newLeadsMap = new Map();
+          leadsData.forEach(lead => newLeadsMap.set(lead.id, lead));
+          setLeadsMap(newLeadsMap);
+        }
+      }
     } catch (error) {
       console.error('Erro ao carregar lembretes:', error);
     } finally {
@@ -397,6 +413,20 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            {reminder.lead_id && leadsMap.get(reminder.lead_id) && (
+              <button
+                onClick={() => {
+                  const lead = leadsMap.get(reminder.lead_id!);
+                  if (lead && lead.telefone) {
+                    openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo);
+                  }
+                }}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Abrir WhatsApp com o lead"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </button>
+            )}
             {!reminder.lido && (
               <div className="relative">
                 <button

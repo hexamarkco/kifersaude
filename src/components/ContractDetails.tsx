@@ -207,6 +207,20 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 </div>
               </div>
             )}
+
+            {contract.bonus_por_vida_aplicado && contract.bonus_por_vida_valor && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                  <span className="text-sm font-medium text-green-800">Bônus por Vida (Mensal):</span>
+                  <span className="font-bold text-green-700 text-lg">
+                    R$ {contract.bonus_por_vida_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  Valor recorrente adicional além da comissão
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mb-6">

@@ -43,6 +43,8 @@ export type Contract = {
   comissao_prevista?: number;
   comissao_multiplicador?: number;
   previsao_recebimento_comissao?: string;
+  bonus_por_vida_valor?: number;
+  bonus_por_vida_aplicado?: boolean;
   responsavel: string;
   observacoes_internas?: string;
   created_at: string;
@@ -181,6 +183,8 @@ export type Operadora = {
   nome: string;
   comissao_padrao: number;
   prazo_recebimento_dias: number;
+  bonus_por_vida: boolean;
+  bonus_padrao: number;
   ativo: boolean;
   observacoes?: string;
   created_at: string;
@@ -194,6 +198,8 @@ export type ProdutoPlano = {
   modalidade?: string;
   abrangencia?: string;
   acomodacao?: string;
+  comissao_sugerida?: number;
+  bonus_por_vida_valor?: number;
   ativo: boolean;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Contract, Lead } from '../lib/supabase';
 import { Plus, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 
@@ -10,6 +11,7 @@ type ContractsManagerProps = {
 };
 
 export default function ContractsManager({ leadToConvert, onConvertComplete }: ContractsManagerProps) {
+  const { isObserver } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,16 +134,18 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
-        <button
-          onClick={() => {
-            setEditingContract(null);
-            setShowForm(true);
-          }}
-          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Novo Contrato</span>
-        </button>
+        {!isObserver && (
+          <button
+            onClick={() => {
+              setEditingContract(null);
+              setShowForm(true);
+            }}
+            className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Novo Contrato</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
@@ -249,15 +253,17 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                 <Eye className="w-4 h-4" />
                 <span>Ver Detalhes</span>
               </button>
-              <button
-                onClick={() => {
-                  setEditingContract(contract);
-                  setShowForm(true);
-                }}
-                className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-              >
-                Editar
-              </button>
+              {!isObserver && (
+                <button
+                  onClick={() => {
+                    setEditingContract(contract);
+                    setShowForm(true);
+                  }}
+                  className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  Editar
+                </button>
+              )}
             </div>
           </div>
         ))}

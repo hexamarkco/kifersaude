@@ -326,12 +326,18 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-slate-900">{lead.nome_completo}</h3>
-                      <StatusDropdown
-                        currentStatus={lead.status}
-                        leadId={lead.id}
-                        onStatusChange={handleStatusChange}
-                        onProposalSent={handleProposalSent}
-                      />
+                      {!isObserver ? (
+                        <StatusDropdown
+                          currentStatus={lead.status}
+                          leadId={lead.id}
+                          onStatusChange={handleStatusChange}
+                          onProposalSent={handleProposalSent}
+                        />
+                      ) : (
+                        <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded">
+                          {lead.status}
+                        </span>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
                       <div className="flex items-center space-x-2">
@@ -380,37 +386,41 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                 <span className="hidden sm:inline">Ver Detalhes</span>
                 <span className="sm:hidden">Detalhes</span>
               </button>
-              <button
-                onClick={() => {
-                  setEditingLead(lead);
-                  setShowForm(true);
-                }}
-                className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleWhatsAppClick(lead.telefone, lead.nome_completo)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">WhatsApp</span>
-              </button>
-              <button
-                onClick={() => handleConvertToContract(lead)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="hidden md:inline">Converter em Contrato</span>
-                <span className="md:hidden">Contrato</span>
-              </button>
-              <button
-                onClick={() => handleArchive(lead.id)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
-              >
-                <Archive className="w-4 h-4" />
-                <span className="hidden sm:inline">Arquivar</span>
-              </button>
+              {!isObserver && (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingLead(lead);
+                      setShowForm(true);
+                    }}
+                    className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleWhatsAppClick(lead.telefone, lead.nome_completo)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => handleConvertToContract(lead)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden md:inline">Converter em Contrato</span>
+                    <span className="md:hidden">Contrato</span>
+                  </button>
+                  <button
+                    onClick={() => handleArchive(lead.id)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
+                  >
+                    <Archive className="w-4 h-4" />
+                    <span className="hidden sm:inline">Arquivar</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}

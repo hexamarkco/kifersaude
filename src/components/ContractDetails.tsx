@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Contract, ContractHolder, Dependent, Interaction, ContractValueAdjustment } from '../lib/supabase';
 import { X, User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
 import DependentForm from './DependentForm';
 
@@ -11,6 +12,7 @@ type ContractDetailsProps = {
 };
 
 export default function ContractDetails({ contract, onClose, onUpdate }: ContractDetailsProps) {
+  const { isObserver } = useAuth();
   const [holder, setHolder] = useState<ContractHolder | null>(null);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
@@ -240,12 +242,14 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
               <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                 <User className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-600 mb-3">Nenhum titular cadastrado</p>
-                <button
-                  onClick={() => setShowHolderForm(true)}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-                >
-                  Adicionar Titular
-                </button>
+                {!isObserver && (
+                  <button
+                    onClick={() => setShowHolderForm(true)}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    Adicionar Titular
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -256,16 +260,18 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 <Users className="w-5 h-5 mr-2" />
                 Dependentes ({dependents.length})
               </h4>
-              <button
-                onClick={() => {
-                  setEditingDependent(null);
-                  setShowDependentForm(true);
-                }}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Adicionar</span>
-              </button>
+              {!isObserver && (
+                <button
+                  onClick={() => {
+                    setEditingDependent(null);
+                    setShowDependentForm(true);
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar</span>
+                </button>
+              )}
             </div>
 
             {dependents.length > 0 ? (
@@ -284,23 +290,25 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button
-                          onClick={() => {
-                            setEditingDependent(dependent);
-                            setShowDependentForm(true);
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDependent(dependent.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {!isObserver && (
+                        <div className="flex items-center space-x-2 ml-4">
+                          <button
+                            onClick={() => {
+                              setEditingDependent(dependent);
+                              setShowDependentForm(true);
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDependent(dependent.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -316,13 +324,15 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
-              <button
-                onClick={() => setShowInteractionForm(!showInteractionForm)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nova Interação</span>
-              </button>
+              {!isObserver && (
+                <button
+                  onClick={() => setShowInteractionForm(!showInteractionForm)}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nova Interação</span>
+                </button>
+              )}
             </div>
 
             {showInteractionForm && (

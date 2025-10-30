@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, Lead, Interaction } from '../lib/supabase';
 import { X, MessageCircle, Plus } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
 
@@ -12,6 +13,7 @@ type LeadDetailsProps = {
 };
 
 export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProps) {
+  const { isObserver } = useAuth();
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -121,13 +123,15 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
 
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-slate-900">Interações</h4>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nova Interação</span>
-            </button>
+            {!isObserver && (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nova Interação</span>
+              </button>
+            )}
           </div>
 
           {showForm && (

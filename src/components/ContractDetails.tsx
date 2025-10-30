@@ -4,6 +4,7 @@ import { X, User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, Trending
 import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
 import DependentForm from './DependentForm';
+import { formatDateOnly } from '../lib/dateUtils';
 
 type ContractDetailsProps = {
   contract: Contract;
@@ -257,7 +258,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 <h5 className="font-semibold text-slate-900 mb-3">{holder.nome_completo}</h5>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
                   <div><span className="font-medium">CPF:</span> {holder.cpf}</div>
-                  <div><span className="font-medium">Data Nasc.:</span> {new Date(holder.data_nascimento).toLocaleDateString('pt-BR')}</div>
+                  <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(holder.data_nascimento)}</div>
                   <div><span className="font-medium">Telefone:</span> {holder.telefone}</div>
                   {holder.email && <div><span className="font-medium">E-mail:</span> {holder.email}</div>}
                   {holder.cidade && <div><span className="font-medium">Cidade:</span> {holder.cidade}/{holder.estado}</div>}
@@ -309,7 +310,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                         <h5 className="font-semibold text-slate-900 mb-2">{dependent.nome_completo}</h5>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
                           <div><span className="font-medium">Relação:</span> {dependent.relacao}</div>
-                          <div><span className="font-medium">Data Nasc.:</span> {new Date(dependent.data_nascimento).toLocaleDateString('pt-BR')}</div>
+                          <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(dependent.data_nascimento)}</div>
                           {dependent.cpf && <div><span className="font-medium">CPF:</span> {dependent.cpf}</div>}
                           {dependent.valor_individual && (
                             <div><span className="font-medium">Valor:</span> R$ {dependent.valor_individual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>

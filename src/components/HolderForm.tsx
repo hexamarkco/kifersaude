@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase, ContractHolder } from '../lib/supabase';
 import { X, User } from 'lucide-react';
+import { formatDateForInput } from '../lib/dateUtils';
 
 type HolderFormProps = {
   contractId: string;
@@ -15,7 +16,7 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
     nome_completo: holder?.nome_completo || '',
     cpf: holder?.cpf || '',
     rg: holder?.rg || '',
-    data_nascimento: holder?.data_nascimento || '',
+    data_nascimento: formatDateForInput(holder?.data_nascimento) || '',
     sexo: holder?.sexo || '',
     estado_civil: holder?.estado_civil || '',
     telefone: holder?.telefone || '',
@@ -32,7 +33,7 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
     razao_social: holder?.razao_social || '',
     nome_fantasia: holder?.nome_fantasia || '',
     percentual_societario: holder?.percentual_societario?.toString() || '',
-    data_abertura_cnpj: holder?.data_abertura_cnpj || '',
+    data_abertura_cnpj: formatDateForInput(holder?.data_abertura_cnpj) || '',
   });
   const [saving, setSaving] = useState(false);
 

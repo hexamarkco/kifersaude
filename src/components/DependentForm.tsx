@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase, Dependent } from '../lib/supabase';
 import { X, Users } from 'lucide-react';
+import { formatDateForInput } from '../lib/dateUtils';
 
 type DependentFormProps = {
   contractId: string;
@@ -13,7 +14,7 @@ export default function DependentForm({ contractId, dependent, onClose, onSave }
   const [formData, setFormData] = useState({
     nome_completo: dependent?.nome_completo || '',
     cpf: dependent?.cpf || '',
-    data_nascimento: dependent?.data_nascimento || '',
+    data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
     relacao: dependent?.relacao || 'Filho(a)',
     elegibilidade: dependent?.elegibilidade || '',
     valor_individual: dependent?.valor_individual?.toString() || '',

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, Lead, Contract } from '../lib/supabase';
+import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import {
   TrendingUp,
   Users,
@@ -218,16 +219,16 @@ export default function Dashboard() {
       });
 
     const upcomingBirthdays = birthdays.filter(b => {
-      const birthDate = new Date(b.data_nascimento);
-      const thisYearBirthday = new Date(hoje.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-      const nextYearBirthday = new Date(hoje.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
+      const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
+      const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
+      const nextYearBirthday = new Date(hoje.getFullYear() + 1, month - 1, day);
 
       const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : nextYearBirthday;
       return nextBirthday <= futureDate && nextBirthday >= hoje;
     }).map(b => {
-      const birthDate = new Date(b.data_nascimento);
-      const thisYearBirthday = new Date(hoje.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-      const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : new Date(hoje.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
+      const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
+      const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
+      const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : new Date(hoje.getFullYear() + 1, month - 1, day);
 
       return { ...b, nextBirthday };
     }).sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
@@ -480,12 +481,8 @@ export default function Dashboard() {
                   const [year, month] = contract.data_renovacao.split('-').map(Number);
                   dataRenovacao = new Date(year, month - 1, 1);
                 } else if (contract.data_inicio) {
-                  const dataInicio = new Date(contract.data_inicio);
-                  dataRenovacao = new Date(
-                    dataInicio.getFullYear() + 1,
-                    dataInicio.getMonth(),
-                    dataInicio.getDate()
-                  );
+                  const { year, month, day } = parseDateWithoutTimezone(contract.data_inicio);
+                  dataRenovacao = new Date(year + 1, month - 1, day);
                 } else {
                   return null;
                 }

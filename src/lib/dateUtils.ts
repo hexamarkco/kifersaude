@@ -1,5 +1,32 @@
 export const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo';
 
+export function formatDateForInput(date: string | null | undefined): string {
+  if (!date) return '';
+
+  const dateOnly = date.split('T')[0];
+  return dateOnly;
+}
+
+export function parseDateForStorage(dateString: string): string {
+  if (!dateString) return '';
+
+  return dateString;
+}
+
+export function formatDateOnly(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+export function parseDateWithoutTimezone(dateString: string): { year: number; month: number; day: number } {
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  return { year, month, day };
+}
+
 export function formatDateTimeForInput(date: string | null | undefined): string {
   if (!date) return '';
 

@@ -52,7 +52,6 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center space-x-6">
               <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Somos</a>
               <a href="#como-funciona" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Como Funciona</a>
-              <a href="#planos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Planos</a>
               <a href="#contato" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Contato</a>
             </div>
           </div>
@@ -214,107 +213,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="planos" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-              Comparativo de Planos
-            </h2>
-            <p className="text-xl text-slate-600">
-              Encontre o plano ideal para o seu perfil
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow border-2 border-transparent hover:border-orange-300">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Básico</h3>
-                <p className="text-slate-600">Economia</p>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Acomodação: Enfermaria</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Abrangência: Municipal/Regional</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Coparticipação: Sim</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Ideal para: Jovens e saudáveis</span>
-                </li>
-              </ul>
-              <button onClick={scrollToForm} className="w-full py-3 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors">
-                Quero saber mais
-              </button>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-xl p-8 border-4 border-orange-500 relative transform md:scale-105">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                MAIS POPULAR
-              </div>
-              <div className="text-center mb-6 mt-4">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Intermediário</h3>
-                <p className="text-slate-600">Equilíbrio</p>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Acomodação: Apartamento</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Abrangência: Estadual</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Coparticipação: Opcional</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Ideal para: Famílias</span>
-                </li>
-              </ul>
-              <button onClick={scrollToForm} className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-colors shadow-lg">
-                Quero saber mais
-              </button>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow border-2 border-transparent hover:border-orange-300">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Premium</h3>
-                <p className="text-slate-600">Rede D'Or, Rede Amil</p>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Acomodação: Apartamento Premium</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Abrangência: Nacional</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Coparticipação: Não</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Ideal para: Executivos</span>
-                </li>
-              </ul>
-              <button onClick={scrollToForm} className="w-full py-3 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors">
-                Quero saber mais
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -592,7 +490,6 @@ export default function LandingPage() {
               <ul className="space-y-2 text-slate-400">
                 <li><a href="#" className="hover:text-orange-400 transition-colors">Home</a></li>
                 <li><a href="#quem-somos" className="hover:text-orange-400 transition-colors">Sobre</a></li>
-                <li><a href="#planos" className="hover:text-orange-400 transition-colors">Planos</a></li>
                 <li><a href="#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
                 <li><a href="#" className="hover:text-orange-400 transition-colors">Política de Privacidade</a></li>
               </ul>

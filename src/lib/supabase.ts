@@ -150,3 +150,16 @@ export type UserProfile = {
   created_at: string;
   created_by?: string;
 };
+
+export type FollowUpCustomRule = {
+  id: string;
+  lead_id: string;
+  status: string;
+  days_after: number;
+  title: string;
+  description: string;
+  priority: 'baixa' | 'media' | 'alta';
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

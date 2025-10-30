@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder, Lead } from '../lib/supabase';
-import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, MessageCircle } from 'lucide-react';
+import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, MessageCircle, UserCheck, Plus } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
+import { createAdditionalFollowUps } from '../lib/followUpService';
 
 export default function RemindersManager() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -11,6 +12,8 @@ export default function RemindersManager() {
   const [reschedulingReminder, setReschedulingReminder] = useState<string | null>(null);
   const [newReminderDate, setNewReminderDate] = useState('');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [respondingReminder, setRespondingReminder] = useState<string | null>(null);
+  const [additionalFollowUps, setAdditionalFollowUps] = useState({ count: 3, intervalDays: 2 });
 
   useEffect(() => {
     loadReminders();
@@ -196,6 +199,35 @@ export default function RemindersManager() {
     return <Icon className="w-5 h-5" />;
   };
 
+  const handleLeadResponded = async (reminder: Reminder) => {
+    if (!reminder.lead_id) {
+      alert('Este lembrete não está associado a um lead');
+      return;
+    }
+
+    try {
+      await supabase
+        .from('reminders')
+        .update({ lido: true })
+        .eq('id', reminder.id);
+
+      await createAdditionalFollowUps(
+        reminder.lead_id,
+        additionalFollowUps.count,
+        additionalFollowUps.intervalDays
+      );
+
+      setRespondingReminder(null);
+      setAdditionalFollowUps({ count: 3, intervalDays: 2 });
+      loadReminders();
+
+      alert(`${additionalFollowUps.count} lembretes adicionais criados com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao criar lembretes adicionais:', error);
+      alert('Erro ao criar lembretes adicionais');
+    }
+  };
+
 
   if (loading) {
     return (
@@ -322,6 +354,15 @@ export default function RemindersManager() {
                         <MessageCircle className="w-5 h-5" />
                       </button>
                     )}
+                    {!reminder.lido && reminder.lead_id && (
+                      <button
+                        onClick={() => setRespondingReminder(reminder.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Lead respondeu"
+                      >
+                        <UserCheck className="w-5 h-5" />
+                      </button>
+                    )}
                     {!reminder.lido && (
                       <button
                         onClick={() => {
@@ -361,6 +402,70 @@ export default function RemindersManager() {
                     </button>
                   </div>
                 </div>
+                {respondingReminder === reminder.id && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center space-x-2">
+                        <UserCheck className="w-4 h-4 text-blue-600" />
+                        <span>Lead Respondeu - Criar Follow-ups Adicionais</span>
+                      </h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        O lead respondeu a este contato. Configure quantos lembretes adicionais deseja criar
+                        para continuar o acompanhamento.
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Quantidade de lembretes
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={additionalFollowUps.count}
+                            onChange={(e) => setAdditionalFollowUps({ ...additionalFollowUps, count: parseInt(e.target.value) || 1 })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Intervalo (dias)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            value={additionalFollowUps.intervalDays}
+                            onChange={(e) => setAdditionalFollowUps({ ...additionalFollowUps, intervalDays: parseInt(e.target.value) || 1 })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-600 mb-3 bg-white rounded p-2">
+                        <span>Serão criados {additionalFollowUps.count} lembretes</span>
+                        <span>Intervalo de {additionalFollowUps.intervalDays} {additionalFollowUps.intervalDays === 1 ? 'dia' : 'dias'}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleLeadResponded(reminder)}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Criar Lembretes</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRespondingReminder(null);
+                            setAdditionalFollowUps({ count: 3, intervalDays: 2 });
+                          }}
+                          className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {reschedulingReminder === reminder.id && (
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <div className="bg-orange-50 rounded-lg p-4">

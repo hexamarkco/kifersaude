@@ -40,15 +40,29 @@ const FOLLOW_UP_RULES: FollowUpRule[] = [
   {
     status: 'Proposta enviada',
     daysAfter: 3,
-    title: 'Follow-up de decisão',
+    title: 'Follow-up de decisão 1',
     description: 'Verificar se tem dúvidas e qual a previsão de decisão',
     priority: 'alta',
   },
   {
     status: 'Proposta enviada',
+    daysAfter: 5,
+    title: 'Follow-up de decisão 2',
+    description: 'Reforçar benefícios da proposta e esclarecer dúvidas',
+    priority: 'alta',
+  },
+  {
+    status: 'Proposta enviada',
     daysAfter: 7,
+    title: 'Follow-up de decisão 3',
+    description: 'Verificar objeções e reforçar urgência da decisão',
+    priority: 'media',
+  },
+  {
+    status: 'Proposta enviada',
+    daysAfter: 10,
     title: 'Último acompanhamento',
-    description: 'Criar senso de urgência e perguntar sobre objeções',
+    description: 'Criar senso de urgência final e perguntar sobre objeções restantes',
     priority: 'media',
   },
 ];
@@ -58,7 +72,22 @@ export const createAutomaticFollowUps = async (
   status: string,
   responsavel: string
 ): Promise<void> => {
-  const rules = FOLLOW_UP_RULES.filter((rule) => rule.status === status);
+  const { data: customRules } = await supabase
+    .from('follow_up_custom_rules')
+    .select('*')
+    .eq('lead_id', leadId)
+    .eq('status', status)
+    .eq('active', true);
+
+  const rules = customRules && customRules.length > 0
+    ? customRules.map(rule => ({
+        status: rule.status,
+        daysAfter: rule.days_after,
+        title: rule.title,
+        description: rule.description,
+        priority: rule.priority,
+      }))
+    : FOLLOW_UP_RULES.filter((rule) => rule.status === status);
 
   for (const rule of rules) {
     const followUpDate = new Date();
@@ -77,7 +106,7 @@ export const createAutomaticFollowUps = async (
       await supabase.from('reminders').insert([
         {
           lead_id: leadId,
-          tipo: 'Follow-up',
+          tipo: customRules && customRules.length > 0 ? 'Follow-up Personalizado' : 'Follow-up',
           titulo: rule.title,
           descricao: rule.description,
           data_lembrete: followUpDate.toISOString(),
@@ -94,6 +123,39 @@ export const cancelFollowUps = async (leadId: string): Promise<void> => {
     .from('reminders')
     .delete()
     .eq('lead_id', leadId)
-    .eq('tipo', 'Follow-up')
+    .in('tipo', ['Follow-up', 'Follow-up Personalizado'])
     .eq('lido', false);
+};
+
+export const createAdditionalFollowUps = async (
+  leadId: string,
+  count: number,
+  intervalDays: number,
+  startFromDays: number = 1
+): Promise<void> => {
+  const lead = await supabase
+    .from('leads')
+    .select('nome_completo, status')
+    .eq('id', leadId)
+    .single();
+
+  if (!lead.data) return;
+
+  for (let i = 0; i < count; i++) {
+    const followUpDate = new Date();
+    followUpDate.setDate(followUpDate.getDate() + startFromDays + (i * intervalDays));
+    followUpDate.setHours(9, 0, 0, 0);
+
+    await supabase.from('reminders').insert([
+      {
+        lead_id: leadId,
+        tipo: 'Follow-up Adicional',
+        titulo: `Follow-up adicional ${i + 1} - ${lead.data.nome_completo}`,
+        descricao: `Follow-up adicional após resposta do lead. Verificar andamento da decisão.`,
+        data_lembrete: followUpDate.toISOString(),
+        lido: false,
+        prioridade: 'alta',
+      },
+    ]);
+  }
 };

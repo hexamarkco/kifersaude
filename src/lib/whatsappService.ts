@@ -1,10 +1,14 @@
-export const openWhatsAppInBackgroundTab = (telefone: string, nome: string): void => {
+export const openWhatsAppInBackgroundTab = (telefone: string, nome: string, withMessage: boolean = true): void => {
   try {
     const cleanPhone = telefone.replace(/\D/g, '');
-    const message = encodeURIComponent(
-      `Olá ${nome}, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`
-    );
-    const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${message}`;
+    let whatsappUrl = `https://wa.me/55${cleanPhone}`;
+
+    if (withMessage) {
+      const message = encodeURIComponent(
+        `Olá ${nome}, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`
+      );
+      whatsappUrl += `?text=${message}`;
+    }
 
     const newTab = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 

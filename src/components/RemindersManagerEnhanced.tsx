@@ -418,7 +418,7 @@ export default function RemindersManagerEnhanced() {
                 onClick={() => {
                   const lead = leadsMap.get(reminder.lead_id!);
                   if (lead && lead.telefone) {
-                    openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo);
+                    openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo, false);
                   }
                 }}
                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"

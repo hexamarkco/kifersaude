@@ -31,7 +31,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar perfil do usuário:', error);
+        setUserProfile(null);
+        return;
+      }
+
       setUserProfile(data);
     } catch (error) {
       console.error('Erro ao carregar perfil do usuário:', error);
@@ -40,18 +45,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
+    const initAuth = async () => {
+      try {
+        console.log('🔐 Inicializando autenticação...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('❌ Erro ao obter sessão:', error);
+          setLoading(false);
+          return;
+        }
+
+        console.log('📋 Sessão:', session ? 'Encontrada' : 'Não encontrada');
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          console.log('👤 Carregando perfil do usuário:', session.user.id);
+          await loadUserProfile(session.user.id);
+        }
+
+        setLoading(false);
+        console.log('✅ Autenticação inicializada');
+      } catch (error) {
+        console.error('❌ Erro fatal na inicialização:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+
+    initAuth();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('🔄 Estado de autenticação mudou:', _event);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

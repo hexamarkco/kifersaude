@@ -22,9 +22,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
 
   const loadUserProfile = async (userId: string) => {
+    // Prevent duplicate calls
+    if (loadingProfileRef[userId]) {
+      console.log('⏭️ Pulando carregamento duplicado do perfil');
+      return;
+    }
+
+    loadingProfileRef[userId] = true;
+
     try {
+      console.log('📥 Carregando perfil...');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -32,23 +42,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error('Erro ao carregar perfil do usuário:', error);
+        console.error('❌ Erro ao carregar perfil do usuário:', error);
         setUserProfile(null);
         return;
       }
 
+      console.log('✅ Perfil carregado:', data);
       setUserProfile(data);
     } catch (error) {
-      console.error('Erro ao carregar perfil do usuário:', error);
+      console.error('❌ Erro ao carregar perfil do usuário:', error);
       setUserProfile(null);
+    } finally {
+      loadingProfileRef[userId] = false;
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
       try {
         console.log('🔐 Inicializando autenticação...');
         const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (!mounted) return;
 
         if (error) {
           console.error('❌ Erro ao obter sessão:', error);
@@ -69,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('✅ Autenticação inicializada');
       } catch (error) {
         console.error('❌ Erro fatal na inicialização:', error);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -77,19 +94,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('🔄 Estado de autenticação mudou:', _event);
+
+      if (!mounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
-      } else {
+
+      // Only load profile on SIGNED_IN event, not on INITIAL_SESSION
+      if (_event === 'SIGNED_IN' && session?.user) {
+        (async () => {
+          await loadUserProfile(session.user.id);
+        })();
+      } else if (!session?.user) {
         setUserProfile(null);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

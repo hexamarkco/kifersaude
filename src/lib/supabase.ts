@@ -163,3 +163,56 @@ export type FollowUpCustomRule = {
   created_at: string;
   updated_at: string;
 };
+
+export type SystemSettings = {
+  id: string;
+  company_name: string;
+  notification_sound_enabled: boolean;
+  notification_volume: number;
+  notification_interval_seconds: number;
+  session_timeout_minutes: number;
+  date_format: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Operadora = {
+  id: string;
+  nome: string;
+  comissao_padrao: number;
+  prazo_recebimento_dias: number;
+  ativo: boolean;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProdutoPlano = {
+  id: string;
+  operadora_id: string;
+  nome: string;
+  modalidade?: string;
+  abrangencia?: string;
+  acomodacao?: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadStatusConfig = {
+  id: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  ativo: boolean;
+  padrao: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadOrigem = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
+};

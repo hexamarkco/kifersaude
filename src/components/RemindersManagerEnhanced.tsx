@@ -57,23 +57,16 @@ export default function RemindersManagerEnhanced() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filter]);
+  }, []);
 
   const loadReminders = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('reminders')
         .select('*')
         .order('data_lembrete', { ascending: true });
 
-      if (filter === 'nao-lidos') {
-        query = query.eq('lido', false);
-      } else if (filter === 'lidos') {
-        query = query.eq('lido', true);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       setReminders(data || []);
 
@@ -267,6 +260,13 @@ export default function RemindersManagerEnhanced() {
   };
 
   const filteredReminders = reminders.filter(reminder => {
+    if (filter === 'nao-lidos' && reminder.lido) {
+      return false;
+    }
+    if (filter === 'lidos' && !reminder.lido) {
+      return false;
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =

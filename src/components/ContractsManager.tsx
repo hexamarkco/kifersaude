@@ -10,10 +10,20 @@ type ContractsManagerProps = {
   onConvertComplete?: () => void;
 };
 
+type ContractHolder = {
+  id: string;
+  contract_id: string;
+  nome_completo: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  cnpj?: string;
+};
+
 export default function ContractsManager({ leadToConvert, onConvertComplete }: ContractsManagerProps) {
   const { isObserver } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
+  const [holders, setHolders] = useState<Record<string, ContractHolder>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
@@ -70,13 +80,26 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   const loadContracts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: contractsData, error: contractsError } = await supabase
         .from('contracts')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setContracts(data || []);
+      if (contractsError) throw contractsError;
+
+      const { data: holdersData, error: holdersError } = await supabase
+        .from('contract_holders')
+        .select('id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj');
+
+      if (holdersError) throw holdersError;
+
+      const holdersMap: Record<string, ContractHolder> = {};
+      holdersData?.forEach(holder => {
+        holdersMap[holder.contract_id] = holder;
+      });
+
+      setContracts(contractsData || []);
+      setHolders(holdersMap);
     } catch (error) {
       console.error('Erro ao carregar contratos:', error);
     } finally {
@@ -104,6 +127,17 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
     }
 
     setFilteredContracts(filtered);
+  };
+
+  const getContractDisplayName = (contract: Contract): string => {
+    const holder = holders[contract.id];
+    if (!holder) return 'Sem titular';
+
+    if (contract.modalidade === 'MEI' || contract.modalidade === 'CNPJ') {
+      return holder.nome_fantasia || holder.razao_social || holder.nome_completo;
+    }
+
+    return holder.nome_completo;
   };
 
   const getStatusColor = (status: string) => {
@@ -220,6 +254,9 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                       <span>{contract.comissao_multiplicador}x</span>
                     </span>
                   )}
+                </div>
+                <div className="mb-3">
+                  <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
                   <div>

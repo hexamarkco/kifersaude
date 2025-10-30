@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
-import { Users, FileText, LayoutDashboard, Bell } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, Bell, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 type LayoutProps = {
   children: ReactNode;
@@ -18,12 +20,20 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0
 }: LayoutProps) {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-teal-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
   ];
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -39,38 +49,47 @@ export default function Layout({
                 <p className="text-xs text-slate-500">Sistema de Gestão</p>
               </div>
             </div>
-            <nav className="flex space-x-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => onTabChange(tab.id)}
-                    className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Icon className="w-4 h-4" />
-                      <span>{tab.label}</span>
-                    </div>
-                    {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className={`absolute -top-1 -right-1 ${
-                        tab.badgeColor || 'bg-red-500'
-                      } text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
-                        hasActiveNotification && tab.id === 'reminders' ? 'animate-pulse' : ''
-                      } ${
-                        tab.id === 'leads' && tab.badge > 0 ? 'animate-pulse' : ''
-                      }`}>
-                        {tab.badge > 9 ? '9+' : tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="flex items-center space-x-4">
+              <nav className="flex space-x-1">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => onTabChange(tab.id)}
+                      className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-teal-50 text-teal-700'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Icon className="w-4 h-4" />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.badge !== undefined && tab.badge > 0 && (
+                        <span className={`absolute -top-1 -right-1 ${
+                          tab.badgeColor || 'bg-red-500'
+                        } text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
+                          hasActiveNotification && tab.id === 'reminders' ? 'animate-pulse' : ''
+                        } ${
+                          tab.id === 'leads' && tab.badge > 0 ? 'animate-pulse' : ''
+                        }`}>
+                          {tab.badge > 9 ? '9+' : tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>

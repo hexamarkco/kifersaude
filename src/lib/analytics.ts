@@ -45,8 +45,8 @@ export function calculateConversionRate(leads: Lead[], contracts: Contract[]): n
   const totalLeads = leads.filter(l => !l.arquivado).length;
   if (totalLeads === 0) return 0;
 
-  const convertedLeads = contracts.filter(c => c.lead_id).length;
-  return (convertedLeads / totalLeads) * 100;
+  const closedLeads = leads.filter(l => !l.arquivado && l.status === 'Fechado').length;
+  return (closedLeads / totalLeads) * 100;
 }
 
 export function calculateWinRate(leads: Lead[]): number {

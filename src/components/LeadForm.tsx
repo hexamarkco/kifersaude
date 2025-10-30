@@ -322,7 +322,8 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
                 <option value="Novo">Novo</option>
-                <option value="Em contato">Em contato</option>
+                <option value="Contato iniciado">Contato iniciado</option>
+                <option value="Em atendimento">Em atendimento</option>
                 <option value="Cotando">Cotando</option>
                 <option value="Proposta enviada">Proposta enviada</option>
                 <option value="Fechado">Fechado</option>

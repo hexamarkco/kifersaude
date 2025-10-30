@@ -11,7 +11,8 @@ type StatusDropdownProps = {
 
 const STATUS_OPTIONS = [
   'Novo',
-  'Em contato',
+  'Contato iniciado',
+  'Em atendimento',
   'Cotando',
   'Proposta enviada',
   'Fechado',
@@ -21,7 +22,8 @@ const STATUS_OPTIONS = [
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     'Novo': 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-    'Em contato': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+    'Contato iniciado': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+    'Em atendimento': 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200',
     'Cotando': 'bg-purple-100 text-purple-700 hover:bg-purple-200',
     'Proposta enviada': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
     'Fechado': 'bg-green-100 text-green-700 hover:bg-green-200',

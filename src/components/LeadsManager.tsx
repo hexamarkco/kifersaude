@@ -248,7 +248,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             </button>
           </div>
           <a
-            href="/api_examples/README.md"
+            href="/api-docs.html"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"

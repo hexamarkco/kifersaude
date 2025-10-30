@@ -17,6 +17,7 @@ import {
   formatEstimatedTime,
   ReminderPeriod
 } from '../lib/reminderUtils';
+import RemindersCalendar from './RemindersCalendar';
 
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -35,6 +36,7 @@ export default function RemindersManagerEnhanced() {
   const [customSnoozeReminder, setCustomSnoozeReminder] = useState<string | null>(null);
   const [customSnoozeDateTime, setCustomSnoozeDateTime] = useState('');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     loadReminders();
@@ -529,6 +531,13 @@ export default function RemindersManagerEnhanced() {
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
         <div className="flex items-center space-x-2">
           <button
+            onClick={() => setShowCalendar(true)}
+            className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            title="Ver Calendário"
+          >
+            <Calendar className="w-5 h-5" />
+          </button>
+          <button
             onClick={() => setShowStats(!showStats)}
             className={`p-2 rounded-lg transition-colors ${
               showStats ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -779,6 +788,13 @@ export default function RemindersManagerEnhanced() {
             </div>
           </div>
         </div>
+      )}
+
+      {showCalendar && (
+        <RemindersCalendar
+          reminders={reminders}
+          onClose={() => setShowCalendar(false)}
+        />
       )}
     </div>
   );

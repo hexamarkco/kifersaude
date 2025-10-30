@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase, Contract, Lead, ContractValueAdjustment } from '../lib/supabase';
+import { supabase, Contract, Lead, ContractValueAdjustment, Operadora } from '../lib/supabase';
 import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
+import { configService } from '../lib/configService';
 
 type ContractFormProps = {
   contract: Contract | null;
@@ -13,6 +14,7 @@ type ContractFormProps = {
 
 export default function ContractForm({ contract, leadToConvert, onClose, onSave }: ContractFormProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [formData, setFormData] = useState({
     codigo_contrato: contract?.codigo_contrato || '',
     lead_id: contract?.lead_id || leadToConvert?.id || '',
@@ -29,6 +31,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     comissao_prevista: contract?.comissao_prevista?.toString() || '',
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
     previsao_recebimento_comissao: contract?.previsao_recebimento_comissao || '',
+    vidas: contract?.vidas?.toString() || '1',
     bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
     responsavel: contract?.responsavel || leadToConvert?.responsavel || 'Luiza',
@@ -43,6 +46,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   useEffect(() => {
     loadLeads();
+    loadOperadoras();
     if (contract?.id) {
       loadAdjustments(contract.id);
     }
@@ -74,6 +78,25 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       setLeads(data || []);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
+    }
+  };
+
+  const loadOperadoras = async () => {
+    const data = await configService.getOperadoras();
+    setOperadoras(data.filter(op => op.ativo));
+  };
+
+  const handleOperadoraChange = (operadoraNome: string) => {
+    const operadora = operadoras.find(op => op.nome === operadoraNome);
+    if (operadora) {
+      setFormData(prev => ({
+        ...prev,
+        operadora: operadoraNome,
+        bonus_por_vida_aplicado: operadora.bonus_por_vida,
+        bonus_por_vida_valor: operadora.bonus_padrao > 0 ? operadora.bonus_padrao.toString() : prev.bonus_por_vida_valor,
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, operadora: operadoraNome }));
     }
   };
 
@@ -155,6 +178,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
+        vidas: formData.vidas ? parseInt(formData.vidas) : 1,
         bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFloat(formData.bonus_por_vida_valor) : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
@@ -309,13 +333,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Operadora *
                 </label>
-                <input
-                  type="text"
+                <select
                   required
                   value={formData.operadora}
-                  onChange={(e) => setFormData({ ...formData, operadora: e.target.value })}
+                  onChange={(e) => handleOperadoraChange(e.target.value)}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
+                >
+                  <option value="">Selecione uma operadora</option>
+                  {operadoras.map(op => (
+                    <option key={op.id} value={op.nome}>{op.nome}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Comissão e bônus serão preenchidos automaticamente
+                </p>
               </div>
 
               <div>
@@ -560,9 +591,27 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="flex items-center space-x-2 cursor-pointer">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Quantidade de Vidas *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={formData.vidas}
+                  onChange={(e) => setFormData({ ...formData, vidas: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="1"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Titular + Dependentes
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center space-x-2 cursor-pointer pt-6">
                   <input
                     type="checkbox"
                     checked={formData.bonus_por_vida_aplicado}
@@ -572,14 +621,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   <span className="text-sm font-medium text-slate-700">Aplicar Bônus por Vida</span>
                 </label>
                 <p className="text-xs text-slate-500 mt-1">
-                  Valor recorrente adicional além da comissão
+                  Pagamento único por vida do contrato
                 </p>
               </div>
 
               {formData.bonus_por_vida_aplicado && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Valor do Bônus por Vida (R$)
+                    Bônus por Vida (R$)
                   </label>
                   <input
                     type="number"
@@ -591,7 +640,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     placeholder="0.00"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    Valor mensal recorrente adicional
+                    Total: R$ {(parseFloat(formData.bonus_por_vida_valor || '0') * parseFloat(formData.vidas || '1')).toFixed(2)}
                   </p>
                 </div>
               )}

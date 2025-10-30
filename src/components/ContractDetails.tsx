@@ -210,14 +210,26 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
 
             {contract.bonus_por_vida_aplicado && contract.bonus_por_vida_valor && (
               <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
-                  <span className="text-sm font-medium text-green-800">Bônus por Vida (Mensal):</span>
-                  <span className="font-bold text-green-700 text-lg">
-                    R$ {contract.bonus_por_vida_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-800">Bônus por Vida:</span>
+                    <span className="font-bold text-green-700 text-lg">
+                      R$ {contract.bonus_por_vida_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-green-700">Quantidade de Vidas:</span>
+                    <span className="text-sm font-semibold text-green-800">{contract.vidas || 1}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
+                    <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
+                    <span className="font-bold text-green-700 text-xl">
+                      R$ {((contract.bonus_por_vida_valor * (contract.vidas || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-xs text-green-600 mt-2">
-                  Valor recorrente adicional além da comissão
+                  Pagamento único por vida do contrato (pode ser parcelado)
                 </p>
               </div>
             )}

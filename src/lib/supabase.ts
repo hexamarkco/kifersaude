@@ -43,6 +43,7 @@ export type Contract = {
   comissao_prevista?: number;
   comissao_multiplicador?: number;
   previsao_recebimento_comissao?: string;
+  vidas?: number;
   bonus_por_vida_valor?: number;
   bonus_por_vida_aplicado?: boolean;
   responsavel: string;

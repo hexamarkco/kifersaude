@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Users, Mail, Shield, Trash2, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function ConfigPage() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, refreshProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -110,6 +110,12 @@ export default function ConfigPage() {
       if (error) throw error;
 
       showMessage('success', 'Permissão alterada com sucesso');
+
+      // Refresh own profile if we changed our own role
+      if (userId === user?.id) {
+        await refreshProfile();
+      }
+
       loadUsers();
     } catch (error: any) {
       console.error('Erro ao alterar permissão:', error);

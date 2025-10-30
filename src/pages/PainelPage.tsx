@@ -5,6 +5,7 @@ import Dashboard from '../components/Dashboard';
 import LeadsManager from '../components/LeadsManager';
 import ContractsManager from '../components/ContractsManager';
 import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
+import ConfigPage from './ConfigPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import { notificationService } from '../lib/notificationService';
@@ -108,6 +109,8 @@ export default function PainelPage() {
         return <ContractsManager leadToConvert={leadToConvert} onConvertComplete={() => setLeadToConvert(null)} />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
+      case 'config':
+        return <ConfigPage />;
       default:
         return <Dashboard />;
     }

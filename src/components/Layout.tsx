@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Users, FileText, LayoutDashboard, Bell, LogOut } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,15 +20,19 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0
 }: LayoutProps) {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const tabs = [
+  const baseTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-teal-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
   ];
+
+  const tabs = isAdmin
+    ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]
+    : baseTabs;
 
   const handleLogout = async () => {
     await signOut();

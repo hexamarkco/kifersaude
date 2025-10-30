@@ -142,3 +142,11 @@ export type LeadStatusHistory = {
   observacao?: string;
   created_at: string;
 };
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  role: 'admin' | 'observer';
+  created_at: string;
+  created_by?: string;
+};

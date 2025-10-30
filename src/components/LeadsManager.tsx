@@ -6,6 +6,8 @@ import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
 import FollowUpScheduler from './FollowUpScheduler';
 import LeadKanban from './LeadKanban';
+import { ObserverBanner } from './ObserverRestriction';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
@@ -15,6 +17,7 @@ type LeadsManagerProps = {
 };
 
 export default function LeadsManager({ onConvertToContract }: LeadsManagerProps) {
+  const { isObserver } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,6 +219,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
 
   return (
     <div>
+      <ObserverBanner />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>
         <div className="flex flex-wrap items-center gap-3">
@@ -248,7 +252,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               setEditingLead(null);
               setShowForm(true);
             }}
-            className="flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors w-full sm:w-auto"
+            disabled={isObserver}
+            className="flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isObserver ? 'Você não tem permissão para criar leads' : 'Criar novo lead'}
           >
             <Plus className="w-5 h-5" />
             <span>Novo Lead</span>

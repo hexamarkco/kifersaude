@@ -202,10 +202,12 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
-              <div className="w-full h-96 bg-gradient-to-br from-orange-200 to-amber-200 rounded-3xl overflow-hidden shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center">
-                  <UsersIcon className="w-48 h-48 text-orange-400 opacity-50" />
-                </div>
+              <div className="w-full h-[500px] bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl overflow-hidden shadow-2xl">
+                <img
+                  src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
+                  alt="Luiza Kifer - Especialista em Planos de Saúde"
+                  className="w-full h-full object-cover object-top"
+                />
               </div>
             </div>
 

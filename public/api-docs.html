@@ -42,6 +42,38 @@
         </header>
 
         <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Configuration -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">⚙️ Configuração da API</h2>
+                        <p class="text-slate-600 mt-1">Informe a URL base e a API Key para testar os endpoints diretamente por aqui.</p>
+                    </div>
+                    <button onclick="saveConfig()"
+                            class="self-start md:self-auto bg-teal-600 text-white px-5 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                        💾 Salvar configurações
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="baseUrlInput" class="block text-sm font-medium text-slate-700 mb-1">Base URL</label>
+                        <input id="baseUrlInput" type="url" placeholder="https://seu-projeto.supabase.co/functions/v1/leads-api"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                    </div>
+                    <div class="relative">
+                        <label for="apiKeyInput" class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                        <input id="apiKeyInput" type="password" placeholder="SUPABASE_ANON_KEY"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg pr-12 focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                        <button type="button"
+                                onclick="toggleApiKeyVisibility()"
+                                class="absolute inset-y-0 right-3 mt-6 text-sm text-slate-500 hover:text-slate-700">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                <p id="configStatus" class="mt-4 text-sm text-slate-500 hidden"></p>
+            </div>
+
             <!-- Quick Start -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
                 <h2 class="text-2xl font-bold text-slate-800 mb-4">🚀 Começando</h2>
@@ -375,55 +407,156 @@ Content-Type: application/json</pre>
     </div>
 
     <script>
-        async function testEndpoint(method, path, body = null) {
-            const baseUrl = prompt('Digite a URL base da sua API (ex: https://seu-projeto.supabase.co/functions/v1/leads-api)');
-            if (!baseUrl) return;
+        const CONFIG_STORAGE_KEY = 'apiDocsConfig';
+        const baseUrlInput = document.getElementById('baseUrlInput');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const configStatus = document.getElementById('configStatus');
+        const responseArea = document.getElementById('responseArea');
+        const responseStatus = document.getElementById('responseStatus');
+        const responseBody = document.getElementById('responseBody');
 
-            const apiKey = prompt('Digite seu SUPABASE_ANON_KEY:');
-            if (!apiKey) return;
+        function showConfigMessage(message, type = 'info') {
+            if (!configStatus) return;
 
-            const responseArea = document.getElementById('responseArea');
-            const responseStatus = document.getElementById('responseStatus');
-            const responseBody = document.getElementById('responseBody');
+            const baseClasses = 'mt-4 text-sm';
+            const colorClasses = {
+                info: 'text-slate-600',
+                success: 'text-emerald-600',
+                error: 'text-red-600'
+            };
 
-            responseArea.classList.remove('hidden');
-            responseStatus.innerHTML = '<div class="animate-pulse">Carregando...</div>';
-            responseBody.innerHTML = '';
+            configStatus.className = `${baseClasses} ${colorClasses[type] || colorClasses.info}`;
+            configStatus.textContent = message;
+        }
+
+        function saveConfig() {
+            const baseUrl = baseUrlInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!baseUrl || !apiKey) {
+                showConfigMessage('Preencha a URL base e a API Key para salvar.', 'error');
+                return;
+            }
+
+            const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+            localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify({
+                baseUrl: normalizedBaseUrl,
+                apiKey
+            }));
+
+            showConfigMessage('Configurações salvas com sucesso!', 'success');
+        }
+
+        function loadConfig() {
+            const stored = localStorage.getItem(CONFIG_STORAGE_KEY);
+            if (!stored) {
+                showConfigMessage('Configure a URL base e a API Key para habilitar os testes.', 'info');
+                return;
+            }
 
             try {
-                const options = {
-                    method: method,
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'apikey': apiKey,
-                        'Content-Type': 'application/json'
-                    }
-                };
-
-                if (body && (method === 'POST' || method === 'PUT')) {
-                    options.body = body;
+                const parsed = JSON.parse(stored);
+                if (parsed.baseUrl) {
+                    baseUrlInput.value = parsed.baseUrl;
                 }
-
-                const response = await fetch(baseUrl + path, options);
-                const data = await response.json();
-
-                const statusColor = response.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-                responseStatus.innerHTML = `
-                    <span class="${statusColor} px-3 py-1 rounded font-semibold">
-                        ${response.status} ${response.statusText}
-                    </span>
-                `;
-
-                responseBody.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                if (parsed.apiKey) {
+                    apiKeyInput.value = parsed.apiKey;
+                }
+                showConfigMessage('Configurações carregadas. Você já pode testar os endpoints.', 'success');
             } catch (error) {
-                responseStatus.innerHTML = `
-                    <span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">
-                        Erro
-                    </span>
-                `;
-                responseBody.innerHTML = `<pre>${error.message}</pre>`;
+                console.error('Erro ao carregar configurações da API:', error);
+                showConfigMessage('Não foi possível carregar as configurações salvas.', 'error');
             }
         }
+
+        function getConfig() {
+            return {
+                baseUrl: baseUrlInput.value.trim(),
+                apiKey: apiKeyInput.value.trim()
+            };
+        }
+
+        function toggleApiKeyVisibility() {
+            if (!apiKeyInput) return;
+            const isPassword = apiKeyInput.type === 'password';
+            apiKeyInput.type = isPassword ? 'text' : 'password';
+        }
+
+        function showResponse(statusHtml, bodyHtml) {
+            responseArea.classList.remove('hidden');
+            responseStatus.innerHTML = statusHtml;
+            responseBody.innerHTML = bodyHtml;
+        }
+
+        async function testEndpoint(method, path, body = null) {
+            const { baseUrl, apiKey } = getConfig();
+            if (!baseUrl || !apiKey) {
+                showConfigMessage('Configure a URL base e a API Key para testar os endpoints.', 'error');
+                showResponse(
+                    '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Configuração pendente</span>',
+                    '<pre>Informe a URL base e a API Key antes de continuar.</pre>'
+                );
+                return;
+            }
+
+            showResponse('<div class="animate-pulse text-slate-500">Carregando...</div>', '');
+
+            const headers = {
+                'Authorization': `Bearer ${apiKey}`,
+                'apikey': apiKey,
+                'Content-Type': 'application/json'
+            };
+
+            const options = {
+                method,
+                headers
+            };
+
+            if (body && (method === 'POST' || method === 'PUT')) {
+                const trimmedBody = body.trim();
+                if (trimmedBody.length > 0) {
+                    try {
+                        const parsedBody = JSON.parse(trimmedBody);
+                        options.body = JSON.stringify(parsedBody);
+                    } catch (error) {
+                        showResponse(
+                            '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Erro</span>',
+                            `<pre>Corpo da requisição inválido: ${error.message}</pre>`
+                        );
+                        return;
+                    }
+                }
+            }
+
+            const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+
+            try {
+                const response = await fetch(url, options);
+                const responseText = await response.text();
+                let responseContent = responseText;
+
+                try {
+                    const parsed = JSON.parse(responseText);
+                    responseContent = JSON.stringify(parsed, null, 2);
+                } catch (parseError) {
+                    // Mantém o texto bruto se não for JSON válido
+                }
+
+                const statusColor = response.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                showResponse(
+                    `<span class="${statusColor} px-3 py-1 rounded font-semibold">${response.status} ${response.statusText}</span>`,
+                    `<pre>${responseContent}</pre>`
+                );
+            } catch (error) {
+                console.error('Erro ao testar endpoint:', error);
+                showResponse(
+                    '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Erro</span>',
+                    `<pre>${error.message}</pre>`
+                );
+            }
+        }
+
+        loadConfig();
     </script>
 </body>
 </html>

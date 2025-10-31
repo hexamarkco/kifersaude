@@ -227,7 +227,7 @@ export default function LandingPage() {
                 <img
                   src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
                   alt="Luiza Kifer - Especialista em Planos de Saúde"
-                  className="w-full h-full object-cover object-top"
+                  className="w-full h-full object-cover object-[center_20%]"
                 />
               </div>
             </div>

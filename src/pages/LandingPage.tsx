@@ -104,12 +104,12 @@ export default function LandingPage() {
     e.preventDefault();
     const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdade: ${formData.idade}\nTipo: ${formData.tipoContratacao}`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/5511999999999?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
     setShowModal(false);
   };
 
   const openWhatsApp = () => {
-    window.open('https://wa.me/5511999999999', '_blank');
+    window.open('https://wa.me/5521979302389', '_blank');
   };
 
   const scrollToForm = () => {
@@ -120,13 +120,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white">
       <div className="fixed top-0 w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2 px-4 text-center text-sm font-medium z-50 shadow-md">
         Atendimento rápido via WhatsApp — clique aqui 📲
-        <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="ml-2 underline hover:text-orange-100">
+        <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="ml-2 underline hover:text-orange-100">
           Falar agora
         </a>
       </div>
 
       <a
-        href="https://wa.me/5511999999999"
+        href="https://wa.me/5521979302389"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-2xl z-50 transition-transform hover:scale-110"
@@ -374,7 +374,7 @@ export default function LandingPage() {
               Operadoras Parceiras
             </h2>
             <p className="text-xl text-slate-600">
-              Trabalhamos apenas com operadoras reconhecidas e regulamentadas pela ANS
+              Trabalhamos com as principais operadoras do mercado
             </p>
           </div>
 
@@ -413,6 +413,15 @@ export default function LandingPage() {
                 alt="Bradesco Saúde"
                 className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
               />
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center justify-center px-6 py-4 bg-orange-50 rounded-2xl border-2 border-orange-200">
+              <CheckCircle className="w-6 h-6 text-orange-600 mr-3 flex-shrink-0" />
+              <p className="text-slate-700 text-lg">
+                <span className="font-semibold text-slate-900">E muitas outras operadoras!</span> Trabalhamos com diversas opções para encontrar o plano ideal para você.
+              </p>
             </div>
           </div>
         </div>
@@ -569,8 +578,8 @@ export default function LandingPage() {
 
             <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
               <Shield className="w-12 h-12 text-orange-600 mb-4" />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Parceiros certificados pela ANS</h3>
-              <p className="text-slate-600">Trabalhamos apenas com operadoras regulamentadas</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Operadoras regulamentadas</h3>
+              <p className="text-slate-600">Todas as nossas parceiras são certificadas pela ANS</p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
@@ -821,12 +830,12 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <a href="tel:+5511999999999" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
+            <a href="tel:+5521979302389" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
               <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
                 <Phone className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2 text-center">Telefone</h3>
-              <p className="text-slate-300 text-center">(11) 99999-9999</p>
+              <p className="text-slate-300 text-center">(21) 97930-2389</p>
             </a>
 
             <a href="mailto:contato@kifersaude.com.br" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
@@ -837,7 +846,7 @@ export default function LandingPage() {
               <p className="text-slate-300 text-center">contato@kifersaude.com.br</p>
             </a>
 
-            <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
+            <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
               <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-8 h-8 text-white" />
               </div>
@@ -884,9 +893,9 @@ export default function LandingPage() {
                   <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                   <span>contato@kifersaude.com.br</span>
                 </a>
-                <a href="https://instagram.com/kifer.saude" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
+                <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
                   <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                  <span>@kifer.saude</span>
+                  <span>@souluizakifer</span>
                 </a>
               </div>
             </div>
@@ -894,8 +903,7 @@ export default function LandingPage() {
             <div>
               <h3 className="text-lg font-bold mb-4">Legal</h3>
               <div className="space-y-2 text-slate-400">
-                <p className="text-sm">CNPJ: 12.345.678/0001-90</p>
-                <p className="text-sm">ANS: 123456</p>
+                <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
               </div>
             </div>
           </div>

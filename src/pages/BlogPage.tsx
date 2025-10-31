@@ -102,7 +102,7 @@ export default function BlogPage() {
   };
 
   const openWhatsApp = () => {
-    window.open('https://wa.me/5521964681047?text=Olá! Vim através do blog e gostaria de mais informações sobre planos de saúde.', '_blank');
+    window.open('https://wa.me/5521979302389?text=Olá! Vim através do blog e gostaria de mais informações sobre planos de saúde.', '_blank');
   };
 
   const shareOnWhatsApp = (post: BlogPost) => {
@@ -366,9 +366,9 @@ export default function BlogPage() {
                     <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                     <span>contato@kifersaude.com.br</span>
                   </a>
-                  <a href="https://instagram.com/kifer.saude" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
+                  <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
                     <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                    <span>@kifer.saude</span>
+                    <span>@souluizakifer</span>
                   </a>
                 </div>
               </div>
@@ -376,8 +376,7 @@ export default function BlogPage() {
               <div>
                 <h3 className="text-lg font-bold mb-4">Legal</h3>
                 <div className="space-y-2 text-slate-400">
-                  <p className="text-sm">CNPJ: 12.345.678/0001-90</p>
-                  <p className="text-sm">ANS: 123456</p>
+                  <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
                 </div>
               </div>
             </div>
@@ -546,9 +545,9 @@ export default function BlogPage() {
                   <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                   <span>contato@kifersaude.com.br</span>
                 </a>
-                <a href="https://instagram.com/kifer.saude" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
+                <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
                   <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                  <span>@kifer.saude</span>
+                  <span>@souluizakifer</span>
                 </a>
               </div>
             </div>
@@ -556,8 +555,7 @@ export default function BlogPage() {
             <div>
               <h3 className="text-lg font-bold mb-4">Legal</h3>
               <div className="space-y-2 text-slate-400">
-                <p className="text-sm">CNPJ: 12.345.678/0001-90</p>
-                <p className="text-sm">ANS: 123456</p>
+                <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
               </div>
             </div>
           </div>

@@ -183,21 +183,21 @@ export default function LandingPage() {
               <div className="relative pt-20 pb-8">
                 <div className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-5 py-2.5 flex items-center gap-2 z-10 whitespace-nowrap animate-pulse">
                   <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
-                  <span className="font-bold text-white">Online Agora</span>
+                  <span className="font-bold text-white text-sm">Online Agora</span>
                 </div>
 
-                <div className="absolute top-20 left-4 bg-white rounded-2xl shadow-xl px-6 py-4 z-10">
-                  <div className="text-3xl font-bold text-orange-600 mb-0">500+</div>
-                  <div className="text-sm font-medium text-slate-600">Clientes</div>
+                <div className="absolute top-20 -left-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10">
+                  <div className="text-2xl font-bold text-orange-600 mb-0">500+</div>
+                  <div className="text-xs font-medium text-slate-600">Clientes</div>
                 </div>
 
-                <div className="absolute bottom-24 right-4 bg-white rounded-2xl shadow-xl px-6 py-4 z-10">
-                  <div className="text-3xl font-bold text-orange-600 mb-0">4.9★</div>
-                  <div className="text-sm font-medium text-slate-600">Avaliação</div>
+                <div className="absolute bottom-32 -right-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10">
+                  <div className="text-2xl font-bold text-orange-600 mb-0">4.9★</div>
+                  <div className="text-xs font-medium text-slate-600">Avaliação</div>
                 </div>
 
-                <div className="relative w-[420px] h-[420px] md:w-[500px] md:h-[500px]">
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[85%] rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                <div className="relative w-[320px] h-[480px] md:w-[360px] md:h-[540px]">
+                  <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
                     <img
                       src="/image.png"
                       alt="Luiza Kifer - Especialista em Planos de Saúde"

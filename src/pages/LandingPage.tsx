@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText } from 'lucide-react';
+import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp } from 'lucide-react';
 
 export default function LandingPage() {
   const [formData, setFormData] = useState({
@@ -138,50 +138,69 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 mb-8 leading-tight">
-                O plano ideal começa
+                O plano ideal começa com
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-3">
-                  com gente de verdade.
+                  gente de verdade.
                 </span>
               </h1>
 
-              <p className="text-xl md:text-2xl text-slate-700 mb-12 font-light leading-relaxed">
+              <p className="text-xl md:text-2xl text-slate-700 mb-6 font-light leading-relaxed">
                 Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
                 <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
               </p>
+
+              <div className="flex flex-wrap gap-3 mb-8">
+                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <Shield className="w-5 h-5 mr-2 text-orange-600" />
+                  <span className="font-semibold text-slate-900">100% Gratuito</span>
+                </div>
+                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <CheckCircle className="w-5 h-5 mr-2 text-orange-600" />
+                  <span className="font-semibold text-slate-900">Sem Compromisso</span>
+                </div>
+                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <ThumbsUp className="w-5 h-5 mr-2 text-orange-600" />
+                  <span className="font-semibold text-slate-900">98% Satisfação</span>
+                </div>
+              </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => setShowModal(true)}
                   className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
                 >
-                  Quero minha cotação
-                  <ChevronRight className="inline-block ml-2 w-5 h-5" />
+                  Quero minha cotação gratuita
                 </button>
 
                 <button
                   onClick={openWhatsApp}
-                  className="px-10 py-5 bg-white border-2 border-green-500 text-green-600 text-lg md:text-xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
+                  className="px-10 py-5 bg-green-600 text-white text-lg md:text-xl rounded-xl font-bold hover:bg-green-700 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
                 >
                   <MessageCircle className="inline-block mr-2 w-5 h-5" />
-                  Ir para WhatsApp
+                  Falar no WhatsApp
                 </button>
               </div>
             </div>
 
             <div className="flex justify-center order-1 lg:order-2 relative">
               <div className="relative pt-20 pb-8">
-                <div className="absolute top-0 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10 whitespace-nowrap">
-                  <UsersIcon className="w-5 h-5 text-orange-600" />
-                  <span className="font-bold text-slate-900">500+ Clientes</span>
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-5 py-2.5 flex items-center gap-2 z-10 whitespace-nowrap animate-pulse">
+                  <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                  <span className="font-bold text-white">Online Agora</span>
                 </div>
 
-                <div className="absolute top-1/2 -translate-y-1/2 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10 whitespace-nowrap" style={{ animationDelay: '0.2s' }}>
-                  <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                  <span className="font-bold text-slate-900">4.9★ Avaliação</span>
+                <div className="absolute top-20 left-4 bg-white rounded-2xl shadow-xl px-6 py-4 z-10">
+                  <div className="text-3xl font-bold text-orange-600 mb-0">500+</div>
+                  <div className="text-sm font-medium text-slate-600">Clientes</div>
+                </div>
+
+                <div className="absolute bottom-24 right-4 bg-white rounded-2xl shadow-xl px-6 py-4 z-10">
+                  <div className="text-3xl font-bold text-orange-600 mb-0">4.9★</div>
+                  <div className="text-sm font-medium text-slate-600">Avaliação</div>
                 </div>
 
                 <div className="relative w-[420px] h-[420px] md:w-[500px] md:h-[500px]">
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[85%] rounded-full overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[85%] rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
                     <img
                       src="/image.png"
                       alt="Luiza Kifer - Especialista em Planos de Saúde"

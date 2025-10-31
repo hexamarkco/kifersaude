@@ -110,10 +110,10 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">Luiza Kifer</span>
+              <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
             </div>
             <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
-              <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Sou</a>
+              <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Somos</a>
               <a href="#como-funciona" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Como Funciona</a>
               <a href="#planos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Planos</a>
               <a href="#faq" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">FAQ</a>

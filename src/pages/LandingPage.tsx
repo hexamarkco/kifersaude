@@ -130,51 +130,48 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto relative z-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-left order-2 lg:order-1">
-              <div className="mb-8">
-                <span className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-base font-bold shadow-lg animate-pulse">
-                  <Star className="w-5 h-5 mr-2 fill-current" />
+              <div className="mb-6">
+                <span className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-sm font-bold shadow-lg animate-pulse">
+                  <Star className="w-4 h-4 mr-2 fill-current" />
                   Especialista #1 em Planos de Saúde RJ
                 </span>
               </div>
 
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 mb-8 leading-tight">
-                O plano ideal começa com
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-3">
-                  gente de verdade.
-                </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 leading-tight">
+                O plano ideal começa com <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600">gente de verdade.</span>
               </h1>
 
-              <p className="text-xl md:text-2xl text-slate-700 mb-6 font-light leading-relaxed">
+              <p className="text-lg md:text-xl text-slate-700 mb-5 font-light leading-relaxed">
                 Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
                 <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
               </p>
 
-              <div className="flex flex-wrap gap-3 mb-8">
-                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <Shield className="w-5 h-5 mr-2 text-orange-600" />
-                  <span className="font-semibold text-slate-900">100% Gratuito</span>
+              <div className="flex gap-2 mb-6">
+                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <Shield className="w-4 h-4 mr-1.5 text-orange-600" />
+                  <span className="font-semibold text-slate-900 text-sm">100% Gratuito</span>
                 </div>
-                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <CheckCircle className="w-5 h-5 mr-2 text-orange-600" />
-                  <span className="font-semibold text-slate-900">Sem Compromisso</span>
+                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <CheckCircle className="w-4 h-4 mr-1.5 text-orange-600" />
+                  <span className="font-semibold text-slate-900 text-sm">Sem Compromisso</span>
                 </div>
-                <div className="inline-flex items-center px-5 py-2.5 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <ThumbsUp className="w-5 h-5 mr-2 text-orange-600" />
-                  <span className="font-semibold text-slate-900">98% Satisfação</span>
+                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
+                  <ThumbsUp className="w-4 h-4 mr-1.5 text-orange-600" />
+                  <span className="font-semibold text-slate-900 text-sm">98% Satisfação</span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
+                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base md:text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
                 >
                   Quero minha cotação gratuita
                 </button>
 
                 <button
                   onClick={openWhatsApp}
-                  className="px-10 py-5 bg-green-600 text-white text-lg md:text-xl rounded-xl font-bold hover:bg-green-700 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
+                  className="px-8 py-4 bg-green-600 text-white text-base md:text-lg rounded-xl font-bold hover:bg-green-700 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
                 >
                   <MessageCircle className="inline-block mr-2 w-5 h-5" />
                   Falar no WhatsApp

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Phone, Mail, Instagram, MapPin, MessageCircle, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -14,6 +15,8 @@ interface BlogPost {
   read_time: string;
   published_at: string;
   views_count: number;
+  meta_title?: string;
+  meta_description?: string;
 }
 
 export default function BlogPage() {

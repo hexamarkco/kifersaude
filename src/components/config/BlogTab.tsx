@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIcon, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface BlogPost {
   id: string;
@@ -18,6 +20,8 @@ interface BlogPost {
   created_at: string;
   updated_at: string;
   views_count: number;
+  meta_title?: string;
+  meta_description?: string;
 }
 
 export default function BlogTab() {
@@ -35,8 +39,29 @@ export default function BlogTab() {
     cover_image_url: '',
     category: 'Guias',
     read_time: '5 min',
-    published: false
+    published: false,
+    meta_title: '',
+    meta_description: ''
   });
+
+  const modules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['blockquote', 'code-block'],
+      ['link', 'image'],
+      ['clean']
+    ],
+  }), []);
+
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'blockquote', 'code-block',
+    'link', 'image'
+  ];
 
   useEffect(() => {
     loadPosts();
@@ -65,10 +90,27 @@ export default function BlogTab() {
   };
 
   const handleTitleChange = (title: string) => {
+    const slug = generateSlug(title);
     setFormData({
       ...formData,
       title,
-      slug: generateSlug(title)
+      slug,
+      meta_title: title
+    });
+  };
+
+  const estimateReadTime = (content: string) => {
+    const text = content.replace(/<[^>]*>/g, '');
+    const words = text.split(/\s+/).length;
+    const minutes = Math.ceil(words / 200);
+    return `${minutes} min`;
+  };
+
+  const handleContentChange = (value: string) => {
+    setFormData({
+      ...formData,
+      content: value,
+      read_time: estimateReadTime(value)
     });
   };
 
@@ -121,7 +163,9 @@ export default function BlogTab() {
       cover_image_url: post.cover_image_url || '',
       category: post.category,
       read_time: post.read_time,
-      published: post.published
+      published: post.published,
+      meta_title: post.meta_title || post.title,
+      meta_description: post.meta_description || post.excerpt
     });
     setShowEditor(true);
   };
@@ -168,7 +212,9 @@ export default function BlogTab() {
       cover_image_url: '',
       category: 'Guias',
       read_time: '5 min',
-      published: false
+      published: false,
+      meta_title: '',
+      meta_description: ''
     });
   };
 
@@ -285,31 +331,80 @@ export default function BlogTab() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Resumo *
+              Resumo (Descrição curta) *
             </label>
             <textarea
               value={formData.excerpt}
-              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value, meta_description: e.target.value })}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               rows={3}
-              placeholder="Breve descrição do post (aparece na listagem)"
+              placeholder="Breve descrição do post (aparece na listagem e no Google)"
+              maxLength={160}
             />
+            <p className="text-xs text-slate-500 mt-1">
+              {formData.excerpt.length}/160 caracteres (ideal para SEO)
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Conteúdo (HTML) *
+              Conteúdo do Artigo *
             </label>
-            <textarea
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
-              rows={15}
-              placeholder="<h2>Título</h2><p>Parágrafo...</p>"
-            />
+            <div className="border border-slate-300 rounded-lg overflow-hidden">
+              <ReactQuill
+                theme="snow"
+                value={formData.content}
+                onChange={handleContentChange}
+                modules={modules}
+                formats={formats}
+                placeholder="Escreva o conteúdo do artigo aqui..."
+                className="bg-white"
+                style={{ height: '400px', marginBottom: '50px' }}
+              />
+            </div>
             <p className="text-xs text-slate-500 mt-1">
-              Use tags HTML: &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;img&gt;
+              Use o editor para formatar o texto. Adicione títulos (H2, H3), listas, links e imagens.
             </p>
+          </div>
+
+          <div className="border-t border-slate-200 pt-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">SEO (Otimização para Google)</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Meta Título (Google)
+                </label>
+                <input
+                  type="text"
+                  value={formData.meta_title}
+                  onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Título que aparece no Google"
+                  maxLength={60}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {formData.meta_title.length}/60 caracteres
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Meta Descrição (Google)
+                </label>
+                <textarea
+                  value={formData.meta_description}
+                  onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  rows={2}
+                  placeholder="Descrição que aparece no Google"
+                  maxLength={160}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {formData.meta_description.length}/160 caracteres
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -321,7 +416,7 @@ export default function BlogTab() {
               className="w-4 h-4 text-orange-600 border-slate-300 rounded focus:ring-orange-500"
             />
             <label htmlFor="published" className="text-sm font-medium text-slate-700">
-              Publicar imediatamente
+              Publicar imediatamente (visível no site e Google)
             </label>
           </div>
 

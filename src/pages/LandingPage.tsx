@@ -12,6 +12,9 @@ export default function LandingPage() {
   const [showModal, setShowModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showHistoriaModal, setShowHistoriaModal] = useState(false);
+  const [showAvaliacoesModal, setShowAvaliacoesModal] = useState(false);
+  const [showBlogModal, setShowBlogModal] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -276,10 +279,10 @@ export default function LandingPage() {
               <p className="text-lg text-slate-700 mb-6">
                 A Kifer Saúde nasceu para simplificar o acesso aos melhores planos, com atendimento humano e soluções que cabem no seu bolso.
               </p>
-              <a href="#cotacao" className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
+              <button onClick={() => setShowHistoriaModal(true)} className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
                 Conheça nossa história completa
                 <ChevronRight className="w-4 h-4 ml-1" />
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -441,10 +444,10 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center mt-8">
-            <a href="#" className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
+            <button onClick={() => setShowAvaliacoesModal(true)} className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
               Mais avaliações no Google
               <ChevronRight className="w-4 h-4 ml-1" />
-            </a>
+            </button>
           </div>
         </div>
       </section>
@@ -609,7 +612,7 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center mt-12">
-            <button className="px-8 py-3 border-2 border-orange-600 text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors">
+            <button onClick={() => setShowBlogModal(true)} className="px-8 py-3 border-2 border-orange-600 text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors">
               Ver todos os artigos
             </button>
           </div>
@@ -872,6 +875,369 @@ export default function LandingPage() {
                 Resposta em até 10 minutos
               </p>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showHistoriaModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
+              <h2 className="text-3xl font-bold">Nossa História</h2>
+              <button
+                onClick={() => setShowHistoriaModal(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="prose max-w-none">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Como Tudo Começou</h3>
+                <p className="text-slate-700 leading-relaxed mb-4">
+                  Em 2015, comecei minha jornada no mercado de saúde suplementar com um objetivo claro: tornar o acesso a planos de saúde mais simples, transparente e humano. Durante anos trabalhando em grandes corretoras, percebi que as pessoas se sentiam perdidas em meio a tantas opções, siglas técnicas e processos burocráticos.
+                </p>
+                <p className="text-slate-700 leading-relaxed mb-4">
+                  Foi então que decidi criar a Kifer Saúde, uma corretora que não vende apenas planos, mas oferece consultoria personalizada e acompanhamento em cada etapa da jornada do cliente.
+                </p>
+
+                <h3 className="text-2xl font-bold text-slate-900 mb-4 mt-8">Nossa Missão</h3>
+                <p className="text-slate-700 leading-relaxed mb-4">
+                  Acreditamos que contratar um plano de saúde não deve ser complicado. Por isso, nossa missão é traduzir o "juridiquês" para a linguagem do dia a dia, comparar as melhores opções do mercado e encontrar o plano que realmente faz sentido para cada pessoa e família.
+                </p>
+
+                <h3 className="text-2xl font-bold text-slate-900 mb-4 mt-8">Por Que Somos Diferentes</h3>
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-xl mb-6">
+                  <ul className="space-y-3 text-slate-700">
+                    <li className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span><strong>Atendimento Humanizado:</strong> Tratamos cada cliente como único, entendendo suas necessidades e particularidades</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span><strong>Transparência Total:</strong> Explicamos cada detalhe, sem letras miúdas ou surpresas desagradáveis</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span><strong>Acompanhamento Contínuo:</strong> Não desaparecemos após a venda. Estamos aqui para ajudar sempre que precisar</span>
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span><strong>Especialização Regional:</strong> Conhecemos profundamente o mercado do Rio de Janeiro e suas particularidades</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <h3 className="text-2xl font-bold text-slate-900 mb-4 mt-8">Nossos Valores</h3>
+                <p className="text-slate-700 leading-relaxed mb-4">
+                  Construímos nossa empresa sobre três pilares fundamentais: <strong>confiança</strong>, <strong>transparência</strong> e <strong>compromisso</strong>. Cada cliente que atendemos não é apenas um número, mas uma relação de longo prazo baseada em respeito e cuidado genuíno.
+                </p>
+
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-8 mt-8">
+                  <h3 className="text-2xl font-bold mb-4">Mais de 500 Clientes Satisfeitos</h3>
+                  <p className="text-white/90 leading-relaxed mb-4">
+                    Ao longo desses anos, já ajudamos centenas de famílias a encontrarem o plano de saúde perfeito. Nossa taxa de satisfação de 98% reflete o compromisso que temos com cada pessoa que confia em nosso trabalho.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowHistoriaModal(false);
+                      setShowModal(true);
+                    }}
+                    className="px-6 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-all"
+                  >
+                    Faça parte dessa história
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAvaliacoesModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
+              <div>
+                <h2 className="text-3xl font-bold">Avaliações de Clientes</h2>
+                <p className="text-white/90 mt-1">Nota média: 4.9 ⭐ (127 avaliações)</p>
+              </div>
+              <button
+                onClick={() => setShowAvaliacoesModal(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  {
+                    name: "Regina Silva",
+                    age: 44,
+                    rating: 5,
+                    date: "Há 2 semanas",
+                    review: "Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D'Or. Atendimento nota 10! Ela explicou cada detalhe e me ajudou a escolher o melhor custo-benefício."
+                  },
+                  {
+                    name: "Marcelo Santos",
+                    age: 38,
+                    rating: 5,
+                    date: "Há 1 mês",
+                    review: "Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções. A Luiza é muito atenciosa e profissional!"
+                  },
+                  {
+                    name: "Ana Paula Ferreira",
+                    age: 52,
+                    rating: 5,
+                    date: "Há 1 mês",
+                    review: "Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente! Tirou todas as minhas dúvidas e ainda me ligou depois para saber se estava tudo certo."
+                  },
+                  {
+                    name: "Carlos Eduardo",
+                    age: 29,
+                    rating: 5,
+                    date: "Há 2 meses",
+                    review: "Como MEI, consegui economizar muito no plano empresarial. A Luiza me mostrou opções que eu nem sabia que existiam. Recomendo demais!"
+                  },
+                  {
+                    name: "Juliana Oliveira",
+                    age: 35,
+                    rating: 5,
+                    date: "Há 2 meses",
+                    review: "Contratei plano para toda minha família e foi super tranquilo. A Luiza tem um conhecimento incrível sobre as operadoras e me ajudou a escolher o melhor."
+                  },
+                  {
+                    name: "Roberto Alves",
+                    age: 47,
+                    rating: 5,
+                    date: "Há 3 meses",
+                    review: "Precisava migrar de operadora urgente e a Kifer Saúde resolveu tudo rapidinho. Atendimento excepcional e muito profissional!"
+                  },
+                  {
+                    name: "Fernanda Costa",
+                    age: 41,
+                    rating: 5,
+                    date: "Há 3 meses",
+                    review: "Melhor experiência que tive contratando plano de saúde. Nada de empurrar plano caro, a Luiza realmente busca o que é melhor para o cliente."
+                  },
+                  {
+                    name: "Paulo Henrique",
+                    age: 55,
+                    rating: 5,
+                    date: "Há 4 meses",
+                    review: "Sempre tive plano pela empresa, mas agora como autônomo precisava contratar por conta. A Luiza me orientou perfeitamente e consegui um plano ótimo com preço justo!"
+                  },
+                  {
+                    name: "Camila Rodrigues",
+                    age: 33,
+                    rating: 4,
+                    date: "Há 4 meses",
+                    review: "Muito bom! A Luiza é bem atenciosa e me ajudou bastante na escolha. Única observação é que demorou um pouco mais que o esperado para ativar, mas foi culpa da operadora."
+                  },
+                  {
+                    name: "André Luiz",
+                    age: 42,
+                    rating: 5,
+                    date: "Há 5 meses",
+                    review: "Consultoria de primeira! A Luiza não só me vendeu um plano, ela me educou sobre como funciona todo o sistema de saúde suplementar. Vale muito a pena!"
+                  }
+                ].map((review, index) => (
+                  <div key={index} className="bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center">
+                        <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-orange-700 font-bold text-lg">{review.name[0]}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{review.name}</p>
+                          <p className="text-sm text-slate-600">{review.age} anos</p>
+                        </div>
+                      </div>
+                      <span className="text-sm text-slate-500">{review.date}</span>
+                    </div>
+                    <div className="flex items-center mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-5 h-5 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
+                      ))}
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">{review.review}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 text-center">
+                <p className="text-slate-700 mb-4">
+                  Quer deixar sua avaliação ou tirar dúvidas com nossos clientes?
+                </p>
+                <a
+                  href="https://www.google.com/search?q=kifer+saude"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold hover:bg-orange-700 transition-colors"
+                >
+                  Ver no Google
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBlogModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
+              <h2 className="text-3xl font-bold">Blog e Conteúdos</h2>
+              <button
+                onClick={() => setShowBlogModal(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  {
+                    title: "Como escolher o plano de saúde ideal para sua família",
+                    excerpt: "Descubra os principais critérios para avaliar e escolher o melhor plano de saúde considerando sua realidade familiar. Entenda sobre abrangência, carências e coberturas.",
+                    date: "15 de Janeiro, 2025",
+                    category: "Guias",
+                    readTime: "8 min"
+                  },
+                  {
+                    title: "Planos empresariais: como MEI pode economizar até 40%",
+                    excerpt: "Entenda como microempreendedores individuais podem contratar planos de saúde com preços muito mais acessíveis e quais são os requisitos necessários.",
+                    date: "10 de Janeiro, 2025",
+                    category: "Economia",
+                    readTime: "6 min"
+                  },
+                  {
+                    title: "Rede credenciada: como verificar hospitais e médicos",
+                    excerpt: "Aprenda a pesquisar e confirmar se seus médicos e hospitais favoritos fazem parte da rede do seu plano. Dicas práticas para não errar na escolha.",
+                    date: "5 de Janeiro, 2025",
+                    category: "Dicas",
+                    readTime: "5 min"
+                  },
+                  {
+                    title: "Coparticipação vale a pena? Entenda quando escolher",
+                    excerpt: "Descubra se o modelo de coparticipação é ideal para seu perfil e como calcular se realmente vai economizar com essa modalidade de plano.",
+                    date: "28 de Dezembro, 2024",
+                    category: "Guias",
+                    readTime: "7 min"
+                  },
+                  {
+                    title: "Carências em planos de saúde: tudo que você precisa saber",
+                    excerpt: "Entenda os prazos de carência para cada tipo de procedimento, como funciona a portabilidade e casos em que há redução ou isenção de carências.",
+                    date: "20 de Dezembro, 2024",
+                    category: "Educação",
+                    readTime: "10 min"
+                  },
+                  {
+                    title: "Plano nacional vs estadual: qual escolher?",
+                    excerpt: "Compare as diferenças entre planos com abrangência nacional e estadual. Descubra qual faz mais sentido para seu estilo de vida e orçamento.",
+                    date: "15 de Dezembro, 2024",
+                    category: "Comparativos",
+                    readTime: "6 min"
+                  },
+                  {
+                    title: "Como funciona a portabilidade de carências",
+                    excerpt: "Aprenda a migrar de plano sem precisar cumprir novas carências. Veja os requisitos e passo a passo para fazer a portabilidade corretamente.",
+                    date: "10 de Dezembro, 2024",
+                    category: "Dicas",
+                    readTime: "9 min"
+                  },
+                  {
+                    title: "Planos de saúde para idosos: direitos e cuidados",
+                    excerpt: "Conheça os direitos dos idosos em relação a planos de saúde, estatuto do idoso e como garantir um atendimento de qualidade na terceira idade.",
+                    date: "5 de Dezembro, 2024",
+                    category: "Direitos",
+                    readTime: "8 min"
+                  },
+                  {
+                    title: "O que a ANS fiscaliza nos planos de saúde?",
+                    excerpt: "Entenda o papel da Agência Nacional de Saúde Suplementar e como ela protege os beneficiários. Saiba como fazer reclamações e denúncias.",
+                    date: "1 de Dezembro, 2024",
+                    category: "Educação",
+                    readTime: "7 min"
+                  },
+                  {
+                    title: "Reajuste anual: como funciona e como se preparar",
+                    excerpt: "Descubra como é calculado o reajuste anual dos planos de saúde, quais os limites legais e dicas para lidar com os aumentos de mensalidade.",
+                    date: "25 de Novembro, 2024",
+                    category: "Economia",
+                    readTime: "6 min"
+                  },
+                  {
+                    title: "Telemedicina: como usar pelo plano de saúde",
+                    excerpt: "Aprenda a utilizar os serviços de telemedicina oferecidos pelos planos de saúde. Veja quais consultas podem ser feitas online e como agendar.",
+                    date: "20 de Novembro, 2024",
+                    category: "Tecnologia",
+                    readTime: "5 min"
+                  },
+                  {
+                    title: "Maternidade em planos de saúde: coberturas e carências",
+                    excerpt: "Guia completo sobre cobertura de maternidade, pré-natal, parto e pós-parto. Entenda carências e planejamento para quem deseja engravidar.",
+                    date: "15 de Novembro, 2024",
+                    category: "Guias",
+                    readTime: "11 min"
+                  }
+                ].map((post, index) => (
+                  <article key={index} className="bg-slate-50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group cursor-pointer">
+                    <div className="h-40 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                      <FileText className="w-16 h-16 text-orange-400 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
+                          {post.category}
+                        </span>
+                        <span className="text-xs text-slate-500 flex items-center">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {post.date}
+                        </span>
+                        <span className="text-xs text-slate-500 flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {post.readTime}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                        {post.excerpt}
+                      </p>
+                      <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center">
+                        Ler artigo completo
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-8 text-center">
+                <h3 className="text-2xl font-bold mb-3">Ficou com alguma dúvida?</h3>
+                <p className="text-white/90 mb-6">
+                  Converse comigo pelo WhatsApp e tire todas as suas dúvidas sobre planos de saúde
+                </p>
+                <button
+                  onClick={() => {
+                    setShowBlogModal(false);
+                    openWhatsApp();
+                  }}
+                  className="px-8 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-all inline-flex items-center"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Falar no WhatsApp
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight } from 'lucide-react';
+import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X } from 'lucide-react';
 
 export default function LandingPage() {
   const [formData, setFormData] = useState({
@@ -9,16 +9,18 @@ export default function LandingPage() {
     idade: '',
     tipoContratacao: 'PF'
   });
+  const [showModal, setShowModal] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdade: ${formData.idade}\nTipo: ${formData.tipoContratacao}`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/5511999999999?text=${encodedMessage}`, '_blank');
+    setShowModal(false);
   };
 
-  const scrollToForm = () => {
-    document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth' });
+  const openWhatsApp = () => {
+    window.open('https://wa.me/5511999999999', '_blank');
   };
 
   return (
@@ -58,43 +60,50 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-36 pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden">
+      <section className="pt-36 pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-7xl mx-auto relative z-10 w-full">
           <div className="text-center">
-            <div className="mb-6 flex justify-center gap-4">
-              <span className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-semibold text-orange-700 shadow-md">
-                <Shield className="w-4 h-4 mr-2" />
-                Corretora registrada na ANS
-              </span>
-              <span className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-semibold text-orange-700 shadow-md">
-                <Heart className="w-4 h-4 mr-2" />
-                Atendimento humanizado
+            <div className="mb-8">
+              <span className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-base font-bold shadow-lg animate-pulse">
+                <Star className="w-5 h-5 mr-2 fill-current" />
+                Especialista #1 em Planos de Saúde RJ
               </span>
             </div>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
-              O plano de saúde certo muda tudo —
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-2">
-                inclusive o quanto você paga.
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-slate-900 mb-8 leading-tight">
+              O plano ideal começa
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-3">
+                com gente de verdade.
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-slate-700 mb-10 max-w-3xl mx-auto font-light">
-              Compare opções, reduza custos e escolha a proteção ideal para você e sua família.
+            <p className="text-2xl md:text-3xl text-slate-700 mb-12 max-w-4xl mx-auto font-light leading-relaxed">
+              Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
+              <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
             </p>
 
-            <button
-              onClick={scrollToForm}
-              className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform"
-            >
-              Fazer minha cotação agora
-              <ChevronRight className="inline-block ml-2 w-5 h-5" />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-12 py-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xl md:text-2xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform"
+              >
+                Quero minha cotação
+                <ChevronRight className="inline-block ml-2 w-6 h-6" />
+              </button>
+
+              <button
+                onClick={openWhatsApp}
+                className="px-12 py-6 bg-white border-2 border-green-500 text-green-600 text-xl md:text-2xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform"
+              >
+                <MessageCircle className="inline-block mr-2 w-6 h-6" />
+                Ir para WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -519,6 +528,113 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
+              <h2 className="text-3xl font-bold">Faça sua Cotação</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-8">
+              <p className="text-slate-600 mb-6 text-center">
+                Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="Seu nome"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Telefone (WhatsApp) *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Cidade *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.cidade}
+                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="Sua cidade"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Idade dos Beneficiários *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.idade}
+                    onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="Ex: 35, 32, 8"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Tipo de Contratação *
+                </label>
+                <select
+                  value={formData.tipoContratacao}
+                  onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                >
+                  <option value="PF">Pessoa Física</option>
+                  <option value="MEI">MEI</option>
+                  <option value="CNPJ">CNPJ</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              >
+                Enviar cotação via WhatsApp
+                <MessageCircle className="inline-block ml-2 w-5 h-5" />
+              </button>
+
+              <p className="text-center text-sm text-slate-500 mt-4">
+                Resposta em até 10 minutos
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

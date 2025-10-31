@@ -201,8 +201,8 @@ export default function LandingPage() {
                 </div>
 
                 <div className="relative w-[320px] h-[480px] md:w-[360px] md:h-[540px]">
-                  <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-4 py-2 flex items-center gap-2 z-20 whitespace-nowrap animate-pulse">
-                    <div className="w-4 h-4 bg-white rounded-full animate-pulse"></div>
+                  <div className="absolute top-5 right-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-4 py-2 flex items-center gap-2 z-20 whitespace-nowrap animate-pulse">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     <span className="font-bold text-white text-xs">Online Agora</span>
                   </div>
                   <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">

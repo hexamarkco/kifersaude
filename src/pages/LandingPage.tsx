@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp } from 'lucide-react';
 
 export default function LandingPage() {
@@ -11,6 +11,16 @@ export default function LandingPage() {
   });
   const [showModal, setShowModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const faqData = [
     {
@@ -103,21 +113,37 @@ export default function LandingPage() {
         <MessageCircle className="w-8 h-8" />
       </a>
 
-      <nav className="fixed top-10 w-full bg-white/95 backdrop-blur-sm shadow-sm z-40">
+      <nav className={`fixed top-10 w-full z-40 transition-all duration-300 ${
+        isScrolled
+          ? 'bg-white/95 backdrop-blur-sm shadow-sm'
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
                 <Heart className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
+              <span className={`text-2xl font-bold transition-colors duration-300 ${
+                isScrolled ? 'text-slate-900' : 'text-slate-900'
+              }`}>Kifer Saúde</span>
             </div>
             <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
-              <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Somos</a>
-              <a href="#como-funciona" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Como Funciona</a>
-              <a href="#planos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Planos</a>
-              <a href="#faq" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">FAQ</a>
-              <a href="#contato" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Contato</a>
+              <a href="#quem-somos" className={`font-medium transition-colors ${
+                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+              }`}>Quem Somos</a>
+              <a href="#como-funciona" className={`font-medium transition-colors ${
+                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+              }`}>Como Funciona</a>
+              <a href="#planos" className={`font-medium transition-colors ${
+                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+              }`}>Planos</a>
+              <a href="#faq" className={`font-medium transition-colors ${
+                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+              }`}>FAQ</a>
+              <a href="#contato" className={`font-medium transition-colors ${
+                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+              }`}>Contato</a>
             </div>
             <button
               onClick={() => setShowModal(true)}

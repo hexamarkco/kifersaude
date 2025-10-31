@@ -169,23 +169,25 @@ export default function LandingPage() {
             </div>
 
             <div className="flex justify-center order-1 lg:order-2 relative">
-              <div className="relative">
-                <div className="absolute -top-6 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10">
+              <div className="relative pt-16 pb-8">
+                <div className="absolute top-0 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10">
                   <UsersIcon className="w-5 h-5 text-orange-600" />
                   <span className="font-bold text-slate-900">500+ Clientes</span>
                 </div>
 
-                <div className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10" style={{ animationDelay: '0.2s' }}>
+                <div className="absolute top-1/2 -translate-y-1/2 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10" style={{ animationDelay: '0.2s' }}>
                   <Star className="w-5 h-5 text-yellow-400 fill-current" />
                   <span className="font-bold text-slate-900">4.9★ Avaliação</span>
                 </div>
 
-                <div className="w-80 h-80 md:w-96 md:h-96 rounded-full overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
-                  <img
-                    src="/image.png"
-                    alt="Luiza Kifer - Especialista em Planos de Saúde"
-                    className="w-full h-full object-cover"
-                  />
+                <div className="relative w-80 h-80 md:w-96 md:h-96">
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[85%] rounded-full overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                    <img
+                      src="/image.png"
+                      alt="Luiza Kifer - Especialista em Planos de Saúde"
+                      className="w-full h-full object-cover object-top scale-110"
+                    />
+                  </div>
                 </div>
 
                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl px-8 py-4 text-center min-w-[280px] z-10">

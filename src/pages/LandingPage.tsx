@@ -80,6 +80,10 @@ export default function LandingPage() {
     window.open('https://wa.me/5511999999999', '_blank');
   };
 
+  const scrollToForm = () => {
+    document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="fixed top-0 w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2 px-4 text-center text-sm font-medium z-50 shadow-md">

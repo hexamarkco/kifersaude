@@ -112,23 +112,31 @@ export default function LandingPage() {
               </div>
               <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-4">
               <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Somos</a>
               <a href="#como-funciona" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Como Funciona</a>
+              <a href="#planos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Planos</a>
+              <a href="#faq" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">FAQ</a>
               <a href="#contato" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Contato</a>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:scale-105"
+              >
+                Cotação Grátis
+              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <section className="pt-36 pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[90vh] flex items-center">
+      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className="text-left order-2 lg:order-1">
               <div className="mb-6">
                 <span className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-sm font-bold shadow-lg animate-pulse">
@@ -181,10 +189,6 @@ export default function LandingPage() {
 
             <div className="flex justify-center order-1 lg:order-2 relative">
               <div className="relative pt-20 pb-8">
-                <div className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-5 py-2.5 flex items-center gap-2 z-10 whitespace-nowrap animate-pulse">
-                  <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
-                  <span className="font-bold text-white text-sm">Online Agora</span>
-                </div>
 
                 <div className="absolute top-20 -left-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10">
                   <div className="text-2xl font-bold text-orange-600 mb-0">500+</div>
@@ -197,11 +201,15 @@ export default function LandingPage() {
                 </div>
 
                 <div className="relative w-[320px] h-[480px] md:w-[360px] md:h-[540px]">
+                  <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-4 py-2 flex items-center gap-2 z-20 whitespace-nowrap animate-pulse">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span className="font-bold text-white text-xs">Online Agora</span>
+                  </div>
                   <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
                     <img
                       src="/image.png"
                       alt="Luiza Kifer - Especialista em Planos de Saúde"
-                      className="w-full h-full object-cover object-top scale-110"
+                      className="w-full h-full object-cover object-[center_35%] scale-105"
                     />
                   </div>
                 </div>

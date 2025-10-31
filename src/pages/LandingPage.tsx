@@ -121,49 +121,78 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-36 pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
+      <section className="pt-36 pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[90vh] flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10 w-full">
-          <div className="text-center">
-            <div className="mb-8">
-              <span className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-base font-bold shadow-lg animate-pulse">
-                <Star className="w-5 h-5 mr-2 fill-current" />
-                Especialista #1 em Planos de Saúde RJ
-              </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-left order-2 lg:order-1">
+              <div className="mb-8">
+                <span className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-base font-bold shadow-lg animate-pulse">
+                  <Star className="w-5 h-5 mr-2 fill-current" />
+                  Especialista #1 em Planos de Saúde RJ
+                </span>
+              </div>
+
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 mb-8 leading-tight">
+                O plano ideal começa
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-3">
+                  com gente de verdade.
+                </span>
+              </h1>
+
+              <p className="text-xl md:text-2xl text-slate-700 mb-12 font-light leading-relaxed">
+                Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
+                <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform"
+                >
+                  Quero minha cotação
+                  <ChevronRight className="inline-block ml-2 w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={openWhatsApp}
+                  className="px-10 py-5 bg-white border-2 border-green-500 text-green-600 text-lg md:text-xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform"
+                >
+                  <MessageCircle className="inline-block mr-2 w-5 h-5" />
+                  Ir para WhatsApp
+                </button>
+              </div>
             </div>
 
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-slate-900 mb-8 leading-tight">
-              O plano ideal começa
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mt-3">
-                com gente de verdade.
-              </span>
-            </h1>
+            <div className="flex justify-center order-1 lg:order-2 relative">
+              <div className="relative">
+                <div className="absolute -top-6 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10">
+                  <Users as UsersIcon className="w-5 h-5 text-orange-600" />
+                  <span className="font-bold text-slate-900">500+ Clientes</span>
+                </div>
 
-            <p className="text-2xl md:text-3xl text-slate-700 mb-12 max-w-4xl mx-auto font-light leading-relaxed">
-              Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
-              <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
-            </p>
+                <div className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10" style={{ animationDelay: '0.2s' }}>
+                  <Star className="w-5 h-5 text-yellow-400 fill-current" />
+                  <span className="font-bold text-slate-900">4.9★ Avaliação</span>
+                </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button
-                onClick={() => setShowModal(true)}
-                className="px-12 py-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xl md:text-2xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform"
-              >
-                Quero minha cotação
-                <ChevronRight className="inline-block ml-2 w-6 h-6" />
-              </button>
+                <div className="w-80 h-80 md:w-96 md:h-96 rounded-full overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                  <img
+                    src="/image.png"
+                    alt="Luiza Kifer - Especialista em Planos de Saúde"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
-              <button
-                onClick={openWhatsApp}
-                className="px-12 py-6 bg-white border-2 border-green-500 text-green-600 text-xl md:text-2xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform"
-              >
-                <MessageCircle className="inline-block mr-2 w-6 h-6" />
-                Ir para WhatsApp
-              </button>
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl px-8 py-4 text-center min-w-[280px] z-10">
+                  <h3 className="text-xl font-bold text-slate-900 mb-1">Luiza Kifer</h3>
+                  <p className="text-orange-600 font-semibold">Sua especialista em saúde</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

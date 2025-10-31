@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp } from 'lucide-react';
+import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 
 export default function LandingPage() {
   const [formData, setFormData] = useState({
@@ -878,55 +878,60 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="bg-slate-950 text-white py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div>
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                   <Heart className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-2xl font-bold">Kifer Saúde</span>
               </div>
-              <p className="text-slate-400 mb-4">
-                Kifer Saúde é uma corretora registrada na ANS, especializada em planos individuais, familiares e empresariais.
-              </p>
-              <p className="text-slate-500 text-sm">
-                CNPJ: 00.000.000/0001-00
+              <p className="text-slate-400 leading-relaxed">
+                Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-4">Links Rápidos</h3>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-orange-400 transition-colors">Home</a></li>
-                <li><a href="#quem-somos" className="hover:text-orange-400 transition-colors">Sobre</a></li>
+              <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
+              <ul className="space-y-3 text-slate-400">
+                <li><a href="#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
+                <li><a href="#cotacao" className="hover:text-orange-400 transition-colors">Planos</a></li>
+                <li><button onClick={() => setShowBlogModal(true)} className="hover:text-orange-400 transition-colors text-left">Blog</button></li>
                 <li><a href="#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
-                <li><a href="#" className="hover:text-orange-400 transition-colors">Política de Privacidade</a></li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-4">Contato</h3>
+              <h3 className="text-lg font-bold mb-4">Contato</h3>
               <div className="space-y-3 text-slate-400">
-                <a href="tel:+5511999999999" className="flex items-center hover:text-orange-400 transition-colors">
-                  <Phone className="w-4 h-4 mr-2" />
-                  (11) 99999-9999
+                <div className="flex items-start">
+                  <MapPin className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+                  <span>Rio de Janeiro, RJ</span>
+                </div>
+                <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-400 transition-colors">
+                  <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+                  <span>contato@kifersaude.com.br</span>
                 </a>
-                <a href="mailto:contato@kifersaude.com.br" className="flex items-center hover:text-orange-400 transition-colors">
-                  <Mail className="w-4 h-4 mr-2" />
-                  contato@kifersaude.com.br
+                <a href="https://instagram.com/kifer.saude" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
+                  <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+                  <span>@kifer.saude</span>
                 </a>
-                <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-orange-400 transition-colors">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  WhatsApp
-                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold mb-4">Legal</h3>
+              <div className="space-y-2 text-slate-400">
+                <p className="text-sm">CNPJ: 12.345.678/0001-90</p>
+                <p className="text-sm">ANS: 123456</p>
               </div>
             </div>
           </div>
 
           <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-            <p>&copy; 2025 Kifer Saúde - Corretora de Planos de Saúde. Todos os direitos reservados.</p>
+            <p>© 2025 Kifer Saúde. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

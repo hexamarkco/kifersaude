@@ -152,7 +152,7 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform"
+                  className="px-10 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg md:text-xl rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
                 >
                   Quero minha cotação
                   <ChevronRight className="inline-block ml-2 w-5 h-5" />
@@ -160,7 +160,7 @@ export default function LandingPage() {
 
                 <button
                   onClick={openWhatsApp}
-                  className="px-10 py-5 bg-white border-2 border-green-500 text-green-600 text-lg md:text-xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform"
+                  className="px-10 py-5 bg-white border-2 border-green-500 text-green-600 text-lg md:text-xl rounded-xl font-bold hover:bg-green-50 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
                 >
                   <MessageCircle className="inline-block mr-2 w-5 h-5" />
                   Ir para WhatsApp
@@ -169,18 +169,18 @@ export default function LandingPage() {
             </div>
 
             <div className="flex justify-center order-1 lg:order-2 relative">
-              <div className="relative pt-16 pb-8">
-                <div className="absolute top-0 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10">
+              <div className="relative pt-20 pb-8">
+                <div className="absolute top-0 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10 whitespace-nowrap">
                   <UsersIcon className="w-5 h-5 text-orange-600" />
                   <span className="font-bold text-slate-900">500+ Clientes</span>
                 </div>
 
-                <div className="absolute top-1/2 -translate-y-1/2 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10" style={{ animationDelay: '0.2s' }}>
+                <div className="absolute top-1/2 -translate-y-1/2 -right-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10 whitespace-nowrap" style={{ animationDelay: '0.2s' }}>
                   <Star className="w-5 h-5 text-yellow-400 fill-current" />
                   <span className="font-bold text-slate-900">4.9★ Avaliação</span>
                 </div>
 
-                <div className="relative w-80 h-80 md:w-96 md:h-96">
+                <div className="relative w-[420px] h-[420px] md:w-[500px] md:h-[500px]">
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[85%] rounded-full overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
                     <img
                       src="/image.png"
@@ -192,7 +192,7 @@ export default function LandingPage() {
 
                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl px-8 py-4 text-center min-w-[280px] z-10">
                   <h3 className="text-xl font-bold text-slate-900 mb-1">Luiza Kifer</h3>
-                  <p className="text-orange-600 font-semibold">Sua especialista em saúde</p>
+                  <p className="text-orange-600 font-semibold whitespace-nowrap">Sua especialista em saúde</p>
                 </div>
               </div>
             </div>

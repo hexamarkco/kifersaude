@@ -379,11 +379,41 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center">
-            {['SulAmérica', 'Amil', 'Bradesco Saúde', 'Porto Seguro', 'Unimed', 'MedSênior', 'Leve Saúde', 'Prevent Senior', 'NotreDame', 'Hapvida'].map((operadora) => (
-              <div key={operadora} className="bg-slate-50 rounded-xl p-6 flex items-center justify-center h-24 hover:shadow-lg transition-shadow">
-                <span className="text-slate-600 font-semibold text-center">{operadora}</span>
-              </div>
-            ))}
+            <div className="bg-white rounded-xl p-6 flex items-center justify-center h-32 hover:shadow-lg transition-all group">
+              <img
+                src="/amil-logo-1-2.png"
+                alt="Amil"
+                className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
+            <div className="bg-white rounded-xl p-6 flex items-center justify-center h-32 hover:shadow-lg transition-all group">
+              <img
+                src="/porto-logo.png"
+                alt="Porto Seguro"
+                className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
+            <div className="bg-white rounded-xl p-6 flex items-center justify-center h-32 hover:shadow-lg transition-all group">
+              <img
+                src="/assim-saude-logo.png"
+                alt="Assim Saúde"
+                className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
+            <div className="bg-white rounded-xl p-6 flex items-center justify-center h-32 hover:shadow-lg transition-all group">
+              <img
+                src="/sulamerica-saude-logo.png"
+                alt="SulAmérica Saúde"
+                className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
+            <div className="bg-white rounded-xl p-6 flex items-center justify-center h-32 hover:shadow-lg transition-all group">
+              <img
+                src="/bradesco-saude-logo-1-1.png"
+                alt="Bradesco Saúde"
+                className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
           </div>
         </div>
       </section>

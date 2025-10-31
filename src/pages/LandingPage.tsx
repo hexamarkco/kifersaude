@@ -205,7 +205,7 @@ export default function LandingPage() {
                     <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     <span className="font-bold text-white text-xs">Online Agora</span>
                   </div>
-                  <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                  <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
                     <img
                       src="/image.png"
                       alt="Luiza Kifer - Especialista em Planos de Saúde"

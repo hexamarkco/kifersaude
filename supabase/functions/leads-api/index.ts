@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
+const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'] as const;
+
+function normalizeText(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+const origemAliasMap: Record<string, (typeof origensValidas)[number]> = origensValidas.reduce(
+  (acc, origem) => {
+    acc[normalizeText(origem)] = origem;
+    return acc;
+  },
+  {} as Record<string, (typeof origensValidas)[number]>
+);
+
+function getCanonicalOrigem(origem?: string): (typeof origensValidas)[number] | null {
+  if (!origem || typeof origem !== 'string') {
+    return null;
+  }
+
+  const normalized = normalizeText(origem);
+  return origemAliasMap[normalized] ?? null;
+}
+
 interface LeadData {
   nome_completo: string;
   telefone: string;
@@ -36,9 +64,11 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     errors.push('Campo "origem" é obrigatório e deve ser uma string');
   }
 
-  const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'];
-  if (data.origem && !origensValidas.includes(data.origem)) {
+  const origemCanonical = getCanonicalOrigem(data.origem);
+  if (data.origem && !origemCanonical) {
     errors.push(`Campo "origem" deve ser um dos valores: ${origensValidas.join(', ')}`);
+  } else if (origemCanonical) {
+    data.origem = origemCanonical;
   }
 
   if (!data.tipo_contratacao || typeof data.tipo_contratacao !== 'string') {
@@ -132,7 +162,7 @@ Deno.serve(async (req: Request) => {
         email: body.email?.trim() || null,
         cidade: body.cidade?.trim() || null,
         regiao: body.regiao?.trim() || null,
-        origem: body.origem,
+        origem: getCanonicalOrigem(body.origem) ?? body.origem,
         tipo_contratacao: body.tipo_contratacao,
         operadora_atual: body.operadora_atual?.trim() || null,
         status: body.status || 'Novo',

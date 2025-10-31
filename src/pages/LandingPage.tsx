@@ -250,7 +250,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="quem-somos" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="quem-somos" className="py-20 px-4 sm:px-6 lg:px-8 bg-white scroll-mt-32">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
@@ -285,7 +285,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="como-funciona" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <section id="como-funciona" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 scroll-mt-32">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
@@ -345,7 +345,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="planos" className="py-20 px-4 sm:px-6 lg:px-8 bg-white scroll-mt-32">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
@@ -520,7 +520,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-white scroll-mt-32">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
@@ -616,7 +616,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="cotacao" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600">
+      <section id="cotacao" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 scroll-mt-32">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -716,7 +716,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer id="contato" className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8">
+      <footer id="contato" className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 scroll-mt-32">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             <div className="md:col-span-2">

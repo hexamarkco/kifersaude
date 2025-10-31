@@ -171,7 +171,7 @@ export default function LandingPage() {
             <div className="flex justify-center order-1 lg:order-2 relative">
               <div className="relative">
                 <div className="absolute -top-6 -left-6 bg-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-2 animate-bounce z-10">
-                  <Users as UsersIcon className="w-5 h-5 text-orange-600" />
+                  <UsersIcon className="w-5 h-5 text-orange-600" />
                   <span className="font-bold text-slate-900">500+ Clientes</span>
                 </div>
 

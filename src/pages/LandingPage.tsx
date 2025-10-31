@@ -100,12 +100,46 @@ export default function LandingPage() {
   ];
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdade: ${formData.idade}\nTipo: ${formData.tipoContratacao}`;
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
-    setShowModal(false);
+
+    try {
+      const leadData = {
+        nome_completo: formData.nome,
+        telefone: formData.telefone,
+        cidade: formData.cidade || null,
+        origem: 'orgânico',
+        tipo_contratacao: formData.tipoContratacao === 'PF' ? 'Pessoa Física' : formData.tipoContratacao,
+        status: 'Novo',
+        responsavel: 'Luiza',
+        observacoes: `Idade dos beneficiários: ${formData.idade}`,
+        data_criacao: new Date().toISOString(),
+        ultimo_contato: new Date().toISOString(),
+        arquivado: false
+      };
+
+      const { error } = await supabase
+        .from('leads')
+        .insert([leadData]);
+
+      if (error) {
+        console.error('Erro ao salvar lead:', error);
+        alert('Ocorreu um erro ao enviar sua cotação. Por favor, tente novamente ou entre em contato via WhatsApp.');
+        return;
+      }
+
+      const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdade: ${formData.idade}\nTipo: ${formData.tipoContratacao}`;
+      const encodedMessage = encodeURIComponent(message);
+      window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
+
+      setFormData({ nome: '', telefone: '', cidade: '', idade: '', tipoContratacao: 'PF' });
+      setShowModal(false);
+
+      alert('✅ Cotação enviada com sucesso! Em breve entraremos em contato.');
+    } catch (error) {
+      console.error('Erro ao processar formulário:', error);
+      alert('Ocorreu um erro ao enviar sua cotação. Por favor, tente novamente.');
+    }
   };
 
   const openWhatsApp = () => {

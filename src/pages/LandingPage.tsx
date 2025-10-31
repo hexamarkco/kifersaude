@@ -110,21 +110,21 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
+              <span className="text-2xl font-bold text-slate-900">Luiza Kifer</span>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Somos</a>
+            <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
+              <a href="#quem-somos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Quem Sou</a>
               <a href="#como-funciona" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Como Funciona</a>
               <a href="#planos" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Planos</a>
               <a href="#faq" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">FAQ</a>
               <a href="#contato" className="text-slate-700 hover:text-orange-600 font-medium transition-colors">Contato</a>
-              <button
-                onClick={() => setShowModal(true)}
-                className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:scale-105"
-              >
-                Cotação Grátis
-              </button>
             </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="hidden md:block px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:scale-105"
+            >
+              Cotação Grátis
+            </button>
           </div>
         </div>
       </nav>

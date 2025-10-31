@@ -36,7 +36,7 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     errors.push('Campo "origem" é obrigatório e deve ser uma string');
   }
 
-  const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico'];
+  const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'];
   if (data.origem && !origensValidas.includes(data.origem)) {
     errors.push(`Campo "origem" deve ser um dos valores: ${origensValidas.join(', ')}`);
   }

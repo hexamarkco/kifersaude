@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings, MessageCircle, ChevronDown, Briefcase } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings, MessageCircle, ChevronDown, Briefcase, Mail, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,6 +41,8 @@ export default function Layout({
   const comunicacaoChildren = !isObserver ? [
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'whatsapp-history', label: 'WhatsApp', icon: MessageCircle },
+    { id: 'email', label: 'Email', icon: Mail },
+    { id: 'blog', label: 'Blog', icon: BookOpen },
   ] : [];
 
   const baseTabs: TabConfig[] = [

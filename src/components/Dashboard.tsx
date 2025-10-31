@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
+import { useAuth } from '../contexts/AuthContext';
 import {
   TrendingUp,
   Users,
@@ -40,6 +41,7 @@ type Dependent = {
 };
 
 export default function Dashboard() {
+  const { isObserver } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -98,7 +100,12 @@ export default function Dashboard() {
         supabase.from('dependents').select('*'),
       ]);
 
-      setLeads(leadsRes.data || []);
+      let filteredLeads = leadsRes.data || [];
+      if (isObserver) {
+        filteredLeads = filteredLeads.filter(lead => lead.origem !== 'Ully');
+      }
+
+      setLeads(filteredLeads);
       setContracts(contractsRes.data || []);
       setHolders(holdersRes.data || []);
       setDependents(dependentsRes.data || []);

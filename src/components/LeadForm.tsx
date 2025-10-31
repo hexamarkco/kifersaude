@@ -279,6 +279,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 <option value="Telein">Telein</option>
                 <option value="indicação">Indicação</option>
                 <option value="orgânico">Orgânico</option>
+                <option value="Ully">Ully</option>
               </select>
             </div>
 

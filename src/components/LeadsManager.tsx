@@ -100,6 +100,10 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const filterLeads = () => {
     let filtered = [...leads];
 
+    if (isObserver) {
+      filtered = filtered.filter(lead => lead.origem !== 'Ully');
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(lead =>
         lead.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||

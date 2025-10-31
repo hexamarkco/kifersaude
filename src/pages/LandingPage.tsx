@@ -623,6 +623,16 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+              <FileText className="w-12 h-12 text-orange-600 mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Conteúdo educativo</h3>
+              <p className="text-slate-600">
+                <a href="/blog" className="text-orange-600 hover:text-orange-700 font-semibold">
+                  Acesse nosso blog
+                </a> com dicas e guias sobre planos de saúde
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
               <Search className="w-12 h-12 text-orange-600 mb-4" />
               <h3 className="text-xl font-bold text-slate-900 mb-2">Cotações personalizadas</h3>
               <p className="text-slate-600">Sem custo e totalmente adaptadas ao seu perfil</p>
@@ -898,7 +908,7 @@ export default function LandingPage() {
               <ul className="space-y-3 text-slate-400">
                 <li><a href="#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
                 <li><a href="#cotacao" className="hover:text-orange-400 transition-colors">Planos</a></li>
-                <li><button onClick={() => setShowBlogModal(true)} className="hover:text-orange-400 transition-colors text-left">Blog</button></li>
+                <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
                 <li><a href="#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
               </ul>
             </div>

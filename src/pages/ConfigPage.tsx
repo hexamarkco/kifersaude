@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings, Users, Building2, AlertCircle, Zap } from 'lucide-react';
+import { Settings, Users, Building2, AlertCircle, Zap, FileText } from 'lucide-react';
 import SystemSettingsTab from '../components/config/SystemSettingsTab';
 import OperadorasTab from '../components/config/OperadorasTab';
 import UsersTab from '../components/config/UsersTab';
 import ApiIntegrationsTab from '../components/config/ApiIntegrationsTab';
+import BlogTab from '../components/config/BlogTab';
 
-type TabType = 'system' | 'operadoras' | 'users' | 'apis';
+type TabType = 'system' | 'operadoras' | 'users' | 'apis' | 'blog';
 
 export default function ConfigPage() {
   const { isAdmin } = useAuth();
@@ -28,6 +29,7 @@ export default function ConfigPage() {
     { id: 'system' as TabType, label: 'Sistema', icon: Settings },
     { id: 'operadoras' as TabType, label: 'Operadoras', icon: Building2 },
     { id: 'users' as TabType, label: 'Usuários', icon: Users },
+    { id: 'blog' as TabType, label: 'Blog', icon: FileText },
     { id: 'apis' as TabType, label: 'Integrações', icon: Zap },
   ];
 
@@ -63,6 +65,7 @@ export default function ConfigPage() {
           {activeTab === 'system' && <SystemSettingsTab />}
           {activeTab === 'operadoras' && <OperadorasTab />}
           {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'blog' && <BlogTab />}
           {activeTab === 'apis' && <ApiIntegrationsTab />}
         </div>
       </div>

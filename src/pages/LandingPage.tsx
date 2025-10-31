@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  category: string;
+  read_time: string;
+  published_at: string;
+  cover_image_url?: string;
+}
 
 export default function LandingPage() {
   const [formData, setFormData] = useState({
@@ -9,13 +22,14 @@ export default function LandingPage() {
     idade: '',
     tipoContratacao: 'PF'
   });
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showHistoriaModal, setShowHistoriaModal] = useState(false);
   const [showAvaliacoesModal, setShowAvaliacoesModal] = useState(false);
-  const [showBlogModal, setShowBlogModal] = useState(false);
-  const [selectedArticle, setSelectedArticle] = useState<number | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +39,30 @@ export default function LandingPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    loadBlogPosts();
+  }, []);
+
+  const loadBlogPosts = async () => {
+    setLoadingPosts(true);
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('id, title, slug, excerpt, category, read_time, published_at, cover_image_url')
+      .eq('published', true)
+      .order('published_at', { ascending: false })
+      .limit(3);
+
+    if (!error && data) {
+      setBlogPosts(data);
+    }
+    setLoadingPosts(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   const faqData = [
     {
@@ -61,145 +99,6 @@ export default function LandingPage() {
     }
   ];
 
-  const allBlogPosts = [
-    {
-      title: "Como escolher o plano de saúde ideal para sua família",
-      excerpt: "Descubra os principais critérios para avaliar e escolher o melhor plano de saúde considerando sua realidade familiar. Entenda sobre abrangência, carências e coberturas.",
-      date: "15 de Janeiro, 2025",
-      category: "Guias",
-      readTime: "8 min",
-      content: `
-        <h2>Entendendo suas necessidades</h2>
-        <p>Escolher um plano de saúde para a família é uma decisão importante que impacta o bem-estar de todos. O primeiro passo é fazer um levantamento das necessidades específicas de cada membro da família.</p>
-
-        <h3>1. Analise o perfil da sua família</h3>
-        <p>Considere a faixa etária de cada pessoa, condições de saúde pré-existentes, frequência de uso de serviços médicos e preferências de hospitais e médicos. Famílias com crianças pequenas, por exemplo, costumam usar mais pediatria e pronto-socorro, enquanto famílias com idosos precisam de maior acesso a especialistas.</p>
-
-        <h3>2. Abrangência geográfica</h3>
-        <p>Se sua família viaja muito ou tem membros em diferentes cidades, um plano nacional pode ser mais adequado. Caso todos residam na mesma região, um plano estadual ou municipal oferece melhor custo-benefício.</p>
-
-        <h3>3. Rede credenciada</h3>
-        <p>Verifique se os hospitais, clínicas e médicos de confiança da família estão na rede do plano. Uma boa rede credenciada próxima à sua residência é essencial para emergências.</p>
-
-        <h3>4. Tipo de acomodação</h3>
-        <p>Planos com acomodação em quarto individual (apartamento) são mais caros, mas oferecem mais privacidade. Enfermaria (quarto compartilhado) é mais econômica e pode ser suficiente para muitas famílias.</p>
-
-        <h3>5. Coparticipação ou sem coparticipação?</h3>
-        <p>Planos com coparticipação têm mensalidade mais baixa, mas você paga uma taxa em cada consulta ou exame. Se sua família usa muito o plano, pode sair mais caro no final. Faça as contas!</p>
-
-        <h3>6. Carências</h3>
-        <p>Verifique os prazos de carência para cada tipo de procedimento. Alguns planos oferecem redução ou isenção de carências em casos específicos, como portabilidade de outro plano.</p>
-
-        <h2>Dicas práticas</h2>
-        <ul>
-          <li>Compare pelo menos 3 operadoras diferentes</li>
-          <li>Leia o rol de procedimentos cobertos</li>
-          <li>Entenda a política de reajuste anual</li>
-          <li>Verifique a reputação da operadora na ANS</li>
-          <li>Considere contratar como MEI ou PJ para economizar</li>
-        </ul>
-
-        <h2>Conclusão</h2>
-        <p>Não existe um plano perfeito para todas as famílias. O ideal é aquele que equilibra cobertura adequada com um valor que cabe no orçamento familiar. Uma boa consultoria pode fazer toda a diferença nessa escolha.</p>
-      `
-    },
-    {
-      title: "Planos empresariais: como MEI pode economizar até 40%",
-      excerpt: "Entenda como microempreendedores individuais podem contratar planos de saúde com preços muito mais acessíveis e quais são os requisitos necessários.",
-      date: "10 de Janeiro, 2025",
-      category: "Economia",
-      readTime: "6 min",
-      content: `
-        <h2>A vantagem do CNPJ</h2>
-        <p>Você sabia que ter um CNPJ pode reduzir em até 40% o valor do seu plano de saúde? Isso acontece porque planos empresariais (PME) têm valores mais atrativos que os planos para pessoa física (PF).</p>
-
-        <h3>Por que planos empresariais são mais baratos?</h3>
-        <p>As operadoras oferecem condições especiais para empresas porque o risco é diluído entre mais pessoas e a taxa de sinistralidade costuma ser menor. Mesmo sendo MEI (com apenas você como beneficiário), você se enquadra como empresa.</p>
-
-        <h3>Requisitos para contratar como MEI</h3>
-        <ul>
-          <li>Ter um CNPJ ativo como MEI</li>
-          <li>Estar com as obrigações fiscais em dia</li>
-          <li>Algumas operadoras exigem mínimo de 2 vidas (você + dependente)</li>
-          <li>CNPJ deve ter pelo menos 6 meses de atividade (algumas operadoras)</li>
-        </ul>
-
-        <h3>Comparação de valores</h3>
-        <p>Veja um exemplo prático para uma pessoa de 35 anos no Rio de Janeiro:</p>
-        <ul>
-          <li><strong>Plano PF (Pessoa Física):</strong> R$ 800/mês</li>
-          <li><strong>Plano PME (MEI):</strong> R$ 480/mês</li>
-          <li><strong>Economia anual:</strong> R$ 3.840</li>
-        </ul>
-
-        <h3>Vale a pena abrir MEI só para ter plano?</h3>
-        <p>Se você ainda não é MEI, vale fazer as contas. O custo mensal do MEI é em torno de R$ 70, e você economiza centenas de reais no plano. Além disso, ter um CNPJ traz outros benefícios como:</p>
-        <ul>
-          <li>Possibilidade de emitir notas fiscais</li>
-          <li>Acesso a crédito empresarial</li>
-          <li>Contribuição para aposentadoria</li>
-          <li>Compras com desconto em atacados</li>
-        </ul>
-
-        <h3>Como contratar</h3>
-        <p>O processo é simples: você solicita a cotação como MEI, apresenta os documentos do CNPJ e documentos pessoais. A aprovação é rápida e o plano pode ser ativado em poucos dias.</p>
-
-        <h2>Atenção aos detalhes</h2>
-        <p>Nem todas as operadoras trabalham com planos PME para MEI com apenas 1 vida. É importante consultar um corretor especializado que conheça as regras de cada operadora e possa encontrar a melhor opção para seu caso.</p>
-      `
-    },
-    {
-      title: "Rede credenciada: como verificar hospitais e médicos",
-      excerpt: "Aprenda a pesquisar e confirmar se seus médicos e hospitais favoritos fazem parte da rede do seu plano. Dicas práticas para não errar na escolha.",
-      date: "5 de Janeiro, 2025",
-      category: "Dicas",
-      readTime: "5 min",
-      content: `
-        <h2>A importância da rede credenciada</h2>
-        <p>De nada adianta contratar um plano barato se os hospitais e médicos que você precisa não estão na rede. Por isso, verificar a rede credenciada deve ser o primeiro passo antes de fechar qualquer contrato.</p>
-
-        <h3>Como consultar a rede</h3>
-        <p>Cada operadora disponibiliza a lista de credenciados de formas diferentes:</p>
-        <ul>
-          <li><strong>Site da operadora:</strong> A maioria tem um buscador onde você filtra por especialidade e região</li>
-          <li><strong>App móvel:</strong> Aplicativos oficiais costumam ter a rede atualizada</li>
-          <li><strong>Central de atendimento:</strong> Ligue e peça confirmação por escrito</li>
-          <li><strong>Corretor de planos:</strong> Um bom corretor verifica isso pra você</li>
-        </ul>
-
-        <h3>Dicas para pesquisar</h3>
-        <p><strong>1. Faça uma lista:</strong> Antes de contratar, liste os hospitais e médicos que você considera essenciais.</p>
-        <p><strong>2. Busque por nome e CRM:</strong> Muitos médicos atendem em múltiplos hospitais e clínicas. Verifique todos os locais.</p>
-        <p><strong>3. Confirme a especialidade:</strong> Alguns médicos atendem certas especialidades apenas em determinadas clínicas.</p>
-        <p><strong>4. Verifique a proximidade:</strong> Um hospital credenciado a 50km pode não ser prático em emergências.</p>
-
-        <h3>Atenção aos hospitais de referência</h3>
-        <p>Grandes hospitais como Rede D'Or, Copa Star, Samaritano, entre outros, são muito procurados no Rio de Janeiro. Nem todos os planos cobrem todos os hospitais. Confirme se o hospital que você quer está na sua categoria de plano.</p>
-
-        <h3>Rede para diferentes tipos de atendimento</h3>
-        <p>Verifique a rede separadamente para:</p>
-        <ul>
-          <li>Consultas e exames ambulatoriais</li>
-          <li>Internações e cirurgias</li>
-          <li>Pronto-socorro e emergências</li>
-          <li>Exames de alta complexidade (ressonância, tomografia)</li>
-        </ul>
-
-        <h3>E se meu médico não está na rede?</h3>
-        <p>Você tem algumas opções:</p>
-        <ul>
-          <li>Escolher outro plano que o credencia</li>
-          <li>Pedir ao médico para se credenciar (nem sempre possível)</li>
-          <li>Usar o plano para exames e procedimentos, pagando particular apenas as consultas</li>
-        </ul>
-
-        <h2>Mudanças na rede</h2>
-        <p>Importante: a rede credenciada pode mudar. Operadoras podem descredenciar hospitais ou médicos. Por isso, sempre tenha um plano B e acompanhe as atualizações da sua operadora.</p>
-      `
-    }
-  ];
-
-  const blogPosts = allBlogPosts.slice(0, 3);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -710,42 +609,73 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {blogPosts.map((post, index) => (
-              <article key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group">
-                <div className="h-48 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                  <FileText className="w-20 h-20 text-orange-400" />
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-semibold rounded-full">
-                      {post.category}
-                    </span>
-                    <span className="text-sm text-slate-500 flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {post.date}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-orange-600 transition-colors">
-                    {post.title}
-                  </h3>
-                  <p className="text-slate-600 mb-4 leading-relaxed">
-                    {post.excerpt}
-                  </p>
-                  <button className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
-                    Ler mais
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          {loadingPosts ? (
+            <div className="text-center py-12">
+              <div className="inline-block w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : blogPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-xl text-slate-500">Em breve teremos artigos incríveis para você!</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {blogPosts.map((post) => (
+                  <article
+                    key={post.id}
+                    onClick={() => navigate(`/blog/${post.slug}`)}
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all cursor-pointer group"
+                  >
+                    {post.cover_image_url ? (
+                      <div className="h-48 overflow-hidden">
+                        <img
+                          src={post.cover_image_url}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                        <FileText className="w-20 h-20 text-orange-400 group-hover:scale-110 transition-transform" />
+                      </div>
+                    )}
+                    <div className="p-6">
+                      <div className="flex items-center gap-4 mb-3">
+                        <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-semibold rounded-full">
+                          {post.category}
+                        </span>
+                        <span className="text-sm text-slate-500 flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          {formatDate(post.published_at)}
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-orange-600 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-slate-600 mb-4 leading-relaxed line-clamp-3">
+                        {post.excerpt}
+                      </p>
+                      <button className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
+                        Ler mais
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
 
-          <div className="text-center mt-12">
-            <button onClick={() => setShowBlogModal(true)} className="px-8 py-3 border-2 border-orange-600 text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors">
-              Ver todos os artigos
-            </button>
-          </div>
+              <div className="text-center mt-12">
+                <button
+                  onClick={() => navigate('/blog')}
+                  className="px-8 py-3 border-2 border-orange-600 text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors inline-flex items-center"
+                >
+                  Ver todos os artigos
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1261,274 +1191,6 @@ export default function LandingPage() {
         </div>
       )}
 
-      {showBlogModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
-              <h2 className="text-3xl font-bold">Blog e Conteúdos</h2>
-              <button
-                onClick={() => setShowBlogModal(false)}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  {
-                    title: "Como escolher o plano de saúde ideal para sua família",
-                    excerpt: "Descubra os principais critérios para avaliar e escolher o melhor plano de saúde considerando sua realidade familiar. Entenda sobre abrangência, carências e coberturas.",
-                    date: "15 de Janeiro, 2025",
-                    category: "Guias",
-                    readTime: "8 min"
-                  },
-                  {
-                    title: "Planos empresariais: como MEI pode economizar até 40%",
-                    excerpt: "Entenda como microempreendedores individuais podem contratar planos de saúde com preços muito mais acessíveis e quais são os requisitos necessários.",
-                    date: "10 de Janeiro, 2025",
-                    category: "Economia",
-                    readTime: "6 min"
-                  },
-                  {
-                    title: "Rede credenciada: como verificar hospitais e médicos",
-                    excerpt: "Aprenda a pesquisar e confirmar se seus médicos e hospitais favoritos fazem parte da rede do seu plano. Dicas práticas para não errar na escolha.",
-                    date: "5 de Janeiro, 2025",
-                    category: "Dicas",
-                    readTime: "5 min"
-                  },
-                  {
-                    title: "Coparticipação vale a pena? Entenda quando escolher",
-                    excerpt: "Descubra se o modelo de coparticipação é ideal para seu perfil e como calcular se realmente vai economizar com essa modalidade de plano.",
-                    date: "28 de Dezembro, 2024",
-                    category: "Guias",
-                    readTime: "7 min"
-                  },
-                  {
-                    title: "Carências em planos de saúde: tudo que você precisa saber",
-                    excerpt: "Entenda os prazos de carência para cada tipo de procedimento, como funciona a portabilidade e casos em que há redução ou isenção de carências.",
-                    date: "20 de Dezembro, 2024",
-                    category: "Educação",
-                    readTime: "10 min"
-                  },
-                  {
-                    title: "Plano nacional vs estadual: qual escolher?",
-                    excerpt: "Compare as diferenças entre planos com abrangência nacional e estadual. Descubra qual faz mais sentido para seu estilo de vida e orçamento.",
-                    date: "15 de Dezembro, 2024",
-                    category: "Comparativos",
-                    readTime: "6 min"
-                  },
-                  {
-                    title: "Como funciona a portabilidade de carências",
-                    excerpt: "Aprenda a migrar de plano sem precisar cumprir novas carências. Veja os requisitos e passo a passo para fazer a portabilidade corretamente.",
-                    date: "10 de Dezembro, 2024",
-                    category: "Dicas",
-                    readTime: "9 min"
-                  },
-                  {
-                    title: "Planos de saúde para idosos: direitos e cuidados",
-                    excerpt: "Conheça os direitos dos idosos em relação a planos de saúde, estatuto do idoso e como garantir um atendimento de qualidade na terceira idade.",
-                    date: "5 de Dezembro, 2024",
-                    category: "Direitos",
-                    readTime: "8 min"
-                  },
-                  {
-                    title: "O que a ANS fiscaliza nos planos de saúde?",
-                    excerpt: "Entenda o papel da Agência Nacional de Saúde Suplementar e como ela protege os beneficiários. Saiba como fazer reclamações e denúncias.",
-                    date: "1 de Dezembro, 2024",
-                    category: "Educação",
-                    readTime: "7 min"
-                  },
-                  {
-                    title: "Reajuste anual: como funciona e como se preparar",
-                    excerpt: "Descubra como é calculado o reajuste anual dos planos de saúde, quais os limites legais e dicas para lidar com os aumentos de mensalidade.",
-                    date: "25 de Novembro, 2024",
-                    category: "Economia",
-                    readTime: "6 min"
-                  },
-                  {
-                    title: "Telemedicina: como usar pelo plano de saúde",
-                    excerpt: "Aprenda a utilizar os serviços de telemedicina oferecidos pelos planos de saúde. Veja quais consultas podem ser feitas online e como agendar.",
-                    date: "20 de Novembro, 2024",
-                    category: "Tecnologia",
-                    readTime: "5 min"
-                  },
-                  {
-                    title: "Maternidade em planos de saúde: coberturas e carências",
-                    excerpt: "Guia completo sobre cobertura de maternidade, pré-natal, parto e pós-parto. Entenda carências e planejamento para quem deseja engravidar.",
-                    date: "15 de Novembro, 2024",
-                    category: "Guias",
-                    readTime: "11 min"
-                  }
-                ].map((post, index) => (
-                  <article key={index} className="bg-slate-50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group cursor-pointer">
-                    <div className="h-40 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                      <FileText className="w-16 h-16 text-orange-400 group-hover:scale-110 transition-transform" />
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-3 mb-3 flex-wrap">
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-                          {post.category}
-                        </span>
-                        <span className="text-xs text-slate-500 flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {post.date}
-                        </span>
-                        <span className="text-xs text-slate-500 flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {post.readTime}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
-                        {post.title}
-                      </h3>
-                      <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setSelectedArticle(index);
-                          setShowBlogModal(false);
-                        }}
-                        className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center"
-                      >
-                        Ler artigo completo
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              <div className="mt-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-8 text-center">
-                <h3 className="text-2xl font-bold mb-3">Ficou com alguma dúvida?</h3>
-                <p className="text-white/90 mb-6">
-                  Converse comigo pelo WhatsApp e tire todas as suas dúvidas sobre planos de saúde
-                </p>
-                <button
-                  onClick={() => {
-                    setShowBlogModal(false);
-                    openWhatsApp();
-                  }}
-                  className="px-8 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-all inline-flex items-center"
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Falar no WhatsApp
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedArticle !== null && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                    {allBlogPosts[selectedArticle].category}
-                  </span>
-                  <span className="text-xs text-white/80 flex items-center">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    {allBlogPosts[selectedArticle].date}
-                  </span>
-                  <span className="text-xs text-white/80 flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {allBlogPosts[selectedArticle].readTime}
-                  </span>
-                </div>
-                <h2 className="text-2xl md:text-3xl font-bold">{allBlogPosts[selectedArticle].title}</h2>
-              </div>
-              <button
-                onClick={() => setSelectedArticle(null)}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors ml-4"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-8">
-              <div
-                className="prose prose-slate max-w-none
-                  prose-headings:text-slate-900 prose-headings:font-bold
-                  prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-4
-                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-                  prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-4
-                  prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6
-                  prose-li:text-slate-700 prose-li:mb-2
-                  prose-strong:text-slate-900 prose-strong:font-semibold"
-                dangerouslySetInnerHTML={{ __html: allBlogPosts[selectedArticle].content }}
-              />
-
-              <div className="mt-12 pt-8 border-t border-slate-200">
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-8 text-center">
-                  <h3 className="text-2xl font-bold mb-3">Gostou do artigo?</h3>
-                  <p className="text-white/90 mb-6">
-                    Entre em contato e tire suas dúvidas sobre planos de saúde com nossa equipe especializada
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button
-                      onClick={() => {
-                        setSelectedArticle(null);
-                        setShowModal(true);
-                      }}
-                      className="px-6 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-all"
-                    >
-                      Fazer cotação gratuita
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedArticle(null);
-                        openWhatsApp();
-                      }}
-                      className="px-6 py-3 bg-white/10 backdrop-blur text-white rounded-xl font-bold hover:bg-white/20 transition-all inline-flex items-center justify-center"
-                    >
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Falar no WhatsApp
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">Leia também</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {allBlogPosts
-                      .filter((_, index) => index !== selectedArticle)
-                      .slice(0, 2)
-                      .map((post, index) => (
-                        <article
-                          key={index}
-                          onClick={() => {
-                            const actualIndex = allBlogPosts.findIndex(p => p.title === post.title);
-                            setSelectedArticle(actualIndex);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className="bg-slate-50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                        >
-                          <div className="h-32 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                            <FileText className="w-12 h-12 text-orange-400 group-hover:scale-110 transition-transform" />
-                          </div>
-                          <div className="p-4">
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-                              {post.category}
-                            </span>
-                            <h4 className="text-lg font-bold text-slate-900 mt-3 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
-                              {post.title}
-                            </h4>
-                            <p className="text-slate-600 text-sm line-clamp-2">{post.excerpt}</p>
-                          </div>
-                        </article>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIcon, Save } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIcon, Save, Upload, Loader } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { uploadBlogImage } from '../../lib/imageUploadService';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -31,6 +32,8 @@ export default function BlogTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingContent, setUploadingContent] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -218,6 +221,37 @@ export default function BlogTab() {
     });
   };
 
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingCover(true);
+    const result = await uploadBlogImage(file);
+    setUploadingCover(false);
+
+    if (result.success && result.url) {
+      setFormData({ ...formData, cover_image_url: result.url });
+    } else {
+      alert(result.error || 'Erro ao fazer upload da imagem');
+    }
+  };
+
+  const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingContent(true);
+    const result = await uploadBlogImage(file);
+    setUploadingContent(false);
+
+    if (result.success && result.url) {
+      const imageHtml = `<img src="${result.url}" alt="Imagem do artigo" />`;
+      setFormData({ ...formData, content: formData.content + imageHtml });
+    } else {
+      alert(result.error || 'Erro ao fazer upload da imagem');
+    }
+  };
+
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -306,25 +340,60 @@ export default function BlogTab() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              URL da Imagem de Capa
+              Imagem de Capa
             </label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={formData.cover_image_url}
-                  onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="https://exemplo.com/imagem.jpg"
-                />
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={formData.cover_image_url}
+                    onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="https://exemplo.com/imagem.jpg ou faça upload"
+                  />
+                </div>
+                {formData.cover_image_url && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(formData.cover_image_url, '_blank')}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              <div>
+                <label className="flex items-center justify-center px-4 py-3 bg-orange-50 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    onChange={handleCoverImageUpload}
+                    className="hidden"
+                    disabled={uploadingCover}
+                  />
+                  {uploadingCover ? (
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <Loader className="w-5 h-5 animate-spin" />
+                      <span className="font-semibold">Fazendo upload...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <Upload className="w-5 h-5" />
+                      <span className="font-semibold">Fazer upload da imagem de capa</span>
+                      <span className="text-sm text-orange-600">(JPG, PNG, WEBP, GIF - máx 5MB)</span>
+                    </div>
+                  )}
+                </label>
               </div>
               {formData.cover_image_url && (
-                <button
-                  onClick={() => window.open(formData.cover_image_url, '_blank')}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                >
-                  <ImageIcon className="w-5 h-5" />
-                </button>
+                <div className="mt-2">
+                  <img
+                    src={formData.cover_image_url}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -350,6 +419,31 @@ export default function BlogTab() {
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               Conteúdo do Artigo *
             </label>
+            <div className="mb-3">
+              <label className="inline-flex items-center px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={handleContentImageUpload}
+                  className="hidden"
+                  disabled={uploadingContent}
+                />
+                {uploadingContent ? (
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-semibold">Fazendo upload...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm font-semibold">Adicionar imagem ao conteúdo</span>
+                  </div>
+                )}
+              </label>
+              <p className="text-xs text-slate-500 mt-1">
+                Faça upload de imagens que serão inseridas no final do editor. Você pode movê-las depois.
+              </p>
+            </div>
             <div className="border border-slate-300 rounded-lg overflow-hidden">
               <ReactQuill
                 theme="snow"

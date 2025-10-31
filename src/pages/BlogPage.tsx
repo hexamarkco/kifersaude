@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Phone, Mail, Instagram, MapPin, MessageCircle, Eye } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Phone, Mail, Instagram, MapPin, MessageCircle, Eye, Share2, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface BlogPost {
@@ -105,9 +105,49 @@ export default function BlogPage() {
     window.open('https://wa.me/5521964681047?text=Olá! Vim através do blog e gostaria de mais informações sobre planos de saúde.', '_blank');
   };
 
+  const shareOnWhatsApp = (post: BlogPost) => {
+    const text = `${post.title}\n\nLeia mais: https://kifersaude.com.br/blog/${post.slug}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const shareOnFacebook = (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const copyLink = (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Link copiado para a área de transferência!');
+    });
+  };
+
   if (selectedPost) {
     return (
       <div className="min-h-screen bg-slate-50">
+        <Helmet>
+          <title>{selectedPost.meta_title || selectedPost.title} | Kifer Saúde Blog</title>
+          <meta name="description" content={selectedPost.meta_description || selectedPost.excerpt} />
+          <meta property="og:title" content={selectedPost.meta_title || selectedPost.title} />
+          <meta property="og:description" content={selectedPost.meta_description || selectedPost.excerpt} />
+          <meta property="og:type" content="article" />
+          <meta property="og:url" content={`https://kifersaude.com.br/blog/${selectedPost.slug}`} />
+          {selectedPost.cover_image_url && (
+            <meta property="og:image" content={selectedPost.cover_image_url} />
+          )}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={selectedPost.meta_title || selectedPost.title} />
+          <meta name="twitter:description" content={selectedPost.meta_description || selectedPost.excerpt} />
+          {selectedPost.cover_image_url && (
+            <meta name="twitter:image" content={selectedPost.cover_image_url} />
+          )}
+          <link rel="canonical" href={`https://kifersaude.com.br/blog/${selectedPost.slug}`} />
+        </Helmet>
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
@@ -169,17 +209,65 @@ export default function BlogPage() {
               {selectedPost.excerpt}
             </p>
 
+            <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-slate-200">
+              <span className="text-sm font-semibold text-slate-600">Compartilhar:</span>
+              <button
+                onClick={() => shareOnWhatsApp(selectedPost)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
+                title="Compartilhar no WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </button>
+              <button
+                onClick={() => shareOnFacebook(selectedPost)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                title="Compartilhar no Facebook"
+              >
+                <Facebook className="w-4 h-4" />
+                Facebook
+              </button>
+              <button
+                onClick={() => shareOnLinkedIn(selectedPost)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+                title="Compartilhar no LinkedIn"
+              >
+                <Linkedin className="w-4 h-4" />
+                LinkedIn
+              </button>
+              <button
+                onClick={() => copyLink(selectedPost)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold transition-colors"
+                title="Copiar link"
+              >
+                <LinkIcon className="w-4 h-4" />
+                Copiar link
+              </button>
+            </div>
+
             <div className="border-t border-slate-200 pt-8">
               <div
-                className="prose prose-slate max-w-none
-                  prose-headings:text-slate-900 prose-headings:font-bold
-                  prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-4
-                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-                  prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-4 prose-p:text-lg
-                  prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6
-                  prose-li:text-slate-700 prose-li:mb-2
-                  prose-strong:text-slate-900 prose-strong:font-semibold
-                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8"
+                className="prose prose-lg prose-slate max-w-none
+                  prose-headings:text-slate-900 prose-headings:font-bold prose-headings:tracking-tight
+                  prose-h1:text-4xl prose-h1:mt-10 prose-h1:mb-6
+                  prose-h2:text-3xl prose-h2:mt-10 prose-h2:mb-5 prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-3
+                  prose-h3:text-2xl prose-h3:mt-8 prose-h3:mb-4
+                  prose-h4:text-xl prose-h4:mt-6 prose-h4:mb-3
+                  prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-6 prose-p:text-lg
+                  prose-ul:my-6 prose-ul:list-disc prose-ul:pl-8 prose-ul:space-y-2
+                  prose-ol:my-6 prose-ol:list-decimal prose-ol:pl-8 prose-ol:space-y-2
+                  prose-li:text-slate-700 prose-li:text-lg prose-li:leading-relaxed
+                  prose-strong:text-slate-900 prose-strong:font-bold
+                  prose-em:text-slate-800 prose-em:italic
+                  prose-a:text-orange-600 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
+                  prose-blockquote:border-l-4 prose-blockquote:border-orange-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-slate-600 prose-blockquote:bg-orange-50 prose-blockquote:py-4 prose-blockquote:my-6 prose-blockquote:rounded-r-lg
+                  prose-code:text-orange-600 prose-code:bg-orange-50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                  prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:p-6 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:shadow-lg prose-pre:my-6
+                  prose-img:rounded-2xl prose-img:shadow-xl prose-img:my-8 prose-img:w-full prose-img:h-auto
+                  prose-hr:border-slate-300 prose-hr:my-10
+                  prose-table:w-full prose-table:border-collapse prose-table:my-6
+                  prose-th:bg-slate-100 prose-th:p-3 prose-th:text-left prose-th:font-bold prose-th:border prose-th:border-slate-300
+                  prose-td:p-3 prose-td:border prose-td:border-slate-300"
                 dangerouslySetInnerHTML={{ __html: selectedPost.content }}
               />
             </div>
@@ -305,6 +393,15 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Helmet>
+        <title>Blog Kifer Saúde | Dicas e Guias sobre Planos de Saúde</title>
+        <meta name="description" content="Aprenda tudo sobre planos de saúde com nossos artigos especializados. Dicas, guias e informações para escolher o melhor plano para você e sua família." />
+        <meta property="og:title" content="Blog Kifer Saúde | Dicas e Guias sobre Planos de Saúde" />
+        <meta property="og:description" content="Aprenda tudo sobre planos de saúde com nossos artigos especializados." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kifersaude.com.br/blog" />
+        <link rel="canonical" href="https://kifersaude.com.br/blog" />
+      </Helmet>
       <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">

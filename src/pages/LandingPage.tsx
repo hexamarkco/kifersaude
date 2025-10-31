@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X } from 'lucide-react';
+import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText } from 'lucide-react';
 
 export default function LandingPage() {
   const [formData, setFormData] = useState({
@@ -10,6 +10,63 @@ export default function LandingPage() {
     tipoContratacao: 'PF'
   });
   const [showModal, setShowModal] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  const faqData = [
+    {
+      question: "Qual a diferença entre pessoa física e MEI?",
+      answer: "Planos para pessoa física são individuais ou familiares contratados em seu nome. Já planos MEI ou empresariais são contratados através de CNPJ e costumam ter valores mais atrativos, podendo economizar até 40% comparado ao plano PF."
+    },
+    {
+      question: "Quanto tempo demora para o plano ser ativado?",
+      answer: "Após a aprovação da proposta, o prazo de ativação varia de 2 a 15 dias úteis, dependendo da operadora escolhida. Alguns planos têm ativação imediata!"
+    },
+    {
+      question: "Posso incluir minha família no plano?",
+      answer: "Sim! Você pode incluir cônjuge, filhos e dependentes legais no mesmo plano. Quanto mais pessoas, melhor costuma ser o custo-benefício."
+    },
+    {
+      question: "Existe carência para usar o plano?",
+      answer: "Sim, a maioria dos planos tem período de carência que varia de acordo com o tipo de procedimento. Urgências e emergências têm carência de apenas 24h. Consultas e exames simples geralmente têm carência de 30 dias."
+    },
+    {
+      question: "Posso escolher meus médicos e hospitais?",
+      answer: "Depende do tipo de plano. Planos com livre escolha permitem atendimento em qualquer profissional ou hospital credenciado. Já planos com referência têm uma rede específica, mas costumam ter valores mais acessíveis."
+    },
+    {
+      question: "O que é coparticipação?",
+      answer: "Coparticipação é quando você paga uma mensalidade mais baixa, mas arca com uma parte do custo de cada consulta ou exame realizado. É uma ótima opção para quem usa pouco o plano."
+    },
+    {
+      question: "Posso cancelar o plano quando quiser?",
+      answer: "Sim! Planos de saúde não têm fidelidade. Você pode cancelar a qualquer momento, sem multas ou taxas. Basta solicitar o cancelamento com 30 dias de antecedência."
+    },
+    {
+      question: "Qual a diferença entre abrangência estadual e nacional?",
+      answer: "Planos estaduais cobrem apenas o estado onde você contratou (mais baratos). Planos nacionais cobrem todo o Brasil, ideais para quem viaja muito ou tem família em outros estados."
+    }
+  ];
+
+  const blogPosts = [
+    {
+      title: "Como escolher o plano de saúde ideal para sua família",
+      excerpt: "Descubra os principais critérios para avaliar e escolher o melhor plano de saúde considerando sua realidade familiar.",
+      date: "15 de Janeiro, 2025",
+      category: "Guias"
+    },
+    {
+      title: "Planos empresariais: como MEI pode economizar até 40%",
+      excerpt: "Entenda como microempreendedores individuais podem contratar planos de saúde com preços muito mais acessíveis.",
+      date: "10 de Janeiro, 2025",
+      category: "Economia"
+    },
+    {
+      title: "Rede credenciada: como verificar hospitais e médicos",
+      excerpt: "Aprenda a pesquisar e confirmar se seus médicos e hospitais favoritos fazem parte da rede do seu plano.",
+      date: "5 de Janeiro, 2025",
+      category: "Dicas"
+    }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,6 +429,102 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-slate-900 mb-2">Atendimento em até 10 minutos</h3>
               <p className="text-slate-600">Resposta rápida para suas dúvidas e cotações</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-xl text-slate-600">
+              Tire suas dúvidas sobre planos de saúde
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto space-y-4">
+            {faqData.map((faq, index) => (
+              <div key={index} className="bg-slate-50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <button
+                  onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                  className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-slate-100 transition-colors"
+                >
+                  <span className="text-lg font-semibold text-slate-900 pr-8">{faq.question}</span>
+                  <ChevronDown
+                    className={`w-6 h-6 text-orange-600 transition-transform flex-shrink-0 ${
+                      openFaqIndex === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {openFaqIndex === index && (
+                  <div className="px-8 pb-6">
+                    <p className="text-slate-700 leading-relaxed">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-slate-600 mb-4">Não encontrou sua resposta?</p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-8 py-3 bg-orange-600 text-white rounded-xl font-semibold hover:bg-orange-700 transition-colors"
+            >
+              Fale com um especialista
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+              Blog e Conteúdos
+            </h2>
+            <p className="text-xl text-slate-600">
+              Aprenda tudo sobre planos de saúde
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {blogPosts.map((post, index) => (
+              <article key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group">
+                <div className="h-48 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                  <FileText className="w-20 h-20 text-orange-400" />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-semibold rounded-full">
+                      {post.category}
+                    </span>
+                    <span className="text-sm text-slate-500 flex items-center">
+                      <Calendar className="w-4 h-4 mr-1" />
+                      {post.date}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-orange-600 transition-colors">
+                    {post.title}
+                  </h3>
+                  <p className="text-slate-600 mb-4 leading-relaxed">
+                    {post.excerpt}
+                  </p>
+                  <button className="text-orange-600 font-semibold hover:text-orange-700 inline-flex items-center">
+                    Ler mais
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <button className="px-8 py-3 border-2 border-orange-600 text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors">
+              Ver todos os artigos
+            </button>
           </div>
         </div>
       </section>

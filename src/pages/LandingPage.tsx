@@ -272,7 +272,7 @@ export default function LandingPage() {
               </h2>
               <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-xl mb-6">
                 <p className="text-lg text-slate-700 italic mb-4">
-                  "Sou a Luiza Kifer, especialista em planos de saúde há mais de 10 anos. Acredito que contratar um plano não é só uma escolha financeira — é uma decisão sobre cuidado, segurança e tranquilidade."
+                  "Sou a Luiza Kifer, especialista em planos de saúde. Acredito que contratar um plano não é só uma escolha financeira — é uma decisão sobre cuidado, segurança e tranquilidade."
                 </p>
                 <p className="text-sm text-slate-600 font-semibold">— Luiza Kifer, Fundadora</p>
               </div>
@@ -896,10 +896,10 @@ export default function LandingPage() {
               <div className="prose max-w-none">
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">Como Tudo Começou</h3>
                 <p className="text-slate-700 leading-relaxed mb-4">
-                  Em 2015, comecei minha jornada no mercado de saúde suplementar com um objetivo claro: tornar o acesso a planos de saúde mais simples, transparente e humano. Durante anos trabalhando em grandes corretoras, percebi que as pessoas se sentiam perdidas em meio a tantas opções, siglas técnicas e processos burocráticos.
+                  A Kifer Saúde nasceu da visão de tornar o acesso a planos de saúde mais simples, transparente e humano. Percebi que as pessoas se sentiam perdidas em meio a tantas opções, siglas técnicas e processos burocráticos no mercado de saúde suplementar.
                 </p>
                 <p className="text-slate-700 leading-relaxed mb-4">
-                  Foi então que decidi criar a Kifer Saúde, uma corretora que não vende apenas planos, mas oferece consultoria personalizada e acompanhamento em cada etapa da jornada do cliente.
+                  Por isso, criei uma corretora que não vende apenas planos, mas oferece consultoria personalizada e acompanhamento em cada etapa da jornada do cliente. Mesmo jovem, trouxe uma abordagem moderna e acessível para um mercado que precisava de renovação.
                 </p>
 
                 <h3 className="text-2xl font-bold text-slate-900 mb-4 mt-8">Nossa Missão</h3>
@@ -937,7 +937,7 @@ export default function LandingPage() {
                 <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-8 mt-8">
                   <h3 className="text-2xl font-bold mb-4">Mais de 500 Clientes Satisfeitos</h3>
                   <p className="text-white/90 leading-relaxed mb-4">
-                    Ao longo desses anos, já ajudamos centenas de famílias a encontrarem o plano de saúde perfeito. Nossa taxa de satisfação de 98% reflete o compromisso que temos com cada pessoa que confia em nosso trabalho.
+                    Já ajudamos centenas de famílias a encontrarem o plano de saúde perfeito. Nossa taxa de satisfação de 98% reflete o compromisso que temos com cada pessoa que confia em nosso trabalho.
                   </p>
                   <button
                     onClick={() => {

@@ -8,6 +8,11 @@ const corsHeaders = {
 
 const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'] as const;
 
+const origemAliases: Record<string, (typeof origensValidas)[number]> = {
+  ully: 'Ully',
+  'painel do corretor': 'Ully',
+};
+
 function normalizeText(value: string): string {
   return value
     .trim()
@@ -24,6 +29,10 @@ const origemAliasMap: Record<string, (typeof origensValidas)[number]> = origensV
   },
   {} as Record<string, (typeof origensValidas)[number]>
 );
+
+Object.entries(origemAliases).forEach(([alias, canonical]) => {
+  origemAliasMap[normalizeText(alias)] = canonical;
+});
 
 function getCanonicalOrigem(origem?: string): (typeof origensValidas)[number] | null {
   if (!origem || typeof origem !== 'string') {
@@ -66,7 +75,12 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
 
   const origemCanonical = getCanonicalOrigem(data.origem);
   if (data.origem && !origemCanonical) {
-    errors.push(`Campo "origem" deve ser um dos valores: ${origensValidas.join(', ')}`);
+    const aliasHint = Object.keys(origemAliases).length
+      ? ` (variações aceitas: ${Object.keys(origemAliases).join(', ')})`
+      : '';
+    errors.push(
+      `Campo "origem" deve ser um dos valores: ${origensValidas.join(', ')}${aliasHint}`
+    );
   } else if (origemCanonical) {
     data.origem = origemCanonical;
   }

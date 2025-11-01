@@ -56,7 +56,7 @@ Cria um novo lead no sistema.
 **Campos Obrigatórios:**
 - `nome_completo` (string): Nome completo do lead
 - `telefone` (string): Telefone de contato
-- `origem` (string): Origem do lead - valores: `"tráfego pago"`, `"Telein"`, `"indicação"`, `"orgânico"`
+- `origem` (string): Origem do lead - valores: `"tráfego pago"`, `"Telein"`, `"indicação"`, `"orgânico"`, `"Ully"` (também aceita variações como `"ully"` ou `"painel do corretor"`)
 - `tipo_contratacao` (string): Tipo de contratação - valores: `"Pessoa Física"`, `"MEI"`, `"CNPJ"`, `"Adesão"`
 - `responsavel` (string): Responsável pelo lead - valores: `"Luiza"`, `"Nick"`
 
@@ -109,7 +109,7 @@ curl -X POST "https://xhtwspmpzvmmmzntkgre.supabase.co/functions/v1/leads-api/le
   "error": "Dados inválidos",
   "details": [
     "Campo \"nome_completo\" é obrigatório e deve ser uma string",
-    "Campo \"origem\" deve ser um dos valores: tráfego pago, Telein, indicação, orgânico"
+    "Campo \"origem\" deve ser um dos valores: tráfego pago, Telein, indicação, orgânico, Ully (variações aceitas: ully, painel do corretor)"
   ]
 }
 ```

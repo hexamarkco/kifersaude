@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Archive,
   CheckCircle2,
@@ -17,13 +17,7 @@ import {
 } from 'lucide-react';
 import { emailProviders, providerOptions } from '../lib/email/providerRegistry';
 import type { EmailAccount, EmailFolder, EmailThread } from '../lib/email/types';
-import {
-  createEmailAccount,
-  createThreadWithMessage,
-  listEmailAccounts,
-  listEmailThreads,
-  updateEmailThread,
-} from '../lib/email/api';
+import { seedAccounts, seedThreads } from '../lib/email/mockData';
 
 interface AccountFormState {
   providerId: EmailAccount['providerId'];
@@ -108,22 +102,18 @@ const formatDateTime = (isoDate: string) => {
 };
 
 export default function EmailManager() {
-  const [accounts, setAccounts] = useState<EmailAccount[]>([]);
-  const [threads, setThreads] = useState<EmailThread[]>([]);
+  const [accounts, setAccounts] = useState<EmailAccount[]>(seedAccounts);
+  const [threads, setThreads] = useState<EmailThread[]>(seedThreads);
   const [selectedAccountId, setSelectedAccountId] = useState<string | 'all'>(
-    'all'
+    'acct-gmail'
   );
   const [activeFolder, setActiveFolder] = useState<EmailFolder>('inbox');
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
+    seedThreads[0]?.id ?? null
+  );
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isAddingAccount, setIsAddingAccount] = useState(false);
   const [isConnectingAccount, setIsConnectingAccount] = useState(false);
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [accountsLoading, setAccountsLoading] = useState(true);
-  const [threadsLoading, setThreadsLoading] = useState(true);
-  const [accountsError, setAccountsError] = useState<string | null>(null);
-  const [threadsError, setThreadsError] = useState<string | null>(null);
-  const [threadsReloadToken, setThreadsReloadToken] = useState(0);
   const [accountForm, setAccountForm] = useState<AccountFormState>({
     providerId: providerOptions[0]?.value ?? 'gmail',
     emailAddress: '',
@@ -134,98 +124,20 @@ export default function EmailManager() {
 
   const selectedThread = threads.find((thread) => thread.id === selectedThreadId);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadAccounts = async () => {
-      setAccountsLoading(true);
-      setAccountsError(null);
-      try {
-        const response = await listEmailAccounts();
-        if (!isMounted) return;
-        setAccounts(response);
-        if (response.length === 1 && selectedAccountId === 'all') {
-          setSelectedAccountId(response[0].id);
-        } else if (
-          response.length > 0 &&
-          selectedAccountId !== 'all' &&
-          !response.some((account) => account.id === selectedAccountId)
-        ) {
-          setSelectedAccountId('all');
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Erro ao carregar contas de email', error);
-          setAccountsError('Não foi possível carregar as contas de email.');
-        }
-      } finally {
-        if (isMounted) {
-          setAccountsLoading(false);
-        }
-      }
-    };
-
-    loadAccounts();
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadThreads = async () => {
-      setThreadsLoading(true);
-      setThreadsError(null);
-      try {
-        const response = await listEmailThreads(
-          selectedAccountId === 'all' ? null : selectedAccountId
-        );
-        if (!isMounted) return;
-        setThreads(response);
-        if (response.length > 0) {
-          setSelectedThreadId((current) =>
-            current && response.some((thread) => thread.id === current)
-              ? current
-              : response[0].id
-          );
-        } else {
-          setSelectedThreadId(null);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Erro ao carregar mensagens', error);
-          setThreadsError('Não foi possível carregar os emails desta conta.');
-        }
-      } finally {
-        if (isMounted) {
-          setThreadsLoading(false);
-        }
-      }
-    };
-
-    loadThreads();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedAccountId, threadsReloadToken]);
-
   const visibleThreads = useMemo(() => {
-    return threads.filter((thread) => threadMatchesFolder(thread, activeFolder));
-  }, [threads, activeFolder]);
+    const filteredByAccount =
+      selectedAccountId === 'all'
+        ? threads
+        : threads.filter((thread) => thread.accountId === selectedAccountId);
+
+    return filteredByAccount.filter((thread) => threadMatchesFolder(thread, activeFolder));
+  }, [threads, selectedAccountId, activeFolder]);
 
   const folderCounters = useMemo(() => {
     return folderConfig.reduce(
       (acc, folder) => {
-        const scopedThreads =
-          selectedAccountId === 'all'
-            ? threads
-            : threads.filter((thread) => thread.accountId === selectedAccountId);
-        const total = scopedThreads.filter((thread) => threadMatchesFolder(thread, folder.id)).length;
-        const unread = scopedThreads.filter(
+        const total = threads.filter((thread) => threadMatchesFolder(thread, folder.id)).length;
+        const unread = threads.filter(
           (thread) => threadMatchesFolder(thread, folder.id) && thread.unread
         ).length;
         acc[folder.id] = { total, unread };
@@ -233,121 +145,57 @@ export default function EmailManager() {
       },
       {} as Record<EmailFolder, { total: number; unread: number }>
     );
-  }, [threads, selectedAccountId]);
+  }, [threads]);
 
-  const handleSelectThread = async (threadId: string) => {
+  const handleSelectThread = (threadId: string) => {
     setSelectedThreadId(threadId);
-    const thread = threads.find((item) => item.id === threadId);
-    if (!thread || !thread.unread) {
-      return;
-    }
-
     setThreads((current) =>
-      current.map((item) =>
-        item.id === threadId ? { ...item, unread: false } : item
+      current.map((thread) =>
+        thread.id === threadId ? { ...thread, unread: false } : thread
       )
     );
-
-    try {
-      await updateEmailThread(threadId, { unread: false });
-    } catch (error) {
-      console.error('Erro ao atualizar leitura da mensagem', error);
-      setThreadsError('Não foi possível marcar o email como lido.');
-      setThreads((current) =>
-        current.map((item) =>
-          item.id === threadId ? { ...item, unread: thread.unread } : item
-        )
-      );
-    }
   };
 
-  const toggleStar = async (threadId: string) => {
-    const thread = threads.find((item) => item.id === threadId);
-    if (!thread) return;
-
-    const nextStarred = !thread.starred;
+  const toggleStar = (threadId: string) => {
     setThreads((current) =>
-      current.map((item) =>
-        item.id === threadId ? { ...item, starred: nextStarred } : item
+      current.map((thread) =>
+        thread.id === threadId ? { ...thread, starred: !thread.starred } : thread
       )
     );
-
-    try {
-      await updateEmailThread(threadId, {
-        starred: nextStarred,
-        updatedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('Erro ao favoritar email', error);
-      setThreadsError('Não foi possível atualizar o destaque do email.');
-      setThreads((current) =>
-        current.map((item) =>
-          item.id === threadId ? { ...item, starred: thread.starred } : item
-        )
-      );
-    }
   };
 
-  const markAsArchived = async (threadId: string) => {
-    const thread = threads.find((item) => item.id === threadId);
-    if (!thread) return;
-
+  const markAsArchived = (threadId: string) => {
     setThreads((current) =>
-      current.map((item) =>
-        item.id === threadId ? { ...item, folder: 'archived', unread: false } : item
+      current.map((thread) =>
+        thread.id === threadId ? { ...thread, folder: 'archived', unread: false } : thread
       )
     );
-
-    try {
-      await updateEmailThread(threadId, {
-        folder: 'archived',
-        unread: false,
-        updatedAt: new Date().toISOString(),
-      });
-      setActiveFolder('archived');
-    } catch (error) {
-      console.error('Erro ao arquivar email', error);
-      setThreadsError('Não foi possível arquivar o email.');
-      setThreads((current) =>
-        current.map((item) =>
-          item.id === threadId ? { ...item, folder: thread.folder, unread: thread.unread } : item
-        )
-      );
-    }
   };
 
   const handleAddAccount = async () => {
     if (!accountForm.emailAddress || !accountForm.displayName) return;
     setIsConnectingAccount(true);
-    setAccountsError(null);
 
-    try {
-      const newAccount = await createEmailAccount({
-        providerId: accountForm.providerId,
-        emailAddress: accountForm.emailAddress,
-        displayName: accountForm.displayName,
-      });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
 
-      setAccounts((current) => [...current, newAccount]);
-      setSelectedAccountId(newAccount.id);
-      setSelectedThreadId(null);
-      setActiveFolder('inbox');
-      setAccountForm({
-        providerId: providerOptions[0]?.value ?? 'gmail',
-        emailAddress: '',
-        displayName: '',
-      });
-      setIsAddingAccount(false);
-      setThreadsReloadToken((token) => token + 1);
-    } catch (error) {
-      console.error('Erro ao conectar conta de email', error);
-      setAccountsError('Não foi possível conectar esta conta. Tente novamente.');
-    } finally {
-      setIsConnectingAccount(false);
-    }
+    const newAccount: EmailAccount = {
+      id: `acct-${Math.random().toString(36).slice(2, 10)}`,
+      providerId: accountForm.providerId,
+      emailAddress: accountForm.emailAddress,
+      displayName: accountForm.displayName,
+      connectedAt: new Date().toISOString(),
+      status: 'connected',
+    };
+
+    setAccounts((current) => [...current, newAccount]);
+    setIsConnectingAccount(false);
+    setIsAddingAccount(false);
+    setAccountForm({ providerId: providerOptions[0]?.value ?? 'gmail', emailAddress: '', displayName: '' });
+    setSelectedAccountId(newAccount.id);
+    setSelectedThreadId(null);
   };
 
-  const handleCompose = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCompose = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const accountId = String(
@@ -362,47 +210,57 @@ export default function EmailManager() {
       return;
     }
 
-    const senderAccount = accounts.find((account) => account.id === accountId);
+    const senderAccount =
+      accounts.find((account) => account.id === accountId) ?? accounts[0] ?? seedAccounts[0];
+    const timestamp = Date.now();
+    const threadId = `draft-${timestamp}`;
+    const messageId = `message-${timestamp}`;
 
-    if (!senderAccount) {
-      setThreadsError('Selecione uma conta válida para enviar o email.');
-      return;
-    }
-
-    setIsSendingEmail(true);
-    setThreadsError(null);
-
-    try {
-      const newThread = await createThreadWithMessage({
-        accountId,
-        to,
-        subject,
-        body,
-        sendAt: null,
-        sender: senderAccount,
-      });
-
-      setThreads((current) => [newThread, ...current]);
-      setSelectedAccountId(accountId);
-      setSelectedThreadId(newThread.id);
-      setActiveFolder('sent');
-      setThreadsReloadToken((token) => token + 1);
-      event.currentTarget.reset();
-      setIsComposeOpen(false);
-    } catch (error) {
-      console.error('Erro ao enviar email', error);
-      setThreadsError('Não foi possível enviar o email. Verifique os dados e tente novamente.');
-    } finally {
-      setIsSendingEmail(false);
-    }
+    const draftThread: EmailThread = {
+      id: threadId,
+      accountId,
+      subject,
+      preview: body.slice(0, 120),
+      updatedAt: new Date().toISOString(),
+      unread: false,
+      starred: false,
+      participants: [
+        {
+          name: senderAccount.displayName,
+          email: senderAccount.emailAddress,
+        },
+        { name: to, email: to },
+      ],
+      folder: 'sent',
+      messages: [
+        {
+          id: messageId,
+          threadId,
+          accountId,
+          sentAt: new Date().toISOString(),
+          from: {
+            name: senderAccount.displayName,
+            email: senderAccount.emailAddress,
+          },
+          to: [{ name: to, email: to }],
+          subject,
+          body,
+          folder: 'sent',
+          unread: false,
+        },
+      ],
+    };
+    setThreads((current) => [draftThread, ...current]);
+    setSelectedThreadId(threadId);
+    setSelectedAccountId(accountId);
+    event.currentTarget.reset();
+    setIsComposeOpen(false);
   };
 
   const selectedAccount =
     selectedAccountId === 'all'
       ? null
       : accounts.find((account) => account.id === selectedAccountId) ?? null;
-
-  const hasAnyAccount = accounts.length > 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -422,10 +280,7 @@ export default function EmailManager() {
                 <p className="text-sm text-slate-500">Sincronize suas caixas de email</p>
               </div>
               <button
-                onClick={() => {
-                  setAccountsError(null);
-                  setIsAddingAccount(true);
-                }}
+                onClick={() => setIsAddingAccount(true)}
                 className="inline-flex items-center gap-1 text-sm font-medium text-orange-600 hover:text-orange-700"
               >
                 <Plus className="w-4 h-4" />
@@ -433,87 +288,68 @@ export default function EmailManager() {
               </button>
             </div>
 
-            {accountsError && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {accountsError}
-              </div>
-            )}
-
             <div className="space-y-4">
-              {accountsLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+              <button
+                type="button"
+                onClick={() => setSelectedAccountId('all')}
+                className={cn(
+                  'w-full px-4 py-3 rounded-lg border transition text-left',
+                  selectedAccountId === 'all'
+                    ? 'border-orange-300 bg-orange-50/80 text-orange-700 shadow-sm'
+                    : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/50'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="block text-sm font-semibold">Todas as contas</span>
+                    <span className="text-xs text-slate-500">Combine Gmail e domínio próprio</span>
+                  </div>
+                  <Mail className="w-5 h-5 text-orange-500" />
                 </div>
-              ) : hasAnyAccount ? (
-                <>
+              </button>
+
+              {accounts.map((account) => {
+                const provider = emailProviders[account.providerId];
+                const isSelected = selectedAccountId === account.id;
+                return (
                   <button
+                    key={account.id}
                     type="button"
-                    onClick={() => setSelectedAccountId('all')}
+                    onClick={() => setSelectedAccountId(account.id)}
                     className={cn(
                       'w-full px-4 py-3 rounded-lg border transition text-left',
-                      selectedAccountId === 'all'
+                      isSelected
                         ? 'border-orange-300 bg-orange-50/80 text-orange-700 shadow-sm'
                         : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/50'
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="block text-sm font-semibold">Todas as contas</span>
-                        <span className="text-xs text-slate-500">Combine Gmail e domínio próprio</span>
+                        <span className="block text-sm font-semibold">{account.displayName}</span>
+                        <span className="text-xs text-slate-500">{account.emailAddress}</span>
+                        <span className="mt-1 block text-[11px] text-slate-400">
+                          {account.status === 'connected'
+                            ? `Conectado ${formatRelativeToNow(account.connectedAt)}`
+                            : 'Sincronizando...'}
+                        </span>
                       </div>
-                      <Mail className="w-5 h-5 text-orange-500" />
-                    </div>
-                  </button>
-
-                  {accounts.map((account) => {
-                    const provider = emailProviders[account.providerId];
-                    const isSelected = selectedAccountId === account.id;
-                    return (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onClick={() => setSelectedAccountId(account.id)}
+                      <span
                         className={cn(
-                          'w-full px-4 py-3 rounded-lg border transition text-left',
-                          isSelected
-                            ? 'border-orange-300 bg-orange-50/80 text-orange-700 shadow-sm'
-                            : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/50'
+                          'inline-flex items-center gap-2 px-2 py-1 rounded-full border text-xs font-medium',
+                          provider.badgeClassName
                         )}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="block text-sm font-semibold">{account.displayName}</span>
-                            <span className="text-xs text-slate-500">{account.emailAddress}</span>
-                            <span className="mt-1 block text-[11px] text-slate-400">
-                              {account.status === 'connected'
-                                ? `Conectado ${formatRelativeToNow(account.connectedAt)}`
-                                : 'Sincronizando...'}
-                            </span>
-                          </div>
-                          <span
-                            className={cn(
-                              'inline-flex items-center gap-2 px-2 py-1 rounded-full border text-xs font-medium',
-                              provider.badgeClassName
-                            )}
-                          >
-                            {provider.name}
-                          </span>
-                          {account.isPrimary && (
-                            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-[11px] font-semibold">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Padrão
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </>
-              ) : (
-                <div className="rounded-lg border border-dashed border-orange-200 bg-orange-50/40 px-4 py-6 text-sm text-slate-600">
-                  Nenhuma conta conectada ainda. Clique em <strong>Adicionar</strong> para integrar seu Gmail ou o email do domínio
-                  kifersaude.com.br.
-                </div>
-              )}
+                        {provider.name}
+                      </span>
+                      {account.isPrimary && (
+                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-[11px] font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Padrão
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -544,18 +380,8 @@ export default function EmailManager() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  if (!hasAnyAccount) return;
-                  setThreadsError(null);
-                  setIsComposeOpen(true);
-                }}
-                disabled={!hasAnyAccount}
-                className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition',
-                  hasAnyAccount
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                )}
+                onClick={() => setIsComposeOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium"
               >
                 <Send className="w-4 h-4" />
                 Novo email
@@ -565,12 +391,6 @@ export default function EmailManager() {
               </button>
             </div>
           </div>
-
-          {threadsError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {threadsError}
-            </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
@@ -607,99 +427,90 @@ export default function EmailManager() {
                 </button>
               </div>
               <div className="divide-y divide-slate-100 overflow-auto" style={{ maxHeight: '540px' }}>
-                {threadsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
-                  </div>
-                ) : visibleThreads.length === 0 ? (
+                {visibleThreads.length === 0 && (
                   <div className="p-6 text-center text-sm text-slate-500">
                     Nenhum email nesta pasta ainda. Conecte suas contas para começar a receber mensagens.
                   </div>
-                ) : (
-                  visibleThreads.map((thread) => {
-                    const account = accounts.find((item) => item.id === thread.accountId);
-                    const provider = account ? emailProviders[account.providerId] : null;
-                    return (
-                      <button
-                        key={thread.id}
-                        onClick={() => handleSelectThread(thread.id)}
-                        className={cn(
-                          'w-full text-left px-4 py-3 transition flex flex-col gap-2',
-                          selectedThreadId === thread.id ? 'bg-orange-50/80' : 'hover:bg-slate-50'
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium',
-                                provider?.badgeClassName ?? 'bg-slate-100 text-slate-600 border-slate-200'
-                              )}
-                            >
-                              {provider?.name ?? 'Conta'}
-                            </span>
-                            {thread.unread ? (
-                              <Circle className="w-2.5 h-2.5 text-orange-500" />
-                            ) : (
-                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-400">
-                            {formatRelativeToNow(thread.updatedAt)}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <h4 className={cn('text-sm font-semibold text-slate-900', thread.unread && 'text-orange-700')}>
-                              {thread.subject}
-                            </h4>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleStar(thread.id);
-                              }}
-                              className="text-slate-400 hover:text-orange-500"
-                            >
-                              <Star className={cn('w-4 h-4', thread.starred && 'fill-orange-500 text-orange-500')} />
-                            </button>
-                          </div>
-                          <p className="text-xs text-slate-500 line-clamp-2">{thread.preview}</p>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>
-                            {thread.participants
-                              .filter((participant) => participant.email !== account?.emailAddress)
-                              .map((participant) => participant.name)
-                              .join(', ') || 'Você'}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                markAsArchived(thread.id);
-                              }}
-                              className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600"
-                            >
-                              <Archive className="w-3 h-3" /> Arquivar
-                            </button>
-                            <MoreHorizontal className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
                 )}
+                {visibleThreads.map((thread) => {
+                  const account = accounts.find((item) => item.id === thread.accountId);
+                  const provider = account ? emailProviders[account.providerId] : null;
+                  return (
+                    <button
+                      key={thread.id}
+                      onClick={() => handleSelectThread(thread.id)}
+                      className={cn(
+                        'w-full text-left px-4 py-3 transition flex flex-col gap-2',
+                        selectedThreadId === thread.id ? 'bg-orange-50/80' : 'hover:bg-slate-50'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium',
+                              provider?.badgeClassName ?? 'bg-slate-100 text-slate-600 border-slate-200'
+                            )}
+                          >
+                            {provider?.name ?? 'Conta' }
+                          </span>
+                          {thread.unread ? (
+                            <Circle className="w-2.5 h-2.5 text-orange-500" />
+                          ) : (
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {formatRelativeToNow(thread.updatedAt)}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <h4 className={cn('text-sm font-semibold text-slate-900', thread.unread && 'text-orange-700')}>
+                            {thread.subject}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleStar(thread.id);
+                            }}
+                            className="text-slate-400 hover:text-orange-500"
+                          >
+                            <Star className={cn('w-4 h-4', thread.starred && 'fill-orange-500 text-orange-500')} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500 line-clamp-2">{thread.preview}</p>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>
+                          {thread.participants
+                            .filter((participant) => participant.email !== account?.emailAddress)
+                            .map((participant) => participant.name)
+                            .join(', ') || 'Você'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              markAsArchived(thread.id);
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600"
+                          >
+                            <Archive className="w-3 h-3" /> Arquivar
+                          </button>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col gap-6">
-              {threadsLoading && !selectedThread ? (
-                <div className="flex flex-1 items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-                </div>
-              ) : selectedThread ? (
+              {selectedThread ? (
                 <>
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
@@ -770,12 +581,6 @@ export default function EmailManager() {
             </div>
 
             <div className="space-y-4">
-              {accountsError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {accountsError}
-                </div>
-              )}
-
               <label className="block text-sm font-medium text-slate-700">
                 Provedor
                 <select
@@ -855,15 +660,8 @@ export default function EmailManager() {
               </button>
               <button
                 onClick={handleAddAccount}
-                className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                  accountForm.emailAddress && accountForm.displayName && !isConnectingAccount
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                )}
-                disabled={
-                  isConnectingAccount || !accountForm.emailAddress || !accountForm.displayName
-                }
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+                disabled={isConnectingAccount}
               >
                 {isConnectingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheckIcon />}
                 Conectar conta
@@ -889,20 +687,13 @@ export default function EmailManager() {
               </button>
             </div>
 
-            {!hasAnyAccount && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Conecte uma conta de email antes de enviar mensagens.
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="block text-sm font-medium text-slate-700">
                 Enviar por
                 <select
                   name="account"
-                  defaultValue={selectedAccount?.id ?? accounts[0]?.id ?? ''}
-                  disabled={!hasAnyAccount}
-                  className="mt-1 block w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  defaultValue={selectedAccount?.id ?? accounts[0]?.id}
+                  className="mt-1 block w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 >
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -955,19 +746,9 @@ export default function EmailManager() {
               </button>
               <button
                 type="submit"
-                disabled={!hasAnyAccount || isSendingEmail}
-                className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                  !hasAnyAccount || isSendingEmail
-                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                    : 'bg-orange-500 text-white hover:bg-orange-600'
-                )}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
               >
-                {isSendingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                <Send className="w-4 h-4" />
                 Enviar
               </button>
             </div>

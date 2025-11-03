@@ -152,24 +152,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="fixed top-0 w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2 px-4 text-center text-sm font-medium z-50 shadow-md">
-        Atendimento rápido via WhatsApp — clique aqui 📲
-        <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="ml-2 underline hover:text-orange-100">
-          Falar agora
-        </a>
-      </div>
-
-      <a
-        href="https://wa.me/5521979302389"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-2xl z-50 transition-transform hover:scale-110"
-        title="Falar no WhatsApp"
-      >
-        <MessageCircle className="w-8 h-8" />
-      </a>
-
-      <nav className={`fixed top-10 w-full z-40 transition-all duration-300 ${
+      <nav className={`fixed top-0 w-full z-40 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/95 backdrop-blur-sm shadow-sm'
           : 'bg-transparent'
@@ -211,7 +194,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
+      <section className="pt-8 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
@@ -614,12 +597,6 @@ export default function LandingPage() {
               <Shield className="w-12 h-12 text-orange-600 mb-4" />
               <h3 className="text-xl font-bold text-slate-900 mb-2">Operadoras regulamentadas</h3>
               <p className="text-slate-600">Todas as nossas parceiras são certificadas pela ANS</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-              <Clock className="w-12 h-12 text-orange-600 mb-4" />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Atendimento em até 10 minutos</h3>
-              <p className="text-slate-600">Resposta rápida para suas dúvidas e cotações</p>
             </div>
           </div>
         </div>

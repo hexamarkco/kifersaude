@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ConfigProvider } from './contexts/ConfigContext';
 import LandingPage from './pages/LandingPage';
 import BlogPage from './pages/BlogPage';
 import PainelPage from './pages/PainelPage';
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')!).render(
             path="/painel"
             element={
               <ProtectedRoute>
-                <PainelPage />
+                <ConfigProvider>
+                  <PainelPage />
+                </ConfigProvider>
               </ProtectedRoute>
             }
           />

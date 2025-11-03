@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings, MessageCircle, ChevronDown, Briefcase, Mail, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 
 type TabConfig = {
@@ -29,32 +30,41 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0
 }: LayoutProps) {
-  const { signOut, isAdmin, isObserver } = useAuth();
+  const { signOut, isObserver, userProfile } = useAuth();
+  const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
+  const currentRole = userProfile?.role || (isObserver ? 'observer' : 'admin');
+
+  const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
 
   const crmChildren = [
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
-  ];
+  ].filter(child => canView(child.id));
 
-  const comunicacaoChildren = !isObserver ? [
+  const comunicacaoChildren = [
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'whatsapp-history', label: 'WhatsApp', icon: MessageCircle },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },
-  ] : [];
+  ].filter(child => canView(child.id));
 
-  const baseTabs: TabConfig[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'crm', label: 'CRM', icon: Briefcase, children: crmChildren },
-  ];
+  const baseTabs: TabConfig[] = [];
 
-  if (!isObserver && comunicacaoChildren.length > 0) {
+  if (canView('dashboard')) {
+    baseTabs.push({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard });
+  }
+
+  if (crmChildren.length > 0) {
+    baseTabs.push({ id: 'crm', label: 'CRM', icon: Briefcase, children: crmChildren });
+  }
+
+  if (comunicacaoChildren.length > 0) {
     baseTabs.push({ id: 'comunicacao', label: 'Comunicação', icon: MessageCircle, children: comunicacaoChildren });
   }
 
-  const tabs = isAdmin
+  const tabs = canView('config')
     ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]
     : baseTabs;
 

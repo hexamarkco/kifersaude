@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +22,7 @@ import {
   getOperadoraDistribution,
   getContractsToRenew,
 } from '../lib/analytics';
+import { useConfig } from '../contexts/ConfigContext';
 
 type Holder = {
   id: string;
@@ -42,6 +43,7 @@ type Dependent = {
 
 export default function Dashboard() {
   const { isObserver } = useAuth();
+  const { leadStatuses } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -50,6 +52,13 @@ export default function Dashboard() {
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>('mes-atual');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const statusColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    leadStatuses.forEach(status => {
+      map[status.nome] = status.cor || '#64748b';
+    });
+    return map;
+  }, [leadStatuses]);
 
   useEffect(() => {
     loadData();
@@ -245,17 +254,10 @@ export default function Dashboard() {
 
   const upcomingBirthdays = getUpcomingBirthdays();
 
-  const statusColors: Record<string, string> = {
-    Novo: '#3b82f6',
-    'Em contato': '#eab308',
-    Cotando: '#f97316',
-    'Proposta enviada': '#14b8a6',
-  };
-
   const donutChartData = leadStatusData.map((item) => ({
     label: item.status,
     value: item.count,
-    color: statusColors[item.status] || '#64748b',
+    color: statusColorMap[item.status] || '#64748b',
   }));
 
   const operadoraColors = [

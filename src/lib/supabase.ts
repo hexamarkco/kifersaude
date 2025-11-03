@@ -224,6 +224,29 @@ export type LeadOrigem = {
   created_at: string;
 };
 
+export type ConfigOption = {
+  id: string;
+  category: string;
+  label: string;
+  value: string;
+  description?: string;
+  ordem: number;
+  ativo: boolean;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RoleAccessRule = {
+  id: string;
+  role: string;
+  module: string;
+  can_view: boolean;
+  can_edit: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ApiIntegration = {
   id: string;
   zapi_instance_id?: string;

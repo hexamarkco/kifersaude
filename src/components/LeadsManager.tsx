@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen } from 'lucide-react';
 import LeadForm from './LeadForm';
@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
+import { useConfig } from '../contexts/ConfigContext';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
@@ -19,6 +20,7 @@ type LeadsManagerProps = {
 
 export default function LeadsManager({ onConvertToContract }: LeadsManagerProps) {
   const { isObserver } = useAuth();
+  const { leadStatuses, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
+  const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
 
   useEffect(() => {
     loadLeads();
@@ -315,13 +319,11 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
             >
               <option value="todos">Todos os status</option>
-              <option value="Novo">Novo</option>
-              <option value="Contato iniciado">Contato iniciado</option>
-              <option value="Em atendimento">Em atendimento</option>
-              <option value="Cotando">Cotando</option>
-              <option value="Proposta enviada">Proposta enviada</option>
-              <option value="Fechado">Fechado</option>
-              <option value="Perdido">Perdido</option>
+              {activeLeadStatuses.map(status => (
+                <option key={status.id} value={status.nome}>
+                  {status.nome}
+                </option>
+              ))}
             </select>
           </div>
           <div className="relative">
@@ -331,8 +333,11 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
             >
               <option value="todos">Todos os responsáveis</option>
-              <option value="Luiza">Luiza</option>
-              <option value="Nick">Nick</option>
+              {responsavelOptions.map(option => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="text-sm text-slate-600 flex items-center justify-end">
@@ -367,6 +372,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                           leadId={lead.id}
                           onStatusChange={handleStatusChange}
                           onProposalSent={handleProposalSent}
+                          statusOptions={activeLeadStatuses}
                         />
                       ) : (
                         <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded">

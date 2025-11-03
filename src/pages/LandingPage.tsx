@@ -615,12 +615,6 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-slate-900 mb-2">Operadoras regulamentadas</h3>
               <p className="text-slate-600">Todas as nossas parceiras são certificadas pela ANS</p>
             </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-              <Clock className="w-12 h-12 text-orange-600 mb-4" />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Atendimento em até 10 minutos</h3>
-              <p className="text-slate-600">Resposta rápida para suas dúvidas e cotações</p>
-            </div>
           </div>
         </div>
       </section>

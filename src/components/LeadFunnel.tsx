@@ -66,7 +66,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
           const stageLeads = getLeadsByStatus(stage.nome);
           const count = stageLeads.length;
           const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-          const width = totalLeads > 0 ? Math.max((count / totalLeads) * maxWidth, 10) : 0;
+          const width = totalLeads > 0 ? (count / totalLeads) * maxWidth : 0;
           const conversionRate = calculateConversionRate(index);
           const color = stage.cor || '#0ea5e9';
           const textColor = getContrastTextColor(color);
@@ -98,20 +98,22 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
               </div>
 
               <div className="relative h-12 bg-slate-100 rounded-lg overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 flex items-center justify-center transition-all duration-500 ease-out"
-                  style={{
-                    width: `${width}%`,
-                    backgroundColor: color,
-                    color: textColor
-                  }}
-                >
-                  {count > 0 && (
-                    <span className="font-semibold text-sm px-3">
-                      {count} {count === 1 ? 'lead' : 'leads'}
-                    </span>
-                  )}
-                </div>
+                {width > 0 && (
+                  <div
+                    className="absolute inset-y-0 left-0 flex items-center justify-center transition-all duration-500 ease-out"
+                    style={{
+                      width: `${width}%`,
+                      backgroundColor: color,
+                      color: textColor
+                    }}
+                  >
+                    {count > 0 && (
+                      <span className="font-semibold text-sm px-3">
+                        {count} {count === 1 ? 'lead' : 'leads'}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {index < stages.length - 1 && (

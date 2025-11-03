@@ -152,23 +152,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="fixed top-0 w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2 px-4 text-center text-sm font-medium z-50 shadow-md">
-        Atendimento rápido via WhatsApp — clique aqui 📲
-        <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="ml-2 underline hover:text-orange-100">
-          Falar agora
-        </a>
-      </div>
-
-      <a
-        href="https://wa.me/5521979302389"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-2xl z-50 transition-transform hover:scale-110"
-        title="Falar no WhatsApp"
-      >
-        <MessageCircle className="w-8 h-8" />
-      </a>
-
       <nav className={`fixed top-10 w-full z-40 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/95 backdrop-blur-sm shadow-sm'

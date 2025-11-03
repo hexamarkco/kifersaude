@@ -170,6 +170,7 @@ Antes de usar em produção, teste:
 8. ✅ Realtime updates funcionam sem refresh
 9. ✅ Performance com centenas de lembretes
 10. ✅ Responsividade em diferentes dispositivos
+11. ✅ Datas personalizadas inválidas não alteram os números exibidos no dashboard
 
 ## Suporte
 

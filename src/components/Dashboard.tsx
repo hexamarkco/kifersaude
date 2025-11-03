@@ -300,11 +300,36 @@ export default function Dashboard() {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const validateDate = (dateStr: string): boolean => {
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dateStr.match(dateRegex);
+
+    if (!match) return false;
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 1900 || year > 2100) return false;
+
+    const date = new Date(year, month - 1, day);
+    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+  };
+
+  const isCustomPeriodValid =
+    periodFilter !== 'personalizado' ||
+    (customStartDate.length === 10 &&
+      customEndDate.length === 10 &&
+      validateDate(customStartDate) &&
+      validateDate(customEndDate));
+
   const filterByPeriod = <T,>(items: T[], getDate: (item: T) => Date | null): T[] => {
     if (periodFilter === 'todo-periodo') return items;
 
     if (periodFilter === 'personalizado') {
-      if (!customStartDate || !customEndDate) return items;
+      if (!isCustomPeriodValid) return items;
 
       const startDate = parseDateString(customStartDate);
       startDate.setHours(0, 0, 0, 0);
@@ -456,24 +481,6 @@ export default function Dashboard() {
     );
   }
 
-  const validateDate = (dateStr: string): boolean => {
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const match = dateStr.match(dateRegex);
-
-    if (!match) return false;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const year = parseInt(match[3], 10);
-
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 31) return false;
-    if (year < 1900 || year > 2100) return false;
-
-    const date = new Date(year, month - 1, day);
-    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
-  };
-
   const formatDateInput = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
 
@@ -495,10 +502,6 @@ export default function Dashboard() {
     const formatted = formatDateInput(e.target.value);
     setCustomEndDate(formatted);
   };
-
-  const isCustomPeriodValid = periodFilter !== 'personalizado' ||
-    (customStartDate.length === 10 && customEndDate.length === 10 &&
-     validateDate(customStartDate) && validateDate(customEndDate));
 
   return (
     <div className="space-y-6">

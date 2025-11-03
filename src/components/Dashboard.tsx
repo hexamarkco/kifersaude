@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -62,50 +63,18 @@ export default function Dashboard() {
     return map;
   }, [leadStatuses]);
 
-  useEffect(() => {
-    loadData();
+  const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
+    return [...items].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : NaN;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : NaN;
+      const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+      const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+      return safeBTime - safeATime;
+    });
+  };
 
-    const leadsChannel = supabase
-      .channel('dashboard-leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-        },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    const contractsChannel = supabase
-      .channel('dashboard-contracts-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'contracts',
-        },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(contractsChannel);
-    };
-  }, []);
-
-  const loadData = async () => {
-    const firstLoad = isInitialLoadRef.current;
-    if (!firstLoad) {
-      setIsRefreshing(true);
-    }
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
@@ -126,13 +95,187 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
-      if (firstLoad) {
-        setIsInitialLoad(false);
-        isInitialLoadRef.current = false;
-      }
-      setIsRefreshing(false);
+      setLoading(false);
     }
-  };
+  }, [isObserver]);
+
+  useEffect(() => {
+    loadData();
+
+    const leadsChannel = supabase
+      .channel('dashboard-leads-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads',
+        },
+        (payload: RealtimePostgresChangesPayload<Lead>) => {
+          const { eventType } = payload;
+          const newLead = payload.new as Lead | null;
+          const oldLead = payload.old as Lead | null;
+
+          setLeads((currentLeads) => {
+            let updatedLeads = currentLeads;
+
+            switch (eventType) {
+              case 'INSERT':
+                if (!newLead) return currentLeads;
+                if (isObserver && newLead.origem === 'Ully') {
+                  return currentLeads.filter((lead) => lead.id !== newLead.id);
+                }
+                updatedLeads = [newLead, ...currentLeads.filter((lead) => lead.id !== newLead.id)];
+                break;
+              case 'UPDATE':
+                if (!newLead) return currentLeads;
+                updatedLeads = currentLeads.filter((lead) => lead.id !== newLead.id);
+                if (!(isObserver && newLead.origem === 'Ully')) {
+                  updatedLeads = [...updatedLeads, newLead];
+                }
+                break;
+              case 'DELETE':
+                if (!oldLead) return currentLeads;
+                updatedLeads = currentLeads.filter((lead) => lead.id !== oldLead.id);
+                break;
+              default:
+                return currentLeads;
+            }
+
+            return sortByCreatedAtDesc(updatedLeads);
+          });
+        }
+      )
+      .subscribe();
+
+    const contractsChannel = supabase
+      .channel('dashboard-contracts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contracts',
+        },
+        (
+          payload: RealtimePostgresChangesPayload<
+            Contract & { holders?: Holder[]; dependents?: Dependent[] }
+          >
+        ) => {
+          const { eventType } = payload;
+          const newContract = payload.new as (Contract & {
+            holders?: Holder[];
+            dependents?: Dependent[];
+          }) | null;
+          const oldContract = payload.old as (Contract & {
+            holders?: Holder[];
+            dependents?: Dependent[];
+          }) | null;
+          const contractId = newContract?.id || oldContract?.id;
+
+          setContracts((currentContracts) => {
+            let updatedContracts = currentContracts;
+
+            switch (eventType) {
+              case 'INSERT':
+                if (!newContract) return currentContracts;
+                updatedContracts = [
+                  newContract,
+                  ...currentContracts.filter((contract) => contract.id !== newContract.id),
+                ];
+                break;
+              case 'UPDATE':
+                if (!newContract) return currentContracts;
+                updatedContracts = [
+                  ...currentContracts.filter((contract) => contract.id !== newContract.id),
+                  newContract,
+                ];
+                break;
+              case 'DELETE':
+                if (!oldContract) return currentContracts;
+                updatedContracts = currentContracts.filter(
+                  (contract) => contract.id !== oldContract.id
+                );
+                break;
+              default:
+                return currentContracts;
+            }
+
+            return sortByCreatedAtDesc(updatedContracts);
+          });
+
+          setHolders((currentHolders) => {
+            if (!contractId) return currentHolders;
+
+            const hasHolderPayload =
+              !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'holders');
+
+            switch (eventType) {
+              case 'DELETE':
+                return currentHolders.filter((holder) => holder.contract_id !== contractId);
+              case 'INSERT':
+              case 'UPDATE': {
+                if (!hasHolderPayload) {
+                  return currentHolders;
+                }
+
+                const incomingHolders = newContract?.holders ?? [];
+                const filteredHolders = currentHolders.filter(
+                  (holder) => holder.contract_id !== contractId
+                );
+
+                if (incomingHolders.length === 0) {
+                  return filteredHolders;
+                }
+
+                return [...filteredHolders, ...incomingHolders];
+              }
+              default:
+                return currentHolders;
+            }
+          });
+
+          setDependents((currentDependents) => {
+            if (!contractId) return currentDependents;
+
+            const hasDependentPayload =
+              !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'dependents');
+
+            switch (eventType) {
+              case 'DELETE':
+                return currentDependents.filter(
+                  (dependent) => dependent.contract_id !== contractId
+                );
+              case 'INSERT':
+              case 'UPDATE': {
+                if (!hasDependentPayload) {
+                  return currentDependents;
+                }
+
+                const incomingDependents = newContract?.dependents ?? [];
+                const filteredDependents = currentDependents.filter(
+                  (dependent) => dependent.contract_id !== contractId
+                );
+
+                if (incomingDependents.length === 0) {
+                  return filteredDependents;
+                }
+
+                return [...filteredDependents, ...incomingDependents];
+              }
+              default:
+                return currentDependents;
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(contractsChannel);
+    };
+  }, [isObserver, loadData]);
 
   const getStartOfMonth = () => {
     const now = new Date();

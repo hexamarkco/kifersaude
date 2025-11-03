@@ -22,7 +22,6 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const { isObserver } = useAuth();
   const { leadStatuses, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
@@ -45,30 +44,63 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'leads',
-          filter: 'arquivado=eq.false'
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newLead = payload.new as Lead;
-            setLeads((current) => {
-              const exists = current.some(l => l.id === newLead.id);
-              if (exists) return current;
-              return [newLead, ...current];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setLeads((current) =>
-              current.map((lead) =>
-                lead.id === (payload.new as Lead).id ? (payload.new as Lead) : lead
-              )
+          const newLead = payload.new as Lead;
+          if (newLead.arquivado) return;
+
+          setLeads((current) => {
+            const exists = current.some((lead) => lead.id === newLead.id);
+            if (exists) {
+              return current.map((lead) => (lead.id === newLead.id ? newLead : lead));
+            }
+
+            return [newLead, ...current].sort((a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
-          } else if (payload.eventType === 'DELETE') {
-            setLeads((current) =>
-              current.filter((lead) => lead.id !== (payload.old as Lead).id)
-            );
-          }
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'leads',
+        },
+        (payload) => {
+          const updatedLead = payload.new as Lead;
+
+          setLeads((current) => {
+            const exists = current.some((lead) => lead.id === updatedLead.id);
+
+            if (!exists && !updatedLead.arquivado) {
+              return [updatedLead, ...current].sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+            }
+
+            if (updatedLead.arquivado) {
+              return current.filter((lead) => lead.id !== updatedLead.id);
+            }
+
+            return current.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead));
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'leads',
+        },
+        (payload) => {
+          const removedLead = payload.old as Lead;
+          setLeads((current) => current.filter((lead) => lead.id !== removedLead.id));
         }
       )
       .subscribe();
@@ -79,9 +111,42 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   }, []);
 
   useEffect(() => {
-    filterLeads();
     setCurrentPage(1);
-  }, [leads, searchTerm, filterStatus, filterResponsavel]);
+  }, [searchTerm, filterStatus, filterResponsavel, itemsPerPage]);
+
+  const filteredLeads = useMemo(() => {
+    let filtered = leads.filter((lead) => !lead.arquivado);
+
+    if (isObserver) {
+      filtered = filtered.filter((lead) => lead.origem !== 'Ully');
+    }
+
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter((lead) =>
+        lead.nome_completo.toLowerCase().includes(lowerSearch) ||
+        lead.telefone.includes(searchTerm) ||
+        lead.email?.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    if (filterStatus !== 'todos') {
+      filtered = filtered.filter((lead) => lead.status === filterStatus);
+    }
+
+    if (filterResponsavel !== 'todos') {
+      filtered = filtered.filter((lead) => lead.responsavel === filterResponsavel);
+    }
+
+    return filtered;
+  }, [leads, searchTerm, filterStatus, filterResponsavel, isObserver]);
+
+  useEffect(() => {
+    const total = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
+    if (currentPage > total) {
+      setCurrentPage(total);
+    }
+  }, [filteredLeads.length, itemsPerPage, currentPage]);
 
   const loadLeads = async () => {
     setLoading(true);
@@ -101,36 +166,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
   };
 
-  const filterLeads = () => {
-    let filtered = [...leads];
-
-    if (isObserver) {
-      filtered = filtered.filter(lead => lead.origem !== 'Ully');
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(lead =>
-        lead.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.telefone.includes(searchTerm) ||
-        lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filterStatus !== 'todos') {
-      filtered = filtered.filter(lead => lead.status === filterStatus);
-    }
-
-    if (filterResponsavel !== 'todos') {
-      filtered = filtered.filter(lead => lead.responsavel === filterResponsavel);
-    }
-
-    setFilteredLeads(filtered);
-  };
-
-  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+  const paginatedLeads = filteredLeads.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

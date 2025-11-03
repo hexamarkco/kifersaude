@@ -6,7 +6,7 @@ import LeadsManager from '../components/LeadsManager';
 import ContractsManager from '../components/ContractsManager';
 import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
 import EmailManager from '../components/EmailManager';
-import BlogPage from './BlogPage';
+import BlogTab from '../components/config/BlogTab';
 import ConfigPage from './ConfigPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
@@ -114,7 +114,7 @@ export default function PainelPage() {
       case 'email':
         return <EmailManager />;
       case 'blog':
-        return <BlogPage />;
+        return <BlogTab />;
       case 'config':
         return <ConfigPage />;
       default:

@@ -135,7 +135,20 @@ export default function Dashboard() {
     return new Date(year, month - 1, day);
   };
 
-  const filterByPeriod = <T extends { created_at?: string; data_criacao?: string }>(items: T[]): T[] => {
+  const parseDateValue = (value?: string | null): Date | null => {
+    if (!value) return null;
+
+    const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (dateOnlyPattern.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const filterByPeriod = <T,>(items: T[], getDate: (item: T) => Date | null): T[] => {
     if (periodFilter === 'todo-periodo') return items;
 
     if (periodFilter === 'personalizado') {
@@ -147,24 +160,33 @@ export default function Dashboard() {
       const endDate = parseDateString(customEndDate);
       endDate.setHours(23, 59, 59, 999);
 
-      return items.filter(item => {
-        const dateField = 'created_at' in item ? item.created_at : 'data_criacao' in item ? item.data_criacao : null;
-        if (!dateField) return true;
-        const itemDate = new Date(dateField);
+      return items.filter((item) => {
+        const itemDate = getDate(item);
+        if (!itemDate) return true;
         return itemDate >= startDate && itemDate <= endDate;
       });
     }
 
     const startOfMonth = getStartOfMonth();
-    return items.filter(item => {
-      const dateField = 'created_at' in item ? item.created_at : 'data_criacao' in item ? item.data_criacao : null;
-      if (!dateField) return true;
-      return new Date(dateField) >= startOfMonth;
+    return items.filter((item) => {
+      const itemDate = getDate(item);
+      if (!itemDate) return true;
+      return itemDate >= startOfMonth;
     });
   };
 
-  const filteredLeads = filterByPeriod(leads);
-  const filteredContracts = filterByPeriod(contracts);
+  const filteredLeads = filterByPeriod(leads, (lead) => {
+    const dateValue = lead.data_criacao || lead.created_at;
+    return parseDateValue(dateValue);
+  });
+
+  const filteredContracts = filterByPeriod(contracts, (contract) => {
+    return (
+      parseDateValue(contract.data_inicio) ||
+      parseDateValue(contract.previsao_recebimento_comissao) ||
+      parseDateValue(contract.created_at)
+    );
+  });
 
   const leadsAtivos = filteredLeads.filter(
     (l) => !l.arquivado && !['Fechado', 'Perdido'].includes(l.status)

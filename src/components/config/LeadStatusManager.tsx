@@ -97,7 +97,7 @@ export default function LeadStatusManager() {
                 <div className="flex items-center space-x-3">
                   <span
                     className="px-3 py-1 rounded-full text-sm font-medium border"
-                    style={getBadgeStyle(status.cor)}
+                    style={getBadgeStyle(status.cor, 1)}
                   >
                     {status.nome}
                   </span>

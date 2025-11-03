@@ -294,7 +294,7 @@ export const configService = {
   async getConfigOptions(category: ConfigCategory): Promise<ConfigOption[]> {
     try {
       const { data, error } = await supabase
-        .from('config_options')
+        .from('system_configurations')
         .select('*')
         .eq('category', category)
         .order('ordem', { ascending: true })
@@ -324,7 +324,7 @@ export const configService = {
       };
 
       const { data, error } = await supabase
-        .from('config_options')
+        .from('system_configurations')
         .insert([payload])
         .select()
         .single();
@@ -342,7 +342,7 @@ export const configService = {
   ): Promise<{ error: any }> {
     try {
       const { error } = await supabase
-        .from('config_options')
+        .from('system_configurations')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
@@ -356,7 +356,7 @@ export const configService = {
   async deleteConfigOption(id: string): Promise<{ error: any }> {
     try {
       const { error } = await supabase
-        .from('config_options')
+        .from('system_configurations')
         .delete()
         .eq('id', id);
 

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -48,8 +49,9 @@ export default function Dashboard() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isInitialLoadRef = useRef(true);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>('mes-atual');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -61,48 +63,18 @@ export default function Dashboard() {
     return map;
   }, [leadStatuses]);
 
-  useEffect(() => {
-    loadData();
+  const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
+    return [...items].sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : NaN;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : NaN;
+      const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+      const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+      return safeBTime - safeATime;
+    });
+  };
 
-    const leadsChannel = supabase
-      .channel('dashboard-leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-        },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    const contractsChannel = supabase
-      .channel('dashboard-contracts-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'contracts',
-        },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(contractsChannel);
-    };
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
@@ -120,14 +92,190 @@ export default function Dashboard() {
       setContracts(contractsRes.data || []);
       setHolders(holdersRes.data || []);
       setDependents(dependentsRes.data || []);
-      setError(null);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      setError('Não foi possível carregar os dados do dashboard. Tente novamente.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isObserver]);
+
+  useEffect(() => {
+    loadData();
+
+    const leadsChannel = supabase
+      .channel('dashboard-leads-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads',
+        },
+        (payload: RealtimePostgresChangesPayload<Lead>) => {
+          const { eventType } = payload;
+          const newLead = payload.new as Lead | null;
+          const oldLead = payload.old as Lead | null;
+
+          setLeads((currentLeads) => {
+            let updatedLeads = currentLeads;
+
+            switch (eventType) {
+              case 'INSERT':
+                if (!newLead) return currentLeads;
+                if (isObserver && newLead.origem === 'Ully') {
+                  return currentLeads.filter((lead) => lead.id !== newLead.id);
+                }
+                updatedLeads = [newLead, ...currentLeads.filter((lead) => lead.id !== newLead.id)];
+                break;
+              case 'UPDATE':
+                if (!newLead) return currentLeads;
+                updatedLeads = currentLeads.filter((lead) => lead.id !== newLead.id);
+                if (!(isObserver && newLead.origem === 'Ully')) {
+                  updatedLeads = [...updatedLeads, newLead];
+                }
+                break;
+              case 'DELETE':
+                if (!oldLead) return currentLeads;
+                updatedLeads = currentLeads.filter((lead) => lead.id !== oldLead.id);
+                break;
+              default:
+                return currentLeads;
+            }
+
+            return sortByCreatedAtDesc(updatedLeads);
+          });
+        }
+      )
+      .subscribe();
+
+    const contractsChannel = supabase
+      .channel('dashboard-contracts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contracts',
+        },
+        (
+          payload: RealtimePostgresChangesPayload<
+            Contract & { holders?: Holder[]; dependents?: Dependent[] }
+          >
+        ) => {
+          const { eventType } = payload;
+          const newContract = payload.new as (Contract & {
+            holders?: Holder[];
+            dependents?: Dependent[];
+          }) | null;
+          const oldContract = payload.old as (Contract & {
+            holders?: Holder[];
+            dependents?: Dependent[];
+          }) | null;
+          const contractId = newContract?.id || oldContract?.id;
+
+          setContracts((currentContracts) => {
+            let updatedContracts = currentContracts;
+
+            switch (eventType) {
+              case 'INSERT':
+                if (!newContract) return currentContracts;
+                updatedContracts = [
+                  newContract,
+                  ...currentContracts.filter((contract) => contract.id !== newContract.id),
+                ];
+                break;
+              case 'UPDATE':
+                if (!newContract) return currentContracts;
+                updatedContracts = [
+                  ...currentContracts.filter((contract) => contract.id !== newContract.id),
+                  newContract,
+                ];
+                break;
+              case 'DELETE':
+                if (!oldContract) return currentContracts;
+                updatedContracts = currentContracts.filter(
+                  (contract) => contract.id !== oldContract.id
+                );
+                break;
+              default:
+                return currentContracts;
+            }
+
+            return sortByCreatedAtDesc(updatedContracts);
+          });
+
+          setHolders((currentHolders) => {
+            if (!contractId) return currentHolders;
+
+            const hasHolderPayload =
+              !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'holders');
+
+            switch (eventType) {
+              case 'DELETE':
+                return currentHolders.filter((holder) => holder.contract_id !== contractId);
+              case 'INSERT':
+              case 'UPDATE': {
+                if (!hasHolderPayload) {
+                  return currentHolders;
+                }
+
+                const incomingHolders = newContract?.holders ?? [];
+                const filteredHolders = currentHolders.filter(
+                  (holder) => holder.contract_id !== contractId
+                );
+
+                if (incomingHolders.length === 0) {
+                  return filteredHolders;
+                }
+
+                return [...filteredHolders, ...incomingHolders];
+              }
+              default:
+                return currentHolders;
+            }
+          });
+
+          setDependents((currentDependents) => {
+            if (!contractId) return currentDependents;
+
+            const hasDependentPayload =
+              !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'dependents');
+
+            switch (eventType) {
+              case 'DELETE':
+                return currentDependents.filter(
+                  (dependent) => dependent.contract_id !== contractId
+                );
+              case 'INSERT':
+              case 'UPDATE': {
+                if (!hasDependentPayload) {
+                  return currentDependents;
+                }
+
+                const incomingDependents = newContract?.dependents ?? [];
+                const filteredDependents = currentDependents.filter(
+                  (dependent) => dependent.contract_id !== contractId
+                );
+
+                if (incomingDependents.length === 0) {
+                  return filteredDependents;
+                }
+
+                return [...filteredDependents, ...incomingDependents];
+              }
+              default:
+                return currentDependents;
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(contractsChannel);
+    };
+  }, [isObserver, loadData]);
 
   const getStartOfMonth = () => {
     const now = new Date();
@@ -152,11 +300,36 @@ export default function Dashboard() {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const validateDate = (dateStr: string): boolean => {
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dateStr.match(dateRegex);
+
+    if (!match) return false;
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 1900 || year > 2100) return false;
+
+    const date = new Date(year, month - 1, day);
+    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+  };
+
+  const isCustomPeriodValid =
+    periodFilter !== 'personalizado' ||
+    (customStartDate.length === 10 &&
+      customEndDate.length === 10 &&
+      validateDate(customStartDate) &&
+      validateDate(customEndDate));
+
   const filterByPeriod = <T,>(items: T[], getDate: (item: T) => Date | null): T[] => {
     if (periodFilter === 'todo-periodo') return items;
 
     if (periodFilter === 'personalizado') {
-      if (!customStartDate || !customEndDate) return items;
+      if (!isCustomPeriodValid) return items;
 
       const startDate = parseDateString(customStartDate);
       startDate.setHours(0, 0, 0, 0);
@@ -300,31 +473,13 @@ export default function Dashboard() {
     color: operadoraColors[index % operadoraColors.length],
   }));
 
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
-
-  const validateDate = (dateStr: string): boolean => {
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const match = dateStr.match(dateRegex);
-
-    if (!match) return false;
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const year = parseInt(match[3], 10);
-
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 31) return false;
-    if (year < 1900 || year > 2100) return false;
-
-    const date = new Date(year, month - 1, day);
-    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
-  };
 
   const formatDateInput = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
@@ -348,12 +503,16 @@ export default function Dashboard() {
     setCustomEndDate(formatted);
   };
 
-  const isCustomPeriodValid = periodFilter !== 'personalizado' ||
-    (customStartDate.length === 10 && customEndDate.length === 10 &&
-     validateDate(customStartDate) && validateDate(customEndDate));
-
   return (
     <div className="space-y-6">
+      {isRefreshing && (
+        <div className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg ring-1 ring-slate-200">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
+            <span className="text-sm font-medium text-slate-600">Atualizando dados...</span>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Dashboard</h2>

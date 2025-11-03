@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -48,7 +48,9 @@ export default function Dashboard() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isInitialLoadRef = useRef(true);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>('mes-atual');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -100,7 +102,10 @@ export default function Dashboard() {
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
+    const firstLoad = isInitialLoadRef.current;
+    if (!firstLoad) {
+      setIsRefreshing(true);
+    }
     try {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
@@ -121,7 +126,11 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
-      setLoading(false);
+      if (firstLoad) {
+        setIsInitialLoad(false);
+        isInitialLoadRef.current = false;
+      }
+      setIsRefreshing(false);
     }
   };
 
@@ -296,7 +305,7 @@ export default function Dashboard() {
     color: operadoraColors[index % operadoraColors.length],
   }));
 
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
@@ -350,6 +359,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {isRefreshing && (
+        <div className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg ring-1 ring-slate-200">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
+            <span className="text-sm font-medium text-slate-600">Atualizando dados...</span>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Dashboard</h2>

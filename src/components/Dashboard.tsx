@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>('mes-atual');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -101,6 +102,7 @@ export default function Dashboard() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
@@ -118,8 +120,10 @@ export default function Dashboard() {
       setContracts(contractsRes.data || []);
       setHolders(holdersRes.data || []);
       setDependents(dependentsRes.data || []);
+      setError(null);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setError('Não foi possível carregar os dados do dashboard. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -408,6 +412,23 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start space-x-3">
+            <div className="mt-1 h-2 w-2 rounded-full bg-red-500"></div>
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       {!isCustomPeriodValid && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center space-x-2">

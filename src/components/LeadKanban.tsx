@@ -1,26 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { Users, Phone, Mail, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { useConfig } from '../contexts/ConfigContext';
+import { getContrastTextColor } from '../lib/colorUtils';
 
 type LeadKanbanProps = {
   onLeadClick?: (lead: Lead) => void;
   onConvertToContract?: (lead: Lead) => void;
 };
 
-const STATUS_COLUMNS = [
-  { id: 'Novo', label: 'Novo', color: 'bg-blue-500' },
-  { id: 'Contato iniciado', label: 'Contato Iniciado', color: 'bg-yellow-500' },
-  { id: 'Em atendimento', label: 'Em Atendimento', color: 'bg-cyan-500' },
-  { id: 'Cotando', label: 'Cotando', color: 'bg-orange-500' },
-  { id: 'Proposta enviada', label: 'Proposta Enviada', color: 'bg-teal-500' },
-  { id: 'Fechado', label: 'Fechado', color: 'bg-green-500' },
-];
-
 export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKanbanProps) {
+  const { leadStatuses } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
+
+  const statusColumns = useMemo(
+    () => leadStatuses.filter(status => status.ativo).sort((a, b) => a.ordem - b.ordem),
+    [leadStatuses]
+  );
 
   useEffect(() => {
     loadLeads();
@@ -44,16 +43,22 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [statusColumns]);
 
   const loadLeads = async () => {
     setLoading(true);
     try {
+      if (statusColumns.length === 0) {
+        setLeads([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .eq('arquivado', false)
-        .in('status', STATUS_COLUMNS.map(c => c.id))
+        .in('status', statusColumns.map(column => column.nome))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -69,8 +74,8 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     setDraggedLead(lead);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
   };
 
   const handleDrop = async (newStatus: string) => {
@@ -82,10 +87,10 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     const oldStatus = draggedLead.status;
 
     setLeads((current) =>
-      current.map((l) =>
-        l.id === draggedLead.id
-          ? { ...l, status: newStatus, ultimo_contato: new Date().toISOString() }
-          : l
+      current.map((lead) =>
+        lead.id === draggedLead.id
+          ? { ...lead, status: newStatus, ultimo_contato: new Date().toISOString() }
+          : lead
       )
     );
 
@@ -121,8 +126,8 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status do lead');
       setLeads((current) =>
-        current.map((l) =>
-          l.id === draggedLead.id ? { ...l, status: oldStatus } : l
+        current.map((lead) =>
+          lead.id === draggedLead.id ? { ...lead, status: oldStatus } : lead
         )
       );
     }
@@ -142,23 +147,36 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     );
   }
 
+  if (statusColumns.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-500">
+        Configure os status do funil para visualizar o Kanban.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto pb-4">
       <div className="flex space-x-4 min-w-max">
-        {STATUS_COLUMNS.map((column) => {
-          const columnLeads = getLeadsByStatus(column.id);
+        {statusColumns.map((column) => {
+          const columnLeads = getLeadsByStatus(column.nome);
+          const chipColor = column.cor || '#2563eb';
+          const chipText = getContrastTextColor(chipColor);
 
           return (
             <div
               key={column.id}
               className="flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4"
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(column.id)}
+              onDrop={() => handleDrop(column.nome)}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                  <h3 className="font-semibold text-slate-900">{column.label}</h3>
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: chipColor }}
+                  ></div>
+                  <h3 className="font-semibold text-slate-900">{column.nome}</h3>
                 </div>
                 <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
                   {columnLeads.length}
@@ -180,9 +198,19 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
                       onClick={() => onLeadClick && onLeadClick(lead)}
                       className="bg-white rounded-lg p-4 border border-slate-200 hover:shadow-md transition-all cursor-move"
                     >
-                      <h4 className="font-semibold text-slate-900 mb-2 truncate">
-                        {lead.nome_completo}
-                      </h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-slate-900 truncate">{lead.nome_completo}</h4>
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[11px] font-semibold border"
+                          style={{
+                            backgroundColor: `${chipColor}1A`,
+                            color: chipText,
+                            borderColor: `${chipColor}40`
+                          }}
+                        >
+                          {column.nome}
+                        </span>
+                      </div>
 
                       <div className="space-y-1.5 text-sm text-slate-600 mb-3">
                         <div className="flex items-center space-x-2">
@@ -198,21 +226,27 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
                         {lead.proximo_retorno && (
                           <div className="flex items-center space-x-2 text-orange-600">
                             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate text-xs">
-                              {formatDateTimeFullBR(lead.proximo_retorno)}
-                            </span>
+                            <span>{formatDateTimeFullBR(lead.proximo_retorno)}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                        <span className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded font-medium">
-                          {lead.origem}
-                        </span>
-                        <span className="text-xs text-slate-500 font-medium">
-                          {lead.responsavel}
-                        </span>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Responsável: <strong className="text-slate-700">{lead.responsavel}</strong></span>
+                        <span>{new Date(lead.data_criacao).toLocaleDateString('pt-BR')}</span>
                       </div>
+
+                      {onConvertToContract && (
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onConvertToContract(lead);
+                          }}
+                          className="mt-3 w-full text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg py-1.5 hover:bg-teal-50 transition-colors"
+                        >
+                          Converter em contrato
+                        </button>
+                      )}
                     </div>
                   ))
                 )}

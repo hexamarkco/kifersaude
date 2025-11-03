@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { X, Search } from 'lucide-react';
 import { formatDateTimeForInput, convertLocalToUTC } from '../lib/dateUtils';
 import { consultarCep, formatCep } from '../lib/cepService';
+import { useConfig } from '../contexts/ConfigContext';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -11,6 +12,7 @@ type LeadFormProps = {
 };
 
 export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
+  const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
   const [formData, setFormData] = useState({
     nome_completo: lead?.nome_completo || '',
     telefone: lead?.telefone || '',
@@ -18,18 +20,58 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     cep: '',
     endereco: '',
     cidade: lead?.cidade || '',
-    estado: '',
+    estado: lead?.estado || '',
     regiao: lead?.regiao || '',
-    origem: lead?.origem || 'tráfego pago',
-    tipo_contratacao: lead?.tipo_contratacao || 'Pessoa Física',
+    origem: lead?.origem || '',
+    tipo_contratacao: lead?.tipo_contratacao || '',
     operadora_atual: lead?.operadora_atual || '',
-    status: lead?.status || 'Novo',
-    responsavel: lead?.responsavel || 'Luiza',
+    status: lead?.status || '',
+    responsavel: lead?.responsavel || '',
     proximo_retorno: formatDateTimeForInput(lead?.proximo_retorno),
     observacoes: lead?.observacoes || '',
   });
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const activeLeadStatuses = leadStatuses.filter(status => status.ativo);
+  const defaultStatus = activeLeadStatuses.find(status => status.padrao) || activeLeadStatuses[0];
+  const activeOrigins = leadOrigins.filter(origin => origin.ativo);
+  const tipoContratacaoOptions = (options.lead_tipo_contratacao || []).filter(option => option.ativo);
+  const responsavelOptions = (options.lead_responsavel || []).filter(option => option.ativo);
+
+  useEffect(() => {
+    if (!lead && !formData.status && defaultStatus) {
+      setFormData(prev => ({ ...prev, status: defaultStatus.nome }));
+    }
+  }, [lead, defaultStatus, formData.status]);
+
+  useEffect(() => {
+    if (!lead && !formData.origem && activeOrigins.length > 0) {
+      setFormData(prev => ({ ...prev, origem: activeOrigins[0].nome }));
+    }
+  }, [lead, activeOrigins, formData.origem]);
+
+  useEffect(() => {
+    if (!lead && !formData.tipo_contratacao && tipoContratacaoOptions.length > 0) {
+      setFormData(prev => ({ ...prev, tipo_contratacao: tipoContratacaoOptions[0].value }));
+    }
+  }, [lead, tipoContratacaoOptions, formData.tipo_contratacao]);
+
+  useEffect(() => {
+    if (!lead && !formData.responsavel && responsavelOptions.length > 0) {
+      setFormData(prev => ({ ...prev, responsavel: responsavelOptions[0].value }));
+    }
+  }, [lead, responsavelOptions, formData.responsavel]);
+
+  if (configLoading && !lead) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-slate-600 text-sm">Carregando configurações...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCepSearch = async () => {
     if (!formData.cep || formData.cep.replace(/\D/g, '').length !== 8) {
@@ -269,35 +311,68 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Origem do Lead *
               </label>
-              <select
-                required
-                value={formData.origem}
-                onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="tráfego pago">Tráfego pago</option>
-                <option value="Telein">Telein</option>
-                <option value="indicação">Indicação</option>
-                <option value="orgânico">Orgânico</option>
-                <option value="Ully">Ully</option>
-              </select>
+                {activeOrigins.length > 0 ? (
+                  <select
+                    required
+                    value={formData.origem}
+                    onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {!activeOrigins.some(origin => origin.nome === formData.origem) && formData.origem && (
+                      <option value={formData.origem} hidden>
+                        {formData.origem}
+                      </option>
+                    )}
+                    {activeOrigins.map(origin => (
+                      <option key={origin.id} value={origin.nome}>
+                        {origin.nome}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={formData.origem}
+                  onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Informe a origem"
+                />
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Tipo de Contratação *
               </label>
-              <select
-                required
-                value={formData.tipo_contratacao}
-                onChange={(e) => setFormData({ ...formData, tipo_contratacao: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="Pessoa Física">Pessoa Física</option>
-                <option value="MEI">MEI</option>
-                <option value="CNPJ">CNPJ</option>
-                <option value="Adesão">Adesão</option>
-              </select>
+                {tipoContratacaoOptions.length > 0 ? (
+                  <select
+                    required
+                    value={formData.tipo_contratacao}
+                    onChange={(e) => setFormData({ ...formData, tipo_contratacao: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {!tipoContratacaoOptions.some(option => option.value === formData.tipo_contratacao) && formData.tipo_contratacao && (
+                      <option value={formData.tipo_contratacao} hidden>
+                        {formData.tipo_contratacao}
+                      </option>
+                    )}
+                    {tipoContratacaoOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={formData.tipo_contratacao}
+                  onChange={(e) => setFormData({ ...formData, tipo_contratacao: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Informe o tipo de contratação"
+                />
+              )}
             </div>
 
             <div>
@@ -316,35 +391,68 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Status *
               </label>
-              <select
-                required
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="Novo">Novo</option>
-                <option value="Contato iniciado">Contato iniciado</option>
-                <option value="Em atendimento">Em atendimento</option>
-                <option value="Cotando">Cotando</option>
-                <option value="Proposta enviada">Proposta enviada</option>
-                <option value="Fechado">Fechado</option>
-                <option value="Perdido">Perdido</option>
-              </select>
+                {activeLeadStatuses.length > 0 ? (
+                  <select
+                    required
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {!activeLeadStatuses.some(status => status.nome === formData.status) && formData.status && (
+                      <option value={formData.status} hidden>
+                        {formData.status}
+                      </option>
+                    )}
+                    {activeLeadStatuses.map(status => (
+                      <option key={status.id} value={status.nome}>
+                        {status.nome}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Informe o status"
+                />
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Responsável *
               </label>
-              <select
-                required
-                value={formData.responsavel}
-                onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="Luiza">Luiza</option>
-                <option value="Nick">Nick</option>
-              </select>
+                {responsavelOptions.length > 0 ? (
+                  <select
+                    required
+                    value={formData.responsavel}
+                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {!responsavelOptions.some(option => option.value === formData.responsavel) && formData.responsavel && (
+                      <option value={formData.responsavel} hidden>
+                        {formData.responsavel}
+                      </option>
+                    )}
+                    {responsavelOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={formData.responsavel}
+                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Informe o responsável"
+                />
+              )}
             </div>
 
             <div>

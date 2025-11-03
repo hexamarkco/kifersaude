@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { Settings, Volume2, VolumeX, Clock, Calendar, Save, CheckCircle, AlertCircle } from 'lucide-react';
 import { SystemSettings } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
+import { useConfig } from '../../contexts/ConfigContext';
+import LeadStatusManager from './LeadStatusManager';
+import LeadOriginsManager from './LeadOriginsManager';
+import ConfigOptionManager from './ConfigOptionManager';
+import AccessControlManager from './AccessControlManager';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { loading: configLoading } = useConfig();
 
   useEffect(() => {
     loadSettings();
@@ -195,6 +201,60 @@ export default function SystemSettingsTab() {
           </button>
         </div>
       </div>
+
+      {configLoading ? (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center text-slate-600">
+          Carregando configurações avançadas...
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <AccessControlManager />
+          <LeadStatusManager />
+          <LeadOriginsManager />
+          <ConfigOptionManager
+            category="lead_tipo_contratacao"
+            title="Tipos de Contratação"
+            description="Defina as opções disponíveis ao cadastrar leads e contratos."
+            placeholder="Ex: Pessoa Física"
+          />
+          <ConfigOptionManager
+            category="lead_responsavel"
+            title="Responsáveis pelos Leads"
+            description="Configure a lista de responsáveis disponíveis para atribuição."
+            placeholder="Ex: Maria"
+          />
+          <ConfigOptionManager
+            category="contract_status"
+            title="Status de Contratos"
+            description="Personalize o ciclo de vida dos contratos."
+            placeholder="Ex: Ativo"
+          />
+          <ConfigOptionManager
+            category="contract_modalidade"
+            title="Modalidades de Contrato"
+            description="Cadastre as modalidades aceitas (PF, MEI, Empresarial, etc)."
+            placeholder="Ex: Empresarial"
+          />
+          <ConfigOptionManager
+            category="contract_abrangencia"
+            title="Abrangências"
+            description="Lista de coberturas disponíveis para os contratos."
+            placeholder="Ex: Nacional"
+          />
+          <ConfigOptionManager
+            category="contract_acomodacao"
+            title="Tipos de Acomodação"
+            description="Defina as opções de acomodação para os planos."
+            placeholder="Ex: Enfermaria"
+          />
+          <ConfigOptionManager
+            category="contract_carencia"
+            title="Tipos de Carência"
+            description="Configure as opções de carência disponíveis."
+            placeholder="Ex: Padrão"
+          />
+        </div>
+      )}
     </div>
   );
 }

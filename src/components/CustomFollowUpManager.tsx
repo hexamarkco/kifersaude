@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase, FollowUpCustomRule, Lead } from '../lib/supabase';
 import { Plus, Trash2, Clock, AlertCircle, X, Edit2, Save } from 'lucide-react';
+import { useConfig } from '../contexts/ConfigContext';
 
 type CustomFollowUpManagerProps = {
   lead: Lead;
   onClose: () => void;
 };
 
-const STATUS_OPTIONS = ['Novo', 'Em contato', 'Cotando', 'Proposta enviada', 'Fechado', 'Perdido'];
 const PRIORITY_OPTIONS: Array<'baixa' | 'media' | 'alta'> = ['baixa', 'media', 'alta'];
 
 export default function CustomFollowUpManager({ lead, onClose }: CustomFollowUpManagerProps) {
+  const { leadStatuses } = useConfig();
   const [rules, setRules] = useState<FollowUpCustomRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingRule, setEditingRule] = useState<string | null>(null);
@@ -21,6 +22,13 @@ export default function CustomFollowUpManager({ lead, onClose }: CustomFollowUpM
     description: '',
     priority: 'media' as 'baixa' | 'media' | 'alta',
   });
+  const statusOptions = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
+
+  useEffect(() => {
+    if (!statusOptions.find(status => status.nome === newRule.status) && statusOptions.length > 0) {
+      setNewRule(prev => ({ ...prev, status: statusOptions[0].nome }));
+    }
+  }, [statusOptions]);
 
   useEffect(() => {
     loadRules();
@@ -167,16 +175,26 @@ export default function CustomFollowUpManager({ lead, onClose }: CustomFollowUpM
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              {statusOptions.length > 0 ? (
                 <select
                   value={newRule.status}
                   onChange={(e) => setNewRule({ ...newRule, status: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
-                  {STATUS_OPTIONS.map(status => (
-                    <option key={status} value={status}>{status}</option>
+                  {statusOptions.map(status => (
+                    <option key={status.id} value={status.nome}>{status.nome}</option>
                   ))}
                 </select>
-              </div>
+              ) : (
+                <input
+                  type="text"
+                  value={newRule.status}
+                  onChange={(e) => setNewRule({ ...newRule, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Configure os status do funil"
+                />
+              )}
+            </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Dias após mudança</label>
                 <input

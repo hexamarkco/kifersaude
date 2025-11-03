@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
@@ -49,6 +49,8 @@ export default function Dashboard() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isInitialLoadRef = useRef(true);
@@ -74,7 +76,14 @@ export default function Dashboard() {
   };
 
   const loadData = useCallback(async () => {
+    if (isInitialLoadRef.current) {
+      setIsInitialLoad(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
     setLoading(true);
+    setError(null);
     try {
       const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
@@ -94,8 +103,16 @@ export default function Dashboard() {
       setDependents(dependentsRes.data || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      const message = error instanceof Error ? error.message : 'Erro desconhecido.';
+      setError(`Não foi possível carregar os dados. ${message}`);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
+
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+        setIsInitialLoad(false);
+      }
     }
   }, [isObserver]);
 

@@ -572,6 +572,23 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start space-x-3">
+            <div className="mt-1 h-2 w-2 rounded-full bg-red-500"></div>
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {!isCustomPeriodValid && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center space-x-2">
           <Calendar className="w-5 h-5 text-yellow-600 flex-shrink-0" />

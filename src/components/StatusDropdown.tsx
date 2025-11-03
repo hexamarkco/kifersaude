@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { LeadStatusConfig } from '../lib/supabase';
-import { getBadgeStyle, getContrastTextColor } from '../lib/colorUtils';
+import { getBadgeStyle } from '../lib/colorUtils';
 
 type StatusDropdownProps = {
   currentStatus: string;
@@ -38,10 +38,10 @@ export default function StatusDropdown({
         borderColor: 'rgba(148, 163, 184, 0.35)'
       };
     }
-    const badge = getBadgeStyle(status.cor, 0.2);
+    const badge = getBadgeStyle(status.cor, 1);
     return {
       backgroundColor: badge.backgroundColor,
-      color: getContrastTextColor(status.cor),
+      color: badge.color,
       borderColor: badge.borderColor,
     };
   };

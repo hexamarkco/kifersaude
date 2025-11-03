@@ -467,7 +467,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <LeadFunnel />
+      <LeadFunnel leads={filteredLeads} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">

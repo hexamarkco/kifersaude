@@ -1,69 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
-import { supabase, Lead } from '../lib/supabase';
+import { useMemo } from 'react';
+import { Lead } from '../lib/supabase';
 import { TrendingDown, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { getContrastTextColor } from '../lib/colorUtils';
 
-export default function LeadFunnel() {
+type LeadFunnelProps = {
+  leads: Lead[];
+};
+
+export default function LeadFunnel({ leads }: LeadFunnelProps) {
   const { leadStatuses } = useConfig();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const stages = useMemo(
     () => leadStatuses.filter(status => status.ativo).sort((a, b) => a.ordem - b.ordem),
     [leadStatuses]
   );
 
-  useEffect(() => {
-    loadLeads();
-
-    const channel = supabase
-      .channel('funnel-leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-          filter: 'arquivado=eq.false'
-        },
-        () => {
-          loadLeads();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [stages]);
-
-  const loadLeads = async () => {
-    setLoading(true);
-    try {
-      if (stages.length === 0) {
-        setLeads([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false)
-        .in('status', stages.map(stage => stage.nome));
-
-      if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar leads:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const funnelLeads = useMemo(
+    () =>
+      leads.filter(
+        (lead) => !lead.arquivado && stages.some((stage) => stage.nome === lead.status)
+      ),
+    [leads, stages]
+  );
 
   const getLeadsByStatus = (status: string) => {
-    return leads.filter((lead) => lead.status === status);
+    return funnelLeads.filter((lead) => lead.status === status);
   };
 
   const calculateConversionRate = (index: number): number => {
@@ -74,16 +36,8 @@ export default function LeadFunnel() {
     return (currentCount / previousCount) * 100;
   };
 
-  const totalLeads = leads.length;
+  const totalLeads = funnelLeads.length;
   const maxWidth = 100;
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
-      </div>
-    );
-  }
 
   if (stages.length === 0) {
     return (

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { LeadStatusConfig } from '../lib/supabase';
+import { getBadgeStyle, getContrastTextColor } from '../lib/colorUtils';
 
 type StatusDropdownProps = {
   currentStatus: string;
@@ -7,29 +9,7 @@ type StatusDropdownProps = {
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>;
   onProposalSent?: (leadId: string) => void;
   disabled?: boolean;
-};
-
-const STATUS_OPTIONS = [
-  'Novo',
-  'Contato iniciado',
-  'Em atendimento',
-  'Cotando',
-  'Proposta enviada',
-  'Fechado',
-  'Perdido',
-];
-
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    'Novo': 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-    'Contato iniciado': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
-    'Em atendimento': 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200',
-    'Cotando': 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-    'Proposta enviada': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
-    'Fechado': 'bg-green-100 text-green-700 hover:bg-green-200',
-    'Perdido': 'bg-red-100 text-red-700 hover:bg-red-200',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+  statusOptions: LeadStatusConfig[];
 };
 
 export default function StatusDropdown({
@@ -38,11 +18,40 @@ export default function StatusDropdown({
   onStatusChange,
   onProposalSent,
   disabled = false,
+  statusOptions,
 }: StatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getStatusInfo = (statusName: string) => {
+    return statusOptions.find(option => option.nome === statusName) || null;
+  };
+
+  const getButtonStyles = (statusName: string) => {
+    const status = getStatusInfo(statusName);
+    if (!status) {
+      return {
+        backgroundColor: 'rgba(148, 163, 184, 0.15)',
+        color: '#475569',
+        borderColor: 'rgba(148, 163, 184, 0.35)'
+      };
+    }
+    const badge = getBadgeStyle(status.cor, 0.2);
+    return {
+      backgroundColor: badge.backgroundColor,
+      color: getContrastTextColor(status.cor),
+      borderColor: badge.borderColor,
+    };
+  };
+
+  const getOptionIndicatorStyle = (statusName: string) => {
+    const status = getStatusInfo(statusName);
+    return {
+      backgroundColor: status ? status.cor : '#94a3b8',
+    };
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,18 +97,15 @@ export default function StatusDropdown({
   };
 
   const displayStatus = isUpdating && pendingStatus ? pendingStatus : currentStatus;
+  const buttonStyles = getButtonStyles(displayStatus);
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         onClick={() => !disabled && !isUpdating && setIsOpen(!isOpen)}
         disabled={disabled || isUpdating}
-        className={`
-          flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium
-          transition-all duration-200 cursor-pointer
-          ${getStatusColor(displayStatus)}
-          ${(disabled || isUpdating) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
-        `}
+        style={buttonStyles}
+        className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 cursor-pointer ${(disabled || isUpdating) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
       >
         <span>{isUpdating ? 'Atualizando...' : displayStatus}</span>
         {!disabled && !isUpdating && (
@@ -109,20 +115,23 @@ export default function StatusDropdown({
 
       {isOpen && !disabled && !isUpdating && (
         <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]">
-          {STATUS_OPTIONS.map((status) => (
+          {statusOptions.map((status) => (
             <button
-              key={status}
-              onClick={() => handleStatusClick(status)}
+              key={status.id}
+              onClick={() => handleStatusClick(status.nome)}
               className={`
                 w-full text-left px-3 py-2 text-sm transition-colors
-                ${status === currentStatus
+                ${status.nome === currentStatus
                   ? 'bg-slate-100 font-medium text-slate-900'
                   : 'text-slate-700 hover:bg-slate-50'
                 }
               `}
             >
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${getStatusColor(status).split(' ')[0]}`} />
-              {status}
+              <span
+                className="inline-block w-2 h-2 rounded-full mr-2"
+                style={getOptionIndicatorStyle(status.nome)}
+              />
+              {status.nome}
             </button>
           ))}
         </div>

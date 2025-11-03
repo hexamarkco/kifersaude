@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, Lead, ContractValueAdjustment, Operadora } from '../lib/supabase';
 import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import { configService } from '../lib/configService';
+import { useConfig } from '../contexts/ConfigContext';
 
 type ContractFormProps = {
   contract: Contract | null;
@@ -15,18 +16,19 @@ type ContractFormProps = {
 export default function ContractForm({ contract, leadToConvert, onClose, onSave }: ContractFormProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const { options, leadStatuses } = useConfig();
   const [formData, setFormData] = useState({
     codigo_contrato: contract?.codigo_contrato || '',
     lead_id: contract?.lead_id || leadToConvert?.id || '',
-    status: contract?.status || 'Rascunho',
-    modalidade: contract?.modalidade || leadToConvert?.tipo_contratacao || 'PF',
+    status: contract?.status || '',
+    modalidade: contract?.modalidade || leadToConvert?.tipo_contratacao || '',
     operadora: contract?.operadora || leadToConvert?.operadora_atual || '',
     produto_plano: contract?.produto_plano || '',
-    abrangencia: contract?.abrangencia || 'Nacional',
-    acomodacao: contract?.acomodacao || 'Enfermaria',
+    abrangencia: contract?.abrangencia || '',
+    acomodacao: contract?.acomodacao || '',
     data_inicio: contract?.data_inicio || '',
     data_renovacao: contract?.data_renovacao ? contract.data_renovacao.substring(0, 7) : '',
-    carencia: contract?.carencia || 'padrão',
+    carencia: contract?.carencia || '',
     mensalidade_total: contract?.mensalidade_total?.toString() || '',
     comissao_prevista: contract?.comissao_prevista?.toString() || '',
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
@@ -34,7 +36,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     vidas: contract?.vidas?.toString() || '1',
     bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
-    responsavel: contract?.responsavel || leadToConvert?.responsavel || 'Luiza',
+    responsavel: contract?.responsavel || leadToConvert?.responsavel || '',
     observacoes_internas: contract?.observacoes_internas || '',
   });
   const [saving, setSaving] = useState(false);
@@ -43,6 +45,64 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [editingAdjustment, setEditingAdjustment] = useState<ContractValueAdjustment | null>(null);
+  const contractStatusOptions = useMemo(
+    () => (options.contract_status || []).filter(option => option.ativo),
+    [options.contract_status]
+  );
+  const modalidadeOptions = useMemo(() => (options.contract_modalidade || []).filter(option => option.ativo), [options.contract_modalidade]);
+  const abrangenciaOptions = useMemo(() => (options.contract_abrangencia || []).filter(option => option.ativo), [options.contract_abrangencia]);
+  const acomodacaoOptions = useMemo(() => (options.contract_acomodacao || []).filter(option => option.ativo), [options.contract_acomodacao]);
+  const carenciaOptions = useMemo(() => (options.contract_carencia || []).filter(option => option.ativo), [options.contract_carencia]);
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter(option => option.ativo),
+    [options.lead_responsavel]
+  );
+  const convertibleLeadStatuses = useMemo(
+    () => leadStatuses.filter(status => status.ativo).map(status => status.nome),
+    [leadStatuses]
+  );
+
+  useEffect(() => {
+    if (!contract && !formData.status && contractStatusOptions.length > 0) {
+      setFormData(prev => ({ ...prev, status: contractStatusOptions[0].value }));
+    }
+  }, [contract, contractStatusOptions, formData.status]);
+
+  useEffect(() => {
+    if (!contract && !formData.modalidade && modalidadeOptions.length > 0) {
+      const defaultValue = leadToConvert?.tipo_contratacao && modalidadeOptions.some(option => option.value === leadToConvert.tipo_contratacao)
+        ? leadToConvert.tipo_contratacao
+        : modalidadeOptions[0].value;
+      setFormData(prev => ({ ...prev, modalidade: defaultValue }));
+    }
+  }, [contract, modalidadeOptions, formData.modalidade, leadToConvert?.tipo_contratacao]);
+
+  useEffect(() => {
+    if (!contract && !formData.abrangencia && abrangenciaOptions.length > 0) {
+      setFormData(prev => ({ ...prev, abrangencia: abrangenciaOptions[0].value }));
+    }
+  }, [contract, abrangenciaOptions, formData.abrangencia]);
+
+  useEffect(() => {
+    if (!contract && !formData.acomodacao && acomodacaoOptions.length > 0) {
+      setFormData(prev => ({ ...prev, acomodacao: acomodacaoOptions[0].value }));
+    }
+  }, [contract, acomodacaoOptions, formData.acomodacao]);
+
+  useEffect(() => {
+    if (!contract && !formData.carencia && carenciaOptions.length > 0) {
+      setFormData(prev => ({ ...prev, carencia: carenciaOptions[0].value }));
+    }
+  }, [contract, carenciaOptions, formData.carencia]);
+
+  useEffect(() => {
+    if (!contract && !formData.responsavel && responsavelOptions.length > 0) {
+      const defaultResponsavel = leadToConvert?.responsavel && responsavelOptions.some(option => option.value === leadToConvert.responsavel)
+        ? leadToConvert.responsavel
+        : responsavelOptions[0].value;
+      setFormData(prev => ({ ...prev, responsavel: defaultResponsavel }));
+    }
+  }, [contract, responsavelOptions, formData.responsavel, leadToConvert?.responsavel]);
 
   useEffect(() => {
     loadLeads();
@@ -50,7 +110,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     if (contract?.id) {
       loadAdjustments(contract.id);
     }
-  }, []);
+  }, [contract?.id, convertibleLeadStatuses]);
 
   useEffect(() => {
     if (formData.mensalidade_total && formData.comissao_multiplicador) {
@@ -67,12 +127,16 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   const loadLeads = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
         .select('*')
-        .eq('arquivado', false)
-        .in('status', ['Cotando', 'Proposta enviada', 'Fechado'])
-        .order('nome_completo');
+        .eq('arquivado', false);
+
+      if (convertibleLeadStatuses.length > 0) {
+        query = query.in('status', convertibleLeadStatuses);
+      }
+
+      const { data, error } = await query.order('nome_completo');
 
       if (error) throw error;
       setLeads(data || []);
@@ -293,40 +357,58 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Status *
                 </label>
-                <select
-                  required
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="Rascunho">Rascunho</option>
-                  <option value="Em análise">Em análise</option>
-                  <option value="Documentos pendentes">Documentos pendentes</option>
-                  <option value="Proposta enviada">Proposta enviada</option>
-                  <option value="Aguardando assinatura">Aguardando assinatura</option>
-                  <option value="Emitido">Emitido</option>
-                  <option value="Ativo">Ativo</option>
-                  <option value="Suspenso">Suspenso</option>
-                  <option value="Cancelado">Cancelado</option>
-                  <option value="Encerrado">Encerrado</option>
-                </select>
+                {contractStatusOptions.length > 0 ? (
+                  <select
+                    required
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {contractStatusOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Configure os status de contrato"
+                  />
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Modalidade *
                 </label>
-                <select
-                  required
-                  value={formData.modalidade}
-                  onChange={(e) => setFormData({ ...formData, modalidade: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="PF">PF</option>
-                  <option value="MEI">MEI</option>
-                  <option value="CNPJ (PME)">CNPJ (PME)</option>
-                  <option value="Adesão">Adesão</option>
-                </select>
+                {modalidadeOptions.length > 0 ? (
+                  <select
+                    required
+                    value={formData.modalidade}
+                    onChange={(e) => setFormData({ ...formData, modalidade: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {modalidadeOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={formData.modalidade}
+                    onChange={(e) => setFormData({ ...formData, modalidade: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Informe a modalidade"
+                  />
+                )}
               </div>
 
               <div>
@@ -366,28 +448,54 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Abrangência
                 </label>
-                <select
-                  value={formData.abrangencia}
-                  onChange={(e) => setFormData({ ...formData, abrangencia: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="Nacional">Nacional</option>
-                  <option value="Regional">Regional</option>
-                </select>
+                {abrangenciaOptions.length > 0 ? (
+                  <select
+                    value={formData.abrangencia}
+                    onChange={(e) => setFormData({ ...formData, abrangencia: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {abrangenciaOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.abrangencia}
+                    onChange={(e) => setFormData({ ...formData, abrangencia: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Informe a abrangência"
+                  />
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Acomodação
                 </label>
-                <select
-                  value={formData.acomodacao}
-                  onChange={(e) => setFormData({ ...formData, acomodacao: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="Enfermaria">Enfermaria</option>
-                  <option value="Apartamento">Apartamento</option>
-                </select>
+                {acomodacaoOptions.length > 0 ? (
+                  <select
+                    value={formData.acomodacao}
+                    onChange={(e) => setFormData({ ...formData, acomodacao: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {acomodacaoOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.acomodacao}
+                    onChange={(e) => setFormData({ ...formData, acomodacao: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Informe a acomodação"
+                  />
+                )}
               </div>
 
               <div>
@@ -419,16 +527,27 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Carência
                 </label>
-                <select
-                  value={formData.carencia}
-                  onChange={(e) => setFormData({ ...formData, carencia: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="padrão">Padrão</option>
-                  <option value="reduzida">Reduzida</option>
-                  <option value="portabilidade">Portabilidade</option>
-                  <option value="zero">Zero</option>
-                </select>
+                {carenciaOptions.length > 0 ? (
+                  <select
+                    value={formData.carencia}
+                    onChange={(e) => setFormData({ ...formData, carencia: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {carenciaOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.carencia}
+                    onChange={(e) => setFormData({ ...formData, carencia: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Informe a carência"
+                  />
+                )}
               </div>
 
               <div className="md:col-span-2">
@@ -651,15 +770,29 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Responsável *
                 </label>
-                <select
-                  required
-                  value={formData.responsavel}
-                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="Luiza">Luiza</option>
-                  <option value="Nick">Nick</option>
-                </select>
+                {responsavelOptions.length > 0 ? (
+                  <select
+                    required
+                    value={formData.responsavel}
+                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  >
+                    {responsavelOptions.map(option => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={formData.responsavel}
+                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Informe o responsável"
+                  />
+                )}
               </div>
 
               <div className="md:col-span-2">

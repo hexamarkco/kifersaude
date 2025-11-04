@@ -216,6 +216,23 @@ export default function RemindersManagerEnhanced() {
       );
       const completionDate = new Date().toISOString();
 
+      const leadRepresentatives = new Map<string, Reminder>();
+      const standaloneReminders: Reminder[] = [];
+
+      const getReminderTimestamp = (reminder: Reminder) =>
+        reminder.data_lembrete ? new Date(reminder.data_lembrete).getTime() : -Infinity;
+
+      for (const reminder of remindersToUpdate) {
+        if (reminder.lead_id) {
+          const existingReminder = leadRepresentatives.get(reminder.lead_id);
+          if (!existingReminder || getReminderTimestamp(reminder) > getReminderTimestamp(existingReminder)) {
+            leadRepresentatives.set(reminder.lead_id, reminder);
+          }
+        } else {
+          standaloneReminders.push(reminder);
+        }
+      }
+
       const { error } = await supabase
         .from('reminders')
         .update({
@@ -226,8 +243,12 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      for (const reminder of remindersToUpdate) {
+      for (const reminder of standaloneReminders) {
         await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
+      }
+
+      for (const representativeReminder of leadRepresentatives.values()) {
+        await rescheduleNextPendingFollowUpIfNeeded(representativeReminder, completionDate);
       }
 
       setSelectedReminders(new Set());

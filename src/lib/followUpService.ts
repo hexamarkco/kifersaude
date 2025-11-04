@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Reminder } from './supabase';
 
 export type FollowUpRule = {
   status: string;
@@ -80,6 +81,155 @@ const FOLLOW_UP_RULES: FollowUpRule[] = [
     priority: 'media',
   },
 ];
+
+export const AUTOMATIC_FOLLOW_UP_TYPES = ['Follow-up', 'Follow-up Personalizado'] as const;
+const AUTOMATIC_FOLLOW_UP_TYPES_SET = new Set<string>(AUTOMATIC_FOLLOW_UP_TYPES);
+
+const isWeekend = (date: Date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
+
+const toBusinessDayStart = (date: Date) => {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+
+  while (isWeekend(result)) {
+    result.setDate(result.getDate() + 1);
+  }
+
+  return result;
+};
+
+const addBusinessDays = (date: Date, businessDays: number) => {
+  const result = new Date(date);
+
+  if (Number.isNaN(result.getTime())) {
+    return result;
+  }
+
+  if (businessDays <= 0) {
+    while (isWeekend(result)) {
+      result.setDate(result.getDate() + 1);
+    }
+    return result;
+  }
+
+  let addedDays = 0;
+  while (addedDays < businessDays) {
+    result.setDate(result.getDate() + 1);
+    if (!isWeekend(result)) {
+      addedDays += 1;
+    }
+  }
+
+  return result;
+};
+
+const calculateBusinessDayDelay = (originalDate: Date, completionDate: Date) => {
+  const start = toBusinessDayStart(originalDate);
+  const end = toBusinessDayStart(completionDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return 0;
+  }
+
+  let delay = 0;
+  const cursor = new Date(start);
+
+  while (cursor < end) {
+    cursor.setDate(cursor.getDate() + 1);
+    if (!isWeekend(cursor)) {
+      delay += 1;
+    }
+  }
+
+  return delay;
+};
+
+export const reschedulePendingFollowUps = async (
+  leadId: string,
+  originalReminderDate: string | Date,
+  completedAt: string | Date
+): Promise<void> => {
+  if (!leadId) return;
+
+  const completionDate = new Date(completedAt);
+  const originalDate = new Date(originalReminderDate);
+
+  if (Number.isNaN(completionDate.getTime()) || Number.isNaN(originalDate.getTime())) {
+    console.warn('Datas inválidas ao reagendar follow-ups automáticos.');
+    return;
+  }
+
+  const delayInBusinessDays = calculateBusinessDayDelay(originalDate, completionDate);
+
+  if (delayInBusinessDays <= 0) {
+    return;
+  }
+
+  const { data: pendingReminders, error } = await supabase
+    .from('reminders')
+    .select('id, data_lembrete')
+    .eq('lead_id', leadId)
+    .in('tipo', [...AUTOMATIC_FOLLOW_UP_TYPES])
+    .eq('lido', false)
+    .order('data_lembrete', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao buscar follow-ups pendentes para reagendamento:', error);
+    return;
+  }
+
+  if (!pendingReminders || pendingReminders.length === 0) {
+    return;
+  }
+
+  const originalDayStart = toBusinessDayStart(originalDate);
+
+  for (const reminder of pendingReminders) {
+    const currentDate = new Date(reminder.data_lembrete);
+
+    if (Number.isNaN(currentDate.getTime())) {
+      console.warn('Data de lembrete inválida ao reagendar follow-up pendente:', reminder);
+      continue;
+    }
+
+    if (currentDate < originalDayStart) {
+      continue;
+    }
+
+    const newDate = addBusinessDays(currentDate, delayInBusinessDays);
+
+    while (isWeekend(newDate)) {
+      newDate.setDate(newDate.getDate() + 1);
+    }
+
+    const { error: updateError } = await supabase
+      .from('reminders')
+      .update({ data_lembrete: newDate.toISOString() })
+      .eq('id', reminder.id);
+
+    if (updateError) {
+      console.error('Erro ao reagendar follow-up pendente:', updateError);
+    }
+  }
+};
+
+export const reschedulePendingFollowUpsIfNeeded = async (
+  reminder: Pick<Reminder, 'lead_id' | 'tipo' | 'data_lembrete'>,
+  completedAt: string | Date
+): Promise<void> => {
+  if (!reminder?.lead_id) return;
+  if (!AUTOMATIC_FOLLOW_UP_TYPES_SET.has(reminder.tipo)) {
+    return;
+  }
+
+  await reschedulePendingFollowUps(reminder.lead_id, reminder.data_lembrete, completedAt);
+};
+
+export const rescheduleNextPendingFollowUp = reschedulePendingFollowUps;
+export const rescheduleNextPendingFollowUpIfNeeded = reschedulePendingFollowUpsIfNeeded;
 
 export const createAutomaticFollowUps = async (
   leadId: string,

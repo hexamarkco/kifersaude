@@ -90,13 +90,36 @@ const isWeekend = (date: Date) => {
   return day === 0 || day === 6;
 };
 
+const addBusinessDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  if (days === 0) {
+    return result;
+  }
+
+  const direction = days > 0 ? 1 : -1;
+  let remaining = Math.abs(days);
+
+  while (remaining > 0) {
+    result.setDate(result.getDate() + direction);
+    if (!isWeekend(result)) {
+      remaining -= 1;
+    }
+  }
+
+  return result;
+};
+
+const normalizeToMorning = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(9, 0, 0, 0);
+  return normalized;
+};
+
 const getNextBusinessMorning = (date: Date) => {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + 1);
-  nextDate.setHours(9, 0, 0, 0);
+  let nextDate = normalizeToMorning(addBusinessDays(date, 1));
 
   while (isWeekend(nextDate)) {
-    nextDate.setDate(nextDate.getDate() + 1);
+    nextDate = normalizeToMorning(addBusinessDays(nextDate, 1));
   }
 
   return nextDate;
@@ -104,9 +127,9 @@ const getNextBusinessMorning = (date: Date) => {
 
 const calculateNextReminderDate = (completionDate: Date) => {
   let nextDate = getNextBusinessMorning(completionDate);
-  const now = new Date();
+  const comparisonMoment = Math.max(completionDate.getTime(), Date.now());
 
-  while (nextDate <= now) {
+  while (nextDate.getTime() <= comparisonMoment) {
     nextDate = getNextBusinessMorning(nextDate);
   }
 

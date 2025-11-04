@@ -187,12 +187,30 @@ class ZAPIService {
   normalizeZAPIMessages(rawMessages: any[]): ZAPIMessage[] {
     if (!Array.isArray(rawMessages)) return [];
 
+    const getMessageText = (msg: any): string => {
+      if (!msg) return '';
+
+      const candidates = [
+        msg.text?.message,
+        typeof msg.text === 'string' ? msg.text : undefined,
+        msg.text?.body,
+        msg.text?.text,
+        msg.body,
+        msg.message,
+        msg.content,
+        msg.caption,
+      ];
+
+      const normalized = candidates.find((value) => typeof value === 'string') || '';
+      return normalized.trim();
+    };
+
     return rawMessages
-      .filter((msg) => msg && msg.text)
+      .filter((msg) => Boolean(getMessageText(msg)))
       .map((msg) => ({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
-        text: msg.text?.message || msg.text || msg.body || '',
+        text: getMessageText(msg),
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,

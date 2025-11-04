@@ -21,8 +21,11 @@ export interface ZAPIResponse {
   error?: string;
 }
 
+const CLIENT_TOKEN = 'Faca52aa7804f429186a4a7734f8a3d66S';
+
 class ZAPIService {
   private baseUrl = 'https://api.z-api.io';
+  private clientToken = CLIENT_TOKEN;
 
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
@@ -62,6 +65,7 @@ class ZAPIService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
           },
         }
       );
@@ -93,6 +97,7 @@ class ZAPIService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
           },
         }
       );
@@ -125,6 +130,7 @@ class ZAPIService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
           },
           body: JSON.stringify({
             phone: phone,
@@ -187,7 +193,7 @@ class ZAPIService {
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
         text: msg.text?.message || msg.text || msg.body || '',
-        type: msg.fromMe ? 'sent' : 'received',
+        type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
         mediaUrl: msg.mediaUrl || msg.media,

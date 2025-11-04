@@ -25,6 +25,10 @@ import {
 } from '../lib/analytics';
 import { useConfig } from '../contexts/ConfigContext';
 
+type DashboardProps = {
+  onNavigateToTab?: (tab: string) => void;
+};
+
 type Holder = {
   id: string;
   contract_id: string;
@@ -42,7 +46,7 @@ type Dependent = {
   data_nascimento: string;
 };
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const { isObserver } = useAuth();
   const { leadStatuses } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -627,6 +631,7 @@ export default function Dashboard() {
           gradient="from-blue-500 to-blue-600"
           iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
           subtitle="Em negociação"
+          onClick={() => onNavigateToTab?.('leads')}
         />
         <AnimatedStatCard
           label="Contratos Ativos"
@@ -635,6 +640,7 @@ export default function Dashboard() {
           gradient="from-teal-500 to-cyan-600"
           iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
           subtitle="Vigentes"
+          onClick={() => onNavigateToTab?.('contracts')}
         />
         <AnimatedStatCard
           label="Comissão Prevista"
@@ -644,6 +650,7 @@ export default function Dashboard() {
           iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
           prefix="R$"
           subtitle="Mensal"
+          onClick={() => onNavigateToTab?.('financeiro-comissoes')}
         />
       </div>
 

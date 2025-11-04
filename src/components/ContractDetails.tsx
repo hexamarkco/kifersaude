@@ -228,6 +228,14 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                       R$ {((contract.bonus_por_vida_valor * (contract.vidas || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))}
                     </span>
                   </div>
+                  {contract.previsao_pagamento_bonificacao && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
+                      <span className="text-sm font-semibold text-green-800">Pagamento previsto:</span>
+                      <span className="font-bold text-green-700">
+                        {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-green-600 mt-2">
                   Pagamento único por vida do contrato (pode ser parcelado)

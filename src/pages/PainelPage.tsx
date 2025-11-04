@@ -12,6 +12,7 @@ import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import { notificationService } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
+import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab';
 
 export default function PainelPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -104,11 +105,13 @@ export default function PainelPage() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigateToTab={handleTabChange} />;
       case 'leads':
         return <LeadsManager onConvertToContract={handleConvertLead} />;
       case 'contracts':
         return <ContractsManager leadToConvert={leadToConvert} onConvertComplete={() => setLeadToConvert(null)} />;
+      case 'financeiro-comissoes':
+        return <FinanceiroComissoesTab />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
       case 'email':

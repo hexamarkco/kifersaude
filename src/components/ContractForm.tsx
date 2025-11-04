@@ -33,6 +33,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     comissao_prevista: contract?.comissao_prevista?.toString() || '',
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
     previsao_recebimento_comissao: contract?.previsao_recebimento_comissao || '',
+    previsao_pagamento_bonificacao: contract?.previsao_pagamento_bonificacao || '',
     vidas: contract?.vidas?.toString() || '1',
     bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
@@ -242,6 +243,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
+        previsao_pagamento_bonificacao: formData.previsao_pagamento_bonificacao || null,
         vidas: formData.vidas ? parseInt(formData.vidas) : 1,
         bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFloat(formData.bonus_por_vida_valor) : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
@@ -764,6 +766,25 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 </div>
               )}
             </div>
+
+            {(formData.bonus_por_vida_aplicado || formData.previsao_pagamento_bonificacao) && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Previsão Pagamento Bonificação
+                </label>
+                <input
+                  type="date"
+                  value={formData.previsao_pagamento_bonificacao}
+                  onChange={(e) =>
+                    setFormData({ ...formData, previsao_pagamento_bonificacao: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Informe quando a bonificação deverá ser recebida.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>

@@ -278,7 +278,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                 <div className="mb-3">
                   <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm text-slate-600">
                   <div>
                     <span className="font-medium">Operadora:</span> {contract.operadora}
                   </div>
@@ -293,6 +293,12 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                   {contract.comissao_prevista && (
                     <div>
                       <span className="font-medium">Comissão:</span> R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  )}
+                  {contract.previsao_pagamento_bonificacao && (
+                    <div>
+                      <span className="font-medium">Pag. Bonificação:</span>{' '}
+                      {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
                     </div>
                   )}
                 </div>

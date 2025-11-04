@@ -69,6 +69,11 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return map;
   }, [leadStatuses]);
 
+  const todayFormatted = useMemo(
+    () => new Date().toLocaleDateString('pt-BR'),
+    []
+  );
+
   const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
     return [...items].sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : NaN;
@@ -651,6 +656,15 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           prefix="R$"
           subtitle="Mensal"
           onClick={() => onNavigateToTab?.('financeiro-comissoes')}
+        />
+        <AnimatedStatCard
+          label="Agenda Financeira"
+          value={todayFormatted}
+          icon={Calendar}
+          gradient="from-purple-500 to-indigo-600"
+          iconBg="bg-gradient-to-br from-purple-500 to-indigo-600"
+          subtitle="Tarefas do dia"
+          onClick={() => onNavigateToTab?.('financeiro-agenda')}
         />
       </div>
 

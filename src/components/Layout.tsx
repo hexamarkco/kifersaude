@@ -13,6 +13,7 @@ import {
   BookOpen,
   PiggyBank,
   DollarSign,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -66,6 +67,7 @@ export default function Layout({
 
   const financeiroChildren = [
     { id: 'financeiro-comissoes', label: 'Comissões', icon: DollarSign },
+    { id: 'financeiro-agenda', label: 'Agenda', icon: Calendar },
   ].filter(child => canView(child.id));
 
   const baseTabs: TabConfig[] = [];

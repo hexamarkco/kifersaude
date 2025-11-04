@@ -14,6 +14,7 @@ type AnimatedStatCardProps = {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 };
 
 export default function AnimatedStatCard({
@@ -26,6 +27,7 @@ export default function AnimatedStatCard({
   suffix = '',
   subtitle,
   trend,
+  onClick,
 }: AnimatedStatCardProps) {
   const [displayValue, setDisplayValue] = useState<number | string>(0);
   const isNumeric = typeof value === 'number';
@@ -57,11 +59,8 @@ export default function AnimatedStatCard({
     return () => clearInterval(timer);
   }, [value, isNumeric]);
 
-  return (
-    <div
-      className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200
-        hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
-    >
+  const cardContent = (
+    <>
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
 
       <div className="relative p-6">
@@ -105,6 +104,28 @@ export default function AnimatedStatCard({
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200 w-full text-left
+        hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500`}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200
+        hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
+    >
+      {cardContent}
     </div>
   );
 }

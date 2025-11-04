@@ -1,5 +1,19 @@
 import { ReactNode, useState } from 'react';
-import { Users, FileText, LayoutDashboard, Bell, LogOut, Settings, MessageCircle, ChevronDown, Briefcase, Mail, BookOpen } from 'lucide-react';
+import {
+  Users,
+  FileText,
+  LayoutDashboard,
+  Bell,
+  LogOut,
+  Settings,
+  MessageCircle,
+  ChevronDown,
+  Briefcase,
+  Mail,
+  BookOpen,
+  PiggyBank,
+  DollarSign,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +64,10 @@ export default function Layout({
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 
+  const financeiroChildren = [
+    { id: 'financeiro-comissoes', label: 'Comissões', icon: DollarSign },
+  ].filter(child => canView(child.id));
+
   const baseTabs: TabConfig[] = [];
 
   if (canView('dashboard')) {
@@ -62,6 +80,10 @@ export default function Layout({
 
   if (comunicacaoChildren.length > 0) {
     baseTabs.push({ id: 'comunicacao', label: 'Comunicação', icon: MessageCircle, children: comunicacaoChildren });
+  }
+
+  if (financeiroChildren.length > 0) {
+    baseTabs.push({ id: 'financeiro', label: 'Financeiro', icon: PiggyBank, children: financeiroChildren });
   }
 
   const tabs = canView('config')

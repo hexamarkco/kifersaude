@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen } from 'lucide-react';
 import LeadForm from './LeadForm';
@@ -13,6 +13,7 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import { useConfig } from '../contexts/ConfigContext';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
@@ -36,6 +37,76 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
 
+  const loadLeads = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('arquivado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeads(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar leads:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleRealtimeLeadChange = useCallback(
+    (payload: RealtimePostgresChangesPayload<Lead>) => {
+      const { eventType } = payload;
+      const newLead = payload.new as Lead | null;
+      const oldLead = payload.old as Lead | null;
+
+      setLeads((current) => {
+        let updatedLeads = current;
+
+        switch (eventType) {
+          case 'INSERT':
+            if (!newLead || newLead.arquivado) return current;
+            updatedLeads = [newLead, ...current.filter((lead) => lead.id !== newLead.id)];
+            break;
+          case 'UPDATE':
+            if (!newLead) return current;
+            if (newLead.arquivado) {
+              updatedLeads = current.filter((lead) => lead.id !== newLead.id);
+            } else {
+              const otherLeads = current.filter((lead) => lead.id !== newLead.id);
+              updatedLeads = [newLead, ...otherLeads];
+            }
+            break;
+          case 'DELETE':
+            if (!oldLead) return current;
+            updatedLeads = current.filter((lead) => lead.id !== oldLead.id);
+            break;
+          default:
+            return current;
+        }
+
+        return updatedLeads.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      });
+
+      if (eventType === 'DELETE' && oldLead) {
+        setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
+        setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
+        setFollowUpLead((current) => (current && current.id === oldLead.id ? null : current));
+        return;
+      }
+
+      if (newLead) {
+        setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
+        setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
+        setFollowUpLead((current) => (current && current.id === newLead.id ? newLead : current));
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     loadLeads();
 
@@ -44,71 +115,18 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'leads',
         },
-        (payload) => {
-          const newLead = payload.new as Lead;
-          if (newLead.arquivado) return;
-
-          setLeads((current) => {
-            const exists = current.some((lead) => lead.id === newLead.id);
-            if (exists) {
-              return current.map((lead) => (lead.id === newLead.id ? newLead : lead));
-            }
-
-            return [newLead, ...current].sort((a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'leads',
-        },
-        (payload) => {
-          const updatedLead = payload.new as Lead;
-
-          setLeads((current) => {
-            const exists = current.some((lead) => lead.id === updatedLead.id);
-
-            if (!exists && !updatedLead.arquivado) {
-              return [updatedLead, ...current].sort((a, b) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
-            }
-
-            if (updatedLead.arquivado) {
-              return current.filter((lead) => lead.id !== updatedLead.id);
-            }
-
-            return current.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead));
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'leads',
-        },
-        (payload) => {
-          const removedLead = payload.old as Lead;
-          setLeads((current) => current.filter((lead) => lead.id !== removedLead.id));
-        }
+        handleRealtimeLeadChange
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadLeads, handleRealtimeLeadChange]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -147,24 +165,6 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       setCurrentPage(total);
     }
   }, [filteredLeads.length, itemsPerPage, currentPage]);
-
-  const loadLeads = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar leads:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;

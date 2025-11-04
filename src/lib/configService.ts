@@ -1,3 +1,5 @@
+import type { PostgrestError } from '@supabase/supabase-js';
+
 import {
   supabase,
   SystemSettings,
@@ -9,7 +11,21 @@ import {
   RoleAccessRule,
 } from './supabase';
 
-const normalizeConfigOption = (option: any): ConfigOption => {
+type RoleAccessMetadata = {
+  role?: string;
+  module?: string;
+  can_view?: unknown;
+  can_edit?: unknown;
+  canView?: unknown;
+  canEdit?: unknown;
+  [key: string]: unknown;
+};
+
+type RoleAccessConfigRow = Omit<ConfigOption, 'metadata'> & {
+  metadata: RoleAccessMetadata | null;
+};
+
+const normalizeConfigOption = (option: ConfigOption & { active?: boolean | null }): ConfigOption => {
   const ativoValue = option?.ativo ?? option?.active;
   return {
     ...option,
@@ -17,7 +33,7 @@ const normalizeConfigOption = (option: any): ConfigOption => {
   };
 };
 
-const isMissingColumnError = (error: any, column: string) => {
+const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) => {
   if (!error) return false;
   const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
   const normalizedMessage = message.replace(/"/g, "'");
@@ -26,6 +42,143 @@ const isMissingColumnError = (error: any, column: string) => {
     error.code === 'PGRST204' &&
     (normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower))
   );
+};
+
+const FALLBACK_ROLE_ACCESS_CATEGORY = 'role_access_rules';
+
+const ensureBoolean = (value: unknown, defaultValue = false) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', 't', '1'].includes(normalized)) return true;
+    if (['false', 'f', '0'].includes(normalized)) return false;
+  }
+  return defaultValue;
+};
+
+const isTableMissingError = (error: unknown, table: string) => {
+  if (!error || typeof error !== 'object') return false;
+  const { code, message, details, hint } = error as PostgrestError;
+  const normalizedCode = typeof code === 'string' ? code.toUpperCase() : '';
+  const tableLower = table.toLowerCase();
+  const normalizedMessage = typeof message === 'string' ? message.toLowerCase() : '';
+  const normalizedDetails = typeof details === 'string' ? details.toLowerCase() : '';
+  const normalizedHint = typeof hint === 'string' ? hint.toLowerCase() : '';
+
+  if (normalizedCode === 'PGRST302' || normalizedCode === 'PGRST301' || normalizedCode === '42P01') return true;
+
+  return (
+    normalizedMessage.includes(`resource ${tableLower}`) ||
+    normalizedMessage.includes(`relation "${tableLower}`) ||
+    normalizedMessage.includes(`relation '${tableLower}`) ||
+    normalizedMessage.includes('does not exist') ||
+    normalizedMessage.includes(tableLower) ||
+    normalizedDetails.includes(tableLower) ||
+    normalizedHint.includes(tableLower)
+  );
+};
+
+const mapFallbackOptionToRoleAccessRule = (option: RoleAccessConfigRow): RoleAccessRule => {
+  const metadata = option.metadata ?? {};
+  const [valueRole, valueModule] = typeof option.value === 'string' ? option.value.split(':') : ['', ''];
+  const role = String(metadata.role ?? valueRole ?? '');
+  const module = String(metadata.module ?? valueModule ?? '');
+  const canView = ensureBoolean(metadata.can_view ?? metadata.canView, false);
+  const canEdit = ensureBoolean(metadata.can_edit ?? metadata.canEdit, false);
+
+  return {
+    id: option?.id ?? '',
+    role,
+    module,
+    can_view: canView,
+    can_edit: canEdit,
+    created_at: option?.created_at ?? new Date().toISOString(),
+    updated_at: option?.updated_at ?? new Date().toISOString(),
+  };
+};
+
+const getFallbackRoleAccessRules = async (): Promise<RoleAccessRule[]> => {
+  const { data, error } = await supabase
+    .from('system_configurations')
+    .select('*')
+    .eq('category', FALLBACK_ROLE_ACCESS_CATEGORY)
+    .order('ordem', { ascending: true })
+    .order('label', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as RoleAccessConfigRow[] | null) ?? [];
+  return rows.map(mapFallbackOptionToRoleAccessRule);
+};
+
+const upsertFallbackRoleAccessRule = async (
+  role: string,
+  module: string,
+  updates: Partial<Pick<RoleAccessRule, 'can_view' | 'can_edit'>>,
+): Promise<{ data: RoleAccessRule | null; error: PostgrestError | null }> => {
+  const key = `${role}:${module}`;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('system_configurations')
+    .select('*')
+    .eq('category', FALLBACK_ROLE_ACCESS_CATEGORY)
+    .eq('value', key)
+    .maybeSingle();
+
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    return { data: null, error: fetchError };
+  }
+
+  const metadataRecord: RoleAccessMetadata = existing?.metadata ?? {};
+  const canView = updates.can_view ?? ensureBoolean(metadataRecord.can_view ?? metadataRecord.canView, false);
+  const canEdit = updates.can_edit ?? ensureBoolean(metadataRecord.can_edit ?? metadataRecord.canEdit, false);
+  const metadata: Record<string, unknown> = {
+    ...metadataRecord,
+    role,
+    module,
+    can_view: canView,
+    can_edit: canEdit,
+  };
+
+  const basePayload: Record<string, unknown> = {
+    category: FALLBACK_ROLE_ACCESS_CATEGORY,
+    value: key,
+    metadata,
+    ativo: true,
+    ordem: existing?.ordem ?? 0,
+    label: existing?.label ?? `${role} - ${module}`,
+  };
+
+  const timestamp = new Date().toISOString();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('system_configurations')
+      .update({ ...basePayload, updated_at: timestamp })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (error) return { data: null, error };
+    return { data: mapFallbackOptionToRoleAccessRule(data as RoleAccessConfigRow), error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('system_configurations')
+    .insert([{ ...basePayload, created_at: timestamp, updated_at: timestamp }])
+    .select()
+    .single();
+
+  if (error) return { data: null, error };
+  return { data: mapFallbackOptionToRoleAccessRule(data as RoleAccessConfigRow), error: null };
+};
+
+const deleteFallbackRoleAccessRule = async (id: string): Promise<{ error: PostgrestError | null }> => {
+  const { error } = await supabase.from('system_configurations').delete().eq('id', id);
+  return { error };
 };
 
 export type ConfigCategory =
@@ -401,16 +554,31 @@ export const configService = {
 
   async getRoleAccessRules(): Promise<RoleAccessRule[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('role_access_rules')
         .select('*')
         .order('role', { ascending: true })
         .order('module', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
+          return await getFallbackRoleAccessRules();
+        }
+        throw error;
+      }
+
       return data || [];
     } catch (error) {
       console.error('Error loading role access rules:', error);
+
+      if (isTableMissingError(error, 'role_access_rules')) {
+        try {
+          return await getFallbackRoleAccessRules();
+        } catch (fallbackError) {
+          console.error('Fallback role access rules failed:', fallbackError);
+        }
+      }
+
       return [];
     }
   },
@@ -419,36 +587,63 @@ export const configService = {
     role: string,
     module: string,
     updates: Partial<Pick<RoleAccessRule, 'can_view' | 'can_edit'>>,
-  ): Promise<{ data: RoleAccessRule | null; error: any }> {
+  ): Promise<{ data: RoleAccessRule | null; error: PostgrestError | null }> {
     try {
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('role_access_rules')
-        .upsert({
-          role,
-          module,
-          ...updates,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'role,module', ignoreDuplicates: false })
+        .upsert(
+          {
+            role,
+            module,
+            ...updates,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'role,module', ignoreDuplicates: false },
+        )
         .select()
         .single();
 
-      return { data, error };
+      if (error) {
+        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
+          return await upsertFallbackRoleAccessRule(role, module, updates);
+        }
+        return { data: null, error };
+      }
+
+      return { data, error: null };
     } catch (error) {
       console.error('Error upserting role access rule:', error);
+
+      if (isTableMissingError(error, 'role_access_rules')) {
+        return await upsertFallbackRoleAccessRule(role, module, updates);
+      }
+
       return { data: null, error };
     }
   },
 
-  async deleteRoleAccessRule(id: string): Promise<{ error: any }> {
+  async deleteRoleAccessRule(id: string): Promise<{ error: PostgrestError | null }> {
     try {
-      const { error } = await supabase
+      const { error, status } = await supabase
         .from('role_access_rules')
         .delete()
         .eq('id', id);
 
-      return { error };
+      if (error) {
+        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
+          return await deleteFallbackRoleAccessRule(id);
+        }
+        return { error };
+      }
+
+      return { error: null };
     } catch (error) {
       console.error('Error deleting role access rule:', error);
+
+      if (isTableMissingError(error, 'role_access_rules')) {
+        return await deleteFallbackRoleAccessRule(id);
+      }
+
       return { error };
     }
   },

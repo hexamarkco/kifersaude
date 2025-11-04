@@ -387,6 +387,10 @@ export default function Dashboard() {
   ).length;
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
+  const activeContracts = useMemo(
+    () => contracts.filter((contract) => contract.status === 'Ativo'),
+    [contracts]
+  );
   const comissaoTotal = contratosAtivos.reduce((sum, c) => sum + (c.comissao_prevista || 0), 0);
 
   const mensalidadeTotal = contratosAtivos.reduce(
@@ -401,7 +405,7 @@ export default function Dashboard() {
 
   const leadStatusData = getLeadStatusDistribution(filteredLeads.filter(l => !l.arquivado && !['Fechado', 'Perdido'].includes(l.status)));
   const operadoraData = getOperadoraDistribution(filteredContracts);
-  const upcomingRenewals = getContractsToRenew(contracts, 30);
+  const upcomingRenewals = getContractsToRenew(activeContracts, 30);
 
   const getUpcomingBirthdays = () => {
     const hoje = new Date();
@@ -418,8 +422,8 @@ export default function Dashboard() {
       isPJ: boolean;
     }> = [];
 
-    const activeContractIds = contratosAtivos.map(c => c.id);
-    const contractsMap = new Map(contratosAtivos.map(c => [c.id, c]));
+    const activeContractIds = activeContracts.map(c => c.id);
+    const contractsMap = new Map(activeContracts.map(c => [c.id, c]));
     const holdersMap = new Map(holders.map(h => [h.contract_id, h]));
 
     holders

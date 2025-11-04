@@ -657,15 +657,6 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           subtitle="Mensal"
           onClick={() => onNavigateToTab?.('financeiro-comissoes')}
         />
-        <AnimatedStatCard
-          label="Agenda Financeira"
-          value={todayFormatted}
-          icon={Calendar}
-          gradient="from-purple-500 to-indigo-600"
-          iconBg="bg-gradient-to-br from-purple-500 to-indigo-600"
-          subtitle="Tarefas do dia"
-          onClick={() => onNavigateToTab?.('financeiro-agenda')}
-        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

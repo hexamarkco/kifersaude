@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
-import { reschedulePendingFollowUpsIfNeeded } from '../lib/followUpService';
+import { rescheduleNextPendingFollowUpIfNeeded } from '../lib/followUpService';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
@@ -131,7 +131,7 @@ export default function RemindersManagerEnhanced() {
       if (error) throw error;
 
       if (!currentStatus && reminder && completionDate) {
-        await reschedulePendingFollowUpsIfNeeded(reminder, completionDate);
+        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
       }
       loadReminders();
     } catch (error) {
@@ -227,7 +227,7 @@ export default function RemindersManagerEnhanced() {
       if (error) throw error;
 
       for (const reminder of remindersToUpdate) {
-        await reschedulePendingFollowUpsIfNeeded(reminder, completionDate);
+        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
       }
 
       setSelectedReminders(new Set());

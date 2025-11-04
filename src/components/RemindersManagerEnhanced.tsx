@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
+import { rescheduleNextPendingFollowUpIfNeeded } from '../lib/followUpService';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
@@ -112,9 +113,12 @@ export default function RemindersManagerEnhanced() {
 
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
     try {
+      const reminder = reminders.find(r => r.id === id);
       const updateData: any = { lido: !currentStatus };
+      let completionDate: string | null = null;
       if (!currentStatus) {
-        updateData.concluido_em = new Date().toISOString();
+        completionDate = new Date().toISOString();
+        updateData.concluido_em = completionDate;
       } else {
         updateData.concluido_em = null;
       }
@@ -125,6 +129,10 @@ export default function RemindersManagerEnhanced() {
         .eq('id', id);
 
       if (error) throw error;
+
+      if (!currentStatus && reminder && completionDate) {
+        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
+      }
       loadReminders();
     } catch (error) {
       console.error('Erro ao atualizar lembrete:', error);
@@ -203,15 +211,25 @@ export default function RemindersManagerEnhanced() {
     if (selectedReminders.size === 0) return;
 
     try {
+      const remindersToUpdate = reminders.filter(
+        reminder => selectedReminders.has(reminder.id) && !reminder.lido
+      );
+      const completionDate = new Date().toISOString();
+
       const { error } = await supabase
         .from('reminders')
         .update({
           lido: true,
-          concluido_em: new Date().toISOString()
+          concluido_em: completionDate
         })
         .in('id', Array.from(selectedReminders));
 
       if (error) throw error;
+
+      for (const reminder of remindersToUpdate) {
+        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
+      }
+
       setSelectedReminders(new Set());
       loadReminders();
     } catch (error) {

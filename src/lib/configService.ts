@@ -9,6 +9,25 @@ import {
   RoleAccessRule,
 } from './supabase';
 
+const normalizeConfigOption = (option: any): ConfigOption => {
+  const ativoValue = option?.ativo ?? option?.active;
+  return {
+    ...option,
+    ativo: ativoValue === undefined || ativoValue === null ? true : Boolean(ativoValue),
+  };
+};
+
+const isMissingColumnError = (error: any, column: string) => {
+  if (!error) return false;
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  const normalizedMessage = message.replace(/"/g, "'");
+  const columnLower = column.toLowerCase();
+  return (
+    error.code === 'PGRST204' &&
+    (normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower))
+  );
+};
+
 export type ConfigCategory =
   | 'lead_tipo_contratacao'
   | 'lead_responsavel'
@@ -301,7 +320,7 @@ export const configService = {
         .order('label', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(normalizeConfigOption);
     } catch (error) {
       console.error('Error loading config options:', error);
       return [];
@@ -313,23 +332,26 @@ export const configService = {
     option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
   ): Promise<{ data: ConfigOption | null; error: any }> {
     try {
-      const payload = {
+      const basePayload = {
         category,
         label: option.label,
         value: option.value || option.label,
         description: option.description || null,
         ordem: option.ordem ?? 0,
-        ativo: option.ativo ?? true,
         metadata: option.metadata || null,
       };
+      const ativoValue = option.ativo ?? true;
 
-      const { data, error } = await supabase
-        .from('system_configurations')
-        .insert([payload])
-        .select()
-        .single();
+      const insert = async (payload: Record<string, any>) =>
+        supabase.from('system_configurations').insert([payload]).select().single();
 
-      return { data, error };
+      let { data, error } = await insert({ ...basePayload, ativo: ativoValue });
+
+      if (error && isMissingColumnError(error, 'ativo')) {
+        ({ data, error } = await insert({ ...basePayload, active: ativoValue }));
+      }
+
+      return { data: data ? normalizeConfigOption(data) : null, error };
     } catch (error) {
       console.error('Error creating config option:', error);
       return { data: null, error };
@@ -341,10 +363,20 @@ export const configService = {
     updates: Partial<Pick<ConfigOption, 'label' | 'value' | 'description' | 'ordem' | 'ativo' | 'metadata'>>,
   ): Promise<{ error: any }> {
     try {
-      const { error } = await supabase
-        .from('system_configurations')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const { ativo, ...rest } = updates;
+      const timestamp = new Date().toISOString();
+      const basePayload: Record<string, any> = { ...rest, updated_at: timestamp };
+
+      if (ativo !== undefined) {
+        basePayload.ativo = ativo;
+      }
+
+      let { error } = await supabase.from('system_configurations').update(basePayload).eq('id', id);
+
+      if (error && ativo !== undefined && isMissingColumnError(error, 'ativo')) {
+        const retryPayload: Record<string, any> = { ...rest, updated_at: timestamp, active: ativo };
+        ({ error } = await supabase.from('system_configurations').update(retryPayload).eq('id', id));
+      }
 
       return { error };
     } catch (error) {

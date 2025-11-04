@@ -232,6 +232,7 @@ export type ConfigOption = {
   description?: string;
   ordem: number;
   ativo: boolean;
+  active?: boolean;
   metadata?: Record<string, any> | null;
   created_at: string;
   updated_at: string;

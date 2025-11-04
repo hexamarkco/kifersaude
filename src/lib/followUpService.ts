@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Reminder } from './supabase';
 
 export type FollowUpRule = {
   status: string;
@@ -80,6 +81,92 @@ const FOLLOW_UP_RULES: FollowUpRule[] = [
     priority: 'media',
   },
 ];
+
+export const AUTOMATIC_FOLLOW_UP_TYPES = ['Follow-up', 'Follow-up Personalizado'] as const;
+const AUTOMATIC_FOLLOW_UP_TYPES_SET = new Set<string>(AUTOMATIC_FOLLOW_UP_TYPES);
+
+const isWeekend = (date: Date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
+
+const getNextBusinessMorning = (date: Date) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + 1);
+  nextDate.setHours(9, 0, 0, 0);
+
+  while (isWeekend(nextDate)) {
+    nextDate.setDate(nextDate.getDate() + 1);
+  }
+
+  return nextDate;
+};
+
+const calculateNextReminderDate = (completionDate: Date) => {
+  let nextDate = getNextBusinessMorning(completionDate);
+  const now = new Date();
+
+  while (nextDate <= now) {
+    nextDate = getNextBusinessMorning(nextDate);
+  }
+
+  return nextDate;
+};
+
+export const rescheduleNextPendingFollowUp = async (
+  leadId: string,
+  completedAt: string | Date
+): Promise<void> => {
+  if (!leadId) return;
+
+  const completionDate = new Date(completedAt);
+  if (Number.isNaN(completionDate.getTime())) {
+    console.warn('Data de conclusão inválida ao reagendar follow-up.');
+    return;
+  }
+
+  const { data: nextReminder, error } = await supabase
+    .from('reminders')
+    .select('id')
+    .eq('lead_id', leadId)
+    .in('tipo', [...AUTOMATIC_FOLLOW_UP_TYPES])
+    .eq('lido', false)
+    .order('data_lembrete', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Erro ao buscar próximo follow-up pendente:', error);
+    return;
+  }
+
+  if (!nextReminder) {
+    return;
+  }
+
+  const nextReminderDate = calculateNextReminderDate(completionDate).toISOString();
+
+  const { error: updateError } = await supabase
+    .from('reminders')
+    .update({ data_lembrete: nextReminderDate })
+    .eq('id', nextReminder.id);
+
+  if (updateError) {
+    console.error('Erro ao reagendar follow-up pendente:', updateError);
+  }
+};
+
+export const rescheduleNextPendingFollowUpIfNeeded = async (
+  reminder: Pick<Reminder, 'lead_id' | 'tipo'>,
+  completedAt: string | Date
+): Promise<void> => {
+  if (!reminder?.lead_id) return;
+  if (!AUTOMATIC_FOLLOW_UP_TYPES_SET.has(reminder.tipo)) {
+    return;
+  }
+
+  await rescheduleNextPendingFollowUp(reminder.lead_id, completedAt);
+};
 
 export const createAutomaticFollowUps = async (
   leadId: string,

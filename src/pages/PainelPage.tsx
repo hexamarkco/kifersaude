@@ -14,6 +14,7 @@ import { notificationService } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
 import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab';
 import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
+import WhatsAppHistoryTab from '../components/WhatsAppHistoryTab';
 
 export default function PainelPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -117,6 +118,8 @@ export default function PainelPage() {
         return <FinanceiroAgendaTab />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
+      case 'whatsapp-history':
+        return <WhatsAppHistoryTab />;
       case 'email':
         return <EmailManager />;
       case 'blog':

@@ -268,15 +268,18 @@ export type ApiIntegration = {
 
 export type WhatsAppConversation = {
   id: string;
-  lead_id: string;
-  contract_id?: string;
+  lead_id?: string | null;
+  contract_id?: string | null;
   phone_number: string;
-  message_id?: string;
+  message_id?: string | null;
   message_text: string;
   message_type: 'sent' | 'received';
   timestamp: string;
   read_status: boolean;
-  media_url?: string;
+  media_url?: string | null;
+  sender_name?: string | null;
+  sender_photo?: string | null;
+  chat_name?: string | null;
   created_at: string;
 };
 

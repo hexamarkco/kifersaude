@@ -543,6 +543,17 @@ export default function WhatsAppHistoryTab() {
     }
   }, [filteredChats, selectedPhone]);
 
+  useEffect(() => {
+    setMessageText('');
+    setSendError(null);
+  }, [selectedPhone]);
+
+  useEffect(() => {
+    if (!quickMessageFeedback) return;
+    const timeout = setTimeout(() => setQuickMessageFeedback(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [quickMessageFeedback]);
+
   const selectedChat = useMemo(() => {
     if (!selectedPhone) return undefined;
     return chatsWithPreferences.find(group => group.phone === selectedPhone);
@@ -1025,6 +1036,118 @@ export default function WhatsAppHistoryTab() {
 
     return groups;
   }, [selectedChatMessages]);
+
+  const handleApplyQuickMessage = useCallback((text: string) => {
+    if (!text) return;
+    setMessageText((prev) => {
+      if (!prev) return text;
+      const needsSpace = /\s$/.test(prev);
+      return `${prev}${needsSpace ? '' : ' '}${text}`;
+    });
+  }, []);
+
+  const handleSaveQuickMessage = useCallback(async () => {
+    const trimmed = messageText.trim();
+    if (!trimmed) {
+      setQuickMessageFeedback({ type: 'error', text: 'Digite uma mensagem para salvar como rápida.' });
+      return;
+    }
+
+    const alreadyExists = quickMessages.some(
+      (item) => item.value.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (alreadyExists) {
+      setQuickMessageFeedback({ type: 'error', text: 'Essa mensagem rápida já está cadastrada.' });
+      return;
+    }
+
+    setSavingQuickMessage(true);
+    try {
+      const { error } = await configService.createConfigOption('whatsapp_quick_messages', {
+        label: trimmed,
+        value: trimmed,
+        ordem: quickMessages.length + 1,
+        ativo: true,
+      });
+
+      if (error) {
+        console.error('Erro ao salvar mensagem rápida:', error);
+        setQuickMessageFeedback({ type: 'error', text: 'Não foi possível salvar a mensagem rápida.' });
+      } else {
+        await refreshCategory('whatsapp_quick_messages');
+        setQuickMessageFeedback({ type: 'success', text: 'Mensagem rápida salva com sucesso!' });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar mensagem rápida:', error);
+      setQuickMessageFeedback({ type: 'error', text: 'Erro ao salvar mensagem rápida.' });
+    } finally {
+      setSavingQuickMessage(false);
+    }
+  }, [messageText, quickMessages, refreshCategory]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!selectedPhone) {
+      setSendError('Selecione uma conversa para enviar mensagens.');
+      return;
+    }
+
+    const textToSend = messageText.trim();
+    if (!textToSend) {
+      setSendError('Digite uma mensagem para enviar.');
+      return;
+    }
+
+    setIsSendingMessage(true);
+    setSendError(null);
+
+    try {
+      const result = await zapiService.sendTextMessage(selectedPhone, textToSend);
+      if (!result.success) {
+        throw new Error(result.error || 'Falha ao enviar mensagem.');
+      }
+
+      const messageId =
+        result.data?.messageId ||
+        result.data?.id ||
+        result.data?.message_id ||
+        result.data?.messageId?.toString() ||
+        null;
+
+      const timestamp = new Date().toISOString();
+      const latestMessage = selectedChatMessages[selectedChatMessages.length - 1];
+
+      const payload = {
+        lead_id: selectedChat?.leadId ?? null,
+        contract_id: latestMessage?.contract_id ?? null,
+        phone_number: selectedPhone,
+        message_id: messageId,
+        message_text: textToSend,
+        message_type: 'sent' as const,
+        timestamp,
+        read_status: true,
+      };
+
+      const { error } = await supabase.from('whatsapp_conversations').insert([payload]);
+      if (error) {
+        console.error('Erro ao registrar mensagem enviada:', error);
+      }
+
+      setMessageText('');
+      await loadConversations(false);
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      setSendError(error instanceof Error ? error.message : 'Erro ao enviar mensagem.');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [selectedPhone, messageText, selectedChat, selectedChatMessages, loadConversations]);
+
+  const handleComposerKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      void handleSendMessage();
+    }
+  };
 
   const handleRefreshChats = async () => {
     setIsRefreshing(true);

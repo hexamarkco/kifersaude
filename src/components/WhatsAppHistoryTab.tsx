@@ -61,7 +61,7 @@ const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   return phone.toLowerCase().includes('@g.us');
 };
 
-type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone'>;
+type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel'>;
 
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
@@ -76,6 +76,13 @@ export default function WhatsAppHistoryTab() {
   const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const { leadStatuses } = useConfig();
+  const { isObserver } = useAuth();
+  const activeLeadStatuses = useMemo(
+    () => leadStatuses.filter((status) => status.ativo),
+    [leadStatuses]
+  );
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
@@ -151,7 +158,7 @@ export default function WhatsAppHistoryTab() {
 
     const { data } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone')
+      .select('id, nome_completo, telefone, status, responsavel')
       .in('id', leadIds);
 
     if (data) {
@@ -191,7 +198,7 @@ export default function WhatsAppHistoryTab() {
 
     const { data, error } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone')
+      .select('id, nome_completo, telefone, status, responsavel')
       .in('telefone', variants);
 
     if (error) {
@@ -487,6 +494,58 @@ export default function WhatsAppHistoryTab() {
       leadsByPhoneMap.get(selectedChat.phone.trim())
     );
   }, [leadsByPhoneMap, leadsMap, selectedChat]);
+
+  const handleLeadStatusChange = useCallback(
+    async (leadId: string, newStatus: string) => {
+      const lead = leadsMap.get(leadId);
+      if (!lead) return;
+
+      const oldStatus = lead.status;
+      const optimisticLead = { ...lead, status: newStatus };
+      upsertLeadsIntoMaps([optimisticLead]);
+
+      try {
+        const now = new Date().toISOString();
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update({ status: newStatus, ultimo_contato: now })
+          .eq('id', leadId);
+
+        if (updateError) throw updateError;
+
+        await supabase.from('interactions').insert([
+          {
+            lead_id: leadId,
+            tipo: 'Observação',
+            descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
+            responsavel: lead.responsavel,
+          },
+        ]);
+
+        await supabase.from('lead_status_history').insert([
+          {
+            lead_id: leadId,
+            status_anterior: oldStatus,
+            status_novo: newStatus,
+            responsavel: lead.responsavel,
+          },
+        ]);
+
+        if (['Fechado', 'Perdido'].includes(newStatus)) {
+          await cancelFollowUps(leadId);
+        } else {
+          await createAutomaticFollowUps(leadId, newStatus, lead.responsavel);
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar status do lead:', error);
+        alert('Erro ao atualizar status do lead');
+        upsertLeadsIntoMaps([{ ...lead, status: oldStatus }]);
+        throw error;
+      }
+    },
+    [createAutomaticFollowUps, cancelFollowUps, leadsMap, upsertLeadsIntoMaps]
+  );
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -1152,7 +1211,7 @@ export default function WhatsAppHistoryTab() {
               ) : (
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
                           {selectedChat?.photoUrl ? (
@@ -1174,12 +1233,21 @@ export default function WhatsAppHistoryTab() {
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
                         </div>
                       </div>
-                      <div className="text-xs text-teal-100 text-right">
+                      <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">
                         {selectedChatLead?.telefone &&
                           sanitizePhoneDigits(selectedChatLead.telefone) !==
                             sanitizePhoneDigits(selectedPhone ?? '') && (
                             <span>Lead: {selectedChatLead.telefone}</span>
                           )}
+                        {selectedChatLead && activeLeadStatuses.length > 0 && (
+                          <StatusDropdown
+                            currentStatus={selectedChatLead.status}
+                            leadId={selectedChatLead.id}
+                            statusOptions={activeLeadStatuses}
+                            onStatusChange={handleLeadStatusChange}
+                            disabled={isObserver}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

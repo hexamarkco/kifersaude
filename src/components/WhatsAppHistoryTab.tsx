@@ -39,6 +39,11 @@ const buildPhoneLookupKeys = (value?: string | null): string[] => {
   return Array.from(keys);
 };
 
+const isGroupWhatsAppJid = (phone?: string | null): boolean => {
+  if (!phone) return false;
+  return phone.toLowerCase().includes('@g.us');
+};
+
 type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone'>;
 
 const formatPhoneForDisplay = (phone: string): string => {
@@ -295,31 +300,50 @@ export default function WhatsAppHistoryTab() {
         lastMessage?: WhatsAppConversation;
         displayName?: string | null;
         photoUrl?: string | null;
+        isGroup: boolean;
       }
     >();
 
     conversations.forEach((conv) => {
+      const normalizedChatName = conv.chat_name?.trim() || null;
+      const normalizedSenderName = conv.sender_name?.trim() || null;
+      const isGroupChat = isGroupWhatsAppJid(conv.phone_number);
       const existing = groups.get(conv.phone_number);
+
       if (!existing) {
         groups.set(conv.phone_number, {
           phone: conv.phone_number,
           messages: [conv],
           leadId: conv.lead_id,
           lastMessage: conv,
-          displayName: conv.sender_name || conv.chat_name || null,
+          displayName: isGroupChat
+            ? normalizedChatName || normalizedSenderName || null
+            : normalizedSenderName || normalizedChatName || null,
           photoUrl: conv.sender_photo || null,
+          isGroup: isGroupChat,
         });
       } else {
         existing.messages.push(conv);
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
         }
-        if (!existing.displayName && (conv.sender_name || conv.chat_name)) {
-          existing.displayName = conv.sender_name || conv.chat_name || null;
-        }
         if (!existing.photoUrl && conv.sender_photo) {
           existing.photoUrl = conv.sender_photo;
         }
+        if (!existing.isGroup && isGroupChat) {
+          existing.isGroup = true;
+        }
+
+        if (isGroupChat) {
+          if (normalizedChatName && normalizedChatName !== existing.displayName) {
+            existing.displayName = normalizedChatName;
+          } else if (!existing.displayName && normalizedSenderName) {
+            existing.displayName = normalizedSenderName;
+          }
+        } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
+          existing.displayName = normalizedSenderName || normalizedChatName;
+        }
+
         if (
           !existing.lastMessage ||
           new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
@@ -348,10 +372,11 @@ export default function WhatsAppHistoryTab() {
     const query = searchQuery.toLowerCase();
     const numericQuery = searchQuery.replace(/\D/g, '');
     return chatGroups.filter((chat) => {
-      const lead =
-        (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
-        leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
-        leadsByPhoneMap.get(chat.phone.trim());
+      const lead = chat.isGroup
+        ? undefined
+        : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
+          leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
+          leadsByPhoneMap.get(chat.phone.trim());
       const sanitizedPhone = sanitizePhoneDigits(chat.phone);
       return (
         chat.phone.toLowerCase().includes(query) ||
@@ -386,7 +411,7 @@ export default function WhatsAppHistoryTab() {
   }, [selectedChat]);
 
   const selectedChatLead = useMemo(() => {
-    if (!selectedChat) return undefined;
+    if (!selectedChat || selectedChat.isGroup) return undefined;
     return (
       (selectedChat.leadId ? leadsMap.get(selectedChat.leadId) : undefined) ??
       leadsByPhoneMap.get(sanitizePhoneDigits(selectedChat.phone)) ??
@@ -738,13 +763,16 @@ export default function WhatsAppHistoryTab() {
                   </div>
                 ) : (
                   filteredChats.map((chat) => {
-                    const lead =
-                      (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
-                      leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
-                      leadsByPhoneMap.get(chat.phone.trim());
+                    const lead = chat.isGroup
+                      ? undefined
+                      : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
+                        leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
+                        leadsByPhoneMap.get(chat.phone.trim());
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
-                    const displayName = lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
+                    const displayName = chat.isGroup
+                      ? chat.displayName || formatPhoneForDisplay(chat.phone)
+                      : lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
 
                     return (
                       <button
@@ -814,7 +842,9 @@ export default function WhatsAppHistoryTab() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg">
-                            {selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
+                            {selectedChat?.isGroup
+                              ? selectedChat?.displayName || selectedPhone
+                              : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
                           </h3>
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
                         </div>

@@ -276,6 +276,92 @@ export default function WhatsAppHistoryTab() {
     await loadConversations(false);
   };
 
+  const formatDateLabel = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (isSameDay(date, today)) {
+      return 'Hoje';
+    }
+    if (isSameDay(date, yesterday)) {
+      return 'Ontem';
+    }
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const selectedChatDisplayName = useMemo(() => {
+    if (!selectedChat) return selectedPhone;
+    return selectedChatLead?.nome_completo || selectedChat.profileName || selectedChat.phone;
+  }, [selectedChat, selectedChatLead, selectedPhone]);
+
+  const selectedChatPhoto = selectedChat?.profilePhoto || null;
+
+  const groupedSelectedMessages = useMemo(() => {
+    const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
+    let currentDate: string | null = null;
+
+    selectedChatMessages.forEach((message) => {
+      const dateLabel = formatDateLabel(message.timestamp);
+      if (dateLabel !== currentDate) {
+        currentDate = dateLabel;
+        groups.push({ date: dateLabel, messages: [] });
+      }
+      groups[groups.length - 1].messages.push(message);
+    });
+
+    return groups;
+  }, [selectedChatMessages]);
+
+  const handleRefreshChats = async () => {
+    setIsRefreshing(true);
+    await loadConversations(false);
+  };
+
+  const selectedChatUnreadCount = useMemo(() => {
+    if (!selectedChat) return 0;
+    return selectedChat.messages.filter(
+      (message) => message.message_type === 'received' && !message.read_status
+    ).length;
+  }, [selectedChat]);
+
+  useEffect(() => {
+    if (!selectedPhone || selectedChatUnreadCount === 0) return;
+
+    const markAsRead = async () => {
+      try {
+        await supabase
+          .from('whatsapp_conversations')
+          .update({ read_status: true })
+          .eq('phone_number', selectedPhone)
+          .eq('message_type', 'received')
+          .eq('read_status', false);
+
+        setConversations((prev) =>
+          prev.map((message) =>
+            message.phone_number === selectedPhone && message.message_type === 'received'
+              ? { ...message, read_status: true }
+              : message
+          )
+        );
+      } catch (error) {
+        console.error('Erro ao marcar mensagens como lidas:', error);
+      }
+    };
+
+    void markAsRead();
+  }, [selectedPhone, selectedChatUnreadCount]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">

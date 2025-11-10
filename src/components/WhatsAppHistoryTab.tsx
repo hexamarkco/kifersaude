@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
+import {
+  supabase,
+  AIGeneratedMessage,
+  WhatsAppConversation,
+  Lead,
+  WhatsAppChatPreference,
+} from '../lib/supabase';
 import {
   MessageCircle,
   Calendar,
@@ -11,8 +17,10 @@ import {
   Loader,
   Phone,
   RefreshCcw,
-  Maximize2,
-  FileText,
+  Archive,
+  ArchiveRestore,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
@@ -46,6 +54,21 @@ const isGroupWhatsAppJid = (phone?: string | null): boolean => {
 
 type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone'>;
 
+type ChatGroupBase = {
+  phone: string;
+  messages: WhatsAppConversation[];
+  leadId?: string | null;
+  lastMessage?: WhatsAppConversation;
+  displayName?: string | null;
+  photoUrl?: string | null;
+  isGroup: boolean;
+};
+
+type ChatGroup = ChatGroupBase & {
+  archived: boolean;
+  pinned: boolean;
+};
+
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
   const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
@@ -59,6 +82,8 @@ export default function WhatsAppHistoryTab() {
   const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [chatPreferences, setChatPreferences] = useState<Map<string, WhatsAppChatPreference>>(new Map());
+  const [chatListFilter, setChatListFilter] = useState<'active' | 'archived'>('active');
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
@@ -165,6 +190,24 @@ export default function WhatsAppHistoryTab() {
     }
   }, [upsertLeadsIntoMaps]);
 
+  const loadChatPreferences = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .select('*');
+
+      if (error) throw error;
+
+      const next = new Map<string, WhatsAppChatPreference>();
+      (data as WhatsAppChatPreference[] | null)?.forEach((preference) => {
+        next.set(preference.phone_number, preference);
+      });
+      setChatPreferences(next);
+    } catch (error) {
+      console.error('Erro ao carregar preferências de chat:', error);
+    }
+  }, []);
+
   const loadAIMessages = useCallback(async () => {
     setLoading(true);
     try {
@@ -204,6 +247,7 @@ export default function WhatsAppHistoryTab() {
       await loadLeads(leadIds);
       const phoneNumbers = [...new Set((data || []).map((c) => c.phone_number).filter(Boolean))];
       await loadLeadsByPhones(phoneNumbers);
+      await loadChatPreferences();
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
     } finally {
@@ -212,7 +256,7 @@ export default function WhatsAppHistoryTab() {
       }
       setIsRefreshing(false);
     }
-  }, [loadLeads, loadLeadsByPhones]);
+  }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
   useEffect(() => {
     if (activeView === 'ai-messages') {
@@ -290,18 +334,10 @@ export default function WhatsAppHistoryTab() {
     return true;
   });
 
-  const chatGroups = useMemo(() => {
+  const chatGroups = useMemo<ChatGroupBase[]>(() => {
     const groups = new Map<
       string,
-      {
-        phone: string;
-        messages: WhatsAppConversation[];
-        leadId?: string | null;
-        lastMessage?: WhatsAppConversation;
-        displayName?: string | null;
-        photoUrl?: string | null;
-        isGroup: boolean;
-      }
+      ChatGroupBase
     >();
 
     conversations.forEach((conv) => {
@@ -367,11 +403,28 @@ export default function WhatsAppHistoryTab() {
       });
   }, [conversations]);
 
+  const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
+    return chatGroups.map((group) => {
+      const preference = chatPreferences.get(group.phone);
+      return {
+        ...group,
+        archived: preference?.archived ?? false,
+        pinned: preference?.pinned ?? false,
+      };
+    });
+  }, [chatGroups, chatPreferences]);
+
   const filteredChats = useMemo(() => {
-    if (!searchQuery) return chatGroups;
+    const relevantChats = chatsWithPreferences.filter((chat) =>
+      chatListFilter === 'archived' ? chat.archived : !chat.archived
+    );
+
     const query = searchQuery.toLowerCase();
     const numericQuery = searchQuery.replace(/\D/g, '');
-    return chatGroups.filter((chat) => {
+
+    const matchesSearch = (chat: ChatGroup) => {
+      if (!searchQuery) return true;
+
       const lead = chat.isGroup
         ? undefined
         : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
@@ -386,8 +439,21 @@ export default function WhatsAppHistoryTab() {
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
         (lead?.telefone?.toLowerCase().includes(query) ?? false)
       );
+    };
+
+    const searchedChats = searchQuery
+      ? relevantChats.filter(matchesSearch)
+      : relevantChats;
+
+    return [...searchedChats].sort((a, b) => {
+      if (a.pinned !== b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+      const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+      const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      return bTime - aTime;
     });
-  }, [chatGroups, leadsByPhoneMap, leadsMap, searchQuery]);
+  }, [chatsWithPreferences, chatListFilter, leadsByPhoneMap, leadsMap, searchQuery]);
 
   useEffect(() => {
     if (filteredChats.length === 0) {
@@ -403,8 +469,13 @@ export default function WhatsAppHistoryTab() {
 
   const selectedChat = useMemo(() => {
     if (!selectedPhone) return undefined;
-    return chatGroups.find(group => group.phone === selectedPhone);
-  }, [chatGroups, selectedPhone]);
+    return chatsWithPreferences.find(group => group.phone === selectedPhone);
+  }, [chatsWithPreferences, selectedPhone]);
+
+  const selectedChatPreference = useMemo(() => {
+    if (!selectedPhone) return undefined;
+    return chatPreferences.get(selectedPhone);
+  }, [chatPreferences, selectedPhone]);
 
   const selectedChatMessages = useMemo(() => {
     return selectedChat?.messages ?? ([] as WhatsAppConversation[]);
@@ -576,6 +647,104 @@ export default function WhatsAppHistoryTab() {
     await loadConversations(false);
   };
 
+  const handleToggleArchive = useCallback(async (phone: string) => {
+    let previousPref: WhatsAppChatPreference | undefined;
+    let nextPref: WhatsAppChatPreference | undefined;
+
+    setChatPreferences((prev) => {
+      const next = new Map(prev);
+      const current = prev.get(phone);
+      previousPref = current;
+      const now = new Date().toISOString();
+      nextPref = {
+        phone_number: phone,
+        archived: !(current?.archived ?? false),
+        pinned: current?.pinned ?? false,
+        created_at: current?.created_at ?? now,
+        updated_at: now,
+      };
+      next.set(phone, nextPref);
+      return next;
+    });
+
+    if (!nextPref) return;
+
+    try {
+      const { error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .upsert({
+          phone_number: phone,
+          archived: nextPref.archived,
+          pinned: nextPref.pinned,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar arquivamento do chat:', error);
+      setChatPreferences((prev) => {
+        const next = new Map(prev);
+        if (previousPref) {
+          next.set(phone, previousPref);
+        } else {
+          next.delete(phone);
+        }
+        return next;
+      });
+    }
+  }, []);
+
+  const handleTogglePin = useCallback(async (phone: string) => {
+    let previousPref: WhatsAppChatPreference | undefined;
+    let nextPref: WhatsAppChatPreference | undefined;
+
+    setChatPreferences((prev) => {
+      const next = new Map(prev);
+      const current = prev.get(phone);
+      previousPref = current;
+      const now = new Date().toISOString();
+      nextPref = {
+        phone_number: phone,
+        archived: current?.archived ?? false,
+        pinned: !(current?.pinned ?? false),
+        created_at: current?.created_at ?? now,
+        updated_at: now,
+      };
+      next.set(phone, nextPref);
+      return next;
+    });
+
+    if (!nextPref) return;
+
+    try {
+      const { error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .upsert({
+          phone_number: phone,
+          archived: nextPref.archived,
+          pinned: nextPref.pinned,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar fixação do chat:', error);
+      setChatPreferences((prev) => {
+        const next = new Map(prev);
+        if (previousPref) {
+          next.set(phone, previousPref);
+        } else {
+          next.delete(phone);
+        }
+        return next;
+      });
+    }
+  }, []);
+
   const selectedChatUnreadCount = useMemo(() => {
     if (!selectedChat) return 0;
     return selectedChat.messages.filter(
@@ -669,6 +838,33 @@ export default function WhatsAppHistoryTab() {
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
+
+          {activeView === 'chat' && (
+            <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => setChatListFilter('active')}
+                className={`px-3 py-2 transition-colors ${
+                  chatListFilter === 'active'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                Ativos
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatListFilter('archived')}
+                className={`px-3 py-2 transition-colors border-l border-slate-200 ${
+                  chatListFilter === 'archived'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                Arquivados
+              </button>
+            </div>
+          )}
 
           {activeView === 'chat' && (
             <button
@@ -775,11 +971,19 @@ export default function WhatsAppHistoryTab() {
                       : lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
 
                     return (
-                      <button
+                      <div
                         key={chat.phone}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedPhone(chat.phone)}
-                        className={`w-full text-left px-4 py-3 border-b border-slate-200 hover:bg-teal-50 transition-colors ${
-                          isActive ? 'bg-teal-50' : 'bg-transparent'
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedPhone(chat.phone);
+                          }
+                        }}
+                        className={`w-full px-4 py-3 border-b border-slate-200 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${
+                          isActive ? 'bg-teal-50' : 'hover:bg-teal-50 bg-transparent'
                         }`}
                       >
                         <div className="flex items-start space-x-3">
@@ -795,22 +999,75 @@ export default function WhatsAppHistoryTab() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold text-slate-900 truncate">
-                                {displayName}
-                              </h4>
-                              {lastMessage && (
-                                <span className="text-xs text-slate-500">
-                                  {formatTime(lastMessage.timestamp)}
-                                </span>
-                              )}
+                            <div className="flex items-start justify-between space-x-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                    {displayName}
+                                  </h4>
+                                  {chat.pinned && <Pin className="w-3 h-3 text-teal-600" />}
+                                </div>
+                                <p className="text-xs text-slate-500 truncate">
+                                  {lastMessage?.message_text || 'Sem mensagens registradas'}
+                                </p>
+                                {(chat.pinned || chat.archived) && (
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    {chat.pinned && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-100 text-teal-700 uppercase tracking-wide">
+                                        Fixado
+                                      </span>
+                                    )}
+                                    {chat.archived && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-200 text-slate-700 uppercase tracking-wide">
+                                        Arquivado
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-start space-x-1 ml-3">
+                                {lastMessage && (
+                                  <span className="text-xs text-slate-500 whitespace-nowrap mr-1">
+                                    {formatTime(lastMessage.timestamp)}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleTogglePin(chat.phone);
+                                  }}
+                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                  title={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                  aria-label={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                >
+                                  {chat.pinned ? (
+                                    <PinOff className="w-4 h-4" />
+                                  ) : (
+                                    <Pin className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleToggleArchive(chat.phone);
+                                  }}
+                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                  title={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                  aria-label={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                >
+                                  {chat.archived ? (
+                                    <ArchiveRestore className="w-4 h-4" />
+                                  ) : (
+                                    <Archive className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-xs text-slate-500 truncate">
-                              {lastMessage?.message_text || 'Sem mensagens registradas'}
-                            </p>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })
                 )}
@@ -827,7 +1084,7 @@ export default function WhatsAppHistoryTab() {
               ) : (
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
                           {selectedChat?.photoUrl ? (
@@ -841,20 +1098,62 @@ export default function WhatsAppHistoryTab() {
                           )}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">
-                            {selectedChat?.isGroup
-                              ? selectedChat?.displayName || selectedPhone
-                              : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
-                          </h3>
+                          <div className="flex items-center flex-wrap gap-2">
+                            <h3 className="font-semibold text-lg">
+                              {selectedChat?.isGroup
+                                ? selectedChat?.displayName || selectedPhone
+                                : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
+                            </h3>
+                            {selectedChatPreference?.pinned && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/20 text-white uppercase tracking-wide">
+                                Fixado
+                              </span>
+                            )}
+                            {selectedChatPreference?.archived && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/10 text-white uppercase tracking-wide">
+                                Arquivado
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
                         </div>
                       </div>
-                      <div className="text-xs text-teal-100 text-right">
-                        {selectedChatLead?.telefone &&
-                          sanitizePhoneDigits(selectedChatLead.telefone) !==
-                            sanitizePhoneDigits(selectedPhone ?? '') && (
-                            <span>Lead: {selectedChatLead.telefone}</span>
-                          )}
+                      <div className="flex items-center gap-3">
+                        <div className="text-xs text-teal-100 text-right">
+                          {selectedChatLead?.telefone &&
+                            sanitizePhoneDigits(selectedChatLead.telefone) !==
+                              sanitizePhoneDigits(selectedPhone ?? '') && (
+                              <span>Lead: {selectedChatLead.telefone}</span>
+                            )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => selectedPhone && void handleTogglePin(selectedPhone)}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            title={selectedChatPreference?.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                            aria-label={selectedChatPreference?.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                          >
+                            {selectedChatPreference?.pinned ? (
+                              <PinOff className="w-4 h-4" />
+                            ) : (
+                              <Pin className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => selectedPhone && void handleToggleArchive(selectedPhone)}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            title={selectedChatPreference?.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                            aria-label={selectedChatPreference?.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                          >
+                            {selectedChatPreference?.archived ? (
+                              <ArchiveRestore className="w-4 h-4" />
+                            ) : (
+                              <Archive className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

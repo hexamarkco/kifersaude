@@ -11,6 +11,8 @@ import {
   Loader,
   Phone,
   RefreshCcw,
+  Maximize2,
+  FileText,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
@@ -58,6 +60,16 @@ export default function WhatsAppHistoryTab() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
+  const [fullscreenMedia, setFullscreenMedia] = useState<
+    | {
+        url: string;
+        type: 'image' | 'video' | 'gif';
+        caption?: string | null;
+        mimeType?: string | null;
+        thumbnailUrl?: string | null;
+      }
+    | null
+  >(null);
 
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
@@ -204,6 +216,25 @@ export default function WhatsAppHistoryTab() {
       loadConversations();
     }
   }, [activeView, loadAIMessages, loadConversations]);
+
+  const closeFullscreen = useCallback(() => setFullscreenMedia(null), []);
+
+  useEffect(() => {
+    if (!fullscreenMedia) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [fullscreenMedia, closeFullscreen]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -394,6 +425,228 @@ export default function WhatsAppHistoryTab() {
     });
   };
 
+  const formatDuration = (seconds?: number | null) => {
+    if (typeof seconds !== 'number' || Number.isNaN(seconds)) {
+      return null;
+    }
+
+    const totalSeconds = Math.max(0, Math.round(seconds));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    if (minutes > 0) {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    return `0:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatNotificationType = (type?: string | null) => {
+    if (!type) return null;
+    const normalized = type.toUpperCase();
+    switch (normalized) {
+      case 'CALL_VOICE':
+        return 'Chamada de voz recebida';
+      case 'CALL_MISSED_VOICE':
+        return 'Chamada de voz perdida';
+      case 'CALL_VIDEO':
+        return 'Chamada de vídeo recebida';
+      case 'CALL_MISSED_VIDEO':
+        return 'Chamada de vídeo perdida';
+      default:
+        return `Notificação: ${type}`;
+    }
+  };
+
+  const getDisplayTextForMessage = (message: WhatsAppConversation) => {
+    const caption = message.media_caption?.trim();
+    const text = message.message_text?.trim();
+
+    if (caption && caption !== text) {
+      return caption;
+    }
+
+    return text || '';
+  };
+
+  const openFullscreen = useCallback(
+    (message: WhatsAppConversation, overrideType?: 'image' | 'video' | 'gif') => {
+      if (!message.media_url) {
+        return;
+      }
+
+      const caption = (() => {
+        const mediaCaption = message.media_caption?.trim();
+        const text = message.message_text?.trim();
+        if (mediaCaption && mediaCaption !== text) {
+          return mediaCaption;
+        }
+        return text || null;
+      })();
+
+      const rawType = message.media_type?.toLowerCase();
+      let resolvedType: 'image' | 'video' | 'gif' = 'image';
+
+      if (overrideType) {
+        resolvedType = overrideType;
+      } else if (rawType === 'video') {
+        resolvedType = 'video';
+      } else if (rawType === 'gif' || message.media_is_gif) {
+        resolvedType = 'gif';
+      } else {
+        resolvedType = 'image';
+      }
+
+      setFullscreenMedia({
+        url: message.media_url,
+        type: resolvedType,
+        caption,
+        mimeType: message.media_mime_type ?? null,
+        thumbnailUrl: message.media_thumbnail_url ?? null,
+      });
+    },
+    []
+  );
+
+  const renderMediaContent = (message: WhatsAppConversation) => {
+    if (!message.media_url) {
+      return null;
+    }
+
+    const rawType = message.media_type?.toLowerCase();
+    const isGif = rawType === 'gif' || Boolean(message.media_is_gif);
+    const mediaType = isGif ? 'gif' : rawType;
+    const accentColor = message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
+    const fallbackText = message.media_caption || message.message_text || 'Mídia recebida';
+
+    switch (mediaType) {
+      case 'image':
+      case 'sticker': {
+        const isSticker = mediaType === 'sticker';
+        return (
+          <div className="relative group">
+            <img
+              src={message.media_url}
+              alt={fallbackText}
+              className={`w-full rounded-lg ${
+                isSticker ? 'max-h-48 object-contain bg-slate-100 p-3' : 'max-h-64 object-cover'
+              }`}
+              loading="lazy"
+            />
+            <button
+              type="button"
+              onClick={() => openFullscreen(message, 'image')}
+              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
+              aria-label="Ver mídia em tela cheia"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      }
+      case 'gif':
+        return (
+          <div className="relative group">
+            <video
+              key={`${message.id}-gif`}
+              className="w-full max-h-64 rounded-lg bg-black object-contain"
+              src={message.media_url}
+              autoPlay
+              loop
+              muted
+              playsInline
+            >
+              Seu navegador não suporta a reprodução de GIFs animados.
+            </video>
+            <button
+              type="button"
+              onClick={() => openFullscreen(message, 'gif')}
+              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
+              aria-label="Ver GIF em tela cheia"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      case 'video':
+        return (
+          <div className="relative group">
+            <video
+              key={`${message.id}-video`}
+              controls
+              poster={message.media_thumbnail_url || undefined}
+              className="w-full max-h-72 rounded-lg bg-black"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+            <button
+              type="button"
+              onClick={() => openFullscreen(message, 'video')}
+              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
+              aria-label="Ver vídeo em tela cheia"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      case 'audio': {
+        const duration = formatDuration(message.media_duration_seconds);
+        return (
+          <div className="space-y-1">
+            <audio
+              key={`${message.id}-audio`}
+              controls
+              src={message.media_url}
+              className="w-full"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de áudio.
+            </audio>
+            {duration && <span className={`text-[11px] ${accentColor}`}>Duração: {duration}</span>}
+            {message.media_caption && (
+              <span className={`text-[11px] ${accentColor}`}>{message.media_caption}</span>
+            )}
+          </div>
+        );
+      }
+      case 'document':
+        return (
+          <div className="space-y-1">
+            <a
+              href={message.media_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-2 text-sm font-medium underline ${
+                message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>{message.media_file_name || fallbackText}</span>
+            </a>
+            {typeof message.media_page_count === 'number' && (
+              <span className={`text-[11px] ${accentColor}`}>
+                {message.media_page_count} {message.media_page_count === 1 ? 'página' : 'páginas'}
+              </span>
+            )}
+          </div>
+        );
+      default:
+        return (
+          <a
+            href={message.media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-sm font-medium underline ${
+              message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
+            }`}
+          >
+            Abrir mídia
+          </a>
+        );
+    }
+  };
+
   const groupedSelectedMessages = useMemo(() => {
     const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
     let currentDate: string | null = null;
@@ -458,7 +711,8 @@ export default function WhatsAppHistoryTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -711,36 +965,72 @@ export default function WhatsAppHistoryTab() {
                           </div>
 
                           <div className="space-y-3">
-                            {group.messages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex ${
-                                  message.message_type === 'sent' ? 'justify-end' : 'justify-start'
-                                }`}
-                              >
+                            {group.messages.map((message) => {
+                              const displayText = getDisplayTextForMessage(message);
+                              const showEmptyFallback = !displayText && !message.media_url;
+                              const bubbleText = displayText || (showEmptyFallback ? 'Mensagem sem conteúdo' : '');
+                              const timestampColor =
+                                message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
+                              const mediaContent = renderMediaContent(message);
+                              const secondaryTextColor =
+                                message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
+                              const extraDetails: string[] = [];
+
+                              if (message.call_id) {
+                                extraDetails.push(`ID da chamada: ${message.call_id}`);
+                              }
+
+                              const notificationLabel = formatNotificationType(message.notification_type);
+                              if (notificationLabel && !bubbleText) {
+                                extraDetails.push(notificationLabel);
+                              }
+
+                              if (message.is_status_reply && bubbleText !== 'Resposta de status') {
+                                extraDetails.push('Resposta de status');
+                              }
+
+                              return (
                                 <div
-                                  className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${
-                                    message.message_type === 'sent'
-                                      ? 'bg-teal-500 text-white rounded-br-sm'
-                                      : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                  key={message.id}
+                                  className={`flex ${
+                                    message.message_type === 'sent' ? 'justify-end' : 'justify-start'
                                   }`}
                                 >
-                                  <p className="text-sm whitespace-pre-wrap break-words">
-                                    {message.message_text || 'Mensagem sem conteúdo'}
-                                  </p>
                                   <div
-                                    className={`flex items-center justify-end space-x-2 mt-1 text-[11px] ${
-                                      message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500'
+                                    className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 ${
+                                      message.message_type === 'sent'
+                                        ? 'bg-teal-500 text-white rounded-br-sm'
+                                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
                                     }`}
                                   >
-                                    <span>{formatTime(message.timestamp)}</span>
-                                    {message.read_status && message.message_type === 'sent' && (
-                                      <span className="font-semibold">Lida</span>
+                                    {bubbleText && (
+                                      <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}
+                                    {mediaContent}
+                                    {extraDetails.length > 0 && (
+                                      <div className={`text-[11px] ${secondaryTextColor} space-y-1`}>
+                                        {extraDetails.map((detail) => (
+                                          <span key={detail} className="block">
+                                            {detail}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div
+                                      className={`flex items-center justify-end space-x-2 text-[11px] ${timestampColor}`}
+                                    >
+                                      {message.media_view_once && (
+                                        <span className="uppercase tracking-wide font-semibold">Visualização única</span>
+                                      )}
+                                      <span>{formatTime(message.timestamp)}</span>
+                                      {message.read_status && message.message_type === 'sent' && (
+                                        <span className="font-semibold">Lida</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ))
@@ -752,6 +1042,65 @@ export default function WhatsAppHistoryTab() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      {fullscreenMedia && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4 py-6"
+          onClick={closeFullscreen}
+        >
+          <div
+            className="relative max-w-5xl w-full"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="relative bg-black/60 rounded-lg p-4 shadow-xl border border-white/10">
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="absolute top-3 right-3 text-slate-100 hover:text-white"
+                aria-label="Fechar visualização em tela cheia"
+              >
+                <XCircle className="w-7 h-7" />
+              </button>
+              {fullscreenMedia.type === 'image' && (
+                <img
+                  src={fullscreenMedia.url}
+                  alt={fullscreenMedia.caption ?? 'Mídia em tela cheia'}
+                  className="max-h-[80vh] w-full object-contain rounded-md"
+                />
+              )}
+              {fullscreenMedia.type === 'video' && (
+                <video
+                  className="w-full max-h-[80vh] rounded-md"
+                  controls
+                  autoPlay
+                  poster={fullscreenMedia.thumbnailUrl ?? undefined}
+                >
+                  <source src={fullscreenMedia.url} type={fullscreenMedia.mimeType ?? undefined} />
+                  Seu navegador não suporta a reprodução de vídeos.
+                </video>
+              )}
+              {fullscreenMedia.type === 'gif' && (
+                <video
+                  className="w-full max-h-[80vh] rounded-md"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                >
+                  <source src={fullscreenMedia.url} type={fullscreenMedia.mimeType ?? undefined} />
+                  Seu navegador não suporta a reprodução deste GIF.
+                </video>
+              )}
+              {fullscreenMedia.caption && (
+                <p className="mt-4 text-sm text-slate-100 text-center whitespace-pre-wrap break-words">
+                  {fullscreenMedia.caption}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

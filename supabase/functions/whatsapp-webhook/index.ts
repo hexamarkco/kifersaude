@@ -147,9 +147,6 @@ async function upsertConversation(
     phoneNumber: string | null;
     mediaUrl?: string;
     text?: string;
-    senderName?: string | null;
-    senderPhoto?: string | null;
-    chatName?: string | null;
   }> = {}
 ): Promise<EventProcessingResult> {
   const normalizedPhone =
@@ -165,21 +162,7 @@ async function upsertConversation(
     overrides.timestamp ??
     (typeof payload?.momment === 'number' ? new Date(payload.momment).toISOString() : new Date().toISOString());
 
-  const derivedSenderName =
-    overrides.senderName ??
-    pickFirstString(
-      payload?.senderName,
-      payload?.contact?.displayName,
-      payload?.sender?.pushname,
-      payload?.sender?.name,
-      payload?.chatName,
-    );
-  const derivedSenderPhoto =
-    overrides.senderPhoto ??
-    pickFirstString(payload?.senderPhoto, payload?.photo, payload?.senderPhotoUrl, payload?.statusImage?.imageUrl);
-  const derivedChatName = overrides.chatName ?? pickFirstString(payload?.chatName, payload?.senderName);
-
-  const record: Record<string, any> = {
+  const record = {
     phone_number: normalizedPhone ?? 'unknown',
     message_id: messageId,
     message_text: overrides.text ?? text ?? 'Mensagem recebida',
@@ -188,24 +171,6 @@ async function upsertConversation(
     read_status: readStatus,
     media_url: overrides.mediaUrl ?? mediaUrl,
   };
-
-  if (overrides.senderName !== undefined) {
-    record.sender_name = overrides.senderName;
-  } else if (derivedSenderName) {
-    record.sender_name = derivedSenderName;
-  }
-
-  if (overrides.senderPhoto !== undefined) {
-    record.sender_photo = overrides.senderPhoto;
-  } else if (derivedSenderPhoto) {
-    record.sender_photo = derivedSenderPhoto;
-  }
-
-  if (overrides.chatName !== undefined) {
-    record.chat_name = overrides.chatName;
-  } else if (derivedChatName) {
-    record.chat_name = derivedChatName;
-  }
 
   try {
     const { data: existing, error: fetchError } = await supabase
@@ -228,9 +193,6 @@ async function upsertConversation(
           timestamp: record.timestamp,
           read_status: record.read_status,
           media_url: record.media_url,
-          ...(record.sender_name !== undefined ? { sender_name: record.sender_name } : {}),
-          ...(record.sender_photo !== undefined ? { sender_photo: record.sender_photo } : {}),
-          ...(record.chat_name !== undefined ? { chat_name: record.chat_name } : {}),
         })
         .eq('id', existing.id);
 

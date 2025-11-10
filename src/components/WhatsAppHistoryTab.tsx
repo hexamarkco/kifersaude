@@ -477,7 +477,7 @@ export default function WhatsAppHistoryTab() {
     return text || '';
   };
 
-  const renderMediaContent = (message: WhatsAppConversation) => {
+  const renderMediaContent = (message: WhatsAppConversation): JSX.Element | null => {
     if (!message.media_url) {
       return null;
     }
@@ -489,25 +489,55 @@ export default function WhatsAppHistoryTab() {
     switch (mediaType) {
       case 'image':
       case 'sticker':
+      case 'gif': {
+        const normalizedType = mediaType === 'gif' ? 'gif' : 'image';
         return (
-          <img
-            src={message.media_url}
-            alt={fallbackText}
-            className="w-full max-h-64 rounded-lg object-cover"
-            loading="lazy"
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: normalizedType,
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
+          >
+            <img
+              src={message.media_url}
+              alt={fallbackText}
+              className="w-full max-h-64 rounded-lg object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+              loading="lazy"
+            />
+          </button>
         );
+      }
       case 'video':
         return (
-          <video
-            key={`${message.id}-video`}
-            controls
-            poster={message.media_thumbnail_url || undefined}
-            className="w-full max-h-72 rounded-lg"
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: 'video',
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
           >
-            <source src={message.media_url} type={message.media_mime_type || undefined} />
-            Seu navegador não suporta a reprodução de vídeos.
-          </video>
+            <video
+              key={`${message.id}-video`}
+              poster={message.media_thumbnail_url || undefined}
+              className="w-full max-h-72 rounded-lg pointer-events-none"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </button>
         );
       case 'audio': {
         const duration = formatDuration(message.media_duration_seconds);

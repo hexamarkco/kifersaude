@@ -10,6 +10,7 @@ import {
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
+import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
 import {
   MessageCircle,
   Calendar,

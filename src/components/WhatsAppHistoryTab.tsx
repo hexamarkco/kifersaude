@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
 import {
   MessageCircle,
@@ -14,6 +14,35 @@ import {
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
+const sanitizePhoneDigits = (value?: string | null): string => {
+  if (!value || typeof value !== 'string') return '';
+  return value.replace(/\D/g, '');
+};
+
+const buildPhoneLookupKeys = (value?: string | null): string[] => {
+  const digits = sanitizePhoneDigits(value);
+  if (!digits) return [];
+
+  const keys = new Set<string>();
+  keys.add(digits);
+
+  if (digits.startsWith('55') && digits.length > 2) {
+    keys.add(digits.slice(2));
+    keys.add(`+${digits}`);
+  } else if (digits.length === 11) {
+    keys.add(`55${digits}`);
+    keys.add(`+55${digits}`);
+  }
+
+  return Array.from(keys);
+};
+
+const formatPhoneForDisplay = (phone: string): string => {
+  if (!phone) return '';
+  const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
+  return withoutSuffix;
+};
+
 export default function WhatsAppHistoryTab() {
   const [aiMessages, setAIMessages] = useState<AIGeneratedMessage[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
@@ -22,8 +51,39 @@ export default function WhatsAppHistoryTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, Lead>>(new Map());
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
+
+  const upsertLeadsIntoMaps = useCallback((leads: Lead[]) => {
+    if (!leads || leads.length === 0) return;
+
+    setLeadsMap((prev) => {
+      const next = new Map(prev);
+      leads.forEach((lead) => {
+        next.set(lead.id, lead);
+      });
+      return next;
+    });
+
+    setLeadsByPhoneMap((prev) => {
+      const next = new Map(prev);
+      leads.forEach((lead) => {
+        if (lead.telefone) {
+          const trimmed = lead.telefone.trim();
+          if (trimmed) {
+            next.set(trimmed, lead);
+          }
+
+          buildPhoneLookupKeys(trimmed).forEach((key) => {
+            next.set(key, lead);
+          });
+        }
+      });
+      return next;
+    });
+  }, []);
 
   const loadLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) return;
@@ -34,13 +94,56 @@ export default function WhatsAppHistoryTab() {
       .in('id', leadIds);
 
     if (data) {
-      setLeadsMap((prev) => {
-        const newMap = new Map(prev);
-        data.forEach(lead => newMap.set(lead.id, lead));
-        return newMap;
-      });
+      upsertLeadsIntoMaps(data);
     }
-  }, []);
+  }, [upsertLeadsIntoMaps]);
+
+  const loadLeadsByPhones = useCallback(async (phones: string[]) => {
+    if (phones.length === 0) return;
+
+    const sanitized = phones
+      .map((phone) => sanitizePhoneDigits(phone))
+      .filter((value) => Boolean(value));
+
+    const toFetch = sanitized.filter((digits) => !loadedPhoneLeadsRef.current.has(digits));
+    if (toFetch.length === 0) return;
+
+    const variants = Array.from(
+      new Set(
+        toFetch.flatMap((digits) => {
+          const keys = new Set<string>([digits]);
+
+          if (digits.startsWith('55') && digits.length > 2) {
+            keys.add(digits.slice(2));
+            keys.add(`+${digits}`);
+          } else if (digits.length === 11) {
+            keys.add(`55${digits}`);
+            keys.add(`+55${digits}`);
+          }
+
+          return Array.from(keys);
+        })
+      )
+    );
+
+    if (variants.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('leads')
+      .select('id, nome_completo, telefone')
+      .in('telefone', variants);
+
+    if (error) {
+      console.error('Erro ao carregar leads por telefone:', error);
+      return;
+    }
+
+    toFetch.forEach((digits) => loadedPhoneLeadsRef.current.add(digits));
+
+    if (data) {
+      upsertLeadsIntoMaps(data);
+    }
+  }, [upsertLeadsIntoMaps]);
 
   const loadAIMessages = useCallback(async () => {
     setLoading(true);
@@ -79,6 +182,8 @@ export default function WhatsAppHistoryTab() {
 
       const leadIds = [...new Set((data || []).map(c => c.lead_id).filter(Boolean) as string[])];
       await loadLeads(leadIds);
+      const phoneNumbers = [...new Set((data || []).map((c) => c.phone_number).filter(Boolean))];
+      await loadLeadsByPhones(phoneNumbers);
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
     } finally {
@@ -87,7 +192,7 @@ export default function WhatsAppHistoryTab() {
       }
       setIsRefreshing(false);
     }
-  }, [loadLeads]);
+  }, [loadLeads, loadLeadsByPhones]);
 
   useEffect(() => {
     if (activeView === 'ai-messages') {
@@ -147,7 +252,17 @@ export default function WhatsAppHistoryTab() {
   });
 
   const chatGroups = useMemo(() => {
-    const groups = new Map<string, { phone: string; messages: WhatsAppConversation[]; leadId?: string | null; lastMessage?: WhatsAppConversation }>();
+    const groups = new Map<
+      string,
+      {
+        phone: string;
+        messages: WhatsAppConversation[];
+        leadId?: string | null;
+        lastMessage?: WhatsAppConversation;
+        displayName?: string | null;
+        photoUrl?: string | null;
+      }
+    >();
 
     conversations.forEach((conv) => {
       const existing = groups.get(conv.phone_number);
@@ -157,11 +272,19 @@ export default function WhatsAppHistoryTab() {
           messages: [conv],
           leadId: conv.lead_id,
           lastMessage: conv,
+          displayName: conv.sender_name || conv.chat_name || null,
+          photoUrl: conv.sender_photo || null,
         });
       } else {
         existing.messages.push(conv);
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
+        }
+        if (!existing.displayName && (conv.sender_name || conv.chat_name)) {
+          existing.displayName = conv.sender_name || conv.chat_name || null;
+        }
+        if (!existing.photoUrl && conv.sender_photo) {
+          existing.photoUrl = conv.sender_photo;
         }
         if (
           !existing.lastMessage ||
@@ -189,15 +312,23 @@ export default function WhatsAppHistoryTab() {
   const filteredChats = useMemo(() => {
     if (!searchQuery) return chatGroups;
     const query = searchQuery.toLowerCase();
+    const numericQuery = searchQuery.replace(/\D/g, '');
     return chatGroups.filter((chat) => {
-      const lead = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
+      const lead =
+        (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
+        leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
+        leadsByPhoneMap.get(chat.phone.trim());
+      const sanitizedPhone = sanitizePhoneDigits(chat.phone);
       return (
-        chat.phone.includes(query) ||
+        chat.phone.toLowerCase().includes(query) ||
+        (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
         chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
-        (lead?.nome_completo?.toLowerCase().includes(query) ?? false)
+        (chat.displayName?.toLowerCase().includes(query) ?? false) ||
+        (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
+        (lead?.telefone?.toLowerCase().includes(query) ?? false)
       );
     });
-  }, [chatGroups, leadsMap, searchQuery]);
+  }, [chatGroups, leadsByPhoneMap, leadsMap, searchQuery]);
 
   useEffect(() => {
     if (filteredChats.length === 0) {
@@ -221,9 +352,13 @@ export default function WhatsAppHistoryTab() {
   }, [selectedChat]);
 
   const selectedChatLead = useMemo(() => {
-    if (!selectedChat?.leadId) return undefined;
-    return leadsMap.get(selectedChat.leadId);
-  }, [leadsMap, selectedChat]);
+    if (!selectedChat) return undefined;
+    return (
+      (selectedChat.leadId ? leadsMap.get(selectedChat.leadId) : undefined) ??
+      leadsByPhoneMap.get(sanitizePhoneDigits(selectedChat.phone)) ??
+      leadsByPhoneMap.get(selectedChat.phone.trim())
+    );
+  }, [leadsByPhoneMap, leadsMap, selectedChat]);
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -463,9 +598,13 @@ export default function WhatsAppHistoryTab() {
                   </div>
                 ) : (
                   filteredChats.map((chat) => {
-                    const lead = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
+                    const lead =
+                      (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
+                      leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
+                      leadsByPhoneMap.get(chat.phone.trim());
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
+                    const displayName = lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
 
                     return (
                       <button
@@ -476,13 +615,21 @@ export default function WhatsAppHistoryTab() {
                         }`}
                       >
                         <div className="flex items-start space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                            <Phone className="w-5 h-5 text-teal-600" />
+                          <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden">
+                            {chat.photoUrl ? (
+                              <img
+                                src={chat.photoUrl}
+                                alt={displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Phone className="w-5 h-5 text-teal-600" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h4 className="text-sm font-semibold text-slate-900 truncate">
-                                {lead?.nome_completo || chat.phone}
+                                {displayName}
                               </h4>
                               {lastMessage && (
                                 <span className="text-xs text-slate-500">
@@ -513,16 +660,31 @@ export default function WhatsAppHistoryTab() {
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {selectedChatLead?.nome_completo || selectedPhone}
-                        </h3>
-                        <p className="text-xs text-teal-100">{selectedPhone}</p>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
+                          {selectedChat?.photoUrl ? (
+                            <img
+                              src={selectedChat.photoUrl}
+                              alt={selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone || 'Contato'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Phone className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
+                          </h3>
+                          <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
+                        </div>
                       </div>
-                      <div className="text-xs text-teal-100">
-                        {selectedChatLead?.telefone && selectedChatLead.telefone !== selectedPhone && (
-                          <span>Lead: {selectedChatLead.telefone}</span>
-                        )}
+                      <div className="text-xs text-teal-100 text-right">
+                        {selectedChatLead?.telefone &&
+                          sanitizePhoneDigits(selectedChatLead.telefone) !==
+                            sanitizePhoneDigits(selectedPhone ?? '') && (
+                            <span>Lead: {selectedChatLead.telefone}</span>
+                          )}
                       </div>
                     </div>
                   </div>

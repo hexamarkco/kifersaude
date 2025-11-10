@@ -62,6 +62,43 @@ function pickFirstString(...candidates: unknown[]): string | null {
   return null;
 }
 
+function extractSenderName(payload: any): string | null {
+  return pickFirstString(
+    payload?.contact?.displayName,
+    payload?.contact?.name,
+    payload?.contact?.formattedName,
+    payload?.contact?.shortName,
+    payload?.senderName,
+    payload?.sender?.name,
+    payload?.sender?.shortName,
+    payload?.pushName,
+    payload?.participantName,
+    payload?.participantPushName
+  );
+}
+
+function extractChatName(payload: any, senderName?: string | null): string | null {
+  return pickFirstString(
+    payload?.chatName,
+    payload?.chat?.name,
+    payload?.chat?.displayName,
+    payload?.groupName,
+    payload?.groupSubject,
+    payload?.contact?.displayName,
+    senderName ?? null
+  );
+}
+
+function extractSenderPhoto(payload: any): string | null {
+  return pickFirstString(
+    payload?.photo,
+    payload?.profilePicUrl,
+    payload?.profilePicThumb,
+    payload?.contact?.photoUrl,
+    payload?.sender?.photo
+  );
+}
+
 function describePayload(payload: any): { text: string; mediaUrl?: string } {
   const textSources: (string | null)[] = [
     pickFirstString(payload?.text?.message, payload?.text?.body, payload?.text?.text),
@@ -162,7 +199,11 @@ async function upsertConversation(
     overrides.timestamp ??
     (typeof payload?.momment === 'number' ? new Date(payload.momment).toISOString() : new Date().toISOString());
 
-  const record = {
+  const senderName = extractSenderName(payload);
+  const chatName = extractChatName(payload, senderName);
+  const senderPhoto = extractSenderPhoto(payload);
+
+  const baseRecord = {
     phone_number: normalizedPhone ?? 'unknown',
     message_id: messageId,
     message_text: overrides.text ?? text ?? 'Mensagem recebida',
@@ -170,6 +211,13 @@ async function upsertConversation(
     timestamp,
     read_status: readStatus,
     media_url: overrides.mediaUrl ?? mediaUrl,
+  };
+
+  const insertRecord = {
+    ...baseRecord,
+    sender_name: senderName ?? null,
+    chat_name: chatName ?? null,
+    sender_photo: senderPhoto ?? null,
   };
 
   try {
@@ -184,16 +232,28 @@ async function upsertConversation(
     }
 
     if (existing) {
+      const updateRecord: Record<string, any> = {
+        phone_number: baseRecord.phone_number,
+        message_text: baseRecord.message_text,
+        message_type: baseRecord.message_type,
+        timestamp: baseRecord.timestamp,
+        read_status: baseRecord.read_status,
+        media_url: baseRecord.media_url,
+      };
+
+      if (senderName) {
+        updateRecord.sender_name = senderName;
+      }
+      if (chatName) {
+        updateRecord.chat_name = chatName;
+      }
+      if (senderPhoto) {
+        updateRecord.sender_photo = senderPhoto;
+      }
+
       const { error: updateError } = await supabase
         .from('whatsapp_conversations')
-        .update({
-          phone_number: record.phone_number,
-          message_text: record.message_text,
-          message_type: record.message_type,
-          timestamp: record.timestamp,
-          read_status: record.read_status,
-          media_url: record.media_url,
-        })
+        .update(updateRecord)
         .eq('id', existing.id);
 
       if (updateError) {
@@ -203,7 +263,7 @@ async function upsertConversation(
       return { messageId, status: 'updated' };
     }
 
-    const { error: insertError } = await supabase.from('whatsapp_conversations').insert(record);
+    const { error: insertError } = await supabase.from('whatsapp_conversations').insert(insertRecord);
     if (insertError) {
       throw insertError;
     }

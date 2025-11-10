@@ -24,16 +24,6 @@ type MediaDetails = {
   thumbnailUrl?: string;
   caption?: string;
   viewOnce?: boolean | null;
-  fileName?: string;
-  pageCount?: number | null;
-  isGif?: boolean | null;
-};
-
-type EventMetadata = {
-  waitingMessage?: boolean;
-  notificationType?: string | null;
-  callId?: string | null;
-  isStatusReply?: boolean;
 };
 
 function respond(body: Record<string, unknown>, init?: ResponseInit) {
@@ -119,33 +109,7 @@ function extractSenderPhoto(payload: any): string | null {
   );
 }
 
-function normalizeNotificationType(raw: unknown): string | null {
-  if (!raw || typeof raw !== 'string') {
-    return null;
-  }
-
-  return raw.trim();
-}
-
-function describeNotificationMessage(type: string | null): string | null {
-  if (!type) return null;
-
-  const normalized = type.toUpperCase();
-  switch (normalized) {
-    case 'CALL_VOICE':
-      return 'Chamada de voz recebida';
-    case 'CALL_MISSED_VOICE':
-      return 'Chamada de voz perdida';
-    case 'CALL_VIDEO':
-      return 'Chamada de vídeo recebida';
-    case 'CALL_MISSED_VIDEO':
-      return 'Chamada de vídeo perdida';
-    default:
-      return `Notificação: ${type}`;
-  }
-}
-
-function describePayload(payload: any): { text: string; media?: MediaDetails; metadata?: EventMetadata } {
+function describePayload(payload: any): { text: string; media?: MediaDetails } {
   const textSources: (string | null)[] = [
     pickFirstString(payload?.text?.message, payload?.text?.body, payload?.text?.text),
     pickFirstString(payload?.message, payload?.body, payload?.content),
@@ -158,19 +122,11 @@ function describePayload(payload: any): { text: string; media?: MediaDetails; me
   let text = textSources.find((value) => typeof value === 'string' && value.trim()) ?? '';
 
   let media: MediaDetails | undefined;
-  let metadata: EventMetadata | undefined;
   const ensureMedia = () => {
     if (!media) {
       media = {};
     }
     return media!;
-  };
-
-  const ensureMetadata = () => {
-    if (!metadata) {
-      metadata = {};
-    }
-    return metadata!;
   };
 
   if (payload?.image) {
@@ -187,21 +143,11 @@ function describePayload(payload: any): { text: string; media?: MediaDetails; me
 
   if (payload?.video) {
     const ref = ensureMedia();
-    const mimeType = pickFirstString(payload.video?.mimeType, payload.video?.mimetype);
-    const normalizedMime = mimeType?.toLowerCase();
-    const isGif =
-      typeof payload.video?.gifPlayback === 'boolean'
-        ? payload.video.gifPlayback
-        : typeof payload.video?.isGif === 'boolean'
-        ? payload.video.isGif
-        : normalizedMime
-        ? normalizedMime.includes('gif')
-        : false;
-    ref.type = ref.type ?? (isGif ? 'gif' : 'video');
+    ref.type = ref.type ?? 'video';
     ref.url = ref.url ?? pickFirstString(payload.video?.videoUrl, payload.video?.url);
     ref.thumbnailUrl =
       ref.thumbnailUrl ?? pickFirstString(payload.video?.thumbnailUrl, payload.video?.previewUrl, payload?.thumbnailUrl);
-    ref.mimeType = ref.mimeType ?? mimeType;
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.video?.mimeType, payload.video?.mimetype);
     ref.caption = ref.caption ?? pickFirstString(payload.video?.caption, payload?.caption);
     const seconds =
       typeof payload.video?.seconds === 'number'
@@ -214,9 +160,6 @@ function describePayload(payload: any): { text: string; media?: MediaDetails; me
     }
     if (typeof payload.video?.viewOnce === 'boolean') {
       ref.viewOnce = payload.video.viewOnce;
-    }
-    if (isGif) {
-      ref.isGif = true;
     }
   }
 
@@ -249,10 +192,6 @@ function describePayload(payload: any): { text: string; media?: MediaDetails; me
     ref.mimeType = ref.mimeType ?? pickFirstString(payload.document?.mimeType, payload.document?.mimetype);
     ref.caption =
       ref.caption ?? pickFirstString(payload.document?.title, payload.document?.fileName, payload?.caption);
-    ref.fileName = pickFirstString(payload.document?.fileName, payload.document?.title) ?? undefined;
-    if (typeof payload.document?.pageCount === 'number') {
-      ref.pageCount = payload.document.pageCount;
-    }
   }
 
   if (payload?.sticker) {
@@ -346,33 +285,10 @@ function describePayload(payload: any): { text: string; media?: MediaDetails; me
     }
   }
 
-  if (payload?.waitingMessage) {
-    ensureMetadata().waitingMessage = true;
-    if (!text || text === 'Mensagem recebida') {
-      text = 'Aguardando mensagem';
-    }
-  }
-
-  const notificationType = normalizeNotificationType(payload?.notification);
-  if (notificationType) {
-    ensureMetadata().notificationType = notificationType;
-    if (!text || text.startsWith('Notificação:')) {
-      text = describeNotificationMessage(notificationType) ?? text;
-    }
-  }
-
-  if (payload?.callId) {
-    ensureMetadata().callId = String(payload.callId);
-  }
-
-  if (payload?.isStatusReply) {
-    ensureMetadata().isStatusReply = true;
-  }
-
   const normalizedText = text || 'Mensagem recebida';
   const normalizedMedia = media && (media.url || media.type || media.caption || typeof media.durationSeconds === 'number') ? media : undefined;
 
-  return { text: normalizedText, media: normalizedMedia, metadata };
+  return { text: normalizedText, media: normalizedMedia };
 }
 
 async function upsertConversation(
@@ -391,7 +307,7 @@ async function upsertConversation(
   const normalizedPhone =
     overrides.phoneNumber ?? normalizePhoneNumber(payload?.phone || payload?.senderPhone || payload?.connectedPhone);
 
-  const { text: derivedText, media: derivedMedia, metadata } = describePayload(payload);
+  const { text: derivedText, media: derivedMedia } = describePayload(payload);
   const chosenMedia = overrides.media ?? derivedMedia;
   const chosenText = overrides.text ?? derivedText ?? 'Mensagem recebida';
   const messageType: 'sent' | 'received' = overrides.messageType ?? (payload?.fromMe ? 'sent' : 'received');
@@ -422,13 +338,6 @@ async function upsertConversation(
     media_thumbnail_url: chosenMedia?.thumbnailUrl ?? null,
     media_caption: chosenMedia?.caption ?? null,
     media_view_once: typeof chosenMedia?.viewOnce === 'boolean' ? chosenMedia.viewOnce : null,
-    media_file_name: chosenMedia?.fileName ?? null,
-    media_page_count: typeof chosenMedia?.pageCount === 'number' ? chosenMedia.pageCount : null,
-    media_is_gif: typeof chosenMedia?.isGif === 'boolean' ? chosenMedia.isGif : null,
-    notification_type: metadata?.notificationType ?? null,
-    call_id: metadata?.callId ?? null,
-    waiting_message: typeof metadata?.waitingMessage === 'boolean' ? metadata.waitingMessage : null,
-    is_status_reply: typeof metadata?.isStatusReply === 'boolean' ? metadata.isStatusReply : null,
   };
 
   const insertRecord = {
@@ -463,13 +372,6 @@ async function upsertConversation(
         media_thumbnail_url: baseRecord.media_thumbnail_url,
         media_caption: baseRecord.media_caption,
         media_view_once: baseRecord.media_view_once,
-        media_file_name: baseRecord.media_file_name,
-        media_page_count: baseRecord.media_page_count,
-        media_is_gif: baseRecord.media_is_gif,
-        notification_type: baseRecord.notification_type,
-        call_id: baseRecord.call_id,
-        waiting_message: baseRecord.waiting_message,
-        is_status_reply: baseRecord.is_status_reply,
       };
 
       if (senderName) {

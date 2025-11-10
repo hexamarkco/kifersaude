@@ -283,9 +283,6 @@ export type WhatsAppConversation = {
   media_thumbnail_url?: string | null;
   media_caption?: string | null;
   media_view_once?: boolean | null;
-  media_file_name?: string | null;
-  media_page_count?: number | null;
-  media_is_gif?: boolean | null;
   sender_name?: string | null;
   sender_photo?: string | null;
   chat_name?: string | null;

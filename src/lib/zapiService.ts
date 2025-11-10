@@ -21,13 +21,6 @@ export interface ZAPIMessage {
   mediaThumbnailUrl?: string;
   mediaCaption?: string;
   mediaViewOnce?: boolean;
-  mediaFileName?: string;
-  mediaPageCount?: number;
-  mediaIsGif?: boolean;
-  notificationType?: string;
-  callId?: string;
-  waitingMessage?: boolean;
-  isStatusReply?: boolean;
 }
 
 export interface ZAPIResponse {
@@ -60,10 +53,6 @@ class ZAPIService {
         return 'Imagem recebida';
       case 'document':
         return 'Documento recebido';
-      case 'sticker':
-        return 'Figurinha recebida';
-      case 'gif':
-        return 'GIF recebido';
       default:
         return 'Mensagem recebida';
     }
@@ -205,11 +194,7 @@ class ZAPIService {
         contract_id: contractId,
         phone_number: phoneNumber,
         message_id: msg.messageId,
-        message_text:
-          msg.text ||
-          msg.notificationType ||
-          (msg.waitingMessage ? 'Aguardando mensagem' : undefined) ||
-          this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
+        message_text: msg.text || this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
         message_type: msg.fromMe ? 'sent' : 'received',
         timestamp: new Date(msg.timestamp * 1000).toISOString(),
         read_status: true,
@@ -221,13 +206,6 @@ class ZAPIService {
         media_thumbnail_url: msg.mediaThumbnailUrl,
         media_caption: msg.mediaCaption,
         media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
-        media_file_name: msg.mediaFileName,
-        media_page_count: typeof msg.mediaPageCount === 'number' ? msg.mediaPageCount : undefined,
-        media_is_gif: typeof msg.mediaIsGif === 'boolean' ? msg.mediaIsGif : undefined,
-        notification_type: msg.notificationType,
-        call_id: msg.callId,
-        waiting_message: typeof msg.waitingMessage === 'boolean' ? msg.waitingMessage : undefined,
-        is_status_reply: typeof msg.isStatusReply === 'boolean' ? msg.isStatusReply : undefined,
       }));
 
       for (const conv of conversations) {
@@ -274,7 +252,7 @@ class ZAPIService {
       return undefined;
     };
 
-    const determineMediaType = (msg: any, mediaUrl?: string): { type?: ZAPIMediaType; isGif?: boolean } => {
+    const determineMediaType = (msg: any, mediaUrl?: string): ZAPIMediaType | undefined => {
       const rawType = typeof msg.type === 'string' ? msg.type.toLowerCase() : undefined;
       const mimeType = typeof msg.mimetype === 'string' ? msg.mimetype.toLowerCase() : undefined;
       const captionType = typeof msg.mediaType === 'string' ? msg.mediaType.toLowerCase() : undefined;
@@ -351,27 +329,6 @@ class ZAPIService {
           ? msg.isViewOnce
           : undefined;
 
-      const notificationType = typeof msg.notification === 'string' ? msg.notification : undefined;
-      const waitingMessage = Boolean(msg.waitingMessage);
-      const isStatusReply = Boolean(msg.isStatusReply || msg.isStatus);
-      const callId = typeof msg.callId === 'string' ? msg.callId : undefined;
-
-      const overrideText = () => {
-        if (waitingMessage) return 'Aguardando mensagem';
-        if (notificationType) {
-          const normalized = notificationType.toUpperCase();
-          if (normalized === 'CALL_VOICE') return 'Chamada de voz recebida';
-          if (normalized === 'CALL_MISSED_VOICE') return 'Chamada de voz perdida';
-          if (normalized === 'CALL_VIDEO') return 'Chamada de vídeo recebida';
-          if (normalized === 'CALL_MISSED_VIDEO') return 'Chamada de vídeo perdida';
-          return `Notificação: ${notificationType}`;
-        }
-        if (isStatusReply) return 'Resposta de status';
-        return undefined;
-      };
-
-      const resolvedText = overrideText() || text;
-
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
@@ -386,13 +343,6 @@ class ZAPIService {
         mediaThumbnailUrl,
         mediaCaption,
         mediaViewOnce,
-        mediaFileName: pickFirstString(msg.fileName, msg.filename, msg.documentName),
-        mediaPageCount: typeof msg.pageCount === 'number' ? msg.pageCount : undefined,
-        mediaIsGif: isGif,
-        notificationType,
-        callId,
-        waitingMessage: waitingMessage || undefined,
-        isStatusReply: isStatusReply || undefined,
       });
     });
 

@@ -1,57 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
-import { MessageCircle, Calendar, Search, Sparkles, CheckCircle, XCircle, Clock, Loader } from 'lucide-react';
+import {
+  MessageCircle,
+  Calendar,
+  Search,
+  Sparkles,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader,
+  Phone,
+  RefreshCcw,
+} from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
 export default function WhatsAppHistoryTab() {
   const [aiMessages, setAIMessages] = useState<AIGeneratedMessage[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'ai-messages' | 'conversations'>('ai-messages');
+  const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [activeView]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      if (activeView === 'ai-messages') {
-        const { data, error } = await supabase
-          .from('ai_generated_messages')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        if (error) throw error;
-        setAIMessages(data || []);
-
-        const leadIds = [...new Set((data || []).map(m => m.lead_id))];
-        await loadLeads(leadIds);
-      } else {
-        const { data, error } = await supabase
-          .from('whatsapp_conversations')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(200);
-
-        if (error) throw error;
-        setConversations(data || []);
-
-        const leadIds = [...new Set((data || []).map(c => c.lead_id))];
-        await loadLeads(leadIds);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadLeads = async (leadIds: string[]) => {
+  const loadLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) return;
 
     const { data } = await supabase
@@ -60,11 +34,68 @@ export default function WhatsAppHistoryTab() {
       .in('id', leadIds);
 
     if (data) {
-      const newMap = new Map();
-      data.forEach(lead => newMap.set(lead.id, lead));
-      setLeadsMap(newMap);
+      setLeadsMap((prev) => {
+        const newMap = new Map(prev);
+        data.forEach(lead => newMap.set(lead.id, lead));
+        return newMap;
+      });
     }
-  };
+  }, []);
+
+  const loadAIMessages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('ai_generated_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setAIMessages(data || []);
+
+      const leadIds = [...new Set((data || []).map(m => m.lead_id))];
+      await loadLeads(leadIds);
+    } catch (error) {
+      console.error('Erro ao carregar mensagens IA:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadLeads]);
+
+  const loadConversations = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_conversations')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+      setConversations(data || []);
+
+      const leadIds = [...new Set((data || []).map(c => c.lead_id).filter(Boolean) as string[])];
+      await loadLeads(leadIds);
+    } catch (error) {
+      console.error('Erro ao carregar conversas:', error);
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      }
+      setIsRefreshing(false);
+    }
+  }, [loadLeads]);
+
+  useEffect(() => {
+    if (activeView === 'ai-messages') {
+      loadAIMessages();
+    } else {
+      loadConversations();
+    }
+  }, [activeView, loadAIMessages, loadConversations]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -115,32 +146,134 @@ export default function WhatsAppHistoryTab() {
     return true;
   });
 
-  const filteredConversations = conversations.filter(conv => {
-    if (searchQuery) {
-      const lead = leadsMap.get(conv.lead_id);
-      const query = searchQuery.toLowerCase();
-      return (
-        conv.message_text.toLowerCase().includes(query) ||
-        (lead?.nome_completo.toLowerCase().includes(query)) ||
-        conv.phone_number.includes(query)
-      );
-    }
-    return true;
-  });
+  const chatGroups = useMemo(() => {
+    const groups = new Map<string, { phone: string; messages: WhatsAppConversation[]; leadId?: string | null; lastMessage?: WhatsAppConversation }>();
 
-  const groupConversationsByPhone = () => {
-    const groups = new Map<string, WhatsAppConversation[]>();
-    filteredConversations.forEach(conv => {
-      const existing = groups.get(conv.phone_number) || [];
-      existing.push(conv);
-      groups.set(conv.phone_number, existing);
+    conversations.forEach((conv) => {
+      const existing = groups.get(conv.phone_number);
+      if (!existing) {
+        groups.set(conv.phone_number, {
+          phone: conv.phone_number,
+          messages: [conv],
+          leadId: conv.lead_id,
+          lastMessage: conv,
+        });
+      } else {
+        existing.messages.push(conv);
+        if (!existing.leadId && conv.lead_id) {
+          existing.leadId = conv.lead_id;
+        }
+        if (
+          !existing.lastMessage ||
+          new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
+        ) {
+          existing.lastMessage = conv;
+        }
+      }
     });
-    return Array.from(groups.entries()).map(([phone, messages]) => ({
-      phone,
-      messages,
-      lastMessage: messages[0],
-      leadId: messages[0].lead_id,
-    }));
+
+    return Array.from(groups.values())
+      .map(group => ({
+        ...group,
+        messages: group.messages.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        ),
+      }))
+      .sort((a, b) => {
+        const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+        const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+  }, [conversations]);
+
+  const filteredChats = useMemo(() => {
+    if (!searchQuery) return chatGroups;
+    const query = searchQuery.toLowerCase();
+    return chatGroups.filter((chat) => {
+      const lead = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
+      return (
+        chat.phone.includes(query) ||
+        chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
+        (lead?.nome_completo?.toLowerCase().includes(query) ?? false)
+      );
+    });
+  }, [chatGroups, leadsMap, searchQuery]);
+
+  useEffect(() => {
+    if (filteredChats.length === 0) {
+      setSelectedPhone(null);
+      return;
+    }
+
+    const exists = filteredChats.some(chat => chat.phone === selectedPhone);
+    if (!exists) {
+      setSelectedPhone(filteredChats[0].phone);
+    }
+  }, [filteredChats, selectedPhone]);
+
+  const selectedChatMessages = useMemo(() => {
+    if (!selectedPhone) return [] as WhatsAppConversation[];
+    const chat = chatGroups.find(group => group.phone === selectedPhone);
+    return chat ? chat.messages : [];
+  }, [chatGroups, selectedPhone]);
+
+  const selectedChatLead = useMemo(() => {
+    if (!selectedPhone) return undefined;
+    const chat = chatGroups.find(group => group.phone === selectedPhone);
+    if (!chat?.leadId) return undefined;
+    return leadsMap.get(chat.leadId);
+  }, [chatGroups, leadsMap, selectedPhone]);
+
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatDateLabel = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (isSameDay(date, today)) {
+      return 'Hoje';
+    }
+    if (isSameDay(date, yesterday)) {
+      return 'Ontem';
+    }
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const groupedSelectedMessages = useMemo(() => {
+    const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
+    let currentDate: string | null = null;
+
+    selectedChatMessages.forEach((message) => {
+      const dateLabel = formatDateLabel(message.timestamp);
+      if (dateLabel !== currentDate) {
+        currentDate = dateLabel;
+        groups.push({ date: dateLabel, messages: [] });
+      }
+      groups[groups.length - 1].messages.push(message);
+    });
+
+    return groups;
+  }, [selectedChatMessages]);
+
+  const handleRefreshChats = async () => {
+    setIsRefreshing(true);
+    await loadConversations(false);
   };
 
   if (loading) {
@@ -175,9 +308,9 @@ export default function WhatsAppHistoryTab() {
               </div>
             </button>
             <button
-              onClick={() => setActiveView('conversations')}
+              onClick={() => setActiveView('chat')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeView === 'conversations'
+                activeView === 'chat'
                   ? 'bg-teal-600 text-white'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
@@ -197,10 +330,23 @@ export default function WhatsAppHistoryTab() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeView === 'ai-messages' ? 'Buscar em mensagens...' : 'Buscar em conversas...'}
+              placeholder={activeView === 'ai-messages' ? 'Buscar em mensagens...' : 'Buscar por nome, telefone ou mensagem...'}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
+
+          {activeView === 'chat' && (
+            <button
+              onClick={handleRefreshChats}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium transition-colors ${
+                isRefreshing ? 'bg-teal-50 text-teal-700' : 'hover:bg-slate-100 text-slate-700'
+              }`}
+              disabled={isRefreshing}
+            >
+              <RefreshCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
+              <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
+            </button>
+          )}
 
           {activeView === 'ai-messages' && (
             <select
@@ -266,37 +412,143 @@ export default function WhatsAppHistoryTab() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {groupConversationsByPhone().length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 rounded-lg">
-                <MessageCircle className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-600">Nenhuma conversa encontrada</p>
+          <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden h-[600px] flex flex-col">
+              <div className="px-4 py-3 bg-white border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-700">Conversas</h3>
+                <p className="text-xs text-slate-500">Contatos com mensagens registradas</p>
               </div>
-            ) : (
-              groupConversationsByPhone().map((group) => {
-                const lead = leadsMap.get(group.leadId);
-                return (
-                  <div key={group.phone} className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{lead?.nome_completo || 'Lead não encontrado'}</h3>
-                        <p className="text-sm text-slate-600">{group.phone}</p>
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        {group.messages.length} mensagens
-                      </span>
-                    </div>
 
-                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                      <p className="text-sm text-slate-700 line-clamp-2">{group.lastMessage.message_text}</p>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Última mensagem: {formatDateTimeFullBR(group.lastMessage.timestamp)}
-                      </p>
+              <div className="flex-1 overflow-y-auto">
+                {filteredChats.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-6 text-slate-500">
+                    <MessageCircle className="w-10 h-10 mb-3" />
+                    <p className="font-medium">Nenhuma conversa encontrada</p>
+                    <p className="text-sm">Aguarde o recebimento de novas mensagens via webhook.</p>
+                  </div>
+                ) : (
+                  filteredChats.map((chat) => {
+                    const lead = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
+                    const lastMessage = chat.lastMessage;
+                    const isActive = chat.phone === selectedPhone;
+
+                    return (
+                      <button
+                        key={chat.phone}
+                        onClick={() => setSelectedPhone(chat.phone)}
+                        className={`w-full text-left px-4 py-3 border-b border-slate-200 hover:bg-teal-50 transition-colors ${
+                          isActive ? 'bg-teal-50' : 'bg-transparent'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                            <Phone className="w-5 h-5 text-teal-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                {lead?.nome_completo || chat.phone}
+                              </h4>
+                              {lastMessage && (
+                                <span className="text-xs text-slate-500">
+                                  {formatTime(lastMessage.timestamp)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 truncate">
+                              {lastMessage?.message_text || 'Sem mensagens registradas'}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl h-[600px] flex flex-col">
+              {!selectedPhone ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                  <MessageCircle className="w-12 h-12 mb-4" />
+                  <p className="font-medium">Selecione uma conversa</p>
+                  <p className="text-sm">Escolha um contato para visualizar o histórico.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {selectedChatLead?.nome_completo || selectedPhone}
+                        </h3>
+                        <p className="text-xs text-teal-100">{selectedPhone}</p>
+                      </div>
+                      <div className="text-xs text-teal-100">
+                        {selectedChatLead?.telefone && selectedChatLead.telefone !== selectedPhone && (
+                          <span>Lead: {selectedChatLead.telefone}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                );
-              })
-            )}
+
+                  <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-4 space-y-6">
+                    {groupedSelectedMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
+                        <MessageCircle className="w-12 h-12 mb-4" />
+                        <p className="font-medium">Nenhuma mensagem registrada</p>
+                        <p className="text-sm">
+                          As mensagens serão exibidas aqui assim que forem recebidas pelo webhook.
+                        </p>
+                      </div>
+                    ) : (
+                      groupedSelectedMessages.map((group) => (
+                        <div key={group.date}>
+                          <div className="flex justify-center mb-4">
+                            <span className="text-xs bg-white text-slate-500 px-3 py-1 rounded-full shadow border border-slate-200">
+                              {group.date}
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            {group.messages.map((message) => (
+                              <div
+                                key={message.id}
+                                className={`flex ${
+                                  message.message_type === 'sent' ? 'justify-end' : 'justify-start'
+                                }`}
+                              >
+                                <div
+                                  className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${
+                                    message.message_type === 'sent'
+                                      ? 'bg-teal-500 text-white rounded-br-sm'
+                                      : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                  }`}
+                                >
+                                  <p className="text-sm whitespace-pre-wrap break-words">
+                                    {message.message_text || 'Mensagem sem conteúdo'}
+                                  </p>
+                                  <div
+                                    className={`flex items-center justify-end space-x-2 mt-1 text-[11px] ${
+                                      message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500'
+                                    }`}
+                                  >
+                                    <span>{formatTime(message.timestamp)}</span>
+                                    {message.read_status && message.message_type === 'sent' && (
+                                      <span className="font-semibold">Lida</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>

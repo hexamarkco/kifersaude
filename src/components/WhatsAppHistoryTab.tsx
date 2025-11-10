@@ -466,23 +466,6 @@ export default function WhatsAppHistoryTab() {
     return `0:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const formatNotificationType = (type?: string | null) => {
-    if (!type) return null;
-    const normalized = type.toUpperCase();
-    switch (normalized) {
-      case 'CALL_VOICE':
-        return 'Chamada de voz recebida';
-      case 'CALL_MISSED_VOICE':
-        return 'Chamada de voz perdida';
-      case 'CALL_VIDEO':
-        return 'Chamada de vídeo recebida';
-      case 'CALL_MISSED_VIDEO':
-        return 'Chamada de vídeo perdida';
-      default:
-        return `Notificação: ${type}`;
-    }
-  };
-
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
     const text = message.message_text?.trim();
@@ -494,126 +477,37 @@ export default function WhatsAppHistoryTab() {
     return text || '';
   };
 
-  const openFullscreen = useCallback(
-    (message: WhatsAppConversation, overrideType?: 'image' | 'video' | 'gif') => {
-      if (!message.media_url) {
-        return;
-      }
-
-      const caption = (() => {
-        const mediaCaption = message.media_caption?.trim();
-        const text = message.message_text?.trim();
-        if (mediaCaption && mediaCaption !== text) {
-          return mediaCaption;
-        }
-        return text || null;
-      })();
-
-      const rawType = message.media_type?.toLowerCase();
-      let resolvedType: 'image' | 'video' | 'gif' = 'image';
-
-      if (overrideType) {
-        resolvedType = overrideType;
-      } else if (rawType === 'video') {
-        resolvedType = 'video';
-      } else if (rawType === 'gif' || message.media_is_gif) {
-        resolvedType = 'gif';
-      } else {
-        resolvedType = 'image';
-      }
-
-      setFullscreenMedia({
-        url: message.media_url,
-        type: resolvedType,
-        caption,
-        mimeType: message.media_mime_type ?? null,
-        thumbnailUrl: message.media_thumbnail_url ?? null,
-      });
-    },
-    []
-  );
-
   const renderMediaContent = (message: WhatsAppConversation) => {
     if (!message.media_url) {
       return null;
     }
 
-    const rawType = message.media_type?.toLowerCase();
-    const isGif = rawType === 'gif' || Boolean(message.media_is_gif);
-    const mediaType = isGif ? 'gif' : rawType;
+    const mediaType = message.media_type?.toLowerCase();
     const accentColor = message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
     const fallbackText = message.media_caption || message.message_text || 'Mídia recebida';
 
     switch (mediaType) {
       case 'image':
-      case 'sticker': {
-        const isSticker = mediaType === 'sticker';
+      case 'sticker':
         return (
-          <div className="relative group">
-            <img
-              src={message.media_url}
-              alt={fallbackText}
-              className={`w-full rounded-lg ${
-                isSticker ? 'max-h-48 object-contain bg-slate-100 p-3' : 'max-h-64 object-cover'
-              }`}
-              loading="lazy"
-            />
-            <button
-              type="button"
-              onClick={() => openFullscreen(message, 'image')}
-              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
-              aria-label="Ver mídia em tela cheia"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          </div>
-        );
-      }
-      case 'gif':
-        return (
-          <div className="relative group">
-            <video
-              key={`${message.id}-gif`}
-              className="w-full max-h-64 rounded-lg bg-black object-contain"
-              src={message.media_url}
-              autoPlay
-              loop
-              muted
-              playsInline
-            >
-              Seu navegador não suporta a reprodução de GIFs animados.
-            </video>
-            <button
-              type="button"
-              onClick={() => openFullscreen(message, 'gif')}
-              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
-              aria-label="Ver GIF em tela cheia"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          </div>
+          <img
+            src={message.media_url}
+            alt={fallbackText}
+            className="w-full max-h-64 rounded-lg object-cover"
+            loading="lazy"
+          />
         );
       case 'video':
         return (
-          <div className="relative group">
-            <video
-              key={`${message.id}-video`}
-              controls
-              poster={message.media_thumbnail_url || undefined}
-              className="w-full max-h-72 rounded-lg bg-black"
-            >
-              <source src={message.media_url} type={message.media_mime_type || undefined} />
-              Seu navegador não suporta a reprodução de vídeos.
-            </video>
-            <button
-              type="button"
-              onClick={() => openFullscreen(message, 'video')}
-              className="absolute top-2 right-2 rounded-full bg-black/70 text-white p-1.5 opacity-0 group-hover:opacity-100 transition"
-              aria-label="Ver vídeo em tela cheia"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          </div>
+          <video
+            key={`${message.id}-video`}
+            controls
+            poster={message.media_thumbnail_url || undefined}
+            className="w-full max-h-72 rounded-lg"
+          >
+            <source src={message.media_url} type={message.media_mime_type || undefined} />
+            Seu navegador não suporta a reprodução de vídeos.
+          </video>
         );
       case 'audio': {
         const duration = formatDuration(message.media_duration_seconds);
@@ -629,32 +523,21 @@ export default function WhatsAppHistoryTab() {
               Seu navegador não suporta a reprodução de áudio.
             </audio>
             {duration && <span className={`text-[11px] ${accentColor}`}>Duração: {duration}</span>}
-            {message.media_caption && (
-              <span className={`text-[11px] ${accentColor}`}>{message.media_caption}</span>
-            )}
           </div>
         );
       }
       case 'document':
         return (
-          <div className="space-y-1">
-            <a
-              href={message.media_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-2 text-sm font-medium underline ${
-                message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>{message.media_file_name || fallbackText}</span>
-            </a>
-            {typeof message.media_page_count === 'number' && (
-              <span className={`text-[11px] ${accentColor}`}>
-                {message.media_page_count} {message.media_page_count === 1 ? 'página' : 'páginas'}
-              </span>
-            )}
-          </div>
+          <a
+            href={message.media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-sm font-medium underline ${
+              message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
+            }`}
+          >
+            Abrir documento
+          </a>
         );
       default:
         return (
@@ -1002,22 +885,6 @@ export default function WhatsAppHistoryTab() {
                               const timestampColor =
                                 message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
                               const mediaContent = renderMediaContent(message);
-                              const secondaryTextColor =
-                                message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
-                              const extraDetails: string[] = [];
-
-                              if (message.call_id) {
-                                extraDetails.push(`ID da chamada: ${message.call_id}`);
-                              }
-
-                              const notificationLabel = formatNotificationType(message.notification_type);
-                              if (notificationLabel && !bubbleText) {
-                                extraDetails.push(notificationLabel);
-                              }
-
-                              if (message.is_status_reply && bubbleText !== 'Resposta de status') {
-                                extraDetails.push('Resposta de status');
-                              }
 
                               return (
                                 <div
@@ -1033,28 +900,10 @@ export default function WhatsAppHistoryTab() {
                                         : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
                                     }`}
                                   >
-                                    {selectedChat?.isGroup && message.sender_name && (
-                                      <span
-                                        className={`text-xs font-semibold uppercase tracking-wide ${
-                                          message.message_type === 'sent' ? 'text-teal-100' : 'text-teal-600'
-                                        }`}
-                                      >
-                                        {message.sender_name}
-                                      </span>
-                                    )}
                                     {bubbleText && (
                                       <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}
                                     {mediaContent}
-                                    {extraDetails.length > 0 && (
-                                      <div className={`text-[11px] ${secondaryTextColor} space-y-1`}>
-                                        {extraDetails.map((detail) => (
-                                          <span key={detail} className="block">
-                                            {detail}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
                                     <div
                                       className={`flex items-center justify-end space-x-2 text-[11px] ${timestampColor}`}
                                     >

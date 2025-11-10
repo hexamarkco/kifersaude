@@ -276,58 +276,6 @@ export default function WhatsAppHistoryTab() {
     await loadConversations(false);
   };
 
-  const formatDateLabel = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    const isSameDay = (a: Date, b: Date) =>
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate();
-
-    if (isSameDay(date, today)) {
-      return 'Hoje';
-    }
-    if (isSameDay(date, yesterday)) {
-      return 'Ontem';
-    }
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const selectedChatDisplayName = useMemo(() => {
-    if (!selectedChat) return selectedPhone;
-    return selectedChatLead?.nome_completo || selectedChat.profileName || selectedChat.phone;
-  }, [selectedChat, selectedChatLead, selectedPhone]);
-
-  const selectedChatPhoto = selectedChat?.profilePhoto || null;
-
-  const groupedSelectedMessages = useMemo(() => {
-    const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
-    let currentDate: string | null = null;
-
-    selectedChatMessages.forEach((message) => {
-      const dateLabel = formatDateLabel(message.timestamp);
-      if (dateLabel !== currentDate) {
-        currentDate = dateLabel;
-        groups.push({ date: dateLabel, messages: [] });
-      }
-      groups[groups.length - 1].messages.push(message);
-    });
-
-    return groups;
-  }, [selectedChatMessages]);
-
-  const handleRefreshChats = async () => {
-    setIsRefreshing(true);
-    await loadConversations(false);
-  };
-
   const selectedChatUnreadCount = useMemo(() => {
     if (!selectedChat) return 0;
     return selectedChat.messages.filter(

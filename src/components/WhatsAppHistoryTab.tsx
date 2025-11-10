@@ -147,45 +147,21 @@ export default function WhatsAppHistoryTab() {
   });
 
   const chatGroups = useMemo(() => {
-    const groups = new Map<
-      string,
-      {
-        phone: string;
-        messages: WhatsAppConversation[];
-        leadId?: string | null;
-        lastMessage?: WhatsAppConversation;
-        profileName?: string | null;
-        profilePhoto?: string | null;
-        unreadCount: number;
-      }
-    >();
+    const groups = new Map<string, { phone: string; messages: WhatsAppConversation[]; leadId?: string | null; lastMessage?: WhatsAppConversation }>();
 
     conversations.forEach((conv) => {
       const existing = groups.get(conv.phone_number);
-      const displayName = conv.sender_name || conv.chat_name || null;
-      const unreadIncrement = conv.message_type === 'received' && !conv.read_status ? 1 : 0;
-
       if (!existing) {
         groups.set(conv.phone_number, {
           phone: conv.phone_number,
           messages: [conv],
           leadId: conv.lead_id,
           lastMessage: conv,
-          profileName: displayName,
-          profilePhoto: conv.sender_photo || null,
-          unreadCount: unreadIncrement,
         });
       } else {
         existing.messages.push(conv);
-        existing.unreadCount += unreadIncrement;
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
-        }
-        if (!existing.profileName && displayName) {
-          existing.profileName = displayName;
-        }
-        if (!existing.profilePhoto && conv.sender_photo) {
-          existing.profilePhoto = conv.sender_photo;
         }
         if (
           !existing.lastMessage ||
@@ -197,7 +173,7 @@ export default function WhatsAppHistoryTab() {
     });
 
     return Array.from(groups.values())
-      .map((group) => ({
+      .map(group => ({
         ...group,
         messages: group.messages.sort(
           (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -218,8 +194,7 @@ export default function WhatsAppHistoryTab() {
       return (
         chat.phone.includes(query) ||
         chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
-        (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
-        (chat.profileName?.toLowerCase().includes(query) ?? false)
+        (lead?.nome_completo?.toLowerCase().includes(query) ?? false)
       );
     });
   }, [chatGroups, leadsMap, searchQuery]);
@@ -236,63 +211,18 @@ export default function WhatsAppHistoryTab() {
     }
   }, [filteredChats, selectedPhone]);
 
-  useEffect(() => {
-    if (activeView !== 'chat') {
-      return;
-    }
-
-    const channel = supabase
-      .channel('whatsapp-conversations-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'whatsapp_conversations' },
-        (payload) => {
-          if (payload.eventType === 'DELETE' && payload.old?.id) {
-            const deletedId = payload.old.id as string;
-            setConversations((prev) => prev.filter((message) => message.id !== deletedId));
-            return;
-          }
-
-          if (!payload.new) {
-            return;
-          }
-
-          const newMessage = payload.new as WhatsAppConversation;
-
-          setConversations((prev) => {
-            const existingIndex = prev.findIndex((message) => message.id === newMessage.id);
-            if (existingIndex !== -1) {
-              const updated = [...prev];
-              updated[existingIndex] = { ...prev[existingIndex], ...newMessage };
-              return updated;
-            }
-            const next = [...prev, newMessage];
-            if (next.length > 600) {
-              next.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-              return next.slice(0, 600);
-            }
-            return next;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeView]);
-
-  const selectedChat = useMemo(() => {
-    if (!selectedPhone) return undefined;
-    return chatGroups.find((group) => group.phone === selectedPhone);
+  const selectedChatMessages = useMemo(() => {
+    if (!selectedPhone) return [] as WhatsAppConversation[];
+    const chat = chatGroups.find(group => group.phone === selectedPhone);
+    return chat ? chat.messages : [];
   }, [chatGroups, selectedPhone]);
 
-  const selectedChatMessages = useMemo(() => selectedChat?.messages ?? [], [selectedChat]);
-
   const selectedChatLead = useMemo(() => {
-    if (!selectedChat?.leadId) return undefined;
-    return leadsMap.get(selectedChat.leadId);
-  }, [leadsMap, selectedChat]);
+    if (!selectedPhone) return undefined;
+    const chat = chatGroups.find(group => group.phone === selectedPhone);
+    if (!chat?.leadId) return undefined;
+    return leadsMap.get(chat.leadId);
+  }, [chatGroups, leadsMap, selectedPhone]);
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -301,7 +231,52 @@ export default function WhatsAppHistoryTab() {
     });
   };
 
-  const formatMessageDateLabel = (timestamp: string) => {
+  const formatDateLabel = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (isSameDay(date, today)) {
+      return 'Hoje';
+    }
+    if (isSameDay(date, yesterday)) {
+      return 'Ontem';
+    }
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const groupedSelectedMessages = useMemo(() => {
+    const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
+    let currentDate: string | null = null;
+
+    selectedChatMessages.forEach((message) => {
+      const dateLabel = formatDateLabel(message.timestamp);
+      if (dateLabel !== currentDate) {
+        currentDate = dateLabel;
+        groups.push({ date: dateLabel, messages: [] });
+      }
+      groups[groups.length - 1].messages.push(message);
+    });
+
+    return groups;
+  }, [selectedChatMessages]);
+
+  const handleRefreshChats = async () => {
+    setIsRefreshing(true);
+    await loadConversations(false);
+  };
+
+  const formatDateLabel = (timestamp: string) => {
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date();
@@ -337,7 +312,7 @@ export default function WhatsAppHistoryTab() {
     let currentDate: string | null = null;
 
     selectedChatMessages.forEach((message) => {
-      const dateLabel = formatMessageDateLabel(message.timestamp);
+      const dateLabel = formatDateLabel(message.timestamp);
       if (dateLabel !== currentDate) {
         currentDate = dateLabel;
         groups.push({ date: dateLabel, messages: [] });
@@ -542,8 +517,6 @@ export default function WhatsAppHistoryTab() {
                     const lead = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
-                    const displayName = lead?.nome_completo || chat.profileName || chat.phone;
-                    const unreadCount = chat.unreadCount;
 
                     return (
                       <button
@@ -554,34 +527,13 @@ export default function WhatsAppHistoryTab() {
                         }`}
                       >
                         <div className="flex items-start space-x-3">
-                          <div className="relative">
-                            {chat.profilePhoto ? (
-                              <img
-                                src={chat.profilePhoto}
-                                alt={displayName}
-                                className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
-                                <Phone className="w-5 h-5 text-teal-600" />
-                              </div>
-                            )}
-                            {unreadCount > 0 && !isActive && (
-                              <span className="absolute -top-1 -right-1 bg-teal-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                                {unreadCount}
-                              </span>
-                            )}
+                          <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                            <Phone className="w-5 h-5 text-teal-600" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h4
-                                className={`text-sm truncate ${
-                                  unreadCount > 0 && !isActive
-                                    ? 'font-bold text-teal-700'
-                                    : 'font-semibold text-slate-900'
-                                }`}
-                              >
-                                {displayName}
+                              <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                {lead?.nome_completo || chat.phone}
                               </h4>
                               {lastMessage && (
                                 <span className="text-xs text-slate-500">
@@ -589,11 +541,7 @@ export default function WhatsAppHistoryTab() {
                                 </span>
                               )}
                             </div>
-                            <p
-                              className={`text-xs truncate ${
-                                unreadCount > 0 && !isActive ? 'text-teal-700 font-medium' : 'text-slate-500'
-                              }`}
-                            >
+                            <p className="text-xs text-slate-500 truncate">
                               {lastMessage?.message_text || 'Sem mensagens registradas'}
                             </p>
                           </div>
@@ -616,33 +564,16 @@ export default function WhatsAppHistoryTab() {
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {selectedChatPhoto ? (
-                          <img
-                            src={selectedChatPhoto}
-                            alt={selectedChatDisplayName || 'Contato'}
-                            className="w-12 h-12 rounded-full object-cover border border-white/40"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                            <Phone className="w-6 h-6 text-white" />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            {selectedChatDisplayName || selectedPhone}
-                          </h3>
-                          <p className="text-xs text-teal-100">{selectedPhone}</p>
-                        </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {selectedChatLead?.nome_completo || selectedPhone}
+                        </h3>
+                        <p className="text-xs text-teal-100">{selectedPhone}</p>
                       </div>
-                      <div className="text-xs text-teal-100 text-right">
+                      <div className="text-xs text-teal-100">
                         {selectedChatLead?.telefone && selectedChatLead.telefone !== selectedPhone && (
                           <span>Lead: {selectedChatLead.telefone}</span>
                         )}
-                        {selectedChatLead?.nome_completo && selectedChat?.profileName &&
-                          selectedChatLead.nome_completo !== selectedChat.profileName && (
-                            <div>{selectedChat.profileName}</div>
-                          )}
                       </div>
                     </div>
                   </div>

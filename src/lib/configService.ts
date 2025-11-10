@@ -27,19 +27,22 @@ type RoleAccessConfigRow = Omit<ConfigOption, 'metadata'> & {
 
 const normalizeConfigOption = (option: ConfigOption & { active?: boolean | null }): ConfigOption => {
   const ativoValue = option?.ativo ?? option?.active;
+  const fallbackValue = typeof option.value === 'string' && option.value.length > 0 ? option.value : option.label;
   return {
     ...option,
+    value: fallbackValue,
     ativo: ativoValue === undefined || ativoValue === null ? true : Boolean(ativoValue),
   };
 };
 
 const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) => {
   if (!error) return false;
+  const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
   const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
   const normalizedMessage = message.replace(/"/g, "'");
   const columnLower = column.toLowerCase();
   return (
-    error.code === 'PGRST204' &&
+    (normalizedCode === 'PGRST204' || normalizedCode === '42703') &&
     (normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower))
   );
 };
@@ -94,9 +97,12 @@ const toPostgrestError = (error: unknown): PostgrestError => {
   };
 };
 
+const getRoleModuleKey = (role: string, module: string) => `${role}:${module}`;
+
 const mapFallbackOptionToRoleAccessRule = (option: RoleAccessConfigRow): RoleAccessRule => {
   const metadata = option.metadata ?? {};
-  const [valueRole, valueModule] = typeof option.value === 'string' ? option.value.split(':') : ['', ''];
+  const optionValue = typeof option.value === 'string' ? option.value : '';
+  const [valueRole, valueModule] = optionValue.includes(':') ? optionValue.split(':') : ['', ''];
   const role = String(metadata.role ?? valueRole ?? '');
   const module = String(metadata.module ?? valueModule ?? '');
   const canView = ensureBoolean(metadata.can_view ?? metadata.canView, false);
@@ -129,25 +135,70 @@ const getFallbackRoleAccessRules = async (): Promise<RoleAccessRule[]> => {
   return rows.map(mapFallbackOptionToRoleAccessRule);
 };
 
+const findMatchingFallbackRoleAccessRule = (
+  rows: RoleAccessConfigRow[],
+  role: string,
+  module: string,
+): RoleAccessConfigRow | undefined => {
+  const roleLower = role.toLowerCase();
+  const moduleLower = module.toLowerCase();
+  const key = getRoleModuleKey(role, module).toLowerCase();
+
+  return rows.find((row) => {
+    const valueMatch = typeof row.value === 'string' && row.value.toLowerCase() === key;
+    const metadataRole = String(row.metadata?.role ?? '').toLowerCase();
+    const metadataModule = String(row.metadata?.module ?? '').toLowerCase();
+    const label = typeof row.label === 'string' ? row.label.toLowerCase() : '';
+    const labelMatch = label === `${roleLower} - ${moduleLower}`;
+
+    return (
+      valueMatch ||
+      (metadataRole === roleLower && metadataModule === moduleLower) ||
+      labelMatch
+    );
+  });
+};
+
 const upsertFallbackRoleAccessRule = async (
   role: string,
   module: string,
   updates: Partial<Pick<RoleAccessRule, 'can_view' | 'can_edit'>>,
 ): Promise<{ data: RoleAccessRule | null; error: PostgrestError | null }> => {
-  const key = `${role}:${module}`;
+  const key = getRoleModuleKey(role, module);
 
-  const { data: existing, error: fetchError } = await supabase
+  const {
+    data: existing,
+    error: fetchError,
+  } = await supabase
     .from('system_configurations')
     .select('*')
     .eq('category', FALLBACK_ROLE_ACCESS_CATEGORY)
     .eq('value', key)
     .maybeSingle();
 
-  if (fetchError && fetchError.code !== 'PGRST116') {
-    return { data: null, error: fetchError };
+  let resolvedExisting = existing as RoleAccessConfigRow | null;
+  let resolvedError = fetchError;
+
+  if (resolvedError && isMissingColumnError(resolvedError, 'value')) {
+    const { data: fallbackRows, error: fallbackError } = await supabase
+      .from('system_configurations')
+      .select('*')
+      .eq('category', FALLBACK_ROLE_ACCESS_CATEGORY);
+
+    if (fallbackError) {
+      return { data: null, error: fallbackError };
+    }
+
+    const rows = (fallbackRows as RoleAccessConfigRow[] | null) ?? [];
+    resolvedExisting = findMatchingFallbackRoleAccessRule(rows, role, module) ?? null;
+    resolvedError = null;
   }
 
-  const metadataRecord: RoleAccessMetadata = existing?.metadata ?? {};
+  if (resolvedError && resolvedError.code !== 'PGRST116') {
+    return { data: null, error: resolvedError };
+  }
+
+  const metadataRecord: RoleAccessMetadata = resolvedExisting?.metadata ?? {};
   const canView = updates.can_view ?? ensureBoolean(metadataRecord.can_view ?? metadataRecord.canView, false);
   const canEdit = updates.can_edit ?? ensureBoolean(metadataRecord.can_edit ?? metadataRecord.canEdit, false);
   const metadata: Record<string, unknown> = {
@@ -163,29 +214,50 @@ const upsertFallbackRoleAccessRule = async (
     value: key,
     metadata,
     ativo: true,
-    ordem: existing?.ordem ?? 0,
-    label: existing?.label ?? `${role} - ${module}`,
+    ordem: resolvedExisting?.ordem ?? 0,
+    label: resolvedExisting?.label ?? `${role} - ${module}`,
   };
 
   const timestamp = new Date().toISOString();
 
-  if (existing) {
-    const { data, error } = await supabase
+  if (resolvedExisting) {
+    const updatePayload = { ...basePayload, updated_at: timestamp };
+    let { data, error } = await supabase
       .from('system_configurations')
-      .update({ ...basePayload, updated_at: timestamp })
-      .eq('id', existing.id)
+      .update(updatePayload)
+      .eq('id', resolvedExisting.id)
       .select()
       .single();
+
+    if (error && isMissingColumnError(error, 'value')) {
+      const { value: _omit, ...payloadWithoutValue } = updatePayload;
+      ({ data, error } = await supabase
+        .from('system_configurations')
+        .update(payloadWithoutValue)
+        .eq('id', resolvedExisting.id)
+        .select()
+        .single());
+    }
 
     if (error) return { data: null, error };
     return { data: mapFallbackOptionToRoleAccessRule(data as RoleAccessConfigRow), error: null };
   }
 
-  const { data, error } = await supabase
+  const insertPayload = { ...basePayload, created_at: timestamp, updated_at: timestamp };
+  let { data, error } = await supabase
     .from('system_configurations')
-    .insert([{ ...basePayload, created_at: timestamp, updated_at: timestamp }])
+    .insert([insertPayload])
     .select()
     .single();
+
+  if (error && isMissingColumnError(error, 'value')) {
+    const { value: _omit, ...payloadWithoutValue } = insertPayload;
+    ({ data, error } = await supabase
+      .from('system_configurations')
+      .insert([payloadWithoutValue])
+      .select()
+      .single());
+  }
 
   if (error) return { data: null, error };
   return { data: mapFallbackOptionToRoleAccessRule(data as RoleAccessConfigRow), error: null };
@@ -513,13 +585,22 @@ export const configService = {
       const insert = async (payload: Record<string, any>) =>
         supabase.from('system_configurations').insert([payload]).select().single();
 
-      let { data, error } = await insert({ ...basePayload, ativo: ativoValue });
+      let payloadWithAtivo: Record<string, any> = { ...basePayload, ativo: ativoValue };
+      let { data, error } = await insert(payloadWithAtivo);
 
       if (error && isMissingColumnError(error, 'ativo')) {
-        ({ data, error } = await insert({ ...basePayload, active: ativoValue }));
+        payloadWithAtivo = { ...basePayload, active: ativoValue };
+        ({ data, error } = await insert(payloadWithAtivo));
       }
 
-      return { data: data ? normalizeConfigOption(data) : null, error };
+      if (error && isMissingColumnError(error, 'value')) {
+        const { value: _omit, ...withoutValue } = payloadWithAtivo;
+        ({ data, error } = await insert(withoutValue));
+      }
+
+      if (error) throw error;
+
+      return { data: data ? normalizeConfigOption(data as ConfigOption) : null, error: null };
     } catch (error) {
       console.error('Error creating config option:', error);
       return { data: null, error };
@@ -544,6 +625,11 @@ export const configService = {
       if (error && ativo !== undefined && isMissingColumnError(error, 'ativo')) {
         const retryPayload: Record<string, any> = { ...rest, updated_at: timestamp, active: ativo };
         ({ error } = await supabase.from('system_configurations').update(retryPayload).eq('id', id));
+      }
+
+      if (error && isMissingColumnError(error, 'value')) {
+        const { value: _omit, ...retryWithoutValue } = basePayload;
+        ({ error } = await supabase.from('system_configurations').update(retryWithoutValue).eq('id', id));
       }
 
       return { error };

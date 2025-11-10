@@ -118,7 +118,7 @@ export default function RemindersManagerEnhanced() {
       const completionDate = !currentStatus ? new Date().toISOString() : null;
       const updateData: Pick<Reminder, 'lido' | 'concluido_em'> = {
         lido: !currentStatus,
-        concluido_em: completionDate
+        concluido_em: completionDate ?? undefined,
       };
 
       const { error } = await supabase

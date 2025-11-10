@@ -5,6 +5,8 @@ export interface ZAPIConfig {
   token: string;
 }
 
+export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document';
+
 export interface ZAPIMessage {
   messageId: string;
   phone: string;
@@ -13,6 +15,8 @@ export interface ZAPIMessage {
   timestamp: number;
   fromMe: boolean;
   mediaUrl?: string;
+  mediaType?: ZAPIMediaType;
+  mediaMimeType?: string;
 }
 
 export interface ZAPIResponse {
@@ -205,18 +209,62 @@ class ZAPIService {
       return normalized.trim();
     };
 
-    return rawMessages
-      .filter((msg) => Boolean(getMessageText(msg)))
-      .map((msg) => ({
+    const determineMediaType = (msg: any, mediaUrl?: string): ZAPIMediaType | undefined => {
+      const rawType = typeof msg.type === 'string' ? msg.type.toLowerCase() : undefined;
+      const mimeType = typeof msg.mimetype === 'string' ? msg.mimetype.toLowerCase() : undefined;
+      const captionType = typeof msg.mediaType === 'string' ? msg.mediaType.toLowerCase() : undefined;
+      const source = mediaUrl || '';
+      const extension = source.split('?')[0]?.split('.').pop()?.toLowerCase();
+
+      const matchesType = (...types: string[]) =>
+        [rawType, captionType, extension, mimeType].some((value) =>
+          value ? types.some((type) => value.includes(type)) : false
+        );
+
+      if (matchesType('audio', 'ptt', 'voice')) {
+        return 'audio';
+      }
+
+      if (matchesType('video', 'mp4', 'mov', 'mkv', '3gp')) {
+        return 'video';
+      }
+
+      if (matchesType('image', 'jpg', 'jpeg', 'png', 'gif', 'webp')) {
+        return 'image';
+      }
+
+      if (mediaUrl) {
+        return 'document';
+      }
+
+      return undefined;
+    };
+
+    const normalizedMessages: ZAPIMessage[] = [];
+
+    rawMessages.forEach((msg) => {
+      const mediaUrl = msg.mediaUrl || msg.media;
+      const text = getMessageText(msg);
+      const hasContent = Boolean(text) || Boolean(mediaUrl);
+
+      if (!hasContent) {
+        return;
+      }
+
+      normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
-        text: getMessageText(msg),
+        text,
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
-        mediaUrl: msg.mediaUrl || msg.media,
-      }))
-      .sort((a, b) => a.timestamp - b.timestamp);
+        mediaUrl: mediaUrl || undefined,
+        mediaType: determineMediaType(msg, mediaUrl),
+        mediaMimeType: msg.mimetype || msg.mimeType,
+      });
+    });
+
+    return normalizedMessages.sort((a, b) => a.timestamp - b.timestamp);
   }
 
   async fetchAndSaveHistory(

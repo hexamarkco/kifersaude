@@ -37,6 +37,8 @@ const buildPhoneLookupKeys = (value?: string | null): string[] => {
   return Array.from(keys);
 };
 
+type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone'>;
+
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
   const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
@@ -50,13 +52,14 @@ export default function WhatsAppHistoryTab() {
   const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
-  const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, Lead>>(new Map());
+
+  const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
+  const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
 
-  const upsertLeadsIntoMaps = useCallback((leads: Lead[]) => {
+  const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
 
     setLeadsMap((prev) => {
@@ -94,7 +97,7 @@ export default function WhatsAppHistoryTab() {
       .in('id', leadIds);
 
     if (data) {
-      upsertLeadsIntoMaps(data);
+      upsertLeadsIntoMaps(data as LeadPreview[]);
     }
   }, [upsertLeadsIntoMaps]);
 
@@ -141,7 +144,7 @@ export default function WhatsAppHistoryTab() {
     toFetch.forEach((digits) => loadedPhoneLeadsRef.current.add(digits));
 
     if (data) {
-      upsertLeadsIntoMaps(data);
+      upsertLeadsIntoMaps(data as LeadPreview[]);
     }
   }, [upsertLeadsIntoMaps]);
 

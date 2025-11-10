@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { MessageCircle, CheckCheck } from 'lucide-react';
-import { ZAPIMessage } from '../lib/zapiService';
+import { ZAPIMessage, ZAPIMediaType } from '../lib/zapiService';
 
 interface WhatsAppConversationViewerProps {
   messages: ZAPIMessage[];
@@ -80,6 +80,99 @@ export default function WhatsAppConversationViewer({
 
   const groupedMessages = groupMessagesByDate();
 
+  const deriveMediaTypeFromUrl = (url?: string, mimeType?: string): ZAPIMediaType | undefined => {
+    if (!url && !mimeType) return undefined;
+
+    const normalizedMime = mimeType?.toLowerCase();
+    const extension = url?.split('?')[0]?.split('.').pop()?.toLowerCase();
+
+    const includesType = (value: string | undefined, candidates: string[]) =>
+      value ? candidates.some((candidate) => value.includes(candidate)) : false;
+
+    if (includesType(normalizedMime, ['audio/']) || includesType(extension, ['mp3', 'ogg', 'wav', 'm4a', 'aac'])) {
+      return 'audio';
+    }
+
+    if (includesType(normalizedMime, ['video/']) || includesType(extension, ['mp4', 'mov', 'mkv', 'avi', '3gp', 'webm'])) {
+      return 'video';
+    }
+
+    if (includesType(normalizedMime, ['image/']) || includesType(extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+      return 'image';
+    }
+
+    if (url) {
+      return 'document';
+    }
+
+    return undefined;
+  };
+
+  const getMediaType = (message: ZAPIMessage): ZAPIMediaType | undefined => {
+    return message.mediaType || deriveMediaTypeFromUrl(message.mediaUrl, message.mediaMimeType);
+  };
+
+  const renderMediaContent = (message: ZAPIMessage) => {
+    if (!message.mediaUrl) {
+      return null;
+    }
+
+    const mediaType = getMediaType(message);
+
+    if (mediaType === 'audio') {
+      return (
+        <div className="mb-2">
+          <audio
+            controls
+            className="w-full"
+            src={message.mediaUrl}
+          >
+            Seu navegador não suporta reprodução de áudio.
+          </audio>
+        </div>
+      );
+    }
+
+    if (mediaType === 'video') {
+      return (
+        <div className="mb-2">
+          <video
+            controls
+            className="rounded-lg max-w-full h-auto"
+            src={message.mediaUrl}
+          >
+            Seu navegador não suporta reprodução de vídeo.
+          </video>
+        </div>
+      );
+    }
+
+    if (mediaType === 'image' || !mediaType) {
+      return (
+        <div className="mb-2">
+          <img
+            src={message.mediaUrl}
+            alt="Mídia da conversa"
+            className="rounded-lg max-w-full h-auto"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-2">
+        <a
+          href={message.mediaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm underline"
+        >
+          Abrir mídia compartilhada
+        </a>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-96 bg-gradient-to-b from-teal-50 to-white rounded-lg overflow-hidden border border-slate-200">
       <div className="bg-teal-600 text-white px-4 py-3 flex items-center space-x-3">
@@ -111,16 +204,15 @@ export default function WhatsAppConversationViewer({
                       : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
                   }`}
                 >
-                  {message.mediaUrl && (
-                    <div className="mb-2">
-                      <img
-                        src={message.mediaUrl}
-                        alt="Mídia"
-                        className="rounded-lg max-w-full h-auto"
-                      />
-                    </div>
+                  {renderMediaContent(message)}
+                  {message.text && (
+                    <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                   )}
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                  {!message.text && message.mediaUrl && getMediaType(message) === 'audio' && (
+                    <p className="text-xs mt-2 opacity-80">
+                      Mensagem de áudio
+                    </p>
+                  )}
                   <div
                     className={`flex items-center justify-end space-x-1 mt-1 text-xs ${
                       message.fromMe ? 'text-teal-100' : 'text-slate-500'

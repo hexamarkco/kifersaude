@@ -394,6 +394,111 @@ export default function WhatsAppHistoryTab() {
     });
   };
 
+  const formatDuration = (seconds?: number | null) => {
+    if (typeof seconds !== 'number' || Number.isNaN(seconds)) {
+      return null;
+    }
+
+    const totalSeconds = Math.max(0, Math.round(seconds));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    if (minutes > 0) {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    return `0:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getDisplayTextForMessage = (message: WhatsAppConversation) => {
+    const caption = message.media_caption?.trim();
+    const text = message.message_text?.trim();
+
+    if (caption && caption !== text) {
+      return caption;
+    }
+
+    return text || '';
+  };
+
+  const renderMediaContent = (message: WhatsAppConversation) => {
+    if (!message.media_url) {
+      return null;
+    }
+
+    const mediaType = message.media_type?.toLowerCase();
+    const accentColor = message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
+    const fallbackText = message.media_caption || message.message_text || 'Mídia recebida';
+
+    switch (mediaType) {
+      case 'image':
+      case 'sticker':
+        return (
+          <img
+            src={message.media_url}
+            alt={fallbackText}
+            className="w-full max-h-64 rounded-lg object-cover"
+            loading="lazy"
+          />
+        );
+      case 'video':
+        return (
+          <video
+            key={`${message.id}-video`}
+            controls
+            poster={message.media_thumbnail_url || undefined}
+            className="w-full max-h-72 rounded-lg"
+          >
+            <source src={message.media_url} type={message.media_mime_type || undefined} />
+            Seu navegador não suporta a reprodução de vídeos.
+          </video>
+        );
+      case 'audio': {
+        const duration = formatDuration(message.media_duration_seconds);
+        return (
+          <div className="space-y-1">
+            <audio
+              key={`${message.id}-audio`}
+              controls
+              src={message.media_url}
+              className="w-full"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de áudio.
+            </audio>
+            {duration && <span className={`text-[11px] ${accentColor}`}>Duração: {duration}</span>}
+          </div>
+        );
+      }
+      case 'document':
+        return (
+          <a
+            href={message.media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-sm font-medium underline ${
+              message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
+            }`}
+          >
+            Abrir documento
+          </a>
+        );
+      default:
+        return (
+          <a
+            href={message.media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-sm font-medium underline ${
+              message.message_type === 'sent' ? 'text-white' : 'text-teal-600'
+            }`}
+          >
+            Abrir mídia
+          </a>
+        );
+    }
+  };
+
   const groupedSelectedMessages = useMemo(() => {
     const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
     let currentDate: string | null = null;
@@ -711,36 +816,47 @@ export default function WhatsAppHistoryTab() {
                           </div>
 
                           <div className="space-y-3">
-                            {group.messages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex ${
-                                  message.message_type === 'sent' ? 'justify-end' : 'justify-start'
-                                }`}
-                              >
+                            {group.messages.map((message) => {
+                              const displayText = getDisplayTextForMessage(message);
+                              const showEmptyFallback = !displayText && !message.media_url;
+                              const bubbleText = displayText || (showEmptyFallback ? 'Mensagem sem conteúdo' : '');
+                              const timestampColor =
+                                message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
+                              const mediaContent = renderMediaContent(message);
+
+                              return (
                                 <div
-                                  className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${
-                                    message.message_type === 'sent'
-                                      ? 'bg-teal-500 text-white rounded-br-sm'
-                                      : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                  key={message.id}
+                                  className={`flex ${
+                                    message.message_type === 'sent' ? 'justify-end' : 'justify-start'
                                   }`}
                                 >
-                                  <p className="text-sm whitespace-pre-wrap break-words">
-                                    {message.message_text || 'Mensagem sem conteúdo'}
-                                  </p>
                                   <div
-                                    className={`flex items-center justify-end space-x-2 mt-1 text-[11px] ${
-                                      message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500'
+                                    className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 ${
+                                      message.message_type === 'sent'
+                                        ? 'bg-teal-500 text-white rounded-br-sm'
+                                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
                                     }`}
                                   >
-                                    <span>{formatTime(message.timestamp)}</span>
-                                    {message.read_status && message.message_type === 'sent' && (
-                                      <span className="font-semibold">Lida</span>
+                                    {bubbleText && (
+                                      <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}
+                                    {mediaContent}
+                                    <div
+                                      className={`flex items-center justify-end space-x-2 text-[11px] ${timestampColor}`}
+                                    >
+                                      {message.media_view_once && (
+                                        <span className="uppercase tracking-wide font-semibold">Visualização única</span>
+                                      )}
+                                      <span>{formatTime(message.timestamp)}</span>
+                                      {message.read_status && message.message_type === 'sent' && (
+                                        <span className="font-semibold">Lida</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ))

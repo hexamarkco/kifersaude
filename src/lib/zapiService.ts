@@ -17,6 +17,10 @@ export interface ZAPIMessage {
   mediaUrl?: string;
   mediaType?: ZAPIMediaType;
   mediaMimeType?: string;
+  mediaDurationSeconds?: number;
+  mediaThumbnailUrl?: string;
+  mediaCaption?: string;
+  mediaViewOnce?: boolean;
 }
 
 export interface ZAPIResponse {
@@ -30,6 +34,29 @@ const CLIENT_TOKEN = 'Faca52aa7804f429186a4a7734f8a3d66S';
 class ZAPIService {
   private baseUrl = 'https://api.z-api.io';
   private clientToken = CLIENT_TOKEN;
+
+  private getMediaFallbackText(mediaType?: ZAPIMediaType, durationSeconds?: number): string {
+    if (!mediaType) {
+      return 'Mensagem recebida';
+    }
+
+    switch (mediaType) {
+      case 'audio': {
+        const seconds = typeof durationSeconds === 'number' ? `${Math.round(durationSeconds)}s` : null;
+        return seconds ? `Áudio recebido (${seconds})` : 'Áudio recebido';
+      }
+      case 'video': {
+        const seconds = typeof durationSeconds === 'number' ? `${Math.round(durationSeconds)}s` : null;
+        return seconds ? `Vídeo recebido (${seconds})` : 'Vídeo recebido';
+      }
+      case 'image':
+        return 'Imagem recebida';
+      case 'document':
+        return 'Documento recebido';
+      default:
+        return 'Mensagem recebida';
+    }
+  }
 
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
@@ -167,11 +194,18 @@ class ZAPIService {
         contract_id: contractId,
         phone_number: phoneNumber,
         message_id: msg.messageId,
-        message_text: msg.text,
+        message_text: msg.text || this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
         message_type: msg.fromMe ? 'sent' : 'received',
         timestamp: new Date(msg.timestamp * 1000).toISOString(),
         read_status: true,
         media_url: msg.mediaUrl,
+        media_type: msg.mediaType,
+        media_mime_type: msg.mediaMimeType,
+        media_duration_seconds:
+          typeof msg.mediaDurationSeconds === 'number' ? Math.round(msg.mediaDurationSeconds) : undefined,
+        media_thumbnail_url: msg.mediaThumbnailUrl,
+        media_caption: msg.mediaCaption,
+        media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
       }));
 
       for (const conv of conversations) {
@@ -207,6 +241,15 @@ class ZAPIService {
 
       const normalized = candidates.find((value) => typeof value === 'string') || '';
       return normalized.trim();
+    };
+
+    const pickFirstString = (...values: any[]): string | undefined => {
+      for (const value of values) {
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+      return undefined;
     };
 
     const determineMediaType = (msg: any, mediaUrl?: string): ZAPIMediaType | undefined => {
@@ -251,6 +294,31 @@ class ZAPIService {
         return;
       }
 
+      const mediaDurationSeconds =
+        typeof msg.seconds === 'number'
+          ? msg.seconds
+          : typeof msg.duration === 'number'
+          ? msg.duration
+          : typeof msg.length === 'number'
+          ? msg.length
+          : undefined;
+
+      const mediaCaption = pickFirstString(msg.caption, msg.title, msg.description);
+      const mediaThumbnailUrl = pickFirstString(
+        msg.thumbnailUrl,
+        msg.thumbUrl,
+        msg.preview,
+        msg.previewUrl,
+        msg.image,
+        msg.thumbnail
+      );
+      const mediaViewOnce =
+        typeof msg.viewOnce === 'boolean'
+          ? msg.viewOnce
+          : typeof msg.isViewOnce === 'boolean'
+          ? msg.isViewOnce
+          : undefined;
+
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
@@ -261,6 +329,10 @@ class ZAPIService {
         mediaUrl: mediaUrl || undefined,
         mediaType: determineMediaType(msg, mediaUrl),
         mediaMimeType: msg.mimetype || msg.mimeType,
+        mediaDurationSeconds,
+        mediaThumbnailUrl,
+        mediaCaption,
+        mediaViewOnce,
       });
     });
 

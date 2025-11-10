@@ -16,6 +16,16 @@ type EventProcessingResult = {
   reason?: string;
 };
 
+type MediaDetails = {
+  url?: string;
+  type?: string;
+  mimeType?: string;
+  durationSeconds?: number | null;
+  thumbnailUrl?: string;
+  caption?: string;
+  viewOnce?: boolean | null;
+};
+
 function respond(body: Record<string, unknown>, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     status: init?.status ?? 200,
@@ -99,7 +109,7 @@ function extractSenderPhoto(payload: any): string | null {
   );
 }
 
-function describePayload(payload: any): { text: string; mediaUrl?: string } {
+function describePayload(payload: any): { text: string; media?: MediaDetails } {
   const textSources: (string | null)[] = [
     pickFirstString(payload?.text?.message, payload?.text?.body, payload?.text?.text),
     pickFirstString(payload?.message, payload?.body, payload?.content),
@@ -110,6 +120,110 @@ function describePayload(payload: any): { text: string; mediaUrl?: string } {
   ];
 
   let text = textSources.find((value) => typeof value === 'string' && value.trim()) ?? '';
+
+  let media: MediaDetails | undefined;
+  const ensureMedia = () => {
+    if (!media) {
+      media = {};
+    }
+    return media!;
+  };
+
+  if (payload?.image) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'image';
+    ref.url = ref.url ?? pickFirstString(payload.image?.imageUrl, payload.image?.url, payload.image?.thumbnailUrl);
+    ref.thumbnailUrl = ref.thumbnailUrl ?? pickFirstString(payload.image?.thumbnailUrl, payload.image?.previewUrl);
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.image?.mimeType, payload.image?.mimetype);
+    ref.caption = ref.caption ?? pickFirstString(payload.image?.caption, payload?.caption);
+    if (typeof payload.image?.viewOnce === 'boolean') {
+      ref.viewOnce = payload.image.viewOnce;
+    }
+  }
+
+  if (payload?.video) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'video';
+    ref.url = ref.url ?? pickFirstString(payload.video?.videoUrl, payload.video?.url);
+    ref.thumbnailUrl =
+      ref.thumbnailUrl ?? pickFirstString(payload.video?.thumbnailUrl, payload.video?.previewUrl, payload?.thumbnailUrl);
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.video?.mimeType, payload.video?.mimetype);
+    ref.caption = ref.caption ?? pickFirstString(payload.video?.caption, payload?.caption);
+    const seconds =
+      typeof payload.video?.seconds === 'number'
+        ? payload.video.seconds
+        : typeof payload.video?.duration === 'number'
+        ? payload.video.duration
+        : undefined;
+    if (typeof seconds === 'number') {
+      ref.durationSeconds = seconds;
+    }
+    if (typeof payload.video?.viewOnce === 'boolean') {
+      ref.viewOnce = payload.video.viewOnce;
+    }
+  }
+
+  if (payload?.audio) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'audio';
+    ref.url = ref.url ?? pickFirstString(payload.audio?.audioUrl, payload.audio?.url);
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.audio?.mimeType, payload.audio?.mimetype);
+    const seconds =
+      typeof payload.audio?.seconds === 'number'
+        ? payload.audio.seconds
+        : typeof payload.audio?.duration === 'number'
+        ? payload.audio.duration
+        : typeof payload.audio?.length === 'number'
+        ? payload.audio.length
+        : undefined;
+    if (typeof seconds === 'number') {
+      ref.durationSeconds = seconds;
+    }
+    ref.caption = ref.caption ?? pickFirstString(payload.audio?.caption, payload?.caption);
+    if (typeof payload.audio?.viewOnce === 'boolean') {
+      ref.viewOnce = payload.audio.viewOnce;
+    }
+  }
+
+  if (payload?.document) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'document';
+    ref.url = ref.url ?? pickFirstString(payload.document?.documentUrl, payload.document?.url);
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.document?.mimeType, payload.document?.mimetype);
+    ref.caption =
+      ref.caption ?? pickFirstString(payload.document?.title, payload.document?.fileName, payload?.caption);
+  }
+
+  if (payload?.sticker) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'sticker';
+    ref.url = ref.url ?? pickFirstString(payload.sticker?.stickerUrl, payload.sticker?.url);
+    ref.mimeType = ref.mimeType ?? pickFirstString(payload.sticker?.mimeType, payload.sticker?.mimetype);
+  }
+
+  if (payload?.location?.thumbnailUrl) {
+    const ref = ensureMedia();
+    ref.type = ref.type ?? 'location';
+    ref.url = ref.url ?? payload.location.thumbnailUrl;
+  }
+
+  const fallbackMediaUrl = pickFirstString(
+    payload?.image?.imageUrl,
+    payload?.image?.thumbnailUrl,
+    payload?.video?.videoUrl,
+    payload?.audio?.audioUrl,
+    payload?.document?.documentUrl,
+    payload?.sticker?.stickerUrl,
+    payload?.buttonsMessage?.imageUrl,
+    payload?.buttonsMessage?.videoUrl,
+    payload?.location?.thumbnailUrl,
+    payload?.statusImage?.imageUrl
+  );
+
+  if (fallbackMediaUrl) {
+    const ref = ensureMedia();
+    ref.url = ref.url ?? fallbackMediaUrl;
+  }
 
   if (!text) {
     if (payload?.reaction?.value) {
@@ -132,13 +246,23 @@ function describePayload(payload: any): { text: string; mediaUrl?: string } {
       const name = payload.location?.name ? `${payload.location.name}` : 'Localização';
       const address = payload.location?.address ? ` - ${payload.location.address}` : '';
       text = `${name}${address}`;
-    } else if (payload?.audio) {
-      const seconds = typeof payload.audio?.seconds === 'number' ? `${payload.audio.seconds}s` : '';
-      text = seconds ? `Áudio recebido (${seconds})` : 'Áudio recebido';
-    } else if (payload?.video) {
-      const seconds = typeof payload.video?.seconds === 'number' ? `${payload.video.seconds}s` : '';
-      text = seconds ? `Vídeo recebido (${seconds})` : 'Vídeo recebido';
-    } else if (payload?.image) {
+    } else if (media?.type === 'audio' || payload?.audio) {
+      const duration =
+        typeof media?.durationSeconds === 'number'
+          ? `${Math.round(media.durationSeconds)}s`
+          : typeof payload?.audio?.seconds === 'number'
+          ? `${payload.audio.seconds}s`
+          : '';
+      text = duration ? `Áudio recebido (${duration})` : 'Áudio recebido';
+    } else if (media?.type === 'video' || payload?.video) {
+      const duration =
+        typeof media?.durationSeconds === 'number'
+          ? `${Math.round(media.durationSeconds)}s`
+          : typeof payload?.video?.seconds === 'number'
+          ? `${payload.video.seconds}s`
+          : '';
+      text = duration ? `Vídeo recebido (${duration})` : 'Vídeo recebido';
+    } else if (media?.type === 'image' || payload?.image) {
       text = 'Imagem recebida';
     } else if (payload?.document?.fileName || payload?.document?.title) {
       const name = payload.document?.fileName || payload.document?.title;
@@ -158,19 +282,10 @@ function describePayload(payload: any): { text: string; mediaUrl?: string } {
     }
   }
 
-  const mediaUrl =
-    payload?.image?.imageUrl ||
-    payload?.image?.thumbnailUrl ||
-    payload?.video?.videoUrl ||
-    payload?.audio?.audioUrl ||
-    payload?.document?.documentUrl ||
-    payload?.sticker?.stickerUrl ||
-    payload?.buttonsMessage?.imageUrl ||
-    payload?.buttonsMessage?.videoUrl ||
-    payload?.location?.thumbnailUrl ||
-    payload?.statusImage?.imageUrl;
+  const normalizedText = text || 'Mensagem recebida';
+  const normalizedMedia = media && (media.url || media.type || media.caption || typeof media.durationSeconds === 'number') ? media : undefined;
 
-  return { text, mediaUrl: typeof mediaUrl === 'string' ? mediaUrl : undefined };
+  return { text: normalizedText, media: normalizedMedia };
 }
 
 async function upsertConversation(
@@ -182,14 +297,16 @@ async function upsertConversation(
     readStatus: boolean;
     timestamp: string;
     phoneNumber: string | null;
-    mediaUrl?: string;
+    media?: MediaDetails;
     text?: string;
   }> = {}
 ): Promise<EventProcessingResult> {
   const normalizedPhone =
     overrides.phoneNumber ?? normalizePhoneNumber(payload?.phone || payload?.senderPhone || payload?.connectedPhone);
 
-  const { text, mediaUrl } = describePayload(payload);
+  const { text: derivedText, media: derivedMedia } = describePayload(payload);
+  const chosenMedia = overrides.media ?? derivedMedia;
+  const chosenText = overrides.text ?? derivedText ?? 'Mensagem recebida';
   const messageType: 'sent' | 'received' = overrides.messageType ?? (payload?.fromMe ? 'sent' : 'received');
   const readStatus =
     typeof overrides.readStatus === 'boolean'
@@ -206,11 +323,18 @@ async function upsertConversation(
   const baseRecord = {
     phone_number: normalizedPhone ?? 'unknown',
     message_id: messageId,
-    message_text: overrides.text ?? text ?? 'Mensagem recebida',
+    message_text: chosenText || 'Mensagem recebida',
     message_type: messageType,
     timestamp,
     read_status: readStatus,
-    media_url: overrides.mediaUrl ?? mediaUrl,
+    media_url: chosenMedia?.url ?? null,
+    media_type: chosenMedia?.type ?? null,
+    media_mime_type: chosenMedia?.mimeType ?? null,
+    media_duration_seconds:
+      typeof chosenMedia?.durationSeconds === 'number' ? Math.round(chosenMedia.durationSeconds) : null,
+    media_thumbnail_url: chosenMedia?.thumbnailUrl ?? null,
+    media_caption: chosenMedia?.caption ?? null,
+    media_view_once: typeof chosenMedia?.viewOnce === 'boolean' ? chosenMedia.viewOnce : null,
   };
 
   const insertRecord = {
@@ -239,6 +363,12 @@ async function upsertConversation(
         timestamp: baseRecord.timestamp,
         read_status: baseRecord.read_status,
         media_url: baseRecord.media_url,
+        media_type: baseRecord.media_type,
+        media_mime_type: baseRecord.media_mime_type,
+        media_duration_seconds: baseRecord.media_duration_seconds,
+        media_thumbnail_url: baseRecord.media_thumbnail_url,
+        media_caption: baseRecord.media_caption,
+        media_view_once: baseRecord.media_view_once,
       };
 
       if (senderName) {
@@ -280,11 +410,8 @@ async function handleReceivedCallback(
   payload: any,
   messageId: string
 ): Promise<EventProcessingResult> {
-  const { text, mediaUrl } = describePayload(payload);
   return upsertConversation(supabase, payload, messageId, {
     messageType: payload?.fromMe ? 'sent' : 'received',
-    mediaUrl,
-    text,
   });
 }
 

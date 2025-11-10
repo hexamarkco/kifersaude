@@ -211,18 +211,19 @@ export default function WhatsAppHistoryTab() {
     }
   }, [filteredChats, selectedPhone]);
 
-  const selectedChatMessages = useMemo(() => {
-    if (!selectedPhone) return [] as WhatsAppConversation[];
-    const chat = chatGroups.find(group => group.phone === selectedPhone);
-    return chat ? chat.messages : [];
+  const selectedChat = useMemo(() => {
+    if (!selectedPhone) return undefined;
+    return chatGroups.find(group => group.phone === selectedPhone);
   }, [chatGroups, selectedPhone]);
 
+  const selectedChatMessages = useMemo(() => {
+    return selectedChat?.messages ?? ([] as WhatsAppConversation[]);
+  }, [selectedChat]);
+
   const selectedChatLead = useMemo(() => {
-    if (!selectedPhone) return undefined;
-    const chat = chatGroups.find(group => group.phone === selectedPhone);
-    if (!chat?.leadId) return undefined;
-    return leadsMap.get(chat.leadId);
-  }, [chatGroups, leadsMap, selectedPhone]);
+    if (!selectedChat?.leadId) return undefined;
+    return leadsMap.get(selectedChat.leadId);
+  }, [leadsMap, selectedChat]);
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {

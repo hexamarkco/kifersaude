@@ -32,6 +32,8 @@ import {
   FileVideo,
   FileAudio,
   Square,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { zapiService } from '../lib/zapiService';
@@ -239,7 +241,13 @@ export default function WhatsAppHistoryTab() {
         .from('whatsapp_chat_preferences')
         .select('*');
 
-      if (error) throw error;
+      if (error) {
+        if ((error as { code?: string })?.code === 'PGRST205') {
+          setChatPreferences(new Map());
+          return;
+        }
+        throw error;
+      }
 
       const next = new Map<string, WhatsAppChatPreference>();
       (data as WhatsAppChatPreference[] | null)?.forEach((preference) => {

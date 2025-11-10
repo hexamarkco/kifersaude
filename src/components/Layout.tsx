@@ -14,6 +14,7 @@ import {
   PiggyBank,
   DollarSign,
   Calendar,
+  type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -22,7 +23,7 @@ import { useNavigate } from 'react-router-dom';
 type TabConfig = {
   id: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   badge?: number;
   badgeColor?: string;
   children?: TabConfig[];

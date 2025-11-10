@@ -286,6 +286,10 @@ export type WhatsAppConversation = {
   sender_name?: string | null;
   sender_photo?: string | null;
   chat_name?: string | null;
+  notification_type?: string | null;
+  call_id?: string | null;
+  waiting_message?: boolean | null;
+  is_status_reply?: boolean | null;
   created_at: string;
 };
 

@@ -11,6 +11,8 @@ import {
   Loader,
   Phone,
   RefreshCcw,
+  Maximize2,
+  FileText,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
@@ -58,6 +60,16 @@ export default function WhatsAppHistoryTab() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
+  const [fullscreenMedia, setFullscreenMedia] = useState<
+    | {
+        url: string;
+        type: 'image' | 'video' | 'gif';
+        caption?: string | null;
+        mimeType?: string | null;
+        thumbnailUrl?: string | null;
+      }
+    | null
+  >(null);
 
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
@@ -204,6 +216,25 @@ export default function WhatsAppHistoryTab() {
       loadConversations();
     }
   }, [activeView, loadAIMessages, loadConversations]);
+
+  const closeFullscreen = useCallback(() => setFullscreenMedia(null), []);
+
+  useEffect(() => {
+    if (!fullscreenMedia) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [fullscreenMedia, closeFullscreen]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -563,7 +594,8 @@ export default function WhatsAppHistoryTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -868,6 +900,65 @@ export default function WhatsAppHistoryTab() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      {fullscreenMedia && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4 py-6"
+          onClick={closeFullscreen}
+        >
+          <div
+            className="relative max-w-5xl w-full"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="relative bg-black/60 rounded-lg p-4 shadow-xl border border-white/10">
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="absolute top-3 right-3 text-slate-100 hover:text-white"
+                aria-label="Fechar visualização em tela cheia"
+              >
+                <XCircle className="w-7 h-7" />
+              </button>
+              {fullscreenMedia.type === 'image' && (
+                <img
+                  src={fullscreenMedia.url}
+                  alt={fullscreenMedia.caption ?? 'Mídia em tela cheia'}
+                  className="max-h-[80vh] w-full object-contain rounded-md"
+                />
+              )}
+              {fullscreenMedia.type === 'video' && (
+                <video
+                  className="w-full max-h-[80vh] rounded-md"
+                  controls
+                  autoPlay
+                  poster={fullscreenMedia.thumbnailUrl ?? undefined}
+                >
+                  <source src={fullscreenMedia.url} type={fullscreenMedia.mimeType ?? undefined} />
+                  Seu navegador não suporta a reprodução de vídeos.
+                </video>
+              )}
+              {fullscreenMedia.type === 'gif' && (
+                <video
+                  className="w-full max-h-[80vh] rounded-md"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                >
+                  <source src={fullscreenMedia.url} type={fullscreenMedia.mimeType ?? undefined} />
+                  Seu navegador não suporta a reprodução deste GIF.
+                </video>
+              )}
+              {fullscreenMedia.caption && (
+                <p className="mt-4 text-sm text-slate-100 text-center whitespace-pre-wrap break-words">
+                  {fullscreenMedia.caption}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

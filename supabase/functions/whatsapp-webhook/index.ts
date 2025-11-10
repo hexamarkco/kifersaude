@@ -229,7 +229,9 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
     if (payload?.reaction?.value) {
       text = `Reação: ${payload.reaction.value}`;
     } else if (payload?.notification) {
-      text = `Notificação: ${payload.notification}`;
+      const notificationType = normalizeNotificationType(payload.notification);
+      ensureMetadata().notificationType = notificationType;
+      text = describeNotificationMessage(notificationType) ?? 'Notificação recebida';
     } else if (payload?.poll?.question) {
       const options = Array.isArray(payload?.poll?.options)
         ? payload.poll.options.map((opt: any) => opt?.name).filter(Boolean).join(', ')
@@ -277,6 +279,7 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       text = payload.carouselMessage.text;
     } else if (payload?.statusImage) {
       text = 'Resposta de status';
+      ensureMetadata().isStatusReply = true;
     } else {
       text = 'Mensagem recebida';
     }

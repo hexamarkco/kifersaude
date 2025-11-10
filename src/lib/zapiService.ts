@@ -5,7 +5,7 @@ export interface ZAPIConfig {
   token: string;
 }
 
-export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document';
+export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document' | 'sticker' | 'gif';
 
 export interface ZAPIMessage {
   messageId: string;
@@ -265,22 +265,31 @@ class ZAPIService {
         );
 
       if (matchesType('audio', 'ptt', 'voice')) {
-        return 'audio';
+        return { type: 'audio' };
       }
 
-      if (matchesType('video', 'mp4', 'mov', 'mkv', '3gp')) {
-        return 'video';
+      if (matchesType('gif') || rawType === 'gif' || msg.gifPlayback === true || msg.isGif === true) {
+        return { type: 'gif', isGif: true };
+      }
+
+      if (matchesType('sticker', 'webp')) {
+        return { type: 'sticker' };
+      }
+
+      if (matchesType('video', 'mp4', 'mov', 'mkv', '3gp', 'webm')) {
+        return { type: 'video' };
       }
 
       if (matchesType('image', 'jpg', 'jpeg', 'png', 'gif', 'webp')) {
-        return 'image';
+        const isGif = matchesType('gif');
+        return { type: isGif ? 'gif' : 'image', isGif };
       }
 
       if (mediaUrl) {
-        return 'document';
+        return { type: 'document' };
       }
 
-      return undefined;
+      return { type: undefined };
     };
 
     const normalizedMessages: ZAPIMessage[] = [];
@@ -288,7 +297,8 @@ class ZAPIService {
     rawMessages.forEach((msg) => {
       const mediaUrl = msg.mediaUrl || msg.media;
       const text = getMessageText(msg);
-      const hasContent = Boolean(text) || Boolean(mediaUrl);
+      const { type: mediaType, isGif } = determineMediaType(msg, mediaUrl);
+      const hasContent = Boolean(text) || Boolean(mediaUrl) || Boolean(msg.notification);
 
       if (!hasContent) {
         return;
@@ -322,12 +332,12 @@ class ZAPIService {
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
-        text,
+        text: resolvedText,
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
         mediaUrl: mediaUrl || undefined,
-        mediaType: determineMediaType(msg, mediaUrl),
+        mediaType,
         mediaMimeType: msg.mimetype || msg.mimeType,
         mediaDurationSeconds,
         mediaThumbnailUrl,

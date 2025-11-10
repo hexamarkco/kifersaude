@@ -35,6 +35,11 @@ class ZAPIService {
   private baseUrl = 'https://api.z-api.io';
   private clientToken = CLIENT_TOKEN;
 
+  private normalizePhoneNumber(phoneNumber: string): string {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    return cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+  }
+
   private getMediaFallbackText(mediaType?: ZAPIMediaType, durationSeconds?: number): string {
     if (!mediaType) {
       return 'Mensagem recebida';
@@ -119,8 +124,7 @@ class ZAPIService {
         return { success: false, error: 'Z-API não configurado' };
       }
 
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+      const phone = this.normalizePhoneNumber(phoneNumber);
 
       const response = await fetch(
         `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/messages/${phone}?limit=${limit}`,
@@ -152,8 +156,7 @@ class ZAPIService {
         return { success: false, error: 'Z-API não configurado' };
       }
 
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+      const phone = this.normalizePhoneNumber(phoneNumber);
 
       const response = await fetch(
         `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-text`,
@@ -171,11 +174,71 @@ class ZAPIService {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.message || 'Falha ao enviar mensagem' };
+        let errorMessage = 'Falha ao enviar mensagem';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API:', error);
+        }
+        return { success: false, error: errorMessage };
       }
 
-      const data = await response.json();
+      const data = await response
+        .json()
+        .catch(() => ({ message: 'Mensagem enviada' }));
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  async sendMediaMessage(
+    phoneNumber: string,
+    file: Blob,
+    filename: string,
+    caption?: string
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+
+      const formData = new FormData();
+      formData.append('phone', phone);
+      formData.append('file', file, filename);
+      if (caption) {
+        formData.append('message', caption);
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-file`,
+        {
+          method: 'POST',
+          headers: {
+            'Client-Token': this.clientToken,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao enviar mídia';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      const data = await response
+        .json()
+        .catch(() => ({ message: 'Mídia enviada' }));
       return { success: true, data };
     } catch (error) {
       return { success: false, error: String(error) };

@@ -1,10 +1,11 @@
 import {
+  ChangeEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
 import {
@@ -20,12 +21,16 @@ import {
   RefreshCcw,
   Maximize2,
   FileText,
+  Paperclip,
+  Mic,
+  Trash2,
   Send,
-  BookmarkPlus,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  Square,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { useConfig } from '../contexts/ConfigContext';
-import { configService } from '../lib/configService';
 import { zapiService } from '../lib/zapiService';
 
 const sanitizePhoneDigits = (value?: string | null): string => {
@@ -56,7 +61,22 @@ const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   return phone.toLowerCase().includes('@g.us');
 };
 
-type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone'>;
+type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel'>;
+
+type ChatGroupBase = {
+  phone: string;
+  messages: WhatsAppConversation[];
+  leadId?: string | null;
+  lastMessage?: WhatsAppConversation;
+  displayName?: string | null;
+  photoUrl?: string | null;
+  isGroup: boolean;
+};
+
+type ChatGroup = ChatGroupBase & {
+  archived: boolean;
+  pinned: boolean;
+};
 
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
@@ -71,6 +91,15 @@ export default function WhatsAppHistoryTab() {
   const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [chatPreferences, setChatPreferences] = useState<Map<string, WhatsAppChatPreference>>(new Map());
+  const [chatListFilter, setChatListFilter] = useState<'active' | 'archived'>('active');
+
+  const { leadStatuses } = useConfig();
+  const { isObserver } = useAuth();
+  const activeLeadStatuses = useMemo(
+    () => leadStatuses.filter((status) => status.ativo),
+    [leadStatuses]
+  );
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
@@ -87,18 +116,19 @@ export default function WhatsAppHistoryTab() {
       }
     | null
   >(null);
-  const { options, refreshCategory } = useConfig();
-  const quickMessages = useMemo(
-    () => (options.whatsapp_quick_messages || []).filter((option) => option.ativo),
-    [options]
-  );
-  const [messageText, setMessageText] = useState('');
+  const [composerText, setComposerText] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [savingQuickMessage, setSavingQuickMessage] = useState(false);
-  const [quickMessageFeedback, setQuickMessageFeedback] = useState<
-    { type: 'success' | 'error'; text: string } | null
-  >(null);
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingSupported, setIsRecordingSupported] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
@@ -129,12 +159,23 @@ export default function WhatsAppHistoryTab() {
     });
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hasSupport =
+      typeof navigator !== 'undefined' &&
+      Boolean(navigator.mediaDevices) &&
+      'MediaRecorder' in window;
+
+    setIsRecordingSupported(hasSupport);
+  }, []);
+
   const loadLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) return;
 
     const { data } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone')
+      .select('id, nome_completo, telefone, status, responsavel')
       .in('id', leadIds);
 
     if (data) {
@@ -174,7 +215,7 @@ export default function WhatsAppHistoryTab() {
 
     const { data, error } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone')
+      .select('id, nome_completo, telefone, status, responsavel')
       .in('telefone', variants);
 
     if (error) {
@@ -188,6 +229,24 @@ export default function WhatsAppHistoryTab() {
       upsertLeadsIntoMaps(data as LeadPreview[]);
     }
   }, [upsertLeadsIntoMaps]);
+
+  const loadChatPreferences = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .select('*');
+
+      if (error) throw error;
+
+      const next = new Map<string, WhatsAppChatPreference>();
+      (data as WhatsAppChatPreference[] | null)?.forEach((preference) => {
+        next.set(preference.phone_number, preference);
+      });
+      setChatPreferences(next);
+    } catch (error) {
+      console.error('Erro ao carregar preferências de chat:', error);
+    }
+  }, []);
 
   const loadAIMessages = useCallback(async () => {
     setLoading(true);
@@ -228,6 +287,7 @@ export default function WhatsAppHistoryTab() {
       await loadLeads(leadIds);
       const phoneNumbers = [...new Set((data || []).map((c) => c.phone_number).filter(Boolean))];
       await loadLeadsByPhones(phoneNumbers);
+      await loadChatPreferences();
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
     } finally {
@@ -236,7 +296,7 @@ export default function WhatsAppHistoryTab() {
       }
       setIsRefreshing(false);
     }
-  }, [loadLeads, loadLeadsByPhones]);
+  }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
   useEffect(() => {
     if (activeView === 'ai-messages') {
@@ -264,6 +324,29 @@ export default function WhatsAppHistoryTab() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [fullscreenMedia, closeFullscreen]);
+
+  useEffect(() => {
+    return () => {
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+    };
+  }, [recordedAudio]);
+
+  useEffect(() => {
+    if (!composerSuccess) return;
+    if (typeof window === 'undefined') return;
+
+    const timeout = window.setTimeout(() => setComposerSuccess(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [composerSuccess]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -314,18 +397,19 @@ export default function WhatsAppHistoryTab() {
     return true;
   });
 
-  const chatGroups = useMemo(() => {
+  const chatGroups = useMemo<ChatGroupBase[]>(() => {
     const groups = new Map<
-      string,
-      {
-        phone: string;
-        messages: WhatsAppConversation[];
-        leadId?: string | null;
-        lastMessage?: WhatsAppConversation;
-        displayName?: string | null;
-        photoUrl?: string | null;
-        isGroup: boolean;
-      }
+    string,
+    {
+      phone: string;
+      messages: WhatsAppConversation[];
+      leadId?: string | null;
+      contractId?: string | null;
+      lastMessage?: WhatsAppConversation;
+      displayName?: string | null;
+      photoUrl?: string | null;
+      isGroup: boolean;
+    }
     >();
 
     conversations.forEach((conv) => {
@@ -339,6 +423,7 @@ export default function WhatsAppHistoryTab() {
           phone: conv.phone_number,
           messages: [conv],
           leadId: conv.lead_id,
+          contractId: conv.contract_id || null,
           lastMessage: conv,
           displayName: isGroupChat
             ? normalizedChatName || normalizedSenderName || null
@@ -350,6 +435,9 @@ export default function WhatsAppHistoryTab() {
         existing.messages.push(conv);
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
+        }
+        if (!existing.contractId && conv.contract_id) {
+          existing.contractId = conv.contract_id;
         }
         if (!existing.photoUrl && conv.sender_photo) {
           existing.photoUrl = conv.sender_photo;
@@ -391,11 +479,28 @@ export default function WhatsAppHistoryTab() {
       });
   }, [conversations]);
 
+  const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
+    return chatGroups.map((group) => {
+      const preference = chatPreferences.get(group.phone);
+      return {
+        ...group,
+        archived: preference?.archived ?? false,
+        pinned: preference?.pinned ?? false,
+      };
+    });
+  }, [chatGroups, chatPreferences]);
+
   const filteredChats = useMemo(() => {
-    if (!searchQuery) return chatGroups;
+    const relevantChats = chatsWithPreferences.filter((chat) =>
+      chatListFilter === 'archived' ? chat.archived : !chat.archived
+    );
+
     const query = searchQuery.toLowerCase();
     const numericQuery = searchQuery.replace(/\D/g, '');
-    return chatGroups.filter((chat) => {
+
+    const matchesSearch = (chat: ChatGroup) => {
+      if (!searchQuery) return true;
+
       const lead = chat.isGroup
         ? undefined
         : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
@@ -410,8 +515,21 @@ export default function WhatsAppHistoryTab() {
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
         (lead?.telefone?.toLowerCase().includes(query) ?? false)
       );
+    };
+
+    const searchedChats = searchQuery
+      ? relevantChats.filter(matchesSearch)
+      : relevantChats;
+
+    return [...searchedChats].sort((a, b) => {
+      if (a.pinned !== b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+      const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+      const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      return bTime - aTime;
     });
-  }, [chatGroups, leadsByPhoneMap, leadsMap, searchQuery]);
+  }, [chatsWithPreferences, chatListFilter, leadsByPhoneMap, leadsMap, searchQuery]);
 
   useEffect(() => {
     if (filteredChats.length === 0) {
@@ -438,8 +556,13 @@ export default function WhatsAppHistoryTab() {
 
   const selectedChat = useMemo(() => {
     if (!selectedPhone) return undefined;
-    return chatGroups.find(group => group.phone === selectedPhone);
-  }, [chatGroups, selectedPhone]);
+    return chatsWithPreferences.find(group => group.phone === selectedPhone);
+  }, [chatsWithPreferences, selectedPhone]);
+
+  const selectedChatPreference = useMemo(() => {
+    if (!selectedPhone) return undefined;
+    return chatPreferences.get(selectedPhone);
+  }, [chatPreferences, selectedPhone]);
 
   const selectedChatMessages = useMemo(() => {
     return selectedChat?.messages ?? ([] as WhatsAppConversation[]);
@@ -453,6 +576,58 @@ export default function WhatsAppHistoryTab() {
       leadsByPhoneMap.get(selectedChat.phone.trim())
     );
   }, [leadsByPhoneMap, leadsMap, selectedChat]);
+
+  const handleLeadStatusChange = useCallback(
+    async (leadId: string, newStatus: string) => {
+      const lead = leadsMap.get(leadId);
+      if (!lead) return;
+
+      const oldStatus = lead.status;
+      const optimisticLead = { ...lead, status: newStatus };
+      upsertLeadsIntoMaps([optimisticLead]);
+
+      try {
+        const now = new Date().toISOString();
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update({ status: newStatus, ultimo_contato: now })
+          .eq('id', leadId);
+
+        if (updateError) throw updateError;
+
+        await supabase.from('interactions').insert([
+          {
+            lead_id: leadId,
+            tipo: 'Observação',
+            descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
+            responsavel: lead.responsavel,
+          },
+        ]);
+
+        await supabase.from('lead_status_history').insert([
+          {
+            lead_id: leadId,
+            status_anterior: oldStatus,
+            status_novo: newStatus,
+            responsavel: lead.responsavel,
+          },
+        ]);
+
+        if (['Fechado', 'Perdido'].includes(newStatus)) {
+          await cancelFollowUps(leadId);
+        } else {
+          await createAutomaticFollowUps(leadId, newStatus, lead.responsavel);
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar status do lead:', error);
+        alert('Erro ao atualizar status do lead');
+        upsertLeadsIntoMaps([{ ...lead, status: oldStatus }]);
+        throw error;
+      }
+    },
+    [createAutomaticFollowUps, cancelFollowUps, leadsMap, upsertLeadsIntoMaps]
+  );
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -501,6 +676,232 @@ export default function WhatsAppHistoryTab() {
     return `0:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const formatFileSize = (size: number) => {
+    if (size < 1024) {
+      return `${size} B`;
+    }
+    if (size < 1024 * 1024) {
+      return `${Math.round(size / 1024)} KB`;
+    }
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getAttachmentIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <FileImage className="w-4 h-4 text-teal-600" />;
+    }
+    if (file.type.startsWith('video/')) {
+      return <FileVideo className="w-4 h-4 text-purple-600" />;
+    }
+    if (file.type.startsWith('audio/')) {
+      return <FileAudio className="w-4 h-4 text-orange-600" />;
+    }
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      return <FileText className="w-4 h-4 text-rose-600" />;
+    }
+    return <Paperclip className="w-4 h-4 text-slate-500" />;
+  };
+
+  const handleAttachmentButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const filesArray = Array.from(files);
+    setAttachments((prev) => {
+      const existingKeys = new Set(prev.map((file) => `${file.name}-${file.size}`));
+      const uniqueFiles = filesArray.filter(
+        (file) => !existingKeys.has(`${file.name}-${file.size}`)
+      );
+      return [...prev, ...uniqueFiles];
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    setComposerError(null);
+    setComposerSuccess(null);
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const startRecording = useCallback(async () => {
+    if (!isRecordingSupported) {
+      setRecordingError('Gravação de áudio não suportada neste navegador.');
+      return;
+    }
+
+    try {
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+      setRecordedAudio(null);
+      setComposerSuccess(null);
+      setComposerError(null);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const mimeType = mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setRecordedAudio({ blob: audioBlob, url: audioUrl });
+        audioChunksRef.current = [];
+        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingError(null);
+    } catch (error) {
+      console.error('Erro ao iniciar gravação de áudio:', error);
+      setRecordingError('Não foi possível iniciar a gravação. Verifique as permissões do microfone.');
+    }
+  }, [isRecordingSupported, recordedAudio]);
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    setIsRecording(false);
+  }, []);
+
+  const discardRecording = useCallback(() => {
+    if (recordedAudio?.url) {
+      URL.revokeObjectURL(recordedAudio.url);
+    }
+    setRecordedAudio(null);
+    setRecordingError(null);
+  }, [recordedAudio]);
+
+  const hasContentToSend = useMemo(() => {
+    return composerText.trim().length > 0 || attachments.length > 0 || Boolean(recordedAudio);
+  }, [attachments.length, composerText, recordedAudio]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!selectedPhone) {
+      setComposerError('Selecione uma conversa para enviar mensagens.');
+      return;
+    }
+
+    if (!hasContentToSend) {
+      setComposerError('Adicione uma mensagem, anexo ou áudio antes de enviar.');
+      return;
+    }
+
+    setIsSendingMessage(true);
+    setComposerError(null);
+    setComposerSuccess(null);
+
+    try {
+      const textToSend = composerText.trim();
+
+      if (textToSend) {
+        const textResult = await zapiService.sendTextMessage(selectedPhone, textToSend);
+        if (!textResult.success) {
+          throw new Error(textResult.error || 'Falha ao enviar mensagem de texto.');
+        }
+      }
+
+      for (const file of attachments) {
+        const mediaResult = await zapiService.sendMediaMessage(selectedPhone, file, file.name);
+        if (!mediaResult.success) {
+          throw new Error(mediaResult.error || 'Falha ao enviar anexo.');
+        }
+      }
+
+      if (recordedAudio) {
+        const blob = recordedAudio.blob;
+        const type = blob.type || 'audio/webm';
+        let extension = 'webm';
+        if (type.includes('ogg')) {
+          extension = 'ogg';
+        } else if (type.includes('mpeg') || type.includes('mp3')) {
+          extension = 'mp3';
+        } else if (type.includes('wav')) {
+          extension = 'wav';
+        } else if (type.includes('m4a') || type.includes('mp4')) {
+          extension = 'm4a';
+        }
+
+        const audioFile = new File([blob], `gravacao-${Date.now()}.${extension}`, { type });
+        const audioResult = await zapiService.sendMediaMessage(
+          selectedPhone,
+          audioFile,
+          audioFile.name
+        );
+        if (!audioResult.success) {
+          throw new Error(audioResult.error || 'Falha ao enviar áudio.');
+        }
+      }
+
+      if (selectedChatLead?.id) {
+        const refreshResult = await zapiService.fetchAndSaveHistory(
+          selectedChatLead.id,
+          selectedPhone,
+          selectedChat?.contractId ?? undefined
+        );
+        if (!refreshResult.success) {
+          console.error('Erro ao atualizar histórico após envio:', refreshResult.error);
+        }
+      }
+
+      await loadConversations(false);
+
+      setComposerSuccess('Mensagem enviada com sucesso!');
+      setComposerText('');
+      setAttachments([]);
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+      setRecordedAudio(null);
+    } catch (error) {
+      setComposerError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao enviar mensagem. Tente novamente mais tarde.'
+      );
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [
+    attachments,
+    composerText,
+    hasContentToSend,
+    loadConversations,
+    recordedAudio,
+    selectedChat?.contractId,
+    selectedChatLead?.id,
+    selectedPhone,
+  ]);
+
+  const handleComposerKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      void handleSendMessage();
+    }
+  };
+
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
     const text = message.message_text?.trim();
@@ -512,7 +913,7 @@ export default function WhatsAppHistoryTab() {
     return text || '';
   };
 
-  const renderMediaContent = (message: WhatsAppConversation) => {
+  const renderMediaContent = (message: WhatsAppConversation): JSX.Element | null => {
     if (!message.media_url) {
       return null;
     }
@@ -524,25 +925,55 @@ export default function WhatsAppHistoryTab() {
     switch (mediaType) {
       case 'image':
       case 'sticker':
+      case 'gif': {
+        const normalizedType = mediaType === 'gif' ? 'gif' : 'image';
         return (
-          <img
-            src={message.media_url}
-            alt={fallbackText}
-            className="w-full max-h-64 rounded-lg object-cover"
-            loading="lazy"
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: normalizedType,
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
+          >
+            <img
+              src={message.media_url}
+              alt={fallbackText}
+              className="w-full max-h-64 rounded-lg object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+              loading="lazy"
+            />
+          </button>
         );
+      }
       case 'video':
         return (
-          <video
-            key={`${message.id}-video`}
-            controls
-            poster={message.media_thumbnail_url || undefined}
-            className="w-full max-h-72 rounded-lg"
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: 'video',
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
           >
-            <source src={message.media_url} type={message.media_mime_type || undefined} />
-            Seu navegador não suporta a reprodução de vídeos.
-          </video>
+            <video
+              key={`${message.id}-video`}
+              poster={message.media_thumbnail_url || undefined}
+              className="w-full max-h-72 rounded-lg pointer-events-none"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </button>
         );
       case 'audio': {
         const duration = formatDuration(message.media_duration_seconds);
@@ -723,6 +1154,104 @@ export default function WhatsAppHistoryTab() {
     await loadConversations(false);
   };
 
+  const handleToggleArchive = useCallback(async (phone: string) => {
+    let previousPref: WhatsAppChatPreference | undefined;
+    let nextPref: WhatsAppChatPreference | undefined;
+
+    setChatPreferences((prev) => {
+      const next = new Map(prev);
+      const current = prev.get(phone);
+      previousPref = current;
+      const now = new Date().toISOString();
+      nextPref = {
+        phone_number: phone,
+        archived: !(current?.archived ?? false),
+        pinned: current?.pinned ?? false,
+        created_at: current?.created_at ?? now,
+        updated_at: now,
+      };
+      next.set(phone, nextPref);
+      return next;
+    });
+
+    if (!nextPref) return;
+
+    try {
+      const { error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .upsert({
+          phone_number: phone,
+          archived: nextPref.archived,
+          pinned: nextPref.pinned,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar arquivamento do chat:', error);
+      setChatPreferences((prev) => {
+        const next = new Map(prev);
+        if (previousPref) {
+          next.set(phone, previousPref);
+        } else {
+          next.delete(phone);
+        }
+        return next;
+      });
+    }
+  }, []);
+
+  const handleTogglePin = useCallback(async (phone: string) => {
+    let previousPref: WhatsAppChatPreference | undefined;
+    let nextPref: WhatsAppChatPreference | undefined;
+
+    setChatPreferences((prev) => {
+      const next = new Map(prev);
+      const current = prev.get(phone);
+      previousPref = current;
+      const now = new Date().toISOString();
+      nextPref = {
+        phone_number: phone,
+        archived: current?.archived ?? false,
+        pinned: !(current?.pinned ?? false),
+        created_at: current?.created_at ?? now,
+        updated_at: now,
+      };
+      next.set(phone, nextPref);
+      return next;
+    });
+
+    if (!nextPref) return;
+
+    try {
+      const { error } = await supabase
+        .from('whatsapp_chat_preferences')
+        .upsert({
+          phone_number: phone,
+          archived: nextPref.archived,
+          pinned: nextPref.pinned,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar fixação do chat:', error);
+      setChatPreferences((prev) => {
+        const next = new Map(prev);
+        if (previousPref) {
+          next.set(phone, previousPref);
+        } else {
+          next.delete(phone);
+        }
+        return next;
+      });
+    }
+  }, []);
+
   const selectedChatUnreadCount = useMemo(() => {
     if (!selectedChat) return 0;
     return selectedChat.messages.filter(
@@ -816,6 +1345,33 @@ export default function WhatsAppHistoryTab() {
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
+
+          {activeView === 'chat' && (
+            <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => setChatListFilter('active')}
+                className={`px-3 py-2 transition-colors ${
+                  chatListFilter === 'active'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                Ativos
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatListFilter('archived')}
+                className={`px-3 py-2 transition-colors border-l border-slate-200 ${
+                  chatListFilter === 'archived'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                Arquivados
+              </button>
+            </div>
+          )}
 
           {activeView === 'chat' && (
             <button
@@ -922,11 +1478,19 @@ export default function WhatsAppHistoryTab() {
                       : lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
 
                     return (
-                      <button
+                      <div
                         key={chat.phone}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedPhone(chat.phone)}
-                        className={`w-full text-left px-4 py-3 border-b border-slate-200 hover:bg-teal-50 transition-colors ${
-                          isActive ? 'bg-teal-50' : 'bg-transparent'
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedPhone(chat.phone);
+                          }
+                        }}
+                        className={`w-full px-4 py-3 border-b border-slate-200 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${
+                          isActive ? 'bg-teal-50' : 'hover:bg-teal-50 bg-transparent'
                         }`}
                       >
                         <div className="flex items-start space-x-3">
@@ -942,22 +1506,75 @@ export default function WhatsAppHistoryTab() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold text-slate-900 truncate">
-                                {displayName}
-                              </h4>
-                              {lastMessage && (
-                                <span className="text-xs text-slate-500">
-                                  {formatTime(lastMessage.timestamp)}
-                                </span>
-                              )}
+                            <div className="flex items-start justify-between space-x-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                    {displayName}
+                                  </h4>
+                                  {chat.pinned && <Pin className="w-3 h-3 text-teal-600" />}
+                                </div>
+                                <p className="text-xs text-slate-500 truncate">
+                                  {lastMessage?.message_text || 'Sem mensagens registradas'}
+                                </p>
+                                {(chat.pinned || chat.archived) && (
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    {chat.pinned && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-100 text-teal-700 uppercase tracking-wide">
+                                        Fixado
+                                      </span>
+                                    )}
+                                    {chat.archived && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-200 text-slate-700 uppercase tracking-wide">
+                                        Arquivado
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-start space-x-1 ml-3">
+                                {lastMessage && (
+                                  <span className="text-xs text-slate-500 whitespace-nowrap mr-1">
+                                    {formatTime(lastMessage.timestamp)}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleTogglePin(chat.phone);
+                                  }}
+                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                  title={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                  aria-label={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                >
+                                  {chat.pinned ? (
+                                    <PinOff className="w-4 h-4" />
+                                  ) : (
+                                    <Pin className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleToggleArchive(chat.phone);
+                                  }}
+                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                  title={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                  aria-label={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                >
+                                  {chat.archived ? (
+                                    <ArchiveRestore className="w-4 h-4" />
+                                  ) : (
+                                    <Archive className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-xs text-slate-500 truncate">
-                              {lastMessage?.message_text || 'Sem mensagens registradas'}
-                            </p>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })
                 )}
@@ -974,7 +1591,7 @@ export default function WhatsAppHistoryTab() {
               ) : (
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
                           {selectedChat?.photoUrl ? (
@@ -988,20 +1605,41 @@ export default function WhatsAppHistoryTab() {
                           )}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">
-                            {selectedChat?.isGroup
-                              ? selectedChat?.displayName || selectedPhone
-                              : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
-                          </h3>
+                          <div className="flex items-center flex-wrap gap-2">
+                            <h3 className="font-semibold text-lg">
+                              {selectedChat?.isGroup
+                                ? selectedChat?.displayName || selectedPhone
+                                : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
+                            </h3>
+                            {selectedChatPreference?.pinned && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/20 text-white uppercase tracking-wide">
+                                Fixado
+                              </span>
+                            )}
+                            {selectedChatPreference?.archived && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/10 text-white uppercase tracking-wide">
+                                Arquivado
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
                         </div>
                       </div>
-                      <div className="text-xs text-teal-100 text-right">
+                      <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">
                         {selectedChatLead?.telefone &&
                           sanitizePhoneDigits(selectedChatLead.telefone) !==
                             sanitizePhoneDigits(selectedPhone ?? '') && (
                             <span>Lead: {selectedChatLead.telefone}</span>
                           )}
+                        {selectedChatLead && activeLeadStatuses.length > 0 && (
+                          <StatusDropdown
+                            currentStatus={selectedChatLead.status}
+                            leadId={selectedChatLead.id}
+                            statusOptions={activeLeadStatuses}
+                            onStatusChange={handleLeadStatusChange}
+                            disabled={isObserver}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1072,90 +1710,135 @@ export default function WhatsAppHistoryTab() {
                     )}
                   </div>
 
-                  <div className="border-t border-slate-200 bg-white px-6 py-4 space-y-4">
-                    {quickMessageFeedback && (
-                      <div
-                        className={`text-sm px-3 py-2 rounded-lg border ${
-                          quickMessageFeedback.type === 'success'
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
-                        }`}
-                      >
-                        {quickMessageFeedback.text}
-                      </div>
-                    )}
-                    {sendError && (
-                      <div className="text-sm px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700">
-                        {sendError}
-                      </div>
-                    )}
-                    {quickMessages.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                            Mensagens rápidas
+                  <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 space-y-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,image/*,video/*,audio/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleAttachmentChange}
+                    />
+                    <div className="flex items-start space-x-3">
+                      <textarea
+                        value={composerText}
+                        onChange={(event) => {
+                          setComposerText(event.target.value);
+                          if (composerError) {
+                            setComposerError(null);
+                          }
+                        }}
+                        onKeyDown={handleComposerKeyDown}
+                        rows={3}
+                        placeholder="Escreva uma mensagem..."
+                        className="flex-1 resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                      <div className="flex flex-col items-end space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleAttachmentButtonClick}
+                          className="flex items-center space-x-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                          disabled={isSendingMessage}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                          <span>Anexar arquivo</span>
+                        </button>
+                        {isRecordingSupported ? (
+                          <button
+                            type="button"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`flex items-center space-x-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                              isRecording
+                                ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                            }`}
+                            disabled={isSendingMessage}
+                          >
+                            {isRecording ? (
+                              <Square className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                            <span>{isRecording ? 'Parar gravação' : 'Gravar áudio'}</span>
+                          </button>
+                        ) : (
+                          <span className="max-w-[160px] text-right text-[11px] text-slate-500">
+                            Gravação de áudio não suportada neste navegador.
                           </span>
-                          <span className="text-[11px] text-slate-400">Clique para usar na conversa</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
-                          {quickMessages.map((msg) => (
-                            <button
-                              key={msg.id}
-                              type="button"
-                              onClick={() => handleApplyQuickMessage(msg.value)}
-                              className="px-3 py-1.5 bg-teal-50 text-teal-700 text-xs rounded-full hover:bg-teal-100 transition-colors border border-teal-100 max-w-full"
-                              title={msg.value}
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handleSendMessage()}
+                          disabled={!hasContentToSend || isSendingMessage}
+                          className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow transition-colors ${
+                            !hasContentToSend || isSendingMessage
+                              ? 'bg-teal-300'
+                              : 'bg-teal-600 hover:bg-teal-700'
+                          }`}
+                        >
+                          <Send className="h-4 w-4" />
+                          <span>{isSendingMessage ? 'Enviando...' : 'Enviar'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {attachments.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase text-slate-500">Anexos</p>
+                        <div className="space-y-2">
+                          {attachments.map((file, index) => (
+                            <div
+                              key={`${file.name}-${file.size}-${index}`}
+                              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
                             >
-                              <span className="line-clamp-1">{msg.label}</span>
-                            </button>
+                              <div className="flex items-center space-x-3">
+                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                                  {getAttachmentIcon(file)}
+                                </span>
+                                <div>
+                                  <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
+                                    {file.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">{formatFileSize(file.size)}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAttachment(index)}
+                                className="text-slate-400 transition-colors hover:text-red-500"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-col md:flex-row md:items-end md:space-x-3 space-y-3 md:space-y-0">
-                      <div className="flex-1">
-                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center space-x-2">
-                          <MessageCircle className="w-4 h-4 text-teal-500" />
-                          <span>Mensagem</span>
-                        </label>
-                        <textarea
-                          value={messageText}
-                          onChange={(event) => {
-                            setMessageText(event.target.value);
-                            if (sendError) {
-                              setSendError(null);
-                            }
-                          }}
-                          onKeyDown={handleComposerKeyDown}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
-                          placeholder="Digite sua mensagem ou selecione uma mensagem rápida..."
-                        />
-                        <p className="mt-1 text-[11px] text-slate-400">
-                          Use Ctrl + Enter (ou ⌘ + Enter) para enviar rapidamente.
+
+                    {recordedAudio && (
+                      <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase text-slate-500">Áudio gravado</p>
+                          <button
+                            type="button"
+                            onClick={discardRecording}
+                            className="text-slate-400 transition-colors hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <audio controls src={recordedAudio.url} className="w-full">
+                          Seu navegador não suporta reprodução de áudio.
+                        </audio>
+                        <p className="text-[11px] text-slate-500">
+                          Ouça o áudio antes de enviar para garantir a qualidade.
                         </p>
                       </div>
-                      <div className="flex md:flex-col md:space-y-2 space-x-2 md:space-x-0">
-                        <button
-                          type="button"
-                          onClick={() => void handleSendMessage()}
-                          disabled={isSendingMessage}
-                          className="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Send className="w-4 h-4" />
-                          <span>{isSendingMessage ? 'Enviando...' : 'Enviar'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveQuickMessage()}
-                          disabled={savingQuickMessage || !messageText.trim()}
-                          className="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <BookmarkPlus className="w-4 h-4" />
-                          <span>{savingQuickMessage ? 'Salvando...' : 'Salvar como rápida'}</span>
-                        </button>
-                      </div>
-                    </div>
+                    )}
+
+                    {recordingError && <p className="text-sm text-red-600">{recordingError}</p>}
+                    {composerError && <p className="text-sm text-red-600">{composerError}</p>}
+                    {composerSuccess && <p className="text-sm text-teal-600">{composerSuccess}</p>}
                   </div>
                 </>
               )}

@@ -293,6 +293,14 @@ export type WhatsAppConversation = {
   created_at: string;
 };
 
+export type WhatsAppChatPreference = {
+  phone_number: string;
+  archived: boolean;
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AIGeneratedMessage = {
   id: string;
   reminder_id: string;

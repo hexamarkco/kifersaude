@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MessageCircle, CheckCheck, Check } from 'lucide-react';
+import { MessageCircle, CheckCheck } from 'lucide-react';
 import { ZAPIMessage } from '../lib/zapiService';
 
 interface WhatsAppConversationViewerProps {

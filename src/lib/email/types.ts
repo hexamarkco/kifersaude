@@ -19,6 +19,7 @@ export interface EmailAccount {
   connectedAt: string;
   status: 'connected' | 'syncing' | 'error';
   isPrimary?: boolean;
+  lastSyncAt?: string;
 }
 
 export interface EmailParticipant {
@@ -34,10 +35,12 @@ export interface EmailMessage {
   from: EmailParticipant;
   to: EmailParticipant[];
   cc?: EmailParticipant[];
+  bcc?: EmailParticipant[];
   subject: string;
   body: string;
   folder: EmailFolder;
   unread: boolean;
+  direction?: 'inbound' | 'outbound';
 }
 
 export interface EmailThread {
@@ -46,6 +49,7 @@ export interface EmailThread {
   subject: string;
   preview: string;
   updatedAt: string;
+  createdAt: string;
   unread: boolean;
   starred: boolean;
   participants: EmailParticipant[];

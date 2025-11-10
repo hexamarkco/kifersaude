@@ -236,6 +236,7 @@ export const createAutomaticFollowUps = async (
           data_lembrete: followUpDate.toISOString(),
           lido: false,
           prioridade: rule.priority,
+          responsavel,
         },
       ]);
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Phone, Mail, Award, CheckCircle, Users as UsersIcon, Briefcase, Shield, Zap, Search, MessageCircle, Star, TrendingUp, Clock, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
+import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface BlogPost {

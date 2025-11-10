@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
-import { MessageCircle, Calendar, Filter, Search, Sparkles, CheckCircle, XCircle, Clock, Loader } from 'lucide-react';
+import { MessageCircle, Calendar, Search, Sparkles, CheckCircle, XCircle, Clock, Loader } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 
 export default function WhatsAppHistoryTab() {

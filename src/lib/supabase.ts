@@ -12,6 +12,7 @@ export type Lead = {
   email?: string;
   cidade?: string;
   regiao?: string;
+  estado?: string;
   origem: string;
   tipo_contratacao: string;
   operadora_atual?: string;
@@ -116,6 +117,7 @@ export type Reminder = {
   data_lembrete: string;
   lido: boolean;
   prioridade: string;
+  responsavel?: string;
   tags?: string[];
   recorrencia?: string;
   recorrencia_config?: any;

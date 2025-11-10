@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Users, Mail, Shield, Trash2, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function UsersTab() {
-  const { isAdmin, user, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);

@@ -6,6 +6,7 @@ import {
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
   ChevronDown, ChevronUp, Tag, X, MessageCircle, Sparkles
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import {
@@ -114,14 +115,11 @@ export default function RemindersManagerEnhanced() {
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
     try {
       const reminder = reminders.find(r => r.id === id);
-      const updateData: any = { lido: !currentStatus };
-      let completionDate: string | null = null;
-      if (!currentStatus) {
-        completionDate = new Date().toISOString();
-        updateData.concluido_em = completionDate;
-      } else {
-        updateData.concluido_em = null;
-      }
+      const completionDate = !currentStatus ? new Date().toISOString() : null;
+      const updateData: Pick<Reminder, 'lido' | 'concluido_em'> = {
+        lido: !currentStatus,
+        concluido_em: completionDate
+      };
 
       const { error } = await supabase
         .from('reminders')
@@ -130,7 +128,7 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      if (!currentStatus && reminder && completionDate) {
+      if (completionDate && reminder) {
         await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
       }
       loadReminders();
@@ -366,7 +364,7 @@ export default function RemindersManagerEnhanced() {
   };
 
   const getTipoIcon = (tipo: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, LucideIcon> = {
       'Documentos pendentes': AlertCircle,
       'Assinatura': AlertCircle,
       'Ativação': Calendar,

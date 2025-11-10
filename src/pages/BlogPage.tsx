@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Phone, Mail, Instagram, MapPin, MessageCircle, Eye, Share2, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface BlogPost {

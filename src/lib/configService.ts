@@ -79,6 +79,21 @@ const isTableMissingError = (error: unknown, table: string) => {
   );
 };
 
+const toPostgrestError = (error: unknown): PostgrestError => {
+  if (error && typeof error === 'object' && 'message' in error && 'code' in error) {
+    return error as PostgrestError;
+  }
+
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  return {
+    message,
+    details: '',
+    hint: '',
+    code: 'UNKNOWN',
+    name: 'Error',
+  };
+};
+
 const mapFallbackOptionToRoleAccessRule = (option: RoleAccessConfigRow): RoleAccessRule => {
   const metadata = option.metadata ?? {};
   const [valueRole, valueModule] = typeof option.value === 'string' ? option.value.split(':') : ['', ''];
@@ -257,7 +272,7 @@ export const configService = {
       return { data, error };
     } catch (error) {
       console.error('Error creating operadora:', error);
-      return { data: null, error };
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 
@@ -268,7 +283,7 @@ export const configService = {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
-      return { error };
+      return { error: toPostgrestError(error) };
     } catch (error) {
       console.error('Error updating operadora:', error);
       return { error };
@@ -315,7 +330,7 @@ export const configService = {
       return { data, error };
     } catch (error) {
       console.error('Error creating produto:', error);
-      return { data: null, error };
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 
@@ -326,7 +341,7 @@ export const configService = {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
-      return { error };
+      return { error: toPostgrestError(error) };
     } catch (error) {
       console.error('Error updating produto:', error);
       return { error };
@@ -618,7 +633,7 @@ export const configService = {
         return await upsertFallbackRoleAccessRule(role, module, updates);
       }
 
-      return { data: null, error };
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 
@@ -644,7 +659,7 @@ export const configService = {
         return await deleteFallbackRoleAccessRule(id);
       }
 
-      return { error };
+      return { error: toPostgrestError(error) };
     }
   },
 };

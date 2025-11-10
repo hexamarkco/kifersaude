@@ -69,11 +69,6 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return map;
   }, [leadStatuses]);
 
-  const todayFormatted = useMemo(
-    () => new Date().toLocaleDateString('pt-BR'),
-    []
-  );
-
   const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
     return [...items].sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : NaN;

@@ -221,6 +221,7 @@ export default function EmailManager() {
       accountId,
       subject,
       preview: body.slice(0, 120),
+      createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       unread: false,
       starred: false,

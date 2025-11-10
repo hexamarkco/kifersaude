@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, FollowUpCustomRule, Lead } from '../lib/supabase';
-import { Plus, Trash2, Clock, AlertCircle, X, Edit2, Save } from 'lucide-react';
+import { Plus, Trash2, Clock, AlertCircle, X } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 
 type CustomFollowUpManagerProps = {
@@ -14,7 +14,6 @@ export default function CustomFollowUpManager({ lead, onClose }: CustomFollowUpM
   const { leadStatuses } = useConfig();
   const [rules, setRules] = useState<FollowUpCustomRule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingRule, setEditingRule] = useState<string | null>(null);
   const [newRule, setNewRule] = useState({
     status: lead.status,
     days_after: 1,
@@ -97,7 +96,6 @@ export default function CustomFollowUpManager({ lead, onClose }: CustomFollowUpM
 
       if (error) throw error;
       loadRules();
-      setEditingRule(null);
     } catch (error) {
       console.error('Erro ao atualizar regra:', error);
       alert('Erro ao atualizar regra');

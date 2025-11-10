@@ -5,7 +5,7 @@ export interface ZAPIConfig {
   token: string;
 }
 
-export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document';
+export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document' | 'sticker' | 'gif';
 
 export interface ZAPIMessage {
   messageId: string;
@@ -17,6 +17,17 @@ export interface ZAPIMessage {
   mediaUrl?: string;
   mediaType?: ZAPIMediaType;
   mediaMimeType?: string;
+  mediaDurationSeconds?: number;
+  mediaThumbnailUrl?: string;
+  mediaCaption?: string;
+  mediaViewOnce?: boolean;
+  mediaFileName?: string;
+  mediaPageCount?: number;
+  mediaIsGif?: boolean;
+  notificationType?: string;
+  callId?: string;
+  waitingMessage?: boolean;
+  isStatusReply?: boolean;
 }
 
 export interface ZAPIResponse {
@@ -30,6 +41,33 @@ const CLIENT_TOKEN = 'Faca52aa7804f429186a4a7734f8a3d66S';
 class ZAPIService {
   private baseUrl = 'https://api.z-api.io';
   private clientToken = CLIENT_TOKEN;
+
+  private getMediaFallbackText(mediaType?: ZAPIMediaType, durationSeconds?: number): string {
+    if (!mediaType) {
+      return 'Mensagem recebida';
+    }
+
+    switch (mediaType) {
+      case 'audio': {
+        const seconds = typeof durationSeconds === 'number' ? `${Math.round(durationSeconds)}s` : null;
+        return seconds ? `Áudio recebido (${seconds})` : 'Áudio recebido';
+      }
+      case 'video': {
+        const seconds = typeof durationSeconds === 'number' ? `${Math.round(durationSeconds)}s` : null;
+        return seconds ? `Vídeo recebido (${seconds})` : 'Vídeo recebido';
+      }
+      case 'image':
+        return 'Imagem recebida';
+      case 'document':
+        return 'Documento recebido';
+      case 'sticker':
+        return 'Figurinha recebida';
+      case 'gif':
+        return 'GIF recebido';
+      default:
+        return 'Mensagem recebida';
+    }
+  }
 
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
@@ -167,11 +205,29 @@ class ZAPIService {
         contract_id: contractId,
         phone_number: phoneNumber,
         message_id: msg.messageId,
-        message_text: msg.text,
+        message_text:
+          msg.text ||
+          msg.notificationType ||
+          (msg.waitingMessage ? 'Aguardando mensagem' : undefined) ||
+          this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
         message_type: msg.fromMe ? 'sent' : 'received',
         timestamp: new Date(msg.timestamp * 1000).toISOString(),
         read_status: true,
         media_url: msg.mediaUrl,
+        media_type: msg.mediaType,
+        media_mime_type: msg.mediaMimeType,
+        media_duration_seconds:
+          typeof msg.mediaDurationSeconds === 'number' ? Math.round(msg.mediaDurationSeconds) : undefined,
+        media_thumbnail_url: msg.mediaThumbnailUrl,
+        media_caption: msg.mediaCaption,
+        media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
+        media_file_name: msg.mediaFileName,
+        media_page_count: typeof msg.mediaPageCount === 'number' ? msg.mediaPageCount : undefined,
+        media_is_gif: typeof msg.mediaIsGif === 'boolean' ? msg.mediaIsGif : undefined,
+        notification_type: msg.notificationType,
+        call_id: msg.callId,
+        waiting_message: typeof msg.waitingMessage === 'boolean' ? msg.waitingMessage : undefined,
+        is_status_reply: typeof msg.isStatusReply === 'boolean' ? msg.isStatusReply : undefined,
       }));
 
       for (const conv of conversations) {
@@ -209,7 +265,16 @@ class ZAPIService {
       return normalized.trim();
     };
 
-    const determineMediaType = (msg: any, mediaUrl?: string): ZAPIMediaType | undefined => {
+    const pickFirstString = (...values: any[]): string | undefined => {
+      for (const value of values) {
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+      return undefined;
+    };
+
+    const determineMediaType = (msg: any, mediaUrl?: string): { type?: ZAPIMediaType; isGif?: boolean } => {
       const rawType = typeof msg.type === 'string' ? msg.type.toLowerCase() : undefined;
       const mimeType = typeof msg.mimetype === 'string' ? msg.mimetype.toLowerCase() : undefined;
       const captionType = typeof msg.mediaType === 'string' ? msg.mediaType.toLowerCase() : undefined;
@@ -222,22 +287,31 @@ class ZAPIService {
         );
 
       if (matchesType('audio', 'ptt', 'voice')) {
-        return 'audio';
+        return { type: 'audio' };
       }
 
-      if (matchesType('video', 'mp4', 'mov', 'mkv', '3gp')) {
-        return 'video';
+      if (matchesType('gif') || rawType === 'gif' || msg.gifPlayback === true || msg.isGif === true) {
+        return { type: 'gif', isGif: true };
+      }
+
+      if (matchesType('sticker', 'webp')) {
+        return { type: 'sticker' };
+      }
+
+      if (matchesType('video', 'mp4', 'mov', 'mkv', '3gp', 'webm')) {
+        return { type: 'video' };
       }
 
       if (matchesType('image', 'jpg', 'jpeg', 'png', 'gif', 'webp')) {
-        return 'image';
+        const isGif = matchesType('gif');
+        return { type: isGif ? 'gif' : 'image', isGif };
       }
 
       if (mediaUrl) {
-        return 'document';
+        return { type: 'document' };
       }
 
-      return undefined;
+      return { type: undefined };
     };
 
     const normalizedMessages: ZAPIMessage[] = [];
@@ -245,22 +319,80 @@ class ZAPIService {
     rawMessages.forEach((msg) => {
       const mediaUrl = msg.mediaUrl || msg.media;
       const text = getMessageText(msg);
-      const hasContent = Boolean(text) || Boolean(mediaUrl);
+      const { type: mediaType, isGif } = determineMediaType(msg, mediaUrl);
+      const hasContent = Boolean(text) || Boolean(mediaUrl) || Boolean(msg.notification);
 
       if (!hasContent) {
         return;
       }
 
+      const mediaDurationSeconds =
+        typeof msg.seconds === 'number'
+          ? msg.seconds
+          : typeof msg.duration === 'number'
+          ? msg.duration
+          : typeof msg.length === 'number'
+          ? msg.length
+          : undefined;
+
+      const mediaCaption = pickFirstString(msg.caption, msg.title, msg.description);
+      const mediaThumbnailUrl = pickFirstString(
+        msg.thumbnailUrl,
+        msg.thumbUrl,
+        msg.preview,
+        msg.previewUrl,
+        msg.image,
+        msg.thumbnail
+      );
+      const mediaViewOnce =
+        typeof msg.viewOnce === 'boolean'
+          ? msg.viewOnce
+          : typeof msg.isViewOnce === 'boolean'
+          ? msg.isViewOnce
+          : undefined;
+
+      const notificationType = typeof msg.notification === 'string' ? msg.notification : undefined;
+      const waitingMessage = Boolean(msg.waitingMessage);
+      const isStatusReply = Boolean(msg.isStatusReply || msg.isStatus);
+      const callId = typeof msg.callId === 'string' ? msg.callId : undefined;
+
+      const overrideText = () => {
+        if (waitingMessage) return 'Aguardando mensagem';
+        if (notificationType) {
+          const normalized = notificationType.toUpperCase();
+          if (normalized === 'CALL_VOICE') return 'Chamada de voz recebida';
+          if (normalized === 'CALL_MISSED_VOICE') return 'Chamada de voz perdida';
+          if (normalized === 'CALL_VIDEO') return 'Chamada de vídeo recebida';
+          if (normalized === 'CALL_MISSED_VIDEO') return 'Chamada de vídeo perdida';
+          return `Notificação: ${notificationType}`;
+        }
+        if (isStatusReply) return 'Resposta de status';
+        return undefined;
+      };
+
+      const resolvedText = overrideText() || text;
+
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: msg.phone || msg.chatId || '',
-        text,
+        text: resolvedText,
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
         mediaUrl: mediaUrl || undefined,
-        mediaType: determineMediaType(msg, mediaUrl),
+        mediaType,
         mediaMimeType: msg.mimetype || msg.mimeType,
+        mediaDurationSeconds,
+        mediaThumbnailUrl,
+        mediaCaption,
+        mediaViewOnce,
+        mediaFileName: pickFirstString(msg.fileName, msg.filename, msg.documentName),
+        mediaPageCount: typeof msg.pageCount === 'number' ? msg.pageCount : undefined,
+        mediaIsGif: isGif,
+        notificationType,
+        callId,
+        waitingMessage: waitingMessage || undefined,
+        isStatusReply: isStatusReply || undefined,
       });
     });
 

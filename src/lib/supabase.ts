@@ -277,9 +277,22 @@ export type WhatsAppConversation = {
   timestamp: string;
   read_status: boolean;
   media_url?: string | null;
+  media_type?: string | null;
+  media_mime_type?: string | null;
+  media_duration_seconds?: number | null;
+  media_thumbnail_url?: string | null;
+  media_caption?: string | null;
+  media_view_once?: boolean | null;
+  media_file_name?: string | null;
+  media_page_count?: number | null;
+  media_is_gif?: boolean | null;
   sender_name?: string | null;
   sender_photo?: string | null;
   chat_name?: string | null;
+  notification_type?: string | null;
+  call_id?: string | null;
+  waiting_message?: boolean | null;
+  is_status_reply?: boolean | null;
   created_at: string;
 };
 

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  supabase,
-  AIGeneratedMessage,
-  WhatsAppConversation,
-  Lead,
-  WhatsAppChatPreference,
-} from '../lib/supabase';
+  ChangeEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
 import {
   MessageCircle,
   Calendar,
@@ -17,12 +19,19 @@ import {
   Loader,
   Phone,
   RefreshCcw,
-  Archive,
-  ArchiveRestore,
-  Pin,
-  PinOff,
+  Maximize2,
+  FileText,
+  Paperclip,
+  Mic,
+  Trash2,
+  Send,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  Square,
 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { zapiService } from '../lib/zapiService';
 
 const sanitizePhoneDigits = (value?: string | null): string => {
   if (!value || typeof value !== 'string') return '';
@@ -100,6 +109,19 @@ export default function WhatsAppHistoryTab() {
       }
     | null
   >(null);
+  const [composerText, setComposerText] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingSupported, setIsRecordingSupported] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
@@ -128,6 +150,17 @@ export default function WhatsAppHistoryTab() {
       });
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hasSupport =
+      typeof navigator !== 'undefined' &&
+      Boolean(navigator.mediaDevices) &&
+      'MediaRecorder' in window;
+
+    setIsRecordingSupported(hasSupport);
   }, []);
 
   const loadLeads = useCallback(async (leadIds: string[]) => {
@@ -285,6 +318,29 @@ export default function WhatsAppHistoryTab() {
     };
   }, [fullscreenMedia, closeFullscreen]);
 
+  useEffect(() => {
+    return () => {
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+    };
+  }, [recordedAudio]);
+
+  useEffect(() => {
+    if (!composerSuccess) return;
+    if (typeof window === 'undefined') return;
+
+    const timeout = window.setTimeout(() => setComposerSuccess(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [composerSuccess]);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
@@ -336,8 +392,17 @@ export default function WhatsAppHistoryTab() {
 
   const chatGroups = useMemo<ChatGroupBase[]>(() => {
     const groups = new Map<
-      string,
-      ChatGroupBase
+    string,
+    {
+      phone: string;
+      messages: WhatsAppConversation[];
+      leadId?: string | null;
+      contractId?: string | null;
+      lastMessage?: WhatsAppConversation;
+      displayName?: string | null;
+      photoUrl?: string | null;
+      isGroup: boolean;
+    }
     >();
 
     conversations.forEach((conv) => {
@@ -351,6 +416,7 @@ export default function WhatsAppHistoryTab() {
           phone: conv.phone_number,
           messages: [conv],
           leadId: conv.lead_id,
+          contractId: conv.contract_id || null,
           lastMessage: conv,
           displayName: isGroupChat
             ? normalizedChatName || normalizedSenderName || null
@@ -362,6 +428,9 @@ export default function WhatsAppHistoryTab() {
         existing.messages.push(conv);
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
+        }
+        if (!existing.contractId && conv.contract_id) {
+          existing.contractId = conv.contract_id;
         }
         if (!existing.photoUrl && conv.sender_photo) {
           existing.photoUrl = conv.sender_photo;
@@ -537,6 +606,232 @@ export default function WhatsAppHistoryTab() {
     return `0:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const formatFileSize = (size: number) => {
+    if (size < 1024) {
+      return `${size} B`;
+    }
+    if (size < 1024 * 1024) {
+      return `${Math.round(size / 1024)} KB`;
+    }
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getAttachmentIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <FileImage className="w-4 h-4 text-teal-600" />;
+    }
+    if (file.type.startsWith('video/')) {
+      return <FileVideo className="w-4 h-4 text-purple-600" />;
+    }
+    if (file.type.startsWith('audio/')) {
+      return <FileAudio className="w-4 h-4 text-orange-600" />;
+    }
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      return <FileText className="w-4 h-4 text-rose-600" />;
+    }
+    return <Paperclip className="w-4 h-4 text-slate-500" />;
+  };
+
+  const handleAttachmentButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const filesArray = Array.from(files);
+    setAttachments((prev) => {
+      const existingKeys = new Set(prev.map((file) => `${file.name}-${file.size}`));
+      const uniqueFiles = filesArray.filter(
+        (file) => !existingKeys.has(`${file.name}-${file.size}`)
+      );
+      return [...prev, ...uniqueFiles];
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    setComposerError(null);
+    setComposerSuccess(null);
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const startRecording = useCallback(async () => {
+    if (!isRecordingSupported) {
+      setRecordingError('Gravação de áudio não suportada neste navegador.');
+      return;
+    }
+
+    try {
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+      setRecordedAudio(null);
+      setComposerSuccess(null);
+      setComposerError(null);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const mimeType = mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setRecordedAudio({ blob: audioBlob, url: audioUrl });
+        audioChunksRef.current = [];
+        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingError(null);
+    } catch (error) {
+      console.error('Erro ao iniciar gravação de áudio:', error);
+      setRecordingError('Não foi possível iniciar a gravação. Verifique as permissões do microfone.');
+    }
+  }, [isRecordingSupported, recordedAudio]);
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    setIsRecording(false);
+  }, []);
+
+  const discardRecording = useCallback(() => {
+    if (recordedAudio?.url) {
+      URL.revokeObjectURL(recordedAudio.url);
+    }
+    setRecordedAudio(null);
+    setRecordingError(null);
+  }, [recordedAudio]);
+
+  const hasContentToSend = useMemo(() => {
+    return composerText.trim().length > 0 || attachments.length > 0 || Boolean(recordedAudio);
+  }, [attachments.length, composerText, recordedAudio]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!selectedPhone) {
+      setComposerError('Selecione uma conversa para enviar mensagens.');
+      return;
+    }
+
+    if (!hasContentToSend) {
+      setComposerError('Adicione uma mensagem, anexo ou áudio antes de enviar.');
+      return;
+    }
+
+    setIsSendingMessage(true);
+    setComposerError(null);
+    setComposerSuccess(null);
+
+    try {
+      const textToSend = composerText.trim();
+
+      if (textToSend) {
+        const textResult = await zapiService.sendTextMessage(selectedPhone, textToSend);
+        if (!textResult.success) {
+          throw new Error(textResult.error || 'Falha ao enviar mensagem de texto.');
+        }
+      }
+
+      for (const file of attachments) {
+        const mediaResult = await zapiService.sendMediaMessage(selectedPhone, file, file.name);
+        if (!mediaResult.success) {
+          throw new Error(mediaResult.error || 'Falha ao enviar anexo.');
+        }
+      }
+
+      if (recordedAudio) {
+        const blob = recordedAudio.blob;
+        const type = blob.type || 'audio/webm';
+        let extension = 'webm';
+        if (type.includes('ogg')) {
+          extension = 'ogg';
+        } else if (type.includes('mpeg') || type.includes('mp3')) {
+          extension = 'mp3';
+        } else if (type.includes('wav')) {
+          extension = 'wav';
+        } else if (type.includes('m4a') || type.includes('mp4')) {
+          extension = 'm4a';
+        }
+
+        const audioFile = new File([blob], `gravacao-${Date.now()}.${extension}`, { type });
+        const audioResult = await zapiService.sendMediaMessage(
+          selectedPhone,
+          audioFile,
+          audioFile.name
+        );
+        if (!audioResult.success) {
+          throw new Error(audioResult.error || 'Falha ao enviar áudio.');
+        }
+      }
+
+      if (selectedChatLead?.id) {
+        const refreshResult = await zapiService.fetchAndSaveHistory(
+          selectedChatLead.id,
+          selectedPhone,
+          selectedChat?.contractId ?? undefined
+        );
+        if (!refreshResult.success) {
+          console.error('Erro ao atualizar histórico após envio:', refreshResult.error);
+        }
+      }
+
+      await loadConversations(false);
+
+      setComposerSuccess('Mensagem enviada com sucesso!');
+      setComposerText('');
+      setAttachments([]);
+      if (recordedAudio?.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+      setRecordedAudio(null);
+    } catch (error) {
+      setComposerError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao enviar mensagem. Tente novamente mais tarde.'
+      );
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [
+    attachments,
+    composerText,
+    hasContentToSend,
+    loadConversations,
+    recordedAudio,
+    selectedChat?.contractId,
+    selectedChatLead?.id,
+    selectedPhone,
+  ]);
+
+  const handleComposerKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      void handleSendMessage();
+    }
+  };
+
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
     const text = message.message_text?.trim();
@@ -548,7 +843,7 @@ export default function WhatsAppHistoryTab() {
     return text || '';
   };
 
-  const renderMediaContent = (message: WhatsAppConversation) => {
+  const renderMediaContent = (message: WhatsAppConversation): JSX.Element | null => {
     if (!message.media_url) {
       return null;
     }
@@ -560,25 +855,55 @@ export default function WhatsAppHistoryTab() {
     switch (mediaType) {
       case 'image':
       case 'sticker':
+      case 'gif': {
+        const normalizedType = mediaType === 'gif' ? 'gif' : 'image';
         return (
-          <img
-            src={message.media_url}
-            alt={fallbackText}
-            className="w-full max-h-64 rounded-lg object-cover"
-            loading="lazy"
-          />
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: normalizedType,
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
+          >
+            <img
+              src={message.media_url}
+              alt={fallbackText}
+              className="w-full max-h-64 rounded-lg object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+              loading="lazy"
+            />
+          </button>
         );
+      }
       case 'video':
         return (
-          <video
-            key={`${message.id}-video`}
-            controls
-            poster={message.media_thumbnail_url || undefined}
-            className="w-full max-h-72 rounded-lg"
+          <button
+            type="button"
+            onClick={() =>
+              setFullscreenMedia({
+                url: message.media_url!,
+                type: 'video',
+                caption: message.media_caption,
+                mimeType: message.media_mime_type,
+                thumbnailUrl: message.media_thumbnail_url,
+              })
+            }
+            className="group block w-full cursor-zoom-in focus:outline-none"
           >
-            <source src={message.media_url} type={message.media_mime_type || undefined} />
-            Seu navegador não suporta a reprodução de vídeos.
-          </video>
+            <video
+              key={`${message.id}-video`}
+              poster={message.media_thumbnail_url || undefined}
+              className="w-full max-h-72 rounded-lg pointer-events-none"
+            >
+              <source src={message.media_url} type={message.media_mime_type || undefined} />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </button>
         );
       case 'audio': {
         const duration = formatDuration(message.media_duration_seconds);
@@ -1222,6 +1547,137 @@ export default function WhatsAppHistoryTab() {
                         </div>
                       ))
                     )}
+                  </div>
+
+                  <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 space-y-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,image/*,video/*,audio/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleAttachmentChange}
+                    />
+                    <div className="flex items-start space-x-3">
+                      <textarea
+                        value={composerText}
+                        onChange={(event) => {
+                          setComposerText(event.target.value);
+                          if (composerError) {
+                            setComposerError(null);
+                          }
+                        }}
+                        onKeyDown={handleComposerKeyDown}
+                        rows={3}
+                        placeholder="Escreva uma mensagem..."
+                        className="flex-1 resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                      <div className="flex flex-col items-end space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleAttachmentButtonClick}
+                          className="flex items-center space-x-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                          disabled={isSendingMessage}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                          <span>Anexar arquivo</span>
+                        </button>
+                        {isRecordingSupported ? (
+                          <button
+                            type="button"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`flex items-center space-x-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                              isRecording
+                                ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                            }`}
+                            disabled={isSendingMessage}
+                          >
+                            {isRecording ? (
+                              <Square className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                            <span>{isRecording ? 'Parar gravação' : 'Gravar áudio'}</span>
+                          </button>
+                        ) : (
+                          <span className="max-w-[160px] text-right text-[11px] text-slate-500">
+                            Gravação de áudio não suportada neste navegador.
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handleSendMessage()}
+                          disabled={!hasContentToSend || isSendingMessage}
+                          className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow transition-colors ${
+                            !hasContentToSend || isSendingMessage
+                              ? 'bg-teal-300'
+                              : 'bg-teal-600 hover:bg-teal-700'
+                          }`}
+                        >
+                          <Send className="h-4 w-4" />
+                          <span>{isSendingMessage ? 'Enviando...' : 'Enviar'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {attachments.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase text-slate-500">Anexos</p>
+                        <div className="space-y-2">
+                          {attachments.map((file, index) => (
+                            <div
+                              key={`${file.name}-${file.size}-${index}`}
+                              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                                  {getAttachmentIcon(file)}
+                                </span>
+                                <div>
+                                  <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
+                                    {file.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">{formatFileSize(file.size)}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAttachment(index)}
+                                className="text-slate-400 transition-colors hover:text-red-500"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {recordedAudio && (
+                      <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase text-slate-500">Áudio gravado</p>
+                          <button
+                            type="button"
+                            onClick={discardRecording}
+                            className="text-slate-400 transition-colors hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <audio controls src={recordedAudio.url} className="w-full">
+                          Seu navegador não suporta reprodução de áudio.
+                        </audio>
+                        <p className="text-[11px] text-slate-500">
+                          Ouça o áudio antes de enviar para garantir a qualidade.
+                        </p>
+                      </div>
+                    )}
+
+                    {recordingError && <p className="text-sm text-red-600">{recordingError}</p>}
+                    {composerError && <p className="text-sm text-red-600">{composerError}</p>}
+                    {composerSuccess && <p className="text-sm text-teal-600">{composerSuccess}</p>}
                   </div>
                 </>
               )}

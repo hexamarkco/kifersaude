@@ -21,8 +21,20 @@ type RoleAccessMetadata = {
   [key: string]: unknown;
 };
 
-type RoleAccessConfigRow = Omit<ConfigOption, 'metadata'> & {
-  metadata: RoleAccessMetadata | null;
+type RoleAccessConfigRow = {
+  id?: string;
+  category?: string | null;
+  value?: string | null;
+  label?: string | null;
+  ordem?: number | null;
+  ativo?: boolean | null;
+  active?: boolean | null;
+  metadata?: RoleAccessMetadata | null;
+  config_key?: string | null;
+  config_value?: unknown;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const normalizeConfigOption = (option: ConfigOption & { active?: boolean | null }): ConfigOption => {
@@ -45,6 +57,20 @@ const isMissingColumnError = (error: PostgrestError | null | undefined, column: 
     (normalizedCode === 'PGRST204' || normalizedCode === '42703') &&
     (normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower))
   );
+};
+
+const isColumnTypeError = (error: PostgrestError | null | undefined, column: string) => {
+  if (!error) return false;
+  const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+  if (!['22P02', '42804', '23502', '22007', '42883'].includes(normalizedCode)) {
+    return false;
+  }
+
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  const normalizedMessage = message.replace(/"/g, "'");
+  const columnLower = column.toLowerCase();
+
+  return normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower);
 };
 
 const FALLBACK_ROLE_ACCESS_CATEGORY = 'role_access_rules';
@@ -99,9 +125,60 @@ const toPostgrestError = (error: unknown): PostgrestError => {
 
 const getRoleModuleKey = (role: string, module: string) => `${role}:${module}`;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const extractRoleAccessMetadata = (option: RoleAccessConfigRow): RoleAccessMetadata => {
+  const optionMetadata = option?.metadata;
+  if (isRecord(optionMetadata)) {
+    return optionMetadata as RoleAccessMetadata;
+  }
+
+  const configValue = option?.config_value;
+  if (isRecord(configValue)) {
+    return configValue as RoleAccessMetadata;
+  }
+
+  if (typeof option?.description === 'string') {
+    try {
+      const parsed = JSON.parse(option.description);
+      if (isRecord(parsed)) {
+        return parsed as RoleAccessMetadata;
+      }
+    } catch (error) {
+      // Ignore JSON parse errors and fall through to empty metadata
+    }
+  }
+
+  return {};
+};
+
+const resolveOptionValueKey = (option: RoleAccessConfigRow, metadata: RoleAccessMetadata): string => {
+  if (typeof option?.value === 'string' && option.value.length > 0) {
+    return option.value;
+  }
+
+  if (typeof option?.config_key === 'string' && option.config_key.length > 0) {
+    return option.config_key;
+  }
+
+  if (typeof metadata?.value === 'string' && metadata.value.length > 0) {
+    return metadata.value;
+  }
+
+  const role = typeof metadata?.role === 'string' ? metadata.role : '';
+  const module = typeof metadata?.module === 'string' ? metadata.module : '';
+
+  if (role && module) {
+    return getRoleModuleKey(role, module);
+  }
+
+  return '';
+};
+
 const mapFallbackOptionToRoleAccessRule = (option: RoleAccessConfigRow): RoleAccessRule => {
-  const metadata = option.metadata ?? {};
-  const optionValue = typeof option.value === 'string' ? option.value : '';
+  const metadata = extractRoleAccessMetadata(option);
+  const optionValue = resolveOptionValueKey(option, metadata);
   const [valueRole, valueModule] = optionValue.includes(':') ? optionValue.split(':') : ['', ''];
   const role = String(metadata.role ?? valueRole ?? '');
   const module = String(metadata.module ?? valueModule ?? '');
@@ -145,16 +222,20 @@ const findMatchingFallbackRoleAccessRule = (
   const key = getRoleModuleKey(role, module).toLowerCase();
 
   return rows.find((row) => {
-    const valueMatch = typeof row.value === 'string' && row.value.toLowerCase() === key;
-    const metadataRole = String(row.metadata?.role ?? '').toLowerCase();
-    const metadataModule = String(row.metadata?.module ?? '').toLowerCase();
+    const metadata = extractRoleAccessMetadata(row);
+    const resolvedValue = resolveOptionValueKey(row, metadata).toLowerCase();
+    const valueMatch = resolvedValue === key;
+    const metadataRole = String(metadata?.role ?? '').toLowerCase();
+    const metadataModule = String(metadata?.module ?? '').toLowerCase();
     const label = typeof row.label === 'string' ? row.label.toLowerCase() : '';
     const labelMatch = label === `${roleLower} - ${moduleLower}`;
+    const configKey = typeof row.config_key === 'string' ? row.config_key.toLowerCase() : '';
 
     return (
       valueMatch ||
       (metadataRole === roleLower && metadataModule === moduleLower) ||
-      labelMatch
+      labelMatch ||
+      configKey === key
     );
   });
 };
@@ -198,7 +279,7 @@ const upsertFallbackRoleAccessRule = async (
     return { data: null, error: resolvedError };
   }
 
-  const metadataRecord: RoleAccessMetadata = resolvedExisting?.metadata ?? {};
+  const metadataRecord: RoleAccessMetadata = extractRoleAccessMetadata((resolvedExisting ?? {}) as RoleAccessConfigRow);
   const canView = updates.can_view ?? ensureBoolean(metadataRecord.can_view ?? metadataRecord.canView, false);
   const canEdit = updates.can_edit ?? ensureBoolean(metadataRecord.can_edit ?? metadataRecord.canEdit, false);
   const metadata: Record<string, unknown> = {
@@ -211,52 +292,163 @@ const upsertFallbackRoleAccessRule = async (
 
   const basePayload: Record<string, unknown> = {
     category: FALLBACK_ROLE_ACCESS_CATEGORY,
-    value: key,
-    metadata,
-    ativo: true,
     ordem: resolvedExisting?.ordem ?? 0,
-    label: resolvedExisting?.label ?? `${role} - ${module}`,
   };
+
+  if (!resolvedExisting || 'value' in resolvedExisting) {
+    basePayload.value = key;
+  }
+
+  if (!resolvedExisting || 'label' in resolvedExisting) {
+    basePayload.label = resolvedExisting?.label ?? `${role} - ${module}`;
+  }
+
+  if (!resolvedExisting || 'ativo' in resolvedExisting) {
+    basePayload.ativo = true;
+  } else if (resolvedExisting && 'active' in resolvedExisting) {
+    basePayload.active = true;
+  }
+
+  if (!resolvedExisting || 'metadata' in resolvedExisting) {
+    basePayload.metadata = metadata;
+  } else if (resolvedExisting && 'config_value' in resolvedExisting) {
+    basePayload.config_value = metadata;
+    basePayload.config_key = resolvedExisting.config_key ?? key;
+  } else {
+    basePayload.metadata = metadata;
+  }
 
   const timestamp = new Date().toISOString();
 
-  if (resolvedExisting) {
-    const updatePayload = { ...basePayload, updated_at: timestamp };
-    let { data, error } = await supabase
-      .from('system_configurations')
-      .update(updatePayload)
-      .eq('id', resolvedExisting.id)
-      .select()
-      .single();
+  if (resolvedExisting && resolvedExisting.id) {
+    let updatePayload: Record<string, unknown> = { ...basePayload, updated_at: timestamp };
 
-    if (error && isMissingColumnError(error, 'value')) {
-      const { value: _omit, ...payloadWithoutValue } = updatePayload;
-      ({ data, error } = await supabase
+    const existingId = resolvedExisting.id ?? '';
+
+    const performUpdate = async (payload: Record<string, unknown>) =>
+      supabase
         .from('system_configurations')
-        .update(payloadWithoutValue)
-        .eq('id', resolvedExisting.id)
+        .update(payload)
+        .eq('id', existingId)
         .select()
-        .single());
+        .single();
+
+    let { data, error } = await performUpdate(updatePayload);
+
+    const triedColumns = new Set<string>();
+
+    while (error) {
+      if (isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+        triedColumns.add('ativo');
+        const { ativo, ...rest } = updatePayload;
+        updatePayload = { ...rest, active: ativo ?? true };
+      } else if (isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+        triedColumns.add('active');
+        const { active: _omitActive, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+        triedColumns.add('metadata');
+        const { metadata: _omitMetadata, ...rest } = updatePayload;
+        updatePayload = {
+          ...rest,
+          config_value: metadata,
+          config_key: resolvedExisting?.config_key ?? key,
+        };
+      } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+        triedColumns.add('value');
+        const { value: _omitValue, ...rest } = updatePayload;
+        updatePayload = {
+          ...rest,
+          config_key: resolvedExisting?.config_key ?? key,
+        };
+      } else if (isMissingColumnError(error, 'label') && !triedColumns.has('label')) {
+        triedColumns.add('label');
+        const { label: _omitLabel, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else if (isColumnTypeError(error, 'label') && !triedColumns.has('label_type')) {
+        triedColumns.add('label_type');
+        const { label: _omitLabel, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else if (isColumnTypeError(error, 'ordem') && !triedColumns.has('ordem')) {
+        triedColumns.add('ordem');
+        const { ordem: _omitOrdem, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else if (isMissingColumnError(error, 'config_value') && !triedColumns.has('config_value')) {
+        triedColumns.add('config_value');
+        const { config_value: _omitConfigValue, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else if (isMissingColumnError(error, 'config_key') && !triedColumns.has('config_key')) {
+        triedColumns.add('config_key');
+        const { config_key: _omitConfigKey, ...rest } = updatePayload;
+        updatePayload = rest;
+      } else {
+        break;
+      }
+
+      ({ data, error } = await performUpdate(updatePayload));
     }
 
     if (error) return { data: null, error };
     return { data: mapFallbackOptionToRoleAccessRule(data as RoleAccessConfigRow), error: null };
   }
 
-  const insertPayload = { ...basePayload, created_at: timestamp, updated_at: timestamp };
-  let { data, error } = await supabase
-    .from('system_configurations')
-    .insert([insertPayload])
-    .select()
-    .single();
+  let insertPayload: Record<string, unknown> = { ...basePayload, created_at: timestamp, updated_at: timestamp };
 
-  if (error && isMissingColumnError(error, 'value')) {
-    const { value: _omit, ...payloadWithoutValue } = insertPayload;
-    ({ data, error } = await supabase
-      .from('system_configurations')
-      .insert([payloadWithoutValue])
-      .select()
-      .single());
+  const insert = async (payload: Record<string, unknown>) =>
+    supabase.from('system_configurations').insert([payload]).select().single();
+
+  let { data, error } = await insert(insertPayload);
+  const triedColumns = new Set<string>();
+
+  while (error) {
+    if (isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+      triedColumns.add('ativo');
+      const { ativo, ...rest } = insertPayload;
+      insertPayload = { ...rest, active: ativo ?? true };
+    } else if (isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+      triedColumns.add('active');
+      const { active: _omitActive, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+      triedColumns.add('metadata');
+      const { metadata: _omitMetadata, ...rest } = insertPayload;
+      insertPayload = {
+        ...rest,
+        config_value: metadata,
+        config_key: key,
+      };
+    } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+      triedColumns.add('value');
+      const { value: _omitValue, ...rest } = insertPayload;
+      insertPayload = {
+        ...rest,
+        config_key: key,
+      };
+    } else if (isMissingColumnError(error, 'label') && !triedColumns.has('label')) {
+      triedColumns.add('label');
+      const { label: _omitLabel, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else if (isColumnTypeError(error, 'label') && !triedColumns.has('label_type')) {
+      triedColumns.add('label_type');
+      const { label: _omitLabel, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else if (isColumnTypeError(error, 'ordem') && !triedColumns.has('ordem')) {
+      triedColumns.add('ordem');
+      const { ordem: _omitOrdem, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else if (isMissingColumnError(error, 'config_value') && !triedColumns.has('config_value')) {
+      triedColumns.add('config_value');
+      const { config_value: _omitConfigValue, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else if (isMissingColumnError(error, 'config_key') && !triedColumns.has('config_key')) {
+      triedColumns.add('config_key');
+      const { config_key: _omitConfigKey, ...rest } = insertPayload;
+      insertPayload = rest;
+    } else {
+      break;
+    }
+
+    ({ data, error } = await insert(insertPayload));
   }
 
   if (error) return { data: null, error };

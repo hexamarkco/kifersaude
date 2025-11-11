@@ -64,6 +64,142 @@ function normalizePhoneNumber(raw: unknown): string | null {
   return digits;
 }
 
+function extractNormalizedPhoneNumber(payload: any): string | null {
+  const candidatePhones: string[] = [];
+  const seenCandidates = new Set<string>();
+
+  const pushNormalized = (value: unknown) => {
+    let candidate = value;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      candidate = String(Math.trunc(candidate));
+    }
+
+    if (typeof candidate !== 'string') {
+      return;
+    }
+
+    const normalized = normalizePhoneNumber(candidate);
+    if (normalized && !seenCandidates.has(normalized)) {
+      candidatePhones.push(normalized);
+      seenCandidates.add(normalized);
+    }
+  };
+
+  const addCandidate = (value: unknown) => {
+    if (!value) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => addCandidate(entry));
+      return;
+    }
+
+    pushNormalized(value);
+  };
+
+  const candidateValues: unknown[] = [
+    payload?.phone,
+    payload?.phoneNumber,
+    payload?.chatPhone,
+    payload?.senderPhone,
+    payload?.sender?.phone,
+    payload?.sender?.jid,
+    payload?.remotePhone,
+    payload?.receiverPhone,
+    payload?.recipientPhone,
+    payload?.targetPhone,
+    payload?.to,
+    payload?.from,
+    payload?.whatsapp,
+    payload?.contactPhone,
+    payload?.chatId,
+    payload?.remoteJid,
+    payload?.jid,
+    payload?.participant,
+    payload?.participantPhone,
+    payload?.groupId,
+    payload?.groupJid,
+    payload?.conversationId,
+    payload?.chat?.id,
+    payload?.chat?.jid,
+    payload?.chat?.phone,
+    payload?.contact?.phone,
+    payload?.contact?.waid,
+    payload?.contact?.jid,
+    payload?.contact?.id,
+    payload?.participant?.phone,
+    payload?.participant?.jid,
+    payload?.message?.phone,
+    payload?.message?.chatId,
+    payload?.message?.remoteJid,
+    payload?.message?.jid,
+    payload?.message?.to,
+    payload?.message?.from,
+    payload?.message?.participant,
+    payload?.message?.key?.remoteJid,
+    payload?.message?.key?.participant,
+    payload?.contextInfo?.participant,
+    payload?.contextInfo?.remoteJid,
+  ];
+
+  candidateValues.forEach((value) => addCandidate(value));
+
+  const connectedValues: unknown[] = [
+    payload?.connectedPhone,
+    payload?.instancePhone,
+    payload?.sessionPhone,
+    payload?.connected?.phone,
+    payload?.instance?.phone,
+    payload?.session?.phone,
+    payload?.me,
+    payload?.me?.id,
+    payload?.me?.jid,
+    payload?.me?.phone,
+    payload?.user?.id,
+    payload?.user?.jid,
+    payload?.owner?.id,
+    payload?.account?.phone,
+    payload?.account?.jid,
+    payload?.profile?.jid,
+  ];
+
+  if (payload?.fromMe) {
+    connectedValues.push(payload?.senderPhone, payload?.from, payload?.message?.from);
+  }
+
+  const connectedNumbers = new Set<string>();
+  connectedValues.forEach((value) => {
+    let candidate = value;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      candidate = String(Math.trunc(candidate));
+    }
+
+    const normalized = normalizePhoneNumber(candidate);
+    if (normalized) {
+      connectedNumbers.add(normalized);
+    }
+  });
+
+  if (payload?.fromMe && connectedNumbers.size > 0) {
+    for (const candidate of candidatePhones) {
+      if (!connectedNumbers.has(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  if (candidatePhones.length > 0) {
+    return candidatePhones[0];
+  }
+
+  if (!payload?.fromMe && connectedNumbers.size > 0) {
+    return Array.from(connectedNumbers)[0] ?? null;
+  }
+
+  return null;
+}
+
 function pickFirstString(...candidates: unknown[]): string | null {
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim()) {
@@ -343,7 +479,7 @@ async function upsertConversation(
   }> = {}
 ): Promise<EventProcessingResult> {
   const normalizedPhone =
-    overrides.phoneNumber ?? normalizePhoneNumber(payload?.phone || payload?.senderPhone || payload?.connectedPhone);
+    overrides.phoneNumber ?? extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
 
   const { text: derivedText, media: derivedMedia } = describePayload(payload);
   const chosenMedia = overrides.media ?? derivedMedia;

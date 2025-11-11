@@ -71,7 +71,7 @@ import {
   Navigation,
   Edit,
 } from 'lucide-react';
-import type { PostgrestError } from '@supabase/supabase-js';
+import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import {
   zapiService,
@@ -110,8 +110,22 @@ const RECORDING_WAVEFORM_BARS = 12;
 const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
 const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
+const WHATSAPP_CONVERSATIONS_LIMIT = 500;
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
+
+const parseTimestampValue = (value?: string | null): number => {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return parsed;
+};
 
 const OUTGOING_STATUS_VISUALS: Record<
   WhatsAppMessageDeliveryStatus,
@@ -662,6 +676,7 @@ export default function WhatsAppHistoryTab({
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
+  const leadsMapRef = useRef(leadsMap);
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [activePhone, setActivePhone] = useState<string | null>(null);
   const [selectionActionState, setSelectionActionState] = useState<SelectionActionState>({
@@ -1584,6 +1599,10 @@ export default function WhatsAppHistoryTab({
   }, []);
 
   useEffect(() => {
+    leadsMapRef.current = leadsMap;
+  }, [leadsMap]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const hasDevices = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices);
@@ -1645,10 +1664,15 @@ export default function WhatsAppHistoryTab({
   const loadLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) return;
 
+    const uniqueLeadIds = Array.from(new Set(leadIds.filter((id): id is string => Boolean(id))));
+    const missingLeadIds = uniqueLeadIds.filter((id) => !leadsMapRef.current.has(id));
+
+    if (missingLeadIds.length === 0) return;
+
     const { data } = await supabase
       .from('leads')
       .select('id, nome_completo, telefone, status, responsavel, observacoes')
-      .in('id', leadIds);
+      .in('id', missingLeadIds);
 
     if (data) {
       upsertLeadsIntoMaps(data as LeadPreview[]);
@@ -1701,6 +1725,79 @@ export default function WhatsAppHistoryTab({
       upsertLeadsIntoMaps(data as LeadPreview[]);
     }
   }, [upsertLeadsIntoMaps]);
+
+  const handleRealtimeConversationChange = useCallback(
+    (payload: RealtimePostgresChangesPayload<WhatsAppConversation>) => {
+      if (!payload) {
+        return false;
+      }
+
+      const newRecord = (payload.new as WhatsAppConversation | null) ?? null;
+      const oldRecord = (payload.old as WhatsAppConversation | null) ?? null;
+      const recordForState = payload.eventType === 'DELETE' ? oldRecord : newRecord;
+
+      if (!recordForState || !recordForState.id) {
+        return false;
+      }
+
+      let didChange = false;
+
+      setConversations((previous) => {
+        if (payload.eventType === 'DELETE') {
+          if (!previous.some((conversation) => conversation.id === recordForState.id)) {
+            return previous;
+          }
+
+          didChange = true;
+          return previous.filter((conversation) => conversation.id !== recordForState.id);
+        }
+
+        const next = [...previous];
+        const existingIndex = next.findIndex((conversation) => conversation.id === recordForState.id);
+
+        if (existingIndex === -1) {
+          next.push(recordForState);
+        } else {
+          const existing = next[existingIndex]!;
+          next[existingIndex] = { ...existing, ...recordForState };
+        }
+
+        didChange = true;
+
+        next.sort(
+          (a, b) =>
+            parseTimestampValue(b.timestamp ?? b.created_at) -
+            parseTimestampValue(a.timestamp ?? a.created_at),
+        );
+
+        if (next.length > WHATSAPP_CONVERSATIONS_LIMIT) {
+          return next.slice(0, WHATSAPP_CONVERSATIONS_LIMIT);
+        }
+
+        return next;
+      });
+
+      const leadIdToLoad =
+        payload.eventType === 'DELETE' ? oldRecord?.lead_id : newRecord?.lead_id;
+      if (leadIdToLoad) {
+        void loadLeads([leadIdToLoad]);
+      }
+
+      const phonesToLoad = [
+        newRecord?.phone_number,
+        newRecord?.target_phone,
+        oldRecord?.phone_number,
+        oldRecord?.target_phone,
+      ].filter((value): value is string => Boolean(value));
+
+      if (phonesToLoad.length > 0) {
+        void loadLeadsByPhones(phonesToLoad);
+      }
+
+      return didChange;
+    },
+    [loadLeads, loadLeadsByPhones],
+  );
 
   const loadLeadById = useCallback(
     async (leadId: string) => {
@@ -1866,7 +1963,7 @@ export default function WhatsAppHistoryTab({
         .from('whatsapp_conversations')
         .select('*')
         .order('timestamp', { ascending: false })
-        .limit(500);
+        .limit(WHATSAPP_CONVERSATIONS_LIMIT);
 
       if (error) throw error;
       setConversations(data || []);
@@ -2240,9 +2337,15 @@ export default function WhatsAppHistoryTab({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'whatsapp_conversations' },
-        () => {
-          // Atualiza silenciosamente as conversas quando um novo evento chega.
-          loadConversations(false);
+        (payload) => {
+          const handled = handleRealtimeConversationChange(
+            payload as RealtimePostgresChangesPayload<WhatsAppConversation>,
+          );
+
+          if (!handled) {
+            // Fallback para manter os dados sincronizados em caso de eventos inesperados.
+            void loadConversations(false);
+          }
         },
       );
 
@@ -2263,7 +2366,7 @@ export default function WhatsAppHistoryTab({
       void conversationsChannel.unsubscribe();
       void aiMessagesChannel.unsubscribe();
     };
-  }, [loadConversations, loadAIMessages]);
+  }, [handleRealtimeConversationChange, loadConversations, loadAIMessages]);
 
   useEffect(() => {
     const unsubscribe = zapiService.subscribeToTypingPresence({

@@ -171,6 +171,7 @@ export default function WhatsAppHistoryTab() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingFinalizedRef = useRef(false);
   const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
@@ -1022,19 +1023,37 @@ export default function WhatsAppHistoryTab() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      recordingFinalizedRef.current = false;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
+      const finalizeRecording = (fallbackMimeType: string) => {
+        if (recordingFinalizedRef.current) {
+          return;
         }
-      };
 
-      mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/webm';
+        if (!audioChunksRef.current.length) {
+          return;
+        }
+
+        const mimeType = mediaRecorder.mimeType || fallbackMimeType || audioChunksRef.current[0]?.type || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio({ blob: audioBlob, url: audioUrl });
         audioChunksRef.current = [];
+        recordingFinalizedRef.current = true;
+      };
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+          const fallbackMimeType = event.data.type || 'audio/webm';
+          if (mediaRecorder.state === 'inactive') {
+            finalizeRecording(fallbackMimeType);
+          }
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        finalizeRecording(audioChunksRef.current[0]?.type || 'audio/webm');
         recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
         recordingStreamRef.current = null;
       };

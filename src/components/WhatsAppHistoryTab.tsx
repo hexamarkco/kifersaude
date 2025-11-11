@@ -625,8 +625,6 @@ export default function WhatsAppHistoryTab({
   const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
   const [startConversationLoading, setStartConversationLoading] = useState(false);
   const [startConversationError, setStartConversationError] = useState<string | null>(null);
-  const [startConversationPage, setStartConversationPage] = useState(1);
-  const [startConversationHasMore, setStartConversationHasMore] = useState(true);
   const [startConversationSearch, setStartConversationSearch] = useState('');
   const [startConversationPhone, setStartConversationPhone] = useState('');
   const [startConversationSelectedContact, setStartConversationSelectedContact] = useState<string | null>(null);
@@ -1840,53 +1838,66 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
-  const loadStartConversationContacts = useCallback(
-    async (pageToLoad = 1, replace = false) => {
-      setStartConversationLoading(true);
-      setStartConversationError(null);
+  const loadStartConversationContacts = useCallback(async () => {
+    setStartConversationLoading(true);
+    setStartConversationError(null);
 
-      try {
-        const result = await zapiService.fetchContacts(pageToLoad, 50);
+    try {
+      const aggregatedContacts = new Map<string, ZAPIContact>();
+      const pageSize = 100;
+      let currentPage = 1;
+
+      while (true) {
+        const result = await zapiService.fetchContacts(currentPage, pageSize);
         if (!result.success) {
           throw new Error(result.error || 'Falha ao carregar contatos.');
         }
 
         const contacts = result.data ?? [];
 
-        setStartConversationContacts((prev) => {
-          const existing = new Map<string, ZAPIContact>();
-          const base = replace ? [] : prev;
-
-          base.forEach((contact) => {
-            const key = sanitizePhoneDigits(contact.phone);
-            if (key) {
-              existing.set(key, contact);
-            }
-          });
-
-          contacts.forEach((contact) => {
-            const key = sanitizePhoneDigits(contact.phone);
-            if (!key || existing.has(key)) {
-              return;
-            }
-            existing.set(key, contact);
-          });
-
-          return Array.from(existing.values());
+        contacts.forEach((contact) => {
+          const key = sanitizePhoneDigits(contact.phone);
+          if (!key || aggregatedContacts.has(key)) {
+            return;
+          }
+          aggregatedContacts.set(key, contact);
         });
 
-        setStartConversationPage(pageToLoad);
-        setStartConversationHasMore(Boolean(result.hasMore));
-      } catch (error) {
-        setStartConversationError(
-          error instanceof Error ? error.message : 'Erro ao carregar contatos.'
-        );
-      } finally {
-        setStartConversationLoading(false);
+        if (!result.hasMore || contacts.length < pageSize) {
+          break;
+        }
+
+        currentPage += 1;
       }
-    },
-    []
-  );
+
+      const sortedContacts = Array.from(aggregatedContacts.values()).sort((a, b) => {
+        const getDisplayName = (contact: ZAPIContact) =>
+          (
+            contact.name ||
+            contact.short ||
+            contact.vname ||
+            contact.notify ||
+            formatPhoneForDisplay(contact.phone)
+          )
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        const nameA = getDisplayName(a);
+        const nameB = getDisplayName(b);
+
+        return nameA.localeCompare(nameB, 'pt-BR');
+      });
+
+      setStartConversationContacts(sortedContacts);
+    } catch (error) {
+      setStartConversationError(
+        error instanceof Error ? error.message : 'Erro ao carregar contatos.'
+      );
+    } finally {
+      setStartConversationLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (activeView === 'ai-messages') {
@@ -1905,7 +1916,7 @@ export default function WhatsAppHistoryTab({
     setIsStartConversationModalOpen(true);
 
     if (startConversationContacts.length === 0) {
-      void loadStartConversationContacts(1, true);
+      void loadStartConversationContacts();
     }
   }, [loadStartConversationContacts, startConversationContacts.length]);
 
@@ -1913,19 +1924,6 @@ export default function WhatsAppHistoryTab({
     setIsStartConversationModalOpen(false);
     setStartConversationError(null);
   }, []);
-
-  const handleLoadMoreStartConversationContacts = useCallback(() => {
-    if (startConversationLoading || !startConversationHasMore) {
-      return;
-    }
-
-    void loadStartConversationContacts(startConversationPage + 1);
-  }, [
-    loadStartConversationContacts,
-    startConversationHasMore,
-    startConversationLoading,
-    startConversationPage,
-  ]);
 
   const handleSelectStartConversationContact = useCallback((contact: ZAPIContact) => {
     const normalized = normalizePhoneForChat(contact.phone);
@@ -6682,25 +6680,6 @@ const getOutgoingMessageStatus = (
                     </div>
                   </div>
 
-                  {startConversationHasMore && (
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleLoadMoreStartConversationContacts}
-                        disabled={startConversationLoading}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {startConversationLoading ? (
-                          <>
-                            <Loader className="h-4 w-4 animate-spin" />
-                            Carregando...
-                          </>
-                        ) : (
-                          'Carregar mais contatos'
-                        )}
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-4">

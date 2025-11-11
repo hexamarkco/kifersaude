@@ -172,7 +172,7 @@ export default function WhatsAppHistoryTab() {
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingFinalizedRef = useRef(false);
-  const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string } | null>(null);
+  const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string; file: File } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
@@ -437,14 +437,6 @@ export default function WhatsAppHistoryTab() {
       recordingStreamRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    return () => {
-      if (recordedAudio?.url) {
-        URL.revokeObjectURL(recordedAudio.url);
-      }
-    };
-  }, [recordedAudio]);
 
   useEffect(() => {
     if (!composerSuccess) return;
@@ -896,11 +888,28 @@ export default function WhatsAppHistoryTab() {
       prev.forEach(releaseAttachmentPreview);
       return [];
     });
+    setRecordedAudio(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
       fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
     }
   }, [releaseAttachmentPreview]);
+
+  const removeRecordedAudioAttachment = useCallback(() => {
+    if (!recordedAudio) {
+      return;
+    }
+    setAttachments((prev) => {
+      const index = prev.findIndex((attachment) => attachment.file === recordedAudio.file);
+      if (index === -1) {
+        return prev;
+      }
+      const target = prev[index];
+      releaseAttachmentPreview(target);
+      return prev.filter((_, idx) => idx !== index);
+    });
+    setRecordedAudio(null);
+  }, [recordedAudio, releaseAttachmentPreview]);
 
   const handleAttachmentButtonClick = () => {
     if (isSendingMessage) {
@@ -962,13 +971,20 @@ export default function WhatsAppHistoryTab() {
   };
 
   const handleRemoveAttachment = (index: number) => {
+    let shouldClearRecordedAudio = false;
     setAttachments((prev) => {
       const target = prev[index];
       if (target) {
         releaseAttachmentPreview(target);
+        if (recordedAudio && target.file === recordedAudio.file) {
+          shouldClearRecordedAudio = true;
+        }
       }
       return prev.filter((_, idx) => idx !== index);
     });
+    if (shouldClearRecordedAudio) {
+      setRecordedAudio(null);
+    }
     setComposerError(null);
     setComposerSuccess(null);
   };
@@ -980,10 +996,7 @@ export default function WhatsAppHistoryTab() {
     }
 
     try {
-      if (recordedAudio?.url) {
-        URL.revokeObjectURL(recordedAudio.url);
-      }
-      setRecordedAudio(null);
+      removeRecordedAudioAttachment();
       setComposerSuccess(null);
       setComposerError(null);
 
@@ -1004,9 +1017,31 @@ export default function WhatsAppHistoryTab() {
         }
 
         const mimeType = mediaRecorder.mimeType || fallbackMimeType || audioChunksRef.current[0]?.type || 'audio/webm';
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const normalizedMimeType = mimeType.split(';')[0] || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: normalizedMimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
-        setRecordedAudio({ blob: audioBlob, url: audioUrl });
+        let extension = 'webm';
+        if (normalizedMimeType.includes('ogg')) {
+          extension = 'ogg';
+        } else if (normalizedMimeType.includes('mpeg') || normalizedMimeType.includes('mp3')) {
+          extension = 'mp3';
+        } else if (normalizedMimeType.includes('wav')) {
+          extension = 'wav';
+        } else if (normalizedMimeType.includes('m4a') || normalizedMimeType.includes('mp4')) {
+          extension = 'm4a';
+        }
+        const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, {
+          type: normalizedMimeType,
+        });
+        setRecordedAudio({ blob: audioBlob, url: audioUrl, file: audioFile });
+        setAttachments((prev) => [
+          ...prev,
+          {
+            file: audioFile,
+            type: 'audio',
+            previewUrl: audioUrl,
+          },
+        ]);
         audioChunksRef.current = [];
         recordingFinalizedRef.current = true;
       };
@@ -1034,7 +1069,7 @@ export default function WhatsAppHistoryTab() {
       console.error('Erro ao iniciar gravação de áudio:', error);
       setRecordingError('Não foi possível iniciar a gravação. Verifique as permissões do microfone.');
     }
-  }, [isRecordingSupported, recordedAudio]);
+  }, [isRecordingSupported, removeRecordedAudioAttachment]);
 
   const stopRecording = useCallback(() => {
     const recorder = mediaRecorderRef.current;
@@ -1045,16 +1080,20 @@ export default function WhatsAppHistoryTab() {
   }, []);
 
   const discardRecording = useCallback(() => {
-    if (recordedAudio?.url) {
-      URL.revokeObjectURL(recordedAudio.url);
-    }
-    setRecordedAudio(null);
+    removeRecordedAudioAttachment();
     setRecordingError(null);
-  }, [recordedAudio]);
+  }, [removeRecordedAudioAttachment]);
+
+  const attachmentsWithoutRecordedAudio = useMemo(() => {
+    if (!recordedAudio) {
+      return attachments;
+    }
+    return attachments.filter((attachment) => attachment.file !== recordedAudio.file);
+  }, [attachments, recordedAudio]);
 
   const hasContentToSend = useMemo(() => {
-    return composerText.trim().length > 0 || attachments.length > 0 || Boolean(recordedAudio);
-  }, [attachments.length, composerText, recordedAudio]);
+    return composerText.trim().length > 0 || attachments.length > 0;
+  }, [attachments.length, composerText]);
 
   const handleSendMessage = useCallback(async () => {
     if (!selectedPhone) {
@@ -1093,32 +1132,6 @@ export default function WhatsAppHistoryTab() {
         }
       }
 
-      if (recordedAudio) {
-        const blob = recordedAudio.blob;
-        const type = blob.type || 'audio/webm';
-        let extension = 'webm';
-        if (type.includes('ogg')) {
-          extension = 'ogg';
-        } else if (type.includes('mpeg') || type.includes('mp3')) {
-          extension = 'mp3';
-        } else if (type.includes('wav')) {
-          extension = 'wav';
-        } else if (type.includes('m4a') || type.includes('mp4')) {
-          extension = 'm4a';
-        }
-
-        const audioFile = new File([blob], `gravacao-${Date.now()}.${extension}`, { type });
-        const audioResult = await zapiService.sendMediaMessage(
-          selectedPhone,
-          audioFile,
-          audioFile.name,
-          'audio'
-        );
-        if (!audioResult.success) {
-          throw new Error(audioResult.error || 'Falha ao enviar áudio.');
-        }
-      }
-
       if (selectedChatLead?.id) {
         const refreshResult = await zapiService.fetchAndSaveHistory(
           selectedChatLead.id,
@@ -1135,10 +1148,6 @@ export default function WhatsAppHistoryTab() {
       setComposerSuccess('Mensagem enviada com sucesso!');
       setComposerText('');
       clearAttachments();
-      if (recordedAudio?.url) {
-        URL.revokeObjectURL(recordedAudio.url);
-      }
-      setRecordedAudio(null);
     } catch (error) {
       setComposerError(
         error instanceof Error
@@ -1154,7 +1163,6 @@ export default function WhatsAppHistoryTab() {
     composerText,
     hasContentToSend,
     loadConversations,
-    recordedAudio,
     selectedChat?.contractId,
     selectedChatLead?.id,
     selectedPhone,
@@ -2030,7 +2038,7 @@ export default function WhatsAppHistoryTab() {
                       </div>
                     </div>
 
-                    {attachments.length > 0 && (
+                    {attachmentsWithoutRecordedAudio.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-semibold uppercase text-slate-500">
                           Anexos
@@ -2039,7 +2047,7 @@ export default function WhatsAppHistoryTab() {
                           Os arquivos serão enviados com o tipo selecionado no menu de anexos.
                         </p>
                         <div className="space-y-3">
-                          {attachments.map((attachment, index) => {
+                          {attachmentsWithoutRecordedAudio.map((attachment, index) => {
                             const { file, type } = attachment;
                             return (
                               <div

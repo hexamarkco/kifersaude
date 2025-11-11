@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MessageCircle, CheckCheck } from 'lucide-react';
 import { ZAPIMessage, ZAPIMediaType } from '../lib/zapiService';
 
@@ -79,6 +79,37 @@ export default function WhatsAppConversationViewer({
   }
 
   const groupedMessages = groupMessagesByDate();
+
+  const isGroupChat = useMemo(() => {
+    if (messages.length === 0) {
+      return false;
+    }
+
+    return messages.some((message) => {
+      const phone = typeof message.phone === 'string' ? message.phone : '';
+      const normalized = phone.toLowerCase();
+      if (normalized.includes('@g.us') || normalized.includes('-group')) {
+        return true;
+      }
+      const digits = phone.replace(/\D/g, '');
+      return digits.length >= 20;
+    });
+  }, [messages]);
+
+  const conversationName = useMemo(() => {
+    if (!isGroupChat) {
+      return leadName;
+    }
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const chatName = messages[index]?.chatName;
+      if (typeof chatName === 'string' && chatName.trim()) {
+        return chatName.trim();
+      }
+    }
+
+    return leadName;
+  }, [isGroupChat, leadName, messages]);
 
   const deriveMediaTypeFromUrl = (url?: string, mimeType?: string): ZAPIMediaType | undefined => {
     if (!url && !mimeType) return undefined;
@@ -181,7 +212,7 @@ export default function WhatsAppConversationViewer({
       <div className="bg-teal-600 text-white px-4 py-3 flex items-center space-x-3">
         <MessageCircle className="w-5 h-5" />
         <div>
-          <p className="font-medium">{leadName}</p>
+          <p className="font-medium">{conversationName}</p>
           <p className="text-xs text-teal-100">{messages.length} mensagens</p>
         </div>
       </div>
@@ -211,12 +242,21 @@ export default function WhatsAppConversationViewer({
                       isAudioMessage
                         ? 'w-full sm:max-w-xl'
                         : 'max-w-[75%]'
-                    } rounded-lg ${paddingClasses} shadow-sm ${
+                    } rounded-lg ${paddingClasses} shadow-sm flex flex-col space-y-2 ${
                       message.fromMe
                         ? 'bg-teal-500 text-white rounded-br-none'
                         : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
                     }`}
                   >
+                    {isGroupChat && (
+                      <span
+                        className={`text-xs font-semibold ${
+                          message.fromMe ? 'text-teal-100 self-end' : 'text-teal-600'
+                        }`}
+                      >
+                        {message.fromMe ? 'Você' : message.senderName?.trim() || 'Participante'}
+                      </span>
+                    )}
                     {renderMediaContent(message, mediaType)}
                     {message.text && (
                       <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>

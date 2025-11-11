@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { zapiService, type ZAPIMediaType } from '../lib/zapiService';
+import { zapiService, type ZAPIMediaType, type ZAPIGroupMetadata } from '../lib/zapiService';
 
 declare global {
   interface Window {
@@ -294,7 +294,14 @@ const buildPhoneLookupKeys = (value?: string | null): string[] => {
 
 const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   if (!phone) return false;
-  return phone.toLowerCase().includes('@g.us');
+
+  const normalized = phone.toLowerCase();
+  if (normalized.includes('@g.us') || normalized.includes('-group')) {
+    return true;
+  }
+
+  const digits = sanitizePhoneDigits(phone);
+  return digits.length >= 20;
 };
 
 type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel'>;
@@ -317,7 +324,8 @@ type ChatGroup = ChatGroupBase & {
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
   const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
-  return withoutSuffix;
+  const withoutGroupSuffix = withoutSuffix.replace(/-group$/i, '');
+  return withoutGroupSuffix;
 };
 
 export default function WhatsAppHistoryTab() {
@@ -373,6 +381,62 @@ export default function WhatsAppHistoryTab() {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
+  const groupMetadataPendingRef = useRef<Set<string>>(new Set());
+
+  const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
+    if (!value) {
+      return [];
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    const keys = new Set<string>();
+    keys.add(trimmed);
+
+    const withoutDomain = trimmed.includes('@') ? trimmed.split('@')[0] ?? '' : trimmed;
+    if (withoutDomain) {
+      keys.add(withoutDomain);
+    }
+
+    const digitsOnly = sanitizePhoneDigits(withoutDomain);
+    if (digitsOnly) {
+      keys.add(digitsOnly);
+    }
+
+    const ensureGroupSuffix = (candidate: string) => {
+      if (candidate && !candidate.toLowerCase().endsWith('-group')) {
+        keys.add(`${candidate}-group`);
+      }
+    };
+
+    ensureGroupSuffix(withoutDomain);
+    ensureGroupSuffix(digitsOnly);
+
+    return Array.from(keys).filter(Boolean);
+  }, []);
+
+  const getGroupMetadataForPhone = useCallback(
+    (phone?: string | null): ZAPIGroupMetadata | undefined => {
+      if (!phone) {
+        return undefined;
+      }
+
+      const candidates = buildGroupMetadataKeys(phone);
+      for (const candidate of candidates) {
+        const metadata = groupMetadataMap.get(candidate);
+        if (metadata) {
+          return metadata;
+        }
+      }
+
+      return undefined;
+    },
+    [buildGroupMetadataKeys, groupMetadataMap]
+  );
 
   const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
     if (attachment.previewUrl) {
@@ -800,12 +864,14 @@ export default function WhatsAppHistoryTab() {
         : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
           leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
           leadsByPhoneMap.get(chat.phone.trim());
+      const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
       const sanitizedPhone = sanitizePhoneDigits(chat.phone);
       return (
         chat.phone.toLowerCase().includes(query) ||
         (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
         chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
         (chat.displayName?.toLowerCase().includes(query) ?? false) ||
+        (groupMetadata?.subject ? groupMetadata.subject.toLowerCase().includes(query) : false) ||
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
         (lead?.telefone?.toLowerCase().includes(query) ?? false)
       );
@@ -859,6 +925,91 @@ export default function WhatsAppHistoryTab() {
       leadsByPhoneMap.get(selectedChat.phone.trim())
     );
   }, [leadsByPhoneMap, leadsMap, selectedChat]);
+
+  useEffect(() => {
+    if (chatsWithPreferences.length === 0) {
+      return;
+    }
+
+    const phonesToFetch: string[] = [];
+
+    chatsWithPreferences.forEach((chat) => {
+      if (!chat.isGroup) {
+        return;
+      }
+
+      const keys = buildGroupMetadataKeys(chat.phone);
+      const alreadyLoaded = keys.some((key) => groupMetadataMap.has(key));
+      const isPending = keys.some((key) => groupMetadataPendingRef.current.has(key));
+
+      if (!alreadyLoaded && !isPending) {
+        phonesToFetch.push(chat.phone);
+        keys.forEach((key) => groupMetadataPendingRef.current.add(key));
+      }
+    });
+
+    if (phonesToFetch.length === 0) {
+      return;
+    }
+
+    void (async () => {
+      for (const phone of phonesToFetch) {
+        try {
+          const result = await zapiService.getGroupMetadata(phone);
+          if (result.success && result.data) {
+            const metadata = result.data as ZAPIGroupMetadata;
+            setGroupMetadataMap((prev) => {
+              const next = new Map(prev);
+              const metadataKeys = new Set<string>([
+                ...buildGroupMetadataKeys(phone),
+                ...buildGroupMetadataKeys(metadata.phone),
+              ]);
+              metadataKeys.forEach((key) => {
+                if (key) {
+                  next.set(key, metadata);
+                }
+              });
+              return next;
+            });
+          } else if (result.error) {
+            console.warn('Não foi possível carregar metadata do grupo', phone, result.error);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar metadata do grupo', phone, error);
+        } finally {
+          const keys = buildGroupMetadataKeys(phone);
+          keys.forEach((key) => groupMetadataPendingRef.current.delete(key));
+        }
+      }
+    })();
+  }, [buildGroupMetadataKeys, chatsWithPreferences, groupMetadataMap]);
+
+  const selectedGroupMetadata = useMemo(() => {
+    if (!selectedChat?.isGroup) {
+      return undefined;
+    }
+    return getGroupMetadataForPhone(selectedChat.phone);
+  }, [getGroupMetadataForPhone, selectedChat]);
+
+  const selectedChatDisplayName = useMemo(() => {
+    if (!selectedChat) {
+      return selectedPhone ? formatPhoneForDisplay(selectedPhone) : '';
+    }
+
+    if (selectedChat.isGroup) {
+      return (
+        selectedGroupMetadata?.subject ||
+        selectedChat.displayName ||
+        formatPhoneForDisplay(selectedChat.phone)
+      );
+    }
+
+    return (
+      selectedChatLead?.nome_completo ||
+      selectedChat.displayName ||
+      formatPhoneForDisplay(selectedChat.phone)
+    );
+  }, [selectedChat, selectedChatLead, selectedGroupMetadata, selectedPhone]);
 
   const handleLeadStatusChange = useCallback(
     async (leadId: string, newStatus: string) => {
@@ -1925,8 +2076,9 @@ export default function WhatsAppHistoryTab() {
                         leadsByPhoneMap.get(chat.phone.trim());
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
+                    const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
                     const displayName = chat.isGroup
-                      ? chat.displayName || formatPhoneForDisplay(chat.phone)
+                      ? groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone)
                       : lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
 
                     return (
@@ -2049,7 +2201,7 @@ export default function WhatsAppHistoryTab() {
                           {selectedChat?.photoUrl ? (
                             <img
                               src={selectedChat.photoUrl}
-                              alt={selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone || 'Contato'}
+                              alt={selectedChatDisplayName || selectedPhone || 'Contato'}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -2058,11 +2210,7 @@ export default function WhatsAppHistoryTab() {
                         </div>
                         <div>
                           <div className="flex items-center flex-wrap gap-2">
-                            <h3 className="font-semibold text-lg">
-                              {selectedChat?.isGroup
-                                ? selectedChat?.displayName || selectedPhone
-                                : selectedChatLead?.nome_completo || selectedChat?.displayName || selectedPhone}
-                            </h3>
+                            <h3 className="font-semibold text-lg">{selectedChatDisplayName}</h3>
                             {selectedChatPreference?.pinned && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/20 text-white uppercase tracking-wide">
                                 Fixado

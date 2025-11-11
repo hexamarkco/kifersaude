@@ -97,6 +97,8 @@ const DEFAULT_MP3_BITRATE = 128;
 const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
 const RECORDING_WAVEFORM_BARS = 12;
 const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
+const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -117,6 +119,16 @@ type MessageWithReactions = WhatsAppConversation & {
 type ReactionModalState = {
   message: MessageWithReactions;
   summary: MessageReactionSummary;
+};
+
+type ChatTypingPresenceState = {
+  isTyping: boolean;
+  lastTypingAt: number | null;
+  presenceStatus: 'online' | 'offline' | null;
+  lastPresenceAt: number | null;
+  lastSeenAt: number | null;
+  contactName: string | null;
+  updatedAt: number;
 };
 
 const isMimeTypeSupported = (mimeType: string): boolean => {
@@ -258,6 +270,9 @@ const convertBlobToMp3 = async (blob: Blob): Promise<Blob> => {
     });
     const channelCount = Math.min(2, Math.max(1, audioBuffer.numberOfChannels));
     const lamejs = await loadLameJs();
+    if (!lamejs) {
+      throw new Error('Biblioteca de conversão de áudio indisponível.');
+    }
     const mp3Encoder = new lamejs.Mp3Encoder(channelCount, audioBuffer.sampleRate, DEFAULT_MP3_BITRATE);
     const blockSize = 1152;
     const mp3Chunks: Uint8Array[] = [];
@@ -389,6 +404,62 @@ const buildPhoneLookupKeys = (value?: string | null): string[] => {
   return Array.from(keys);
 };
 
+const buildPresenceKeyCandidates = (
+  phone?: string | null,
+  chatId?: string | null
+): string[] => {
+  const candidates = new Set<string>();
+
+  const pushValue = (value?: string | null) => {
+    if (!value || typeof value !== 'string') {
+      return;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    candidates.add(trimmed);
+
+    const digits = sanitizePhoneDigits(trimmed);
+    if (digits) {
+      candidates.add(digits);
+
+      if (digits.startsWith('55') && digits.length > 2) {
+        candidates.add(digits.slice(2));
+        candidates.add(`+${digits}`);
+      } else if (digits.length === 11) {
+        candidates.add(`55${digits}`);
+        candidates.add(`+55${digits}`);
+      }
+    }
+
+    if (trimmed.includes('@')) {
+      const withoutDomain = trimmed.split('@')[0] ?? '';
+      if (withoutDomain) {
+        candidates.add(withoutDomain);
+        const domainDigits = sanitizePhoneDigits(withoutDomain);
+        if (domainDigits) {
+          candidates.add(domainDigits);
+          if (domainDigits.startsWith('55') && domainDigits.length > 2) {
+            candidates.add(domainDigits.slice(2));
+            candidates.add(`+${domainDigits}`);
+          } else if (domainDigits.length === 11) {
+            candidates.add(`55${domainDigits}`);
+            candidates.add(`+55${domainDigits}`);
+          }
+        }
+      }
+    }
+  };
+
+  pushValue(phone);
+  pushValue(chatId);
+
+  return Array.from(candidates).filter(Boolean);
+};
+
 const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   if (!phone) return false;
 
@@ -407,6 +478,7 @@ type ChatGroupBase = {
   phone: string;
   messages: WhatsAppConversation[];
   leadId?: string | null;
+  contractId?: string | null;
   lastMessage?: WhatsAppConversation;
   displayName?: string | null;
   photoUrl?: string | null;
@@ -1613,6 +1685,86 @@ export default function WhatsAppHistoryTab({
     };
   }, [loadConversations, loadAIMessages]);
 
+  useEffect(() => {
+    const unsubscribe = zapiService.subscribeToTypingPresence({
+      onTypingStart: updateTypingPresenceFromEvent,
+      onTypingStop: updateTypingPresenceFromEvent,
+      onPresence: updateTypingPresenceFromEvent,
+      onEvent: updateTypingPresenceFromEvent,
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [updateTypingPresenceFromEvent]);
+
+  useEffect(() => {
+    if (!selectedPhone) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadPresence = async () => {
+      const result = await zapiService.getChatPresence(selectedPhone);
+      if (!isActive) {
+        return;
+      }
+
+      if (result.success && result.data) {
+        const payload = result.data as ZAPITypingPresenceEvent;
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          'kind' in payload &&
+          typeof (payload as { kind: unknown }).kind === 'string'
+        ) {
+          updateTypingPresenceFromEvent(payload);
+        }
+      }
+    };
+
+    void loadPresence();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedPhone, updateTypingPresenceFromEvent]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const sweepInterval = window.setInterval(() => {
+      setTypingPresenceMap((previous) => {
+        if (previous.size === 0) {
+          return previous;
+        }
+
+        const now = Date.now();
+        let nextMap: Map<string, ChatTypingPresenceState> | null = null;
+
+        previous.forEach((value, key) => {
+          if (value.isTyping && value.lastTypingAt && now - value.lastTypingAt > TYPING_INACTIVITY_TIMEOUT_MS) {
+            if (!nextMap) {
+              nextMap = new Map(previous);
+            }
+            nextMap.set(key, { ...value, isTyping: false, updatedAt: now });
+          }
+        });
+
+        return nextMap ?? previous;
+      });
+    }, TYPING_PRESENCE_SWEEP_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(sweepInterval);
+    };
+  }, []);
+
   const closeFullscreen = useCallback(() => setFullscreenMedia(null), []);
 
   useEffect(() => {
@@ -2040,6 +2192,68 @@ export default function WhatsAppHistoryTab({
     selectedPhone,
   ]);
 
+  const selectedChatPresenceState = useMemo(() => {
+    if (!selectedPhone) {
+      return undefined;
+    }
+
+    const candidates = buildPresenceKeyCandidates(selectedPhone, selectedPhone);
+    for (const key of candidates) {
+      const value = typingPresenceMap.get(key);
+      if (value) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }, [selectedPhone, typingPresenceMap]);
+
+  const formatLastSeenStatus = useCallback((timestamp?: number | null) => {
+    if (typeof timestamp !== 'number' || Number.isNaN(timestamp)) {
+      return null;
+    }
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const now = new Date();
+    const sameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+
+    const timePart = date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    if (sameDay) {
+      return `Visto por último hoje às ${timePart}`;
+    }
+
+    if (isYesterday) {
+      return `Visto por último ontem às ${timePart}`;
+    }
+
+    const datePart = date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    return `Visto por último em ${datePart} às ${timePart}`;
+  }, []);
+
   useEffect(() => {
     if (!externalChatRequest) {
       return;
@@ -2321,6 +2535,31 @@ export default function WhatsAppHistoryTab({
     selectedGroupMetadata,
     selectedPhone,
   ]);
+
+  const selectedChatPresenceLabel = useMemo(() => {
+    if (!selectedChatPresenceState) {
+      return null;
+    }
+
+    if (selectedChatPresenceState.isTyping) {
+      return 'Contato digitando...';
+    }
+
+    if (selectedChatPresenceState.presenceStatus === 'online') {
+      return 'Online agora';
+    }
+
+    const lastSeenLabel = formatLastSeenStatus(selectedChatPresenceState.lastSeenAt);
+    if (lastSeenLabel) {
+      return lastSeenLabel;
+    }
+
+    if (selectedChatPresenceState.presenceStatus === 'offline') {
+      return 'Offline';
+    }
+
+    return null;
+  }, [formatLastSeenStatus, selectedChatPresenceState]);
 
   const processedSelectedMessages = useMemo(() => {
     const processed: MessageWithReactions[] = [];
@@ -4318,6 +4557,11 @@ export default function WhatsAppHistoryTab({
                             )}
                           </div>
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
+                          {selectedChatPresenceLabel && (
+                            <p className="text-xs text-teal-100 mt-0.5">
+                              {selectedChatPresenceLabel}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">

@@ -185,6 +185,64 @@ class ZAPIService {
     }
   }
 
+  async setChatArchiveStatus(phoneNumber: string, archived: boolean): Promise<ZAPIResponse> {
+    return this.modifyChat(phoneNumber, archived ? 'archive' : 'unarchive');
+  }
+
+  private async modifyChat(
+    phoneNumber: string,
+    action: 'archive' | 'unarchive'
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/modify-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify({
+            phone,
+            action,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao atualizar chat no WhatsApp';
+        try {
+          const errorData = (await response.json()) as { message?: string };
+          if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.warn('Erro ao interpretar resposta do Z-API (modify-chat):', parseError);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      try {
+        const data = (await response.json()) as { value?: boolean };
+        if (data?.value === true) {
+          return { success: true, data };
+        }
+        return { success: false, error: 'Ação de arquivamento não confirmada pelo Z-API' };
+      } catch (parseError) {
+        console.warn('Resposta sem JSON ao modificar chat:', parseError);
+        return { success: true };
+      }
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
       const { data, error } = await supabase

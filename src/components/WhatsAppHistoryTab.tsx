@@ -17,6 +17,7 @@ import {
   Contract,
   WhatsAppChatPreference,
 } from '../lib/supabase';
+import { gptService } from '../lib/gptService';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
 import {
   listWhatsAppQuickReplies,
@@ -652,6 +653,11 @@ export default function WhatsAppHistoryTab({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const [isAIAssistantMenuOpen, setIsAIAssistantMenuOpen] = useState(false);
+  const [isGeneratingAISuggestions, setIsGeneratingAISuggestions] = useState(false);
+  const [isRewritingMessage, setIsRewritingMessage] = useState(false);
+  const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
+  const [aiAssistantError, setAIAssistantError] = useState<string | null>(null);
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>([]);
   const [isQuickRepliesLoading, setIsQuickRepliesLoading] = useState(false);
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
@@ -698,6 +704,8 @@ export default function WhatsAppHistoryTab({
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const quickRepliesButtonRef = useRef<HTMLButtonElement | null>(null);
   const quickRepliesMenuRef = useRef<HTMLDivElement | null>(null);
+  const aiAssistantButtonRef = useRef<HTMLButtonElement | null>(null);
+  const aiAssistantMenuRef = useRef<HTMLDivElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -954,6 +962,37 @@ export default function WhatsAppHistoryTab({
   }, [isQuickRepliesMenuOpen]);
 
   useEffect(() => {
+    if (!isAIAssistantMenuOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        aiAssistantMenuRef.current?.contains(target) ||
+        aiAssistantButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsAIAssistantMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAIAssistantMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAIAssistantMenuOpen]);
+
+  useEffect(() => {
     leadContractsMapRef.current = leadContractsMap;
   }, [leadContractsMap]);
 
@@ -1003,6 +1042,20 @@ export default function WhatsAppHistoryTab({
   useEffect(() => {
     setActiveReactionMenuMessageId(null);
     setReactionError(null);
+  }, [selectedPhone]);
+
+  useEffect(() => {
+    if (isSendingMessage) {
+      setIsAIAssistantMenuOpen(false);
+    }
+  }, [isSendingMessage]);
+
+  useEffect(() => {
+    setIsAIAssistantMenuOpen(false);
+    setAISuggestions([]);
+    setAIAssistantError(null);
+    setIsGeneratingAISuggestions(false);
+    setIsRewritingMessage(false);
   }, [selectedPhone]);
 
   const handleToggleQuickRepliesMenu = useCallback(() => {
@@ -1159,6 +1212,99 @@ export default function WhatsAppHistoryTab({
       setQuickRepliesError(message);
     }
   };
+
+  const handleToggleAIAssistantMenu = useCallback(() => {
+    setIsAIAssistantMenuOpen((previous) => !previous);
+    setAIAssistantError(null);
+  }, []);
+
+  const handleGenerateAISuggestions = useCallback(async () => {
+    setAIAssistantError(null);
+    setAISuggestions([]);
+    setIsGeneratingAISuggestions(true);
+
+    try {
+      const result = await gptService.generateChatReplySuggestions({
+        lead: selectedChatLead ?? undefined,
+        conversationHistory: selectedChatMessages,
+      });
+
+      if (!result.success || !result.suggestions || result.suggestions.length === 0) {
+        setAIAssistantError(result.error || 'Não foi possível gerar sugestões no momento.');
+        return;
+      }
+
+      setAISuggestions(result.suggestions);
+      setComposerSuccess('Sugestões geradas pela IA. Clique para inserir no campo de mensagem.');
+    } catch (error) {
+      setAIAssistantError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao gerar sugestões com a IA. Tente novamente em instantes.'
+      );
+    } finally {
+      setIsGeneratingAISuggestions(false);
+    }
+  }, [selectedChatLead, selectedChatMessages]);
+
+  const handleApplyAISuggestion = useCallback(
+    (suggestion: string) => {
+      setComposerText(suggestion);
+      setComposerError(null);
+      setComposerSuccess('Sugestão da IA aplicada. Revise e envie quando estiver pronta.');
+      setIsAIAssistantMenuOpen(false);
+      setAISuggestions([]);
+
+      setTimeout(() => {
+        composerTextareaRef.current?.focus();
+      }, 0);
+    },
+    [composerTextareaRef]
+  );
+
+  const handleRewriteComposerMessage = useCallback(async () => {
+    const trimmedMessage = composerText.trim();
+
+    if (!trimmedMessage) {
+      setAIAssistantError('Digite uma mensagem para que a IA possa reescrever.');
+      setIsAIAssistantMenuOpen(true);
+      return;
+    }
+
+    setAIAssistantError(null);
+    setIsRewritingMessage(true);
+
+    try {
+      const result = await gptService.rewriteMessage({
+        message: trimmedMessage,
+        lead: selectedChatLead ?? undefined,
+        conversationHistory: selectedChatMessages,
+      });
+
+      if (!result.success || !result.rewrittenMessage) {
+        setAIAssistantError(result.error || 'Não foi possível reescrever a mensagem agora.');
+        return;
+      }
+
+      setComposerText(result.rewrittenMessage);
+      setComposerError(null);
+      setComposerSuccess('Mensagem reescrita com ajuda da IA. Revise antes de enviar.');
+      setIsAIAssistantMenuOpen(false);
+      setAISuggestions([]);
+
+      setTimeout(() => {
+        composerTextareaRef.current?.focus();
+      }, 0);
+    } catch (error) {
+      setAIAssistantError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao reescrever a mensagem com a IA. Tente novamente.'
+      );
+    } finally {
+      setIsRewritingMessage(false);
+    }
+  }, [composerText, selectedChatLead, selectedChatMessages, composerTextareaRef]);
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -3840,9 +3986,13 @@ export default function WhatsAppHistoryTab({
     );
   }, [attachments, recordedAudio]);
 
+  const composerTextHasContent = composerText.trim().length > 0;
+
   const hasContentToSend = useMemo(() => {
-    return composerText.trim().length > 0 || attachments.length > 0;
-  }, [attachments.length, composerText]);
+    return composerTextHasContent || attachments.length > 0;
+  }, [attachments.length, composerTextHasContent]);
+
+  const isAIProcessing = isGeneratingAISuggestions || isRewritingMessage;
 
   const handleSendMessage = useCallback(async () => {
     if (!selectedPhone) {
@@ -5904,6 +6054,104 @@ const getOutgoingMessageStatus = (
                       <div className="flex-1">
                         <div className="group relative flex min-h-[3.75rem] items-stretch rounded-xl border border-slate-300 bg-white shadow-sm transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500">
                           <div className="flex items-center gap-2 border-r border-slate-200/70 px-2">
+                            <div className="relative">
+                              <button
+                                ref={aiAssistantButtonRef}
+                                type="button"
+                                onClick={handleToggleAIAssistantMenu}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={isSendingMessage}
+                                aria-haspopup="menu"
+                                aria-expanded={isAIAssistantMenuOpen}
+                                aria-label="Assistente de mensagens com IA"
+                              >
+                                <Sparkles className="h-5 w-5 text-teal-600" />
+                              </button>
+                              {isAIAssistantMenuOpen && (
+                                <div
+                                  ref={aiAssistantMenuRef}
+                                  className="absolute left-0 z-30 mt-2 w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  role="menu"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs font-semibold uppercase text-slate-500">
+                                      Assistente IA
+                                    </p>
+                                  </div>
+                                  <p className="mt-2 text-sm text-slate-600">
+                                    Gere sugestões com base na conversa ou melhore a mensagem atual.
+                                  </p>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleGenerateAISuggestions()}
+                                      disabled={isAIProcessing}
+                                      className="inline-flex items-center gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {isGeneratingAISuggestions ? (
+                                        <Loader className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Sparkles className="h-4 w-4" />
+                                      )}
+                                      <span>Sugerir respostas</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleRewriteComposerMessage()}
+                                      disabled={isAIProcessing || !composerTextHasContent}
+                                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {isRewritingMessage ? (
+                                        <Loader className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <RefreshCcw className="h-4 w-4" />
+                                      )}
+                                      <span>Reescrever texto</span>
+                                    </button>
+                                  </div>
+                                  {aiAssistantError && (
+                                    <p className="mt-3 text-xs text-red-500">{aiAssistantError}</p>
+                                  )}
+                                  {isGeneratingAISuggestions && !aiAssistantError && (
+                                    <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                                      <Loader className="h-3 w-3 animate-spin" />
+                                      Gerando sugestões...
+                                    </div>
+                                  )}
+                                  {isRewritingMessage && !aiAssistantError && (
+                                    <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                                      <Loader className="h-3 w-3 animate-spin" />
+                                      Reescrevendo mensagem...
+                                    </div>
+                                  )}
+                                  {aiSuggestions.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                      <p className="text-[11px] font-semibold uppercase text-slate-500">
+                                        Sugestões
+                                      </p>
+                                      <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                                        {aiSuggestions.map((suggestion, index) => (
+                                          <button
+                                            key={`ai-suggestion-${index}`}
+                                            type="button"
+                                            onClick={() => handleApplyAISuggestion(suggestion)}
+                                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:border-teal-300 hover:bg-white"
+                                          >
+                                            <span className="block whitespace-pre-wrap leading-relaxed">
+                                              {suggestion}
+                                            </span>
+                                            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-teal-600">
+                                              <CheckCircle className="h-3 w-3" />
+                                              Usar esta sugestão
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             <div className="relative">
                               <button
                                 ref={quickRepliesButtonRef}

@@ -6355,7 +6355,7 @@ const getOutgoingMessageStatus = (
                               {isAIAssistantMenuOpen && (
                                 <div
                                   ref={aiAssistantMenuRef}
-                                  className="absolute left-0 z-30 mt-2 w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  className="absolute left-0 bottom-full z-30 mb-2 w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
                                   role="menu"
                                 >
                                   <div className="flex items-center justify-between">
@@ -6453,7 +6453,7 @@ const getOutgoingMessageStatus = (
                               {isQuickRepliesMenuOpen && (
                                 <div
                                   ref={quickRepliesMenuRef}
-                                  className="absolute left-0 z-20 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  className="absolute left-0 bottom-full z-20 mb-2 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
                                   role="menu"
                                 >
                                   <div className="flex items-center justify-between">
@@ -6608,7 +6608,7 @@ const getOutgoingMessageStatus = (
                               {isAttachmentMenuOpen && (
                                 <div
                                   ref={attachmentMenuRef}
-                                  className="absolute left-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  className="absolute left-0 bottom-full z-20 mb-2 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
                                   role="menu"
                                 >
                                   <p className="px-1 pb-2 text-xs font-semibold uppercase text-slate-500">

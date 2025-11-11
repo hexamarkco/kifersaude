@@ -1,33 +1,42 @@
-export const openWhatsAppInBackgroundTab = (telefone: string, nome: string, withMessage: boolean = true): void => {
+export const WHATSAPP_CHAT_EVENT = 'open-whatsapp-chat';
+
+export type WhatsAppChatRequestDetail = {
+  phone?: string | null;
+  leadName?: string | null;
+  leadId?: string | null;
+  prefillMessage?: string | null;
+  source?: string;
+};
+
+export type OpenWhatsAppChatOptions = {
+  withMessage?: boolean;
+  leadId?: string | null;
+  source?: string;
+};
+
+export const openWhatsAppInBackgroundTab = (
+  telefone: string,
+  nome: string,
+  options: OpenWhatsAppChatOptions = {}
+): void => {
   try {
-    const cleanPhone = telefone.replace(/\D/g, '');
-    let whatsappUrl = `https://wa.me/55${cleanPhone}`;
+    const { withMessage = true, leadId = null, source } = options;
+    const digitsOnly = (telefone || '').replace(/\D/g, '');
+    const sanitizedPhone = digitsOnly.length > 0 ? digitsOnly : (telefone || '').trim();
+    const prefillMessage = withMessage
+      ? `Olá ${nome}, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`
+      : null;
 
-    if (withMessage) {
-      const message = encodeURIComponent(
-        `Olá ${nome}, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`
-      );
-      whatsappUrl += `?text=${message}`;
-    }
+    const eventDetail: WhatsAppChatRequestDetail = {
+      phone: sanitizedPhone,
+      leadName: nome,
+      leadId,
+      prefillMessage,
+      source,
+    };
 
-    const newTab = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-
-    if (newTab) {
-      window.focus();
-
-      setTimeout(() => {
-        try {
-          if (newTab && !newTab.closed) {
-            newTab.close();
-          }
-        } catch (error) {
-          console.warn('Não foi possível fechar a aba automaticamente:', error);
-        }
-      }, 10000);
-    } else {
-      console.warn('A aba do WhatsApp foi bloqueada pelo navegador. Verifique as configurações de popup.');
-    }
+    window.dispatchEvent(new CustomEvent<WhatsAppChatRequestDetail>(WHATSAPP_CHAT_EVENT, { detail: eventDetail }));
   } catch (error) {
-    console.error('Erro ao abrir WhatsApp:', error);
+    console.error('Erro ao abrir chat do WhatsApp interno:', error);
   }
 };

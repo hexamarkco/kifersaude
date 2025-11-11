@@ -15,6 +15,14 @@ export interface ZAPILocationPayload {
   delayMessage?: number;
 }
 
+export interface ZAPIContact {
+  phone: string;
+  name?: string | null;
+  short?: string | null;
+  vname?: string | null;
+  notify?: string | null;
+}
+
 export interface ZAPIMessage {
   messageId: string;
   phone: string;
@@ -211,6 +219,89 @@ class ZAPIService {
       }
 
       return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  async fetchContacts(
+    page = 1,
+    pageSize = 50
+  ): Promise<{ success: boolean; data?: ZAPIContact[]; error?: string; hasMore?: boolean }> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const url = new URL(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/contacts`
+      );
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('pageSize', String(pageSize));
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Client-Token': this.clientToken,
+        },
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao carregar contatos';
+        try {
+          const errorData = (await response.json()) as { message?: string };
+          errorMessage = errorData?.message || errorMessage;
+        } catch (error) {
+          console.warn('Resposta sem JSON ao carregar contatos:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      let rawData: unknown;
+      try {
+        rawData = (await response.json()) as unknown;
+      } catch (error) {
+        return {
+          success: false,
+          error: 'Resposta inválida do servidor ao carregar contatos.',
+        };
+      }
+
+      if (!Array.isArray(rawData)) {
+        return {
+          success: false,
+          error: 'Estrutura de resposta inesperada ao carregar contatos.',
+        };
+      }
+
+      const contacts: ZAPIContact[] = rawData
+        .map((item) => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+
+          const candidate = item as Record<string, unknown>;
+          const phone = typeof candidate.phone === 'string' ? candidate.phone.trim() : '';
+          if (!phone) {
+            return null;
+          }
+
+          return {
+            phone,
+            name: typeof candidate.name === 'string' ? candidate.name : null,
+            short: typeof candidate.short === 'string' ? candidate.short : null,
+            vname: typeof candidate.vname === 'string' ? candidate.vname : null,
+            notify: typeof candidate.notify === 'string' ? candidate.notify : null,
+          } satisfies ZAPIContact;
+        })
+        .filter((contact): contact is ZAPIContact => Boolean(contact?.phone));
+
+      return {
+        success: true,
+        data: contacts,
+        hasMore: contacts.length >= pageSize,
+      };
     } catch (error) {
       return { success: false, error: String(error) };
     }

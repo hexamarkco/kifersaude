@@ -147,6 +147,9 @@ function normalizePhoneNumber(raw: unknown): string | null {
   }
 
   const lowerTrimmed = trimmed.toLowerCase();
+  if (/@lid\b|\blid@|:lid\b|\blid:/.test(lowerTrimmed)) {
+    return null;
+  }
   if (lowerTrimmed.includes('-group') || lowerTrimmed.includes('@g.us')) {
     return trimmed;
   }

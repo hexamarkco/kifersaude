@@ -429,9 +429,11 @@ export default function WhatsAppHistoryTab({
   const [manualScrollAlternateId, setManualScrollAlternateId] = useState<string | null>(null);
   const [activeReactionDetails, setActiveReactionDetails] =
     useState<ReactionModalState | null>(null);
-  const [forwardingMessage, setForwardingMessage] = useState<MessageWithReactions | null>(null);
-  const [forwardTargetPhone, setForwardTargetPhone] = useState('');
-  const [forwardDelaySeconds, setForwardDelaySeconds] = useState('');
+  const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [forwardingMessageIds, setForwardingMessageIds] = useState<string[]>([]);
+  const [forwardSelectedTargetPhones, setForwardSelectedTargetPhones] = useState<string[]>([]);
+  const [forwardSourcePhone, setForwardSourcePhone] = useState<string | null>(null);
+  const [forwardChatSearchTerm, setForwardChatSearchTerm] = useState('');
   const [forwardError, setForwardError] = useState<string | null>(null);
   const [forwardSuccess, setForwardSuccess] = useState<string | null>(null);
   const [isForwardingMessage, setIsForwardingMessage] = useState(false);
@@ -540,6 +542,29 @@ export default function WhatsAppHistoryTab({
       return undefined;
     },
     [buildGroupMetadataKeys, groupMetadataMap]
+  );
+
+  const getChatDisplayName = useCallback(
+    (chat: ChatGroup): string => {
+      if (chat.isGroup) {
+        const groupMetadata = getGroupMetadataForPhone(chat.phone);
+        return groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone);
+      }
+
+      const lead =
+        (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
+        leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
+        leadsByPhoneMap.get(chat.phone.trim());
+      const chatMetadata = getChatMetadataForPhone(chat.phone);
+
+      return (
+        lead?.nome_completo ||
+        chatMetadata?.displayName ||
+        chat.displayName ||
+        formatPhoneForDisplay(chat.phone)
+      );
+    },
+    [getChatMetadataForPhone, getGroupMetadataForPhone, leadsByPhoneMap, leadsMap]
   );
 
   const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
@@ -2493,62 +2518,84 @@ export default function WhatsAppHistoryTab({
       if (isObserver) {
         return;
       }
-      setForwardingMessage(message);
-      setForwardTargetPhone('');
-      setForwardDelaySeconds('');
+
+      const messageKey = message.id || message.message_id || null;
+
+      setIsForwardModalOpen(true);
+      setForwardingMessageIds(messageKey ? [messageKey] : []);
+      setForwardSelectedTargetPhones([]);
+      setForwardSourcePhone(message.phone_number || selectedPhone || null);
+      setForwardChatSearchTerm('');
       setForwardError(null);
       setForwardSuccess(null);
     },
-    [isObserver]
+    [isObserver, selectedPhone]
   );
 
   const handleCloseForwardModal = useCallback(() => {
-    setForwardingMessage(null);
-    setForwardTargetPhone('');
-    setForwardDelaySeconds('');
+    setIsForwardModalOpen(false);
+    setForwardingMessageIds([]);
+    setForwardSelectedTargetPhones([]);
+    setForwardSourcePhone(null);
+    setForwardChatSearchTerm('');
     setForwardError(null);
     setForwardSuccess(null);
     setIsForwardingMessage(false);
   }, []);
 
   const handleConfirmForwardMessage = useCallback(async () => {
-    if (!forwardingMessage || isObserver) {
+    if (!isForwardModalOpen || isObserver) {
       return;
     }
 
-    const sanitizedTarget = sanitizePhoneDigits(forwardTargetPhone);
-    if (!sanitizedTarget) {
-      setForwardError('Informe o telefone do destinatário para encaminhar a mensagem.');
-      return;
-    }
-
-    if (sanitizedTarget.length < 10) {
-      setForwardError('Informe um telefone válido com DDI e DDD.');
-      return;
-    }
-
-    const messageId = forwardingMessage.message_id || forwardingMessage.id;
-    if (!messageId) {
-      setForwardError('Não foi possível identificar a mensagem selecionada.');
-      return;
-    }
-
-    const messagePhoneDigits = sanitizePhoneDigits(
-      forwardingMessage.phone_number || selectedPhone || ''
-    );
-    if (!messagePhoneDigits) {
-      setForwardError('Não foi possível identificar o chat de origem da mensagem.');
-      return;
-    }
-
-    let delayValue: number | undefined;
-    if (forwardDelaySeconds) {
-      const parsedDelay = Number(forwardDelaySeconds);
-      if (Number.isNaN(parsedDelay) || parsedDelay < 1 || parsedDelay > 15) {
-        setForwardError('Informe um delay entre 1 e 15 segundos.');
-        return;
+    const selectedMessagesMap = new Map<string, MessageWithReactions>();
+    processedSelectedMessages.forEach((message) => {
+      if (message.id) {
+        selectedMessagesMap.set(message.id, message);
       }
-      delayValue = parsedDelay;
+      if (message.message_id) {
+        selectedMessagesMap.set(message.message_id, message);
+      }
+    });
+
+    const messagesToForward = forwardingMessageIds
+      .map((messageId) => selectedMessagesMap.get(messageId))
+      .filter((message): message is MessageWithReactions => Boolean(message));
+
+    if (messagesToForward.length === 0) {
+      setForwardError('Selecione ao menos uma mensagem para encaminhar.');
+      return;
+    }
+
+    const uniqueTargets = Array.from(
+      new Set(
+        forwardSelectedTargetPhones
+          .map((phone) => sanitizePhoneDigits(phone))
+          .filter((phone) => phone.length > 0)
+      )
+    );
+
+    if (uniqueTargets.length === 0) {
+      setForwardError('Selecione ao menos um chat de destino.');
+      return;
+    }
+
+    const sourcePhoneDigits = sanitizePhoneDigits(
+      forwardSourcePhone || messagesToForward[0]?.phone_number || selectedPhone || ''
+    );
+
+    if (!sourcePhoneDigits) {
+      setForwardError('Não foi possível identificar o chat de origem das mensagens.');
+      return;
+    }
+
+    const messageIds = messagesToForward
+      .map((message) => message.message_id || message.id || null)
+      .filter((messageId): messageId is string => Boolean(messageId));
+
+    if (messageIds.length !== messagesToForward.length) {
+      setForwardError('Não foi possível identificar todas as mensagens selecionadas.');
+      return;
     }
 
     setIsForwardingMessage(true);
@@ -2556,34 +2603,107 @@ export default function WhatsAppHistoryTab({
     setForwardSuccess(null);
 
     try {
-      const result = await zapiService.forwardMessage(
-        sanitizedTarget,
-        messageId,
-        messagePhoneDigits,
-        delayValue
-      );
-      if (!result.success) {
-        setForwardError(result.error || 'Falha ao encaminhar a mensagem.');
-        return;
+      for (const target of uniqueTargets) {
+        for (const messageId of messageIds) {
+          const result = await zapiService.forwardMessage(target, messageId, sourcePhoneDigits, 1);
+          if (!result.success) {
+            throw new Error(result.error || 'Falha ao encaminhar a mensagem.');
+          }
+        }
       }
 
-      setForwardSuccess('Mensagem encaminhada com sucesso!');
+      setForwardSuccess('Mensagens encaminhadas com sucesso!');
       setTimeout(() => {
         handleCloseForwardModal();
       }, 1500);
     } catch (error) {
       console.error('Erro ao encaminhar mensagem:', error);
-      setForwardError('Erro ao encaminhar a mensagem.');
+      setForwardError(
+        error instanceof Error ? error.message : 'Erro ao encaminhar as mensagens.'
+      );
     } finally {
       setIsForwardingMessage(false);
     }
   }, [
-    forwardDelaySeconds,
-    forwardTargetPhone,
-    forwardingMessage,
+    forwardSelectedTargetPhones,
+    forwardSourcePhone,
+    forwardingMessageIds,
     handleCloseForwardModal,
+    isForwardModalOpen,
     isObserver,
+    processedSelectedMessages,
     selectedPhone,
+  ]);
+
+  const handleToggleForwardMessageSelection = useCallback(
+    (messageId: string, isChecked: boolean) => {
+      setForwardingMessageIds((prev) => {
+        if (isChecked) {
+          if (prev.includes(messageId)) {
+            return prev;
+          }
+
+          const orderMap = new Map<string, number>();
+          processedSelectedMessages.forEach((message, index) => {
+            if (message.id) {
+              orderMap.set(message.id, index);
+            }
+            if (message.message_id) {
+              orderMap.set(message.message_id, index);
+            }
+          });
+
+          const next = [...prev, messageId];
+          next.sort((a, b) => (orderMap.get(a) ?? 0) - (orderMap.get(b) ?? 0));
+          return next;
+        }
+
+        return prev.filter((id) => id !== messageId);
+      });
+    },
+    [processedSelectedMessages]
+  );
+
+  const handleToggleForwardTarget = useCallback((phone: string, isChecked: boolean) => {
+    setForwardSelectedTargetPhones((prev) => {
+      if (isChecked) {
+        if (prev.includes(phone)) {
+          return prev;
+        }
+        return [...prev, phone];
+      }
+
+      return prev.filter((value) => value !== phone);
+    });
+  }, []);
+
+  const forwardChatOptions = useMemo(() => {
+    const search = forwardChatSearchTerm.trim().toLowerCase();
+
+    return chatsWithPreferences
+      .map((chat) => {
+        const displayName = getChatDisplayName(chat);
+        const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
+        const photoUrl = chat.photoUrl || chatMetadata?.profileThumbnail || null;
+        const phoneDisplay = formatPhoneForDisplay(chat.phone);
+
+        return { chat, displayName, photoUrl, phoneDisplay };
+      })
+      .filter((option) => {
+        if (!search) {
+          return true;
+        }
+
+        const normalizedDisplay = option.displayName.toLowerCase();
+        const normalizedPhone = option.phoneDisplay.toLowerCase();
+        return normalizedDisplay.includes(search) || normalizedPhone.includes(search);
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [
+    chatsWithPreferences,
+    forwardChatSearchTerm,
+    getChatDisplayName,
+    getChatMetadataForPhone,
   ]);
 
   const handleCancelReply = useCallback(() => {
@@ -3680,7 +3800,7 @@ export default function WhatsAppHistoryTab({
         </div>
       )}
 
-      {forwardingMessage && (
+      {isForwardModalOpen && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 px-4 py-6"
           onClick={handleCloseForwardModal}
@@ -3698,49 +3818,138 @@ export default function WhatsAppHistoryTab({
               <X className="h-4 w-4" />
             </button>
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-800">Encaminhar mensagem</h3>
+              <h3 className="text-lg font-semibold text-slate-800">Encaminhar mensagens</h3>
               <p className="text-sm text-slate-500">
-                Informe o telefone do destinatário e, se desejar, um delay para o envio.
+                Selecione os chats de destino e quais mensagens deseja encaminhar. O envio
+                utilizará um delay padrão de 1 segundo.
               </p>
             </div>
-            <div className="mb-4 rounded-lg bg-slate-50 p-3">
-              <p className="text-[11px] font-semibold uppercase text-slate-500">Mensagem selecionada</p>
-              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
-                {getDisplayTextForMessage(forwardingMessage) || 'Mensagem sem conteúdo'}
-              </p>
-            </div>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="text-xs font-semibold uppercase text-slate-500">
-                  Telefone do destinatário
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={forwardTargetPhone}
-                  onChange={(event) => setForwardTargetPhone(sanitizePhoneDigits(event.target.value))}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                  placeholder="Ex: 5511999999999"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold uppercase text-slate-500">
-                  Delay (segundos, opcional)
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={forwardDelaySeconds}
-                  onChange={(event) => {
-                    const digits = event.target.value.replace(/\D/g, '');
-                    setForwardDelaySeconds(digits.slice(0, 2));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                  placeholder="1 a 15"
-                />
-              </label>
+            <div className="space-y-5">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">
+                    Mensagens da conversa
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {forwardingMessageIds.length > 0
+                      ? `${forwardingMessageIds.length} selecionada${
+                          forwardingMessageIds.length > 1 ? 's' : ''
+                        }`
+                      : 'Nenhuma selecionada'}
+                  </span>
+                </div>
+                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
+                  {processedSelectedMessages.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      Nenhuma mensagem disponível para encaminhamento.
+                    </p>
+                  ) : (
+                    processedSelectedMessages.map((message) => {
+                      const messageKey = message.id || message.message_id;
+                      if (!messageKey) {
+                        return null;
+                      }
+
+                      const isChecked = forwardingMessageIds.includes(messageKey);
+                      const preview = getComposerReplyPreviewText(message);
+
+                      return (
+                        <label
+                          key={message.id || message.message_id || message.timestamp}
+                          className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                            isChecked
+                              ? 'border-teal-500 bg-teal-50 shadow-sm'
+                              : 'border-slate-200 bg-white hover:border-teal-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            checked={isChecked}
+                            onChange={(event) =>
+                              handleToggleForwardMessageSelection(messageKey, event.target.checked)
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span className="font-semibold text-slate-600">
+                                {getMessageSenderLabel(message)}
+                              </span>
+                              <span>{formatTime(message.timestamp)}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
+                              {preview}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold uppercase text-slate-500">Chats de destino</span>
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={forwardChatSearchTerm}
+                    onChange={(event) => setForwardChatSearchTerm(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    placeholder="Pesquisar nome ou número"
+                  />
+                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {forwardChatOptions.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-slate-500">
+                        Nenhum chat encontrado.
+                      </p>
+                    ) : (
+                      forwardChatOptions.map(({ chat, displayName, photoUrl, phoneDisplay }) => {
+                        const isChecked = forwardSelectedTargetPhones.includes(chat.phone);
+
+                        return (
+                          <label
+                            key={chat.phone}
+                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                              isChecked
+                                ? 'border-teal-500 bg-teal-50 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-teal-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                              checked={isChecked}
+                              onChange={(event) =>
+                                handleToggleForwardTarget(chat.phone, event.target.checked)
+                              }
+                            />
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-teal-100">
+                                {photoUrl ? (
+                                  <img
+                                    src={photoUrl}
+                                    alt={displayName}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <Phone className="h-4 w-4 text-teal-600" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800">
+                                  {displayName}
+                                </p>
+                                <p className="text-xs text-slate-500">{phoneDisplay}</p>
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             {forwardError && (
               <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

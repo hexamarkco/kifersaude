@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
+import StatusDropdown from './StatusDropdown';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';

@@ -60,7 +60,6 @@ import {
   MapPin,
   Navigation,
   Edit,
-  Plus,
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';

@@ -10,6 +10,7 @@ import NotificationToast from './components/NotificationToast';
 import LeadNotificationToast from './components/LeadNotificationToast';
 import { notificationService } from './lib/notificationService';
 import { audioService } from './lib/audioService';
+import { WHATSAPP_CHAT_EVENT, type WhatsAppChatRequestDetail } from './lib/whatsappService';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -19,12 +20,23 @@ function App() {
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [pendingWhatsAppChat, setPendingWhatsAppChat] = useState<(WhatsAppChatRequestDetail & { requestId: number }) | null>(null);
 
   useEffect(() => {
     loadUnreadReminders();
     const interval = setInterval(loadUnreadReminders, 60000);
 
     notificationService.start(30000);
+
+    const handleWhatsAppChatRequest = (event: Event) => {
+      const customEvent = event as CustomEvent<WhatsAppChatRequestDetail>;
+      if (!customEvent.detail) return;
+
+      setActiveTab('whatsapp-history');
+      setPendingWhatsAppChat({ ...customEvent.detail, requestId: Date.now() });
+    };
+
+    window.addEventListener(WHATSAPP_CHAT_EVENT, handleWhatsAppChatRequest as EventListener);
 
     const unsubscribe = notificationService.subscribe((reminder) => {
       setActiveNotifications((prev) => [...prev, reminder]);
@@ -44,6 +56,7 @@ function App() {
       notificationService.stop();
       unsubscribe();
       unsubscribeLeads();
+      window.removeEventListener(WHATSAPP_CHAT_EVENT, handleWhatsAppChatRequest as EventListener);
     };
   }, []);
 
@@ -110,7 +123,12 @@ function App() {
       case 'reminders':
         return <RemindersManagerEnhanced />;
       case 'whatsapp-history':
-        return <WhatsAppHistoryTab />;
+        return (
+          <WhatsAppHistoryTab
+            externalChatRequest={pendingWhatsAppChat}
+            onConsumeExternalChatRequest={() => setPendingWhatsAppChat(null)}
+          />
+        );
       default:
         return <Dashboard />;
     }

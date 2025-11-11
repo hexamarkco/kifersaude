@@ -270,8 +270,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
   };
 
-  const handleWhatsAppClick = (telefone: string, nome: string) => {
-    openWhatsAppInBackgroundTab(telefone, nome);
+  const handleWhatsAppClick = (lead: Lead) => {
+    if (!lead.telefone) {
+      return;
+    }
+
+    openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo, {
+      withMessage: true,
+      leadId: lead.id,
+      source: 'leads',
+    });
   };
 
   if (loading) {
@@ -477,7 +485,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                     Editar
                   </button>
                   <button
-                    onClick={() => handleWhatsAppClick(lead.telefone, lead.nome_completo)}
+                    onClick={() => handleWhatsAppClick(lead)}
                     className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />

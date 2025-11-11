@@ -677,6 +677,7 @@ export default function WhatsAppHistoryTab({
   const [activeLeadDetails, setActiveLeadDetails] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
+  const [isLeadDetailsPanelOpen, setIsLeadDetailsPanelOpen] = useState(false);
   const [chatMetadataMap, setChatMetadataMap] = useState<Map<string, ZAPIChatMetadata>>(new Map());
   const chatMetadataPendingRef = useRef<Set<string>>(new Set());
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
@@ -2536,6 +2537,18 @@ export default function WhatsAppHistoryTab({
   const isLoadingLeadContracts = Boolean(
     selectedLeadId && loadingContractsLeadId === selectedLeadId
   );
+
+  useEffect(() => {
+    setIsLeadDetailsPanelOpen(false);
+  }, [selectedPhone]);
+
+  const handleToggleLeadDetailsPanel = useCallback(() => {
+    if (!selectedPhone) {
+      return;
+    }
+
+    setIsLeadDetailsPanelOpen((prev) => !prev);
+  }, [selectedPhone]);
 
   const handleRefreshContracts = useCallback(() => {
     if (!selectedLeadId) {
@@ -5241,7 +5254,17 @@ export default function WhatsAppHistoryTab({
                 <>
                   <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={handleToggleLeadDetailsPanel}
+                        className="group flex items-center space-x-3 rounded-lg px-1 -mx-1 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 hover:bg-white/10"
+                        aria-expanded={isLeadDetailsPanelOpen}
+                        title={
+                          isLeadDetailsPanelOpen
+                            ? 'Ocultar detalhes do lead'
+                            : 'Mostrar detalhes do lead'
+                        }
+                      >
                         <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
                           {selectedChatPhotoUrl ? (
                             <img
@@ -5255,7 +5278,9 @@ export default function WhatsAppHistoryTab({
                         </div>
                         <div>
                           <div className="flex items-center flex-wrap gap-2">
-                            <h3 className="font-semibold text-lg">{selectedChatDisplayName}</h3>
+                            <h3 className="font-semibold text-lg group-hover:underline">
+                              {selectedChatDisplayName}
+                            </h3>
                             {selectedChatPreference?.pinned && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/20 text-white uppercase tracking-wide">
                                 Fixado
@@ -5274,7 +5299,7 @@ export default function WhatsAppHistoryTab({
                             </p>
                           )}
                         </div>
-                      </div>
+                      </button>
                       <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">
                         {selectedChatLead?.telefone &&
                           sanitizePhoneDigits(selectedChatLead.telefone) !==
@@ -5918,7 +5943,7 @@ export default function WhatsAppHistoryTab({
                 </>
               )}
             </div>
-            {selectedPhone && (
+            {selectedPhone && isLeadDetailsPanelOpen && (
               <LeadDetailsPanel
                 className="bg-white border border-slate-200 rounded-xl h-[600px] w-full xl:w-[340px] xl:flex-none"
                 lead={selectedChatLead ?? null}

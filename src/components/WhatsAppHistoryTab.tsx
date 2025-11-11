@@ -397,6 +397,8 @@ export default function WhatsAppHistoryTab({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const [activeReactionDetails, setActiveReactionDetails] =
+    useState<ReactionModalState | null>(null);
   const skipAutoSelectRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);

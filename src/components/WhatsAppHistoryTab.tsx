@@ -3278,6 +3278,14 @@ export default function WhatsAppHistoryTab({
 
     const markAsRead = async () => {
       try {
+        const chatStatusResult = await zapiService.modifyChatStatus(selectedPhone, 'read');
+        if (!chatStatusResult.success) {
+          console.error(
+            `Erro ao marcar chat ${selectedPhone} como lido no Z-API:`,
+            chatStatusResult.error
+          );
+        }
+
         if (messageIdsToMark.length > 0) {
           await Promise.allSettled(
             messageIdsToMark.map(async (messageId) => {

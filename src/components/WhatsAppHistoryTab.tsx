@@ -2523,6 +2523,36 @@ export default function WhatsAppHistoryTab({
     selectedPhone,
   ]);
 
+  const selectedLeadId = selectedChatLead?.id ?? null;
+
+  const selectedLeadContracts = useMemo(() => {
+    if (!selectedLeadId) {
+      return undefined;
+    }
+
+    return leadContractsMap.get(selectedLeadId);
+  }, [leadContractsMap, selectedLeadId]);
+
+  const isLoadingLeadContracts = Boolean(
+    selectedLeadId && loadingContractsLeadId === selectedLeadId
+  );
+
+  const handleRefreshContracts = useCallback(() => {
+    if (!selectedLeadId) {
+      return;
+    }
+
+    void loadContractsForLead(selectedLeadId, true);
+  }, [loadContractsForLead, selectedLeadId]);
+
+  useEffect(() => {
+    if (!selectedLeadId) {
+      return;
+    }
+
+    void loadContractsForLead(selectedLeadId);
+  }, [loadContractsForLead, selectedLeadId]);
+
   const selectedChatPresenceState = useMemo(() => {
     if (!selectedPhone) {
       return undefined;

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Users,
   FileText,
@@ -50,6 +50,9 @@ export default function Layout({
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
+  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
   const currentRole = userProfile?.role || (isObserver ? 'observer' : 'admin');
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -120,6 +123,77 @@ export default function Layout({
     return tab.children.reduce((sum, child) => sum + (child.badge || 0), 0);
   };
 
+  const updateDropdownAlignment = useCallback(
+    (parentId: string) => {
+      const dropdown = dropdownRefs.current[parentId];
+      const trigger = triggerRefs.current[parentId];
+
+      if (!dropdown || !trigger) {
+        return;
+      }
+
+      const dropdownRect = dropdown.getBoundingClientRect();
+      const triggerRect = trigger.getBoundingClientRect();
+      const dropdownWidth = dropdownRect.width;
+      const viewportWidth = window.innerWidth;
+
+      let alignment: 'left' | 'right' = 'left';
+      const leftAlignedRightEdge = triggerRect.left + dropdownWidth;
+      const rightAlignedLeftEdge = triggerRect.right - dropdownWidth;
+
+      if (leftAlignedRightEdge > viewportWidth) {
+        alignment = 'right';
+      }
+
+      if (alignment === 'right' && rightAlignedLeftEdge < 0) {
+        alignment = 'left';
+      }
+
+      setDropdownAlignment((previous) => {
+        if (previous[parentId] === alignment) {
+          return previous;
+        }
+
+        return { ...previous, [parentId]: alignment };
+      });
+    },
+    []
+  );
+
+  useLayoutEffect(() => {
+    if (!expandedParent) {
+      return;
+    }
+
+    updateDropdownAlignment(expandedParent);
+
+    const handleResize = () => {
+      updateDropdownAlignment(expandedParent);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [expandedParent, updateDropdownAlignment]);
+
+  useEffect(() => {
+    if (!expandedParent) {
+      return;
+    }
+
+    const handleScroll = () => {
+      updateDropdownAlignment(expandedParent);
+    };
+
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [expandedParent, updateDropdownAlignment]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -135,7 +209,7 @@ export default function Layout({
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <nav className="flex space-x-1">
+              <nav className="flex flex-wrap gap-1">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = isParentActive(tab);
@@ -145,6 +219,9 @@ export default function Layout({
                   return (
                     <div key={tab.id} className="relative">
                       <button
+                        ref={(element) => {
+                          triggerRefs.current[tab.id] = element;
+                        }}
                         onClick={() => handleTabClick(tab)}
                         className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           isActive
@@ -173,7 +250,14 @@ export default function Layout({
                       </button>
 
                       {tab.children && isExpanded && (
-                        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[180px] z-50">
+                        <div
+                          ref={(element) => {
+                            dropdownRefs.current[tab.id] = element;
+                          }}
+                          className={`absolute top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[180px] z-50 ${
+                            dropdownAlignment[tab.id] === 'right' ? 'right-0 left-auto' : 'left-0'
+                          }`}
+                        >
                           {tab.children.map((child) => {
                             const ChildIcon = child.icon;
                             return (

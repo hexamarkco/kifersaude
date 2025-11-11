@@ -5397,13 +5397,13 @@ const getOutgoingMessageStatus = (
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-[320px,minmax(0,1fr)] gap-6">
-            <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden h-[600px] flex flex-col">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex flex-col min-h-[420px] max-h-[calc(100vh_-_12rem)] xl:max-h-[calc(100vh_-_10rem)]">
               <div className="px-4 py-3 bg-white border-b border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700">Conversas</h3>
                 <p className="text-xs text-slate-500">Contatos com mensagens registradas</p>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {hasSelectedPhones && (
                   <div className="px-4 py-2 bg-teal-50 border-b border-teal-200 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-teal-700">
@@ -5678,7 +5678,7 @@ const getOutgoingMessageStatus = (
             </div>
 
             <div className="space-y-6 xl:space-y-0 xl:flex xl:items-start xl:gap-6">
-              <div className="bg-white border border-slate-200 rounded-xl h-[600px] flex flex-col flex-1">
+              <div className="bg-white border border-slate-200 rounded-xl flex flex-col flex-1 min-h-[420px] max-h-[calc(100vh_-_12rem)] xl:max-h-[calc(100vh_-_10rem)]">
               {!selectedPhone ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-500">
                   <MessageCircle className="w-12 h-12 mb-4" />
@@ -5756,7 +5756,7 @@ const getOutgoingMessageStatus = (
 
                   <div
                     ref={messagesContainerRef}
-                    className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-4 space-y-6"
+                    className="flex-1 overflow-y-auto min-h-0 bg-gradient-to-b from-slate-50 to-white px-6 py-4 space-y-6"
                   >
                     {groupedSelectedMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
@@ -6544,7 +6544,7 @@ const getOutgoingMessageStatus = (
             </div>
             {selectedPhone && isLeadDetailsPanelOpen && (
               <LeadDetailsPanel
-                className="bg-white border border-slate-200 rounded-xl h-[600px] w-full xl:w-[340px] xl:flex-none"
+                className="bg-white border border-slate-200 rounded-xl w-full xl:w-[340px] xl:flex-none min-h-[420px] max-h-[calc(100vh_-_12rem)] xl:max-h-[calc(100vh_-_10rem)]"
                 lead={selectedChatLead ?? null}
                 statusOptions={activeLeadStatuses}
                 responsavelOptions={responsavelOptions}

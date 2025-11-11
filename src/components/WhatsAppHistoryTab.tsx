@@ -66,6 +66,7 @@ const FALLBACK_AUDIO_MIME_TYPES = [
 ];
 const DEFAULT_MP3_BITRATE = 128;
 const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+const RECORDING_WAVEFORM_BARS = 12;
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -415,6 +416,13 @@ export default function WhatsAppHistoryTab({
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserDataRef = useRef<Uint8Array | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [recordingLevels, setRecordingLevels] = useState<number[]>(
+    () => Array(RECORDING_WAVEFORM_BARS).fill(0)
+  );
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
   const groupMetadataPendingRef = useRef<Set<string>>(new Set());
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -480,6 +488,97 @@ export default function WhatsAppHistoryTab({
       URL.revokeObjectURL(attachment.previewUrl);
     }
   }, []);
+
+  const stopAudioVisualization = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    analyserRef.current = null;
+    analyserDataRef.current = null;
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => undefined);
+      audioContextRef.current = null;
+    }
+    setRecordingLevels(Array(RECORDING_WAVEFORM_BARS).fill(0));
+  }, []);
+
+  const startAudioVisualization = useCallback(
+    (stream: MediaStream) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
+      if (!AudioContextClass) {
+        return;
+      }
+
+      stopAudioVisualization();
+
+      const audioContext = new AudioContextClass();
+      audioContextRef.current = audioContext;
+
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyserDataRef.current = dataArray;
+
+      setRecordingLevels(Array(RECORDING_WAVEFORM_BARS).fill(0));
+
+      const updateLevels = () => {
+        const analyserNode = analyserRef.current;
+        const data = analyserDataRef.current;
+        if (!analyserNode || !data) {
+          return;
+        }
+
+        analyserNode.getByteTimeDomainData(data);
+        const sliceSize = Math.max(1, Math.floor(data.length / RECORDING_WAVEFORM_BARS));
+        const levels: number[] = [];
+
+        for (let index = 0; index < RECORDING_WAVEFORM_BARS; index += 1) {
+          let sum = 0;
+          for (let sliceIndex = 0; sliceIndex < sliceSize; sliceIndex += 1) {
+            const sample = data[index * sliceSize + sliceIndex];
+            if (typeof sample === 'number') {
+              sum += Math.abs(sample - 128);
+            }
+          }
+          const average = sum / sliceSize;
+          const normalized = Math.min(1, average / 60);
+          levels.push(normalized);
+        }
+
+        setRecordingLevels((previous) => {
+          if (previous.length === levels.length) {
+            let hasMeaningfulChange = false;
+            for (let i = 0; i < levels.length; i += 1) {
+              if (Math.abs(previous[i]! - levels[i]!) > 0.05) {
+                hasMeaningfulChange = true;
+                break;
+              }
+            }
+            if (!hasMeaningfulChange) {
+              return previous;
+            }
+          }
+          return levels;
+        });
+
+        animationFrameRef.current = requestAnimationFrame(updateLevels);
+      };
+
+      updateLevels();
+    },
+    [stopAudioVisualization]
+  );
 
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
@@ -1669,6 +1768,7 @@ export default function WhatsAppHistoryTab({
       }
 
       recordingStreamRef.current = stream;
+      startAudioVisualization(stream);
       const mediaRecorder = new MediaRecorder(stream, { mimeType: supportedMp3MimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -1749,6 +1849,8 @@ export default function WhatsAppHistoryTab({
         void finalizeRecording();
         recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
         recordingStreamRef.current = null;
+        stopAudioVisualization();
+        setIsRecording(false);
       };
 
       mediaRecorder.start();
@@ -1757,8 +1859,9 @@ export default function WhatsAppHistoryTab({
     } catch (error) {
       console.error('Erro ao iniciar gravação de áudio:', error);
       setRecordingError('Não foi possível iniciar a gravação. Verifique as permissões do microfone.');
+      stopAudioVisualization();
     }
-  }, [isRecordingSupported, removeRecordedAudioAttachment]);
+  }, [isRecordingSupported, removeRecordedAudioAttachment, startAudioVisualization, stopAudioVisualization]);
 
   const stopRecording = useCallback(() => {
     const recorder = mediaRecorderRef.current;
@@ -1766,7 +1869,8 @@ export default function WhatsAppHistoryTab({
       recorder.stop();
     }
     setIsRecording(false);
-  }, []);
+    stopAudioVisualization();
+  }, [stopAudioVisualization]);
 
   const discardRecording = useCallback(() => {
     removeRecordedAudioAttachment();
@@ -1861,6 +1965,14 @@ export default function WhatsAppHistoryTab({
     selectedChatLead?.id,
     selectedPhone,
   ]);
+
+  useEffect(() => {
+    return () => {
+      stopAudioVisualization();
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    };
+  }, [stopAudioVisualization]);
 
   const handleComposerKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -2715,103 +2827,127 @@ export default function WhatsAppHistoryTab({
                       className="hidden"
                       onChange={handleAttachmentChange}
                     />
-                    <div className="flex items-start space-x-3">
-                      <textarea
-                        value={composerText}
-                        onChange={(event) => {
-                          setComposerText(event.target.value);
-                          if (composerError) {
-                            setComposerError(null);
-                          }
-                        }}
-                        onKeyDown={handleComposerKeyDown}
-                        rows={3}
-                        placeholder="Escreva uma mensagem..."
-                        className="flex-1 resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-                      />
-                      <div className="flex flex-col items-end space-y-2">
-                        <div className="relative">
-                          <button
-                            ref={attachmentButtonRef}
-                            type="button"
-                            onClick={handleAttachmentButtonClick}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={isSendingMessage}
-                            aria-haspopup="menu"
-                            aria-expanded={isAttachmentMenuOpen}
-                            aria-label="Anexar arquivo"
-                          >
-                            <Paperclip className="h-5 w-5" />
-                          </button>
-                          {isAttachmentMenuOpen && (
-                            <div
-                              ref={attachmentMenuRef}
-                              className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
-                              role="menu"
-                            >
-                              <p className="px-1 pb-2 text-xs font-semibold uppercase text-slate-500">
-                                Tipo do envio
-                              </p>
-                              <div className="space-y-1">
-                                {attachmentTypes.map((value) => (
-                                  <button
-                                    key={value}
-                                    type="button"
-                                    onClick={() => handleAttachmentTypeSelectForUpload(value)}
-                                    className="flex w-full items-center space-x-3 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100"
-                                    role="menuitem"
-                                  >
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100">
-                                      {getAttachmentIcon(value)}
+                    <div className="flex items-center">
+                      <div className="flex-1">
+                        <div className="group relative flex min-h-[3.75rem] items-stretch rounded-xl border border-slate-300 bg-white shadow-sm transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500">
+                          <div className="flex items-center gap-2 border-r border-slate-200/70 px-2">
+                            <div className="relative">
+                              <button
+                                ref={attachmentButtonRef}
+                                type="button"
+                                onClick={handleAttachmentButtonClick}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={isSendingMessage}
+                                aria-haspopup="menu"
+                                aria-expanded={isAttachmentMenuOpen}
+                                aria-label="Anexar arquivo"
+                              >
+                                <Paperclip className="h-5 w-5" />
+                              </button>
+                              {isAttachmentMenuOpen && (
+                                <div
+                                  ref={attachmentMenuRef}
+                                  className="absolute left-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  role="menu"
+                                >
+                                  <p className="px-1 pb-2 text-xs font-semibold uppercase text-slate-500">
+                                    Tipo do envio
+                                  </p>
+                                  <div className="space-y-1">
+                                    {attachmentTypes.map((value) => (
+                                      <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => handleAttachmentTypeSelectForUpload(value)}
+                                        className="flex w-full items-center space-x-3 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100"
+                                        role="menuitem"
+                                      >
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100">
+                                          {getAttachmentIcon(value)}
+                                        </span>
+                                        <span>{attachmentTypeLabels[value]}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {isRecordingSupported && (
+                              <button
+                                type="button"
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                                  isRecording
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'text-slate-500 hover:bg-slate-100'
+                                }`}
+                                disabled={isSendingMessage}
+                                aria-label={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+                              >
+                                {isRecording ? (
+                                  <>
+                                    <span className="absolute inline-flex h-11 w-11 rounded-full bg-red-400/40 opacity-75 animate-ping" />
+                                    <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white">
+                                      <Square className="h-4 w-4" />
                                     </span>
-                                    <span>{attachmentTypeLabels[value]}</span>
-                                  </button>
+                                  </>
+                                ) : (
+                                  <Mic className="h-5 w-5" />
+                                )}
+                              </button>
+                            )}
+                            {isRecording && (
+                              <div className="flex h-9 w-24 items-center justify-center gap-[3px] px-1">
+                                {recordingLevels.map((level, index) => (
+                                  <span
+                                    key={`wave-${index}`}
+                                    className="w-[3px] rounded-full bg-red-500 transition-[height] duration-100 ease-linear"
+                                    style={{ height: `${Math.max(6, level * 32)}px` }}
+                                  />
                                 ))}
                               </div>
-                            </div>
-                          )}
-                        </div>
-                        {isRecordingSupported ? (
-                          <button
-                            type="button"
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`relative flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
-                              isRecording
-                                ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
-                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-                            }`}
-                            disabled={isSendingMessage}
-                            aria-label={isRecording ? 'Parar gravação' : 'Gravar áudio'}
-                          >
-                            {isRecording ? (
-                              <>
-                                <span className="absolute inline-flex h-12 w-12 rounded-full bg-red-400/40 opacity-75 animate-ping" />
-                                <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-white">
-                                  <Square className="h-4 w-4" />
-                                </span>
-                              </>
-                            ) : (
-                              <Mic className="h-5 w-5" />
                             )}
-                          </button>
-                        ) : (
-                          <span className="max-w-[160px] text-right text-[11px] text-slate-500">
-                            Gravação de áudio não suportada neste navegador.
-                          </span>
+                          </div>
+                          <textarea
+                            value={composerText}
+                            onChange={(event) => {
+                              setComposerText(event.target.value);
+                              if (composerError) {
+                                setComposerError(null);
+                              }
+                            }}
+                            onKeyDown={handleComposerKeyDown}
+                            rows={3}
+                            placeholder="Escreva uma mensagem..."
+                            className="flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                          />
+                          <div className="flex items-center px-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleSendMessage()}
+                              disabled={!hasContentToSend || isSendingMessage}
+                              className={`flex h-10 w-10 items-center justify-center rounded-full text-white shadow transition-colors ${
+                                !hasContentToSend || isSendingMessage
+                                  ? 'bg-teal-300'
+                                  : 'bg-teal-600 hover:bg-teal-700'
+                              } disabled:cursor-not-allowed`}
+                              aria-label={isSendingMessage ? 'Enviando mensagem' : 'Enviar mensagem'}
+                            >
+                              {isSendingMessage ? (
+                                <Loader className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <Send className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        {!isRecordingSupported && (
+                          <div className="mt-2 flex justify-end px-1">
+                            <span className="max-w-[220px] text-right text-[11px] text-slate-500">
+                              Gravação de áudio não suportada neste navegador.
+                            </span>
+                          </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => void handleSendMessage()}
-                          disabled={!hasContentToSend || isSendingMessage}
-                          className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow transition-colors ${
-                            !hasContentToSend || isSendingMessage
-                              ? 'bg-teal-300'
-                              : 'bg-teal-600 hover:bg-teal-700'
-                          }`}
-                        >
-                          <Send className="h-4 w-4" />
-                          <span>{isSendingMessage ? 'Enviando...' : 'Enviar'}</span>
-                        </button>
                       </div>
                     </div>
 

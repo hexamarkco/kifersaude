@@ -63,6 +63,8 @@ import {
   Archive,
   ArchiveRestore,
   Plus,
+  Star,
+  StarOff,
   X,
   MapPin,
   Navigation,
@@ -645,14 +647,22 @@ export default function WhatsAppHistoryTab({
   const [isQuickRepliesLoading, setIsQuickRepliesLoading] = useState(false);
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
   const [isQuickRepliesMenuOpen, setIsQuickRepliesMenuOpen] = useState(false);
+  const [quickRepliesView, setQuickRepliesView] = useState<'all' | 'favorites'>('all');
   const [quickReplySearchTerm, setQuickReplySearchTerm] = useState('');
   const [isQuickReplyModalOpen, setIsQuickReplyModalOpen] = useState(false);
   const [quickReplyModalError, setQuickReplyModalError] = useState<string | null>(null);
   const [isSavingQuickReply, setIsSavingQuickReply] = useState(false);
   const [editingQuickReply, setEditingQuickReply] = useState<WhatsAppQuickReply | null>(null);
-  const [quickReplyForm, setQuickReplyForm] = useState<{ title: string; content: string }>(() => ({
+  const [quickReplyForm, setQuickReplyForm] = useState<{
+    title: string;
+    content: string;
+    category: string;
+    is_favorite: boolean;
+  }>(() => ({
     title: '',
     content: '',
+    category: '',
+    is_favorite: false,
   }));
   const [composerReplyMessage, setComposerReplyMessage] = useState<MessageWithReactions | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -784,20 +794,82 @@ export default function WhatsAppHistoryTab({
     []
   );
   const filteredQuickReplies = useMemo(() => {
-    if (!quickReplySearchTerm.trim()) {
-      return sortQuickReplies(quickReplies);
+    const term = quickReplySearchTerm.trim().toLowerCase();
+    const baseList = quickReplies.filter((reply) =>
+      quickRepliesView === 'favorites' ? reply.is_favorite : true
+    );
+
+    if (!term) {
+      return sortQuickReplies(baseList);
     }
 
-    const term = quickReplySearchTerm.trim().toLowerCase();
-
     return sortQuickReplies(
-      quickReplies.filter((reply) => {
+      baseList.filter((reply) => {
         const title = reply.title?.toLowerCase() ?? '';
         const content = reply.content?.toLowerCase() ?? '';
-        return title.includes(term) || content.includes(term);
+        const category = reply.category?.toLowerCase() ?? '';
+        return (
+          title.includes(term) ||
+          content.includes(term) ||
+          category.includes(term)
+        );
       })
     );
-  }, [quickReplies, quickReplySearchTerm, sortQuickReplies]);
+  }, [quickReplies, quickRepliesView, quickReplySearchTerm, sortQuickReplies]);
+
+  const groupedQuickReplies = useMemo(() => {
+    if (filteredQuickReplies.length === 0) {
+      return [] as Array<{ category: string; replies: WhatsAppQuickReply[] }>;
+    }
+
+    const groups = new Map<string, WhatsAppQuickReply[]>();
+
+    for (const reply of filteredQuickReplies) {
+      const category = reply.category?.trim() || 'Sem categoria';
+      if (!groups.has(category)) {
+        groups.set(category, []);
+      }
+      groups.get(category)!.push(reply);
+    }
+
+    return Array.from(groups.entries())
+      .sort((a, b) => {
+        const aIsUncategorized = a[0] === 'Sem categoria';
+        const bIsUncategorized = b[0] === 'Sem categoria';
+
+        if (aIsUncategorized && !bIsUncategorized) {
+          return 1;
+        }
+        if (!aIsUncategorized && bIsUncategorized) {
+          return -1;
+        }
+
+        return a[0].localeCompare(b[0], 'pt-BR', { sensitivity: 'base' });
+      })
+      .map(([category, replies]) => ({
+        category,
+        replies: sortQuickReplies(replies),
+      }));
+  }, [filteredQuickReplies, sortQuickReplies]);
+
+  const emptyQuickRepliesMessage = useMemo(() => {
+    const baseList =
+      quickRepliesView === 'favorites'
+        ? quickReplies.filter((reply) => reply.is_favorite)
+        : quickReplies;
+
+    if (baseList.length === 0) {
+      return quickRepliesView === 'favorites'
+        ? 'Nenhuma resposta rápida favoritada.'
+        : 'Nenhuma resposta rápida cadastrada.';
+    }
+
+    if (quickReplySearchTerm.trim()) {
+      return 'Nenhuma resposta encontrada para a pesquisa atual.';
+    }
+
+    return 'Nenhuma resposta disponível neste agrupamento.';
+  }, [quickReplies, quickRepliesView, quickReplySearchTerm]);
 
   useEffect(() => {
     let isMounted = true;
@@ -959,9 +1031,33 @@ export default function WhatsAppHistoryTab({
     [composerTextareaRef]
   );
 
+  const handleToggleQuickReplyFavorite = useCallback(
+    async (reply: WhatsAppQuickReply) => {
+      try {
+        const updated = await updateWhatsAppQuickReply(reply.id, {
+          is_favorite: !reply.is_favorite,
+        });
+
+        setQuickReplies((previous) =>
+          sortQuickReplies(
+            previous.map((item) => (item.id === updated.id ? updated : item))
+          )
+        );
+        setQuickRepliesError(null);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível atualizar o favorito da resposta rápida.';
+        setQuickRepliesError(message);
+      }
+    },
+    [sortQuickReplies]
+  );
+
   const handleOpenCreateQuickReplyModal = useCallback(() => {
     setEditingQuickReply(null);
-    setQuickReplyForm({ title: '', content: '' });
+    setQuickReplyForm({ title: '', content: '', category: '', is_favorite: false });
     setQuickReplyModalError(null);
     setIsQuickReplyModalOpen(true);
     setIsQuickRepliesMenuOpen(false);
@@ -969,7 +1065,12 @@ export default function WhatsAppHistoryTab({
 
   const handleOpenEditQuickReplyModal = useCallback((reply: WhatsAppQuickReply) => {
     setEditingQuickReply(reply);
-    setQuickReplyForm({ title: reply.title ?? '', content: reply.content ?? '' });
+    setQuickReplyForm({
+      title: reply.title ?? '',
+      content: reply.content ?? '',
+      category: reply.category ?? '',
+      is_favorite: reply.is_favorite ?? false,
+    });
     setQuickReplyModalError(null);
     setIsQuickReplyModalOpen(true);
     setIsQuickRepliesMenuOpen(false);
@@ -985,6 +1086,7 @@ export default function WhatsAppHistoryTab({
     event.preventDefault();
     const title = quickReplyForm.title.trim();
     const content = quickReplyForm.content.trim();
+    const categoryValue = quickReplyForm.category.trim();
 
     if (!title || !content) {
       setQuickReplyModalError('Preencha o título e o conteúdo da resposta rápida.');
@@ -994,22 +1096,27 @@ export default function WhatsAppHistoryTab({
     setIsSavingQuickReply(true);
 
     try {
+      const payload = {
+        title,
+        content,
+        category: categoryValue ? categoryValue : null,
+        is_favorite: quickReplyForm.is_favorite,
+      };
+
       if (editingQuickReply) {
-        const updated = await updateWhatsAppQuickReply(editingQuickReply.id, {
-          title,
-          content,
-        });
+        const updated = await updateWhatsAppQuickReply(editingQuickReply.id, payload);
         setQuickReplies((previous) =>
           sortQuickReplies(
             previous.map((item) => (item.id === updated.id ? updated : item))
           )
         );
       } else {
-        const created = await createWhatsAppQuickReply({ title, content });
+        const created = await createWhatsAppQuickReply(payload);
         setQuickReplies((previous) => sortQuickReplies([...previous, created]));
       }
 
       setQuickReplyModalError(null);
+      setQuickRepliesError(null);
       setIsQuickReplyModalOpen(false);
       setEditingQuickReply(null);
     } catch (error) {
@@ -5707,13 +5814,41 @@ const getOutgoingMessageStatus = (
                                       Nova
                                     </button>
                                   </div>
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <div className="inline-flex items-center rounded-md bg-slate-100 p-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setQuickRepliesView('all')}
+                                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                          quickRepliesView === 'all'
+                                            ? 'bg-white text-teal-700 shadow-sm'
+                                            : 'text-slate-600 hover:text-teal-600'
+                                        }`}
+                                        aria-pressed={quickRepliesView === 'all'}
+                                      >
+                                        Todas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setQuickRepliesView('favorites')}
+                                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                          quickRepliesView === 'favorites'
+                                            ? 'bg-white text-teal-700 shadow-sm'
+                                            : 'text-slate-600 hover:text-teal-600'
+                                        }`}
+                                        aria-pressed={quickRepliesView === 'favorites'}
+                                      >
+                                        Favoritas
+                                      </button>
+                                    </div>
+                                  </div>
                                   <div className="mt-3 space-y-3">
                                     <input
                                       type="text"
                                       value={quickReplySearchTerm}
                                       onChange={(event) => setQuickReplySearchTerm(event.target.value)}
                                       className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                                      placeholder="Pesquisar resposta"
+                                      placeholder="Pesquisar por título, conteúdo ou categoria"
                                     />
                                     {quickRepliesError && (
                                       <div className="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-600">
@@ -5725,46 +5860,74 @@ const getOutgoingMessageStatus = (
                                         <Loader className="h-4 w-4 animate-spin" />
                                         Carregando...
                                       </div>
-                                    ) : filteredQuickReplies.length === 0 ? (
+                                    ) : groupedQuickReplies.length === 0 ? (
                                       <p className="py-4 text-center text-sm text-slate-500">
-                                        {quickReplies.length === 0
-                                          ? 'Nenhuma resposta rápida cadastrada.'
-                                          : 'Nenhuma resposta encontrada.'}
+                                        {emptyQuickRepliesMessage}
                                       </p>
                                     ) : (
-                                      <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
-                                        {filteredQuickReplies.map((reply) => (
-                                          <div
-                                            key={reply.id}
-                                            className="overflow-hidden rounded-lg border border-slate-200"
-                                          >
-                                            <button
-                                              type="button"
-                                              onClick={() => handleInsertQuickReply(reply)}
-                                              className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-teal-50"
-                                            >
-                                              <p className="font-semibold text-slate-800">{reply.title}</p>
-                                              <p className="mt-1 text-xs text-slate-500 whitespace-pre-wrap break-words">
-                                                {reply.content}
-                                              </p>
-                                            </button>
-                                            <div className="flex items-center justify-end gap-1 border-t border-slate-200 bg-slate-50 px-2 py-1.5">
-                                              <button
-                                                type="button"
-                                                onClick={() => handleOpenEditQuickReplyModal(reply)}
-                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                                              >
-                                                <Edit className="h-3.5 w-3.5" />
-                                                Editar
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleDeleteQuickReply(reply)}
-                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                Excluir
-                                              </button>
+                                      <div className="max-h-60 space-y-4 overflow-y-auto pr-1">
+                                        {groupedQuickReplies.map(({ category, replies }) => (
+                                          <div key={category} className="space-y-2">
+                                            <p className="px-1 text-xs font-semibold uppercase text-slate-500">
+                                              {category}
+                                            </p>
+                                            <div className="space-y-2">
+                                              {replies.map((reply) => (
+                                                <div
+                                                  key={reply.id}
+                                                  className="relative overflow-hidden rounded-lg border border-slate-200 bg-white"
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleInsertQuickReply(reply)}
+                                                    className="block w-full px-3 py-2 pr-10 text-left text-sm text-slate-700 transition-colors hover:bg-teal-50"
+                                                  >
+                                                    <p className="font-semibold text-slate-800">{reply.title}</p>
+                                                    <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-500">
+                                                      {reply.content}
+                                                    </p>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => void handleToggleQuickReplyFavorite(reply)}
+                                                    className={`absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${
+                                                      reply.is_favorite
+                                                        ? 'text-amber-500 hover:text-amber-600'
+                                                        : 'text-slate-400 hover:text-amber-500'
+                                                    }`}
+                                                    aria-label={
+                                                      reply.is_favorite
+                                                        ? 'Remover dos favoritos'
+                                                        : 'Adicionar aos favoritos'
+                                                    }
+                                                    aria-pressed={reply.is_favorite}
+                                                  >
+                                                    {reply.is_favorite ? (
+                                                      <Star className="h-4 w-4" fill="currentColor" />
+                                                    ) : (
+                                                      <StarOff className="h-4 w-4" />
+                                                    )}
+                                                  </button>
+                                                  <div className="flex items-center justify-end gap-1 border-t border-slate-200 bg-slate-50 px-2 py-1.5">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleOpenEditQuickReplyModal(reply)}
+                                                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                                    >
+                                                      <Edit className="h-3.5 w-3.5" />
+                                                      Editar
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleDeleteQuickReply(reply)}
+                                                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                                    >
+                                                      <Trash2 className="h-3.5 w-3.5" />
+                                                      Excluir
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ))}
                                             </div>
                                           </div>
                                         ))}
@@ -6336,6 +6499,49 @@ const getOutgoingMessageStatus = (
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
                   placeholder="Digite a mensagem que será inserida no campo de texto"
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="quick-reply-category">
+                  Categoria (opcional)
+                </label>
+                <input
+                  id="quick-reply-category"
+                  type="text"
+                  value={quickReplyForm.category}
+                  onChange={(event) =>
+                    setQuickReplyForm((previous) => ({
+                      ...previous,
+                      category: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Ex.: Follow-up, Boas-vindas"
+                  maxLength={80}
+                />
+                <p className="text-xs text-slate-500">
+                  Utilize categorias para organizar e facilitar a busca pelas respostas.
+                </p>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Favoritar</p>
+                  <p className="text-xs text-slate-500">Exibir na aba de favoritas do menu.</p>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="quick-reply-favorite">
+                  <input
+                    id="quick-reply-favorite"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    checked={quickReplyForm.is_favorite}
+                    onChange={(event) =>
+                      setQuickReplyForm((previous) => ({
+                        ...previous,
+                        is_favorite: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Marcar como favorita</span>
+                </label>
               </div>
               <div className="flex items-center justify-end gap-2">
                 <button

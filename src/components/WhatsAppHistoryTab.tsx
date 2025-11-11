@@ -176,6 +176,12 @@ export default function WhatsAppHistoryTab() {
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
+  const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
+    if (attachment.previewUrl) {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+  }, []);
+
   const upsertLeadsIntoMaps = useCallback((leads: LeadPreview[]) => {
     if (!leads || leads.length === 0) return;
 
@@ -883,12 +889,6 @@ export default function WhatsAppHistoryTab() {
     }
     return URL.createObjectURL(file);
   };
-
-  const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
-    if (attachment.previewUrl) {
-      URL.revokeObjectURL(attachment.previewUrl);
-    }
-  }, []);
 
   const clearAttachments = useCallback(() => {
     setAttachments((prev) => {

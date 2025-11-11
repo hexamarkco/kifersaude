@@ -5,7 +5,7 @@ export interface ZAPIConfig {
   token: string;
 }
 
-export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document' | 'sticker' | 'gif';
+export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document';
 
 export interface ZAPIMessage {
   messageId: string;
@@ -193,10 +193,35 @@ class ZAPIService {
     }
   }
 
+  private async fileToDataUrl(file: Blob): Promise<string> {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          resolve(result);
+        } else {
+          reject(new Error('Falha ao converter arquivo para Base64.'));
+        }
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Falha ao ler arquivo.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private getFileExtension(filename: string): string | null {
+    const parts = filename.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+    return parts.pop()?.toLowerCase() ?? null;
+  }
+
   async sendMediaMessage(
     phoneNumber: string,
     file: Blob,
     filename: string,
+    mediaType: ZAPIMediaType,
     caption?: string
   ): Promise<ZAPIResponse> {
     try {
@@ -207,21 +232,54 @@ class ZAPIService {
 
       const phone = this.normalizePhoneNumber(phoneNumber);
 
-      const formData = new FormData();
-      formData.append('phone', phone);
-      formData.append('file', file, filename);
-      if (caption) {
-        formData.append('message', caption);
+      const dataUrl = await this.fileToDataUrl(file);
+
+      let endpoint: string;
+      const payload: Record<string, unknown> = {
+        phone,
+      };
+
+      switch (mediaType) {
+        case 'image':
+          endpoint = 'send-image';
+          payload.image = dataUrl;
+          if (caption) {
+            payload.caption = caption;
+          }
+          break;
+        case 'audio':
+          endpoint = 'send-audio';
+          payload.audio = dataUrl;
+          break;
+        case 'video':
+          endpoint = 'send-video';
+          payload.video = dataUrl;
+          if (caption) {
+            payload.caption = caption;
+          }
+          break;
+        case 'document':
+        default: {
+          const extension = this.getFileExtension(filename) ?? 'bin';
+          endpoint = `send-document/${extension}`;
+          payload.document = dataUrl;
+          payload.fileName = filename;
+          if (caption) {
+            payload.caption = caption;
+          }
+          break;
+        }
       }
 
       const response = await fetch(
-        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-file`,
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/${endpoint}`,
         {
           method: 'POST',
           headers: {
+            'Content-Type': 'application/json',
             'Client-Token': this.clientToken,
           },
-          body: formData,
+          body: JSON.stringify(payload),
         }
       );
 

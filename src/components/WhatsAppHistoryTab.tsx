@@ -591,6 +591,13 @@ export default function WhatsAppHistoryTab({
     () => (options.lead_responsavel ?? []).filter((option) => option.ativo),
     [options.lead_responsavel]
   );
+  const responsavelLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    responsavelOptions.forEach((option) => {
+      map.set(option.value, option.label);
+    });
+    return map;
+  }, [responsavelOptions]);
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
@@ -2380,6 +2387,10 @@ export default function WhatsAppHistoryTab({
       const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
       const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
       const sanitizedPhone = sanitizePhoneDigits(chat.phone);
+      const leadResponsavelValue = lead?.responsavel?.toLowerCase() ?? '';
+      const leadResponsavelLabel = lead?.responsavel
+        ? responsavelLabelMap.get(lead.responsavel)?.toLowerCase() ?? ''
+        : '';
       return (
         chat.phone.toLowerCase().includes(query) ||
         (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
@@ -2388,7 +2399,9 @@ export default function WhatsAppHistoryTab({
         (chatMetadata?.displayName ? chatMetadata.displayName.toLowerCase().includes(query) : false) ||
         (groupMetadata?.subject ? groupMetadata.subject.toLowerCase().includes(query) : false) ||
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
-        (lead?.telefone?.toLowerCase().includes(query) ?? false)
+        (lead?.telefone?.toLowerCase().includes(query) ?? false) ||
+        leadResponsavelValue.includes(query) ||
+        leadResponsavelLabel.includes(query)
       );
     };
 
@@ -2411,6 +2424,7 @@ export default function WhatsAppHistoryTab({
     getGroupMetadataForPhone,
     leadsByPhoneMap,
     leadsMap,
+    responsavelLabelMap,
     searchQuery,
   ]);
 
@@ -5152,6 +5166,10 @@ const getOutgoingMessageStatus = (
                       ? groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone)
                       : lead?.nome_completo || chatMetadata?.displayName || chat.displayName || formatPhoneForDisplay(chat.phone);
                     const chatPhotoUrl = chat.photoUrl || chatMetadata?.profileThumbnail || null;
+                    const leadResponsavelValue = lead?.responsavel ?? '';
+                    const leadResponsavelLabel = leadResponsavelValue
+                      ? responsavelLabelMap.get(leadResponsavelValue) ?? leadResponsavelValue
+                      : null;
 
                     return (
                       <div
@@ -5204,11 +5222,16 @@ const getOutgoingMessageStatus = (
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between space-x-3">
                               <div className="min-w-0">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <h4 className="text-sm font-semibold text-slate-900 truncate">
                                     {displayName}
                                   </h4>
                                   {chat.pinned && <Pin className="w-3 h-3 text-teal-600" />}
+                                  {leadResponsavelLabel && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
+                                      {leadResponsavelLabel}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-slate-500 truncate">
                                   {lastMessage?.message_text || 'Sem mensagens registradas'}
@@ -5242,6 +5265,41 @@ const getOutgoingMessageStatus = (
                                   )}
                                 </div>
                                 <div className="flex items-start space-x-1">
+                                  {lead && responsavelOptions.length > 0 && (
+                                    <div>
+                                      <select
+                                        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        value={leadResponsavelValue}
+                                        onClick={(event) => event.stopPropagation()}
+                                        onChange={(event) => {
+                                          event.stopPropagation();
+                                          const nextResponsavel = event.target.value;
+                                          if (!nextResponsavel || nextResponsavel === lead.responsavel) {
+                                            return;
+                                          }
+                                          void handleLeadResponsavelChange(lead.id, nextResponsavel);
+                                        }}
+                                        disabled={isObserver}
+                                        aria-label="Alterar responsável"
+                                        title={
+                                          isObserver
+                                            ? 'Visualização do responsável'
+                                            : 'Alterar responsável do lead'
+                                        }
+                                      >
+                                        {leadResponsavelValue === '' && (
+                                          <option value="" disabled>
+                                            {isObserver ? 'Responsável' : 'Definir responsável'}
+                                          </option>
+                                        )}
+                                        {responsavelOptions.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={(event) => {

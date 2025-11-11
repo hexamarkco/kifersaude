@@ -3335,10 +3335,12 @@ export default function WhatsAppHistoryTab({
 
     if (attachment.type === 'audio' && attachment.previewUrl) {
       return (
-        <audio controls className="w-full min-w-[240px] sm:min-w-[320px]">
-          <source src={attachment.previewUrl} />
-          Seu navegador não suporta a reprodução de áudio.
-        </audio>
+        <div className="w-full min-w-[264px] sm:min-w-[344px]">
+          <audio controls className="w-full">
+            <source src={attachment.previewUrl} />
+            Seu navegador não suporta a reprodução de áudio.
+          </audio>
+        </div>
       );
     }
 
@@ -4017,15 +4019,17 @@ const getOutgoingMessageStatus = (
         const duration = formatDuration(message.media_duration_seconds);
         return (
           <div className="space-y-1">
-            <audio
-              key={`${message.id}-audio`}
-              controls
-              src={message.media_url}
-              className="w-full min-w-[240px] sm:min-w-[320px]"
-            >
-              <source src={message.media_url} type={message.media_mime_type || undefined} />
-              Seu navegador não suporta a reprodução de áudio.
-            </audio>
+            <div className="w-full min-w-[264px] sm:min-w-[344px]">
+              <audio
+                key={`${message.id}-audio`}
+                controls
+                src={message.media_url}
+                className="w-full"
+              >
+                <source src={message.media_url} type={message.media_mime_type || undefined} />
+                Seu navegador não suporta a reprodução de áudio.
+              </audio>
+            </div>
             {duration && <span className={`text-[11px] ${accentColor}`}>Duração: {duration}</span>}
           </div>
         );
@@ -5975,13 +5979,11 @@ const getOutgoingMessageStatus = (
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                        <audio
-                          controls
-                          src={recordedAudio.url}
-                          className="w-full min-w-[240px] sm:min-w-[320px]"
-                        >
-                          Seu navegador não suporta reprodução de áudio.
-                        </audio>
+                        <div className="w-full min-w-[264px] sm:min-w-[344px]">
+                          <audio controls src={recordedAudio.url} className="w-full">
+                            Seu navegador não suporta reprodução de áudio.
+                          </audio>
+                        </div>
                         <p className="text-[11px] text-slate-500">
                           Ouça o áudio antes de enviar para garantir a qualidade.
                         </p>

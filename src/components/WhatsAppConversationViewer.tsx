@@ -231,12 +231,8 @@ export default function WhatsAppConversationViewer({
 
     if (mediaType === 'audio') {
       return (
-        <div className="mb-2 w-full">
-          <audio
-            controls
-            className="w-full min-w-[240px] sm:min-w-[320px]"
-            src={message.mediaUrl}
-          >
+        <div className="mb-2 w-full min-w-[264px] sm:min-w-[344px]">
+          <audio controls className="w-full" src={message.mediaUrl}>
             Seu navegador não suporta reprodução de áudio.
           </audio>
         </div>

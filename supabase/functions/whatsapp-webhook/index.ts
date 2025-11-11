@@ -461,23 +461,7 @@ async function handleDeliveryCallback(
   payload: any,
   messageId: string
 ): Promise<EventProcessingResult> {
-  const readStatus = READ_STATUSES.has(String(payload?.status ?? '').toUpperCase());
-  const timestamp =
-    typeof payload?.momment === 'number' ? new Date(payload.momment).toISOString() : new Date().toISOString();
-  const phoneNumber = normalizePhoneNumber(payload?.phone || payload?.connectedPhone);
-  const statusText = payload?.status
-    ? `Status da mensagem: ${payload.status}`
-    : payload?.type
-    ? `Evento de entrega: ${payload.type}`
-    : 'Atualização de entrega';
-
-  return upsertConversation(supabase, payload, messageId, {
-    messageType: 'sent',
-    readStatus,
-    timestamp,
-    phoneNumber,
-    text: statusText,
-  });
+  return { messageId, status: 'skipped', reason: 'Delivery callbacks ignored' };
 }
 
 Deno.serve(async (req: Request) => {

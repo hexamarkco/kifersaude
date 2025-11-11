@@ -185,14 +185,7 @@ class ZAPIService {
     }
   }
 
-  async setChatArchiveStatus(phoneNumber: string, archived: boolean): Promise<ZAPIResponse> {
-    return this.modifyChat(phoneNumber, archived ? 'archive' : 'unarchive');
-  }
-
-  private async modifyChat(
-    phoneNumber: string,
-    action: 'archive' | 'unarchive'
-  ): Promise<ZAPIResponse> {
+  async markMessageAsRead(phoneNumber: string, messageId: string): Promise<ZAPIResponse> {
     try {
       const config = await this.getConfig();
       if (!config) {
@@ -200,8 +193,14 @@ class ZAPIService {
       }
 
       const phone = this.normalizePhoneNumber(phoneNumber);
+      const trimmedMessageId = messageId?.trim();
+
+      if (!trimmedMessageId) {
+        return { success: false, error: 'ID da mensagem é obrigatório' };
+      }
+
       const response = await fetch(
-        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/modify-chat`,
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/read-message`,
         {
           method: 'POST',
           headers: {
@@ -210,34 +209,34 @@ class ZAPIService {
           },
           body: JSON.stringify({
             phone,
-            action,
+            messageId: trimmedMessageId,
           }),
         }
       );
 
+      if (response.status === 204) {
+        return { success: true };
+      }
+
       if (!response.ok) {
-        let errorMessage = 'Falha ao atualizar chat no WhatsApp';
+        let errorMessage = 'Falha ao marcar mensagem como lida';
         try {
           const errorData = (await response.json()) as { message?: string };
-          if (errorData?.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          console.warn('Erro ao interpretar resposta do Z-API (modify-chat):', parseError);
+          errorMessage = errorData?.message || errorMessage;
+        } catch (error) {
+          console.warn('Erro ao interpretar resposta de erro ao marcar como lida:', error);
         }
         return { success: false, error: errorMessage };
       }
 
+      let data: unknown = null;
       try {
-        const data = (await response.json()) as { value?: boolean };
-        if (data?.value === true) {
-          return { success: true, data };
-        }
-        return { success: false, error: 'Ação de arquivamento não confirmada pelo Z-API' };
-      } catch (parseError) {
-        console.warn('Resposta sem JSON ao modificar chat:', parseError);
-        return { success: true };
+        data = (await response.json()) as unknown;
+      } catch (error) {
+        data = null;
       }
+
+      return { success: true, data };
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -545,6 +544,75 @@ class ZAPIService {
       const data = await response
         .json()
         .catch(() => ({ message: 'Mensagem enviada' }));
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  async sendReaction(
+    phoneNumber: string,
+    messageId: string,
+    reaction: string,
+    delayMessage?: number
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      if (!messageId) {
+        return { success: false, error: 'ID da mensagem é obrigatório' };
+      }
+
+      if (!reaction) {
+        return { success: false, error: 'Escolha uma reação para enviar.' };
+      }
+
+      const trimmedPhone = phoneNumber.trim();
+      if (!trimmedPhone) {
+        return { success: false, error: 'Telefone ou identificador do chat é obrigatório.' };
+      }
+
+      const phone = trimmedPhone.includes('@')
+        ? trimmedPhone
+        : this.normalizePhoneNumber(trimmedPhone);
+
+      const payload: Record<string, unknown> = {
+        phone,
+        reaction,
+        messageId,
+      };
+
+      if (typeof delayMessage === 'number') {
+        payload.delayMessage = Math.min(Math.max(Math.round(delayMessage), 1), 15);
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-reaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao enviar reação';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      const data = await response.json().catch(() => ({ message: 'Reação enviada' }));
       return { success: true, data };
     } catch (error) {
       return { success: false, error: String(error) };

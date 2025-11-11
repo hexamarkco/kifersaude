@@ -43,13 +43,14 @@ function normalizePhoneNumber(raw: unknown): string | null {
     return null;
   }
 
-  if (trimmed.includes('-group') || trimmed.includes('@')) {
+  const lowerTrimmed = trimmed.toLowerCase();
+  if (lowerTrimmed.includes('-group') || lowerTrimmed.includes('@g.us')) {
     return trimmed;
   }
 
   const digits = trimmed.replace(/\D/g, '');
   if (!digits) {
-    return null;
+    return trimmed.includes('@') ? trimmed : null;
   }
 
   if (digits.startsWith('55')) {

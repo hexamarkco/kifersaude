@@ -973,37 +973,6 @@ export default function WhatsAppHistoryTab() {
     setComposerSuccess(null);
   };
 
-  const handleAttachmentTypeChange = (index: number, type: AttachmentType) => {
-    setAttachments((prev) =>
-      prev.map((attachment, idx) => {
-        if (idx !== index) {
-          return attachment;
-        }
-
-        if (attachment.type === type) {
-          return attachment;
-        }
-
-        if (type === 'document') {
-          releaseAttachmentPreview(attachment);
-          return {
-            ...attachment,
-            type,
-            previewUrl: null,
-          };
-        }
-
-        const previewUrl = attachment.previewUrl ?? createPreviewUrl(attachment.file, type);
-        return {
-          ...attachment,
-          type,
-          previewUrl,
-        };
-      })
-    );
-    setComposerError(null);
-  };
-
   const startRecording = useCallback(async () => {
     if (!isRecordingSupported) {
       setRecordingError('Gravação de áudio não suportada neste navegador.');
@@ -2067,12 +2036,11 @@ export default function WhatsAppHistoryTab() {
                           Anexos
                         </p>
                         <p className="text-[11px] text-slate-500">
-                          Confirme o tipo de cada arquivo antes de enviar.
+                          Os arquivos serão enviados com o tipo selecionado no menu de anexos.
                         </p>
                         <div className="space-y-3">
                           {attachments.map((attachment, index) => {
                             const { file, type } = attachment;
-                            const selectId = `attachment-type-${index}`;
                             return (
                               <div
                                 key={`${file.name}-${file.size}-${index}`}
@@ -2101,30 +2069,13 @@ export default function WhatsAppHistoryTab() {
                                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3">
                                   {renderAttachmentPreview(attachment)}
                                 </div>
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                  <label
-                                    htmlFor={selectId}
-                                    className="text-xs font-semibold uppercase text-slate-500"
-                                  >
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                  <span className="text-xs font-semibold uppercase text-slate-500">
                                     Tipo do arquivo
-                                  </label>
-                                  <select
-                                    id={selectId}
-                                    value={type}
-                                    onChange={(event) =>
-                                      handleAttachmentTypeChange(
-                                        index,
-                                        event.target.value as AttachmentType
-                                      )
-                                    }
-                                    className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 sm:w-48"
-                                  >
-                                    {attachmentTypes.map((value) => (
-                                      <option key={value} value={value}>
-                                        {attachmentTypeLabels[value]}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  </span>
+                                  <span className="inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-700 sm:w-auto">
+                                    {attachmentTypeLabels[type]}
+                                  </span>
                                 </div>
                               </div>
                             );

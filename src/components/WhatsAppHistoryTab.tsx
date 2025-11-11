@@ -2929,8 +2929,38 @@ export default function WhatsAppHistoryTab({
   useEffect(() => {
     if (!selectedPhone || selectedChatUnreadCount === 0) return;
 
+    const unreadMessages = selectedChatMessages.filter(
+      (message) => message.message_type === 'received' && !message.read_status
+    );
+
+    if (unreadMessages.length === 0) {
+      return;
+    }
+
+    const messageIdsToMark = Array.from(
+      new Set(
+        unreadMessages
+          .map((message) => message.message_id?.trim())
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
     const markAsRead = async () => {
       try {
+        if (messageIdsToMark.length > 0) {
+          await Promise.allSettled(
+            messageIdsToMark.map(async (messageId) => {
+              const result = await zapiService.markMessageAsRead(selectedPhone, messageId);
+              if (!result.success) {
+                console.error(
+                  `Erro ao marcar mensagem ${messageId} como lida no Z-API:`,
+                  result.error
+                );
+              }
+            })
+          );
+        }
+
         await supabase
           .from('whatsapp_conversations')
           .update({ read_status: true })
@@ -2951,7 +2981,7 @@ export default function WhatsAppHistoryTab({
     };
 
     void markAsRead();
-  }, [selectedPhone, selectedChatUnreadCount]);
+  }, [selectedPhone, selectedChatMessages, selectedChatUnreadCount]);
 
   if (loading) {
     return (

@@ -552,21 +552,6 @@ export default function WhatsAppHistoryTab({
 
   useEffect(() => {
     if (!activeReactionMenuMessageId) {
-      return;
-    }
-
-    const exists = processedSelectedMessages.some(
-      (message) => message.message_id === activeReactionMenuMessageId
-    );
-
-    if (!exists) {
-      setActiveReactionMenuMessageId(null);
-      setReactionError(null);
-    }
-  }, [activeReactionMenuMessageId, processedSelectedMessages]);
-
-  useEffect(() => {
-    if (!activeReactionMenuMessageId) {
       setReactionError(null);
     }
   }, [activeReactionMenuMessageId]);
@@ -1810,6 +1795,21 @@ export default function WhatsAppHistoryTab({
     });
     return map;
   }, [processedSelectedMessages]);
+
+  useEffect(() => {
+    if (!activeReactionMenuMessageId) {
+      return;
+    }
+
+    const exists = processedSelectedMessages.some(
+      (message) => message.message_id === activeReactionMenuMessageId
+    );
+
+    if (!exists) {
+      setActiveReactionMenuMessageId(null);
+      setReactionError(null);
+    }
+  }, [activeReactionMenuMessageId, processedSelectedMessages]);
 
   const scrollTargetMessageId = useMemo(() => {
     if (processedSelectedMessages.length === 0) {

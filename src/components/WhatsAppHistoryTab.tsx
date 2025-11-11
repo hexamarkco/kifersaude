@@ -939,11 +939,31 @@ export default function WhatsAppHistoryTab({
       return;
     }
 
-    const exists = filteredChats.some(chat => chat.phone === selectedPhone);
+    const selectedDigits = sanitizePhoneDigits(selectedPhone);
+    const exists = filteredChats.some((chat) => {
+      if (chat.phone === selectedPhone) {
+        return true;
+      }
+
+      if (!selectedDigits) {
+        return false;
+      }
+
+      return sanitizePhoneDigits(chat.phone) === selectedDigits;
+    });
+
     if (!exists) {
+      const isExternalSelection = externalSelectionContext?.phone
+        ? sanitizePhoneDigits(externalSelectionContext.phone) === selectedDigits && !!selectedDigits
+        : false;
+
+      if (isExternalSelection) {
+        return;
+      }
+
       setSelectedPhone(filteredChats[0].phone);
     }
-  }, [filteredChats, selectedPhone]);
+  }, [externalSelectionContext, filteredChats, selectedPhone]);
 
   const selectedChat = useMemo(() => {
     if (!selectedPhone) return undefined;

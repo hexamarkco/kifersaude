@@ -55,6 +55,7 @@ import {
   PinOff,
   Archive,
   ArchiveRestore,
+  Plus,
   X,
   MapPin,
   Navigation,
@@ -69,6 +70,7 @@ import {
   type ZAPILocationPayload,
   type ZAPIGroupMetadata,
   type ZAPIChatMetadata,
+  type ZAPIContact,
 } from '../lib/zapiService';
 
 declare global {
@@ -418,11 +420,33 @@ type ChatGroup = ChatGroupBase & {
   pinned: boolean;
 };
 
+type ManualChatPlaceholder = {
+  phone: string;
+  displayName?: string | null;
+};
+
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
   const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
   const withoutGroupSuffix = withoutSuffix.replace(/-group$/i, '');
   return withoutGroupSuffix;
+};
+
+const normalizePhoneForChat = (phone: string): string => {
+  const digits = sanitizePhoneDigits(phone);
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('55')) {
+    return digits;
+  }
+
+  if (digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits;
 };
 
 type WhatsAppHistoryTabProps = {
@@ -455,6 +479,19 @@ export default function WhatsAppHistoryTab({
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [externalSelectionContext, setExternalSelectionContext] = useState<WhatsAppChatRequestDetail | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
+  const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
+  const [startConversationLoading, setStartConversationLoading] = useState(false);
+  const [startConversationError, setStartConversationError] = useState<string | null>(null);
+  const [startConversationPage, setStartConversationPage] = useState(1);
+  const [startConversationHasMore, setStartConversationHasMore] = useState(true);
+  const [startConversationSearch, setStartConversationSearch] = useState('');
+  const [startConversationPhone, setStartConversationPhone] = useState('');
+  const [startConversationSelectedContact, setStartConversationSelectedContact] = useState<string | null>(null);
+  const [startConversationSelectedName, setStartConversationSelectedName] = useState<string | null>(null);
+  const [manualChatPlaceholders, setManualChatPlaceholders] = useState<
+    Map<string, ManualChatPlaceholder>
+  >(new Map());
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
   const [fullscreenMedia, setFullscreenMedia] = useState<
     | {
@@ -1301,6 +1338,54 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
+  const loadStartConversationContacts = useCallback(
+    async (pageToLoad = 1, replace = false) => {
+      setStartConversationLoading(true);
+      setStartConversationError(null);
+
+      try {
+        const result = await zapiService.fetchContacts(pageToLoad, 50);
+        if (!result.success) {
+          throw new Error(result.error || 'Falha ao carregar contatos.');
+        }
+
+        const contacts = result.data ?? [];
+
+        setStartConversationContacts((prev) => {
+          const existing = new Map<string, ZAPIContact>();
+          const base = replace ? [] : prev;
+
+          base.forEach((contact) => {
+            const key = sanitizePhoneDigits(contact.phone);
+            if (key) {
+              existing.set(key, contact);
+            }
+          });
+
+          contacts.forEach((contact) => {
+            const key = sanitizePhoneDigits(contact.phone);
+            if (!key || existing.has(key)) {
+              return;
+            }
+            existing.set(key, contact);
+          });
+
+          return Array.from(existing.values());
+        });
+
+        setStartConversationPage(pageToLoad);
+        setStartConversationHasMore(Boolean(result.hasMore));
+      } catch (error) {
+        setStartConversationError(
+          error instanceof Error ? error.message : 'Erro ao carregar contatos.'
+        );
+      } finally {
+        setStartConversationLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (activeView === 'ai-messages') {
       loadAIMessages();
@@ -1308,6 +1393,195 @@ export default function WhatsAppHistoryTab({
       loadConversations();
     }
   }, [activeView, loadAIMessages, loadConversations]);
+
+  const handleOpenStartConversationModal = useCallback(() => {
+    setStartConversationError(null);
+    setStartConversationSearch('');
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationPhone('');
+    setIsStartConversationModalOpen(true);
+
+    if (startConversationContacts.length === 0) {
+      void loadStartConversationContacts(1, true);
+    }
+  }, [loadStartConversationContacts, startConversationContacts.length]);
+
+  const handleCloseStartConversationModal = useCallback(() => {
+    setIsStartConversationModalOpen(false);
+    setStartConversationError(null);
+  }, []);
+
+  const handleLoadMoreStartConversationContacts = useCallback(() => {
+    if (startConversationLoading || !startConversationHasMore) {
+      return;
+    }
+
+    void loadStartConversationContacts(startConversationPage + 1);
+  }, [
+    loadStartConversationContacts,
+    startConversationHasMore,
+    startConversationLoading,
+    startConversationPage,
+  ]);
+
+  const handleSelectStartConversationContact = useCallback((contact: ZAPIContact) => {
+    const normalized = normalizePhoneForChat(contact.phone);
+    if (!normalized) {
+      return;
+    }
+
+    setStartConversationSelectedContact(normalized);
+    const displayName =
+      contact.name ||
+      contact.short ||
+      contact.vname ||
+      contact.notify ||
+      formatPhoneForDisplay(contact.phone);
+    setStartConversationSelectedName(displayName);
+    setStartConversationPhone(normalized);
+    setStartConversationError(null);
+  }, []);
+
+  const handleStartConversationPhoneChange = useCallback((value: string) => {
+    const digits = sanitizePhoneDigits(value);
+    setStartConversationPhone(digits);
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationError(null);
+  }, []);
+
+  const filteredStartConversationContacts = useMemo(() => {
+    if (!startConversationSearch.trim()) {
+      return startConversationContacts;
+    }
+
+    const query = startConversationSearch.trim().toLowerCase();
+    const numericQuery = sanitizePhoneDigits(startConversationSearch);
+
+    return startConversationContacts.filter((contact) => {
+      const candidateNames = [contact.name, contact.short, contact.vname, contact.notify]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.toLowerCase());
+
+      if (candidateNames.some((value) => value.includes(query))) {
+        return true;
+      }
+
+      const phoneNormalized = sanitizePhoneDigits(contact.phone);
+      if (numericQuery && phoneNormalized.includes(numericQuery)) {
+        return true;
+      }
+
+      return contact.phone.toLowerCase().includes(query);
+    });
+  }, [startConversationContacts, startConversationSearch]);
+
+  const startConversationSelectedDisplayName = useMemo(() => {
+    if (startConversationSelectedName) {
+      return startConversationSelectedName;
+    }
+
+    const normalized = normalizePhoneForChat(startConversationPhone);
+    if (!normalized) {
+      return '';
+    }
+
+    const matchedContact = startConversationContacts.find(
+      (contact) => normalizePhoneForChat(contact.phone) === normalized
+    );
+
+    if (matchedContact) {
+      return (
+        matchedContact.name ||
+        matchedContact.short ||
+        matchedContact.vname ||
+        matchedContact.notify ||
+        formatPhoneForDisplay(matchedContact.phone)
+      );
+    }
+
+    const lookupKeys = [normalized, ...buildPhoneLookupKeys(normalized)];
+    for (const key of lookupKeys) {
+      if (!key) continue;
+      const lead = leadsByPhoneMap.get(key);
+      if (lead) {
+        return lead.nome_completo;
+      }
+    }
+
+    return formatPhoneForDisplay(normalized);
+  }, [
+    leadsByPhoneMap,
+    startConversationContacts,
+    startConversationPhone,
+    startConversationSelectedName,
+  ]);
+
+  const handleConfirmStartConversation = useCallback(() => {
+    const normalized = normalizePhoneForChat(startConversationPhone);
+    if (!normalized) {
+      setStartConversationError('Informe um número de telefone válido.');
+      return;
+    }
+
+    const lookupKeys = [normalized, ...buildPhoneLookupKeys(normalized)];
+    let matchedLead: LeadPreview | undefined;
+    for (const key of lookupKeys) {
+      if (!key) continue;
+      const lead = leadsByPhoneMap.get(key);
+      if (lead) {
+        matchedLead = lead;
+        break;
+      }
+    }
+
+    const matchedContact = startConversationContacts.find(
+      (contact) => normalizePhoneForChat(contact.phone) === normalized
+    );
+
+    const displayName =
+      startConversationSelectedName ||
+      matchedContact?.name ||
+      matchedContact?.short ||
+      matchedContact?.vname ||
+      matchedContact?.notify ||
+      matchedLead?.nome_completo ||
+      formatPhoneForDisplay(normalized);
+
+    setManualChatPlaceholders((prev) => {
+      const next = new Map(prev);
+      next.set(normalized, { phone: normalized, displayName });
+      return next;
+    });
+
+    skipAutoSelectRef.current = true;
+    setSelectedPhone(normalized);
+
+    setExternalSelectionContext({
+      phone: normalized,
+      leadName: matchedLead?.nome_completo || displayName,
+      leadId: matchedLead?.id ?? null,
+    });
+
+    if (chatListFilter !== 'active') {
+      setChatListFilter('active');
+    }
+
+    setIsStartConversationModalOpen(false);
+    setStartConversationError(null);
+    setStartConversationSearch('');
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationPhone('');
+  }, [
+    chatListFilter,
+    leadsByPhoneMap,
+    setChatListFilter,
+    startConversationContacts,
+    startConversationPhone,
+    startConversationSelectedName,
+  ]);
 
   useEffect(() => {
     const conversationsChannel = supabase
@@ -1510,8 +1784,39 @@ export default function WhatsAppHistoryTab({
       });
   }, [conversations]);
 
+  useEffect(() => {
+    setManualChatPlaceholders((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+
+      const existingDigits = new Set(
+        conversations
+          .map((conversation) => sanitizePhoneDigits(conversation.phone_number))
+          .filter((value) => value.length > 0)
+      );
+
+      if (existingDigits.size === 0) {
+        return prev;
+      }
+
+      let changed = false;
+      const next = new Map(prev);
+
+      prev.forEach((placeholder, key) => {
+        const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+        if (normalizedPlaceholder && existingDigits.has(normalizedPlaceholder)) {
+          next.delete(key);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [conversations]);
+
   const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
-    return chatGroups.map((group) => {
+    const baseChats = chatGroups.map((group) => {
       const preference = chatPreferences.get(group.phone);
       return {
         ...group,
@@ -1519,7 +1824,61 @@ export default function WhatsAppHistoryTab({
         pinned: preference?.pinned ?? false,
       };
     });
-  }, [chatGroups, chatPreferences]);
+
+    if (manualChatPlaceholders.size === 0) {
+      return baseChats;
+    }
+
+    const normalizedExisting = new Set(
+      baseChats
+        .map((chat) => sanitizePhoneDigits(chat.phone))
+        .filter((value) => value.length > 0)
+    );
+
+    const mergedChats = [...baseChats];
+
+    manualChatPlaceholders.forEach((placeholder) => {
+      const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+      if (normalizedPlaceholder && normalizedExisting.has(normalizedPlaceholder)) {
+        return;
+      }
+
+      if (normalizedPlaceholder) {
+        normalizedExisting.add(normalizedPlaceholder);
+      }
+
+      let placeholderLead: LeadPreview | undefined;
+      if (placeholder.phone) {
+        const lookupKeys = [placeholder.phone, ...buildPhoneLookupKeys(placeholder.phone)];
+        for (const key of lookupKeys) {
+          if (!key) continue;
+          const candidate = leadsByPhoneMap.get(key);
+          if (candidate) {
+            placeholderLead = candidate;
+            break;
+          }
+        }
+      }
+
+      mergedChats.push({
+        phone: placeholder.phone,
+        messages: [],
+        leadId: placeholderLead?.id ?? null,
+        lastMessage: undefined,
+        displayName:
+          placeholder.displayName ||
+          placeholderLead?.nome_completo ||
+          formatPhoneForDisplay(placeholder.phone),
+        photoUrl: null,
+        isGroup: false,
+        unreadCount: 0,
+        archived: false,
+        pinned: false,
+      });
+    });
+
+    return mergedChats;
+  }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
 
   const filteredChats = useMemo(() => {
     const relevantChats = chatsWithPreferences.filter((chat) =>
@@ -3627,6 +3986,14 @@ export default function WhatsAppHistoryTab({
 
           <div className="flex items-center space-x-3">
             <button
+              type="button"
+              onClick={handleOpenStartConversationModal}
+              className="inline-flex items-center space-x-2 rounded-lg border border-teal-500 px-4 py-2 text-sm font-medium text-teal-600 transition-colors hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Iniciar conversa</span>
+            </button>
+            <button
               onClick={() => setActiveView('ai-messages')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeView === 'ai-messages'
@@ -4601,6 +4968,191 @@ export default function WhatsAppHistoryTab({
         )}
       </div>
       </div>
+
+      {isStartConversationModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">
+          <div
+            className="relative w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              onClick={handleCloseStartConversationModal}
+              className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de início de conversa"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-slate-900">Iniciar conversa</h3>
+                <p className="text-sm text-slate-500">
+                  Selecione um contato existente ou informe um número de telefone para iniciar uma nova conversa.
+                </p>
+              </div>
+
+              {startConversationError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {startConversationError}
+                </div>
+              )}
+
+              <div className="grid gap-6 md:grid-cols-[1.2fr,0.8fr]">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700" htmlFor="start-conversation-search">
+                      Buscar contato
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        id="start-conversation-search"
+                        type="text"
+                        value={startConversationSearch}
+                        onChange={(event) => setStartConversationSearch(event.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 pl-10 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                        placeholder="Digite o nome ou número"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50">
+                    <div className="max-h-64 overflow-y-auto">
+                      {startConversationLoading && startConversationContacts.length === 0 ? (
+                        <div className="flex h-40 items-center justify-center text-slate-500">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Loader className="h-4 w-4 animate-spin" />
+                            <span>Carregando contatos...</span>
+                          </div>
+                        </div>
+                      ) : filteredStartConversationContacts.length === 0 ? (
+                        <div className="flex h-40 items-center justify-center px-4 text-center text-slate-500">
+                          <p className="text-sm">
+                            Nenhum contato encontrado para os filtros informados.
+                          </p>
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-slate-200">
+                          {filteredStartConversationContacts.map((contact) => {
+                            const normalized = normalizePhoneForChat(contact.phone);
+                            const isSelected =
+                              startConversationSelectedContact === normalized;
+                            const contactName =
+                              contact.name ||
+                              contact.short ||
+                              contact.notify ||
+                              contact.vname ||
+                              formatPhoneForDisplay(contact.phone);
+
+                            return (
+                              <li key={`${contact.phone}-${contactName}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectStartConversationContact(contact)}
+                                  className={`flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${
+                                    isSelected ? 'bg-teal-100/60' : 'hover:bg-teal-50'
+                                  }`}
+                                >
+                                  <span className="text-sm font-medium text-slate-800">
+                                    {contactName}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {formatPhoneForDisplay(contact.phone)}
+                                  </span>
+                                  {contact.notify && (
+                                    <span className="text-[11px] font-medium uppercase tracking-wide text-teal-600">
+                                      WhatsApp: {contact.notify}
+                                    </span>
+                                  )}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  {startConversationHasMore && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreStartConversationContacts}
+                        disabled={startConversationLoading}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {startConversationLoading ? (
+                          <>
+                            <Loader className="h-4 w-4 animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          'Carregar mais contatos'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700" htmlFor="start-conversation-phone">
+                      Número de telefone
+                    </label>
+                    <input
+                      id="start-conversation-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      value={startConversationPhone}
+                      onChange={(event) => handleStartConversationPhoneChange(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleConfirmStartConversation();
+                        }
+                      }}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                      placeholder="Ex.: 559999999999"
+                    />
+                  </div>
+
+                  {startConversationSelectedDisplayName && (
+                    <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-700">
+                      Conversa com{' '}
+                      <span className="font-semibold">
+                        {startConversationSelectedDisplayName}
+                      </span>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-500">
+                    Utilize apenas números, incluindo DDD e código do país quando necessário. Exemplo: 559999999999.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseStartConversationModal}
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmStartConversation}
+                  disabled={!normalizePhoneForChat(startConversationPhone)}
+                  className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-300"
+                >
+                  Iniciar conversa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {fullscreenMedia && (
         <div

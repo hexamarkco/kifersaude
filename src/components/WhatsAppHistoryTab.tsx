@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { zapiService } from '../lib/zapiService';
+import { zapiService, type ZAPIMediaType } from '../lib/zapiService';
 
 const isChatPreferencesTableMissingError = (error: PostgrestError | null | undefined) => {
   if (!error) return false;
@@ -68,6 +68,13 @@ const sanitizePhoneDigits = (value?: string | null): string => {
   if (!value || typeof value !== 'string') return '';
   return value.replace(/\D/g, '');
 };
+
+type AttachmentType = ZAPIMediaType;
+
+interface AttachmentItem {
+  file: File;
+  type: AttachmentType;
+}
 
 const buildPhoneLookupKeys = (value?: string | null): string[] => {
   const digits = sanitizePhoneDigits(value);
@@ -148,7 +155,7 @@ export default function WhatsAppHistoryTab() {
     | null
   >(null);
   const [composerText, setComposerText] = useState('');
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
@@ -702,6 +709,45 @@ export default function WhatsAppHistoryTab() {
     return `0:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const attachmentTypeLabels: Record<AttachmentType, string> = {
+    image: 'Foto / Imagem',
+    video: 'Vídeo',
+    audio: 'Áudio',
+    document: 'Documento',
+  };
+
+  const attachmentTypes: AttachmentType[] = ['image', 'video', 'audio', 'document'];
+
+  const inferAttachmentType = (file: File): AttachmentType => {
+    if (file.type.startsWith('image/')) {
+      return 'image';
+    }
+    if (file.type.startsWith('video/')) {
+      return 'video';
+    }
+    if (file.type.startsWith('audio/')) {
+      return 'audio';
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    if (imageExtensions.some((ext) => lowerName.endsWith(ext))) {
+      return 'image';
+    }
+
+    const videoExtensions = ['.mp4', '.mov', '.mkv', '.avi', '.wmv'];
+    if (videoExtensions.some((ext) => lowerName.endsWith(ext))) {
+      return 'video';
+    }
+
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.aac'];
+    if (audioExtensions.some((ext) => lowerName.endsWith(ext))) {
+      return 'audio';
+    }
+
+    return 'document';
+  };
+
   const formatFileSize = (size: number) => {
     if (size < 1024) {
       return `${size} B`;
@@ -712,20 +758,18 @@ export default function WhatsAppHistoryTab() {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const getAttachmentIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
-      return <FileImage className="w-4 h-4 text-teal-600" />;
+  const getAttachmentIcon = (type: AttachmentType) => {
+    switch (type) {
+      case 'image':
+        return <FileImage className="w-4 h-4 text-teal-600" />;
+      case 'video':
+        return <FileVideo className="w-4 h-4 text-purple-600" />;
+      case 'audio':
+        return <FileAudio className="w-4 h-4 text-orange-600" />;
+      case 'document':
+      default:
+        return <FileText className="w-4 h-4 text-rose-600" />;
     }
-    if (file.type.startsWith('video/')) {
-      return <FileVideo className="w-4 h-4 text-purple-600" />;
-    }
-    if (file.type.startsWith('audio/')) {
-      return <FileAudio className="w-4 h-4 text-orange-600" />;
-    }
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      return <FileText className="w-4 h-4 text-rose-600" />;
-    }
-    return <Paperclip className="w-4 h-4 text-slate-500" />;
   };
 
   const handleAttachmentButtonClick = () => {
@@ -740,11 +784,17 @@ export default function WhatsAppHistoryTab() {
 
     const filesArray = Array.from(files);
     setAttachments((prev) => {
-      const existingKeys = new Set(prev.map((file) => `${file.name}-${file.size}`));
+      const existingKeys = new Set(
+        prev.map((attachment) => `${attachment.file.name}-${attachment.file.size}`)
+      );
       const uniqueFiles = filesArray.filter(
         (file) => !existingKeys.has(`${file.name}-${file.size}`)
       );
-      return [...prev, ...uniqueFiles];
+      const newAttachments = uniqueFiles.map((file) => ({
+        file,
+        type: inferAttachmentType(file),
+      }));
+      return [...prev, ...newAttachments];
     });
 
     if (fileInputRef.current) {
@@ -757,6 +807,22 @@ export default function WhatsAppHistoryTab() {
 
   const handleRemoveAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, idx) => idx !== index));
+    setComposerError(null);
+    setComposerSuccess(null);
+  };
+
+  const handleAttachmentTypeChange = (index: number, type: AttachmentType) => {
+    setAttachments((prev) =>
+      prev.map((attachment, idx) =>
+        idx === index
+          ? {
+              ...attachment,
+              type,
+            }
+          : attachment
+      )
+    );
+    setComposerError(null);
   };
 
   const startRecording = useCallback(async () => {
@@ -849,8 +915,13 @@ export default function WhatsAppHistoryTab() {
         }
       }
 
-      for (const file of attachments) {
-        const mediaResult = await zapiService.sendMediaMessage(selectedPhone, file, file.name);
+      for (const attachment of attachments) {
+        const mediaResult = await zapiService.sendMediaMessage(
+          selectedPhone,
+          attachment.file,
+          attachment.file.name,
+          attachment.type
+        );
         if (!mediaResult.success) {
           throw new Error(mediaResult.error || 'Falha ao enviar anexo.');
         }
@@ -874,7 +945,8 @@ export default function WhatsAppHistoryTab() {
         const audioResult = await zapiService.sendMediaMessage(
           selectedPhone,
           audioFile,
-          audioFile.name
+          audioFile.name,
+          'audio'
         );
         if (!audioResult.success) {
           throw new Error(audioResult.error || 'Falha ao enviar áudio.');
@@ -1743,33 +1815,69 @@ export default function WhatsAppHistoryTab() {
 
                     {attachments.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase text-slate-500">Anexos</p>
-                        <div className="space-y-2">
-                          {attachments.map((file, index) => (
-                            <div
-                              key={`${file.name}-${file.size}-${index}`}
-                              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                                  {getAttachmentIcon(file)}
-                                </span>
-                                <div>
-                                  <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
-                                    {file.name}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500">{formatFileSize(file.size)}</p>
+                        <p className="text-xs font-semibold uppercase text-slate-500">
+                          Anexos
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Confirme o tipo de cada arquivo antes de enviar.
+                        </p>
+                        <div className="space-y-3">
+                          {attachments.map((attachment, index) => {
+                            const { file, type } = attachment;
+                            const selectId = `attachment-type-${index}`;
+                            return (
+                              <div
+                                key={`${file.name}-${file.size}-${index}`}
+                                className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                                      {getAttachmentIcon(type)}
+                                    </span>
+                                    <div>
+                                      <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
+                                        {file.name}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500">{formatFileSize(file.size)}</p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAttachment(index)}
+                                    className="text-slate-400 transition-colors hover:text-red-500"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <label
+                                    htmlFor={selectId}
+                                    className="text-xs font-semibold uppercase text-slate-500"
+                                  >
+                                    Tipo do arquivo
+                                  </label>
+                                  <select
+                                    id={selectId}
+                                    value={type}
+                                    onChange={(event) =>
+                                      handleAttachmentTypeChange(
+                                        index,
+                                        event.target.value as AttachmentType
+                                      )
+                                    }
+                                    className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 sm:w-48"
+                                  >
+                                    {attachmentTypes.map((value) => (
+                                      <option key={value} value={value}>
+                                        {attachmentTypeLabels[value]}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveAttachment(index)}
-                                className="text-slate-400 transition-colors hover:text-red-500"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

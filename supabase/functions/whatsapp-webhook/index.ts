@@ -306,6 +306,85 @@ function extractNormalizedPhoneNumber(payload: any): string | null {
   return null;
 }
 
+function extractNormalizedTargetPhone(payload: any): string | null {
+  const candidateValues: unknown[] = [
+    payload?.targetPhone,
+    payload?.phone,
+    payload?.phoneNumber,
+    payload?.remotePhone,
+    payload?.receiverPhone,
+    payload?.recipientPhone,
+    payload?.chatPhone,
+    payload?.to,
+    payload?.chatId,
+    payload?.jid,
+    payload?.message?.to,
+    payload?.message?.chatId,
+    payload?.message?.remoteJid,
+    payload?.message?.jid,
+    payload?.message?.key?.remoteJid,
+    payload?.participantPhone,
+    payload?.participant?.phone,
+    payload?.participant?.jid,
+  ];
+
+  const connectedValues: unknown[] = [
+    payload?.connectedPhone,
+    payload?.instancePhone,
+    payload?.sessionPhone,
+    payload?.connected?.phone,
+    payload?.instance?.phone,
+    payload?.session?.phone,
+    payload?.me,
+    payload?.me?.id,
+    payload?.me?.jid,
+    payload?.me?.phone,
+    payload?.user?.id,
+    payload?.user?.jid,
+    payload?.owner?.id,
+    payload?.account?.phone,
+    payload?.account?.jid,
+    payload?.profile?.jid,
+  ];
+
+  const connectedNumbers = new Set<string>();
+  connectedValues.forEach((value) => {
+    let candidate = value;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      candidate = String(Math.trunc(candidate));
+    }
+
+    const normalized = normalizePhoneNumber(candidate);
+    if (normalized) {
+      connectedNumbers.add(normalized);
+    }
+  });
+
+  for (const value of candidateValues) {
+    let candidate = value;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      candidate = String(Math.trunc(candidate));
+    }
+
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+
+    const normalized = normalizePhoneNumber(candidate);
+    if (normalized && !connectedNumbers.has(normalized)) {
+      return normalized;
+    }
+  }
+
+  const forcedPayload = payload?.fromMe ? payload : { ...payload, fromMe: true };
+  const fallback = extractNormalizedPhoneNumber(forcedPayload);
+  if (fallback && !connectedNumbers.has(fallback)) {
+    return fallback;
+  }
+
+  return null;
+}
+
 function pickFirstString(...candidates: unknown[]): string | null {
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim()) {
@@ -580,12 +659,22 @@ async function upsertConversation(
     readStatus: boolean;
     timestamp: string;
     phoneNumber: string | null;
+    targetPhone: string | null;
     media?: MediaDetails;
     text?: string;
     deliveryStatus: DeliveryStatus | null;
     deliveryStatusUpdatedAt: string | null;
   }> = {}
 ): Promise<EventProcessingResult> {
+  const targetPhoneOverrideRaw = overrides.targetPhone;
+  let normalizedTargetPhone: string | null = null;
+  let hasTargetPhoneOverride = false;
+
+  if (typeof targetPhoneOverrideRaw === 'string' && targetPhoneOverrideRaw.trim()) {
+    hasTargetPhoneOverride = true;
+    normalizedTargetPhone = normalizePhoneNumber(targetPhoneOverrideRaw) ?? targetPhoneOverrideRaw.trim();
+  }
+
   const normalizedPhone =
     overrides.phoneNumber ?? extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
 
@@ -615,12 +704,13 @@ async function upsertConversation(
         (normalizedStatus ? timestamp : null);
 
   const senderName = extractSenderName(payload);
-  const isGroupChat = detectGroupChat(payload, normalizedPhone);
+  const basePhoneNumber = messageType === 'sent' && normalizedTargetPhone ? normalizedTargetPhone : normalizedPhone;
+  const isGroupChat = detectGroupChat(payload, basePhoneNumber ?? normalizedPhone);
   const chatName = extractChatName(payload, senderName, isGroupChat);
   const senderPhoto = extractSenderPhoto(payload);
 
   const baseRecord = {
-    phone_number: normalizedPhone ?? 'unknown',
+    phone_number: basePhoneNumber ?? 'unknown',
     message_id: messageId,
     message_text: chosenText || 'Mensagem recebida',
     message_type: messageType,
@@ -636,6 +726,7 @@ async function upsertConversation(
     media_view_once: typeof chosenMedia?.viewOnce === 'boolean' ? chosenMedia.viewOnce : null,
     delivery_status: normalizedStatus ?? null,
     delivery_status_updated_at: normalizedStatusTimestamp ?? null,
+    target_phone: normalizedTargetPhone ?? null,
   };
 
   const insertRecord = {
@@ -648,7 +739,7 @@ async function upsertConversation(
   try {
     const { data: existing, error: fetchError } = await supabase
       .from('whatsapp_conversations')
-      .select('id, delivery_status, delivery_status_updated_at, read_status')
+      .select('id, delivery_status, delivery_status_updated_at, read_status, target_phone')
       .eq('message_id', messageId)
       .maybeSingle();
 
@@ -658,7 +749,6 @@ async function upsertConversation(
 
     if (existing) {
       const updateRecord: Record<string, any> = {
-        phone_number: baseRecord.phone_number,
         message_text: baseRecord.message_text,
         message_type: baseRecord.message_type,
         timestamp: baseRecord.timestamp,
@@ -671,6 +761,17 @@ async function upsertConversation(
         media_caption: baseRecord.media_caption,
         media_view_once: baseRecord.media_view_once,
       };
+
+      const chosenTargetPhone = normalizedTargetPhone ?? existing.target_phone ?? null;
+      if (baseRecord.message_type === 'sent' && chosenTargetPhone) {
+        updateRecord.phone_number = chosenTargetPhone;
+      } else {
+        updateRecord.phone_number = baseRecord.phone_number;
+      }
+
+      if (hasTargetPhoneOverride && normalizedTargetPhone) {
+        updateRecord.target_phone = normalizedTargetPhone;
+      }
 
       if (typeof normalizedStatus === 'string') {
         const existingStatus = normalizeDeliveryStatus(existing.delivery_status);
@@ -735,7 +836,20 @@ async function handleDeliveryCallback(
   payload: any,
   messageId: string
 ): Promise<EventProcessingResult> {
-  return { messageId, status: 'skipped', reason: 'Delivery callbacks ignored' };
+  const targetPhone = extractNormalizedTargetPhone(payload);
+  const normalizedPhone =
+    targetPhone ?? extractNormalizedPhoneNumber(payload?.fromMe ? payload : { ...payload, fromMe: true }) ?? null;
+
+  const overrides: NonNullable<Parameters<typeof upsertConversation>[3]> = {
+    messageType: 'sent',
+    phoneNumber: normalizedPhone,
+  };
+
+  if (targetPhone) {
+    overrides.targetPhone = targetPhone;
+  }
+
+  return upsertConversation(supabase, payload?.fromMe ? payload : { ...payload, fromMe: true }, messageId, overrides);
 }
 
 Deno.serve(async (req: Request) => {

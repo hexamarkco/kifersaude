@@ -1,5 +1,6 @@
 import {
   ChangeEvent,
+  FormEvent,
   KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
@@ -16,6 +17,13 @@ import {
   WhatsAppChatPreference,
 } from '../lib/supabase';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
+import {
+  listWhatsAppQuickReplies,
+  createWhatsAppQuickReply,
+  updateWhatsAppQuickReply,
+  deleteWhatsAppQuickReply,
+  type WhatsAppQuickReply,
+} from '../lib/whatsappQuickRepliesService';
 import StatusDropdown from './StatusDropdown';
 import LeadDetails from './LeadDetails';
 import LeadForm from './LeadForm';
@@ -28,6 +36,7 @@ import {
   Calendar,
   Search,
   Sparkles,
+  MessageSquare,
   CheckCircle,
   XCircle,
   Clock,
@@ -50,9 +59,11 @@ import {
   PinOff,
   Archive,
   ArchiveRestore,
+  Plus,
   X,
   MapPin,
   Navigation,
+  Edit,
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -62,6 +73,7 @@ import {
   type ZAPILocationPayload,
   type ZAPIGroupMetadata,
   type ZAPIChatMetadata,
+  type ZAPIContact,
 } from '../lib/zapiService';
 
 declare global {
@@ -89,6 +101,8 @@ const DEFAULT_MP3_BITRATE = 128;
 const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
 const RECORDING_WAVEFORM_BARS = 12;
 const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
+const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -109,6 +123,16 @@ type MessageWithReactions = WhatsAppConversation & {
 type ReactionModalState = {
   message: MessageWithReactions;
   summary: MessageReactionSummary;
+};
+
+type ChatTypingPresenceState = {
+  isTyping: boolean;
+  lastTypingAt: number | null;
+  presenceStatus: 'online' | 'offline' | null;
+  lastPresenceAt: number | null;
+  lastSeenAt: number | null;
+  contactName: string | null;
+  updatedAt: number;
 };
 
 const isMimeTypeSupported = (mimeType: string): boolean => {
@@ -250,6 +274,9 @@ const convertBlobToMp3 = async (blob: Blob): Promise<Blob> => {
     });
     const channelCount = Math.min(2, Math.max(1, audioBuffer.numberOfChannels));
     const lamejs = await loadLameJs();
+    if (!lamejs) {
+      throw new Error('Biblioteca de conversão de áudio indisponível.');
+    }
     const mp3Encoder = new lamejs.Mp3Encoder(channelCount, audioBuffer.sampleRate, DEFAULT_MP3_BITRATE);
     const blockSize = 1152;
     const mp3Chunks: Uint8Array[] = [];
@@ -381,6 +408,62 @@ const buildPhoneLookupKeys = (value?: string | null): string[] => {
   return Array.from(keys);
 };
 
+const buildPresenceKeyCandidates = (
+  phone?: string | null,
+  chatId?: string | null
+): string[] => {
+  const candidates = new Set<string>();
+
+  const pushValue = (value?: string | null) => {
+    if (!value || typeof value !== 'string') {
+      return;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    candidates.add(trimmed);
+
+    const digits = sanitizePhoneDigits(trimmed);
+    if (digits) {
+      candidates.add(digits);
+
+      if (digits.startsWith('55') && digits.length > 2) {
+        candidates.add(digits.slice(2));
+        candidates.add(`+${digits}`);
+      } else if (digits.length === 11) {
+        candidates.add(`55${digits}`);
+        candidates.add(`+55${digits}`);
+      }
+    }
+
+    if (trimmed.includes('@')) {
+      const withoutDomain = trimmed.split('@')[0] ?? '';
+      if (withoutDomain) {
+        candidates.add(withoutDomain);
+        const domainDigits = sanitizePhoneDigits(withoutDomain);
+        if (domainDigits) {
+          candidates.add(domainDigits);
+          if (domainDigits.startsWith('55') && domainDigits.length > 2) {
+            candidates.add(domainDigits.slice(2));
+            candidates.add(`+${domainDigits}`);
+          } else if (domainDigits.length === 11) {
+            candidates.add(`55${domainDigits}`);
+            candidates.add(`+55${domainDigits}`);
+          }
+        }
+      }
+    }
+  };
+
+  pushValue(phone);
+  pushValue(chatId);
+
+  return Array.from(candidates).filter(Boolean);
+};
+
 const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   if (!phone) return false;
 
@@ -411,6 +494,7 @@ type ChatGroupBase = {
   phone: string;
   messages: WhatsAppConversation[];
   leadId?: string | null;
+  contractId?: string | null;
   lastMessage?: WhatsAppConversation;
   displayName?: string | null;
   photoUrl?: string | null;
@@ -423,11 +507,33 @@ type ChatGroup = ChatGroupBase & {
   pinned: boolean;
 };
 
+type ManualChatPlaceholder = {
+  phone: string;
+  displayName?: string | null;
+};
+
 const formatPhoneForDisplay = (phone: string): string => {
   if (!phone) return '';
   const withoutSuffix = phone.includes('@') ? phone.split('@')[0] : phone;
   const withoutGroupSuffix = withoutSuffix.replace(/-group$/i, '');
   return withoutGroupSuffix;
+};
+
+const normalizePhoneForChat = (phone: string): string => {
+  const digits = sanitizePhoneDigits(phone);
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('55')) {
+    return digits;
+  }
+
+  if (digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits;
 };
 
 type WhatsAppHistoryTabProps = {
@@ -464,6 +570,19 @@ export default function WhatsAppHistoryTab({
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [externalSelectionContext, setExternalSelectionContext] = useState<WhatsAppChatRequestDetail | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
+  const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
+  const [startConversationLoading, setStartConversationLoading] = useState(false);
+  const [startConversationError, setStartConversationError] = useState<string | null>(null);
+  const [startConversationPage, setStartConversationPage] = useState(1);
+  const [startConversationHasMore, setStartConversationHasMore] = useState(true);
+  const [startConversationSearch, setStartConversationSearch] = useState('');
+  const [startConversationPhone, setStartConversationPhone] = useState('');
+  const [startConversationSelectedContact, setStartConversationSelectedContact] = useState<string | null>(null);
+  const [startConversationSelectedName, setStartConversationSelectedName] = useState<string | null>(null);
+  const [manualChatPlaceholders, setManualChatPlaceholders] = useState<
+    Map<string, ManualChatPlaceholder>
+  >(new Map());
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
   const [fullscreenMedia, setFullscreenMedia] = useState<
     | {
@@ -488,6 +607,19 @@ export default function WhatsAppHistoryTab({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>([]);
+  const [isQuickRepliesLoading, setIsQuickRepliesLoading] = useState(false);
+  const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
+  const [isQuickRepliesMenuOpen, setIsQuickRepliesMenuOpen] = useState(false);
+  const [quickReplySearchTerm, setQuickReplySearchTerm] = useState('');
+  const [isQuickReplyModalOpen, setIsQuickReplyModalOpen] = useState(false);
+  const [quickReplyModalError, setQuickReplyModalError] = useState<string | null>(null);
+  const [isSavingQuickReply, setIsSavingQuickReply] = useState(false);
+  const [editingQuickReply, setEditingQuickReply] = useState<WhatsAppQuickReply | null>(null);
+  const [quickReplyForm, setQuickReplyForm] = useState<{ title: string; content: string }>(() => ({
+    title: '',
+    content: '',
+  }));
   const [composerReplyMessage, setComposerReplyMessage] = useState<MessageWithReactions | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [manualScrollTargetId, setManualScrollTargetId] = useState<string | null>(null);
@@ -511,6 +643,8 @@ export default function WhatsAppHistoryTab({
   const attachmentsRef = useRef<AttachmentItem[]>([]);
   const attachmentButtonRef = useRef<HTMLButtonElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
+  const quickRepliesButtonRef = useRef<HTMLButtonElement | null>(null);
+  const quickRepliesMenuRef = useRef<HTMLDivElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -546,6 +680,101 @@ export default function WhatsAppHistoryTab({
   const highlightTimeoutRef = useRef<number | null>(null);
   const reactionMenuRef = useRef<HTMLDivElement | null>(null);
   const reactionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const sortQuickReplies = useCallback(
+    (items: WhatsAppQuickReply[]) =>
+      [...items].sort((a, b) =>
+        a.title.localeCompare(b.title, 'pt-BR', { sensitivity: 'base' })
+      ),
+    []
+  );
+  const filteredQuickReplies = useMemo(() => {
+    if (!quickReplySearchTerm.trim()) {
+      return sortQuickReplies(quickReplies);
+    }
+
+    const term = quickReplySearchTerm.trim().toLowerCase();
+
+    return sortQuickReplies(
+      quickReplies.filter((reply) => {
+        const title = reply.title?.toLowerCase() ?? '';
+        const content = reply.content?.toLowerCase() ?? '';
+        return title.includes(term) || content.includes(term);
+      })
+    );
+  }, [quickReplies, quickReplySearchTerm, sortQuickReplies]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadQuickReplies = async () => {
+      setIsQuickRepliesLoading(true);
+      try {
+        const replies = await listWhatsAppQuickReplies();
+        if (!isMounted) {
+          return;
+        }
+        setQuickReplies(sortQuickReplies(replies));
+        setQuickRepliesError(null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar as respostas rápidas.';
+        setQuickRepliesError(message);
+      } finally {
+        if (isMounted) {
+          setIsQuickRepliesLoading(false);
+        }
+      }
+    };
+
+    void loadQuickReplies();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sortQuickReplies]);
+
+  useEffect(() => {
+    if (isSendingMessage) {
+      setIsQuickRepliesMenuOpen(false);
+    }
+  }, [isSendingMessage]);
+
+  useEffect(() => {
+    if (!isQuickRepliesMenuOpen) {
+      setQuickReplySearchTerm('');
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        quickRepliesMenuRef.current?.contains(target) ||
+        quickRepliesButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsQuickRepliesMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsQuickRepliesMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isQuickRepliesMenuOpen]);
 
   useEffect(() => {
     leadContractsMapRef.current = leadContractsMap;
@@ -598,6 +827,126 @@ export default function WhatsAppHistoryTab({
     setActiveReactionMenuMessageId(null);
     setReactionError(null);
   }, [selectedPhone]);
+
+  const handleToggleQuickRepliesMenu = useCallback(() => {
+    setIsQuickRepliesMenuOpen((previous) => !previous);
+  }, []);
+
+  const handleInsertQuickReply = useCallback(
+    (reply: WhatsAppQuickReply) => {
+      const textarea = composerTextareaRef.current;
+
+      if (textarea) {
+        const { selectionStart, selectionEnd, value } = textarea;
+        const newValue =
+          value.slice(0, selectionStart) + reply.content + value.slice(selectionEnd);
+        setComposerText(newValue);
+        setTimeout(() => {
+          textarea.focus();
+          const cursorPosition = selectionStart + reply.content.length;
+          textarea.setSelectionRange(cursorPosition, cursorPosition);
+        }, 0);
+      } else {
+        setComposerText((previous) => {
+          if (!previous) {
+            return reply.content;
+          }
+          if (previous.endsWith(' ') || previous.endsWith('\n')) {
+            return `${previous}${reply.content}`;
+          }
+          return `${previous} ${reply.content}`;
+        });
+      }
+
+      setIsQuickRepliesMenuOpen(false);
+    },
+    [composerTextareaRef]
+  );
+
+  const handleOpenCreateQuickReplyModal = useCallback(() => {
+    setEditingQuickReply(null);
+    setQuickReplyForm({ title: '', content: '' });
+    setQuickReplyModalError(null);
+    setIsQuickReplyModalOpen(true);
+    setIsQuickRepliesMenuOpen(false);
+  }, []);
+
+  const handleOpenEditQuickReplyModal = useCallback((reply: WhatsAppQuickReply) => {
+    setEditingQuickReply(reply);
+    setQuickReplyForm({ title: reply.title ?? '', content: reply.content ?? '' });
+    setQuickReplyModalError(null);
+    setIsQuickReplyModalOpen(true);
+    setIsQuickRepliesMenuOpen(false);
+  }, []);
+
+  const handleCloseQuickReplyModal = useCallback(() => {
+    setIsQuickReplyModalOpen(false);
+    setQuickReplyModalError(null);
+    setEditingQuickReply(null);
+  }, []);
+
+  const handleQuickReplyFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = quickReplyForm.title.trim();
+    const content = quickReplyForm.content.trim();
+
+    if (!title || !content) {
+      setQuickReplyModalError('Preencha o título e o conteúdo da resposta rápida.');
+      return;
+    }
+
+    setIsSavingQuickReply(true);
+
+    try {
+      if (editingQuickReply) {
+        const updated = await updateWhatsAppQuickReply(editingQuickReply.id, {
+          title,
+          content,
+        });
+        setQuickReplies((previous) =>
+          sortQuickReplies(
+            previous.map((item) => (item.id === updated.id ? updated : item))
+          )
+        );
+      } else {
+        const created = await createWhatsAppQuickReply({ title, content });
+        setQuickReplies((previous) => sortQuickReplies([...previous, created]));
+      }
+
+      setQuickReplyModalError(null);
+      setIsQuickReplyModalOpen(false);
+      setEditingQuickReply(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível salvar a resposta rápida.';
+      setQuickReplyModalError(message);
+    } finally {
+      setIsSavingQuickReply(false);
+    }
+  };
+
+  const handleDeleteQuickReply = async (reply: WhatsAppQuickReply) => {
+    const confirmed = window.confirm(
+      `Tem certeza de que deseja excluir a resposta rápida "${reply.title}"?`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteWhatsAppQuickReply(reply.id);
+      setQuickReplies((previous) => previous.filter((item) => item.id !== reply.id));
+      setQuickRepliesError(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir a resposta rápida.';
+      setQuickRepliesError(message);
+    }
+  };
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -1197,6 +1546,54 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
+  const loadStartConversationContacts = useCallback(
+    async (pageToLoad = 1, replace = false) => {
+      setStartConversationLoading(true);
+      setStartConversationError(null);
+
+      try {
+        const result = await zapiService.fetchContacts(pageToLoad, 50);
+        if (!result.success) {
+          throw new Error(result.error || 'Falha ao carregar contatos.');
+        }
+
+        const contacts = result.data ?? [];
+
+        setStartConversationContacts((prev) => {
+          const existing = new Map<string, ZAPIContact>();
+          const base = replace ? [] : prev;
+
+          base.forEach((contact) => {
+            const key = sanitizePhoneDigits(contact.phone);
+            if (key) {
+              existing.set(key, contact);
+            }
+          });
+
+          contacts.forEach((contact) => {
+            const key = sanitizePhoneDigits(contact.phone);
+            if (!key || existing.has(key)) {
+              return;
+            }
+            existing.set(key, contact);
+          });
+
+          return Array.from(existing.values());
+        });
+
+        setStartConversationPage(pageToLoad);
+        setStartConversationHasMore(Boolean(result.hasMore));
+      } catch (error) {
+        setStartConversationError(
+          error instanceof Error ? error.message : 'Erro ao carregar contatos.'
+        );
+      } finally {
+        setStartConversationLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (activeView === 'ai-messages') {
       loadAIMessages();
@@ -1204,6 +1601,195 @@ export default function WhatsAppHistoryTab({
       loadConversations();
     }
   }, [activeView, loadAIMessages, loadConversations]);
+
+  const handleOpenStartConversationModal = useCallback(() => {
+    setStartConversationError(null);
+    setStartConversationSearch('');
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationPhone('');
+    setIsStartConversationModalOpen(true);
+
+    if (startConversationContacts.length === 0) {
+      void loadStartConversationContacts(1, true);
+    }
+  }, [loadStartConversationContacts, startConversationContacts.length]);
+
+  const handleCloseStartConversationModal = useCallback(() => {
+    setIsStartConversationModalOpen(false);
+    setStartConversationError(null);
+  }, []);
+
+  const handleLoadMoreStartConversationContacts = useCallback(() => {
+    if (startConversationLoading || !startConversationHasMore) {
+      return;
+    }
+
+    void loadStartConversationContacts(startConversationPage + 1);
+  }, [
+    loadStartConversationContacts,
+    startConversationHasMore,
+    startConversationLoading,
+    startConversationPage,
+  ]);
+
+  const handleSelectStartConversationContact = useCallback((contact: ZAPIContact) => {
+    const normalized = normalizePhoneForChat(contact.phone);
+    if (!normalized) {
+      return;
+    }
+
+    setStartConversationSelectedContact(normalized);
+    const displayName =
+      contact.name ||
+      contact.short ||
+      contact.vname ||
+      contact.notify ||
+      formatPhoneForDisplay(contact.phone);
+    setStartConversationSelectedName(displayName);
+    setStartConversationPhone(normalized);
+    setStartConversationError(null);
+  }, []);
+
+  const handleStartConversationPhoneChange = useCallback((value: string) => {
+    const digits = sanitizePhoneDigits(value);
+    setStartConversationPhone(digits);
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationError(null);
+  }, []);
+
+  const filteredStartConversationContacts = useMemo(() => {
+    if (!startConversationSearch.trim()) {
+      return startConversationContacts;
+    }
+
+    const query = startConversationSearch.trim().toLowerCase();
+    const numericQuery = sanitizePhoneDigits(startConversationSearch);
+
+    return startConversationContacts.filter((contact) => {
+      const candidateNames = [contact.name, contact.short, contact.vname, contact.notify]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.toLowerCase());
+
+      if (candidateNames.some((value) => value.includes(query))) {
+        return true;
+      }
+
+      const phoneNormalized = sanitizePhoneDigits(contact.phone);
+      if (numericQuery && phoneNormalized.includes(numericQuery)) {
+        return true;
+      }
+
+      return contact.phone.toLowerCase().includes(query);
+    });
+  }, [startConversationContacts, startConversationSearch]);
+
+  const startConversationSelectedDisplayName = useMemo(() => {
+    if (startConversationSelectedName) {
+      return startConversationSelectedName;
+    }
+
+    const normalized = normalizePhoneForChat(startConversationPhone);
+    if (!normalized) {
+      return '';
+    }
+
+    const matchedContact = startConversationContacts.find(
+      (contact) => normalizePhoneForChat(contact.phone) === normalized
+    );
+
+    if (matchedContact) {
+      return (
+        matchedContact.name ||
+        matchedContact.short ||
+        matchedContact.vname ||
+        matchedContact.notify ||
+        formatPhoneForDisplay(matchedContact.phone)
+      );
+    }
+
+    const lookupKeys = [normalized, ...buildPhoneLookupKeys(normalized)];
+    for (const key of lookupKeys) {
+      if (!key) continue;
+      const lead = leadsByPhoneMap.get(key);
+      if (lead) {
+        return lead.nome_completo;
+      }
+    }
+
+    return formatPhoneForDisplay(normalized);
+  }, [
+    leadsByPhoneMap,
+    startConversationContacts,
+    startConversationPhone,
+    startConversationSelectedName,
+  ]);
+
+  const handleConfirmStartConversation = useCallback(() => {
+    const normalized = normalizePhoneForChat(startConversationPhone);
+    if (!normalized) {
+      setStartConversationError('Informe um número de telefone válido.');
+      return;
+    }
+
+    const lookupKeys = [normalized, ...buildPhoneLookupKeys(normalized)];
+    let matchedLead: LeadPreview | undefined;
+    for (const key of lookupKeys) {
+      if (!key) continue;
+      const lead = leadsByPhoneMap.get(key);
+      if (lead) {
+        matchedLead = lead;
+        break;
+      }
+    }
+
+    const matchedContact = startConversationContacts.find(
+      (contact) => normalizePhoneForChat(contact.phone) === normalized
+    );
+
+    const displayName =
+      startConversationSelectedName ||
+      matchedContact?.name ||
+      matchedContact?.short ||
+      matchedContact?.vname ||
+      matchedContact?.notify ||
+      matchedLead?.nome_completo ||
+      formatPhoneForDisplay(normalized);
+
+    setManualChatPlaceholders((prev) => {
+      const next = new Map(prev);
+      next.set(normalized, { phone: normalized, displayName });
+      return next;
+    });
+
+    skipAutoSelectRef.current = true;
+    setSelectedPhone(normalized);
+
+    setExternalSelectionContext({
+      phone: normalized,
+      leadName: matchedLead?.nome_completo || displayName,
+      leadId: matchedLead?.id ?? null,
+    });
+
+    if (chatListFilter !== 'active') {
+      setChatListFilter('active');
+    }
+
+    setIsStartConversationModalOpen(false);
+    setStartConversationError(null);
+    setStartConversationSearch('');
+    setStartConversationSelectedContact(null);
+    setStartConversationSelectedName(null);
+    setStartConversationPhone('');
+  }, [
+    chatListFilter,
+    leadsByPhoneMap,
+    setChatListFilter,
+    startConversationContacts,
+    startConversationPhone,
+    startConversationSelectedName,
+  ]);
 
   useEffect(() => {
     const conversationsChannel = supabase
@@ -1235,6 +1821,86 @@ export default function WhatsAppHistoryTab({
       void aiMessagesChannel.unsubscribe();
     };
   }, [loadConversations, loadAIMessages]);
+
+  useEffect(() => {
+    const unsubscribe = zapiService.subscribeToTypingPresence({
+      onTypingStart: updateTypingPresenceFromEvent,
+      onTypingStop: updateTypingPresenceFromEvent,
+      onPresence: updateTypingPresenceFromEvent,
+      onEvent: updateTypingPresenceFromEvent,
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [updateTypingPresenceFromEvent]);
+
+  useEffect(() => {
+    if (!selectedPhone) {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadPresence = async () => {
+      const result = await zapiService.getChatPresence(selectedPhone);
+      if (!isActive) {
+        return;
+      }
+
+      if (result.success && result.data) {
+        const payload = result.data as ZAPITypingPresenceEvent;
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          'kind' in payload &&
+          typeof (payload as { kind: unknown }).kind === 'string'
+        ) {
+          updateTypingPresenceFromEvent(payload);
+        }
+      }
+    };
+
+    void loadPresence();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedPhone, updateTypingPresenceFromEvent]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const sweepInterval = window.setInterval(() => {
+      setTypingPresenceMap((previous) => {
+        if (previous.size === 0) {
+          return previous;
+        }
+
+        const now = Date.now();
+        let nextMap: Map<string, ChatTypingPresenceState> | null = null;
+
+        previous.forEach((value, key) => {
+          if (value.isTyping && value.lastTypingAt && now - value.lastTypingAt > TYPING_INACTIVITY_TIMEOUT_MS) {
+            if (!nextMap) {
+              nextMap = new Map(previous);
+            }
+            nextMap.set(key, { ...value, isTyping: false, updatedAt: now });
+          }
+        });
+
+        return nextMap ?? previous;
+      });
+    }, TYPING_PRESENCE_SWEEP_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(sweepInterval);
+    };
+  }, []);
 
   const closeFullscreen = useCallback(() => setFullscreenMedia(null), []);
 
@@ -1406,8 +2072,39 @@ export default function WhatsAppHistoryTab({
       });
   }, [conversations]);
 
+  useEffect(() => {
+    setManualChatPlaceholders((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+
+      const existingDigits = new Set(
+        conversations
+          .map((conversation) => sanitizePhoneDigits(conversation.phone_number))
+          .filter((value) => value.length > 0)
+      );
+
+      if (existingDigits.size === 0) {
+        return prev;
+      }
+
+      let changed = false;
+      const next = new Map(prev);
+
+      prev.forEach((placeholder, key) => {
+        const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+        if (normalizedPlaceholder && existingDigits.has(normalizedPlaceholder)) {
+          next.delete(key);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [conversations]);
+
   const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
-    return chatGroups.map((group) => {
+    const baseChats = chatGroups.map((group) => {
       const preference = chatPreferences.get(group.phone);
       return {
         ...group,
@@ -1415,7 +2112,61 @@ export default function WhatsAppHistoryTab({
         pinned: preference?.pinned ?? false,
       };
     });
-  }, [chatGroups, chatPreferences]);
+
+    if (manualChatPlaceholders.size === 0) {
+      return baseChats;
+    }
+
+    const normalizedExisting = new Set(
+      baseChats
+        .map((chat) => sanitizePhoneDigits(chat.phone))
+        .filter((value) => value.length > 0)
+    );
+
+    const mergedChats = [...baseChats];
+
+    manualChatPlaceholders.forEach((placeholder) => {
+      const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+      if (normalizedPlaceholder && normalizedExisting.has(normalizedPlaceholder)) {
+        return;
+      }
+
+      if (normalizedPlaceholder) {
+        normalizedExisting.add(normalizedPlaceholder);
+      }
+
+      let placeholderLead: LeadPreview | undefined;
+      if (placeholder.phone) {
+        const lookupKeys = [placeholder.phone, ...buildPhoneLookupKeys(placeholder.phone)];
+        for (const key of lookupKeys) {
+          if (!key) continue;
+          const candidate = leadsByPhoneMap.get(key);
+          if (candidate) {
+            placeholderLead = candidate;
+            break;
+          }
+        }
+      }
+
+      mergedChats.push({
+        phone: placeholder.phone,
+        messages: [],
+        leadId: placeholderLead?.id ?? null,
+        lastMessage: undefined,
+        displayName:
+          placeholder.displayName ||
+          placeholderLead?.nome_completo ||
+          formatPhoneForDisplay(placeholder.phone),
+        photoUrl: null,
+        isGroup: false,
+        unreadCount: 0,
+        archived: false,
+        pinned: false,
+      });
+    });
+
+    return mergedChats;
+  }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
 
   const filteredChats = useMemo(() => {
     const relevantChats = chatsWithPreferences.filter((chat) =>
@@ -1578,32 +2329,67 @@ export default function WhatsAppHistoryTab({
     selectedPhone,
   ]);
 
-  const selectedLeadContracts = useMemo(() => {
-    if (!selectedChatLead) {
+  const selectedChatPresenceState = useMemo(() => {
+    if (!selectedPhone) {
       return undefined;
     }
-    return leadContractsMap.get(selectedChatLead.id);
-  }, [leadContractsMap, selectedChatLead]);
 
-  const isLoadingLeadContracts =
-    selectedChatLead != null && loadingContractsLeadId === selectedChatLead.id;
-
-  const handleRefreshContracts = useCallback(() => {
-    if (!selectedChatLead) {
-      return;
-    }
-    void loadContractsForLead(selectedChatLead.id, true);
-  }, [loadContractsForLead, selectedChatLead]);
-
-  useEffect(() => {
-    if (!selectedChatLead) {
-      setLeadContractsError(null);
-      return;
+    const candidates = buildPresenceKeyCandidates(selectedPhone, selectedPhone);
+    for (const key of candidates) {
+      const value = typingPresenceMap.get(key);
+      if (value) {
+        return value;
+      }
     }
 
-    setLeadContractsError(null);
-    void loadContractsForLead(selectedChatLead.id);
-  }, [loadContractsForLead, selectedChatLead]);
+    return undefined;
+  }, [selectedPhone, typingPresenceMap]);
+
+  const formatLastSeenStatus = useCallback((timestamp?: number | null) => {
+    if (typeof timestamp !== 'number' || Number.isNaN(timestamp)) {
+      return null;
+    }
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const now = new Date();
+    const sameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+
+    const timePart = date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    if (sameDay) {
+      return `Visto por último hoje às ${timePart}`;
+    }
+
+    if (isYesterday) {
+      return `Visto por último ontem às ${timePart}`;
+    }
+
+    const datePart = date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    return `Visto por último em ${datePart} às ${timePart}`;
+  }, []);
 
   useEffect(() => {
     if (!externalChatRequest) {
@@ -1886,6 +2672,31 @@ export default function WhatsAppHistoryTab({
     selectedGroupMetadata,
     selectedPhone,
   ]);
+
+  const selectedChatPresenceLabel = useMemo(() => {
+    if (!selectedChatPresenceState) {
+      return null;
+    }
+
+    if (selectedChatPresenceState.isTyping) {
+      return 'Contato digitando...';
+    }
+
+    if (selectedChatPresenceState.presenceStatus === 'online') {
+      return 'Online agora';
+    }
+
+    const lastSeenLabel = formatLastSeenStatus(selectedChatPresenceState.lastSeenAt);
+    if (lastSeenLabel) {
+      return lastSeenLabel;
+    }
+
+    if (selectedChatPresenceState.presenceStatus === 'offline') {
+      return 'Offline';
+    }
+
+    return null;
+  }, [formatLastSeenStatus, selectedChatPresenceState]);
 
   const processedSelectedMessages = useMemo(() => {
     const processed: MessageWithReactions[] = [];
@@ -3613,6 +4424,14 @@ export default function WhatsAppHistoryTab({
 
           <div className="flex items-center space-x-3">
             <button
+              type="button"
+              onClick={handleOpenStartConversationModal}
+              className="inline-flex items-center space-x-2 rounded-lg border border-teal-500 px-4 py-2 text-sm font-medium text-teal-600 transition-colors hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Iniciar conversa</span>
+            </button>
+            <button
               onClick={() => setActiveView('ai-messages')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeView === 'ai-messages'
@@ -3939,6 +4758,11 @@ export default function WhatsAppHistoryTab({
                             )}
                           </div>
                           <p className="text-xs text-teal-100">{selectedPhone ? formatPhoneForDisplay(selectedPhone) : ''}</p>
+                          {selectedChatPresenceLabel && (
+                            <p className="text-xs text-teal-100 mt-0.5">
+                              {selectedChatPresenceLabel}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">
@@ -4262,6 +5086,105 @@ export default function WhatsAppHistoryTab({
                           <div className="flex items-center gap-2 border-r border-slate-200/70 px-2">
                             <div className="relative">
                               <button
+                                ref={quickRepliesButtonRef}
+                                type="button"
+                                onClick={handleToggleQuickRepliesMenu}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={isSendingMessage}
+                                aria-haspopup="menu"
+                                aria-expanded={isQuickRepliesMenuOpen}
+                                aria-label="Inserir resposta rápida"
+                              >
+                                <MessageSquare className="h-5 w-5" />
+                              </button>
+                              {isQuickRepliesMenuOpen && (
+                                <div
+                                  ref={quickRepliesMenuRef}
+                                  className="absolute left-0 z-20 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                  role="menu"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs font-semibold uppercase text-slate-500">
+                                      Respostas rápidas
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={handleOpenCreateQuickReplyModal}
+                                      className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-100"
+                                    >
+                                      <Plus className="h-3.5 w-3.5" />
+                                      Nova
+                                    </button>
+                                  </div>
+                                  <div className="mt-3 space-y-3">
+                                    <input
+                                      type="text"
+                                      value={quickReplySearchTerm}
+                                      onChange={(event) => setQuickReplySearchTerm(event.target.value)}
+                                      className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                                      placeholder="Pesquisar resposta"
+                                    />
+                                    {quickRepliesError && (
+                                      <div className="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-600">
+                                        {quickRepliesError}
+                                      </div>
+                                    )}
+                                    {isQuickRepliesLoading ? (
+                                      <div className="flex items-center justify-center gap-2 py-4 text-sm text-slate-500">
+                                        <Loader className="h-4 w-4 animate-spin" />
+                                        Carregando...
+                                      </div>
+                                    ) : filteredQuickReplies.length === 0 ? (
+                                      <p className="py-4 text-center text-sm text-slate-500">
+                                        {quickReplies.length === 0
+                                          ? 'Nenhuma resposta rápida cadastrada.'
+                                          : 'Nenhuma resposta encontrada.'}
+                                      </p>
+                                    ) : (
+                                      <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                                        {filteredQuickReplies.map((reply) => (
+                                          <div
+                                            key={reply.id}
+                                            className="overflow-hidden rounded-lg border border-slate-200"
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={() => handleInsertQuickReply(reply)}
+                                              className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-teal-50"
+                                            >
+                                              <p className="font-semibold text-slate-800">{reply.title}</p>
+                                              <p className="mt-1 text-xs text-slate-500 whitespace-pre-wrap break-words">
+                                                {reply.content}
+                                              </p>
+                                            </button>
+                                            <div className="flex items-center justify-end gap-1 border-t border-slate-200 bg-slate-50 px-2 py-1.5">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleOpenEditQuickReplyModal(reply)}
+                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                              >
+                                                <Edit className="h-3.5 w-3.5" />
+                                                Editar
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleDeleteQuickReply(reply)}
+                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Excluir
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <button
                                 ref={attachmentButtonRef}
                                 type="button"
                                 onClick={handleAttachmentButtonClick}
@@ -4520,6 +5443,191 @@ export default function WhatsAppHistoryTab({
       </div>
       </div>
 
+      {isStartConversationModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">
+          <div
+            className="relative w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              onClick={handleCloseStartConversationModal}
+              className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de início de conversa"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-slate-900">Iniciar conversa</h3>
+                <p className="text-sm text-slate-500">
+                  Selecione um contato existente ou informe um número de telefone para iniciar uma nova conversa.
+                </p>
+              </div>
+
+              {startConversationError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {startConversationError}
+                </div>
+              )}
+
+              <div className="grid gap-6 md:grid-cols-[1.2fr,0.8fr]">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700" htmlFor="start-conversation-search">
+                      Buscar contato
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        id="start-conversation-search"
+                        type="text"
+                        value={startConversationSearch}
+                        onChange={(event) => setStartConversationSearch(event.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 pl-10 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                        placeholder="Digite o nome ou número"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50">
+                    <div className="max-h-64 overflow-y-auto">
+                      {startConversationLoading && startConversationContacts.length === 0 ? (
+                        <div className="flex h-40 items-center justify-center text-slate-500">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Loader className="h-4 w-4 animate-spin" />
+                            <span>Carregando contatos...</span>
+                          </div>
+                        </div>
+                      ) : filteredStartConversationContacts.length === 0 ? (
+                        <div className="flex h-40 items-center justify-center px-4 text-center text-slate-500">
+                          <p className="text-sm">
+                            Nenhum contato encontrado para os filtros informados.
+                          </p>
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-slate-200">
+                          {filteredStartConversationContacts.map((contact) => {
+                            const normalized = normalizePhoneForChat(contact.phone);
+                            const isSelected =
+                              startConversationSelectedContact === normalized;
+                            const contactName =
+                              contact.name ||
+                              contact.short ||
+                              contact.notify ||
+                              contact.vname ||
+                              formatPhoneForDisplay(contact.phone);
+
+                            return (
+                              <li key={`${contact.phone}-${contactName}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectStartConversationContact(contact)}
+                                  className={`flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${
+                                    isSelected ? 'bg-teal-100/60' : 'hover:bg-teal-50'
+                                  }`}
+                                >
+                                  <span className="text-sm font-medium text-slate-800">
+                                    {contactName}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {formatPhoneForDisplay(contact.phone)}
+                                  </span>
+                                  {contact.notify && (
+                                    <span className="text-[11px] font-medium uppercase tracking-wide text-teal-600">
+                                      WhatsApp: {contact.notify}
+                                    </span>
+                                  )}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  {startConversationHasMore && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreStartConversationContacts}
+                        disabled={startConversationLoading}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {startConversationLoading ? (
+                          <>
+                            <Loader className="h-4 w-4 animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          'Carregar mais contatos'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700" htmlFor="start-conversation-phone">
+                      Número de telefone
+                    </label>
+                    <input
+                      id="start-conversation-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      value={startConversationPhone}
+                      onChange={(event) => handleStartConversationPhoneChange(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleConfirmStartConversation();
+                        }
+                      }}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                      placeholder="Ex.: 559999999999"
+                    />
+                  </div>
+
+                  {startConversationSelectedDisplayName && (
+                    <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-700">
+                      Conversa com{' '}
+                      <span className="font-semibold">
+                        {startConversationSelectedDisplayName}
+                      </span>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-500">
+                    Utilize apenas números, incluindo DDD e código do país quando necessário. Exemplo: 559999999999.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseStartConversationModal}
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmStartConversation}
+                  disabled={!normalizePhoneForChat(startConversationPhone)}
+                  className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-300"
+                >
+                  Iniciar conversa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {fullscreenMedia && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4 py-6"
@@ -4574,6 +5682,98 @@ export default function WhatsAppHistoryTab({
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {isQuickReplyModalOpen && (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/70 px-4 py-6"
+          onClick={handleCloseQuickReplyModal}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleCloseQuickReplyModal}
+              className="absolute top-3 right-3 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de resposta rápida"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="mb-4 space-y-2">
+              <h3 className="text-lg font-semibold text-slate-800">
+                {editingQuickReply ? 'Editar resposta rápida' : 'Nova resposta rápida'}
+              </h3>
+              <p className="text-sm text-slate-500">
+                Defina um título e o conteúdo que será inserido automaticamente no compositor.
+              </p>
+            </div>
+            {quickReplyModalError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {quickReplyModalError}
+              </div>
+            )}
+            <form onSubmit={handleQuickReplyFormSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="quick-reply-title">
+                  Título
+                </label>
+                <input
+                  id="quick-reply-title"
+                  type="text"
+                  value={quickReplyForm.title}
+                  onChange={(event) =>
+                    setQuickReplyForm((previous) => ({ ...previous, title: event.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Ex.: Boas-vindas"
+                  maxLength={120}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="quick-reply-content">
+                  Conteúdo
+                </label>
+                <textarea
+                  id="quick-reply-content"
+                  rows={4}
+                  value={quickReplyForm.content}
+                  onChange={(event) =>
+                    setQuickReplyForm((previous) => ({ ...previous, content: event.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Digite a mensagem que será inserida no campo de texto"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseQuickReplyModal}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQuickReply}
+                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSavingQuickReply ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : editingQuickReply ? (
+                    'Salvar alterações'
+                  ) : (
+                    'Criar resposta'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

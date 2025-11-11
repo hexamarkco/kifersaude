@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
-import { rescheduleNextPendingFollowUpIfNeeded } from '../lib/followUpService';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
@@ -21,6 +20,7 @@ import {
 } from '../lib/reminderUtils';
 import RemindersCalendar from './RemindersCalendar';
 import AIMessageGeneratorModal from './AIMessageGeneratorModal';
+import ReminderSchedulerModal from './ReminderSchedulerModal';
 
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -43,6 +43,13 @@ export default function RemindersManagerEnhanced() {
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedReminderForAI, setSelectedReminderForAI] = useState<Reminder | null>(null);
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
+  const [manualReminderPrompt, setManualReminderPrompt] = useState<{
+    lead: Lead;
+    promptMessage: string;
+    defaultTitle?: string;
+    defaultDescription?: string;
+    defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
+  } | null>(null);
 
   useEffect(() => {
     loadReminders();
@@ -82,7 +89,7 @@ export default function RemindersManagerEnhanced() {
       if (leadIds.length > 0) {
         const { data: leadsData } = await supabase
           .from('leads')
-          .select('id, nome_completo, telefone')
+          .select('id, nome_completo, telefone, responsavel')
           .in('id', leadIds);
 
         if (leadsData) {
@@ -128,8 +135,35 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      if (completionDate && reminder) {
-        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
+      if (completionDate && reminder?.lead_id) {
+        let leadInfo = leadsMap.get(reminder.lead_id);
+
+        if (!leadInfo) {
+          const { data: leadData } = await supabase
+            .from('leads')
+            .select('id, nome_completo, telefone, responsavel')
+            .eq('id', reminder.lead_id)
+            .maybeSingle();
+
+          if (leadData) {
+            leadInfo = leadData as Lead;
+            setLeadsMap(prev => {
+              const next = new Map(prev);
+              next.set(leadInfo!.id, leadInfo!);
+              return next;
+            });
+          }
+        }
+
+        if (leadInfo) {
+          setManualReminderPrompt({
+            lead: leadInfo,
+            promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+            defaultTitle: reminder.titulo,
+            defaultDescription: reminder.descricao ?? undefined,
+            defaultType: 'Follow-up',
+          });
+        }
       }
       loadReminders();
     } catch (error) {
@@ -214,23 +248,6 @@ export default function RemindersManagerEnhanced() {
       );
       const completionDate = new Date().toISOString();
 
-      const leadRepresentatives = new Map<string, Reminder>();
-      const standaloneReminders: Reminder[] = [];
-
-      const getReminderTimestamp = (reminder: Reminder) =>
-        reminder.data_lembrete ? new Date(reminder.data_lembrete).getTime() : -Infinity;
-
-      for (const reminder of remindersToUpdate) {
-        if (reminder.lead_id) {
-          const existingReminder = leadRepresentatives.get(reminder.lead_id);
-          if (!existingReminder || getReminderTimestamp(reminder) > getReminderTimestamp(existingReminder)) {
-            leadRepresentatives.set(reminder.lead_id, reminder);
-          }
-        } else {
-          standaloneReminders.push(reminder);
-        }
-      }
-
       const { error } = await supabase
         .from('reminders')
         .update({
@@ -241,12 +258,38 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      for (const reminder of standaloneReminders) {
-        await rescheduleNextPendingFollowUpIfNeeded(reminder, completionDate);
-      }
+      if (remindersToUpdate.length === 1) {
+        const [completedReminder] = remindersToUpdate;
+        if (completedReminder.lead_id) {
+          let leadInfo = leadsMap.get(completedReminder.lead_id);
 
-      for (const representativeReminder of leadRepresentatives.values()) {
-        await rescheduleNextPendingFollowUpIfNeeded(representativeReminder, completionDate);
+          if (!leadInfo) {
+            const { data: leadData } = await supabase
+              .from('leads')
+              .select('id, nome_completo, telefone, responsavel')
+              .eq('id', completedReminder.lead_id)
+              .maybeSingle();
+
+            if (leadData) {
+              leadInfo = leadData as Lead;
+              setLeadsMap(prev => {
+                const next = new Map(prev);
+                next.set(leadInfo!.id, leadInfo!);
+                return next;
+              });
+            }
+          }
+
+          if (leadInfo) {
+            setManualReminderPrompt({
+              lead: leadInfo,
+              promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+              defaultTitle: completedReminder.titulo,
+              defaultDescription: completedReminder.descricao ?? undefined,
+              defaultType: 'Follow-up',
+            });
+          }
+        }
       }
 
       setSelectedReminders(new Set());
@@ -880,6 +923,27 @@ export default function RemindersManagerEnhanced() {
           onMessageSent={() => {
             loadReminders();
           }}
+        />
+      )}
+
+      {manualReminderPrompt && (
+        <ReminderSchedulerModal
+          lead={manualReminderPrompt.lead}
+          onClose={() => setManualReminderPrompt(null)}
+          onScheduled={({ reminderDate }) => {
+            const { lead } = manualReminderPrompt;
+            setManualReminderPrompt(null);
+            setLeadsMap(prev => {
+              const next = new Map(prev);
+              next.set(lead.id, { ...lead, proximo_retorno: reminderDate });
+              return next;
+            });
+            loadReminders();
+          }}
+          promptMessage={manualReminderPrompt.promptMessage}
+          defaultTitle={manualReminderPrompt.defaultTitle}
+          defaultDescription={manualReminderPrompt.defaultDescription}
+          defaultType={manualReminderPrompt.defaultType}
         />
       )}
     </div>

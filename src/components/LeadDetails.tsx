@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase, Lead, Interaction } from '../lib/supabase';
-import { X, MessageCircle, Plus, Settings } from 'lucide-react';
+import { X, MessageCircle, Plus } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
-import CustomFollowUpManager from './CustomFollowUpManager';
 
 type LeadDetailsProps = {
   lead: Lead;
@@ -23,7 +22,6 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
     descricao: '',
     responsavel: 'Luiza',
   });
-  const [showCustomFollowUp, setShowCustomFollowUp] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -127,23 +125,13 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
             <h4 className="text-lg font-semibold text-slate-900">Interações</h4>
             <div className="flex items-center space-x-2">
               {!isObserver && (
-                <>
-                  <button
-                    onClick={() => setShowCustomFollowUp(true)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    title="Gerenciar lembretes personalizados"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span>Lembretes</span>
-                  </button>
-                  <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Nova Interação</span>
-                  </button>
-                </>
+                <button
+                  onClick={() => setShowForm(!showForm)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nova Interação</span>
+                </button>
               )}
             </div>
           </div>
@@ -246,12 +234,6 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
         </div>
       </div>
 
-      {showCustomFollowUp && (
-        <CustomFollowUpManager
-          lead={lead}
-          onClose={() => setShowCustomFollowUp(false)}
-        />
-      )}
     </div>
   );
 }

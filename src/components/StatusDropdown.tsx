@@ -7,7 +7,6 @@ type StatusDropdownProps = {
   currentStatus: string;
   leadId: string;
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>;
-  onProposalSent?: (leadId: string) => void;
   disabled?: boolean;
   statusOptions: LeadStatusConfig[];
 };
@@ -16,7 +15,6 @@ export default function StatusDropdown({
   currentStatus,
   leadId,
   onStatusChange,
-  onProposalSent,
   disabled = false,
   statusOptions,
 }: StatusDropdownProps) {
@@ -84,10 +82,6 @@ export default function StatusDropdown({
 
     try {
       await onStatusChange(leadId, newStatus);
-
-      if (newStatus === 'Proposta enviada' && onProposalSent) {
-        onProposalSent(leadId);
-      }
     } catch (error) {
       console.error('Error updating status:', error);
       setPendingStatus(null);

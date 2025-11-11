@@ -4,13 +4,12 @@ import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
-import FollowUpScheduler from './FollowUpScheduler';
+import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadKanban from './LeadKanban';
 import Pagination from './Pagination';
 import { ObserverBanner } from './ObserverRestriction';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
 import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -30,7 +29,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
+  const [reminderLead, setReminderLead] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -246,10 +245,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
           responsavel: lead.responsavel,
         }]);
 
-      if (['Fechado', 'Perdido'].includes(newStatus)) {
-        await cancelFollowUps(leadId);
-      } else {
-        await createAutomaticFollowUps(leadId, newStatus, lead.responsavel);
+      const normalizedStatus = newStatus.trim().toLowerCase();
+      if (normalizedStatus === 'proposta recebida') {
+        setReminderLead({ ...lead, status: newStatus });
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
@@ -260,13 +258,6 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         )
       );
       throw error;
-    }
-  };
-
-  const handleProposalSent = (leadId: string) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (lead) {
-      setFollowUpLead(lead);
     }
   };
 
@@ -417,7 +408,6 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                           currentStatus={lead.status}
                           leadId={lead.id}
                           onStatusChange={handleStatusChange}
-                          onProposalSent={handleProposalSent}
                           statusOptions={activeLeadStatuses}
                         />
                       ) : (
@@ -557,14 +547,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         />
       )}
 
-      {followUpLead && (
-        <FollowUpScheduler
-          lead={followUpLead}
-          onClose={() => setFollowUpLead(null)}
-          onScheduled={() => {
-            setFollowUpLead(null);
+      {reminderLead && (
+        <ReminderSchedulerModal
+          lead={reminderLead}
+          onClose={() => setReminderLead(null)}
+          onScheduled={(_details) => {
+            setReminderLead(null);
             loadLeads();
           }}
+          promptMessage="Deseja agendar o primeiro lembrete após a proposta recebida?"
+          defaultType="Follow-up"
         />
       )}
     </div>

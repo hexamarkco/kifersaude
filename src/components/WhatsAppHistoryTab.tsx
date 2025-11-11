@@ -32,7 +32,7 @@ import LeadForm from './LeadForm';
 import LeadDetailsPanel from './LeadDetailsPanel';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
-import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
+import ReminderSchedulerModal from './ReminderSchedulerModal';
 import {
   MessageCircle,
   Calendar,
@@ -163,6 +163,14 @@ type ChatTypingPresenceState = {
   lastSeenAt: number | null;
   contactName: string | null;
   updatedAt: number;
+};
+
+type ReminderPromptConfig = {
+  lead: Lead;
+  promptMessage: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
+  defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
 };
 
 const isMimeTypeSupported = (mimeType: string): boolean => {
@@ -731,6 +739,7 @@ export default function WhatsAppHistoryTab({
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
   const [isLeadDetailsPanelOpen, setIsLeadDetailsPanelOpen] = useState(false);
+  const [manualReminderPrompt, setManualReminderPrompt] = useState<ReminderPromptConfig | null>(null);
   const [chatMetadataMap, setChatMetadataMap] = useState<Map<string, ZAPIChatMetadata>>(new Map());
   const chatMetadataPendingRef = useRef<Set<string>>(new Set());
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
@@ -3417,10 +3426,13 @@ export default function WhatsAppHistoryTab({
           },
         ]);
 
-        if (['Fechado', 'Perdido'].includes(newStatus)) {
-          await cancelFollowUps(leadId);
-        } else {
-          await createAutomaticFollowUps(leadId, newStatus, lead.responsavel);
+        const normalizedStatus = newStatus.trim().toLowerCase();
+        if (normalizedStatus === 'proposta recebida') {
+          setManualReminderPrompt({
+            lead: optimisticLead,
+            promptMessage: 'Deseja agendar um lembrete após a proposta recebida?',
+            defaultType: 'Follow-up',
+          });
         }
       } catch (error) {
         console.error('Erro ao atualizar status do lead:', error);
@@ -7420,6 +7432,27 @@ const getOutgoingMessageStatus = (
           onUpdate={() => {
             void handleLeadDataUpdated(activeLeadDetails.id);
           }}
+        />
+      )}
+
+      {manualReminderPrompt && (
+        <ReminderSchedulerModal
+          lead={manualReminderPrompt.lead}
+          onClose={() => setManualReminderPrompt(null)}
+          onScheduled={({ reminderDate }) => {
+            const { lead } = manualReminderPrompt;
+            setManualReminderPrompt(null);
+            void handleLeadDataUpdated(lead.id);
+            setActiveLeadDetails((current) =>
+              current && current.id === lead.id
+                ? { ...current, proximo_retorno: reminderDate, ultimo_contato: new Date().toISOString() }
+                : current
+            );
+          }}
+          promptMessage={manualReminderPrompt.promptMessage}
+          defaultTitle={manualReminderPrompt.defaultTitle}
+          defaultDescription={manualReminderPrompt.defaultDescription}
+          defaultType={manualReminderPrompt.defaultType}
         />
       )}
     </>

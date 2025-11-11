@@ -172,7 +172,8 @@ export default function WhatsAppHistoryTab() {
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingFinalizedRef = useRef(false);
-  const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string; file: File } | null>(null);
+  const [recordedAudio, setRecordedAudio] =
+    useState<{ blob: Blob; url: string; file: File; base64: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingSupported, setIsRecordingSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
@@ -1007,7 +1008,7 @@ export default function WhatsAppHistoryTab() {
       audioChunksRef.current = [];
       recordingFinalizedRef.current = false;
 
-      const finalizeRecording = (fallbackMimeType: string) => {
+      const finalizeRecording = async (fallbackMimeType: string) => {
         if (recordingFinalizedRef.current) {
           return;
         }
@@ -1016,34 +1017,65 @@ export default function WhatsAppHistoryTab() {
           return;
         }
 
-        const mimeType = mediaRecorder.mimeType || fallbackMimeType || audioChunksRef.current[0]?.type || 'audio/webm';
-        const normalizedMimeType = mimeType.split(';')[0] || 'audio/webm';
-        const audioBlob = new Blob(audioChunksRef.current, { type: normalizedMimeType });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        let extension = 'webm';
-        if (normalizedMimeType.includes('ogg')) {
-          extension = 'ogg';
-        } else if (normalizedMimeType.includes('mpeg') || normalizedMimeType.includes('mp3')) {
-          extension = 'mp3';
-        } else if (normalizedMimeType.includes('wav')) {
-          extension = 'wav';
-        } else if (normalizedMimeType.includes('m4a') || normalizedMimeType.includes('mp4')) {
-          extension = 'm4a';
-        }
-        const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, {
-          type: normalizedMimeType,
-        });
-        setRecordedAudio({ blob: audioBlob, url: audioUrl, file: audioFile });
-        setAttachments((prev) => [
-          ...prev,
-          {
-            file: audioFile,
-            type: 'audio',
-            previewUrl: audioUrl,
-          },
-        ]);
-        audioChunksRef.current = [];
         recordingFinalizedRef.current = true;
+
+        try {
+          const mimeType =
+            mediaRecorder.mimeType ||
+            fallbackMimeType ||
+            audioChunksRef.current[0]?.type ||
+            'audio/webm';
+          const normalizedMimeType = mimeType.split(';')[0] || 'audio/webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: normalizedMimeType });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          let extension = 'webm';
+          if (normalizedMimeType.includes('ogg')) {
+            extension = 'ogg';
+          } else if (normalizedMimeType.includes('mpeg') || normalizedMimeType.includes('mp3')) {
+            extension = 'mp3';
+          } else if (normalizedMimeType.includes('wav')) {
+            extension = 'wav';
+          } else if (normalizedMimeType.includes('m4a') || normalizedMimeType.includes('mp4')) {
+            extension = 'm4a';
+          }
+
+          const convertBlobToDataUrl = (blob: Blob): Promise<string> =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                if (typeof reader.result === 'string') {
+                  resolve(reader.result);
+                } else {
+                  reject(new Error('Falha ao converter áudio para Base64.'));
+                }
+              };
+              reader.onerror = () =>
+                reject(reader.error ?? new Error('Falha ao ler áudio para conversão em Base64.'));
+              reader.readAsDataURL(blob);
+            });
+
+          const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, {
+            type: normalizedMimeType,
+          });
+          const audioBase64 = await convertBlobToDataUrl(audioBlob);
+          console.log('Áudio gravado convertido para Base64:', audioBase64);
+
+          setRecordedAudio({ blob: audioBlob, url: audioUrl, file: audioFile, base64: audioBase64 });
+          setAttachments((prev) => [
+            ...prev,
+            {
+              file: audioFile,
+              type: 'audio',
+              previewUrl: audioUrl,
+            },
+          ]);
+          audioChunksRef.current = [];
+        } catch (error) {
+          recordingFinalizedRef.current = false;
+          audioChunksRef.current = [];
+          console.error('Erro ao finalizar gravação de áudio:', error);
+          return;
+        }
       };
 
       mediaRecorder.ondataavailable = (event) => {
@@ -1051,13 +1083,13 @@ export default function WhatsAppHistoryTab() {
           audioChunksRef.current.push(event.data);
           const fallbackMimeType = event.data.type || 'audio/webm';
           if (mediaRecorder.state === 'inactive') {
-            finalizeRecording(fallbackMimeType);
+            void finalizeRecording(fallbackMimeType);
           }
         }
       };
 
       mediaRecorder.onstop = () => {
-        finalizeRecording(audioChunksRef.current[0]?.type || 'audio/webm');
+        void finalizeRecording(audioChunksRef.current[0]?.type || 'audio/webm');
         recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
         recordingStreamRef.current = null;
       };
@@ -1121,11 +1153,15 @@ export default function WhatsAppHistoryTab() {
       }
 
       for (const attachment of attachments) {
+        const base64Override =
+          recordedAudio && attachment.file === recordedAudio.file ? recordedAudio.base64 : undefined;
         const mediaResult = await zapiService.sendMediaMessage(
           selectedPhone,
           attachment.file,
           attachment.file.name,
-          attachment.type
+          attachment.type,
+          undefined,
+          base64Override
         );
         if (!mediaResult.success) {
           throw new Error(mediaResult.error || 'Falha ao enviar anexo.');
@@ -1163,6 +1199,7 @@ export default function WhatsAppHistoryTab() {
     composerText,
     hasContentToSend,
     loadConversations,
+    recordedAudio,
     selectedChat?.contractId,
     selectedChatLead?.id,
     selectedPhone,

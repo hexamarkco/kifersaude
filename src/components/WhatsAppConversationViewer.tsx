@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { MessageCircle, CheckCheck } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MessageCircle, CheckCheck, ChevronDown } from 'lucide-react';
 import { ZAPIMessage, ZAPIMediaType } from '../lib/zapiService';
 
 interface WhatsAppConversationViewerProps {
@@ -14,6 +14,7 @@ export default function WhatsAppConversationViewer({
   isLoading = false,
 }: WhatsAppConversationViewerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [activeMessageMenu, setActiveMessageMenu] = useState<string | null>(null);
 
   useEffect(() => {
     scrollToBottom();
@@ -22,6 +23,21 @@ export default function WhatsAppConversationViewer({
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-message-menu]')) {
+        setActiveMessageMenu(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
@@ -243,6 +259,24 @@ export default function WhatsAppConversationViewer({
     );
   };
 
+  const handleCopyMessage = async (message: ZAPIMessage) => {
+    const textToCopy = message.text?.trim() || message.mediaUrl || '';
+    if (!textToCopy) {
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      console.warn('Clipboard API não disponível.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+    } catch (error) {
+      console.error('Erro ao copiar mensagem:', error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-96 bg-gradient-to-b from-teal-50 to-white rounded-lg overflow-hidden border border-slate-200">
       <div className="bg-teal-600 text-white px-4 py-3 flex items-center space-x-3">
@@ -266,6 +300,10 @@ export default function WhatsAppConversationViewer({
               const mediaType = getMediaType(message);
               const isAudioMessage = mediaType === 'audio';
 
+              const isMenuOpen = activeMessageMenu === message.messageId;
+              const dropdownHorizontalPosition = message.fromMe ? 'right-0' : 'left-0';
+              const arrowHorizontalPosition = message.fromMe ? 'right-[-36px]' : 'left-[-36px]';
+
               const paddingClasses = isAudioMessage ? 'px-3 py-3' : 'px-4 py-2';
               const quotedSenderLabel = getQuotedSenderLabel(message);
               const quotedPreviewText = getQuotedPreviewText(message);
@@ -273,27 +311,31 @@ export default function WhatsAppConversationViewer({
                 message.quotedMessageId || message.quotedText || message.quotedMediaType
               );
 
+              const isDownloadAvailable =
+                Boolean(message.mediaUrl) && ['audio', 'video', 'image'].includes(mediaType ?? '');
+
               return (
                 <div
                   key={index}
                   className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'} mb-3`}
                 >
-                  <div
-                    className={`${
-                      isAudioMessage
-                        ? 'w-full max-w-[95%] sm:max-w-[85%]'
-                        : 'max-w-[95%] sm:max-w-[85%]'
-                    } rounded-lg ${paddingClasses} shadow-sm flex flex-col space-y-2 ${
-                      message.fromMe
-                        ? 'bg-teal-500 text-white rounded-br-none'
-                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
-                    }`}
-                  >
-                    {isGroupChat && (
-                      <span
-                        className={`text-xs font-semibold ${
-                          message.fromMe ? 'text-teal-100 self-end' : 'text-teal-600'
-                        }`}
+                  <div className="relative group" data-message-menu>
+                    <div
+                      className={`${
+                        isAudioMessage
+                          ? 'w-full max-w-[95%] sm:max-w-[85%]'
+                          : 'max-w-[95%] sm:max-w-[85%]'
+                      } rounded-lg ${paddingClasses} shadow-sm flex flex-col space-y-2 ${
+                        message.fromMe
+                          ? 'bg-teal-500 text-white rounded-br-none'
+                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
+                      }`}
+                    >
+                      {isGroupChat && (
+                        <span
+                          className={`text-xs font-semibold ${
+                            message.fromMe ? 'text-teal-100 self-end' : 'text-teal-600'
+                          }`}
                       >
                         {message.fromMe ? 'Você' : message.senderName?.trim() || 'Participante'}
                       </span>
@@ -333,6 +375,173 @@ export default function WhatsAppConversationViewer({
                         <CheckCheck className="w-4 h-4" />
                       )}
                     </div>
+                  </div>
+                    <button
+                      type="button"
+                      aria-label="Abrir opções da mensagem"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setActiveMessageMenu((current) =>
+                          current === message.messageId ? null : message.messageId
+                        );
+                      }}
+                      className={`absolute top-2 ${arrowHorizontalPosition} w-8 h-8 rounded-full bg-white text-slate-500 shadow-sm border border-slate-200 flex items-center justify-center transition-opacity duration-150 ${
+                        isMenuOpen
+                          ? 'opacity-100'
+                          : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+                      }`}
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-150 ${
+                          isMenuOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    {isMenuOpen && (
+                      <div
+                        className={`absolute z-30 mt-2 w-56 bg-white text-slate-700 rounded-lg shadow-xl border border-slate-200 overflow-hidden ${dropdownHorizontalPosition}`}
+                      >
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 text-xl">
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com gostei">
+                            👍
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com coração">
+                            ❤️
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com risada">
+                            😂
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com surpresa">
+                            😮
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com tristeza">
+                            😢
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Reagir com gratidão">
+                            🙏
+                          </button>
+                          <button type="button" className="hover:scale-110 transition-transform" aria-label="Adicionar nova reação">
+                            +
+                          </button>
+                        </div>
+                        <div className="py-2 text-sm">
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Responder mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Responder
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Reagir à mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Reagir
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              handleCopyMessage(message);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Copiar
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Encaminhar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Encaminhar
+                          </button>
+                          {isDownloadAvailable && message.mediaUrl && (
+                            <a
+                              className="block px-4 py-2 hover:bg-slate-100 transition-colors"
+                              href={message.mediaUrl}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => {
+                                setActiveMessageMenu(null);
+                              }}
+                            >
+                              Baixar mídia
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Fixar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Fixar
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Favoritar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Favoritar
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Adicionar texto às notas', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Adicionar texto às notas
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Selecionar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Selecionar
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors"
+                            onClick={() => {
+                              console.info('Denunciar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Denunciar
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors text-red-600"
+                            onClick={() => {
+                              console.info('Apagar mensagem', message.messageId);
+                              setActiveMessageMenu(null);
+                            }}
+                          >
+                            Apagar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

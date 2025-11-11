@@ -34,6 +34,7 @@ import {
   FileAudio,
   Square,
   CornerUpRight,
+  SmilePlus,
   Share2,
   Pin,
   PinOff,
@@ -74,6 +75,7 @@ const FALLBACK_AUDIO_MIME_TYPES = [
 const DEFAULT_MP3_BITRATE = 128;
 const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
 const RECORDING_WAVEFORM_BARS = 12;
+const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -429,6 +431,9 @@ export default function WhatsAppHistoryTab({
   const [manualScrollAlternateId, setManualScrollAlternateId] = useState<string | null>(null);
   const [activeReactionDetails, setActiveReactionDetails] =
     useState<ReactionModalState | null>(null);
+  const [activeReactionMenuMessageId, setActiveReactionMenuMessageId] = useState<string | null>(null);
+  const [reactionError, setReactionError] = useState<string | null>(null);
+  const [sendingReactionMessageId, setSendingReactionMessageId] = useState<string | null>(null);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
   const [forwardingMessageIds, setForwardingMessageIds] = useState<string[]>([]);
   const [forwardSelectedTargetPhones, setForwardSelectedTargetPhones] = useState<string[]>([]);
@@ -468,6 +473,71 @@ export default function WhatsAppHistoryTab({
   const lastScrolledChatRef = useRef<string | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  const reactionMenuRef = useRef<HTMLDivElement | null>(null);
+  const reactionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  useEffect(() => {
+    if (!activeReactionMenuMessageId) {
+      reactionMenuRef.current = null;
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const menuElement = reactionMenuRef.current;
+      if (menuElement && menuElement.contains(event.target as Node)) {
+        return;
+      }
+
+      const buttonElement = reactionButtonRefs.current.get(activeReactionMenuMessageId);
+      if (buttonElement && buttonElement.contains(event.target as Node)) {
+        return;
+      }
+
+      setActiveReactionMenuMessageId(null);
+      setReactionError(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveReactionMenuMessageId(null);
+        setReactionError(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeReactionMenuMessageId]);
+
+  useEffect(() => {
+    if (!activeReactionMenuMessageId) {
+      return;
+    }
+
+    const exists = processedSelectedMessages.some(
+      (message) => message.message_id === activeReactionMenuMessageId
+    );
+
+    if (!exists) {
+      setActiveReactionMenuMessageId(null);
+      setReactionError(null);
+    }
+  }, [activeReactionMenuMessageId, processedSelectedMessages]);
+
+  useEffect(() => {
+    if (!activeReactionMenuMessageId) {
+      setReactionError(null);
+    }
+  }, [activeReactionMenuMessageId]);
+
+  useEffect(() => {
+    setActiveReactionMenuMessageId(null);
+    setReactionError(null);
+  }, [selectedPhone]);
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -2499,6 +2569,47 @@ export default function WhatsAppHistoryTab({
     setActiveReactionDetails(null);
   }, []);
 
+  const handleSendReaction = useCallback(
+    async (message: MessageWithReactions, emoji: string) => {
+      if (isObserver) {
+        return;
+      }
+
+      const messageId = message.message_id?.trim();
+      if (!messageId) {
+        setReactionError('Não foi possível identificar a mensagem para reagir.');
+        return;
+      }
+
+      const chatIdentifier = (message.phone_number || selectedPhone || '').trim();
+      if (!chatIdentifier) {
+        setReactionError('Não foi possível identificar o chat da mensagem.');
+        return;
+      }
+
+      setSendingReactionMessageId(messageId);
+      setReactionError(null);
+
+      try {
+        const result = await zapiService.sendReaction(chatIdentifier, messageId, emoji);
+        if (!result.success) {
+          setReactionError(result.error || 'Erro ao enviar reação.');
+          return;
+        }
+
+        setActiveReactionMenuMessageId(null);
+      } catch (error) {
+        console.error('Erro ao enviar reação:', error);
+        setReactionError(
+          error instanceof Error ? error.message : 'Erro desconhecido ao enviar a reação.'
+        );
+      } finally {
+        setSendingReactionMessageId(null);
+      }
+    },
+    [isObserver, selectedPhone]
+  );
+
   const handleReplyToMessage = useCallback(
     (message: MessageWithReactions) => {
       if (isObserver) {
@@ -3379,6 +3490,14 @@ export default function WhatsAppHistoryTab({
                               const bubbleHighlightClasses = isHighlighted
                                 ? 'outline outline-2 outline-teal-400'
                                 : '';
+                              const reactionMenuMessageId = message.message_id?.trim() || null;
+                              const canReactToMessage = Boolean(reactionMenuMessageId);
+                              const isReactionMenuOpen =
+                                !!reactionMenuMessageId &&
+                                activeReactionMenuMessageId === reactionMenuMessageId;
+                              const isSendingReaction =
+                                !!reactionMenuMessageId &&
+                                sendingReactionMessageId === reactionMenuMessageId;
 
                               return (
                                 <div
@@ -3469,6 +3588,87 @@ export default function WhatsAppHistoryTab({
                                             : 'opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100 pointer-events-none group-hover/message:pointer-events-auto group-focus-within/message:pointer-events-auto'
                                         }`}
                                       >
+                                        {canReactToMessage && (
+                                          <div className="relative pointer-events-auto">
+                                            <button
+                                              ref={(element) => {
+                                                if (!reactionMenuMessageId) {
+                                                  return;
+                                                }
+                                                if (element) {
+                                                  reactionButtonRefs.current.set(
+                                                    reactionMenuMessageId,
+                                                    element
+                                                  );
+                                                } else {
+                                                  reactionButtonRefs.current.delete(reactionMenuMessageId);
+                                                }
+                                              }}
+                                              type="button"
+                                              onClick={() => {
+                                                if (!reactionMenuMessageId || isSendingReaction) {
+                                                  return;
+                                                }
+                                                setReactionError(null);
+                                                setActiveReactionMenuMessageId((previous) =>
+                                                  previous === reactionMenuMessageId
+                                                    ? null
+                                                    : reactionMenuMessageId
+                                                );
+                                              }}
+                                              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-teal-600 shadow-sm transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                              aria-label="Reagir à mensagem"
+                                              disabled={isSendingReaction}
+                                            >
+                                              {isSendingReaction ? (
+                                                <Loader className="h-4 w-4 animate-spin" />
+                                              ) : (
+                                                <SmilePlus className="h-4 w-4" />
+                                              )}
+                                            </button>
+                                            {isReactionMenuOpen && (
+                                              <div
+                                                ref={(element) => {
+                                                  if (isReactionMenuOpen) {
+                                                    reactionMenuRef.current = element;
+                                                  }
+                                                }}
+                                                className="pointer-events-auto absolute right-full top-1/2 mr-2 flex w-48 -translate-y-1/2 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-slate-600 shadow-lg"
+                                              >
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                                  Escolha uma reação
+                                                </p>
+                                                <div className="grid grid-cols-3 gap-1">
+                                                  {DEFAULT_REACTION_EMOJIS.map((emoji) => (
+                                                    <button
+                                                      key={`${reactionMenuMessageId}-${emoji}`}
+                                                      type="button"
+                                                      onClick={() =>
+                                                        reactionMenuMessageId
+                                                          ? void handleSendReaction(message, emoji)
+                                                          : undefined
+                                                      }
+                                                      disabled={isSendingReaction}
+                                                      className="flex h-10 items-center justify-center rounded-md text-2xl transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                      aria-label={`Reagir com ${emoji}`}
+                                                    >
+                                                      <span>{emoji}</span>
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                                {isSendingReaction && (
+                                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                    <Loader className="h-3 w-3 animate-spin" />
+                                                    Enviando reação...
+                                                  </div>
+                                                )}
+                                                {reactionError && (
+                                                  <p className="text-xs text-red-500">{reactionError}</p>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => handleReplyToMessage(message)}

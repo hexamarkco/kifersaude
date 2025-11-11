@@ -267,6 +267,7 @@ export type WhatsAppConversation = {
   lead_id?: string | null;
   contract_id?: string | null;
   phone_number: string;
+  target_phone?: string | null;
   message_id?: string | null;
   message_text: string;
   message_type: 'sent' | 'received';

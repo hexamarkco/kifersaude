@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
+import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
 import StatusDropdown from './StatusDropdown';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -348,7 +349,15 @@ const formatPhoneForDisplay = (phone: string): string => {
   return withoutGroupSuffix;
 };
 
-export default function WhatsAppHistoryTab() {
+type WhatsAppHistoryTabProps = {
+  externalChatRequest?: (WhatsAppChatRequestDetail & { requestId?: number }) | null;
+  onConsumeExternalChatRequest?: () => void;
+};
+
+export default function WhatsAppHistoryTab({
+  externalChatRequest,
+  onConsumeExternalChatRequest,
+}: WhatsAppHistoryTabProps) {
   const [aiMessages, setAIMessages] = useState<AIGeneratedMessage[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -368,6 +377,7 @@ export default function WhatsAppHistoryTab() {
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [externalSelectionContext, setExternalSelectionContext] = useState<WhatsAppChatRequestDetail | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
   const [fullscreenMedia, setFullscreenMedia] = useState<
@@ -387,7 +397,7 @@ export default function WhatsAppHistoryTab() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
-  const [activeReactionDetails, setActiveReactionDetails] = useState<ReactionModalState | null>(null);
+  const skipAutoSelectRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
   const attachmentButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -913,8 +923,17 @@ export default function WhatsAppHistoryTab() {
   }, [chatsWithPreferences, chatListFilter, leadsByPhoneMap, leadsMap, searchQuery]);
 
   useEffect(() => {
+    if (skipAutoSelectRef.current) {
+      skipAutoSelectRef.current = false;
+      return;
+    }
+
     if (filteredChats.length === 0) {
-      setSelectedPhone(null);
+      return;
+    }
+
+    if (!selectedPhone) {
+      setSelectedPhone(filteredChats[0].phone);
       return;
     }
 
@@ -939,13 +958,236 @@ export default function WhatsAppHistoryTab() {
   }, [selectedChat]);
 
   const selectedChatLead = useMemo(() => {
-    if (!selectedChat || selectedChat.isGroup) return undefined;
+    if (!selectedPhone) {
+      return undefined;
+    }
+
+    const normalizedSelected = sanitizePhoneDigits(selectedPhone);
+    const trimmedSelected = selectedPhone.trim();
+
+    if (selectedChat && !selectedChat.isGroup) {
+      const leadFromChat =
+        (selectedChat.leadId ? leadsMap.get(selectedChat.leadId) : undefined) ??
+        leadsByPhoneMap.get(sanitizePhoneDigits(selectedChat.phone)) ??
+        leadsByPhoneMap.get(selectedChat.phone.trim());
+
+      if (leadFromChat) {
+        return leadFromChat;
+      }
+    }
+
+    if (externalSelectionContext?.leadId) {
+      const contextPhone = sanitizePhoneDigits(externalSelectionContext.phone ?? '');
+      if (contextPhone && normalizedSelected && contextPhone === normalizedSelected) {
+        const lead = leadsMap.get(externalSelectionContext.leadId);
+        if (lead) {
+          return lead;
+        }
+      }
+    }
+
+    if (normalizedSelected) {
+      const fallbackLead =
+        leadsByPhoneMap.get(normalizedSelected) ||
+        leadsByPhoneMap.get(trimmedSelected);
+      if (fallbackLead) {
+        return fallbackLead;
+      }
+    }
+
+    return undefined;
+  }, [
+    externalSelectionContext,
+    leadsByPhoneMap,
+    leadsMap,
+    selectedChat,
+    selectedPhone,
+  ]);
+
+  useEffect(() => {
+    if (!externalChatRequest) {
+      return;
+    }
+
+    const { phone, leadId, prefillMessage } = externalChatRequest;
+    const normalizedTarget = sanitizePhoneDigits(phone ?? '');
+
+    let matchedChat: ChatGroup | undefined;
+
+    if (leadId) {
+      matchedChat = chatsWithPreferences.find(chat => chat.leadId === leadId);
+    }
+
+    if (!matchedChat && normalizedTarget) {
+      matchedChat = chatsWithPreferences.find((chat) => {
+        const chatDigits = sanitizePhoneDigits(chat.phone);
+        if (chatDigits && chatDigits === normalizedTarget) {
+          return true;
+        }
+
+        const lookupKeys = buildPhoneLookupKeys(chat.phone);
+        return lookupKeys.includes(normalizedTarget);
+      });
+    }
+
+    if (matchedChat) {
+      const desiredFilter = matchedChat.archived ? 'archived' : 'active';
+      if (chatListFilter !== desiredFilter) {
+        setChatListFilter(desiredFilter);
+      }
+
+      skipAutoSelectRef.current = true;
+      setSelectedPhone(matchedChat.phone);
+    } else if (phone) {
+      if (chatListFilter !== 'active') {
+        setChatListFilter('active');
+      }
+
+      skipAutoSelectRef.current = true;
+      setSelectedPhone(phone);
+    }
+
+    if (prefillMessage && !composerText.trim()) {
+      setComposerText(prefillMessage);
+    }
+
+    setExternalSelectionContext(externalChatRequest);
+    onConsumeExternalChatRequest?.();
+  }, [
+    chatListFilter,
+    chatsWithPreferences,
+    composerText,
+    externalChatRequest,
+    onConsumeExternalChatRequest,
+  ]);
+
+  useEffect(() => {
+    if (!externalSelectionContext?.phone) {
+      return;
+    }
+
+    if (!selectedPhone) {
+      setExternalSelectionContext(null);
+      return;
+    }
+
+    const contextDigits = sanitizePhoneDigits(externalSelectionContext.phone);
+    const selectedDigits = sanitizePhoneDigits(selectedPhone);
+
+    if (contextDigits && selectedDigits && contextDigits !== selectedDigits) {
+      setExternalSelectionContext(null);
+    }
+  }, [externalSelectionContext, selectedPhone]);
+
+  useEffect(() => {
+    if (chatsWithPreferences.length === 0) {
+      return;
+    }
+
+    const phonesToFetch: string[] = [];
+
+    chatsWithPreferences.forEach((chat) => {
+      if (!chat.isGroup) {
+        return;
+      }
+
+      const keys = buildGroupMetadataKeys(chat.phone);
+      const alreadyLoaded = keys.some((key) => groupMetadataMap.has(key));
+      const isPending = keys.some((key) => groupMetadataPendingRef.current.has(key));
+
+      if (!alreadyLoaded && !isPending) {
+        phonesToFetch.push(chat.phone);
+        keys.forEach((key) => groupMetadataPendingRef.current.add(key));
+      }
+    });
+
+    if (phonesToFetch.length === 0) {
+      return;
+    }
+
+    void (async () => {
+      for (const phone of phonesToFetch) {
+        try {
+          const result = await zapiService.getGroupMetadata(phone);
+          if (result.success && result.data) {
+            const metadata = result.data as ZAPIGroupMetadata;
+            setGroupMetadataMap((prev) => {
+              const next = new Map(prev);
+              const metadataKeys = new Set<string>([
+                ...buildGroupMetadataKeys(phone),
+                ...buildGroupMetadataKeys(metadata.phone),
+              ]);
+              metadataKeys.forEach((key) => {
+                if (key) {
+                  next.set(key, metadata);
+                }
+              });
+              return next;
+            });
+          } else if (result.error) {
+            console.warn('Não foi possível carregar metadata do grupo', phone, result.error);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar metadata do grupo', phone, error);
+        } finally {
+          const keys = buildGroupMetadataKeys(phone);
+          keys.forEach((key) => groupMetadataPendingRef.current.delete(key));
+        }
+      }
+    })();
+  }, [buildGroupMetadataKeys, chatsWithPreferences, groupMetadataMap]);
+
+  const selectedGroupMetadata = useMemo(() => {
+    if (!selectedChat?.isGroup) {
+      return undefined;
+    }
+    return getGroupMetadataForPhone(selectedChat.phone);
+  }, [getGroupMetadataForPhone, selectedChat]);
+
+  const selectedChatDisplayName = useMemo(() => {
+    if (!selectedPhone) {
+      return '';
+    }
+
+    if (!selectedChat) {
+      if (selectedChatLead?.nome_completo) {
+        return selectedChatLead.nome_completo;
+      }
+
+      if (externalSelectionContext?.phone) {
+        const contextDigits = sanitizePhoneDigits(externalSelectionContext.phone);
+        const selectedDigits = sanitizePhoneDigits(selectedPhone);
+        if (contextDigits && selectedDigits && contextDigits === selectedDigits) {
+          return (
+            externalSelectionContext.leadName ||
+            formatPhoneForDisplay(selectedPhone)
+          );
+        }
+      }
+
+      return formatPhoneForDisplay(selectedPhone);
+    }
+
+    if (selectedChat.isGroup) {
+      return (
+        selectedGroupMetadata?.subject ||
+        selectedChat.displayName ||
+        formatPhoneForDisplay(selectedChat.phone)
+      );
+    }
+
     return (
-      (selectedChat.leadId ? leadsMap.get(selectedChat.leadId) : undefined) ??
-      leadsByPhoneMap.get(sanitizePhoneDigits(selectedChat.phone)) ??
-      leadsByPhoneMap.get(selectedChat.phone.trim())
+      selectedChatLead?.nome_completo ||
+      selectedChat.displayName ||
+      formatPhoneForDisplay(selectedChat.phone)
     );
-  }, [leadsByPhoneMap, leadsMap, selectedChat]);
+  }, [
+    externalSelectionContext,
+    selectedChat,
+    selectedChatLead,
+    selectedGroupMetadata,
+    selectedPhone,
+  ]);
 
   useEffect(() => {
     if (chatsWithPreferences.length === 0) {

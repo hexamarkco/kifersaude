@@ -287,6 +287,20 @@ function extractNormalizedPhoneNumber(payload: any): string | null {
     }
   });
 
+  const groupCandidateByJid = candidatePhones.find((candidate) =>
+    candidate.toLowerCase().includes('@g.us')
+  );
+  if (groupCandidateByJid) {
+    return groupCandidateByJid;
+  }
+
+  const groupCandidateBySuffix = candidatePhones.find((candidate) =>
+    candidate.toLowerCase().includes('-group')
+  );
+  if (groupCandidateBySuffix) {
+    return groupCandidateBySuffix;
+  }
+
   if (payload?.fromMe && connectedNumbers.size > 0) {
     for (const candidate of candidatePhones) {
       if (!connectedNumbers.has(candidate)) {

@@ -112,16 +112,19 @@ export default function WhatsAppConversationViewer({
     return message.mediaType || deriveMediaTypeFromUrl(message.mediaUrl, message.mediaMimeType);
   };
 
-  const renderMediaContent = (message: ZAPIMessage) => {
+  const renderMediaContent = (
+    message: ZAPIMessage,
+    mediaTypeOverride?: ZAPIMediaType,
+  ) => {
     if (!message.mediaUrl) {
       return null;
     }
 
-    const mediaType = getMediaType(message);
+    const mediaType = mediaTypeOverride ?? getMediaType(message);
 
     if (mediaType === 'audio') {
       return (
-        <div className="mb-2">
+        <div className="mb-2 w-full">
           <audio
             controls
             className="w-full"
@@ -192,40 +195,51 @@ export default function WhatsAppConversationViewer({
               </span>
             </div>
 
-            {group.messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'} mb-3`}
-              >
+            {group.messages.map((message, index) => {
+              const mediaType = getMediaType(message);
+              const isAudioMessage = mediaType === 'audio';
+
+              const paddingClasses = isAudioMessage ? 'px-3 py-3' : 'px-4 py-2';
+
+              return (
                 <div
-                  className={`max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${
-                    message.fromMe
-                      ? 'bg-teal-500 text-white rounded-br-none'
-                      : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
-                  }`}
+                  key={index}
+                  className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'} mb-3`}
                 >
-                  {renderMediaContent(message)}
-                  {message.text && (
-                    <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-                  )}
-                  {!message.text && message.mediaUrl && getMediaType(message) === 'audio' && (
-                    <p className="text-xs mt-2 opacity-80">
-                      Mensagem de áudio
-                    </p>
-                  )}
                   <div
-                    className={`flex items-center justify-end space-x-1 mt-1 text-xs ${
-                      message.fromMe ? 'text-teal-100' : 'text-slate-500'
+                    className={`${
+                      isAudioMessage
+                        ? 'max-w-[90%] min-w-[240px] sm:min-w-[320px]'
+                        : 'max-w-[75%]'
+                    } rounded-lg ${paddingClasses} shadow-sm ${
+                      message.fromMe
+                        ? 'bg-teal-500 text-white rounded-br-none'
+                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none'
                     }`}
                   >
-                    <span>{formatTime(message.timestamp)}</span>
-                    {message.fromMe && (
-                      <CheckCheck className="w-4 h-4" />
+                    {renderMediaContent(message, mediaType)}
+                    {message.text && (
+                      <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                     )}
+                    {!message.text && message.mediaUrl && mediaType === 'audio' && (
+                      <p className="text-xs mt-2 opacity-80">
+                        Mensagem de áudio
+                      </p>
+                    )}
+                    <div
+                      className={`flex items-center justify-end space-x-1 mt-1 text-xs ${
+                        message.fromMe ? 'text-teal-100' : 'text-slate-500'
+                      }`}
+                    >
+                      <span>{formatTime(message.timestamp)}</span>
+                      {message.fromMe && (
+                        <CheckCheck className="w-4 h-4" />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
         <div ref={messagesEndRef} />

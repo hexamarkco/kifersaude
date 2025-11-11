@@ -21,6 +21,35 @@ export interface ZAPIMessage {
   mediaThumbnailUrl?: string;
   mediaCaption?: string;
   mediaViewOnce?: boolean;
+  senderName?: string;
+  senderPhoto?: string;
+  chatName?: string;
+}
+
+export interface ZAPIGroupParticipant {
+  phone: string;
+  isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  short?: string;
+  name?: string;
+}
+
+export interface ZAPIGroupMetadata {
+  phone: string;
+  description?: string | null;
+  owner?: string | null;
+  subject?: string | null;
+  creation?: number | null;
+  invitationLink?: string | null;
+  invitationLinkError?: string | null;
+  communityId?: string | null;
+  adminOnlyMessage?: boolean | null;
+  adminOnlySettings?: boolean | null;
+  requireAdminApproval?: boolean | null;
+  isGroupAnnouncement?: boolean | null;
+  participants?: ZAPIGroupParticipant[];
+  subjectTime?: number | null;
+  subjectOwner?: string | null;
 }
 
 export interface ZAPIResponse {
@@ -147,6 +176,154 @@ class ZAPIService {
     } catch (error) {
       return { success: false, error: String(error) };
     }
+  }
+
+  private pickFirstString(...candidates: unknown[]): string | null {
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string') {
+        const trimmed = candidate.trim();
+        if (trimmed) {
+          return trimmed;
+        }
+      }
+    }
+    return null;
+  }
+
+  private detectGroupChatFromMessage(msg: any, normalizedPhone?: string | null): boolean {
+    if (typeof msg?.isGroup === 'boolean') {
+      return msg.isGroup;
+    }
+
+    if (typeof msg?.chat?.isGroup === 'boolean') {
+      return msg.chat.isGroup;
+    }
+
+    const candidates = [normalizedPhone, msg?.phone, msg?.chatId, msg?.remoteJid, msg?.jid, msg?.groupId, msg?.id];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string') {
+        const lowerCandidate = candidate.toLowerCase();
+        if (lowerCandidate.includes('@g.us') || lowerCandidate.includes('-group')) {
+          return true;
+        }
+        const digits = candidate.replace(/\D/g, '');
+        if (digits.length >= 20) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private extractSenderNameFromMessage(msg: any): string | null {
+    return this.pickFirstString(
+      msg?.senderName,
+      msg?.sender_name,
+      msg?.sender?.name,
+      msg?.sender?.shortName,
+      msg?.sender?.pushName,
+      msg?.sender?.notifyName,
+      msg?.participantName,
+      msg?.participantPushName,
+      msg?.pushName,
+      msg?.contact?.displayName,
+      msg?.contact?.name,
+      msg?.contact?.formattedName,
+      msg?.contact?.shortName,
+      msg?.name,
+    );
+  }
+
+  private extractChatNameFromMessage(msg: any, senderName?: string | null, normalizedPhone?: string | null): string | null {
+    const isGroup = this.detectGroupChatFromMessage(msg, normalizedPhone);
+
+    if (isGroup) {
+      const explicitGroupName = this.pickFirstString(
+        msg?.chatName,
+        msg?.chat?.name,
+        msg?.chat?.displayName,
+        msg?.chat?.subject,
+        msg?.groupName,
+        msg?.groupSubject,
+        msg?.subject,
+      );
+      if (explicitGroupName) {
+        return explicitGroupName;
+      }
+    }
+
+    return (
+      this.pickFirstString(
+        msg?.chatName,
+        msg?.chat?.name,
+        msg?.chat?.displayName,
+        msg?.contact?.displayName,
+        msg?.contact?.name,
+        msg?.contact?.formattedName,
+        msg?.contact?.shortName,
+      ) || senderName || null
+    );
+  }
+
+  private extractSenderPhotoFromMessage(msg: any): string | null {
+    return this.pickFirstString(
+      msg?.senderPhoto,
+      msg?.photo,
+      msg?.profilePicUrl,
+      msg?.profilePicThumb,
+      msg?.contact?.photoUrl,
+      msg?.chat?.photoUrl,
+      msg?.chat?.thumbnailUrl,
+      msg?.chat?.icon,
+    );
+  }
+
+  private buildGroupIdCandidates(phone: string): string[] {
+    const candidates = new Set<string>();
+    const normalized = typeof phone === 'string' ? phone.trim() : '';
+
+    if (normalized) {
+      candidates.add(normalized);
+    }
+
+    if (normalized.includes('@')) {
+      const withoutDomain = normalized.split('@')[0] ?? '';
+      if (withoutDomain) {
+        candidates.add(withoutDomain);
+      }
+    }
+
+    const withoutSpaces = normalized.replace(/\s+/g, '');
+    if (withoutSpaces) {
+      candidates.add(withoutSpaces);
+    }
+
+    const baseCandidate = normalized.includes('@') ? normalized.split('@')[0] ?? '' : normalized;
+    const digitsOnly = baseCandidate.replace(/\D/g, '');
+    if (digitsOnly) {
+      candidates.add(digitsOnly);
+    }
+
+    const ensureGroupSuffix = (value: string) => {
+      if (!value) {
+        return;
+      }
+      if (!value.toLowerCase().includes('-group')) {
+        candidates.add(`${value}-group`);
+      }
+    };
+
+    if (baseCandidate) {
+      ensureGroupSuffix(baseCandidate);
+    }
+
+    if (digitsOnly) {
+      ensureGroupSuffix(digitsOnly);
+    }
+
+    return Array.from(candidates).filter((candidate) => candidate.length > 0);
   }
 
   async sendTextMessage(phoneNumber: string, message: string): Promise<ZAPIResponse> {
@@ -332,6 +509,9 @@ class ZAPIService {
         media_thumbnail_url: msg.mediaThumbnailUrl,
         media_caption: msg.mediaCaption,
         media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
+        sender_name: msg.senderName,
+        sender_photo: msg.senderPhoto,
+        chat_name: msg.chatName,
       }));
 
       for (const conv of conversations) {
@@ -423,7 +603,23 @@ class ZAPIService {
     rawMessages.forEach((msg) => {
       const mediaUrl = msg.mediaUrl || msg.media;
       const text = getMessageText(msg);
-      const { type: mediaType, isGif } = determineMediaType(msg, mediaUrl);
+      const mediaTypeResult = determineMediaType(msg, mediaUrl);
+      const inferMediaType = (value: any): ZAPIMediaType | undefined => {
+        if (!value) {
+          return undefined;
+        }
+
+        const candidate = typeof value === 'object' && 'type' in value ? value.type : value;
+
+        if (candidate === 'gif' || candidate === 'sticker') {
+          return 'image';
+        }
+
+        return candidate as ZAPIMediaType | undefined;
+      };
+
+      const resolvedMediaType = inferMediaType(mediaTypeResult);
+
       const hasContent = Boolean(text) || Boolean(mediaUrl) || Boolean(msg.notification);
 
       if (!hasContent) {
@@ -455,20 +651,31 @@ class ZAPIService {
           ? msg.isViewOnce
           : undefined;
 
+      const resolvedText = text || this.getMediaFallbackText(resolvedMediaType, mediaDurationSeconds);
+
+      const phoneValue = msg.phone || msg.chatId || '';
+      const normalizedPhone = typeof phoneValue === 'string' ? phoneValue.trim() : '';
+      const senderName = this.extractSenderNameFromMessage(msg);
+      const chatName = this.extractChatNameFromMessage(msg, senderName, normalizedPhone);
+      const senderPhoto = this.extractSenderPhotoFromMessage(msg);
+
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
-        phone: msg.phone || msg.chatId || '',
+        phone: phoneValue,
         text: resolvedText,
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
         mediaUrl: mediaUrl || undefined,
-        mediaType,
+        mediaType: resolvedMediaType,
         mediaMimeType: msg.mimetype || msg.mimeType,
         mediaDurationSeconds,
         mediaThumbnailUrl,
         mediaCaption,
         mediaViewOnce,
+        senderName: senderName || undefined,
+        chatName: chatName || undefined,
+        senderPhoto: senderPhoto || undefined,
       });
     });
 
@@ -494,6 +701,56 @@ class ZAPIService {
       return { success: true, messages };
     } catch (error) {
       return { success: false, messages: [], error: String(error) };
+    }
+  }
+
+  async getGroupMetadata(groupId: string): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const candidates = this.buildGroupIdCandidates(groupId);
+      let lastError: string | undefined;
+
+      for (const candidate of candidates) {
+        try {
+          const response = await fetch(
+            `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/group-metadata/${encodeURIComponent(candidate)}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': this.clientToken,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = (await response.json()) as ZAPIGroupMetadata;
+            return { success: true, data };
+          }
+
+          if (response.status === 404) {
+            lastError = 'Grupo não encontrado';
+            continue;
+          }
+
+          try {
+            const errorData = await response.json();
+            lastError = errorData.message || 'Falha ao buscar metadata do grupo';
+          } catch (error) {
+            lastError = 'Falha ao buscar metadata do grupo';
+          }
+        } catch (error) {
+          lastError = String(error);
+        }
+      }
+
+      return { success: false, error: lastError || 'Falha ao buscar metadata do grupo' };
+    } catch (error) {
+      return { success: false, error: String(error) };
     }
   }
 }

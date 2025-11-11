@@ -22,7 +22,6 @@ import {
   Loader,
   Phone,
   RefreshCcw,
-  Maximize2,
   FileText,
   Paperclip,
   Mic,
@@ -34,9 +33,35 @@ import {
   Square,
   Pin,
   PinOff,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { zapiService } from '../lib/zapiService';
+
+const isChatPreferencesTableMissingError = (error: PostgrestError | null | undefined) => {
+  if (!error) return false;
+
+  const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+  if (['PGRST302', 'PGRST301', '42P01', 'PGRST404'].includes(normalizedCode)) {
+    return true;
+  }
+
+  const tableLower = 'whatsapp_chat_preferences';
+  const normalize = (value?: string | null) => (typeof value === 'string' ? value.toLowerCase() : '');
+
+  const message = normalize(error.message);
+  const details = normalize(error.details);
+  const hint = normalize(error.hint);
+
+  return (
+    message.includes(tableLower) ||
+    message.includes('does not exist') ||
+    details.includes(tableLower) ||
+    hint.includes(tableLower)
+  );
+};
 
 const sanitizePhoneDigits = (value?: string | null): string => {
   if (!value || typeof value !== 'string') return '';
@@ -242,7 +267,7 @@ export default function WhatsAppHistoryTab() {
         .select('*');
 
       if (error) {
-        if ((error as { code?: string })?.code === 'PGRST205') {
+        if (isChatPreferencesTableMissingError(error)) {
           setChatPreferences(new Map());
           return;
         }

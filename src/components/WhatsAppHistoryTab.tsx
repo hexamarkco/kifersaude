@@ -12,6 +12,7 @@ import {
   supabase,
   AIGeneratedMessage,
   WhatsAppConversation,
+  WhatsAppMessageDeliveryStatus,
   Lead,
   Contract,
   WhatsAppChatPreference,
@@ -37,7 +38,9 @@ import {
   Search,
   Sparkles,
   MessageSquare,
+  Check,
   CheckCircle,
+  CheckCheck,
   XCircle,
   Clock,
   Loader,
@@ -106,6 +109,29 @@ const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
 const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
+
+const OUTGOING_STATUS_VISUALS: Record<
+  WhatsAppMessageDeliveryStatus,
+  { icon: typeof Check; className: string; label: string }
+> = {
+  pending: { icon: Clock, className: 'text-white/70', label: 'Enviando' },
+  sent: { icon: Check, className: 'text-white/80', label: 'Enviado' },
+  received: { icon: CheckCheck, className: 'text-white/80', label: 'Recebido' },
+  read: { icon: CheckCheck, className: 'text-cyan-100', label: 'Lido' },
+  played: { icon: CheckCheck, className: 'text-cyan-100', label: 'Reproduzido' },
+  read_by_me: { icon: Check, className: 'text-white/80', label: 'Lido por você' },
+  failed: { icon: XCircle, className: 'text-red-200', label: 'Falha no envio' },
+};
+
+const getOutgoingDeliveryStatusVisual = (
+  status?: WhatsAppMessageDeliveryStatus | null,
+) => {
+  if (!status) {
+    return null;
+  }
+
+  return OUTGOING_STATUS_VISUALS[status] ?? null;
+};
 
 type MessageReactionDetail = {
   name: string;
@@ -3825,11 +3851,11 @@ export default function WhatsAppHistoryTab({
     return false;
   };
 
-  const getMediaTypeLabel = (mediaType?: string | null) => {
-    const normalized = mediaType?.toLowerCase();
-    switch (normalized) {
-      case 'audio':
-        return 'Mensagem de áudio';
+const getMediaTypeLabel = (mediaType?: string | null) => {
+  const normalized = mediaType?.toLowerCase();
+  switch (normalized) {
+    case 'audio':
+      return 'Mensagem de áudio';
       case 'video':
         return 'Vídeo';
       case 'image':
@@ -3842,8 +3868,22 @@ export default function WhatsAppHistoryTab({
         return 'Documento';
       default:
         return 'Mensagem';
-    }
-  };
+  }
+};
+
+const getOutgoingMessageStatus = (
+  message: WhatsAppConversation,
+): WhatsAppMessageDeliveryStatus | null => {
+  if (message.message_type !== 'sent') {
+    return null;
+  }
+
+  if (message.delivery_status) {
+    return message.delivery_status;
+  }
+
+  return 'sent';
+};
 
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
@@ -5387,6 +5427,9 @@ export default function WhatsAppHistoryTab({
                               const isSendingReaction =
                                 !!reactionMenuMessageId &&
                                 sendingReactionMessageId === reactionMenuMessageId;
+                              const outgoingStatus = getOutgoingMessageStatus(message);
+                              const outgoingStatusVisual = getOutgoingDeliveryStatusVisual(outgoingStatus);
+                              const OutgoingStatusIcon = outgoingStatusVisual?.icon;
 
                               return (
                                 <div
@@ -5446,8 +5489,17 @@ export default function WhatsAppHistoryTab({
                                         <span className="uppercase tracking-wide font-semibold">Visualização única</span>
                                       )}
                                       <span>{formatTime(message.timestamp)}</span>
-                                      {message.read_status && message.message_type === 'sent' && (
-                                        <span className="font-semibold">Lida</span>
+                                      {OutgoingStatusIcon && outgoingStatusVisual && (
+                                        <span
+                                          className="flex items-center"
+                                          title={outgoingStatusVisual.label}
+                                        >
+                                          <OutgoingStatusIcon
+                                            className={`h-4 w-4 ${outgoingStatusVisual.className}`}
+                                            aria-hidden="true"
+                                          />
+                                          <span className="sr-only">{outgoingStatusVisual.label}</span>
+                                        </span>
                                       )}
                                     </div>
                                     {reactionSummaries.length > 0 && (

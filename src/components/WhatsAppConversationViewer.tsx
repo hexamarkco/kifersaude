@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, CheckCheck, ChevronDown } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, Clock, MessageCircle, XCircle } from 'lucide-react';
+import { WhatsAppMessageDeliveryStatus } from '../lib/supabase';
 import { ZAPIMessage, ZAPIMediaType } from '../lib/zapiService';
 
 interface WhatsAppConversationViewerProps {
@@ -7,6 +8,29 @@ interface WhatsAppConversationViewerProps {
   leadName: string;
   isLoading?: boolean;
 }
+
+const DELIVERY_STATUS_VISUALS: Record<
+  WhatsAppMessageDeliveryStatus,
+  { icon: typeof Check; className: string; label: string }
+> = {
+  pending: { icon: Clock, className: 'text-white/70', label: 'Enviando' },
+  sent: { icon: Check, className: 'text-white/80', label: 'Enviado' },
+  received: { icon: CheckCheck, className: 'text-white/80', label: 'Recebido' },
+  read: { icon: CheckCheck, className: 'text-sky-100', label: 'Lido' },
+  played: { icon: CheckCheck, className: 'text-sky-100', label: 'Reproduzido' },
+  read_by_me: { icon: Check, className: 'text-white/80', label: 'Lido por você' },
+  failed: { icon: XCircle, className: 'text-red-200', label: 'Falha no envio' },
+};
+
+const getDeliveryStatusVisual = (
+  status?: WhatsAppMessageDeliveryStatus | null,
+) => {
+  if (!status) {
+    return null;
+  }
+
+  return DELIVERY_STATUS_VISUALS[status] ?? null;
+};
 
 export default function WhatsAppConversationViewer({
   messages,
@@ -314,6 +338,10 @@ export default function WhatsAppConversationViewer({
               const isDownloadAvailable =
                 Boolean(message.mediaUrl) && ['audio', 'video', 'image'].includes(mediaType ?? '');
 
+              const deliveryStatus = message.fromMe ? message.deliveryStatus ?? 'sent' : null;
+              const statusVisual = deliveryStatus ? getDeliveryStatusVisual(deliveryStatus) : null;
+              const StatusIcon = statusVisual?.icon;
+
               return (
                 <div
                   key={index}
@@ -371,8 +399,14 @@ export default function WhatsAppConversationViewer({
                       }`}
                     >
                       <span>{formatTime(message.timestamp)}</span>
-                      {message.fromMe && (
-                        <CheckCheck className="w-4 h-4" />
+                      {StatusIcon && statusVisual && (
+                        <span className="flex items-center" title={statusVisual.label}>
+                          <StatusIcon
+                            className={`w-4 h-4 ${statusVisual.className}`}
+                            aria-hidden="true"
+                          />
+                          <span className="sr-only">{statusVisual.label}</span>
+                        </span>
                       )}
                     </div>
                   </div>

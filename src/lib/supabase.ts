@@ -5,6 +5,15 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export type WhatsAppMessageDeliveryStatus =
+  | 'pending'
+  | 'sent'
+  | 'received'
+  | 'read'
+  | 'read_by_me'
+  | 'played'
+  | 'failed';
+
 export type Lead = {
   id: string;
   nome_completo: string;
@@ -296,6 +305,8 @@ export type WhatsAppConversation = {
   quoted_message_from_me?: boolean | null;
   quoted_message_type?: string | null;
   quoted_message_media_url?: string | null;
+  delivery_status?: WhatsAppMessageDeliveryStatus | null;
+  delivery_status_updated_at?: string | null;
   created_at: string;
 };
 

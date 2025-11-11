@@ -804,8 +804,10 @@ export default function WhatsAppHistoryTab({
     }
   }, []);
 
-  const loadAIMessages = useCallback(async () => {
-    setLoading(true);
+  const loadAIMessages = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('ai_generated_messages')
@@ -821,7 +823,9 @@ export default function WhatsAppHistoryTab({
     } catch (error) {
       console.error('Erro ao carregar mensagens IA:', error);
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   }, [loadLeads]);
 
@@ -861,6 +865,37 @@ export default function WhatsAppHistoryTab({
       loadConversations();
     }
   }, [activeView, loadAIMessages, loadConversations]);
+
+  useEffect(() => {
+    const conversationsChannel = supabase
+      .channel('whatsapp-conversations-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_conversations' },
+        () => {
+          // Atualiza silenciosamente as conversas quando um novo evento chega.
+          loadConversations(false);
+        },
+      );
+
+    const aiMessagesChannel = supabase
+      .channel('ai-generated-messages-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_generated_messages' },
+        () => {
+          loadAIMessages(false);
+        },
+      );
+
+    void conversationsChannel.subscribe();
+    void aiMessagesChannel.subscribe();
+
+    return () => {
+      void conversationsChannel.unsubscribe();
+      void aiMessagesChannel.unsubscribe();
+    };
+  }, [loadConversations, loadAIMessages]);
 
   const closeFullscreen = useCallback(() => setFullscreenMedia(null), []);
 

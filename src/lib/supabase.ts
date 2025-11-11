@@ -290,6 +290,12 @@ export type WhatsAppConversation = {
   call_id?: string | null;
   waiting_message?: boolean | null;
   is_status_reply?: boolean | null;
+  quoted_message_id?: string | null;
+  quoted_message_text?: string | null;
+  quoted_message_sender?: string | null;
+  quoted_message_from_me?: boolean | null;
+  quoted_message_type?: string | null;
+  quoted_message_media_url?: string | null;
   created_at: string;
 };
 

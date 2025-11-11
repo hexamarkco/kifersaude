@@ -119,6 +119,72 @@ class ZAPIService {
     }
   }
 
+  async forwardMessage(
+    targetPhone: string,
+    messageId: string,
+    messagePhone: string,
+    delayMessage?: number
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(targetPhone);
+      const sourcePhone = this.normalizePhoneNumber(messagePhone);
+
+      if (!messageId) {
+        return { success: false, error: 'ID da mensagem é obrigatório' };
+      }
+
+      const payload: Record<string, string | number> = {
+        phone,
+        messageId,
+        messagePhone: sourcePhone,
+      };
+
+      if (typeof delayMessage === 'number' && Number.isFinite(delayMessage)) {
+        payload.delayMessage = delayMessage;
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/forward-message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao encaminhar mensagem';
+        try {
+          const errorData = (await response.json()) as { message?: string };
+          errorMessage = errorData?.message || errorMessage;
+        } catch (error) {
+          console.warn('Erro ao interpretar resposta de encaminhamento:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      let data: unknown = null;
+      try {
+        data = (await response.json()) as unknown;
+      } catch (error) {
+        data = null;
+        console.warn('Resposta sem JSON ao encaminhar mensagem:', error);
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
       const { data, error } = await supabase

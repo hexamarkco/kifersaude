@@ -34,6 +34,7 @@ import {
   FileAudio,
   Square,
   CornerUpRight,
+  Share2,
   Pin,
   PinOff,
   Archive,
@@ -428,6 +429,12 @@ export default function WhatsAppHistoryTab({
   const [manualScrollAlternateId, setManualScrollAlternateId] = useState<string | null>(null);
   const [activeReactionDetails, setActiveReactionDetails] =
     useState<ReactionModalState | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<MessageWithReactions | null>(null);
+  const [forwardTargetPhone, setForwardTargetPhone] = useState('');
+  const [forwardDelaySeconds, setForwardDelaySeconds] = useState('');
+  const [forwardError, setForwardError] = useState<string | null>(null);
+  const [forwardSuccess, setForwardSuccess] = useState<string | null>(null);
+  const [isForwardingMessage, setIsForwardingMessage] = useState(false);
   const skipAutoSelectRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
@@ -2481,6 +2488,104 @@ export default function WhatsAppHistoryTab({
     [isObserver]
   );
 
+  const handleOpenForwardModal = useCallback(
+    (message: MessageWithReactions) => {
+      if (isObserver) {
+        return;
+      }
+      setForwardingMessage(message);
+      setForwardTargetPhone('');
+      setForwardDelaySeconds('');
+      setForwardError(null);
+      setForwardSuccess(null);
+    },
+    [isObserver]
+  );
+
+  const handleCloseForwardModal = useCallback(() => {
+    setForwardingMessage(null);
+    setForwardTargetPhone('');
+    setForwardDelaySeconds('');
+    setForwardError(null);
+    setForwardSuccess(null);
+    setIsForwardingMessage(false);
+  }, []);
+
+  const handleConfirmForwardMessage = useCallback(async () => {
+    if (!forwardingMessage || isObserver) {
+      return;
+    }
+
+    const sanitizedTarget = sanitizePhoneDigits(forwardTargetPhone);
+    if (!sanitizedTarget) {
+      setForwardError('Informe o telefone do destinatário para encaminhar a mensagem.');
+      return;
+    }
+
+    if (sanitizedTarget.length < 10) {
+      setForwardError('Informe um telefone válido com DDI e DDD.');
+      return;
+    }
+
+    const messageId = forwardingMessage.message_id || forwardingMessage.id;
+    if (!messageId) {
+      setForwardError('Não foi possível identificar a mensagem selecionada.');
+      return;
+    }
+
+    const messagePhoneDigits = sanitizePhoneDigits(
+      forwardingMessage.phone_number || selectedPhone || ''
+    );
+    if (!messagePhoneDigits) {
+      setForwardError('Não foi possível identificar o chat de origem da mensagem.');
+      return;
+    }
+
+    let delayValue: number | undefined;
+    if (forwardDelaySeconds) {
+      const parsedDelay = Number(forwardDelaySeconds);
+      if (Number.isNaN(parsedDelay) || parsedDelay < 1 || parsedDelay > 15) {
+        setForwardError('Informe um delay entre 1 e 15 segundos.');
+        return;
+      }
+      delayValue = parsedDelay;
+    }
+
+    setIsForwardingMessage(true);
+    setForwardError(null);
+    setForwardSuccess(null);
+
+    try {
+      const result = await zapiService.forwardMessage(
+        sanitizedTarget,
+        messageId,
+        messagePhoneDigits,
+        delayValue
+      );
+      if (!result.success) {
+        setForwardError(result.error || 'Falha ao encaminhar a mensagem.');
+        return;
+      }
+
+      setForwardSuccess('Mensagem encaminhada com sucesso!');
+      setTimeout(() => {
+        handleCloseForwardModal();
+      }, 1500);
+    } catch (error) {
+      console.error('Erro ao encaminhar mensagem:', error);
+      setForwardError('Erro ao encaminhar a mensagem.');
+    } finally {
+      setIsForwardingMessage(false);
+    }
+  }, [
+    forwardDelaySeconds,
+    forwardTargetPhone,
+    forwardingMessage,
+    handleCloseForwardModal,
+    isObserver,
+    selectedPhone,
+  ]);
+
   const handleCancelReply = useCallback(() => {
     setComposerReplyMessage(null);
   }, []);
@@ -3237,23 +3342,30 @@ export default function WhatsAppHistoryTab({
                                     )}
                                     </div>
                                     {!isObserver && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleReplyToMessage(message)}
-                                        disabled={isObserver}
-                                        className={`absolute top-2 right-2 rounded-full p-1 transition-opacity ${
-                                          message.message_type === 'sent'
-                                            ? 'text-white hover:bg-white/20'
-                                            : 'text-teal-600 hover:bg-teal-50'
-                                        } ${
+                                      <div
+                                        className={`absolute top-1/2 right-0 flex -translate-y-1/2 translate-x-full flex-col gap-2 transition-opacity ${
                                           isObserver
                                             ? 'hidden'
-                                            : 'opacity-0 group-hover/message:opacity-100 focus:opacity-100'
+                                            : 'opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100 pointer-events-none group-hover/message:pointer-events-auto group-focus-within/message:pointer-events-auto'
                                         }`}
-                                        aria-label="Responder mensagem"
                                       >
-                                        <CornerUpRight className="w-4 h-4" />
-                                      </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleReplyToMessage(message)}
+                                          className="pointer-events-auto rounded-full bg-white p-1 text-teal-600 shadow-sm transition-colors hover:bg-teal-50"
+                                          aria-label="Responder mensagem"
+                                        >
+                                          <CornerUpRight className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenForwardModal(message)}
+                                          className="pointer-events-auto rounded-full bg-white p-1 text-teal-600 shadow-sm transition-colors hover:bg-teal-50"
+                                          aria-label="Encaminhar mensagem"
+                                        >
+                                          <Share2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -3563,6 +3675,106 @@ export default function WhatsAppHistoryTab({
                   {fullscreenMedia.caption}
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {forwardingMessage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 px-4 py-6"
+          onClick={handleCloseForwardModal}
+        >
+          <div
+            className="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleCloseForwardModal}
+              className="absolute top-3 right-3 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de encaminhamento"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Encaminhar mensagem</h3>
+              <p className="text-sm text-slate-500">
+                Informe o telefone do destinatário e, se desejar, um delay para o envio.
+              </p>
+            </div>
+            <div className="mb-4 rounded-lg bg-slate-50 p-3">
+              <p className="text-[11px] font-semibold uppercase text-slate-500">Mensagem selecionada</p>
+              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
+                {getDisplayTextForMessage(forwardingMessage) || 'Mensagem sem conteúdo'}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-slate-500">
+                  Telefone do destinatário
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={forwardTargetPhone}
+                  onChange={(event) => setForwardTargetPhone(sanitizePhoneDigits(event.target.value))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Ex: 5511999999999"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-slate-500">
+                  Delay (segundos, opcional)
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={forwardDelaySeconds}
+                  onChange={(event) => {
+                    const digits = event.target.value.replace(/\D/g, '');
+                    setForwardDelaySeconds(digits.slice(0, 2));
+                  }}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="1 a 15"
+                />
+              </label>
+            </div>
+            {forwardError && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {forwardError}
+              </div>
+            )}
+            {forwardSuccess && (
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {forwardSuccess}
+              </div>
+            )}
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCloseForwardModal}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmForwardMessage()}
+                disabled={isForwardingMessage}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isForwardingMessage ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Encaminhando...
+                  </>
+                ) : (
+                  'Encaminhar'
+                )}
+              </button>
             </div>
           </div>
         </div>

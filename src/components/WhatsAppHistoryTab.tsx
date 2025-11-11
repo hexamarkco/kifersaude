@@ -437,6 +437,7 @@ export default function WhatsAppHistoryTab({
   const [forwardError, setForwardError] = useState<string | null>(null);
   const [forwardSuccess, setForwardSuccess] = useState<string | null>(null);
   const [isForwardingMessage, setIsForwardingMessage] = useState(false);
+  const [forwardStep, setForwardStep] = useState<'messages' | 'targets'>('messages');
   const skipAutoSelectRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
@@ -2528,6 +2529,7 @@ export default function WhatsAppHistoryTab({
       setForwardChatSearchTerm('');
       setForwardError(null);
       setForwardSuccess(null);
+      setForwardStep('messages');
     },
     [isObserver, selectedPhone]
   );
@@ -2541,6 +2543,44 @@ export default function WhatsAppHistoryTab({
     setForwardError(null);
     setForwardSuccess(null);
     setIsForwardingMessage(false);
+    setForwardStep('messages');
+  }, []);
+
+  const selectedMessagesMap = useMemo(() => {
+    const map = new Map<string, MessageWithReactions>();
+    processedSelectedMessages.forEach((message) => {
+      if (message.id) {
+        map.set(message.id, message);
+      }
+      if (message.message_id) {
+        map.set(message.message_id, message);
+      }
+    });
+    return map;
+  }, [processedSelectedMessages]);
+
+  const messagesSelectedForForward = useMemo(
+    () =>
+      forwardingMessageIds
+        .map((messageId) => selectedMessagesMap.get(messageId))
+        .filter((message): message is MessageWithReactions => Boolean(message)),
+    [forwardingMessageIds, selectedMessagesMap]
+  );
+
+  const handleForwardAdvanceToTargets = useCallback(() => {
+    if (forwardingMessageIds.length === 0) {
+      setForwardError('Selecione ao menos uma mensagem para encaminhar.');
+      return;
+    }
+
+    setForwardError(null);
+    setForwardStep('targets');
+  }, [forwardingMessageIds]);
+
+  const handleForwardBackToMessages = useCallback(() => {
+    setForwardStep('messages');
+    setForwardError(null);
+    setForwardSuccess(null);
   }, []);
 
   const handleConfirmForwardMessage = useCallback(async () => {
@@ -2548,19 +2588,17 @@ export default function WhatsAppHistoryTab({
       return;
     }
 
-    const selectedMessagesMap = new Map<string, MessageWithReactions>();
-    processedSelectedMessages.forEach((message) => {
-      if (message.id) {
-        selectedMessagesMap.set(message.id, message);
-      }
-      if (message.message_id) {
-        selectedMessagesMap.set(message.message_id, message);
-      }
-    });
+    if (forwardStep !== 'targets') {
+      setForwardError('Selecione primeiro os chats de destino.');
+      return;
+    }
 
-    const messagesToForward = forwardingMessageIds
-      .map((messageId) => selectedMessagesMap.get(messageId))
-      .filter((message): message is MessageWithReactions => Boolean(message));
+    if (messagesSelectedForForward.length === 0) {
+      setForwardError('Selecione ao menos uma mensagem para encaminhar.');
+      return;
+    }
+
+    const messagesToForward = messagesSelectedForForward;
 
     if (messagesToForward.length === 0) {
       setForwardError('Selecione ao menos uma mensagem para encaminhar.');
@@ -2627,41 +2665,48 @@ export default function WhatsAppHistoryTab({
   }, [
     forwardSelectedTargetPhones,
     forwardSourcePhone,
-    forwardingMessageIds,
+    forwardStep,
     handleCloseForwardModal,
     isForwardModalOpen,
     isObserver,
-    processedSelectedMessages,
+    messagesSelectedForForward,
     selectedPhone,
   ]);
 
   const handleToggleForwardMessageSelection = useCallback(
     (messageId: string, isChecked: boolean) => {
       setForwardingMessageIds((prev) => {
+        let next: string[] = prev;
+
         if (isChecked) {
           if (prev.includes(messageId)) {
-            return prev;
+            next = prev;
+          } else {
+            const orderMap = new Map<string, number>();
+            processedSelectedMessages.forEach((message, index) => {
+              if (message.id) {
+                orderMap.set(message.id, index);
+              }
+              if (message.message_id) {
+                orderMap.set(message.message_id, index);
+              }
+            });
+
+            next = [...prev, messageId];
+            next.sort((a, b) => (orderMap.get(a) ?? 0) - (orderMap.get(b) ?? 0));
           }
-
-          const orderMap = new Map<string, number>();
-          processedSelectedMessages.forEach((message, index) => {
-            if (message.id) {
-              orderMap.set(message.id, index);
-            }
-            if (message.message_id) {
-              orderMap.set(message.message_id, index);
-            }
-          });
-
-          const next = [...prev, messageId];
-          next.sort((a, b) => (orderMap.get(a) ?? 0) - (orderMap.get(b) ?? 0));
-          return next;
+        } else {
+          next = prev.filter((id) => id !== messageId);
         }
 
-        return prev.filter((id) => id !== messageId);
+        if (forwardStep === 'messages' && next.length > 0) {
+          setForwardError(null);
+        }
+
+        return next;
       });
     },
-    [processedSelectedMessages]
+    [forwardStep, processedSelectedMessages]
   );
 
   const handleToggleForwardTarget = useCallback((phone: string, isChecked: boolean) => {
@@ -3817,100 +3862,51 @@ export default function WhatsAppHistoryTab({
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="mb-4">
+            <div className="mb-4 space-y-1">
+              <p className="text-xs font-semibold uppercase text-teal-600">
+                Etapa {forwardStep === 'messages' ? '1' : '2'} de 2
+              </p>
               <h3 className="text-lg font-semibold text-slate-800">Encaminhar mensagens</h3>
               <p className="text-sm text-slate-500">
-                Selecione os chats de destino e quais mensagens deseja encaminhar. O envio
-                utilizará um delay padrão de 1 segundo.
+                {forwardStep === 'messages'
+                  ? 'Selecione as mensagens da conversa que deseja encaminhar.'
+                  : 'Escolha os chats de destino para encaminhar as mensagens selecionadas. O envio utilizará um delay padrão de 1 segundo.'}
               </p>
             </div>
             <div className="space-y-5">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase text-slate-500">
-                    Mensagens da conversa
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {forwardingMessageIds.length > 0
-                      ? `${forwardingMessageIds.length} selecionada${
-                          forwardingMessageIds.length > 1 ? 's' : ''
-                        }`
-                      : 'Nenhuma selecionada'}
-                  </span>
-                </div>
-                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
-                  {processedSelectedMessages.length === 0 ? (
-                    <p className="text-sm text-slate-500">
-                      Nenhuma mensagem disponível para encaminhamento.
-                    </p>
-                  ) : (
-                    processedSelectedMessages.map((message) => {
-                      const messageKey = message.id || message.message_id;
-                      if (!messageKey) {
-                        return null;
-                      }
-
-                      const isChecked = forwardingMessageIds.includes(messageKey);
-                      const preview = getComposerReplyPreviewText(message);
-
-                      return (
-                        <label
-                          key={message.id || message.message_id || message.timestamp}
-                          className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                            isChecked
-                              ? 'border-teal-500 bg-teal-50 shadow-sm'
-                              : 'border-slate-200 bg-white hover:border-teal-300'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                            checked={isChecked}
-                            onChange={(event) =>
-                              handleToggleForwardMessageSelection(messageKey, event.target.checked)
-                            }
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between text-xs text-slate-500">
-                              <span className="font-semibold text-slate-600">
-                                {getMessageSenderLabel(message)}
-                              </span>
-                              <span>{formatTime(message.timestamp)}</span>
-                            </div>
-                            <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
-                              {preview}
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs font-semibold uppercase text-slate-500">Chats de destino</span>
-                <div className="mt-2 space-y-2">
-                  <input
-                    type="text"
-                    value={forwardChatSearchTerm}
-                    onChange={(event) => setForwardChatSearchTerm(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                    placeholder="Pesquisar nome ou número"
-                  />
-                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                    {forwardChatOptions.length === 0 ? (
-                      <p className="py-4 text-center text-sm text-slate-500">
-                        Nenhum chat encontrado.
+              {forwardStep === 'messages' ? (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase text-slate-500">
+                      Mensagens da conversa
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {forwardingMessageIds.length > 0
+                        ? `${forwardingMessageIds.length} selecionada${
+                            forwardingMessageIds.length > 1 ? 's' : ''
+                          }`
+                        : 'Nenhuma selecionada'}
+                    </span>
+                  </div>
+                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {processedSelectedMessages.length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        Nenhuma mensagem disponível para encaminhamento.
                       </p>
                     ) : (
-                      forwardChatOptions.map(({ chat, displayName, photoUrl, phoneDisplay }) => {
-                        const isChecked = forwardSelectedTargetPhones.includes(chat.phone);
+                      processedSelectedMessages.map((message) => {
+                        const messageKey = message.id || message.message_id;
+                        if (!messageKey) {
+                          return null;
+                        }
+
+                        const isChecked = forwardingMessageIds.includes(messageKey);
+                        const preview = getComposerReplyPreviewText(message);
 
                         return (
                           <label
-                            key={chat.phone}
-                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                            key={message.id || message.message_id || message.timestamp}
+                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
                               isChecked
                                 ? 'border-teal-500 bg-teal-50 shadow-sm'
                                 : 'border-slate-200 bg-white hover:border-teal-300'
@@ -3918,30 +3914,22 @@ export default function WhatsAppHistoryTab({
                           >
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                              className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                               checked={isChecked}
                               onChange={(event) =>
-                                handleToggleForwardTarget(chat.phone, event.target.checked)
+                                handleToggleForwardMessageSelection(messageKey, event.target.checked)
                               }
                             />
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-teal-100">
-                                {photoUrl ? (
-                                  <img
-                                    src={photoUrl}
-                                    alt={displayName}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <Phone className="h-4 w-4 text-teal-600" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-800">
-                                  {displayName}
-                                </p>
-                                <p className="text-xs text-slate-500">{phoneDisplay}</p>
-                              </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold uppercase text-slate-400">
+                                {getMessageSenderLabel(message)}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
+                                {preview}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {formatDateLabel(message.timestamp)} às {formatTime(message.timestamp)}
+                              </p>
                             </div>
                           </label>
                         );
@@ -3949,19 +3937,129 @@ export default function WhatsAppHistoryTab({
                     )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase text-slate-500">
+                        Mensagens selecionadas
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleForwardBackToMessages}
+                        className="text-xs font-semibold text-teal-600 transition-colors hover:text-teal-700"
+                      >
+                        Alterar seleção
+                      </button>
+                    </div>
+                    <div className="mt-2 max-h-36 space-y-2 overflow-y-auto pr-1">
+                      {messagesSelectedForForward.length === 0 ? (
+                        <p className="text-sm text-slate-500">
+                          Nenhuma mensagem selecionada.
+                        </p>
+                      ) : (
+                        messagesSelectedForForward.map((message) => {
+                          const preview = getComposerReplyPreviewText(message);
+
+                          return (
+                            <div
+                              key={message.id || message.message_id || message.timestamp}
+                              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                            >
+                              <p className="text-xs font-semibold uppercase text-slate-400">
+                                {getMessageSenderLabel(message)}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
+                                {preview}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {formatDateLabel(message.timestamp)} às {formatTime(message.timestamp)}
+                              </p>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-semibold uppercase text-slate-500">
+                      Chats de destino
+                    </span>
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="text"
+                        value={forwardChatSearchTerm}
+                        onChange={(event) => setForwardChatSearchTerm(event.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                        placeholder="Pesquisar nome ou número"
+                      />
+                      <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                        {forwardChatOptions.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-slate-500">
+                            Nenhum chat encontrado.
+                          </p>
+                        ) : (
+                          forwardChatOptions.map(({ chat, displayName, photoUrl, phoneDisplay }) => {
+                            const isChecked = forwardSelectedTargetPhones.includes(chat.phone);
+
+                            return (
+                              <label
+                                key={chat.phone}
+                                className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                                  isChecked
+                                    ? 'border-teal-500 bg-teal-50 shadow-sm'
+                                    : 'border-slate-200 bg-white hover:border-teal-300'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                  checked={isChecked}
+                                  onChange={(event) =>
+                                    handleToggleForwardTarget(chat.phone, event.target.checked)
+                                  }
+                                />
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-teal-100">
+                                    {photoUrl ? (
+                                      <img
+                                        src={photoUrl}
+                                        alt={displayName}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <Phone className="h-4 w-4 text-teal-600" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-slate-800">
+                                      {displayName}
+                                    </p>
+                                    <p className="text-xs text-slate-500">{phoneDisplay}</p>
+                                  </div>
+                                </div>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             {forwardError && (
               <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {forwardError}
               </div>
             )}
-            {forwardSuccess && (
+            {forwardStep === 'targets' && forwardSuccess && (
               <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {forwardSuccess}
               </div>
             )}
-            <div className="mt-6 flex items-center justify-end gap-2">
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={handleCloseForwardModal}
@@ -3969,26 +4067,46 @@ export default function WhatsAppHistoryTab({
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                onClick={() => void handleConfirmForwardMessage()}
-                disabled={isForwardingMessage}
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isForwardingMessage ? (
-                  <>
-                    <Loader className="h-4 w-4 animate-spin" />
-                    Encaminhando...
-                  </>
-                ) : (
-                  'Encaminhar'
-                )}
-              </button>
+              {forwardStep === 'messages' ? (
+                <button
+                  type="button"
+                  onClick={handleForwardAdvanceToTargets}
+                  disabled={forwardingMessageIds.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Continuar
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleForwardBackToMessages}
+                    disabled={isForwardingMessage}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleConfirmForwardMessage()}
+                    disabled={isForwardingMessage}
+                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isForwardingMessage ? (
+                      <>
+                        <Loader className="h-4 w-4 animate-spin" />
+                        Encaminhando...
+                      </>
+                    ) : (
+                      'Encaminhar'
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
-
       {activeReactionDetails && (
         <div
           className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/70 px-4 py-6"

@@ -13,6 +13,7 @@ import {
   AIGeneratedMessage,
   WhatsAppConversation,
   Lead,
+  Contract,
   WhatsAppChatPreference,
 } from '../lib/supabase';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
@@ -24,6 +25,9 @@ import {
   type WhatsAppQuickReply,
 } from '../lib/whatsappQuickRepliesService';
 import StatusDropdown from './StatusDropdown';
+import LeadDetails from './LeadDetails';
+import LeadForm from './LeadForm';
+import LeadDetailsPanel from './LeadDetailsPanel';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createAutomaticFollowUps, cancelFollowUps } from '../lib/followUpService';
@@ -472,7 +476,19 @@ const isGroupWhatsAppJid = (phone?: string | null): boolean => {
   return digits.length >= 20;
 };
 
-type LeadPreview = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel'>;
+type LeadPreview = Pick<
+  Lead,
+  'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel' | 'observacoes'
+>;
+
+const toLeadPreview = (lead: Lead): LeadPreview => ({
+  id: lead.id,
+  nome_completo: lead.nome_completo,
+  telefone: lead.telefone,
+  status: lead.status,
+  responsavel: lead.responsavel,
+  observacoes: lead.observacoes ?? null,
+});
 
 type ChatGroupBase = {
   phone: string;
@@ -538,11 +554,15 @@ export default function WhatsAppHistoryTab({
   const [chatPreferences, setChatPreferences] = useState<Map<string, WhatsAppChatPreference>>(new Map());
   const [chatListFilter, setChatListFilter] = useState<'active' | 'archived'>('active');
 
-  const { leadStatuses } = useConfig();
+  const { leadStatuses, options } = useConfig();
   const { isObserver } = useAuth();
   const activeLeadStatuses = useMemo(
     () => leadStatuses.filter((status) => status.ativo),
     [leadStatuses]
+  );
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel ?? []).filter((option) => option.ativo),
+    [options.lead_responsavel]
   );
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
@@ -642,6 +662,13 @@ export default function WhatsAppHistoryTab({
   const [recordingLevels, setRecordingLevels] = useState<number[]>(
     () => Array(RECORDING_WAVEFORM_BARS).fill(0)
   );
+  const [leadContractsMap, setLeadContractsMap] = useState<Map<string, Contract[]>>(new Map());
+  const leadContractsMapRef = useRef<Map<string, Contract[]>>(leadContractsMap);
+  const [loadingContractsLeadId, setLoadingContractsLeadId] = useState<string | null>(null);
+  const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
+  const [activeLeadDetails, setActiveLeadDetails] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
   const [chatMetadataMap, setChatMetadataMap] = useState<Map<string, ZAPIChatMetadata>>(new Map());
   const chatMetadataPendingRef = useRef<Set<string>>(new Set());
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
@@ -748,6 +775,10 @@ export default function WhatsAppHistoryTab({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isQuickRepliesMenuOpen]);
+
+  useEffect(() => {
+    leadContractsMapRef.current = leadContractsMap;
+  }, [leadContractsMap]);
 
   useEffect(() => {
     if (!activeReactionMenuMessageId) {
@@ -1276,7 +1307,7 @@ export default function WhatsAppHistoryTab({
 
     const { data } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone, status, responsavel')
+      .select('id, nome_completo, telefone, status, responsavel, observacoes')
       .in('id', leadIds);
 
     if (data) {
@@ -1316,7 +1347,7 @@ export default function WhatsAppHistoryTab({
 
     const { data, error } = await supabase
       .from('leads')
-      .select('id, nome_completo, telefone, status, responsavel')
+      .select('id, nome_completo, telefone, status, responsavel, observacoes')
       .in('telefone', variants);
 
     if (error) {
@@ -1330,6 +1361,112 @@ export default function WhatsAppHistoryTab({
       upsertLeadsIntoMaps(data as LeadPreview[]);
     }
   }, [upsertLeadsIntoMaps]);
+
+  const loadLeadById = useCallback(
+    async (leadId: string) => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const lead = data as Lead;
+      upsertLeadsIntoMaps([toLeadPreview(lead)]);
+      return lead;
+    },
+    [upsertLeadsIntoMaps]
+  );
+
+  const loadContractsForLead = useCallback(
+    async (leadId: string, force = false) => {
+      if (!leadId) {
+        return;
+      }
+
+      if (!force && leadContractsMapRef.current.has(leadId)) {
+        return;
+      }
+
+      setLoadingContractsLeadId(leadId);
+      setLeadContractsError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from('contracts')
+          .select(
+            'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, created_at'
+          )
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        setLeadContractsMap((current) => {
+          const next = new Map(current);
+          next.set(leadId, (data as Contract[] | null) ?? []);
+          return next;
+        });
+      } catch (error) {
+        console.error('Erro ao carregar contratos do lead:', error);
+        setLeadContractsError('Erro ao carregar contratos do lead');
+      } finally {
+        setLoadingContractsLeadId((current) => (current === leadId ? null : current));
+      }
+    },
+    []
+  );
+
+  const handleLeadDataUpdated = useCallback(
+    async (leadId: string) => {
+      try {
+        const updatedLead = await loadLeadById(leadId);
+        setActiveLeadDetails((current) =>
+          current && current.id === leadId ? updatedLead : current
+        );
+        setEditingLead((current) => (current && current.id === leadId ? updatedLead : current));
+      } catch (error) {
+        console.error('Erro ao atualizar dados do lead:', error);
+      }
+    },
+    [loadLeadById]
+  );
+
+  const handleOpenLeadDetails = useCallback(
+    async (leadId: string) => {
+      try {
+        const lead = await loadLeadById(leadId);
+        setActiveLeadDetails(lead);
+      } catch (error) {
+        console.error('Erro ao carregar detalhes do lead:', error);
+        alert('Erro ao carregar detalhes do lead');
+      }
+    },
+    [loadLeadById]
+  );
+
+  const handleEditLead = useCallback(
+    async (leadId: string) => {
+      if (isObserver) {
+        return;
+      }
+
+      try {
+        const lead = await loadLeadById(leadId);
+        setEditingLead(lead);
+        setIsLeadFormOpen(true);
+      } catch (error) {
+        console.error('Erro ao carregar lead para edição:', error);
+        alert('Erro ao carregar lead para edição');
+      }
+    },
+    [isObserver, loadLeadById]
+  );
 
   const loadChatPreferences = useCallback(async () => {
     try {
@@ -2680,6 +2817,12 @@ export default function WhatsAppHistoryTab({
       const oldStatus = lead.status;
       const optimisticLead = { ...lead, status: newStatus };
       upsertLeadsIntoMaps([optimisticLead]);
+      setActiveLeadDetails((current) =>
+        current && current.id === leadId ? { ...current, status: newStatus } : current
+      );
+      setEditingLead((current) =>
+        current && current.id === leadId ? { ...current, status: newStatus } : current
+      );
 
       try {
         const now = new Date().toISOString();
@@ -2718,10 +2861,67 @@ export default function WhatsAppHistoryTab({
         console.error('Erro ao atualizar status do lead:', error);
         alert('Erro ao atualizar status do lead');
         upsertLeadsIntoMaps([{ ...lead, status: oldStatus }]);
+        setActiveLeadDetails((current) =>
+          current && current.id === leadId ? { ...current, status: oldStatus } : current
+        );
+        setEditingLead((current) =>
+          current && current.id === leadId ? { ...current, status: oldStatus } : current
+        );
         throw error;
       }
     },
     [createAutomaticFollowUps, cancelFollowUps, leadsMap, upsertLeadsIntoMaps]
+  );
+
+  const handleLeadResponsavelChange = useCallback(
+    async (leadId: string, newResponsavel: string) => {
+      const lead = leadsMap.get(leadId);
+      if (!lead) {
+        return;
+      }
+
+      const oldResponsavel = lead.responsavel;
+      const optimisticLead = { ...lead, responsavel: newResponsavel };
+      upsertLeadsIntoMaps([optimisticLead]);
+      setActiveLeadDetails((current) =>
+        current && current.id === leadId ? { ...current, responsavel: newResponsavel } : current
+      );
+      setEditingLead((current) =>
+        current && current.id === leadId ? { ...current, responsavel: newResponsavel } : current
+      );
+
+      try {
+        const { error } = await supabase
+          .from('leads')
+          .update({ responsavel: newResponsavel })
+          .eq('id', leadId);
+
+        if (error) {
+          throw error;
+        }
+
+        await supabase.from('interactions').insert([
+          {
+            lead_id: leadId,
+            tipo: 'Observação',
+            descricao: `Responsável alterado de "${oldResponsavel || 'Não definido'}" para "${newResponsavel}"`,
+            responsavel: newResponsavel,
+          },
+        ]);
+      } catch (error) {
+        console.error('Erro ao atualizar responsável do lead:', error);
+        alert('Erro ao atualizar responsável do lead');
+        upsertLeadsIntoMaps([{ ...lead, responsavel: oldResponsavel }]);
+        setActiveLeadDetails((current) =>
+          current && current.id === leadId ? { ...current, responsavel: oldResponsavel } : current
+        );
+        setEditingLead((current) =>
+          current && current.id === leadId ? { ...current, responsavel: oldResponsavel } : current
+        );
+        throw error;
+      }
+    },
+    [leadsMap, upsertLeadsIntoMaps]
   );
 
   const formatTime = (timestamp: string) => {
@@ -4376,7 +4576,7 @@ export default function WhatsAppHistoryTab({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-[320px,minmax(0,1fr)] gap-6">
             <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden h-[600px] flex flex-col">
               <div className="px-4 py-3 bg-white border-b border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700">Conversas</h3>
@@ -4519,7 +4719,8 @@ export default function WhatsAppHistoryTab({
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl h-[600px] flex flex-col">
+            <div className="space-y-6 xl:space-y-0 xl:flex xl:items-start xl:gap-6">
+              <div className="bg-white border border-slate-200 rounded-xl h-[600px] flex flex-col flex-1">
               {!selectedPhone ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-500">
                   <MessageCircle className="w-12 h-12 mb-4" />
@@ -5206,6 +5407,36 @@ export default function WhatsAppHistoryTab({
                   </div>
                 </>
               )}
+            </div>
+            {selectedPhone && (
+              <LeadDetailsPanel
+                className="bg-white border border-slate-200 rounded-xl h-[600px] w-full xl:w-[340px] xl:flex-none"
+                lead={selectedChatLead ?? null}
+                statusOptions={activeLeadStatuses}
+                responsavelOptions={responsavelOptions}
+                onStatusChange={handleLeadStatusChange}
+                onResponsavelChange={handleLeadResponsavelChange}
+                contracts={selectedLeadContracts}
+                contractsLoading={isLoadingLeadContracts}
+                contractsError={leadContractsError}
+                onRefreshContracts={selectedChatLead ? handleRefreshContracts : undefined}
+                disabled={isObserver}
+                onViewLead={
+                  selectedChatLead
+                    ? () => {
+                        void handleOpenLeadDetails(selectedChatLead.id);
+                      }
+                    : undefined
+                }
+                onEditLead={
+                  !isObserver && selectedChatLead
+                    ? () => {
+                        void handleEditLead(selectedChatLead.id);
+                      }
+                    : undefined
+                }
+              />
+            )}
             </div>
           </div>
         )}
@@ -5997,6 +6228,34 @@ export default function WhatsAppHistoryTab({
             </div>
           </div>
         </div>
+      )}
+
+      {isLeadFormOpen && editingLead && (
+        <LeadForm
+          lead={editingLead}
+          onClose={() => {
+            setIsLeadFormOpen(false);
+            setEditingLead(null);
+          }}
+          onSave={() => {
+            const leadId = editingLead?.id;
+            setIsLeadFormOpen(false);
+            setEditingLead(null);
+            if (leadId) {
+              void handleLeadDataUpdated(leadId);
+            }
+          }}
+        />
+      )}
+
+      {activeLeadDetails && (
+        <LeadDetails
+          lead={activeLeadDetails}
+          onClose={() => setActiveLeadDetails(null)}
+          onUpdate={() => {
+            void handleLeadDataUpdated(activeLeadDetails.id);
+          }}
+        />
       )}
     </>
   );

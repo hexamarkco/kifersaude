@@ -143,6 +143,42 @@ export default function WhatsAppConversationViewer({
     return message.mediaType || deriveMediaTypeFromUrl(message.mediaUrl, message.mediaMimeType);
   };
 
+  const getQuotedSenderLabel = (message: ZAPIMessage) => {
+    if (message.quotedSenderName?.trim()) {
+      return message.quotedSenderName.trim();
+    }
+
+    if (typeof message.quotedFromMe === 'boolean') {
+      return message.quotedFromMe ? 'Você' : 'Contato';
+    }
+
+    return 'Contato';
+  };
+
+  const getQuotedPreviewText = (message: ZAPIMessage) => {
+    const text = message.quotedText?.trim();
+    if (text) {
+      return text;
+    }
+
+    if (message.quotedMediaType) {
+      switch (message.quotedMediaType) {
+        case 'audio':
+          return 'Mensagem de áudio';
+        case 'video':
+          return 'Vídeo';
+        case 'image':
+          return 'Imagem';
+        case 'document':
+          return 'Documento';
+        default:
+          return 'Mensagem';
+      }
+    }
+
+    return 'Mensagem';
+  };
+
   const renderMediaContent = (
     message: ZAPIMessage,
     mediaTypeOverride?: ZAPIMediaType,
@@ -231,6 +267,11 @@ export default function WhatsAppConversationViewer({
               const isAudioMessage = mediaType === 'audio';
 
               const paddingClasses = isAudioMessage ? 'px-3 py-3' : 'px-4 py-2';
+              const quotedSenderLabel = getQuotedSenderLabel(message);
+              const quotedPreviewText = getQuotedPreviewText(message);
+              const hasQuotedMessage = Boolean(
+                message.quotedMessageId || message.quotedText || message.quotedMediaType
+              );
 
               return (
                 <div
@@ -256,6 +297,22 @@ export default function WhatsAppConversationViewer({
                       >
                         {message.fromMe ? 'Você' : message.senderName?.trim() || 'Participante'}
                       </span>
+                    )}
+                    {hasQuotedMessage && (
+                      <div
+                        className={`rounded-lg border-l-4 px-3 py-2 text-xs ${
+                          message.fromMe
+                            ? 'bg-white/10 border-white/50 text-teal-50'
+                            : 'bg-teal-50 border-teal-400 text-teal-800'
+                        }`}
+                      >
+                        <p className="font-semibold tracking-wide text-[11px] uppercase opacity-90">
+                          ~ {quotedSenderLabel}
+                        </p>
+                        <p className="mt-1 text-[13px] whitespace-pre-wrap break-words">
+                          {quotedPreviewText}
+                        </p>
+                      </div>
                     )}
                     {renderMediaContent(message, mediaType)}
                     {message.text && (

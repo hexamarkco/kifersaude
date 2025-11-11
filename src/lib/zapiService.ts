@@ -24,6 +24,12 @@ export interface ZAPIMessage {
   senderName?: string;
   senderPhoto?: string;
   chatName?: string;
+  quotedMessageId?: string;
+  quotedText?: string;
+  quotedSenderName?: string;
+  quotedFromMe?: boolean;
+  quotedMediaType?: ZAPIMediaType;
+  quotedMediaUrl?: string;
 }
 
 export interface ZAPIGroupParticipant {
@@ -366,7 +372,11 @@ class ZAPIService {
     return Array.from(candidates).filter((candidate) => candidate.length > 0);
   }
 
-  async sendTextMessage(phoneNumber: string, message: string): Promise<ZAPIResponse> {
+  async sendTextMessage(
+    phoneNumber: string,
+    message: string,
+    replyMessageId?: string
+  ): Promise<ZAPIResponse> {
     try {
       const config = await this.getConfig();
       if (!config) {
@@ -374,6 +384,16 @@ class ZAPIService {
       }
 
       const phone = this.normalizePhoneNumber(phoneNumber);
+
+      const payload: Record<string, unknown> = {
+        phone: phone,
+        message: message,
+      };
+
+      if (replyMessageId) {
+        payload.replyMessageId = replyMessageId;
+        payload.quotedMessageId = replyMessageId;
+      }
 
       const response = await fetch(
         `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-text`,
@@ -383,10 +403,7 @@ class ZAPIService {
             'Content-Type': 'application/json',
             'Client-Token': this.clientToken,
           },
-          body: JSON.stringify({
-            phone: phone,
-            message: message,
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -440,7 +457,8 @@ class ZAPIService {
     filename: string,
     mediaType: ZAPIMediaType,
     caption?: string,
-    preEncodedDataUrl?: string
+    preEncodedDataUrl?: string,
+    replyMessageId?: string
   ): Promise<ZAPIResponse> {
     try {
       const config = await this.getConfig();
@@ -460,6 +478,11 @@ class ZAPIService {
       const payload: Record<string, unknown> = {
         phone,
       };
+
+      if (replyMessageId) {
+        payload.replyMessageId = replyMessageId;
+        payload.quotedMessageId = replyMessageId;
+      }
 
       switch (mediaType) {
         case 'image':
@@ -552,6 +575,13 @@ class ZAPIService {
         sender_name: msg.senderName,
         sender_photo: msg.senderPhoto,
         chat_name: msg.chatName,
+        quoted_message_id: msg.quotedMessageId,
+        quoted_message_text: msg.quotedText,
+        quoted_message_sender: msg.quotedSenderName,
+        quoted_message_from_me:
+          typeof msg.quotedFromMe === 'boolean' ? msg.quotedFromMe : undefined,
+        quoted_message_type: msg.quotedMediaType,
+        quoted_message_media_url: msg.quotedMediaUrl,
       }));
 
       for (const conv of conversations) {
@@ -638,26 +668,186 @@ class ZAPIService {
       return { type: undefined };
     };
 
+    const inferMediaType = (value: any): ZAPIMediaType | undefined => {
+      if (!value) {
+        return undefined;
+      }
+
+      const candidate = typeof value === 'object' && 'type' in value ? value.type : value;
+
+      if (candidate === 'gif' || candidate === 'sticker') {
+        return 'image';
+      }
+
+      return candidate as ZAPIMediaType | undefined;
+    };
+
     const normalizedMessages: ZAPIMessage[] = [];
+
+    const extractQuotedMessageInfo = (msg: any) => {
+      if (!msg) {
+        return null;
+      }
+
+      const contextInfo = msg.contextInfo || msg.context || {};
+      const directQuoted = msg.quotedMsg ?? msg.quotedMessage ?? msg.quoted ?? null;
+      const contextQuoted = contextInfo.quotedMessage ?? contextInfo.quotedMsg ?? null;
+
+      const objectCandidates: Record<string, any>[] = [];
+      if (directQuoted && typeof directQuoted === 'object') {
+        objectCandidates.push(directQuoted);
+      }
+      if (contextQuoted && typeof contextQuoted === 'object') {
+        objectCandidates.push(contextQuoted);
+      }
+
+      const quotedIds: unknown[] = [
+        msg.quotedMessageId,
+        msg.quotedMsgId,
+        contextInfo.stanzaId,
+        contextInfo.stanzaID,
+        contextInfo.stanzaid,
+        contextInfo.quotedMessageId,
+        contextInfo.id,
+      ];
+
+      objectCandidates.forEach((candidate) => {
+        quotedIds.push(
+          candidate.id,
+          candidate.messageId,
+          candidate.msgId,
+          candidate.stanzaId,
+          candidate.stanzaID,
+          candidate.key?.id
+        );
+      });
+
+      const quotedMessageId = pickFirstString(...quotedIds);
+
+      const quotedSenderCandidates: unknown[] = [
+        msg.quotedSender,
+        msg.quotedParticipantName,
+        msg.quotedParticipant,
+        contextInfo.participant,
+        contextInfo.participantName,
+        contextInfo.author,
+      ];
+
+      objectCandidates.forEach((candidate) => {
+        quotedSenderCandidates.push(
+          candidate.senderName,
+          candidate.notifyName,
+          candidate.pushName,
+          candidate.author,
+          candidate.participant,
+          candidate.sender,
+          candidate.from
+        );
+      });
+
+      const quotedSenderName = pickFirstString(...quotedSenderCandidates);
+
+      const quotedTextCandidates: unknown[] = [
+        msg.quotedText,
+        msg.quotedBody,
+        contextInfo.quotedMessageBody,
+        typeof directQuoted === 'string' ? directQuoted : undefined,
+        typeof contextQuoted === 'string' ? contextQuoted : undefined,
+      ];
+
+      objectCandidates.forEach((candidate) => {
+        quotedTextCandidates.push(
+          candidate.text,
+          candidate.body,
+          candidate.caption,
+          candidate.title,
+          candidate.description,
+          candidate.conversation,
+          candidate.message?.conversation,
+          candidate.message?.extendedTextMessage?.text,
+          candidate.message?.imageMessage?.caption,
+          candidate.message?.videoMessage?.caption,
+          candidate.message?.documentMessage?.caption
+        );
+
+        const nestedMessage = candidate.message;
+        if (nestedMessage) {
+          quotedTextCandidates.push(
+            nestedMessage.extendedTextMessage?.text,
+            nestedMessage.imageMessage?.caption,
+            nestedMessage.videoMessage?.caption,
+            nestedMessage.documentMessage?.caption
+          );
+        }
+      });
+
+      const quotedText = pickFirstString(...quotedTextCandidates);
+
+      const quotedMediaCandidates: unknown[] = [];
+      objectCandidates.forEach((candidate) => {
+        quotedMediaCandidates.push(
+          candidate.mediaUrl,
+          candidate.media,
+          candidate.url,
+          candidate.downloadUrl,
+          candidate.directPath,
+          candidate.previewUrl,
+          candidate.imageUrl
+        );
+
+        const nestedMessage = candidate.message;
+        if (nestedMessage) {
+          quotedMediaCandidates.push(
+            nestedMessage.imageMessage?.url,
+            nestedMessage.videoMessage?.url,
+            nestedMessage.documentMessage?.url,
+            nestedMessage.audioMessage?.url,
+            nestedMessage.stickerMessage?.url
+          );
+        }
+      });
+
+      const quotedMediaUrl = pickFirstString(...quotedMediaCandidates);
+      const mediaTypeSource = objectCandidates[0] ?? contextInfo.quotedMessage ?? contextInfo.quotedMsg ?? {};
+      const mediaTypeResult = determineMediaType(mediaTypeSource, quotedMediaUrl);
+      const quotedMediaType = inferMediaType(mediaTypeResult);
+
+      let quotedFromMe: boolean | undefined;
+      for (const candidate of objectCandidates) {
+        if (typeof candidate?.fromMe === 'boolean') {
+          quotedFromMe = candidate.fromMe;
+          break;
+        }
+        if (typeof candidate?.key?.fromMe === 'boolean') {
+          quotedFromMe = candidate.key.fromMe;
+          break;
+        }
+      }
+
+      if (typeof quotedFromMe === 'undefined' && typeof contextInfo.fromMe === 'boolean') {
+        quotedFromMe = contextInfo.fromMe;
+      }
+
+      if (!quotedMessageId && !quotedText && !quotedMediaUrl && !quotedMediaType) {
+        return null;
+      }
+
+      return {
+        messageId: quotedMessageId ?? undefined,
+        text:
+          quotedText ||
+          (quotedMediaType ? this.getMediaFallbackText(quotedMediaType, undefined) : undefined),
+        senderName: quotedSenderName ?? undefined,
+        fromMe: quotedFromMe,
+        mediaType: quotedMediaType,
+        mediaUrl: quotedMediaUrl ?? undefined,
+      };
+    };
 
     rawMessages.forEach((msg) => {
       const mediaUrl = msg.mediaUrl || msg.media;
       const text = getMessageText(msg);
       const mediaTypeResult = determineMediaType(msg, mediaUrl);
-      const inferMediaType = (value: any): ZAPIMediaType | undefined => {
-        if (!value) {
-          return undefined;
-        }
-
-        const candidate = typeof value === 'object' && 'type' in value ? value.type : value;
-
-        if (candidate === 'gif' || candidate === 'sticker') {
-          return 'image';
-        }
-
-        return candidate as ZAPIMediaType | undefined;
-      };
-
       const resolvedMediaType = inferMediaType(mediaTypeResult);
 
       const hasContent = Boolean(text) || Boolean(mediaUrl) || Boolean(msg.notification);
@@ -698,6 +888,7 @@ class ZAPIService {
       const senderName = this.extractSenderNameFromMessage(msg);
       const chatName = this.extractChatNameFromMessage(msg, senderName, normalizedPhone);
       const senderPhoto = this.extractSenderPhotoFromMessage(msg);
+      const quotedInfo = extractQuotedMessageInfo(msg);
 
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
@@ -716,6 +907,12 @@ class ZAPIService {
         senderName: senderName || undefined,
         chatName: chatName || undefined,
         senderPhoto: senderPhoto || undefined,
+        quotedMessageId: quotedInfo?.messageId,
+        quotedText: quotedInfo?.text,
+        quotedSenderName: quotedInfo?.senderName,
+        quotedFromMe: quotedInfo?.fromMe,
+        quotedMediaType: quotedInfo?.mediaType,
+        quotedMediaUrl: quotedInfo?.mediaUrl,
       });
     });
 

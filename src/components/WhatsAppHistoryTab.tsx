@@ -33,6 +33,7 @@ import {
   FileVideo,
   FileAudio,
   Square,
+  CornerUpRight,
   Pin,
   PinOff,
   Archive,
@@ -421,6 +422,10 @@ export default function WhatsAppHistoryTab({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
+  const [composerReplyMessage, setComposerReplyMessage] = useState<MessageWithReactions | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [manualScrollTargetId, setManualScrollTargetId] = useState<string | null>(null);
+  const [manualScrollAlternateId, setManualScrollAlternateId] = useState<string | null>(null);
   const [activeReactionDetails, setActiveReactionDetails] =
     useState<ReactionModalState | null>(null);
   const skipAutoSelectRef = useRef(false);
@@ -452,6 +457,8 @@ export default function WhatsAppHistoryTab({
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollTargetMessageRef = useRef<HTMLDivElement | null>(null);
   const lastScrolledChatRef = useRef<string | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -1549,6 +1556,16 @@ export default function WhatsAppHistoryTab({
     return processed;
   }, [selectedChatDisplayName, selectedChatMessages]);
 
+  const messageIdToInternalId = useMemo(() => {
+    const map = new Map<string, string>();
+    processedSelectedMessages.forEach((message) => {
+      if (message.message_id) {
+        map.set(message.message_id, message.id);
+      }
+    });
+    return map;
+  }, [processedSelectedMessages]);
+
   const scrollTargetMessageId = useMemo(() => {
     if (processedSelectedMessages.length === 0) {
       return null;
@@ -2063,27 +2080,39 @@ export default function WhatsAppHistoryTab({
 
     try {
       const textToSend = composerText.trim();
+      const replyMessageId = composerReplyMessage?.message_id ?? undefined;
+      let replyConsumed = false;
 
       if (textToSend) {
-        const textResult = await zapiService.sendTextMessage(selectedPhone, textToSend);
+        const textResult = await zapiService.sendTextMessage(
+          selectedPhone,
+          textToSend,
+          replyMessageId
+        );
         if (!textResult.success) {
           throw new Error(textResult.error || 'Falha ao enviar mensagem de texto.');
         }
+        replyConsumed = Boolean(replyMessageId);
       }
 
       for (const attachment of attachments) {
         const base64Override =
           recordedAudio && attachment.file === recordedAudio.file ? recordedAudio.base64 : undefined;
+        const shouldIncludeReply = Boolean(replyMessageId && !replyConsumed);
         const mediaResult = await zapiService.sendMediaMessage(
           selectedPhone,
           attachment.file,
           attachment.file.name,
           attachment.type,
           undefined,
-          base64Override
+          base64Override,
+          shouldIncludeReply ? replyMessageId : undefined
         );
         if (!mediaResult.success) {
           throw new Error(mediaResult.error || 'Falha ao enviar anexo.');
+        }
+        if (shouldIncludeReply) {
+          replyConsumed = true;
         }
       }
 
@@ -2103,6 +2132,7 @@ export default function WhatsAppHistoryTab({
       setComposerSuccess('Mensagem enviada com sucesso!');
       setComposerText('');
       clearAttachments();
+      setComposerReplyMessage(null);
     } catch (error) {
       setComposerError(
         error instanceof Error
@@ -2122,6 +2152,7 @@ export default function WhatsAppHistoryTab({
     selectedChat?.contractId,
     selectedChatLead?.id,
     selectedPhone,
+    composerReplyMessage,
   ]);
 
   useEffect(() => {
@@ -2180,6 +2211,26 @@ export default function WhatsAppHistoryTab({
     return false;
   };
 
+  const getMediaTypeLabel = (mediaType?: string | null) => {
+    const normalized = mediaType?.toLowerCase();
+    switch (normalized) {
+      case 'audio':
+        return 'Mensagem de áudio';
+      case 'video':
+        return 'Vídeo';
+      case 'image':
+        return 'Imagem';
+      case 'gif':
+        return 'GIF';
+      case 'sticker':
+        return 'Sticker';
+      case 'document':
+        return 'Documento';
+      default:
+        return 'Mensagem';
+    }
+  };
+
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
     const text = message.message_text?.trim();
@@ -2193,6 +2244,57 @@ export default function WhatsAppHistoryTab({
     }
 
     return text || '';
+  };
+
+  const getMessageSenderLabel = (message: WhatsAppConversation) => {
+    if (message.message_type === 'sent') {
+      return 'Você';
+    }
+
+    return message.sender_name?.trim() || selectedChatDisplayName || 'Contato';
+  };
+
+  const getQuotedSenderLabelForMessage = (message: WhatsAppConversation) => {
+    const trimmed = message.quoted_message_sender?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    if (typeof message.quoted_message_from_me === 'boolean') {
+      return message.quoted_message_from_me ? 'Você' : 'Contato';
+    }
+
+    return 'Contato';
+  };
+
+  const getQuotedPreviewTextForMessage = (message: WhatsAppConversation) => {
+    const text = message.quoted_message_text?.trim();
+    if (text) {
+      return text;
+    }
+
+    if (message.quoted_message_type) {
+      return getMediaTypeLabel(message.quoted_message_type);
+    }
+
+    return 'Mensagem';
+  };
+
+  const getComposerReplyPreviewText = (message: WhatsAppConversation) => {
+    const text = getDisplayTextForMessage(message).trim();
+    if (text) {
+      return text;
+    }
+
+    if (message.media_caption?.trim()) {
+      return message.media_caption.trim();
+    }
+
+    if (message.media_url) {
+      return getMediaTypeLabel(message.media_type);
+    }
+
+    return 'Mensagem';
   };
 
   const renderMediaContent = (message: WhatsAppConversation): JSX.Element | null => {
@@ -2330,6 +2432,37 @@ export default function WhatsAppHistoryTab({
     setActiveReactionDetails(null);
   }, []);
 
+  const handleReplyToMessage = useCallback(
+    (message: MessageWithReactions) => {
+      if (isObserver) {
+        return;
+      }
+      setComposerReplyMessage(message);
+      setComposerError(null);
+      setTimeout(() => {
+        composerTextareaRef.current?.focus();
+      }, 0);
+    },
+    [isObserver]
+  );
+
+  const handleCancelReply = useCallback(() => {
+    setComposerReplyMessage(null);
+  }, []);
+
+  const handleJumpToMessage = useCallback(
+    (messageId?: string | null) => {
+      if (!messageId) {
+        return;
+      }
+
+      const alternateId = messageIdToInternalId.get(messageId) ?? null;
+      setManualScrollTargetId(messageId);
+      setManualScrollAlternateId(alternateId);
+    },
+    [messageIdToInternalId]
+  );
+
   const handleRefreshChats = async () => {
     setIsRefreshing(true);
     await loadConversations(false);
@@ -2466,6 +2599,72 @@ export default function WhatsAppHistoryTab({
 
     return () => cancelAnimationFrame(frame);
   }, [scrollTargetMessageId, selectedPhone]);
+
+  useEffect(() => {
+    if (!selectedPhone || !manualScrollTargetId) {
+      return;
+    }
+
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const findElementById = (id: string) => {
+      if (!id) {
+        return null;
+      }
+
+      const elements = container.querySelectorAll<HTMLElement>('[data-message-id],[data-internal-id]');
+      for (const element of elements) {
+        const { messageId, internalId } = element.dataset;
+        if (messageId === id || internalId === id) {
+          return element;
+        }
+      }
+      return null;
+    };
+
+    let target = findElementById(manualScrollTargetId);
+    let highlightId = manualScrollTargetId;
+
+    if (!target && manualScrollAlternateId) {
+      target = findElementById(manualScrollAlternateId);
+      if (target) {
+        highlightId = manualScrollAlternateId;
+      }
+    }
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMessageId(highlightId);
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedMessageId((current) => (current === highlightId ? null : current));
+        highlightTimeoutRef.current = null;
+      }, 3000);
+    }
+
+    setManualScrollTargetId(null);
+    setManualScrollAlternateId(null);
+  }, [manualScrollAlternateId, manualScrollTargetId, selectedPhone]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setComposerReplyMessage(null);
+    setHighlightedMessageId(null);
+    setManualScrollTargetId(null);
+    setManualScrollAlternateId(null);
+  }, [selectedPhone]);
 
   useEffect(() => {
     if (!selectedPhone || selectedChatUnreadCount === 0) return;
@@ -2908,10 +3107,24 @@ export default function WhatsAppHistoryTab({
                                 message.message_type === 'sent'
                                   ? 'border-white/30 bg-white/20 text-white hover:bg-white/30'
                                   : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200';
+                              const quotedSenderLabel = getQuotedSenderLabelForMessage(message);
+                              const quotedPreviewText = getQuotedPreviewTextForMessage(message);
+                              const hasQuotedMessage = Boolean(
+                                message.quoted_message_id ||
+                                  message.quoted_message_text ||
+                                  message.quoted_message_type
+                              );
+                              const messageDomId = message.message_id ?? message.id;
+                              const isHighlighted = highlightedMessageId === messageDomId;
+                              const bubbleHighlightClasses = isHighlighted
+                                ? 'outline outline-2 outline-teal-400'
+                                : '';
 
                               return (
                                 <div
                                   key={message.id}
+                                  data-message-id={message.message_id ?? undefined}
+                                  data-internal-id={message.id}
                                   ref={
                                     message.id === scrollTargetMessageId
                                       ? (element) => {
@@ -2925,16 +3138,35 @@ export default function WhatsAppHistoryTab({
                                     message.message_type === 'sent' ? 'justify-end' : 'justify-start'
                                   }`}
                                 >
-                                  <div
-                                    className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 ${
-                                      message.message_type === 'sent'
-                                        ? 'bg-teal-500 text-white rounded-br-sm'
-                                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
-                                    }`}
-                                  >
-                                    {senderLabel && (
-                                      <span className={senderLabelClass}>{senderLabel}</span>
-                                    )}
+                                  <div className="relative group/message">
+                                    <div
+                                      className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 ${
+                                        message.message_type === 'sent'
+                                          ? 'bg-teal-500 text-white rounded-br-sm'
+                                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                      } ${bubbleHighlightClasses}`}
+                                    >
+                                      {senderLabel && (
+                                        <span className={senderLabelClass}>{senderLabel}</span>
+                                      )}
+                                      {hasQuotedMessage && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleJumpToMessage(message.quoted_message_id)}
+                                          className={`text-left rounded-lg border-l-4 px-3 py-2 text-xs transition-colors ${
+                                            message.message_type === 'sent'
+                                              ? 'bg-white/10 border-white/50 text-teal-50 hover:bg-white/20'
+                                              : 'bg-teal-50 border-teal-400 text-teal-800 hover:bg-teal-100'
+                                          }`}
+                                        >
+                                          <p className="font-semibold tracking-wide text-[11px] uppercase opacity-80">
+                                            ~ {quotedSenderLabel}
+                                          </p>
+                                          <p className="mt-1 text-[13px] whitespace-pre-wrap break-words">
+                                            {quotedPreviewText}
+                                          </p>
+                                        </button>
+                                      )}
                                     {bubbleText && (
                                       <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}
@@ -2968,6 +3200,26 @@ export default function WhatsAppHistoryTab({
                                         ))}
                                       </div>
                                     )}
+                                    </div>
+                                    {!isObserver && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReplyToMessage(message)}
+                                        disabled={isObserver}
+                                        className={`absolute top-2 right-2 rounded-full p-1 transition-opacity ${
+                                          message.message_type === 'sent'
+                                            ? 'text-white hover:bg-white/20'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                        } ${
+                                          isObserver
+                                            ? 'hidden'
+                                            : 'opacity-0 group-hover/message:opacity-100 focus:opacity-100'
+                                        }`}
+                                        aria-label="Responder mensagem"
+                                      >
+                                        <CornerUpRight className="w-4 h-4" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -2979,6 +3231,26 @@ export default function WhatsAppHistoryTab({
                   </div>
 
                   <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 space-y-3">
+                    {composerReplyMessage && (
+                      <div className="flex items-start gap-3 rounded-lg border border-teal-200 bg-teal-50/80 px-3 py-2">
+                        <div className="border-l-4 border-teal-400 pl-3 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-700">
+                            Respondendo a {getMessageSenderLabel(composerReplyMessage)}
+                          </p>
+                          <p className="mt-1 text-sm text-teal-800 whitespace-pre-wrap break-words">
+                            {getComposerReplyPreviewText(composerReplyMessage)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCancelReply}
+                          className="ml-2 text-teal-700 transition-colors hover:text-teal-900"
+                          aria-label="Cancelar resposta"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -3069,6 +3341,7 @@ export default function WhatsAppHistoryTab({
                             )}
                           </div>
                           <textarea
+                            ref={composerTextareaRef}
                             value={composerText}
                             onChange={(event) => {
                               setComposerText(event.target.value);

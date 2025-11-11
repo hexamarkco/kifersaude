@@ -855,7 +855,7 @@ export default function WhatsAppHistoryTab() {
 
     if (attachment.type === 'audio' && attachment.previewUrl) {
       return (
-        <audio controls className="w-full">
+        <audio controls className="w-full min-w-[240px] sm:min-w-[320px]">
           <source src={attachment.previewUrl} />
           Seu navegador não suporta a reprodução de áudio.
         </audio>
@@ -1293,7 +1293,7 @@ export default function WhatsAppHistoryTab() {
               key={`${message.id}-audio`}
               controls
               src={message.media_url}
-              className="w-full"
+              className="w-full min-w-[240px] sm:min-w-[320px]"
             >
               <source src={message.media_url} type={message.media_mime_type || undefined} />
               Seu navegador não suporta a reprodução de áudio.
@@ -2096,7 +2096,11 @@ export default function WhatsAppHistoryTab() {
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                        <audio controls src={recordedAudio.url} className="w-full">
+                        <audio
+                          controls
+                          src={recordedAudio.url}
+                          className="w-full min-w-[240px] sm:min-w-[320px]"
+                        >
                           Seu navegador não suporta reprodução de áudio.
                         </audio>
                         <p className="text-[11px] text-slate-500">

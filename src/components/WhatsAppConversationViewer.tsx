@@ -127,7 +127,7 @@ export default function WhatsAppConversationViewer({
         <div className="mb-2 w-full">
           <audio
             controls
-            className="w-full"
+            className="w-full min-w-[240px] sm:min-w-[320px]"
             src={message.mediaUrl}
           >
             Seu navegador não suporta reprodução de áudio.
@@ -209,7 +209,7 @@ export default function WhatsAppConversationViewer({
                   <div
                     className={`${
                       isAudioMessage
-                        ? 'max-w-[90%] min-w-[240px] sm:min-w-[320px]'
+                        ? 'w-full sm:max-w-xl'
                         : 'max-w-[75%]'
                     } rounded-lg ${paddingClasses} shadow-sm ${
                       message.fromMe

@@ -493,6 +493,75 @@ class ZAPIService {
     }
   }
 
+  async sendReaction(
+    phoneNumber: string,
+    messageId: string,
+    reaction: string,
+    delayMessage?: number
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      if (!messageId) {
+        return { success: false, error: 'ID da mensagem é obrigatório' };
+      }
+
+      if (!reaction) {
+        return { success: false, error: 'Escolha uma reação para enviar.' };
+      }
+
+      const trimmedPhone = phoneNumber.trim();
+      if (!trimmedPhone) {
+        return { success: false, error: 'Telefone ou identificador do chat é obrigatório.' };
+      }
+
+      const phone = trimmedPhone.includes('@')
+        ? trimmedPhone
+        : this.normalizePhoneNumber(trimmedPhone);
+
+      const payload: Record<string, unknown> = {
+        phone,
+        reaction,
+        messageId,
+      };
+
+      if (typeof delayMessage === 'number') {
+        payload.delayMessage = Math.min(Math.max(Math.round(delayMessage), 1), 15);
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-reaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao enviar reação';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      const data = await response.json().catch(() => ({ message: 'Reação enviada' }));
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   private async fileToDataUrl(file: Blob): Promise<string> {
     return await new Promise((resolve, reject) => {
       const reader = new FileReader();

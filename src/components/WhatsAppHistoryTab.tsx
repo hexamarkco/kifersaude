@@ -567,7 +567,11 @@ export default function WhatsAppHistoryTab({
 
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
+  const [activePhone, setActivePhone] = useState<string | null>(null);
+  const [selectionActionState, setSelectionActionState] = useState<SelectionActionState>({
+    status: 'idle',
+  });
   const [externalSelectionContext, setExternalSelectionContext] = useState<WhatsAppChatRequestDetail | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
@@ -679,6 +683,67 @@ export default function WhatsAppHistoryTab({
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
   const reactionMenuRef = useRef<HTMLDivElement | null>(null);
+  const selectionFeedbackTimeoutRef = useRef<number | null>(null);
+
+  const selectedPhone = activePhone;
+  const hasSelectedPhones = selectedPhones.size > 0;
+
+  const clearSelectionFeedbackTimeout = useCallback(() => {
+    if (selectionFeedbackTimeoutRef.current !== null) {
+      if (typeof window !== 'undefined') {
+        window.clearTimeout(selectionFeedbackTimeoutRef.current);
+      }
+      selectionFeedbackTimeoutRef.current = null;
+    }
+  }, []);
+
+  const dismissSelectionFeedback = useCallback(() => {
+    clearSelectionFeedbackTimeout();
+    setSelectionActionState({ status: 'idle' });
+  }, [clearSelectionFeedbackTimeout]);
+
+  const updateSelectionFeedback = useCallback(
+    (state: SelectionActionState) => {
+      clearSelectionFeedbackTimeout();
+      setSelectionActionState(state);
+
+      if ((state.status === 'success' || state.status === 'error') && state.message) {
+        if (typeof window !== 'undefined') {
+          selectionFeedbackTimeoutRef.current = window.setTimeout(() => {
+            setSelectionActionState({ status: 'idle' });
+            selectionFeedbackTimeoutRef.current = null;
+          }, 4000);
+        }
+      }
+    },
+    [clearSelectionFeedbackTimeout]
+  );
+
+  const selectPrimaryPhone = useCallback((phone: string) => {
+    setActivePhone(phone);
+  }, []);
+
+  const togglePhoneSelection = useCallback((phone: string) => {
+    setSelectedPhones((prev) => {
+      const next = new Set(prev);
+      if (next.has(phone)) {
+        next.delete(phone);
+      } else {
+        next.add(phone);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelectedPhones = useCallback(() => {
+    setSelectedPhones(() => new Set());
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearSelectionFeedbackTimeout();
+    };
+  }, [clearSelectionFeedbackTimeout]);
   const reactionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const sortQuickReplies = useCallback(
     (items: WhatsAppQuickReply[]) =>
@@ -2215,6 +2280,7 @@ export default function WhatsAppHistoryTab({
     chatsWithPreferences,
     chatListFilter,
     getChatMetadataForPhone,
+    getGroupMetadataForPhone,
     leadsByPhoneMap,
     leadsMap,
     searchQuery,
@@ -2231,7 +2297,7 @@ export default function WhatsAppHistoryTab({
     }
 
     if (!selectedPhone) {
-      setSelectedPhone(filteredChats[0].phone);
+      selectPrimaryPhone(filteredChats[0].phone);
       return;
     }
 
@@ -2257,9 +2323,36 @@ export default function WhatsAppHistoryTab({
         return;
       }
 
-      setSelectedPhone(filteredChats[0].phone);
+      selectPrimaryPhone(filteredChats[0].phone);
     }
-  }, [externalSelectionContext, filteredChats, selectedPhone]);
+  }, [externalSelectionContext, filteredChats, selectedPhone, selectPrimaryPhone]);
+
+  useEffect(() => {
+    if (selectedPhones.size === 0) {
+      return;
+    }
+
+    const availablePhones = new Set(chatsWithPreferences.map((chat) => chat.phone));
+
+    setSelectedPhones((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+
+      prev.forEach((phone) => {
+        if (availablePhones.has(phone)) {
+          next.add(phone);
+        } else {
+          changed = true;
+        }
+      });
+
+      if (!changed) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [chatsWithPreferences, selectedPhones.size]);
 
   const selectedChat = useMemo(() => {
     if (!selectedPhone) return undefined;
@@ -2424,14 +2517,14 @@ export default function WhatsAppHistoryTab({
       }
 
       skipAutoSelectRef.current = true;
-      setSelectedPhone(matchedChat.phone);
+      selectPrimaryPhone(matchedChat.phone);
     } else if (phone) {
       if (chatListFilter !== 'active') {
         setChatListFilter('active');
       }
 
       skipAutoSelectRef.current = true;
-      setSelectedPhone(phone);
+      selectPrimaryPhone(phone);
     }
 
     if (prefillMessage && !composerText.trim()) {
@@ -2446,6 +2539,7 @@ export default function WhatsAppHistoryTab({
     composerText,
     externalChatRequest,
     onConsumeExternalChatRequest,
+    selectPrimaryPhone,
   ]);
 
   useEffect(() => {
@@ -2870,7 +2964,7 @@ export default function WhatsAppHistoryTab({
         throw error;
       }
     },
-    [createAutomaticFollowUps, cancelFollowUps, leadsMap, upsertLeadsIntoMaps]
+    [leadsMap, upsertLeadsIntoMaps]
   );
 
   const handleLeadResponsavelChange = useCallback(
@@ -4122,126 +4216,369 @@ export default function WhatsAppHistoryTab({
     await loadConversations(false);
   };
 
-  const handleToggleArchive = useCallback(async (phone: string) => {
-    let previousPref: WhatsAppChatPreference | undefined;
-    let nextPref: WhatsAppChatPreference | undefined;
+  const applyArchiveState = useCallback(
+    async (
+      phone: string,
+      desiredState: boolean | ((current?: WhatsAppChatPreference) => boolean)
+    ) => {
+      let previousPref: WhatsAppChatPreference | undefined;
+      let nextPref: WhatsAppChatPreference | undefined;
+      let shouldArchive = false;
+      let remoteUpdated = false;
 
-    setChatPreferences((prev) => {
-      const next = new Map(prev);
-      const current = prev.get(phone);
-      previousPref = current;
-      const now = new Date().toISOString();
-      nextPref = {
-        phone_number: phone,
-        archived: !(current?.archived ?? false),
-        pinned: current?.pinned ?? false,
-        created_at: current?.created_at ?? now,
-        updated_at: now,
-      };
-      next.set(phone, nextPref);
-      return next;
-    });
-
-    if (!nextPref) return;
-
-    const shouldArchive = nextPref.archived;
-    let remoteUpdated = false;
-
-    try {
-      const remoteResult = await zapiService.setChatArchiveStatus(phone, shouldArchive);
-      if (!remoteResult.success) {
-        throw new Error(remoteResult.error || 'Falha ao atualizar arquivamento no WhatsApp.');
-      }
-      remoteUpdated = true;
-
-      const { error } = await supabase
-        .from('whatsapp_chat_preferences')
-        .upsert({
-          phone_number: phone,
-          archived: nextPref.archived,
-          pinned: nextPref.pinned,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar arquivamento do chat:', error);
       setChatPreferences((prev) => {
         const next = new Map(prev);
-        if (previousPref) {
-          next.set(phone, previousPref);
-        } else {
-          next.delete(phone);
-        }
+        const current = prev.get(phone);
+        previousPref = current;
+        const now = new Date().toISOString();
+        shouldArchive =
+          typeof desiredState === 'function' ? desiredState(current) : desiredState;
+        nextPref = {
+          phone_number: phone,
+          archived: shouldArchive,
+          pinned: current?.pinned ?? false,
+          created_at: current?.created_at ?? now,
+          updated_at: now,
+        };
+        next.set(phone, nextPref);
         return next;
       });
 
-      if (remoteUpdated) {
-        const revertResult = await zapiService.setChatArchiveStatus(
-          phone,
-          previousPref?.archived ?? false
+      if (!nextPref) {
+        return;
+      }
+
+      try {
+        const remoteResult = await zapiService.setChatArchiveStatus(phone, shouldArchive);
+        if (!remoteResult.success) {
+          throw new Error(remoteResult.error || 'Falha ao atualizar arquivamento no WhatsApp.');
+        }
+        remoteUpdated = true;
+
+        const { error } = await supabase
+          .from('whatsapp_chat_preferences')
+          .upsert({
+            phone_number: phone,
+            archived: nextPref.archived,
+            pinned: nextPref.pinned,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        setChatPreferences((prev) => {
+          const next = new Map(prev);
+          if (previousPref) {
+            next.set(phone, previousPref);
+          } else {
+            next.delete(phone);
+          }
+          return next;
+        });
+
+        if (remoteUpdated) {
+          const revertResult = await zapiService.setChatArchiveStatus(
+            phone,
+            previousPref?.archived ?? false
+          );
+          if (!revertResult.success) {
+            console.error('Falha ao reverter arquivamento no WhatsApp:', revertResult.error);
+          }
+        }
+
+        throw error;
+      }
+    },
+    []
+  );
+
+  const applyPinState = useCallback(
+    async (
+      phone: string,
+      desiredState: boolean | ((current?: WhatsAppChatPreference) => boolean)
+    ) => {
+      let previousPref: WhatsAppChatPreference | undefined;
+      let nextPref: WhatsAppChatPreference | undefined;
+      let shouldPin = false;
+
+      setChatPreferences((prev) => {
+        const next = new Map(prev);
+        const current = prev.get(phone);
+        previousPref = current;
+        const now = new Date().toISOString();
+        shouldPin = typeof desiredState === 'function' ? desiredState(current) : desiredState;
+        nextPref = {
+          phone_number: phone,
+          archived: current?.archived ?? false,
+          pinned: shouldPin,
+          created_at: current?.created_at ?? now,
+          updated_at: now,
+        };
+        next.set(phone, nextPref);
+        return next;
+      });
+
+      if (!nextPref) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('whatsapp_chat_preferences')
+          .upsert({
+            phone_number: phone,
+            archived: nextPref.archived,
+            pinned: nextPref.pinned,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        setChatPreferences((prev) => {
+          const next = new Map(prev);
+          if (previousPref) {
+            next.set(phone, previousPref);
+          } else {
+            next.delete(phone);
+          }
+          return next;
+        });
+
+        throw error;
+      }
+    },
+    []
+  );
+
+  const handleToggleArchive = useCallback(
+    async (phone: string) => {
+      try {
+        await applyArchiveState(phone, (current) => !(current?.archived ?? false));
+      } catch (error) {
+        console.error('Erro ao atualizar arquivamento do chat:', error);
+      }
+    },
+    [applyArchiveState]
+  );
+
+  const handleTogglePin = useCallback(
+    async (phone: string) => {
+      try {
+        await applyPinState(phone, (current) => !(current?.pinned ?? false));
+      } catch (error) {
+        console.error('Erro ao atualizar fixação do chat:', error);
+      }
+    },
+    [applyPinState]
+  );
+
+  const markChatMessagesAsRead = useCallback(
+    async (phone: string, messagesOverride?: WhatsAppConversation[]) => {
+      const relevantMessages =
+        messagesOverride ??
+        conversations.filter((message) => message.phone_number === phone);
+
+      const unreadMessages = relevantMessages.filter(
+        (message) => message.message_type === 'received' && !message.read_status
+      );
+
+      if (unreadMessages.length === 0) {
+        return;
+      }
+
+      const messageIdsToMark = Array.from(
+        new Set(
+          unreadMessages
+            .map((message) => message.message_id?.trim())
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      try {
+        const chatStatusResult = await zapiService.modifyChatStatus(phone, 'read');
+        if (!chatStatusResult.success) {
+          throw new Error(
+            chatStatusResult.error || `Falha ao marcar chat ${phone} como lido no Z-API.`
+          );
+        }
+
+        if (messageIdsToMark.length > 0) {
+          await Promise.allSettled(
+            messageIdsToMark.map(async (messageId) => {
+              const result = await zapiService.markMessageAsRead(phone, messageId);
+              if (!result.success) {
+                console.error(
+                  `Erro ao marcar mensagem ${messageId} como lida no Z-API:`,
+                  result.error
+                );
+              }
+            })
+          );
+        }
+
+        const { error } = await supabase
+          .from('whatsapp_conversations')
+          .update({ read_status: true })
+          .eq('phone_number', phone)
+          .eq('message_type', 'received')
+          .or('read_status.is.false,read_status.is.null');
+
+        if (error) {
+          throw error;
+        }
+
+        setConversations((prev) =>
+          prev.map((message) =>
+            message.phone_number === phone && message.message_type === 'received'
+              ? { ...message, read_status: true }
+              : message
+          )
         );
-        if (!revertResult.success) {
-          console.error('Falha ao reverter arquivamento no WhatsApp:', revertResult.error);
-        }
+      } catch (error) {
+        console.error('Erro ao marcar mensagens como lidas:', error);
+        throw error;
       }
-    }
-  }, []);
+    },
+    [conversations]
+  );
 
-  const handleTogglePin = useCallback(async (phone: string) => {
-    let previousPref: WhatsAppChatPreference | undefined;
-    let nextPref: WhatsAppChatPreference | undefined;
-
-    setChatPreferences((prev) => {
-      const next = new Map(prev);
-      const current = prev.get(phone);
-      previousPref = current;
-      const now = new Date().toISOString();
-      nextPref = {
-        phone_number: phone,
-        archived: current?.archived ?? false,
-        pinned: !(current?.pinned ?? false),
-        created_at: current?.created_at ?? now,
-        updated_at: now,
-      };
-      next.set(phone, nextPref);
-      return next;
-    });
-
-    if (!nextPref) return;
-
+  const markChatMessagesAsUnread = useCallback(async (phone: string) => {
     try {
+      const chatStatusResult = await zapiService.modifyChatStatus(phone, 'unread');
+      if (!chatStatusResult.success) {
+        throw new Error(
+          chatStatusResult.error || `Falha ao marcar chat ${phone} como não lido no Z-API.`
+        );
+      }
+
       const { error } = await supabase
-        .from('whatsapp_chat_preferences')
-        .upsert({
-          phone_number: phone,
-          archived: nextPref.archived,
-          pinned: nextPref.pinned,
-          updated_at: new Date().toISOString(),
-        });
+        .from('whatsapp_conversations')
+        .update({ read_status: false })
+        .eq('phone_number', phone)
+        .eq('message_type', 'received');
 
       if (error) {
         throw error;
       }
+
+      setConversations((prev) =>
+        prev.map((message) =>
+          message.phone_number === phone && message.message_type === 'received'
+            ? { ...message, read_status: false }
+            : message
+        )
+      );
     } catch (error) {
-      console.error('Erro ao atualizar fixação do chat:', error);
-      setChatPreferences((prev) => {
-        const next = new Map(prev);
-        if (previousPref) {
-          next.set(phone, previousPref);
-        } else {
-          next.delete(phone);
-        }
-        return next;
-      });
+      console.error('Erro ao marcar chat como não lido:', error);
+      throw error;
     }
   }, []);
+
+  const executeSelectionAction = useCallback(
+    async ({
+      loadingMessage,
+      successMessage,
+      errorMessage,
+      action,
+    }: {
+      loadingMessage: string;
+      successMessage: string;
+      errorMessage: (failedCount: number) => string;
+      action: (phone: string) => Promise<void>;
+    }) => {
+      const phones = Array.from(selectedPhones);
+      if (phones.length === 0) {
+        return;
+      }
+
+      updateSelectionFeedback({ status: 'loading', message: loadingMessage });
+
+      const results = await Promise.allSettled(phones.map((phone) => action(phone)));
+      let failedCount = 0;
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          failedCount += 1;
+          console.error(`Falha ao executar ação em ${phones[index]}:`, result.reason);
+        }
+      });
+
+      if (failedCount === 0) {
+        updateSelectionFeedback({ status: 'success', message: successMessage });
+        clearSelectedPhones();
+      } else {
+        updateSelectionFeedback({ status: 'error', message: errorMessage(failedCount) });
+      }
+    },
+    [clearSelectedPhones, selectedPhones, updateSelectionFeedback]
+  );
+
+  const handleBulkMarkAsRead = useCallback(async () => {
+    await executeSelectionAction({
+      loadingMessage: 'Marcando conversas selecionadas como lidas...',
+      successMessage: 'Conversas marcadas como lidas.',
+      errorMessage: (failed) =>
+        failed === 1
+          ? 'Falha ao marcar uma conversa como lida.'
+          : `Falha ao marcar ${failed} conversas como lidas.`,
+      action: async (phone) => {
+        await markChatMessagesAsRead(phone);
+      },
+    });
+  }, [executeSelectionAction, markChatMessagesAsRead]);
+
+  const handleBulkMarkAsUnread = useCallback(async () => {
+    await executeSelectionAction({
+      loadingMessage: 'Marcando conversas selecionadas como não lidas...',
+      successMessage: 'Conversas marcadas como não lidas.',
+      errorMessage: (failed) =>
+        failed === 1
+          ? 'Falha ao marcar uma conversa como não lida.'
+          : `Falha ao marcar ${failed} conversas como não lidas.`,
+      action: async (phone) => {
+        await markChatMessagesAsUnread(phone);
+      },
+    });
+  }, [executeSelectionAction, markChatMessagesAsUnread]);
+
+  const handleBulkArchive = useCallback(async () => {
+    await executeSelectionAction({
+      loadingMessage: 'Arquivando conversas selecionadas...',
+      successMessage: 'Conversas arquivadas com sucesso.',
+      errorMessage: (failed) =>
+        failed === 1
+          ? 'Falha ao arquivar uma das conversas selecionadas.'
+          : `Falha ao arquivar ${failed} conversas selecionadas.`,
+      action: async (phone) => {
+        await applyArchiveState(phone, true);
+      },
+    });
+  }, [applyArchiveState, executeSelectionAction]);
+
+  const handleBulkUnarchive = useCallback(async () => {
+    await executeSelectionAction({
+      loadingMessage: 'Desarquivando conversas selecionadas...',
+      successMessage: 'Conversas desarquivadas com sucesso.',
+      errorMessage: (failed) =>
+        failed === 1
+          ? 'Falha ao desarquivar uma das conversas selecionadas.'
+          : `Falha ao desarquivar ${failed} conversas selecionadas.`,
+      action: async (phone) => {
+        await applyArchiveState(phone, false);
+      },
+    });
+  }, [applyArchiveState, executeSelectionAction]);
 
   const selectedChatUnreadCount = useMemo(() => {
     return selectedChat?.unreadCount ?? 0;
   }, [selectedChat]);
+
+  const selectionCount = selectedPhones.size;
+  const isProcessingSelection = selectionActionState.status === 'loading';
 
   useEffect(() => {
     if (!selectedPhone || !scrollTargetMessageId) {
@@ -4342,67 +4679,15 @@ export default function WhatsAppHistoryTab({
   useEffect(() => {
     if (!selectedPhone || selectedChatUnreadCount === 0) return;
 
-    const unreadMessages = selectedChatMessages.filter(
-      (message) => message.message_type === 'received' && !message.read_status
-    );
-
-    if (unreadMessages.length === 0) {
-      return;
-    }
-
-    const messageIdsToMark = Array.from(
-      new Set(
-        unreadMessages
-          .map((message) => message.message_id?.trim())
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-
-    const markAsRead = async () => {
-      try {
-        const chatStatusResult = await zapiService.modifyChatStatus(selectedPhone, 'read');
-        if (!chatStatusResult.success) {
-          console.error(
-            `Erro ao marcar chat ${selectedPhone} como lido no Z-API:`,
-            chatStatusResult.error
-          );
-        }
-
-        if (messageIdsToMark.length > 0) {
-          await Promise.allSettled(
-            messageIdsToMark.map(async (messageId) => {
-              const result = await zapiService.markMessageAsRead(selectedPhone, messageId);
-              if (!result.success) {
-                console.error(
-                  `Erro ao marcar mensagem ${messageId} como lida no Z-API:`,
-                  result.error
-                );
-              }
-            })
-          );
-        }
-
-        await supabase
-          .from('whatsapp_conversations')
-          .update({ read_status: true })
-          .eq('phone_number', selectedPhone)
-          .eq('message_type', 'received')
-          .or('read_status.is.false,read_status.is.null');
-
-        setConversations((prev) =>
-          prev.map((message) =>
-            message.phone_number === selectedPhone && message.message_type === 'received'
-              ? { ...message, read_status: true }
-              : message
-          )
-        );
-      } catch (error) {
-        console.error('Erro ao marcar mensagens como lidas:', error);
-      }
-    };
-
-    void markAsRead();
-  }, [selectedPhone, selectedChatMessages, selectedChatUnreadCount]);
+    void markChatMessagesAsRead(selectedPhone, selectedChatMessages).catch((error) => {
+      console.error('Erro ao marcar mensagens como lidas:', error);
+    });
+  }, [
+    markChatMessagesAsRead,
+    selectedChatMessages,
+    selectedChatUnreadCount,
+    selectedPhone,
+  ]);
 
   if (loading) {
     return (
@@ -4584,6 +4869,79 @@ export default function WhatsAppHistoryTab({
               </div>
 
               <div className="flex-1 overflow-y-auto">
+                {hasSelectedPhones && (
+                  <div className="px-4 py-2 bg-teal-50 border-b border-teal-200 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-teal-700">
+                      {isProcessingSelection ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4" />
+                      )}
+                      <span className="text-sm font-medium">
+                        {selectionCount}{' '}
+                        {selectionCount === 1 ? 'conversa selecionada' : 'conversas selecionadas'}
+                      </span>
+                      {selectionActionState.status === 'loading' && selectionActionState.message && (
+                        <span className="text-xs text-teal-600">{selectionActionState.message}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleBulkMarkAsRead();
+                        }}
+                        disabled={isProcessingSelection}
+                        className="inline-flex items-center gap-1 rounded-lg border border-teal-500 px-3 py-1.5 text-sm font-medium text-teal-600 transition-colors hover:bg-teal-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Marcar como lido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleBulkMarkAsUnread();
+                        }}
+                        disabled={isProcessingSelection}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Marcar como não lido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleBulkArchive();
+                        }}
+                        disabled={isProcessingSelection}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Archive className="w-4 h-4" />
+                        Arquivar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleBulkUnarchive();
+                        }}
+                        disabled={isProcessingSelection}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <ArchiveRestore className="w-4 h-4" />
+                        Desarquivar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearSelectedPhones()}
+                        disabled={isProcessingSelection}
+                        className="inline-flex items-center gap-1 rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <X className="w-4 h-4" />
+                        Limpar seleção
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {filteredChats.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center px-6 text-slate-500">
                     <MessageCircle className="w-10 h-10 mb-3" />
@@ -4599,6 +4957,7 @@ export default function WhatsAppHistoryTab({
                         leadsByPhoneMap.get(chat.phone.trim());
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
+                    const isSelected = selectedPhones.has(chat.phone);
                     const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
                     const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
                     const displayName = chat.isGroup
@@ -4611,18 +4970,38 @@ export default function WhatsAppHistoryTab({
                         key={chat.phone}
                         role="button"
                         tabIndex={0}
-                        onClick={() => setSelectedPhone(chat.phone)}
+                        onClick={() => selectPrimaryPhone(chat.phone)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            setSelectedPhone(chat.phone);
+                            selectPrimaryPhone(chat.phone);
                           }
                         }}
                         className={`w-full px-4 py-3 border-b border-slate-200 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${
-                          isActive ? 'bg-teal-50' : 'hover:bg-teal-50 bg-transparent'
+                          isActive
+                            ? 'bg-teal-50 ring-1 ring-teal-400'
+                            : isSelected
+                            ? 'bg-teal-100/60 ring-1 ring-teal-300'
+                            : 'hover:bg-teal-50 bg-transparent'
                         }`}
                       >
                         <div className="flex items-start space-x-3">
+                          <div className="pt-1">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-teal-500 text-teal-600 focus:ring-teal-500"
+                              checked={isSelected}
+                              disabled={isProcessingSelection}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(event) => {
+                                event.stopPropagation();
+                                togglePhoneSelection(chat.phone);
+                              }}
+                              aria-label={
+                                isSelected ? 'Remover conversa da seleção' : 'Selecionar conversa'
+                              }
+                            />
+                          </div>
                           <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden">
                             {chatPhotoUrl ? (
                               <img

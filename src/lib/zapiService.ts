@@ -34,6 +34,7 @@ export interface ZAPIMessage {
   type: 'sent' | 'received';
   timestamp: number;
   fromMe: boolean;
+  isGroupChat: boolean;
   deliveryStatus?: WhatsAppMessageDeliveryStatus;
   deliveryStatusUpdatedAt?: string;
   mediaUrl?: string;
@@ -44,6 +45,8 @@ export interface ZAPIMessage {
   mediaCaption?: string;
   mediaViewOnce?: boolean;
   senderName?: string;
+  senderJid?: string;
+  senderPhone?: string;
   senderPhoto?: string;
   chatName?: string;
   quotedMessageId?: string;
@@ -778,6 +781,78 @@ class ZAPIService {
     return null;
   }
 
+  private sanitizeDigits(value?: string | null): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    return value.replace(/\D/g, '');
+  }
+
+  private areNamesEquivalent(a?: string | null, b?: string | null): boolean {
+    if (!a || !b) {
+      return false;
+    }
+
+    const normalize = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .trim()
+        .toLowerCase();
+
+    return normalize(a) === normalize(b);
+  }
+
+  private extractSenderIdFromMessage(msg: any): string | null {
+    return (
+      this.pickFirstString(
+        msg?.sender?.id,
+        msg?.sender?.jid,
+        msg?.senderId,
+        msg?.sender_id,
+        msg?.participant,
+        msg?.participantId,
+        msg?.participant_id,
+        msg?.participant?.id,
+        msg?.participant?.jid,
+        msg?.author,
+        msg?.authorId,
+        msg?.author_id,
+        msg?.key?.participant,
+        msg?.key?.remoteJid,
+        msg?.remoteJid,
+        msg?.remoteParticipant,
+        msg?.from,
+        msg?.jid,
+      ) || null
+    );
+  }
+
+  private normalizeParticipantPhone(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const digits = this.sanitizeDigits(value);
+    if (!digits) {
+      return null;
+    }
+
+    return digits;
+  }
+
+  private formatPhoneFallback(digits: string): string {
+    if (!digits) {
+      return '';
+    }
+
+    if (digits.startsWith('+')) {
+      return digits;
+    }
+
+    return digits.startsWith('55') ? `+${digits}` : `+${digits}`;
+  }
+
   private normalizeEventTimestamp(value: unknown): number | null {
     if (typeof value === 'number' && Number.isFinite(value)) {
       if (value >= 1e12) {
@@ -998,14 +1073,29 @@ class ZAPIService {
       msg?.sender?.shortName,
       msg?.sender?.pushName,
       msg?.sender?.notifyName,
+      msg?.sender?.formattedName,
+      msg?.sender?.displayName,
+      msg?.sender?.fullName,
+      msg?.senderShortName,
+      msg?.senderPushName,
+      msg?.senderNotifyName,
       msg?.participantName,
       msg?.participantPushName,
+      msg?.participantShortName,
+      msg?.participant?.name,
+      msg?.participant?.shortName,
+      msg?.participant?.pushName,
+      msg?.participant?.notifyName,
+      msg?.participant?.displayName,
+      msg?.participant?.formattedName,
+      msg?.notifyName,
       msg?.pushName,
       msg?.contact?.displayName,
       msg?.contact?.name,
       msg?.contact?.formattedName,
       msg?.contact?.shortName,
-      msg?.name,
+      msg?.contact?.pushName,
+      msg?.contact?.notifyName,
     );
   }
 
@@ -1430,7 +1520,64 @@ class ZAPIService {
     contractId?: string
   ): Promise<void> {
     try {
+      let groupMetadata: ZAPIGroupMetadata | null = null;
+      let normalizedGroupSubject: string | null = null;
+      const participantNameByPhone = new Map<string, string>();
+
+      const hasGroupMessages = messages.some((msg) => msg.isGroupChat);
+
+      if (hasGroupMessages) {
+        const metadataResult = await this.getGroupMetadata(messages[0]?.phone ?? phoneNumber);
+        if (metadataResult.success && metadataResult.data) {
+          groupMetadata = metadataResult.data as ZAPIGroupMetadata;
+          normalizedGroupSubject =
+            typeof groupMetadata.subject === 'string' ? groupMetadata.subject.trim() || null : null;
+
+          const participants = Array.isArray(groupMetadata.participants)
+            ? groupMetadata.participants
+            : [];
+
+          participants.forEach((participant) => {
+            const participantDigits = this.sanitizeDigits(participant.phone);
+            if (!participantDigits) {
+              return;
+            }
+
+            const participantName = this.pickFirstString(participant.name, participant.short);
+            if (participantName) {
+              participantNameByPhone.set(participantDigits, participantName);
+            }
+          });
+        }
+      }
+
       const conversations: Partial<WhatsAppConversation>[] = messages.map((msg) => {
+        const senderDigits = this.sanitizeDigits(msg.senderPhone || msg.senderJid || '');
+        const isGroupMessage = msg.isGroupChat;
+
+        let senderName = msg.senderName?.trim() || null;
+
+        if (isGroupMessage) {
+          if (senderName && normalizedGroupSubject && this.areNamesEquivalent(senderName, normalizedGroupSubject)) {
+            senderName = null;
+          }
+
+          if (senderDigits) {
+            const participantName = participantNameByPhone.get(senderDigits);
+            if (participantName) {
+              senderName = participantName;
+            }
+          }
+
+          if (!senderName && senderDigits) {
+            senderName = this.formatPhoneFallback(senderDigits);
+          }
+        }
+
+        const chatDisplayName = isGroupMessage
+          ? groupMetadata?.subject || msg.chatName || undefined
+          : msg.chatName || undefined;
+
         const record: Partial<WhatsAppConversation> = {
           lead_id: leadId,
           contract_id: contractId,
@@ -1448,9 +1595,7 @@ class ZAPIService {
           media_thumbnail_url: msg.mediaThumbnailUrl,
           media_caption: msg.mediaCaption,
           media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
-          sender_name: msg.senderName,
           sender_photo: msg.senderPhoto,
-          chat_name: msg.chatName,
           quoted_message_id: msg.quotedMessageId,
           quoted_message_text: msg.quotedText,
           quoted_message_sender: msg.quotedSenderName,
@@ -1458,6 +1603,8 @@ class ZAPIService {
             typeof msg.quotedFromMe === 'boolean' ? msg.quotedFromMe : undefined,
           quoted_message_type: msg.quotedMediaType,
           quoted_message_media_url: msg.quotedMediaUrl,
+          sender_name: senderName ?? msg.senderName ?? undefined,
+          chat_name: chatDisplayName,
         };
 
         const fallbackStatus: WhatsAppMessageDeliveryStatus | undefined =
@@ -1468,7 +1615,6 @@ class ZAPIService {
           record.delivery_status_updated_at =
             msg.deliveryStatusUpdatedAt ?? new Date(msg.timestamp * 1000).toISOString();
         }
-
         return record;
       });
 
@@ -2625,8 +2771,15 @@ class ZAPIService {
 
       const phoneValue = msg.phone || msg.chatId || '';
       const normalizedPhone = typeof phoneValue === 'string' ? phoneValue.trim() : '';
+      const senderId = this.extractSenderIdFromMessage(msg);
+      const senderPhone = this.normalizeParticipantPhone(senderId);
       const senderName = this.extractSenderNameFromMessage(msg);
       const chatName = this.extractChatNameFromMessage(msg, senderName, normalizedPhone);
+      const isGroupChat = this.detectGroupChatFromMessage(msg, normalizedPhone);
+      const sanitizedSenderName =
+        isGroupChat && chatName && senderName && this.areNamesEquivalent(senderName, chatName)
+          ? null
+          : senderName;
       const senderPhoto = this.extractSenderPhotoFromMessage(msg);
       const quotedInfo = extractQuotedMessageInfo(msg);
 
@@ -2685,6 +2838,7 @@ class ZAPIService {
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
+        isGroupChat,
         deliveryStatus,
         deliveryStatusUpdatedAt,
         mediaUrl: mediaUrl || undefined,
@@ -2709,7 +2863,9 @@ class ZAPIService {
         mediaThumbnailUrl,
         mediaCaption,
         mediaViewOnce,
-        senderName: senderName || undefined,
+        senderName: sanitizedSenderName || undefined,
+        senderJid: senderId || undefined,
+        senderPhone: senderPhone || undefined,
         chatName: chatName || undefined,
         senderPhoto: senderPhoto || undefined,
         quotedMessageId: quotedInfo?.messageId,

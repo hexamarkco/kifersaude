@@ -682,20 +682,26 @@ async function upsertConversation(
 ): Promise<EventProcessingResult> {
   const targetPhoneOverrideRaw = overrides.targetPhone;
   let normalizedTargetPhone: string | null = null;
-  let hasTargetPhoneOverride = false;
 
   if (typeof targetPhoneOverrideRaw === 'string' && targetPhoneOverrideRaw.trim()) {
-    hasTargetPhoneOverride = true;
     normalizedTargetPhone = normalizePhoneNumber(targetPhoneOverrideRaw) ?? targetPhoneOverrideRaw.trim();
   }
 
   const normalizedPhone =
     overrides.phoneNumber ?? extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
 
+  const messageType: 'sent' | 'received' = overrides.messageType ?? (payload?.fromMe ? 'sent' : 'received');
+
+  if (!normalizedTargetPhone && messageType === 'sent') {
+    const extractedTarget = extractNormalizedTargetPhone(payload);
+    if (extractedTarget) {
+      normalizedTargetPhone = extractedTarget;
+    }
+  }
+
   const { text: derivedText, media: derivedMedia } = describePayload(payload);
   const chosenMedia = overrides.media ?? derivedMedia;
   const chosenText = overrides.text ?? derivedText ?? 'Mensagem recebida';
-  const messageType: 'sent' | 'received' = overrides.messageType ?? (payload?.fromMe ? 'sent' : 'received');
   const readStatus =
     typeof overrides.readStatus === 'boolean'
       ? overrides.readStatus
@@ -783,7 +789,7 @@ async function upsertConversation(
         updateRecord.phone_number = baseRecord.phone_number;
       }
 
-      if (hasTargetPhoneOverride && normalizedTargetPhone) {
+      if (normalizedTargetPhone && normalizedTargetPhone !== existing.target_phone) {
         updateRecord.target_phone = normalizedTargetPhone;
       }
 

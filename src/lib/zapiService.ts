@@ -222,7 +222,8 @@ class ZAPIService {
     file: Blob,
     filename: string,
     mediaType: ZAPIMediaType,
-    caption?: string
+    caption?: string,
+    preEncodedDataUrl?: string
   ): Promise<ZAPIResponse> {
     try {
       const config = await this.getConfig();
@@ -232,7 +233,11 @@ class ZAPIService {
 
       const phone = this.normalizePhoneNumber(phoneNumber);
 
-      const dataUrl = await this.fileToDataUrl(file);
+      const dataUrl = preEncodedDataUrl ?? (await this.fileToDataUrl(file));
+
+      if (mediaType === 'audio') {
+        console.log('Áudio convertido para Base64:', dataUrl);
+      }
 
       let endpoint: string;
       const payload: Record<string, unknown> = {

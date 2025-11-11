@@ -2319,7 +2319,7 @@ export default function WhatsAppHistoryTab({
           .update({ read_status: true })
           .eq('phone_number', selectedPhone)
           .eq('message_type', 'received')
-          .eq('read_status', false);
+          .or('read_status.is.false,read_status.is.null');
 
         setConversations((prev) =>
           prev.map((message) =>

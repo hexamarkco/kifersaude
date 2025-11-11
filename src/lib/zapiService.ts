@@ -1525,6 +1525,9 @@ class ZAPIService {
       const participantNameByPhone = new Map<string, string>();
 
       const hasGroupMessages = messages.some((msg) => msg.isGroupChat);
+      const normalizedTargetPhone = hasGroupMessages
+        ? null
+        : this.normalizePhoneNumber(phoneNumber);
 
       if (hasGroupMessages) {
         const metadataResult = await this.getGroupMetadata(messages[0]?.phone ?? phoneNumber);
@@ -1582,6 +1585,7 @@ class ZAPIService {
           lead_id: leadId,
           contract_id: contractId,
           phone_number: phoneNumber,
+          target_phone: normalizedTargetPhone,
           message_id: msg.messageId,
           message_text: msg.text || this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
           message_type: msg.fromMe ? 'sent' : 'received',

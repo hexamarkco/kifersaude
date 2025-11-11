@@ -70,6 +70,7 @@ import {
   type ZAPIGroupMetadata,
   type ZAPIChatMetadata,
   type ZAPIContact,
+  type ZAPITypingPresenceEvent,
 } from '../lib/zapiService';
 
 declare global {
@@ -563,6 +564,9 @@ export default function WhatsAppHistoryTab({
   const [manualChatPlaceholders, setManualChatPlaceholders] = useState<
     Map<string, ManualChatPlaceholder>
   >(new Map());
+  const [typingPresenceMap, setTypingPresenceMap] = useState<
+    Map<string, ChatTypingPresenceState>
+  >(() => new Map());
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
   const [fullscreenMedia, setFullscreenMedia] = useState<
     | {
@@ -1653,6 +1657,103 @@ export default function WhatsAppHistoryTab({
     startConversationPhone,
     startConversationSelectedName,
   ]);
+
+  const updateTypingPresenceFromEvent = useCallback(
+    (event: ZAPITypingPresenceEvent | null | undefined) => {
+      if (!event || typeof event !== 'object') {
+        return;
+      }
+
+      const candidateKeys = buildPresenceKeyCandidates(event.phone, event.chatId);
+      if (candidateKeys.length === 0) {
+        return;
+      }
+
+      const now = Date.now();
+      const eventTimestamp =
+        typeof event.timestamp === 'number' && Number.isFinite(event.timestamp)
+          ? event.timestamp
+          : now;
+      const typingUpdate =
+        typeof event.isTyping === 'boolean'
+          ? event.isTyping
+          : event.kind === 'typing-start'
+            ? true
+            : event.kind === 'typing-stop'
+              ? false
+              : undefined;
+      const hasTypingUpdate = typingUpdate !== undefined;
+      const presenceUpdate =
+        event.presence === 'online' || event.presence === 'offline'
+          ? event.presence
+          : undefined;
+      const lastSeenUpdate =
+        typeof event.lastSeenAt === 'number' && Number.isFinite(event.lastSeenAt)
+          ? event.lastSeenAt
+          : null;
+      const contactNameUpdate =
+        typeof event.contactName === 'string' && event.contactName.trim()
+          ? event.contactName.trim()
+          : null;
+
+      setTypingPresenceMap((previous) => {
+        let nextMap: Map<string, ChatTypingPresenceState> | null = null;
+
+        candidateKeys.forEach((key) => {
+          const previousValue = previous.get(key);
+
+          const isTyping =
+            typingUpdate !== undefined ? typingUpdate : previousValue?.isTyping ?? false;
+          const lastTypingAt = hasTypingUpdate
+            ? eventTimestamp
+            : previousValue?.lastTypingAt ?? null;
+          const presenceStatus =
+            presenceUpdate !== undefined
+              ? presenceUpdate
+              : previousValue?.presenceStatus ?? null;
+          const lastPresenceAt =
+            presenceUpdate !== undefined
+              ? eventTimestamp
+              : previousValue?.lastPresenceAt ?? null;
+          const lastSeenAt =
+            lastSeenUpdate !== null
+              ? lastSeenUpdate
+              : previousValue?.lastSeenAt ?? null;
+          const contactName =
+            contactNameUpdate ?? previousValue?.contactName ?? null;
+
+          const nextValue: ChatTypingPresenceState = {
+            isTyping,
+            lastTypingAt,
+            presenceStatus,
+            lastPresenceAt,
+            lastSeenAt,
+            contactName,
+            updatedAt: now,
+          };
+
+          const shouldUpdate =
+            !previousValue ||
+            previousValue.isTyping !== nextValue.isTyping ||
+            previousValue.lastTypingAt !== nextValue.lastTypingAt ||
+            previousValue.presenceStatus !== nextValue.presenceStatus ||
+            previousValue.lastPresenceAt !== nextValue.lastPresenceAt ||
+            previousValue.lastSeenAt !== nextValue.lastSeenAt ||
+            previousValue.contactName !== nextValue.contactName;
+
+          if (shouldUpdate) {
+            if (!nextMap) {
+              nextMap = new Map(previous);
+            }
+            nextMap.set(key, nextValue);
+          }
+        });
+
+        return nextMap ?? previous;
+      });
+    },
+    [setTypingPresenceMap],
+  );
 
   useEffect(() => {
     const conversationsChannel = supabase

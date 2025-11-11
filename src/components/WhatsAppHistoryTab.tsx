@@ -41,6 +41,201 @@ import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { zapiService, type ZAPIMediaType } from '../lib/zapiService';
 
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+    lamejs?: {
+      Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => {
+        encodeBuffer(left: Int16Array, right?: Int16Array): Uint8Array;
+        flush(): Uint8Array;
+      };
+    };
+  }
+}
+
+const MP3_MIME_TYPES = ['audio/mpeg', 'audio/mp3'];
+const FALLBACK_AUDIO_MIME_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/ogg;codecs=opus',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/aac',
+];
+const DEFAULT_MP3_BITRATE = 128;
+const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+
+let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
+
+const isMimeTypeSupported = (mimeType: string): boolean => {
+  if (typeof MediaRecorder === 'undefined') {
+    return false;
+  }
+
+  if (typeof MediaRecorder.isTypeSupported !== 'function') {
+    // If the method is unavailable, optimistically assume the browser can record.
+    return true;
+  }
+
+  try {
+    return MediaRecorder.isTypeSupported(mimeType);
+  } catch (error) {
+    console.warn('Falha ao verificar suporte a tipo de mídia:', error);
+    return false;
+  }
+};
+
+const getPreferredMimeType = (preferredTypes: string[]): string | null => {
+  for (const type of preferredTypes) {
+    if (isMimeTypeSupported(type)) {
+      return type;
+    }
+  }
+  return null;
+};
+
+const isMp3MimeType = (mimeType: string | undefined | null): boolean => {
+  if (!mimeType) {
+    return false;
+  }
+  const normalized = mimeType.toLowerCase();
+  return MP3_MIME_TYPES.some((type) => normalized.includes(type.split('/')[1]!));
+};
+
+const loadLameJs = async (): Promise<typeof window.lamejs> => {
+  if (window.lamejs) {
+    return window.lamejs;
+  }
+
+  if (typeof document === 'undefined') {
+    throw new Error('Documento indisponível para carregar a biblioteca de conversão.');
+  }
+
+  if (!lameJsLoadPromise) {
+    lameJsLoadPromise = new Promise((resolve, reject) => {
+      if (window.lamejs) {
+        resolve(window.lamejs);
+        return;
+      }
+
+      const existingScript = document.querySelector<HTMLScriptElement>('script[data-lamejs]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => {
+          if (window.lamejs) {
+            resolve(window.lamejs);
+          } else {
+            lameJsLoadPromise = null;
+            reject(new Error('Biblioteca lamejs carregada, mas não disponível.'));
+          }
+        });
+        existingScript.addEventListener('error', () => {
+          lameJsLoadPromise = null;
+          reject(new Error('Falha ao carregar a biblioteca de conversão para MP3.'));
+        });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = MP3_ENCODER_SCRIPT_URL;
+      script.async = true;
+      script.dataset.lamejs = 'true';
+      script.onload = () => {
+        if (window.lamejs) {
+          resolve(window.lamejs);
+        } else {
+          lameJsLoadPromise = null;
+          reject(new Error('Biblioteca lamejs carregada, mas não disponível.'));
+        }
+      };
+      script.onerror = () => {
+        lameJsLoadPromise = null;
+        reject(new Error('Falha ao carregar a biblioteca de conversão para MP3.'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  return lameJsLoadPromise;
+};
+
+const floatTo16BitPCM = (input: Float32Array): Int16Array => {
+  const output = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i += 1) {
+    const sample = Math.max(-1, Math.min(1, input[i] ?? 0));
+    output[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+  }
+  return output;
+};
+
+const convertBlobToMp3 = async (blob: Blob): Promise<Blob> => {
+  if (typeof window === 'undefined') {
+    throw new Error('Ambiente sem suporte para conversão de áudio.');
+  }
+
+  const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
+  if (!AudioContextClass) {
+    throw new Error('Este navegador não suporta conversão de áudio para MP3.');
+  }
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContextClass();
+
+  try {
+    const audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+      const handleSuccess = (buffer: AudioBuffer) => resolve(buffer);
+      const handleError = (error?: DOMException | null) => {
+        reject(error ?? new Error('Falha ao decodificar áudio gravado.'));
+      };
+
+      const decodeResult = audioContext.decodeAudioData(
+        arrayBuffer.slice(0),
+        handleSuccess,
+        handleError
+      );
+
+      if (decodeResult instanceof Promise) {
+        decodeResult.then(resolve).catch(reject);
+      }
+    });
+    const channelCount = Math.min(2, Math.max(1, audioBuffer.numberOfChannels));
+    const lamejs = await loadLameJs();
+    const mp3Encoder = new lamejs.Mp3Encoder(channelCount, audioBuffer.sampleRate, DEFAULT_MP3_BITRATE);
+    const blockSize = 1152;
+    const mp3Chunks: Uint8Array[] = [];
+    const leftChannel = audioBuffer.getChannelData(0);
+    const rightChannel = channelCount > 1 ? audioBuffer.getChannelData(1) : null;
+
+    for (let i = 0; i < audioBuffer.length; i += blockSize) {
+      const leftChunk = leftChannel.subarray(i, Math.min(i + blockSize, leftChannel.length));
+      const leftBuffer = floatTo16BitPCM(leftChunk);
+      let mp3buf: Uint8Array;
+
+      if (rightChannel) {
+        const rightChunk = rightChannel.subarray(i, Math.min(i + blockSize, rightChannel.length));
+        const rightBuffer = floatTo16BitPCM(rightChunk);
+        mp3buf = mp3Encoder.encodeBuffer(leftBuffer, rightBuffer);
+      } else {
+        mp3buf = mp3Encoder.encodeBuffer(leftBuffer);
+      }
+
+      if (mp3buf.length > 0) {
+        mp3Chunks.push(mp3buf);
+      }
+    }
+
+    const flushChunk = mp3Encoder.flush();
+    if (flushChunk.length > 0) {
+      mp3Chunks.push(flushChunk);
+    }
+
+    return new Blob(mp3Chunks, { type: 'audio/mpeg' });
+  } finally {
+    await audioContext.close().catch(() => {
+      // Ignora erros ao fechar o contexto de áudio
+    });
+  }
+};
+
 const isChatPreferencesTableMissingError = (error: PostgrestError | null | undefined) => {
   if (!error) return false;
 
@@ -171,6 +366,7 @@ export default function WhatsAppHistoryTab() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingMimeTypeRef = useRef<string | null>(null);
   const recordingFinalizedRef = useRef(false);
   const [recordedAudio, setRecordedAudio] =
     useState<{ blob: Blob; url: string; file: File; base64: string } | null>(null);
@@ -216,12 +412,13 @@ export default function WhatsAppHistoryTab() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const hasSupport =
-      typeof navigator !== 'undefined' &&
-      Boolean(navigator.mediaDevices) &&
-      'MediaRecorder' in window;
+    const hasDevices = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices);
+    const hasMediaRecorder = 'MediaRecorder' in window;
+    const hasSupportedMimeType = Boolean(
+      getPreferredMimeType([...MP3_MIME_TYPES, ...FALLBACK_AUDIO_MIME_TYPES])
+    );
 
-    setIsRecordingSupported(hasSupport);
+    setIsRecordingSupported(hasDevices && hasMediaRecorder && hasSupportedMimeType);
   }, []);
 
   useEffect(() => {
@@ -909,6 +1106,9 @@ export default function WhatsAppHistoryTab() {
       releaseAttachmentPreview(target);
       return prev.filter((_, idx) => idx !== index);
     });
+    if (recordedAudio.url) {
+      URL.revokeObjectURL(recordedAudio.url);
+    }
     setRecordedAudio(null);
   }, [recordedAudio, releaseAttachmentPreview]);
 
@@ -1060,10 +1260,10 @@ export default function WhatsAppHistoryTab() {
           const audioFile = new File([audioBlob], `gravacao-${Date.now()}.mp3`, {
             type: mimeType,
           });
-          const audioBase64 = await convertBlobToDataUrl(audioBlob);
+          const audioBase64 = await convertBlobToDataUrl(mp3Blob);
           console.log('Áudio gravado convertido para Base64:', audioBase64);
 
-          setRecordedAudio({ blob: audioBlob, url: audioUrl, file: audioFile, base64: audioBase64 });
+          setRecordedAudio({ blob: mp3Blob, url: audioUrl, file: audioFile, base64: audioBase64 });
           setAttachments((prev) => [
             ...prev,
             {
@@ -1073,10 +1273,17 @@ export default function WhatsAppHistoryTab() {
             },
           ]);
           audioChunksRef.current = [];
+          recordingMimeTypeRef.current = null;
         } catch (error) {
           recordingFinalizedRef.current = false;
           audioChunksRef.current = [];
+          recordingMimeTypeRef.current = null;
           console.error('Erro ao finalizar gravação de áudio:', error);
+          setRecordingError(
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível processar a gravação de áudio. Tente novamente.'
+          );
           return;
         }
       };

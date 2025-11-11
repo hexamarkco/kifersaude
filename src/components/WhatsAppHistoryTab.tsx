@@ -1203,20 +1203,25 @@ export default function WhatsAppHistoryTab() {
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const supportedMp3MimeType = getPreferredMimeType(MP3_MIME_TYPES);
-      const fallbackMimeType = getPreferredMimeType(FALLBACK_AUDIO_MIME_TYPES);
-      const chosenMimeType = supportedMp3MimeType ?? fallbackMimeType;
+      const mp3MimeTypes = ['audio/mpeg', 'audio/mp3'];
+      const supportedMp3MimeType = mp3MimeTypes.find((type) => {
+        return (
+          typeof MediaRecorder !== 'undefined' &&
+          typeof MediaRecorder.isTypeSupported === 'function' &&
+          MediaRecorder.isTypeSupported(type)
+        );
+      });
 
-      if (!chosenMimeType) {
+      if (!supportedMp3MimeType) {
         stream.getTracks().forEach((track) => track.stop());
-        recordingStreamRef.current = null;
-        setRecordingError('Não foi possível encontrar um formato de áudio compatível neste navegador.');
+        setRecordingError(
+          'Seu navegador não suporta gravação de áudio em MP3. Atualize o navegador ou tente utilizar outro dispositivo.'
+        );
         return;
       }
 
       recordingStreamRef.current = stream;
-      recordingMimeTypeRef.current = chosenMimeType;
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: chosenMimeType });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: supportedMp3MimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       recordingFinalizedRef.current = false;
@@ -1233,13 +1238,9 @@ export default function WhatsAppHistoryTab() {
         recordingFinalizedRef.current = true;
 
         try {
-          const recordedMimeType =
-            audioChunksRef.current[0]?.type || recordingMimeTypeRef.current || 'audio/webm';
-          const recordedBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
-          const shouldConvertToMp3 = !isMp3MimeType(recordedMimeType);
-
-          const mp3Blob = shouldConvertToMp3 ? await convertBlobToMp3(recordedBlob) : recordedBlob;
-          const audioUrl = URL.createObjectURL(mp3Blob);
+          const mimeType = supportedMp3MimeType ?? 'audio/mpeg';
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+          const audioUrl = URL.createObjectURL(audioBlob);
 
           const convertBlobToDataUrl = (blob: Blob): Promise<string> =>
             new Promise((resolve, reject) => {
@@ -1256,8 +1257,8 @@ export default function WhatsAppHistoryTab() {
               reader.readAsDataURL(blob);
             });
 
-          const audioFile = new File([mp3Blob], `gravacao-${Date.now()}.mp3`, {
-            type: 'audio/mpeg',
+          const audioFile = new File([audioBlob], `gravacao-${Date.now()}.mp3`, {
+            type: mimeType,
           });
           const audioBase64 = await convertBlobToDataUrl(mp3Blob);
           console.log('Áudio gravado convertido para Base64:', audioBase64);

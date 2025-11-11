@@ -928,12 +928,57 @@ export default function WhatsAppHistoryTab() {
     }
   };
 
+  const isMediaFallbackText = (message: WhatsAppConversation, text?: string | null) => {
+    if (!text) {
+      return false;
+    }
+
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+      return false;
+    }
+
+    const genericFallbacks = new Set([
+      'Mensagem recebida',
+      'Mensagem enviada',
+      'Mídia recebida',
+      'Mídia enviada',
+    ]);
+
+    if (genericFallbacks.has(normalizedText)) {
+      return true;
+    }
+
+    const mediaType = message.media_type?.toLowerCase();
+    const fallbackPrefixes: Partial<Record<string, string[]>> = {
+      audio: ['Áudio recebido', 'Áudio enviado'],
+      video: ['Vídeo recebido', 'Vídeo enviado'],
+      image: ['Imagem recebida', 'Imagem enviada'],
+      gif: ['GIF recebido', 'GIF enviado', 'Imagem recebida', 'Imagem enviada'],
+      sticker: ['Sticker recebido', 'Sticker enviado', 'Imagem recebida', 'Imagem enviada'],
+      document: ['Documento recebido', 'Documento enviado'],
+    };
+
+    if (mediaType) {
+      const prefixes = fallbackPrefixes[mediaType];
+      if (prefixes?.some((prefix) => normalizedText.startsWith(prefix))) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const getDisplayTextForMessage = (message: WhatsAppConversation) => {
     const caption = message.media_caption?.trim();
     const text = message.message_text?.trim();
 
     if (caption && caption !== text) {
       return caption;
+    }
+
+    if (message.media_url && isMediaFallbackText(message, text)) {
+      return '';
     }
 
     return text || '';

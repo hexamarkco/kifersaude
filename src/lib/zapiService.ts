@@ -93,6 +93,29 @@ export interface ZAPIResponse {
   error?: string;
 }
 
+export type ZAPIPresenceStatus = 'online' | 'offline' | 'unknown';
+
+export type ZAPITypingPresenceEventKind = 'typing-start' | 'typing-stop' | 'presence';
+
+export interface ZAPITypingPresenceEvent {
+  kind: ZAPITypingPresenceEventKind;
+  phone?: string | null;
+  chatId?: string | null;
+  contactName?: string | null;
+  presence?: ZAPIPresenceStatus;
+  isTyping?: boolean;
+  lastSeenAt?: number | null;
+  timestamp?: number | null;
+  raw?: unknown;
+}
+
+export interface ZAPITypingPresenceCallbacks {
+  onTypingStart?: (event: ZAPITypingPresenceEvent) => void;
+  onTypingStop?: (event: ZAPITypingPresenceEvent) => void;
+  onPresence?: (event: ZAPITypingPresenceEvent) => void;
+  onEvent?: (event: ZAPITypingPresenceEvent) => void;
+}
+
 const CLIENT_TOKEN = 'Faca52aa7804f429186a4a7734f8a3d66S';
 
 class ZAPIService {
@@ -306,6 +329,56 @@ class ZAPIService {
     }
   }
 
+  async setChatArchiveStatus(phoneNumber: string, archived: boolean): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+      const action = archived ? 'archive' : 'unarchive';
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/modify-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify({ phone, action }),
+        }
+      );
+
+      if (response.status === 204) {
+        return { success: true };
+      }
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao atualizar arquivamento do chat';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData?.message || errorMessage;
+        } catch (parseError) {
+          console.warn('Erro ao interpretar resposta de arquivamento:', parseError);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      let data: unknown = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
       const { data, error } = await supabase
@@ -392,6 +465,139 @@ class ZAPIService {
     }
   }
 
+  subscribeToTypingPresence(callbacks: ZAPITypingPresenceCallbacks): () => void {
+    const channel = supabase.channel('zapi-typing-presence', {
+      config: { broadcast: { self: false } },
+    });
+
+    const handlePayload = (payload: any, fallback: ZAPITypingPresenceEventKind) => {
+      const normalized = this.normalizeTypingPresencePayload(payload, fallback);
+      if (!normalized) {
+        return;
+      }
+
+      callbacks.onEvent?.(normalized);
+
+      switch (normalized.kind) {
+        case 'typing-start':
+          callbacks.onTypingStart?.(normalized);
+          break;
+        case 'typing-stop':
+          callbacks.onTypingStop?.(normalized);
+          break;
+        case 'presence':
+          callbacks.onPresence?.(normalized);
+          break;
+        default:
+          break;
+      }
+    };
+
+    const eventMap: Array<[string, ZAPITypingPresenceEventKind]> = [
+      ['typing', 'typing-start'],
+      ['typing:start', 'typing-start'],
+      ['typing_start', 'typing-start'],
+      ['typing-stop', 'typing-stop'],
+      ['typing:stop', 'typing-stop'],
+      ['typing_stop', 'typing-stop'],
+      ['presence', 'presence'],
+      ['presence:update', 'presence'],
+      ['presence_update', 'presence'],
+      ['zapi:typing-presence', 'presence'],
+    ];
+
+    eventMap.forEach(([eventName, fallback]) => {
+      channel.on('broadcast', { event: eventName }, ({ payload }) => {
+        handlePayload(payload, fallback);
+      });
+    });
+
+    try {
+      void channel.subscribe();
+    } catch (error) {
+      console.error('Erro ao assinar canal de digitação/presença:', error);
+    }
+
+    return () => {
+      void channel.unsubscribe().catch((error: unknown) => {
+        console.error('Erro ao cancelar assinatura de digitação/presença:', error);
+      });
+    };
+  }
+
+  async getChatPresence(phoneNumber: string): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+      const endpoints = [
+        `contacts/${phone}/presence`,
+        `contacts/${phone}/last-seen`,
+        `contacts/${phone}/status`,
+      ];
+
+      let lastError: string | null = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(
+            `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/${endpoint}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': this.clientToken,
+              },
+            }
+          );
+
+          if (response.status === 204) {
+            const payload = this.normalizeTypingPresencePayload({ phone }, 'presence');
+            return { success: true, data: payload };
+          }
+
+          if (!response.ok) {
+            let message = 'Falha ao buscar presença do contato';
+            try {
+              const errorData = await response.json();
+              message = errorData?.message || message;
+            } catch (parseError) {
+              message = 'Falha ao buscar presença do contato';
+            }
+
+            if (response.status === 404) {
+              lastError = message;
+              continue;
+            }
+
+            return { success: false, error: message };
+          }
+
+          const rawData = await response.json().catch(() => null);
+          const payload = this.normalizeTypingPresencePayload(
+            { ...(rawData ?? {}), phone },
+            'presence'
+          );
+
+          if (payload) {
+            return { success: true, data: payload };
+          }
+
+          return { success: true, data: rawData };
+        } catch (error) {
+          lastError = String(error);
+        }
+      }
+
+      return { success: false, error: lastError || 'Falha ao buscar presença do contato' };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   private pickFirstString(...candidates: unknown[]): string | null {
     for (const candidate of candidates) {
       if (typeof candidate === 'string') {
@@ -402,6 +608,191 @@ class ZAPIService {
       }
     }
     return null;
+  }
+
+  private normalizeEventTimestamp(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      if (value >= 1e12) {
+        return Math.trunc(value);
+      }
+      if (value >= 1e10) {
+        return Math.trunc(value);
+      }
+      return Math.trunc(value * 1000);
+    }
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.getTime();
+    }
+
+    if (typeof value === 'string') {
+      const numeric = Number(value);
+      if (!Number.isNaN(numeric)) {
+        return this.normalizeEventTimestamp(numeric);
+      }
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizePresenceStatus(value: unknown): ZAPIPresenceStatus | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    if (['online', 'available', 'connected', 'active'].includes(normalized)) {
+      return 'online';
+    }
+
+    if (['offline', 'unavailable', 'inactive', 'disconnected'].includes(normalized)) {
+      return 'offline';
+    }
+
+    return 'unknown';
+  }
+
+  private resolveTypingPresenceKind(
+    rawKind: string | null,
+    fallback: ZAPITypingPresenceEventKind,
+    payload: any
+  ): ZAPITypingPresenceEventKind {
+    const normalized = rawKind?.trim().toLowerCase();
+
+    if (normalized) {
+      if (normalized.includes('typing') && normalized.includes('stop')) {
+        return 'typing-stop';
+      }
+      if (normalized.includes('typing') && normalized.includes('start')) {
+        return 'typing-start';
+      }
+      if (normalized === 'typing' || normalized === 'typing_start' || normalized === 'typing:start') {
+        return 'typing-start';
+      }
+      if (normalized === 'typing_stop' || normalized === 'typing:stop') {
+        return 'typing-stop';
+      }
+      if (normalized.includes('presence') || normalized.includes('lastseen') || normalized.includes('last_seen')) {
+        return 'presence';
+      }
+      if (['online', 'offline', 'available', 'unavailable'].includes(normalized)) {
+        return 'presence';
+      }
+    }
+
+    if (typeof payload?.isTyping === 'boolean') {
+      return payload.isTyping ? 'typing-start' : 'typing-stop';
+    }
+
+    if (payload && typeof payload === 'object') {
+      const presenceCandidates = [
+        payload.presence,
+        payload.status,
+        payload.state,
+        payload.lastSeen,
+        payload.last_seen,
+        payload.lastSeenAt,
+        payload.last_seen_at,
+      ];
+      if (presenceCandidates.some((candidate) => candidate !== undefined && candidate !== null)) {
+        return 'presence';
+      }
+    }
+
+    return fallback;
+  }
+
+  private normalizeTypingPresencePayload(
+    payload: any,
+    fallback: ZAPITypingPresenceEventKind
+  ): ZAPITypingPresenceEvent | null {
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const phoneCandidate = this.pickFirstString(
+      payload.phone,
+      payload.chatPhone,
+      payload.remoteJid,
+      payload.chatId,
+      payload.jid,
+      payload.to,
+      payload.whatsapp,
+      payload.contact,
+    );
+
+    const chatIdCandidate = this.pickFirstString(
+      payload.chatId,
+      payload.remoteJid,
+      payload.jid,
+      payload.room,
+      payload.conversationId,
+      payload.chat,
+      payload.session,
+      payload.phone,
+    );
+
+    if (!phoneCandidate && !chatIdCandidate) {
+      return null;
+    }
+
+    const rawKind = this.pickFirstString(
+      payload.kind,
+      payload.type,
+      payload.event,
+      payload.eventType,
+      payload.status,
+    );
+
+    const kind = this.resolveTypingPresenceKind(rawKind, fallback, payload);
+
+    const presenceStatus = this.normalizePresenceStatus(
+      payload.presence ?? payload.status ?? payload.state ?? payload.connectionState
+    );
+
+    const timestamp = this.normalizeEventTimestamp(
+      payload.timestamp ?? payload.eventTimestamp ?? payload.createdAt ?? payload.created_at ?? payload.updatedAt
+    );
+
+    const lastSeenAt = this.normalizeEventTimestamp(
+      payload.lastSeen ?? payload.last_seen ?? payload.lastSeenAt ?? payload.last_seen_at ?? payload.presenceLastSeen
+    );
+
+    const isTyping =
+      typeof payload.isTyping === 'boolean'
+        ? payload.isTyping
+        : kind === 'typing-start'
+          ? true
+          : kind === 'typing-stop'
+            ? false
+            : undefined;
+
+    return {
+      kind,
+      phone: phoneCandidate ?? chatIdCandidate ?? null,
+      chatId: chatIdCandidate ?? phoneCandidate ?? null,
+      contactName: this.pickFirstString(
+        payload.contactName,
+        payload.senderName,
+        payload.sender,
+        payload.name,
+        payload.pushName,
+        payload.displayName,
+      ),
+      presence: presenceStatus ?? (kind === 'presence' ? 'unknown' : undefined),
+      isTyping,
+      lastSeenAt: lastSeenAt ?? null,
+      timestamp: timestamp ?? null,
+      raw: payload,
+    };
   }
 
   private detectGroupChatFromMessage(msg: any, normalizedPhone?: string | null): boolean {
@@ -1325,7 +1716,7 @@ class ZAPIService {
       if (Array.isArray(msg.contacts) && msg.contacts.length > 0) {
         const names = msg.contacts
           .map((contact: any) => pickFirstString(contact.displayName, contact.name))
-          .filter((value): value is string => Boolean(value));
+          .filter((value: string | null): value is string => Boolean(value));
         if (names.length > 0) {
           return `Contatos compartilhados: ${names.join(', ')}.`;
         }
@@ -1341,7 +1732,7 @@ class ZAPIService {
         const options = Array.isArray(msg.poll.options)
           ? msg.poll.options
               .map((option: any) => pickFirstString(option.name))
-              .filter((value): value is string => Boolean(value))
+              .filter((value: string | null): value is string => Boolean(value))
           : [];
         return (
           joinNonEmptyParts([
@@ -1356,7 +1747,7 @@ class ZAPIService {
         const selected = Array.isArray(msg.pollVote.options)
           ? msg.pollVote.options
               .map((option: any) => pickFirstString(option.name))
-              .filter((value): value is string => Boolean(value))
+              .filter((value: string | null): value is string => Boolean(value))
           : [];
         return (
           joinNonEmptyParts([
@@ -1557,21 +1948,21 @@ class ZAPIService {
         );
 
       if (msg.audio || matchesType('audio', 'ptt', 'voice')) {
-        return { type: 'audio' };
+        return 'audio';
       }
 
       if (
         msg.video ||
         matchesType('video', 'mp4', 'mov', 'mkv', '3gp', 'webm')
       ) {
-        return { type: 'video' };
+        return 'video';
       }
 
       if (
         msg.document ||
         matchesType('pdf', 'doc', 'xls', 'ppt', 'document')
       ) {
-        return { type: 'document' };
+        return 'document';
       }
 
       if (
@@ -1582,24 +1973,18 @@ class ZAPIService {
         msg.image ||
         matchesType('image', 'jpg', 'jpeg', 'png', 'gif', 'webp')
       ) {
-        const isGif =
-          matchesType('gif') ||
-          msg.image?.isGif === true ||
-          msg.image?.gifPlayback === true ||
-          msg.gifPlayback === true ||
-          msg.isGif === true;
-        return { type: isGif ? 'gif' : 'image', isGif };
+        return 'image';
       }
 
       if (matchesType('sticker', 'webp')) {
-        return { type: 'sticker' };
+        return 'image';
       }
 
       if (mediaUrl) {
-        return { type: 'document' };
+        return 'document';
       }
 
-      return { type: undefined };
+      return undefined;
     };
 
     const inferMediaType = (value: any): ZAPIMediaType | undefined => {

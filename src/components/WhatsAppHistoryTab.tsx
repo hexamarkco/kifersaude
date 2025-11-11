@@ -74,7 +74,10 @@ type AttachmentType = ZAPIMediaType;
 interface AttachmentItem {
   file: File;
   type: AttachmentType;
+  previewUrl?: string | null;
 }
+
+const DEFAULT_ATTACHMENT_ACCEPT = 'application/pdf,image/*,video/*,audio/*';
 
 const buildPhoneLookupKeys = (value?: string | null): string[] => {
   const digits = sanitizePhoneDigits(value);
@@ -156,10 +159,15 @@ export default function WhatsAppHistoryTab() {
   >(null);
   const [composerText, setComposerText] = useState('');
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+  const [nextAttachmentType, setNextAttachmentType] = useState<AttachmentType | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentsRef = useRef<AttachmentItem[]>([]);
+  const attachmentButtonRef = useRef<HTMLButtonElement | null>(null);
+  const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -207,6 +215,53 @@ export default function WhatsAppHistoryTab() {
 
     setIsRecordingSupported(hasSupport);
   }, []);
+
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  useEffect(() => {
+    return () => {
+      attachmentsRef.current.forEach(releaseAttachmentPreview);
+    };
+  }, [releaseAttachmentPreview]);
+
+  useEffect(() => {
+    if (isSendingMessage) {
+      setIsAttachmentMenuOpen(false);
+    }
+  }, [isSendingMessage]);
+
+  useEffect(() => {
+    if (!isAttachmentMenuOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        attachmentMenuRef.current?.contains(target) ||
+        attachmentButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsAttachmentMenuOpen(false);
+    };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAttachmentMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [isAttachmentMenuOpen]);
 
   const loadLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) return;
@@ -770,13 +825,108 @@ export default function WhatsAppHistoryTab() {
     }
   };
 
+  const renderAttachmentPreview = (attachment: AttachmentItem) => {
+    if (attachment.type === 'image' && attachment.previewUrl) {
+      return (
+        <img
+          src={attachment.previewUrl}
+          alt={attachment.file.name}
+          className="max-h-48 w-full rounded-lg object-cover"
+        />
+      );
+    }
+
+    if (attachment.type === 'video' && attachment.previewUrl) {
+      return (
+        <video
+          controls
+          className="w-full rounded-lg border border-slate-200"
+          src={attachment.previewUrl}
+        />
+      );
+    }
+
+    if (attachment.type === 'audio' && attachment.previewUrl) {
+      return (
+        <audio controls className="w-full">
+          <source src={attachment.previewUrl} />
+          Seu navegador não suporta a reprodução de áudio.
+        </audio>
+      );
+    }
+
+    return (
+      <div className="flex items-center space-x-2 text-sm text-slate-500">
+        <FileText className="h-5 w-5 text-rose-600" />
+        <span>Pré-visualização indisponível para este arquivo.</span>
+      </div>
+    );
+  };
+
+  const getAcceptForAttachmentType = (type: AttachmentType) => {
+    switch (type) {
+      case 'image':
+        return 'image/*';
+      case 'video':
+        return 'video/*';
+      case 'audio':
+        return 'audio/*';
+      case 'document':
+      default:
+        return 'application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
+    }
+  };
+
+  const createPreviewUrl = (file: File, type: AttachmentType) => {
+    if (type === 'document') {
+      return null;
+    }
+    return URL.createObjectURL(file);
+  };
+
+  const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
+    if (attachment.previewUrl) {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+  }, []);
+
+  const clearAttachments = useCallback(() => {
+    setAttachments((prev) => {
+      prev.forEach(releaseAttachmentPreview);
+      return [];
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
+    }
+  }, [releaseAttachmentPreview]);
+
   const handleAttachmentButtonClick = () => {
-    fileInputRef.current?.click();
+    if (isSendingMessage) {
+      return;
+    }
+    setIsAttachmentMenuOpen((prev) => !prev);
+  };
+
+  const handleAttachmentTypeSelectForUpload = (type: AttachmentType) => {
+    setNextAttachmentType(type);
+    setIsAttachmentMenuOpen(false);
+    const input = fileInputRef.current;
+    if (input) {
+      input.accept = getAcceptForAttachmentType(type);
+      input.click();
+    }
   };
 
   const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
+    const selectedType = nextAttachmentType;
     if (!files || files.length === 0) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
+      }
+      setNextAttachmentType(null);
       return;
     }
 
@@ -788,37 +938,67 @@ export default function WhatsAppHistoryTab() {
       const uniqueFiles = filesArray.filter(
         (file) => !existingKeys.has(`${file.name}-${file.size}`)
       );
-      const newAttachments = uniqueFiles.map((file) => ({
-        file,
-        type: inferAttachmentType(file),
-      }));
+      const newAttachments = uniqueFiles.map((file) => {
+        const resolvedType = selectedType ?? inferAttachmentType(file);
+        return {
+          file,
+          type: resolvedType,
+          previewUrl: createPreviewUrl(file, resolvedType),
+        };
+      });
       return [...prev, ...newAttachments];
     });
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+      fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
     }
+
+    setNextAttachmentType(null);
 
     setComposerError(null);
     setComposerSuccess(null);
   };
 
   const handleRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, idx) => idx !== index));
+    setAttachments((prev) => {
+      const target = prev[index];
+      if (target) {
+        releaseAttachmentPreview(target);
+      }
+      return prev.filter((_, idx) => idx !== index);
+    });
     setComposerError(null);
     setComposerSuccess(null);
   };
 
   const handleAttachmentTypeChange = (index: number, type: AttachmentType) => {
     setAttachments((prev) =>
-      prev.map((attachment, idx) =>
-        idx === index
-          ? {
-              ...attachment,
-              type,
-            }
-          : attachment
-      )
+      prev.map((attachment, idx) => {
+        if (idx !== index) {
+          return attachment;
+        }
+
+        if (attachment.type === type) {
+          return attachment;
+        }
+
+        if (type === 'document') {
+          releaseAttachmentPreview(attachment);
+          return {
+            ...attachment,
+            type,
+            previewUrl: null,
+          };
+        }
+
+        const previewUrl = attachment.previewUrl ?? createPreviewUrl(attachment.file, type);
+        return {
+          ...attachment,
+          type,
+          previewUrl,
+        };
+      })
     );
     setComposerError(null);
   };
@@ -966,7 +1146,7 @@ export default function WhatsAppHistoryTab() {
 
       setComposerSuccess('Mensagem enviada com sucesso!');
       setComposerText('');
-      setAttachments([]);
+      clearAttachments();
       if (recordedAudio?.url) {
         URL.revokeObjectURL(recordedAudio.url);
       }
@@ -982,6 +1162,7 @@ export default function WhatsAppHistoryTab() {
     }
   }, [
     attachments,
+    clearAttachments,
     composerText,
     hasContentToSend,
     loadConversations,
@@ -1756,7 +1937,7 @@ export default function WhatsAppHistoryTab() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="application/pdf,image/*,video/*,audio/*"
+                      accept={DEFAULT_ATTACHMENT_ACCEPT}
                       multiple
                       className="hidden"
                       onChange={handleAttachmentChange}
@@ -1776,32 +1957,69 @@ export default function WhatsAppHistoryTab() {
                         className="flex-1 resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
                       />
                       <div className="flex flex-col items-end space-y-2">
-                        <button
-                          type="button"
-                          onClick={handleAttachmentButtonClick}
-                          className="flex items-center space-x-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-                          disabled={isSendingMessage}
-                        >
-                          <Paperclip className="h-4 w-4" />
-                          <span>Anexar arquivo</span>
-                        </button>
+                        <div className="relative">
+                          <button
+                            ref={attachmentButtonRef}
+                            type="button"
+                            onClick={handleAttachmentButtonClick}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={isSendingMessage}
+                            aria-haspopup="menu"
+                            aria-expanded={isAttachmentMenuOpen}
+                            aria-label="Anexar arquivo"
+                          >
+                            <Paperclip className="h-5 w-5" />
+                          </button>
+                          {isAttachmentMenuOpen && (
+                            <div
+                              ref={attachmentMenuRef}
+                              className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                              role="menu"
+                            >
+                              <p className="px-1 pb-2 text-xs font-semibold uppercase text-slate-500">
+                                Tipo do envio
+                              </p>
+                              <div className="space-y-1">
+                                {attachmentTypes.map((value) => (
+                                  <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => handleAttachmentTypeSelectForUpload(value)}
+                                    className="flex w-full items-center space-x-3 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100"
+                                    role="menuitem"
+                                  >
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100">
+                                      {getAttachmentIcon(value)}
+                                    </span>
+                                    <span>{attachmentTypeLabels[value]}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         {isRecordingSupported ? (
                           <button
                             type="button"
                             onClick={isRecording ? stopRecording : startRecording}
-                            className={`flex items-center space-x-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                            className={`relative flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
                               isRecording
                                 ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
                                 : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
                             }`}
                             disabled={isSendingMessage}
+                            aria-label={isRecording ? 'Parar gravação' : 'Gravar áudio'}
                           >
                             {isRecording ? (
-                              <Square className="h-4 w-4" />
+                              <>
+                                <span className="absolute inline-flex h-12 w-12 rounded-full bg-red-400/40 opacity-75 animate-ping" />
+                                <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-white">
+                                  <Square className="h-4 w-4" />
+                                </span>
+                              </>
                             ) : (
-                              <Mic className="h-4 w-4" />
+                              <Mic className="h-5 w-5" />
                             )}
-                            <span>{isRecording ? 'Parar gravação' : 'Gravar áudio'}</span>
                           </button>
                         ) : (
                           <span className="max-w-[160px] text-right text-[11px] text-slate-500">
@@ -1860,6 +2078,9 @@ export default function WhatsAppHistoryTab() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </button>
+                                </div>
+                                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3">
+                                  {renderAttachmentPreview(attachment)}
                                 </div>
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                   <label

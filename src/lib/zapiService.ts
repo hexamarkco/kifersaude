@@ -52,6 +52,27 @@ export interface ZAPIGroupMetadata {
   subjectOwner?: string | null;
 }
 
+export interface ZAPIChatNote {
+  id: string;
+  content: string;
+  createdAt: number;
+  lastUpdateAt: number;
+}
+
+export interface ZAPIChatMetadata {
+  phone: string;
+  unread?: string | null;
+  lastMessageTime?: string | null;
+  isMuted?: string | null;
+  isMarkedSpam?: boolean | null;
+  profileThumbnail?: string | null;
+  isGroupAnnouncement?: boolean | null;
+  isGroup?: boolean | null;
+  notes?: ZAPIChatNote[];
+  about?: string | null;
+  displayName?: string | null;
+}
+
 export interface ZAPIResponse {
   success: boolean;
   data?: any;
@@ -277,6 +298,25 @@ class ZAPIService {
       msg?.chat?.photoUrl,
       msg?.chat?.thumbnailUrl,
       msg?.chat?.icon,
+    );
+  }
+
+  private extractChatDisplayNameFromMetadata(metadata: any): string | null {
+    return this.pickFirstString(
+      metadata?.displayName,
+      metadata?.name,
+      metadata?.profileName,
+      metadata?.contactName,
+      metadata?.pushName,
+      metadata?.formattedName,
+      metadata?.shortName,
+      metadata?.businessName,
+      metadata?.businessProfile?.name,
+      metadata?.chatName,
+      metadata?.chat?.name,
+      metadata?.chat?.displayName,
+      metadata?.contact?.displayName,
+      metadata?.contact?.formattedName,
     );
   }
 
@@ -701,6 +741,89 @@ class ZAPIService {
       return { success: true, messages };
     } catch (error) {
       return { success: false, messages: [], error: String(error) };
+    }
+  }
+
+  async getChatMetadata(phoneNumber: string): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/chats/${phone}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao buscar metadata do chat';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      const rawMetadata = await response.json();
+
+      const normalizedNotes: ZAPIChatNote[] | undefined = Array.isArray(rawMetadata?.notes)
+        ? rawMetadata.notes
+            .filter((note: any) => note && typeof note === 'object')
+            .map((note: any) => ({
+              id: String(note.id ?? ''),
+              content: typeof note.content === 'string' ? note.content : '',
+              createdAt: Number(note.createdAt ?? 0),
+              lastUpdateAt: Number(note.lastUpdateAt ?? 0),
+            }))
+        : rawMetadata?.notes && typeof rawMetadata.notes === 'object'
+        ? [
+            {
+              id: String(rawMetadata.notes.id ?? ''),
+              content: typeof rawMetadata.notes.content === 'string' ? rawMetadata.notes.content : '',
+              createdAt: Number(rawMetadata.notes.createdAt ?? 0),
+              lastUpdateAt: Number(rawMetadata.notes.lastUpdateAt ?? 0),
+            },
+          ]
+        : undefined;
+
+      const displayName = this.extractChatDisplayNameFromMetadata(rawMetadata);
+
+      const metadata: ZAPIChatMetadata = {
+        phone: this.pickFirstString(rawMetadata?.phone, phone) ?? phone,
+        unread: typeof rawMetadata?.unread === 'string' ? rawMetadata.unread : null,
+        lastMessageTime: rawMetadata?.lastMessageTime ? String(rawMetadata.lastMessageTime) : null,
+        isMuted: typeof rawMetadata?.isMuted === 'string' ? rawMetadata.isMuted : null,
+        isMarkedSpam:
+          typeof rawMetadata?.isMarkedSpam === 'boolean'
+            ? rawMetadata.isMarkedSpam
+            : typeof rawMetadata?.isMarkedSpam === 'string'
+            ? rawMetadata.isMarkedSpam.toLowerCase() === 'true'
+            : null,
+        profileThumbnail: this.pickFirstString(rawMetadata?.profileThumbnail, rawMetadata?.profilePicUrl),
+        isGroupAnnouncement:
+          typeof rawMetadata?.isGroupAnnouncement === 'boolean'
+            ? rawMetadata.isGroupAnnouncement
+            : null,
+        isGroup: typeof rawMetadata?.isGroup === 'boolean' ? rawMetadata.isGroup : null,
+        notes: normalizedNotes,
+        about: typeof rawMetadata?.about === 'string' ? rawMetadata.about : null,
+        displayName: displayName,
+      };
+
+      return { success: true, data: metadata };
+    } catch (error) {
+      return { success: false, error: String(error) };
     }
   }
 

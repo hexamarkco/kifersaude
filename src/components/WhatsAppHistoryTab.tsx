@@ -2861,7 +2861,16 @@ export default function WhatsAppHistoryTab({
 
     if (!nextPref) return;
 
+    const shouldArchive = nextPref.archived;
+    let remoteUpdated = false;
+
     try {
+      const remoteResult = await zapiService.setChatArchiveStatus(phone, shouldArchive);
+      if (!remoteResult.success) {
+        throw new Error(remoteResult.error || 'Falha ao atualizar arquivamento no WhatsApp.');
+      }
+      remoteUpdated = true;
+
       const { error } = await supabase
         .from('whatsapp_chat_preferences')
         .upsert({
@@ -2885,6 +2894,16 @@ export default function WhatsAppHistoryTab({
         }
         return next;
       });
+
+      if (remoteUpdated) {
+        const revertResult = await zapiService.setChatArchiveStatus(
+          phone,
+          previousPref?.archived ?? false
+        );
+        if (!revertResult.success) {
+          console.error('Falha ao reverter arquivamento no WhatsApp:', revertResult.error);
+        }
+      }
     }
   }, []);
 

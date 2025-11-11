@@ -250,6 +250,62 @@ class ZAPIService {
     }
   }
 
+  async modifyChatStatus(
+    phoneNumber: string,
+    action: 'read' | 'unread' = 'read'
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+      const normalizedAction = action === 'unread' ? 'unread' : 'read';
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/modify-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify({
+            phone,
+            action: normalizedAction,
+          }),
+        }
+      );
+
+      if (response.status === 204) {
+        return { success: true };
+      }
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao atualizar status do chat';
+        try {
+          const errorData = (await response.json()) as { message?: string };
+          errorMessage = errorData?.message || errorMessage;
+        } catch (error) {
+          console.warn('Erro ao interpretar resposta de erro ao modificar chat:', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      let data: unknown = null;
+      try {
+        data = (await response.json()) as unknown;
+      } catch (error) {
+        data = null;
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
   async getConfig(): Promise<ZAPIConfig | null> {
     try {
       const { data, error } = await supabase

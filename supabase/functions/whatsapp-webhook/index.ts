@@ -87,7 +87,44 @@ function extractSenderName(payload: any): string | null {
   );
 }
 
-function extractChatName(payload: any, senderName?: string | null): string | null {
+function detectGroupChat(payload: any, normalizedPhone?: string | null): boolean {
+  if (typeof payload?.isGroup === 'boolean') {
+    return payload.isGroup;
+  }
+
+  if (typeof payload?.chat?.isGroup === 'boolean') {
+    return payload.chat.isGroup;
+  }
+
+  if (payload?.groupId || payload?.groupName || payload?.groupSubject) {
+    return true;
+  }
+
+  const phoneCandidates = [normalizedPhone, payload?.phone, payload?.senderPhone, payload?.chat?.id, payload?.chat?.jid];
+  for (const candidate of phoneCandidates) {
+    if (typeof candidate === 'string') {
+      const lowerCandidate = candidate.toLowerCase();
+      if (lowerCandidate.includes('@g.us') || lowerCandidate.includes('-group')) {
+        return true;
+      }
+    }
+  }
+
+  if (typeof payload?.remoteJid === 'string' && payload.remoteJid.toLowerCase().includes('@g.us')) {
+    return true;
+  }
+
+  return false;
+}
+
+function extractChatName(payload: any, senderName?: string | null, isGroupChat?: boolean): string | null {
+  if (isGroupChat) {
+    const explicitGroupName = pickFirstString(payload?.chatName);
+    if (explicitGroupName) {
+      return explicitGroupName;
+    }
+  }
+
   return pickFirstString(
     payload?.chatName,
     payload?.chat?.name,
@@ -320,7 +357,8 @@ async function upsertConversation(
     (typeof payload?.momment === 'number' ? new Date(payload.momment).toISOString() : new Date().toISOString());
 
   const senderName = extractSenderName(payload);
-  const chatName = extractChatName(payload, senderName);
+  const isGroupChat = detectGroupChat(payload, normalizedPhone);
+  const chatName = extractChatName(payload, senderName, isGroupChat);
   const senderPhoto = extractSenderPhoto(payload);
 
   const baseRecord = {

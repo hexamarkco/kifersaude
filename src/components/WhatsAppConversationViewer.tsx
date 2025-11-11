@@ -281,8 +281,8 @@ export default function WhatsAppConversationViewer({
                   <div
                     className={`${
                       isAudioMessage
-                        ? 'w-full sm:max-w-xl'
-                        : 'max-w-[75%]'
+                        ? 'w-full max-w-[95%] sm:max-w-[85%]'
+                        : 'max-w-[95%] sm:max-w-[85%]'
                     } rounded-lg ${paddingClasses} shadow-sm flex flex-col space-y-2 ${
                       message.fromMe
                         ? 'bg-teal-500 text-white rounded-br-none'
@@ -309,14 +309,14 @@ export default function WhatsAppConversationViewer({
                         <p className="font-semibold tracking-wide text-[11px] uppercase opacity-90">
                           ~ {quotedSenderLabel}
                         </p>
-                        <p className="mt-1 text-[13px] whitespace-pre-wrap break-words">
+                        <p className="mt-1 text-[13px] whitespace-pre-wrap break-normal">
                           {quotedPreviewText}
                         </p>
                       </div>
                     )}
                     {renderMediaContent(message, mediaType)}
                     {message.text && (
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                      <p className="text-sm whitespace-pre-wrap break-normal">{message.text}</p>
                     )}
                     {!message.text && message.mediaUrl && mediaType === 'audio' && (
                       <p className="text-xs mt-2 opacity-80">

@@ -588,6 +588,40 @@ const normalizePhoneForChat = (phone: string): string => {
   return digits;
 };
 
+const getChatIdentifierForConversation = (
+  conversation?: Pick<WhatsAppConversation, 'phone_number' | 'target_phone'> | null
+): string => {
+  if (!conversation) {
+    return '';
+  }
+
+  const targetPhone = conversation.target_phone?.trim();
+  if (targetPhone) {
+    return targetPhone;
+  }
+
+  const phoneNumber = conversation.phone_number?.trim();
+  return phoneNumber || '';
+};
+
+const resolveChatIdentifier = (
+  conversation?: Pick<WhatsAppConversation, 'phone_number' | 'target_phone'> | null,
+  fallback?: string | null
+): string => {
+  const identifier = getChatIdentifierForConversation(conversation);
+  if (identifier) {
+    return identifier;
+  }
+
+  const fallbackValue = fallback?.trim();
+  return fallbackValue || '';
+};
+
+const doesMessageBelongToChat = (
+  message: Pick<WhatsAppConversation, 'phone_number' | 'target_phone'>,
+  chatIdentifier: string
+): boolean => getChatIdentifierForConversation(message) === chatIdentifier;
+
 type WhatsAppHistoryTabProps = {
   externalChatRequest?: (WhatsAppChatRequestDetail & { requestId?: number }) | null;
   onConsumeExternalChatRequest?: () => void;
@@ -1839,7 +1873,13 @@ export default function WhatsAppHistoryTab({
 
       const leadIds = [...new Set((data || []).map(c => c.lead_id).filter(Boolean) as string[])];
       await loadLeads(leadIds);
-      const phoneNumbers = [...new Set((data || []).map((c) => c.phone_number).filter(Boolean))];
+      const phoneNumbers = [
+        ...new Set(
+          (data || [])
+            .flatMap((c) => [c.phone_number, c.target_phone])
+            .filter((value): value is string => Boolean(value))
+        ),
+      ];
       await loadLeadsByPhones(phoneNumbers);
       await loadChatPreferences();
     } catch (error) {
@@ -2390,29 +2430,35 @@ export default function WhatsAppHistoryTab({
 
   const chatGroups = useMemo<ChatGroupBase[]>(() => {
     const groups = new Map<
-    string,
-    {
-      phone: string;
-      messages: WhatsAppConversation[];
-      leadId?: string | null;
-      contractId?: string | null;
-      lastMessage?: WhatsAppConversation;
-      displayName?: string | null;
-      photoUrl?: string | null;
-      isGroup: boolean;
-      unreadCount: number;
-    }
+      string,
+      {
+        phone: string;
+        messages: WhatsAppConversation[];
+        leadId?: string | null;
+        contractId?: string | null;
+        lastMessage?: WhatsAppConversation;
+        displayName?: string | null;
+        photoUrl?: string | null;
+        isGroup: boolean;
+        unreadCount: number;
+      }
     >();
 
     conversations.forEach((conv) => {
+      const chatIdentifier = getChatIdentifierForConversation(conv);
+      if (!chatIdentifier) {
+        return;
+      }
+
       const normalizedChatName = conv.chat_name?.trim() || null;
       const normalizedSenderName = conv.sender_name?.trim() || null;
-      const isGroupChat = isGroupWhatsAppJid(conv.phone_number);
-      const existing = groups.get(conv.phone_number);
+      const isGroupChat =
+        isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
+      const existing = groups.get(chatIdentifier);
 
       if (!existing) {
-        groups.set(conv.phone_number, {
-          phone: conv.phone_number,
+        groups.set(chatIdentifier, {
+          phone: chatIdentifier,
           messages: [conv],
           leadId: conv.lead_id,
           contractId: conv.contract_id || null,
@@ -2462,7 +2508,7 @@ export default function WhatsAppHistoryTab({
     });
 
     return Array.from(groups.values())
-      .map(group => ({
+      .map((group) => ({
         ...group,
         messages: group.messages.sort(
           (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -2483,7 +2529,9 @@ export default function WhatsAppHistoryTab({
 
       const existingDigits = new Set(
         conversations
-          .map((conversation) => sanitizePhoneDigits(conversation.phone_number))
+          .map((conversation) =>
+            sanitizePhoneDigits(getChatIdentifierForConversation(conversation))
+          )
           .filter((value) => value.length > 0)
       );
 
@@ -4431,7 +4479,7 @@ const getOutgoingMessageStatus = (
         return;
       }
 
-      const chatIdentifier = (message.phone_number || selectedPhone || '').trim();
+      const chatIdentifier = resolveChatIdentifier(message, selectedPhone);
       if (!chatIdentifier) {
         setReactionError('Não foi possível identificar o chat da mensagem.');
         return;
@@ -4485,7 +4533,8 @@ const getOutgoingMessageStatus = (
       setIsForwardModalOpen(true);
       setForwardingMessageIds(messageKey ? [messageKey] : []);
       setForwardSelectedTargetPhones([]);
-      setForwardSourcePhone(message.phone_number || selectedPhone || null);
+      const identifier = resolveChatIdentifier(message, selectedPhone);
+      setForwardSourcePhone(identifier || null);
       setForwardChatSearchTerm('');
       setForwardError(null);
       setForwardSuccess(null);
@@ -4578,8 +4627,9 @@ const getOutgoingMessageStatus = (
       return;
     }
 
+    const fallbackSource = resolveChatIdentifier(messagesToForward[0], selectedPhone);
     const sourcePhoneDigits = sanitizePhoneDigits(
-      forwardSourcePhone || messagesToForward[0]?.phone_number || selectedPhone || ''
+      forwardSourcePhone || fallbackSource || ''
     );
 
     if (!sourcePhoneDigits) {
@@ -4895,9 +4945,14 @@ const getOutgoingMessageStatus = (
 
   const markChatMessagesAsRead = useCallback(
     async (phone: string, messagesOverride?: WhatsAppConversation[]) => {
+      const trimmedPhone = phone.trim();
+      if (!trimmedPhone) {
+        return;
+      }
+
       const relevantMessages =
         messagesOverride ??
-        conversations.filter((message) => message.phone_number === phone);
+        conversations.filter((message) => doesMessageBelongToChat(message, trimmedPhone));
 
       const unreadMessages = relevantMessages.filter(
         (message) => message.message_type === 'received' && !message.read_status
@@ -4916,17 +4971,17 @@ const getOutgoingMessageStatus = (
       );
 
       try {
-        const chatStatusResult = await zapiService.modifyChatStatus(phone, 'read');
+        const chatStatusResult = await zapiService.modifyChatStatus(trimmedPhone, 'read');
         if (!chatStatusResult.success) {
           throw new Error(
-            chatStatusResult.error || `Falha ao marcar chat ${phone} como lido no Z-API.`
+            chatStatusResult.error || `Falha ao marcar chat ${trimmedPhone} como lido no Z-API.`
           );
         }
 
         if (messageIdsToMark.length > 0) {
           await Promise.allSettled(
             messageIdsToMark.map(async (messageId) => {
-              const result = await zapiService.markMessageAsRead(phone, messageId);
+              const result = await zapiService.markMessageAsRead(trimmedPhone, messageId);
               if (!result.success) {
                 console.error(
                   `Erro ao marcar mensagem ${messageId} como lida no Z-API:`,
@@ -4937,12 +4992,17 @@ const getOutgoingMessageStatus = (
           );
         }
 
+        const encodedPhone = encodeURIComponent(trimmedPhone);
+        const readStatusCondition = 'read_status.is.false,read_status.is.null';
+        const filterClauses = [
+          `and(phone_number.eq.${encodedPhone},message_type.eq.received,or(${readStatusCondition}))`,
+          `and(target_phone.eq.${encodedPhone},message_type.eq.received,or(${readStatusCondition}))`,
+        ];
+
         const { error } = await supabase
           .from('whatsapp_conversations')
           .update({ read_status: true })
-          .eq('phone_number', phone)
-          .eq('message_type', 'received')
-          .or('read_status.is.false,read_status.is.null');
+          .or(filterClauses.join(','));
 
         if (error) {
           throw error;
@@ -4950,7 +5010,8 @@ const getOutgoingMessageStatus = (
 
         setConversations((prev) =>
           prev.map((message) =>
-            message.phone_number === phone && message.message_type === 'received'
+            doesMessageBelongToChat(message, trimmedPhone) &&
+            message.message_type === 'received'
               ? { ...message, read_status: true }
               : message
           )
@@ -4964,19 +5025,29 @@ const getOutgoingMessageStatus = (
   );
 
   const markChatMessagesAsUnread = useCallback(async (phone: string) => {
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone) {
+      return;
+    }
+
     try {
-      const chatStatusResult = await zapiService.modifyChatStatus(phone, 'unread');
+      const chatStatusResult = await zapiService.modifyChatStatus(trimmedPhone, 'unread');
       if (!chatStatusResult.success) {
         throw new Error(
-          chatStatusResult.error || `Falha ao marcar chat ${phone} como não lido no Z-API.`
+          chatStatusResult.error || `Falha ao marcar chat ${trimmedPhone} como não lido no Z-API.`
         );
       }
+
+      const encodedPhone = encodeURIComponent(trimmedPhone);
+      const filterClauses = [
+        `and(phone_number.eq.${encodedPhone},message_type.eq.received)`,
+        `and(target_phone.eq.${encodedPhone},message_type.eq.received)`,
+      ];
 
       const { error } = await supabase
         .from('whatsapp_conversations')
         .update({ read_status: false })
-        .eq('phone_number', phone)
-        .eq('message_type', 'received');
+        .or(filterClauses.join(','));
 
       if (error) {
         throw error;
@@ -4984,7 +5055,8 @@ const getOutgoingMessageStatus = (
 
       setConversations((prev) =>
         prev.map((message) =>
-          message.phone_number === phone && message.message_type === 'received'
+          doesMessageBelongToChat(message, trimmedPhone) &&
+          message.message_type === 'received'
             ? { ...message, read_status: false }
             : message
         )

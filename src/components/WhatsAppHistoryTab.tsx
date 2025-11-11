@@ -3169,16 +3169,16 @@ export default function WhatsAppHistoryTab({
                                         }
                                       : undefined
                                   }
-                                  className={`flex ${
+                                  className={`flex w-full ${
                                     message.message_type === 'sent' ? 'justify-end' : 'justify-start'
                                   }`}
                                 >
                                   <div className="relative group/message">
                                     <div
-                                      className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 ${
+                                      className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 items-start ${
                                         message.message_type === 'sent'
-                                          ? 'bg-teal-500 text-white rounded-br-sm'
-                                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                          ? 'bg-teal-500 text-white rounded-br-sm ml-auto min-w-[10rem]'
+                                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm min-w-[9rem]'
                                       } ${bubbleHighlightClasses}`}
                                     >
                                       {senderLabel && (

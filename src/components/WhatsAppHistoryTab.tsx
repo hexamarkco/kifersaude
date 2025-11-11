@@ -380,6 +380,20 @@ const sanitizePhoneDigits = (value?: string | null): string => {
   return value.replace(/\D/g, '');
 };
 
+const normalizeName = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
+
+const areNamesEquivalent = (a?: string | null, b?: string | null): boolean => {
+  if (!a || !b) {
+    return false;
+  }
+  return normalizeName(a) === normalizeName(b);
+};
+
 const normalizeChatMetadataKey = (value?: string | null): string | null => {
   const digits = sanitizePhoneDigits(value);
   if (!digits) {
@@ -5501,6 +5515,67 @@ const getOutgoingMessageStatus = (
                     const leadResponsavelLabel = leadResponsavelValue
                       ? responsavelLabelMap.get(leadResponsavelValue) ?? leadResponsavelValue
                       : null;
+                    const normalizedGroupSubject = groupMetadata?.subject?.trim() || null;
+
+                    let lastMessagePreview = lastMessage?.message_text?.trim() || '';
+
+                    if (!lastMessagePreview && lastMessage?.media_caption) {
+                      const caption = lastMessage.media_caption.trim();
+                      if (caption) {
+                        lastMessagePreview = caption;
+                      }
+                    }
+
+                    if (!lastMessagePreview && lastMessage?.media_type && lastMessage.media_url) {
+                      lastMessagePreview = 'Mídia compartilhada';
+                    }
+
+                    if (lastMessagePreview) {
+                      if (chat.isGroup) {
+                        const resolveGroupSenderLabel = (): string => {
+                          if (!lastMessage) {
+                            return 'Participante';
+                          }
+
+                          if (lastMessage.message_type === 'sent') {
+                            return 'Você';
+                          }
+
+                          let candidate = lastMessage.sender_name?.trim() || null;
+
+                          if (candidate && normalizedGroupSubject && areNamesEquivalent(candidate, normalizedGroupSubject)) {
+                            candidate = null;
+                          }
+
+                          if (!candidate && lastMessage?.sender_name) {
+                            const senderDigits = sanitizePhoneDigits(lastMessage.sender_name);
+                            if (senderDigits && groupMetadata?.participants) {
+                              const participant = groupMetadata.participants.find((participant) => {
+                                const participantDigits = sanitizePhoneDigits(participant.phone);
+                                return participantDigits && participantDigits === senderDigits;
+                              });
+                              if (participant) {
+                                candidate = participant.name?.trim() || participant.short?.trim() || null;
+                              }
+                            }
+                          }
+
+                          return candidate || 'Participante';
+                        };
+
+                        const senderLabel = resolveGroupSenderLabel();
+                        lastMessagePreview = `${senderLabel}: ${lastMessagePreview}`;
+                      } else if (lastMessage?.message_type === 'sent') {
+                        lastMessagePreview = `Você: ${lastMessagePreview}`;
+                      }
+                    } else if (lastMessage) {
+                      lastMessagePreview =
+                        lastMessage.message_type === 'sent'
+                          ? 'Você enviou uma mensagem'
+                          : 'Mensagem sem conteúdo';
+                    } else {
+                      lastMessagePreview = 'Sem mensagens registradas';
+                    }
 
                     return (
                       <div
@@ -5564,9 +5639,7 @@ const getOutgoingMessageStatus = (
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-500 truncate">
-                                  {lastMessage?.message_text || 'Sem mensagens registradas'}
-                                </p>
+                                <p className="text-xs text-slate-500 truncate">{lastMessagePreview}</p>
                                 {(chat.pinned || chat.archived) && (
                                   <div className="flex items-center space-x-2 mt-1">
                                     {chat.pinned && (
@@ -5782,12 +5855,39 @@ const getOutgoingMessageStatus = (
                                 message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
                               const mediaContent = renderMediaContent(message);
                               const isGroupChat = selectedChat?.isGroup ?? false;
-                              const trimmedSenderName = message.sender_name?.trim();
-                              const senderLabel = isGroupChat
-                                ? message.message_type === 'sent'
-                                  ? 'Você'
-                                  : trimmedSenderName || 'Participante'
-                                : null;
+                              const trimmedSenderName = message.sender_name?.trim() || null;
+                              const senderLabel = (() => {
+                                if (!isGroupChat) {
+                                  return null;
+                                }
+
+                                if (message.message_type === 'sent') {
+                                  return 'Você';
+                                }
+
+                                const normalizedSubject = selectedGroupMetadata?.subject?.trim() || null;
+                                let candidate = trimmedSenderName;
+
+                                if (candidate && normalizedSubject && areNamesEquivalent(candidate, normalizedSubject)) {
+                                  candidate = null;
+                                }
+
+                                if (!candidate && message.sender_name) {
+                                  const senderDigits = sanitizePhoneDigits(message.sender_name);
+                                  if (senderDigits && selectedGroupMetadata?.participants) {
+                                    const participant = selectedGroupMetadata.participants.find((participant) => {
+                                      const participantDigits = sanitizePhoneDigits(participant.phone);
+                                      return participantDigits && participantDigits === senderDigits;
+                                    });
+
+                                    if (participant) {
+                                      candidate = participant.name?.trim() || participant.short?.trim() || null;
+                                    }
+                                  }
+                                }
+
+                                return candidate || 'Participante';
+                              })();
                               const senderLabelClass = message.message_type === 'sent'
                                 ? 'text-xs font-semibold text-teal-100 self-end'
                                 : 'text-xs font-semibold text-slate-500';

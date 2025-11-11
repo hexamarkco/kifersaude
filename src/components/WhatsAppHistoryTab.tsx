@@ -1002,13 +1002,31 @@ export default function WhatsAppHistoryTab() {
       setComposerError(null);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const mp3MimeTypes = ['audio/mpeg', 'audio/mp3'];
+      const supportedMp3MimeType = mp3MimeTypes.find((type) => {
+        return (
+          typeof MediaRecorder !== 'undefined' &&
+          typeof MediaRecorder.isTypeSupported === 'function' &&
+          MediaRecorder.isTypeSupported(type)
+        );
+      });
+
+      if (!supportedMp3MimeType) {
+        stream.getTracks().forEach((track) => track.stop());
+        setRecordingError(
+          'Seu navegador não suporta gravação de áudio em MP3. Atualize o navegador ou tente utilizar outro dispositivo.'
+        );
+        return;
+      }
+
       recordingStreamRef.current = stream;
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: supportedMp3MimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       recordingFinalizedRef.current = false;
 
-      const finalizeRecording = async (fallbackMimeType: string) => {
+      const finalizeRecording = async () => {
         if (recordingFinalizedRef.current) {
           return;
         }
@@ -1020,24 +1038,9 @@ export default function WhatsAppHistoryTab() {
         recordingFinalizedRef.current = true;
 
         try {
-          const mimeType =
-            mediaRecorder.mimeType ||
-            fallbackMimeType ||
-            audioChunksRef.current[0]?.type ||
-            'audio/webm';
-          const normalizedMimeType = mimeType.split(';')[0] || 'audio/webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: normalizedMimeType });
+          const mimeType = supportedMp3MimeType ?? 'audio/mpeg';
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
           const audioUrl = URL.createObjectURL(audioBlob);
-          let extension = 'webm';
-          if (normalizedMimeType.includes('ogg')) {
-            extension = 'ogg';
-          } else if (normalizedMimeType.includes('mpeg') || normalizedMimeType.includes('mp3')) {
-            extension = 'mp3';
-          } else if (normalizedMimeType.includes('wav')) {
-            extension = 'wav';
-          } else if (normalizedMimeType.includes('m4a') || normalizedMimeType.includes('mp4')) {
-            extension = 'm4a';
-          }
 
           const convertBlobToDataUrl = (blob: Blob): Promise<string> =>
             new Promise((resolve, reject) => {
@@ -1054,8 +1057,8 @@ export default function WhatsAppHistoryTab() {
               reader.readAsDataURL(blob);
             });
 
-          const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, {
-            type: normalizedMimeType,
+          const audioFile = new File([audioBlob], `gravacao-${Date.now()}.mp3`, {
+            type: mimeType,
           });
           const audioBase64 = await convertBlobToDataUrl(audioBlob);
           console.log('Áudio gravado convertido para Base64:', audioBase64);
@@ -1081,15 +1084,14 @@ export default function WhatsAppHistoryTab() {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
-          const fallbackMimeType = event.data.type || 'audio/webm';
           if (mediaRecorder.state === 'inactive') {
-            void finalizeRecording(fallbackMimeType);
+            void finalizeRecording();
           }
         }
       };
 
       mediaRecorder.onstop = () => {
-        void finalizeRecording(audioChunksRef.current[0]?.type || 'audio/webm');
+        void finalizeRecording();
         recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
         recordingStreamRef.current = null;
       };

@@ -335,6 +335,7 @@ type ChatGroupBase = {
   displayName?: string | null;
   photoUrl?: string | null;
   isGroup: boolean;
+  unreadCount: number;
 };
 
 type ChatGroup = ChatGroupBase & {
@@ -416,6 +417,9 @@ export default function WhatsAppHistoryTab({
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
   const groupMetadataPendingRef = useRef<Set<string>>(new Set());
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollTargetMessageRef = useRef<HTMLDivElement | null>(null);
+  const lastScrolledChatRef = useRef<string | null>(null);
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -802,6 +806,7 @@ export default function WhatsAppHistoryTab({
       displayName?: string | null;
       photoUrl?: string | null;
       isGroup: boolean;
+      unreadCount: number;
     }
     >();
 
@@ -823,6 +828,8 @@ export default function WhatsAppHistoryTab({
             : normalizedSenderName || normalizedChatName || null,
           photoUrl: conv.sender_photo || null,
           isGroup: isGroupChat,
+          unreadCount:
+            conv.message_type === 'received' && !conv.read_status ? 1 : 0,
         });
       } else {
         existing.messages.push(conv);
@@ -852,6 +859,10 @@ export default function WhatsAppHistoryTab({
           new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
         ) {
           existing.lastMessage = conv;
+        }
+
+        if (conv.message_type === 'received' && !conv.read_status) {
+          existing.unreadCount += 1;
         }
       }
     });
@@ -1280,6 +1291,22 @@ export default function WhatsAppHistoryTab({
 
     return processed;
   }, [selectedChatDisplayName, selectedChatMessages]);
+
+  const scrollTargetMessageId = useMemo(() => {
+    if (processedSelectedMessages.length === 0) {
+      return null;
+    }
+
+    const firstUnread = processedSelectedMessages.find(
+      (message) => message.message_type === 'received' && !message.read_status
+    );
+
+    if (firstUnread) {
+      return firstUnread.id;
+    }
+
+    return processedSelectedMessages[processedSelectedMessages.length - 1]?.id ?? null;
+  }, [processedSelectedMessages]);
 
   const handleLeadStatusChange = useCallback(
     async (leadId: string, newStatus: string) => {
@@ -2137,11 +2164,38 @@ export default function WhatsAppHistoryTab({
   }, []);
 
   const selectedChatUnreadCount = useMemo(() => {
-    if (!selectedChat) return 0;
-    return selectedChat.messages.filter(
-      (message) => message.message_type === 'received' && !message.read_status
-    ).length;
+    return selectedChat?.unreadCount ?? 0;
   }, [selectedChat]);
+
+  useEffect(() => {
+    if (!selectedPhone || !scrollTargetMessageId) {
+      return;
+    }
+
+    const isNewChat = lastScrolledChatRef.current !== selectedPhone;
+    if (!isNewChat) {
+      return;
+    }
+
+    const container = messagesContainerRef.current;
+    if (!container) {
+      lastScrolledChatRef.current = selectedPhone;
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const target = scrollTargetMessageRef.current;
+      if (target && container.contains(target)) {
+        target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      } else {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+
+    lastScrolledChatRef.current = selectedPhone;
+
+    return () => cancelAnimationFrame(frame);
+  }, [scrollTargetMessageId, selectedPhone]);
 
   useEffect(() => {
     if (!selectedPhone || selectedChatUnreadCount === 0) return;
@@ -2417,44 +2471,53 @@ export default function WhatsAppHistoryTab({
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-start space-x-1 ml-3">
-                                {lastMessage && (
-                                  <span className="text-xs text-slate-500 whitespace-nowrap mr-1">
-                                    {formatTime(lastMessage.timestamp)}
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    void handleTogglePin(chat.phone);
-                                  }}
-                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-                                  title={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
-                                  aria-label={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
-                                >
-                                  {chat.pinned ? (
-                                    <PinOff className="w-4 h-4" />
-                                  ) : (
-                                    <Pin className="w-4 h-4" />
+                              <div className="flex items-start space-x-2 ml-3">
+                                <div className="flex flex-col items-end space-y-1">
+                                  {lastMessage && (
+                                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                                      {formatTime(lastMessage.timestamp)}
+                                    </span>
                                   )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    void handleToggleArchive(chat.phone);
-                                  }}
-                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-                                  title={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
-                                  aria-label={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
-                                >
-                                  {chat.archived ? (
-                                    <ArchiveRestore className="w-4 h-4" />
-                                  ) : (
-                                    <Archive className="w-4 h-4" />
+                                  {chat.unreadCount > 0 && (
+                                    <span className="inline-flex min-w-[24px] justify-center rounded-full bg-teal-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                                      {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                                    </span>
                                   )}
-                                </button>
+                                </div>
+                                <div className="flex items-start space-x-1">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleTogglePin(chat.phone);
+                                    }}
+                                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                    title={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                    aria-label={chat.pinned ? 'Desfixar conversa' : 'Fixar conversa'}
+                                  >
+                                    {chat.pinned ? (
+                                      <PinOff className="w-4 h-4" />
+                                    ) : (
+                                      <Pin className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleToggleArchive(chat.phone);
+                                    }}
+                                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                    title={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                    aria-label={chat.archived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+                                  >
+                                    {chat.archived ? (
+                                      <ArchiveRestore className="w-4 h-4" />
+                                    ) : (
+                                      <Archive className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2525,7 +2588,10 @@ export default function WhatsAppHistoryTab({
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-4 space-y-6">
+                  <div
+                    ref={messagesContainerRef}
+                    className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-4 space-y-6"
+                  >
                     {groupedSelectedMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
                         <MessageCircle className="w-12 h-12 mb-4" />
@@ -2574,6 +2640,15 @@ export default function WhatsAppHistoryTab({
                               return (
                                 <div
                                   key={message.id}
+                                  ref={
+                                    message.id === scrollTargetMessageId
+                                      ? (element) => {
+                                          if (element) {
+                                            scrollTargetMessageRef.current = element;
+                                          }
+                                        }
+                                      : undefined
+                                  }
                                   className={`flex ${
                                     message.message_type === 'sent' ? 'justify-end' : 'justify-start'
                                   }`}

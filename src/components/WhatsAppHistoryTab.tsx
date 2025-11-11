@@ -7,7 +7,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { supabase, AIGeneratedMessage, WhatsAppConversation, Lead } from '../lib/supabase';
+import {
+  supabase,
+  AIGeneratedMessage,
+  WhatsAppConversation,
+  Lead,
+  WhatsAppChatPreference,
+} from '../lib/supabase';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
 import StatusDropdown from './StatusDropdown';
 import { useConfig } from '../contexts/ConfigContext';
@@ -40,12 +46,15 @@ import {
   Archive,
   ArchiveRestore,
   X,
+  MapPin,
+  Navigation,
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import {
   zapiService,
   type ZAPIMediaType,
+  type ZAPILocationPayload,
   type ZAPIGroupMetadata,
   type ZAPIChatMetadata,
 } from '../lib/zapiService';
@@ -310,15 +319,36 @@ const normalizeChatMetadataKey = (value?: string | null): string | null => {
   return digits;
 };
 
-type AttachmentType = ZAPIMediaType;
+type AttachmentType = ZAPIMediaType | 'location';
 
-interface AttachmentItem {
+type FileAttachmentType = ZAPIMediaType;
+
+type LocationAttachmentPayload = ZAPILocationPayload;
+
+type FileAttachmentItem = {
   file: File;
-  type: AttachmentType;
+  type: FileAttachmentType;
   previewUrl?: string | null;
-}
+};
+
+type LocationAttachmentItem = {
+  type: 'location';
+  location: LocationAttachmentPayload;
+};
+
+type AttachmentItem = FileAttachmentItem | LocationAttachmentItem;
+
+const isFileAttachment = (attachment: AttachmentItem): attachment is FileAttachmentItem =>
+  attachment.type !== 'location';
 
 const DEFAULT_ATTACHMENT_ACCEPT = 'application/pdf,image/*,video/*,audio/*';
+
+const createEmptyLocationForm = (): LocationAttachmentPayload => ({
+  title: '',
+  address: '',
+  latitude: '',
+  longitude: '',
+});
 
 const buildPhoneLookupKeys = (value?: string | null): string[] => {
   const digits = sanitizePhoneDigits(value);
@@ -418,6 +448,12 @@ export default function WhatsAppHistoryTab({
   >(null);
   const [composerText, setComposerText] = useState('');
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = useState(false);
+  const [locationForm, setLocationForm] = useState<LocationAttachmentPayload>(() =>
+    createEmptyLocationForm()
+  );
+  const [locationFormError, setLocationFormError] = useState<string | null>(null);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [nextAttachmentType, setNextAttachmentType] = useState<AttachmentType | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -568,10 +604,81 @@ export default function WhatsAppHistoryTab({
   );
 
   const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
-    if (attachment.previewUrl) {
+    if (isFileAttachment(attachment) && attachment.previewUrl) {
       URL.revokeObjectURL(attachment.previewUrl);
     }
   }, []);
+
+  const resetLocationForm = useCallback(() => {
+    setLocationForm(createEmptyLocationForm());
+    setLocationFormError(null);
+    setIsFetchingCurrentLocation(false);
+  }, []);
+
+  const handleCloseLocationModal = useCallback(() => {
+    setIsLocationModalOpen(false);
+    resetLocationForm();
+  }, [resetLocationForm]);
+
+  const handleUseCurrentLocation = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationFormError('Geolocalização não suportada neste navegador.');
+      return;
+    }
+
+    setIsFetchingCurrentLocation(true);
+    setLocationFormError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationForm((prev) => ({
+          ...prev,
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+          title: prev.title || 'Minha localização',
+          address: prev.address || 'Localização atual',
+        }));
+        setIsFetchingCurrentLocation(false);
+      },
+      (error) => {
+        console.error('Erro ao obter localização atual:', error);
+        setIsFetchingCurrentLocation(false);
+        setLocationFormError(
+          'Não foi possível obter a localização atual. Verifique as permissões do navegador.'
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
+  const handleConfirmLocation = useCallback(() => {
+    const title = locationForm.title.trim();
+    const address = locationForm.address.trim();
+    const latitude = locationForm.latitude.trim();
+    const longitude = locationForm.longitude.trim();
+
+    if (!title || !address || !latitude || !longitude) {
+      setLocationFormError('Preencha todos os campos obrigatórios para enviar a localização.');
+      return;
+    }
+
+    const payload: LocationAttachmentPayload = {
+      title,
+      address,
+      latitude,
+      longitude,
+    };
+
+    if (typeof locationForm.delayMessage === 'number') {
+      payload.delayMessage = locationForm.delayMessage;
+    }
+
+    setAttachments((prev) => [...prev, { type: 'location', location: payload }]);
+    setComposerError(null);
+    setComposerSuccess(null);
+    handleCloseLocationModal();
+  }, [handleCloseLocationModal, locationForm, setAttachments]);
 
   const stopAudioVisualization = useCallback(() => {
     if (animationFrameRef.current) {
@@ -1753,11 +1860,12 @@ export default function WhatsAppHistoryTab({
     video: 'Vídeo',
     audio: 'Áudio',
     document: 'Documento',
+    location: 'Localização',
   };
 
-  const attachmentTypes: AttachmentType[] = ['image', 'video', 'audio', 'document'];
+  const attachmentTypes: AttachmentType[] = ['image', 'video', 'audio', 'document', 'location'];
 
-  const inferAttachmentType = (file: File): AttachmentType => {
+  const inferAttachmentType = (file: File): FileAttachmentType => {
     if (file.type.startsWith('image/')) {
       return 'image';
     }
@@ -1805,6 +1913,8 @@ export default function WhatsAppHistoryTab({
         return <FileVideo className="w-4 h-4 text-purple-600" />;
       case 'audio':
         return <FileAudio className="w-4 h-4 text-orange-600" />;
+      case 'location':
+        return <MapPin className="w-4 h-4 text-emerald-600" />;
       case 'document':
       default:
         return <FileText className="w-4 h-4 text-rose-600" />;
@@ -1812,6 +1922,17 @@ export default function WhatsAppHistoryTab({
   };
 
   const renderAttachmentPreview = (attachment: AttachmentItem) => {
+    if (attachment.type === 'location') {
+      const { title, address, latitude, longitude } = attachment.location;
+      return (
+        <div className="space-y-1 text-sm text-slate-600">
+          <p className="font-semibold text-slate-700">{title}</p>
+          <p className="break-words text-slate-500">{address}</p>
+          <p className="text-xs text-slate-400">Lat: {latitude} · Long: {longitude}</p>
+        </div>
+      );
+    }
+
     if (attachment.type === 'image' && attachment.previewUrl) {
       return (
         <img
@@ -1857,6 +1978,8 @@ export default function WhatsAppHistoryTab({
         return 'video/*';
       case 'audio':
         return 'audio/*';
+      case 'location':
+        return DEFAULT_ATTACHMENT_ACCEPT;
       case 'document':
       default:
         return 'application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
@@ -1887,7 +2010,9 @@ export default function WhatsAppHistoryTab({
       return;
     }
     setAttachments((prev) => {
-      const index = prev.findIndex((attachment) => attachment.file === recordedAudio.file);
+      const index = prev.findIndex(
+        (attachment) => isFileAttachment(attachment) && attachment.file === recordedAudio.file
+      );
       if (index === -1) {
         return prev;
       }
@@ -1909,8 +2034,18 @@ export default function WhatsAppHistoryTab({
   };
 
   const handleAttachmentTypeSelectForUpload = (type: AttachmentType) => {
-    setNextAttachmentType(type);
     setIsAttachmentMenuOpen(false);
+
+    if (type === 'location') {
+      setNextAttachmentType(null);
+      resetLocationForm();
+      setComposerError(null);
+      setComposerSuccess(null);
+      setIsLocationModalOpen(true);
+      return;
+    }
+
+    setNextAttachmentType(type);
     const input = fileInputRef.current;
     if (input) {
       input.accept = getAcceptForAttachmentType(type);
@@ -1933,13 +2068,16 @@ export default function WhatsAppHistoryTab({
     const filesArray = Array.from(files);
     setAttachments((prev) => {
       const existingKeys = new Set(
-        prev.map((attachment) => `${attachment.file.name}-${attachment.file.size}`)
+        prev
+          .filter((attachment): attachment is FileAttachmentItem => isFileAttachment(attachment))
+          .map((attachment) => `${attachment.file.name}-${attachment.file.size}`)
       );
       const uniqueFiles = filesArray.filter(
         (file) => !existingKeys.has(`${file.name}-${file.size}`)
       );
       const newAttachments = uniqueFiles.map((file) => {
-        const resolvedType = selectedType ?? inferAttachmentType(file);
+        const resolvedType: FileAttachmentType =
+          selectedType && selectedType !== 'location' ? selectedType : inferAttachmentType(file);
         return {
           file,
           type: resolvedType,
@@ -1966,7 +2104,7 @@ export default function WhatsAppHistoryTab({
       const target = prev[index];
       if (target) {
         releaseAttachmentPreview(target);
-        if (recordedAudio && target.file === recordedAudio.file) {
+        if (recordedAudio && isFileAttachment(target) && target.file === recordedAudio.file) {
           shouldClearRecordedAudio = true;
         }
       }
@@ -2123,7 +2261,9 @@ export default function WhatsAppHistoryTab({
     if (!recordedAudio) {
       return attachments;
     }
-    return attachments.filter((attachment) => attachment.file !== recordedAudio.file);
+    return attachments.filter(
+      (attachment) => !(isFileAttachment(attachment) && attachment.file === recordedAudio.file)
+    );
   }, [attachments, recordedAudio]);
 
   const hasContentToSend = useMemo(() => {
@@ -2163,9 +2303,25 @@ export default function WhatsAppHistoryTab({
       }
 
       for (const attachment of attachments) {
+        const shouldIncludeReply = Boolean(replyMessageId && !replyConsumed);
+
+        if (attachment.type === 'location') {
+          const locationResult = await zapiService.sendLocationMessage(
+            selectedPhone,
+            attachment.location,
+            shouldIncludeReply ? replyMessageId : undefined
+          );
+          if (!locationResult.success) {
+            throw new Error(locationResult.error || 'Falha ao enviar localização.');
+          }
+          if (shouldIncludeReply) {
+            replyConsumed = true;
+          }
+          continue;
+        }
+
         const base64Override =
           recordedAudio && attachment.file === recordedAudio.file ? recordedAudio.base64 : undefined;
-        const shouldIncludeReply = Boolean(replyMessageId && !replyConsumed);
         const mediaResult = await zapiService.sendMediaMessage(
           selectedPhone,
           attachment.file,
@@ -3653,31 +3809,49 @@ export default function WhatsAppHistoryTab({
 
                     {attachmentsWithoutRecordedAudio.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase text-slate-500">
-                          Anexos
-                        </p>
+                        <p className="text-xs font-semibold uppercase text-slate-500">Anexos</p>
                         <p className="text-[11px] text-slate-500">
-                          Os arquivos serão enviados com o tipo selecionado no menu de anexos.
+                          Os envios (arquivos ou localizações) serão enviados com o tipo selecionado no
+                          menu de anexos.
                         </p>
                         <div className="space-y-3">
                           {attachmentsWithoutRecordedAudio.map((attachment, index) => {
-                            const { file, type } = attachment;
+                            const key = isFileAttachment(attachment)
+                              ? `${attachment.file.name}-${attachment.file.size}-${index}`
+                              : `location-${attachment.location.latitude}-${attachment.location.longitude}-${index}`;
+
                             return (
                               <div
-                                key={`${file.name}-${file.size}-${index}`}
+                                key={key}
                                 className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex items-center space-x-3">
                                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                                      {getAttachmentIcon(type)}
+                                      {getAttachmentIcon(attachment.type)}
                                     </span>
-                                    <div>
-                                      <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
-                                        {file.name}
-                                      </p>
-                                      <p className="text-[11px] text-slate-500">{formatFileSize(file.size)}</p>
-                                    </div>
+                                    {isFileAttachment(attachment) ? (
+                                      <div>
+                                        <p className="max-w-[200px] truncate text-sm font-medium text-slate-700">
+                                          {attachment.file.name}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500">
+                                          {formatFileSize(attachment.file.size)}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        <p className="text-sm font-medium text-slate-700">
+                                          {attachment.location.title}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500 break-words">
+                                          {attachment.location.address}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400">
+                                          {attachment.location.latitude}, {attachment.location.longitude}
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
                                   <button
                                     type="button"
@@ -3692,10 +3866,10 @@ export default function WhatsAppHistoryTab({
                                 </div>
                                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                   <span className="text-xs font-semibold uppercase text-slate-500">
-                                    Tipo do arquivo
+                                    Tipo do envio
                                   </span>
                                   <span className="inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-700 sm:w-auto">
-                                    {attachmentTypeLabels[type]}
+                                    {attachmentTypeLabels[attachment.type]}
                                   </span>
                                 </div>
                               </div>
@@ -3795,6 +3969,144 @@ export default function WhatsAppHistoryTab({
                   {fullscreenMedia.caption}
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLocationModalOpen && (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/70 px-4 py-6"
+          onClick={handleCloseLocationModal}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleCloseLocationModal}
+              className="absolute top-3 right-3 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de localização"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="mb-4 space-y-2">
+              <h3 className="text-lg font-semibold text-slate-800">Enviar localização</h3>
+              <p className="text-sm text-slate-500">
+                Preencha os dados abaixo para compartilhar a localização atual ou um endereço específico.
+              </p>
+            </div>
+            {locationFormError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {locationFormError}
+              </div>
+            )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="location-title">
+                  Título
+                </label>
+                <input
+                  id="location-title"
+                  type="text"
+                  value={locationForm.title}
+                  onChange={(event) =>
+                    setLocationForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Ex.: Minha localização"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="location-address">
+                  Endereço
+                </label>
+                <textarea
+                  id="location-address"
+                  rows={2}
+                  value={locationForm.address}
+                  onChange={(event) =>
+                    setLocationForm((prev) => ({ ...prev, address: event.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  placeholder="Logradouro, número, bairro, cidade, UF, CEP"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700" htmlFor="location-latitude">
+                    Latitude
+                  </label>
+                  <input
+                    id="location-latitude"
+                    type="text"
+                    value={locationForm.latitude}
+                    onChange={(event) =>
+                      setLocationForm((prev) => ({ ...prev, latitude: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    placeholder="Ex.: -23.550520"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700" htmlFor="location-longitude">
+                    Longitude
+                  </label>
+                  <input
+                    id="location-longitude"
+                    type="text"
+                    value={locationForm.longitude}
+                    onChange={(event) =>
+                      setLocationForm((prev) => ({ ...prev, longitude: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    placeholder="Ex.: -46.633308"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Localização atual</p>
+                  <p className="text-xs text-slate-500">
+                    Utilize o GPS do navegador para preencher automaticamente latitude e longitude.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={isFetchingCurrentLocation}
+                  className="inline-flex items-center gap-2 rounded-lg border border-teal-500 px-3 py-2 text-sm font-medium text-teal-600 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isFetchingCurrentLocation ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      Obtendo...
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="h-4 w-4" />
+                      Usar localização atual
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleCloseLocationModal}
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLocation}
+                className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+              >
+                Adicionar à mensagem
+              </button>
             </div>
           </div>
         </div>

@@ -7,6 +7,14 @@ export interface ZAPIConfig {
 
 export type ZAPIMediaType = 'image' | 'video' | 'audio' | 'document';
 
+export interface ZAPILocationPayload {
+  title: string;
+  address: string;
+  latitude: string;
+  longitude: string;
+  delayMessage?: number;
+}
+
 export interface ZAPIMessage {
   messageId: string;
   phone: string;
@@ -608,6 +616,66 @@ class ZAPIService {
       const data = await response
         .json()
         .catch(() => ({ message: 'Mídia enviada' }));
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }
+
+  async sendLocationMessage(
+    phoneNumber: string,
+    location: ZAPILocationPayload,
+    replyMessageId?: string
+  ): Promise<ZAPIResponse> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'Z-API não configurado' };
+      }
+
+      const phone = this.normalizePhoneNumber(phoneNumber);
+      const payload: Record<string, unknown> = {
+        phone,
+        title: location.title,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+
+      if (typeof location.delayMessage === 'number' && Number.isFinite(location.delayMessage)) {
+        payload.delayMessage = location.delayMessage;
+      }
+
+      if (replyMessageId) {
+        payload.messageId = replyMessageId;
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/instances/${config.instanceId}/token/${config.token}/send-location`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': this.clientToken,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Falha ao enviar localização';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta de erro do Z-API (localização):', error);
+        }
+        return { success: false, error: errorMessage };
+      }
+
+      const data = await response
+        .json()
+        .catch(() => ({ message: 'Localização enviada' }));
       return { success: true, data };
     } catch (error) {
       return { success: false, error: String(error) };

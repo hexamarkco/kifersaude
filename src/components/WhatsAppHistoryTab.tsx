@@ -470,7 +470,7 @@ export default function WhatsAppHistoryTab() {
           contractId: conv.contract_id || null,
           lastMessage: conv,
           displayName: isGroupChat
-            ? normalizedChatName || normalizedSenderName || null
+            ? normalizedChatName || null
             : normalizedSenderName || normalizedChatName || null,
           photoUrl: conv.sender_photo || null,
           isGroup: isGroupChat,
@@ -491,10 +491,8 @@ export default function WhatsAppHistoryTab() {
         }
 
         if (isGroupChat) {
-          if (normalizedChatName && normalizedChatName !== existing.displayName) {
+          if (normalizedChatName) {
             existing.displayName = normalizedChatName;
-          } else if (!existing.displayName && normalizedSenderName) {
-            existing.displayName = normalizedSenderName;
           }
         } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
           existing.displayName = normalizedSenderName || normalizedChatName;
@@ -1701,6 +1699,16 @@ export default function WhatsAppHistoryTab() {
                               const timestampColor =
                                 message.message_type === 'sent' ? 'text-teal-100' : 'text-slate-500';
                               const mediaContent = renderMediaContent(message);
+                              const isGroupChat = selectedChat?.isGroup ?? false;
+                              const trimmedSenderName = message.sender_name?.trim();
+                              const senderLabel = isGroupChat
+                                ? message.message_type === 'sent'
+                                  ? 'Você'
+                                  : trimmedSenderName || 'Participante'
+                                : null;
+                              const senderLabelClass = message.message_type === 'sent'
+                                ? 'text-xs font-semibold text-teal-100 self-end'
+                                : 'text-xs font-semibold text-slate-500';
 
                               return (
                                 <div
@@ -1716,6 +1724,9 @@ export default function WhatsAppHistoryTab() {
                                         : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
                                     }`}
                                   >
+                                    {senderLabel && (
+                                      <span className={senderLabelClass}>{senderLabel}</span>
+                                    )}
                                     {bubbleText && (
                                       <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}

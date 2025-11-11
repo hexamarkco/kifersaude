@@ -1218,35 +1218,6 @@ export default function WhatsAppHistoryTab({
     setAIAssistantError(null);
   }, []);
 
-  const handleGenerateAISuggestions = useCallback(async () => {
-    setAIAssistantError(null);
-    setAISuggestions([]);
-    setIsGeneratingAISuggestions(true);
-
-    try {
-      const result = await gptService.generateChatReplySuggestions({
-        lead: selectedChatLead ?? undefined,
-        conversationHistory: selectedChatMessages,
-      });
-
-      if (!result.success || !result.suggestions || result.suggestions.length === 0) {
-        setAIAssistantError(result.error || 'Não foi possível gerar sugestões no momento.');
-        return;
-      }
-
-      setAISuggestions(result.suggestions);
-      setComposerSuccess('Sugestões geradas pela IA. Clique para inserir no campo de mensagem.');
-    } catch (error) {
-      setAIAssistantError(
-        error instanceof Error
-          ? error.message
-          : 'Falha ao gerar sugestões com a IA. Tente novamente em instantes.'
-      );
-    } finally {
-      setIsGeneratingAISuggestions(false);
-    }
-  }, [selectedChatLead, selectedChatMessages]);
-
   const handleApplyAISuggestion = useCallback(
     (suggestion: string) => {
       setComposerText(suggestion);
@@ -1261,50 +1232,6 @@ export default function WhatsAppHistoryTab({
     },
     [composerTextareaRef]
   );
-
-  const handleRewriteComposerMessage = useCallback(async () => {
-    const trimmedMessage = composerText.trim();
-
-    if (!trimmedMessage) {
-      setAIAssistantError('Digite uma mensagem para que a IA possa reescrever.');
-      setIsAIAssistantMenuOpen(true);
-      return;
-    }
-
-    setAIAssistantError(null);
-    setIsRewritingMessage(true);
-
-    try {
-      const result = await gptService.rewriteMessage({
-        message: trimmedMessage,
-        lead: selectedChatLead ?? undefined,
-        conversationHistory: selectedChatMessages,
-      });
-
-      if (!result.success || !result.rewrittenMessage) {
-        setAIAssistantError(result.error || 'Não foi possível reescrever a mensagem agora.');
-        return;
-      }
-
-      setComposerText(result.rewrittenMessage);
-      setComposerError(null);
-      setComposerSuccess('Mensagem reescrita com ajuda da IA. Revise antes de enviar.');
-      setIsAIAssistantMenuOpen(false);
-      setAISuggestions([]);
-
-      setTimeout(() => {
-        composerTextareaRef.current?.focus();
-      }, 0);
-    } catch (error) {
-      setAIAssistantError(
-        error instanceof Error
-          ? error.message
-          : 'Falha ao reescrever a mensagem com a IA. Tente novamente.'
-      );
-    } finally {
-      setIsRewritingMessage(false);
-    }
-  }, [composerText, selectedChatLead, selectedChatMessages, composerTextareaRef]);
 
   const buildGroupMetadataKeys = useCallback((value?: string | null): string[] => {
     if (!value) {
@@ -2864,6 +2791,79 @@ export default function WhatsAppHistoryTab({
   const isLoadingLeadContracts = Boolean(
     selectedLeadId && loadingContractsLeadId === selectedLeadId
   );
+
+  const handleGenerateAISuggestions = useCallback(async () => {
+    setAIAssistantError(null);
+    setAISuggestions([]);
+    setIsGeneratingAISuggestions(true);
+
+    try {
+      const result = await gptService.generateChatReplySuggestions({
+        lead: selectedChatLead ?? undefined,
+        conversationHistory: selectedChatMessages,
+      });
+
+      if (!result.success || !result.suggestions || result.suggestions.length === 0) {
+        setAIAssistantError(result.error || 'Não foi possível gerar sugestões no momento.');
+        return;
+      }
+
+      setAISuggestions(result.suggestions);
+      setComposerSuccess('Sugestões geradas pela IA. Clique para inserir no campo de mensagem.');
+    } catch (error) {
+      setAIAssistantError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao gerar sugestões com a IA. Tente novamente em instantes.'
+      );
+    } finally {
+      setIsGeneratingAISuggestions(false);
+    }
+  }, [selectedChatLead, selectedChatMessages]);
+
+  const handleRewriteComposerMessage = useCallback(async () => {
+    const trimmedMessage = composerText.trim();
+
+    if (!trimmedMessage) {
+      setAIAssistantError('Digite uma mensagem para que a IA possa reescrever.');
+      setIsAIAssistantMenuOpen(true);
+      return;
+    }
+
+    setAIAssistantError(null);
+    setIsRewritingMessage(true);
+
+    try {
+      const result = await gptService.rewriteMessage({
+        message: trimmedMessage,
+        lead: selectedChatLead ?? undefined,
+        conversationHistory: selectedChatMessages,
+      });
+
+      if (!result.success || !result.rewrittenMessage) {
+        setAIAssistantError(result.error || 'Não foi possível reescrever a mensagem agora.');
+        return;
+      }
+
+      setComposerText(result.rewrittenMessage);
+      setComposerError(null);
+      setComposerSuccess('Mensagem reescrita com ajuda da IA. Revise antes de enviar.');
+      setIsAIAssistantMenuOpen(false);
+      setAISuggestions([]);
+
+      setTimeout(() => {
+        composerTextareaRef.current?.focus();
+      }, 0);
+    } catch (error) {
+      setAIAssistantError(
+        error instanceof Error
+          ? error.message
+          : 'Falha ao reescrever a mensagem com a IA. Tente novamente.'
+      );
+    } finally {
+      setIsRewritingMessage(false);
+    }
+  }, [composerText, selectedChatLead, selectedChatMessages, composerTextareaRef]);
 
   useEffect(() => {
     setIsLeadDetailsPanelOpen(false);

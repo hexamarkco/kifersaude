@@ -41,7 +41,12 @@ import {
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { zapiService, type ZAPIMediaType, type ZAPIGroupMetadata } from '../lib/zapiService';
+import {
+  zapiService,
+  type ZAPIMediaType,
+  type ZAPIGroupMetadata,
+  type ZAPIChatMetadata,
+} from '../lib/zapiService';
 
 declare global {
   interface Window {
@@ -286,6 +291,23 @@ const sanitizePhoneDigits = (value?: string | null): string => {
   return value.replace(/\D/g, '');
 };
 
+const normalizeChatMetadataKey = (value?: string | null): string | null => {
+  const digits = sanitizePhoneDigits(value);
+  if (!digits) {
+    return null;
+  }
+
+  if (digits.startsWith('55') || digits.length > 11) {
+    return digits;
+  }
+
+  if (digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits;
+};
+
 type AttachmentType = ZAPIMediaType;
 
 interface AttachmentItem {
@@ -423,6 +445,8 @@ export default function WhatsAppHistoryTab({
   const [recordingLevels, setRecordingLevels] = useState<number[]>(
     () => Array(RECORDING_WAVEFORM_BARS).fill(0)
   );
+  const [chatMetadataMap, setChatMetadataMap] = useState<Map<string, ZAPIChatMetadata>>(new Map());
+  const chatMetadataPendingRef = useRef<Set<string>>(new Set());
   const [groupMetadataMap, setGroupMetadataMap] = useState<Map<string, ZAPIGroupMetadata>>(new Map());
   const groupMetadataPendingRef = useRef<Set<string>>(new Set());
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -463,6 +487,27 @@ export default function WhatsAppHistoryTab({
 
     return Array.from(keys).filter(Boolean);
   }, []);
+
+  const getChatMetadataForPhone = useCallback(
+    (phone?: string | null): ZAPIChatMetadata | undefined => {
+      const normalizedKey = normalizeChatMetadataKey(phone);
+      if (!normalizedKey) {
+        return undefined;
+      }
+
+      const direct = chatMetadataMap.get(normalizedKey);
+      if (direct) {
+        return direct;
+      }
+
+      if (normalizedKey.startsWith('55') && normalizedKey.length > 2) {
+        return chatMetadataMap.get(normalizedKey.slice(2));
+      }
+
+      return undefined;
+    },
+    [chatMetadataMap]
+  );
 
   const getGroupMetadataForPhone = useCallback(
     (phone?: string | null): ZAPIGroupMetadata | undefined => {
@@ -1008,12 +1053,14 @@ export default function WhatsAppHistoryTab({
           leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
           leadsByPhoneMap.get(chat.phone.trim());
       const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
+      const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
       const sanitizedPhone = sanitizePhoneDigits(chat.phone);
       return (
         chat.phone.toLowerCase().includes(query) ||
         (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
         chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
         (chat.displayName?.toLowerCase().includes(query) ?? false) ||
+        (chatMetadata?.displayName ? chatMetadata.displayName.toLowerCase().includes(query) : false) ||
         (groupMetadata?.subject ? groupMetadata.subject.toLowerCase().includes(query) : false) ||
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
         (lead?.telefone?.toLowerCase().includes(query) ?? false)
@@ -1032,7 +1079,14 @@ export default function WhatsAppHistoryTab({
       const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
       return bTime - aTime;
     });
-  }, [chatsWithPreferences, chatListFilter, leadsByPhoneMap, leadsMap, searchQuery]);
+  }, [
+    chatsWithPreferences,
+    chatListFilter,
+    getChatMetadataForPhone,
+    leadsByPhoneMap,
+    leadsMap,
+    searchQuery,
+  ]);
 
   useEffect(() => {
     if (skipAutoSelectRef.current) {
@@ -1079,6 +1133,13 @@ export default function WhatsAppHistoryTab({
     if (!selectedPhone) return undefined;
     return chatsWithPreferences.find(group => group.phone === selectedPhone);
   }, [chatsWithPreferences, selectedPhone]);
+
+  const selectedChatMetadata = useMemo(() => {
+    if (!selectedChat) {
+      return undefined;
+    }
+    return getChatMetadataForPhone(selectedChat.phone);
+  }, [getChatMetadataForPhone, selectedChat]);
 
   const selectedChatPreference = useMemo(() => {
     if (!selectedPhone) return undefined;
@@ -1219,6 +1280,94 @@ export default function WhatsAppHistoryTab({
     const phonesToFetch: string[] = [];
 
     chatsWithPreferences.forEach((chat) => {
+      if (chat.isGroup) {
+        return;
+      }
+
+      const normalizedKey = normalizeChatMetadataKey(chat.phone);
+      if (!normalizedKey) {
+        return;
+      }
+
+      if (chatMetadataMap.has(normalizedKey)) {
+        return;
+      }
+
+      if (chatMetadataPendingRef.current.has(normalizedKey)) {
+        return;
+      }
+
+      phonesToFetch.push(normalizedKey);
+      chatMetadataPendingRef.current.add(normalizedKey);
+    });
+
+    if (phonesToFetch.length === 0) {
+      return;
+    }
+
+    void (async () => {
+      for (const normalizedPhone of phonesToFetch) {
+        let metadataKey: string | null = null;
+        try {
+          const result = await zapiService.getChatMetadata(normalizedPhone);
+          if (result.success && result.data) {
+            const metadata = result.data as ZAPIChatMetadata;
+            metadataKey = normalizeChatMetadataKey(metadata.phone);
+            setChatMetadataMap((prev) => {
+              const next = new Map(prev);
+              const keysToStore = new Set<string>();
+              keysToStore.add(normalizedPhone);
+              if (normalizedPhone.startsWith('55') && normalizedPhone.length > 2) {
+                keysToStore.add(normalizedPhone.slice(2));
+              }
+              if (metadataKey) {
+                keysToStore.add(metadataKey);
+                if (metadataKey.startsWith('55') && metadataKey.length > 2) {
+                  keysToStore.add(metadataKey.slice(2));
+                }
+              }
+              keysToStore.forEach((candidate) => {
+                if (candidate) {
+                  next.set(candidate, metadata);
+                }
+              });
+              return next;
+            });
+          } else if (result.error) {
+            console.warn('Não foi possível carregar metadata do chat', normalizedPhone, result.error);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar metadata do chat', normalizedPhone, error);
+        } finally {
+          const cleanupKeys = new Set<string>();
+          cleanupKeys.add(normalizedPhone);
+          if (normalizedPhone.startsWith('55') && normalizedPhone.length > 2) {
+            cleanupKeys.add(normalizedPhone.slice(2));
+          }
+          if (metadataKey) {
+            cleanupKeys.add(metadataKey);
+            if (metadataKey.startsWith('55') && metadataKey.length > 2) {
+              cleanupKeys.add(metadataKey.slice(2));
+            }
+          }
+          cleanupKeys.forEach((candidate) => {
+            if (candidate) {
+              chatMetadataPendingRef.current.delete(candidate);
+            }
+          });
+        }
+      }
+    })();
+  }, [chatMetadataMap, chatsWithPreferences]);
+
+  useEffect(() => {
+    if (chatsWithPreferences.length === 0) {
+      return;
+    }
+
+    const phonesToFetch: string[] = [];
+
+    chatsWithPreferences.forEach((chat) => {
       if (!chat.isGroup) {
         return;
       }
@@ -1276,6 +1425,13 @@ export default function WhatsAppHistoryTab({
     return getGroupMetadataForPhone(selectedChat.phone);
   }, [getGroupMetadataForPhone, selectedChat]);
 
+  const selectedChatPhotoUrl = useMemo(() => {
+    if (!selectedChat) {
+      return null;
+    }
+    return selectedChat.photoUrl || selectedChatMetadata?.profileThumbnail || null;
+  }, [selectedChat, selectedChatMetadata]);
+
   const selectedChatDisplayName = useMemo(() => {
     if (!selectedPhone) {
       return '';
@@ -1310,11 +1466,13 @@ export default function WhatsAppHistoryTab({
 
     return (
       selectedChatLead?.nome_completo ||
+      selectedChatMetadata?.displayName ||
       selectedChat.displayName ||
       formatPhoneForDisplay(selectedChat.phone)
     );
   }, [
     externalSelectionContext,
+    selectedChatMetadata,
     selectedChat,
     selectedChatLead,
     selectedGroupMetadata,
@@ -2524,9 +2682,11 @@ export default function WhatsAppHistoryTab({
                     const lastMessage = chat.lastMessage;
                     const isActive = chat.phone === selectedPhone;
                     const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
+                    const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
                     const displayName = chat.isGroup
                       ? groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone)
-                      : lead?.nome_completo || chat.displayName || formatPhoneForDisplay(chat.phone);
+                      : lead?.nome_completo || chatMetadata?.displayName || chat.displayName || formatPhoneForDisplay(chat.phone);
+                    const chatPhotoUrl = chat.photoUrl || chatMetadata?.profileThumbnail || null;
 
                     return (
                       <div
@@ -2546,9 +2706,9 @@ export default function WhatsAppHistoryTab({
                       >
                         <div className="flex items-start space-x-3">
                           <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden">
-                            {chat.photoUrl ? (
+                            {chatPhotoUrl ? (
                               <img
-                                src={chat.photoUrl}
+                                src={chatPhotoUrl}
                                 alt={displayName}
                                 className="w-full h-full object-cover"
                               />
@@ -2654,9 +2814,9 @@ export default function WhatsAppHistoryTab({
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-11 h-11 rounded-full bg-teal-500 flex items-center justify-center overflow-hidden border border-teal-300/40">
-                          {selectedChat?.photoUrl ? (
+                          {selectedChatPhotoUrl ? (
                             <img
-                              src={selectedChat.photoUrl}
+                              src={selectedChatPhotoUrl}
                               alt={selectedChatDisplayName || selectedPhone || 'Contato'}
                               className="w-full h-full object-cover"
                             />

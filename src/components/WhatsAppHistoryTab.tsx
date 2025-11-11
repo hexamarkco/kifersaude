@@ -580,6 +580,8 @@ export default function WhatsAppHistoryTab({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [chatPreferences, setChatPreferences] = useState<Map<string, WhatsAppChatPreference>>(new Map());
   const [chatListFilter, setChatListFilter] = useState<'active' | 'archived'>('active');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string>('all');
 
   const { leadStatuses, options } = useConfig();
   const { isObserver } = useAuth();
@@ -2362,9 +2364,44 @@ export default function WhatsAppHistoryTab({
   }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
 
   const filteredChats = useMemo(() => {
+    const resolveLeadForChat = (chat: ChatGroup) => {
+      if (chat.isGroup) {
+        return undefined;
+      }
+
+      const leadFromId = chat.leadId ? leadsMap.get(chat.leadId) : undefined;
+      if (leadFromId) {
+        return leadFromId;
+      }
+
+      const sanitizedPhone = sanitizePhoneDigits(chat.phone);
+      return (
+        leadsByPhoneMap.get(sanitizedPhone) ??
+        leadsByPhoneMap.get(chat.phone.trim())
+      );
+    };
+
     const relevantChats = chatsWithPreferences.filter((chat) =>
       chatListFilter === 'archived' ? chat.archived : !chat.archived
     );
+
+    const filteredByLeadAttributes = relevantChats.filter((chat) => {
+      const lead = resolveLeadForChat(chat);
+
+      if (selectedStatus !== 'all') {
+        if (!lead || lead.status !== selectedStatus) {
+          return false;
+        }
+      }
+
+      if (selectedResponsavel !== 'all') {
+        if (!lead || lead.responsavel !== selectedResponsavel) {
+          return false;
+        }
+      }
+
+      return true;
+    });
 
     const query = searchQuery.toLowerCase();
     const numericQuery = searchQuery.replace(/\D/g, '');
@@ -2372,18 +2409,14 @@ export default function WhatsAppHistoryTab({
     const matchesSearch = (chat: ChatGroup) => {
       if (!searchQuery) return true;
 
-      const lead = chat.isGroup
-        ? undefined
-        : (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
-          leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
-          leadsByPhoneMap.get(chat.phone.trim());
+      const lead = resolveLeadForChat(chat);
       const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
       const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
       const sanitizedPhone = sanitizePhoneDigits(chat.phone);
       return (
         chat.phone.toLowerCase().includes(query) ||
         (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
-        chat.messages.some(message => (message.message_text || '').toLowerCase().includes(query)) ||
+        chat.messages.some((message) => (message.message_text || '').toLowerCase().includes(query)) ||
         (chat.displayName?.toLowerCase().includes(query) ?? false) ||
         (chatMetadata?.displayName ? chatMetadata.displayName.toLowerCase().includes(query) : false) ||
         (groupMetadata?.subject ? groupMetadata.subject.toLowerCase().includes(query) : false) ||
@@ -2393,8 +2426,8 @@ export default function WhatsAppHistoryTab({
     };
 
     const searchedChats = searchQuery
-      ? relevantChats.filter(matchesSearch)
-      : relevantChats;
+      ? filteredByLeadAttributes.filter(matchesSearch)
+      : filteredByLeadAttributes;
 
     return [...searchedChats].sort((a, b) => {
       if (a.pinned !== b.pinned) {
@@ -2411,6 +2444,8 @@ export default function WhatsAppHistoryTab({
     getGroupMetadataForPhone,
     leadsByPhoneMap,
     leadsMap,
+    selectedResponsavel,
+    selectedStatus,
     searchQuery,
   ]);
 
@@ -4933,8 +4968,8 @@ const getOutgoingMessageStatus = (
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="flex-1 relative">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <div className="flex-1 min-w-[220px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -4970,6 +5005,36 @@ const getOutgoingMessageStatus = (
                 Arquivados
               </button>
             </div>
+          )}
+
+          {activeView === 'chat' && (
+            <select
+              value={selectedStatus}
+              onChange={(event) => setSelectedStatus(event.target.value)}
+              className="min-w-[180px] px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            >
+              <option value="all">Todos os status</option>
+              {activeLeadStatuses.map((status) => (
+                <option key={status.id} value={status.nome}>
+                  {status.nome}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {activeView === 'chat' && (
+            <select
+              value={selectedResponsavel}
+              onChange={(event) => setSelectedResponsavel(event.target.value)}
+              className="min-w-[180px] px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            >
+              <option value="all">Todos os responsáveis</option>
+              {responsavelOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label || option.value}
+                </option>
+              ))}
+            </select>
           )}
 
           {activeView === 'chat' && (

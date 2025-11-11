@@ -37,6 +37,7 @@ import {
   PinOff,
   Archive,
   ArchiveRestore,
+  X,
 } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -67,6 +68,25 @@ const DEFAULT_MP3_BITRATE = 128;
 const MP3_ENCODER_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
+
+type MessageReactionDetail = {
+  name: string;
+  timestamp: string;
+};
+
+type MessageReactionSummary = {
+  emoji: string;
+  reactors: MessageReactionDetail[];
+};
+
+type MessageWithReactions = WhatsAppConversation & {
+  reactionSummaries?: MessageReactionSummary[];
+};
+
+type ReactionModalState = {
+  message: MessageWithReactions;
+  summary: MessageReactionSummary;
+};
 
 const isMimeTypeSupported = (mimeType: string): boolean => {
   if (typeof MediaRecorder === 'undefined') {
@@ -1254,6 +1274,76 @@ export default function WhatsAppHistoryTab({
     );
   }, [selectedChat, selectedChatLead, selectedGroupMetadata, selectedPhone]);
 
+  const processedSelectedMessages = useMemo(() => {
+    const processed: MessageWithReactions[] = [];
+    let lastMessage: MessageWithReactions | null = null;
+
+    const normalizeText = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toLowerCase();
+
+    selectedChatMessages.forEach((message) => {
+      const rawText = message.message_text ?? '';
+      const trimmedText = rawText.trim();
+      const normalizedText = trimmedText ? normalizeText(trimmedText) : '';
+      const notificationType = message.notification_type?.toLowerCase();
+      const isReactionNotification =
+        (notificationType === 'reaction' && Boolean(trimmedText)) ||
+        (!!trimmedText && !message.media_url && normalizedText.startsWith('reacao:'));
+
+      if (isReactionNotification) {
+        if (!lastMessage) {
+          return;
+        }
+
+        const colonIndex = trimmedText.indexOf(':');
+        const emojiPart = colonIndex >= 0 ? trimmedText.slice(colonIndex + 1).trim() : '';
+
+        if (!emojiPart) {
+          return;
+        }
+
+        const reactionEmoji = emojiPart;
+        const reactorName =
+          message.sender_name?.trim() ||
+          (message.message_type === 'sent' ? 'Você' : selectedChatDisplayName || 'Contato');
+
+        if (!reactorName) {
+          return;
+        }
+
+        const reactionSummaries = lastMessage.reactionSummaries ?? (lastMessage.reactionSummaries = []);
+        let summary = reactionSummaries.find((item) => item.emoji === reactionEmoji);
+        if (!summary) {
+          summary = { emoji: reactionEmoji, reactors: [] };
+          reactionSummaries.push(summary);
+        }
+
+        const newEntry = { name: reactorName, timestamp: message.timestamp };
+        const existingIndex = summary.reactors.findIndex((reactor) => reactor.name === reactorName);
+        if (existingIndex >= 0) {
+          summary.reactors[existingIndex] = newEntry;
+        } else {
+          summary.reactors.push(newEntry);
+        }
+
+        summary.reactors.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+
+        return;
+      }
+
+      const cloned: MessageWithReactions = { ...message };
+      processed.push(cloned);
+      lastMessage = cloned;
+    });
+
+    return processed;
+  }, [selectedChatDisplayName, selectedChatMessages]);
+
   const handleLeadStatusChange = useCallback(
     async (leadId: string, newStatus: string) => {
       const lead = leadsMap.get(leadId);
@@ -1980,10 +2070,10 @@ export default function WhatsAppHistoryTab({
   };
 
   const groupedSelectedMessages = useMemo(() => {
-    const groups: { date: string; messages: WhatsAppConversation[] }[] = [];
+    const groups: { date: string; messages: MessageWithReactions[] }[] = [];
     let currentDate: string | null = null;
 
-    selectedChatMessages.forEach((message) => {
+    processedSelectedMessages.forEach((message) => {
       const dateLabel = formatDateLabel(message.timestamp);
       if (dateLabel !== currentDate) {
         currentDate = dateLabel;
@@ -1993,7 +2083,18 @@ export default function WhatsAppHistoryTab({
     });
 
     return groups;
-  }, [selectedChatMessages]);
+  }, [processedSelectedMessages]);
+
+  const handleOpenReactionDetails = useCallback(
+    (message: MessageWithReactions, summary: MessageReactionSummary) => {
+      setActiveReactionDetails({ message, summary });
+    },
+    []
+  );
+
+  const handleCloseReactionDetails = useCallback(() => {
+    setActiveReactionDetails(null);
+  }, []);
 
   const handleRefreshChats = async () => {
     setIsRefreshing(true);
@@ -2523,6 +2624,15 @@ export default function WhatsAppHistoryTab({
                               const senderLabelClass = message.message_type === 'sent'
                                 ? 'text-xs font-semibold text-teal-100 self-end'
                                 : 'text-xs font-semibold text-slate-500';
+                              const reactionSummaries = message.reactionSummaries ?? [];
+                              const reactionAlignment =
+                                message.message_type === 'sent'
+                                  ? 'self-end justify-end'
+                                  : 'self-start justify-start';
+                              const reactionButtonClasses =
+                                message.message_type === 'sent'
+                                  ? 'border-white/30 bg-white/20 text-white hover:bg-white/30'
+                                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200';
 
                               return (
                                 <div
@@ -2556,6 +2666,24 @@ export default function WhatsAppHistoryTab({
                                         <span className="font-semibold">Lida</span>
                                       )}
                                     </div>
+                                    {reactionSummaries.length > 0 && (
+                                      <div
+                                        className={`flex flex-wrap gap-1 text-xs font-semibold ${reactionAlignment}`}
+                                      >
+                                        {reactionSummaries.map((summary) => (
+                                          <button
+                                            key={`${message.id}-${summary.emoji}`}
+                                            type="button"
+                                            onClick={() => handleOpenReactionDetails(message, summary)}
+                                            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 shadow-sm transition-colors ${reactionButtonClasses}`}
+                                            aria-label={`Ver reações ${summary.emoji}`}
+                                          >
+                                            <span className="text-base leading-none">{summary.emoji}</span>
+                                            <span>{summary.reactors.length}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -2818,6 +2946,58 @@ export default function WhatsAppHistoryTab({
                 <p className="mt-4 text-sm text-slate-100 text-center whitespace-pre-wrap break-words">
                   {fullscreenMedia.caption}
                 </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeReactionDetails && (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/70 px-4 py-6"
+          onClick={handleCloseReactionDetails}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleCloseReactionDetails}
+              className="absolute top-3 right-3 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar detalhes das reações"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl leading-none">{activeReactionDetails.summary.emoji}</span>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700">Reações</h3>
+                <p className="text-xs text-slate-500">
+                  {activeReactionDetails.summary.reactors.length}{' '}
+                  {activeReactionDetails.summary.reactors.length === 1 ? 'pessoa reagiu' : 'pessoas reagiram'}
+                </p>
+              </div>
+            </div>
+            <div className="mb-4 rounded-lg bg-slate-50 p-3">
+              <p className="text-[11px] font-semibold uppercase text-slate-500">Mensagem</p>
+              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
+                {getDisplayTextForMessage(activeReactionDetails.message) || 'Mensagem sem conteúdo'}
+              </p>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {activeReactionDetails.summary.reactors.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center">Nenhuma reação registrada.</p>
+              ) : (
+                activeReactionDetails.summary.reactors.map((reactor) => (
+                  <div
+                    key={`${reactor.name}-${reactor.timestamp}`}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                  >
+                    <span className="text-sm font-medium text-slate-700">{reactor.name}</span>
+                    <span className="text-xs text-slate-500">{formatDateTimeFullBR(reactor.timestamp)}</span>
+                  </div>
+                ))
               )}
             </div>
           </div>

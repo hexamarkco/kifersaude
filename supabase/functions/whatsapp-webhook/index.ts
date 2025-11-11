@@ -8,6 +8,109 @@ const corsHeaders = {
 
 const READ_STATUSES = new Set(['READ', 'PLAYED']);
 
+type DeliveryStatus =
+  | 'pending'
+  | 'sent'
+  | 'received'
+  | 'read'
+  | 'read_by_me'
+  | 'played'
+  | 'failed';
+
+const DELIVERY_STATUS_PRECEDENCE: Record<DeliveryStatus, number> = {
+  pending: 0,
+  sent: 1,
+  received: 2,
+  read: 3,
+  played: 4,
+  read_by_me: 1,
+  failed: 5,
+};
+
+function normalizeDeliveryStatus(value: unknown): DeliveryStatus | null {
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+
+    switch (normalized.replace(/\s+/g, '_')) {
+      case 'pending':
+      case 'waiting':
+      case 'sending':
+        return 'pending';
+      case 'sent':
+        return 'sent';
+      case 'delivered':
+      case 'delivery':
+      case 'received':
+        return 'received';
+      case 'read':
+      case 'seen':
+      case 'viewed':
+        return 'read';
+      case 'played':
+        return 'played';
+      case 'read_by_me':
+        return 'read_by_me';
+      case 'failed':
+      case 'error':
+        return 'failed';
+      default:
+        return null;
+    }
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const normalized = Math.trunc(value);
+    if (normalized <= -1) {
+      return 'failed';
+    }
+    switch (normalized) {
+      case 0:
+        return 'pending';
+      case 1:
+        return 'sent';
+      case 2:
+        return 'received';
+      case 3:
+        return 'read';
+      case 4:
+        return 'played';
+      default:
+        return null;
+    }
+  }
+
+  return null;
+}
+
+function normalizeStatusTimestamp(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const normalized = Math.trunc(value);
+    const millis = normalized > 1_000_000_000_000 ? normalized : normalized * 1000;
+    const date = new Date(millis);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  return null;
+}
+
 type SupabaseTypedClient = SupabaseClient<any, any, any>;
 
 type EventProcessingResult = {
@@ -476,6 +579,8 @@ async function upsertConversation(
     phoneNumber: string | null;
     media?: MediaDetails;
     text?: string;
+    deliveryStatus: DeliveryStatus | null;
+    deliveryStatusUpdatedAt: string | null;
   }> = {}
 ): Promise<EventProcessingResult> {
   const normalizedPhone =
@@ -492,6 +597,19 @@ async function upsertConversation(
   const timestamp =
     overrides.timestamp ??
     (typeof payload?.momment === 'number' ? new Date(payload.momment).toISOString() : new Date().toISOString());
+
+  const normalizedOverrideStatus =
+    overrides.deliveryStatus === null
+      ? null
+      : overrides.deliveryStatus ?? normalizeDeliveryStatus(payload?.status);
+  const normalizedStatus =
+    normalizedOverrideStatus ?? (messageType === 'sent' ? 'pending' : messageType === 'received' ? 'received' : null);
+  const normalizedStatusTimestamp =
+    overrides.deliveryStatusUpdatedAt === null
+      ? null
+      : overrides.deliveryStatusUpdatedAt ??
+        normalizeStatusTimestamp(payload?.statusMomment ?? payload?.momment) ??
+        (normalizedStatus ? timestamp : null);
 
   const senderName = extractSenderName(payload);
   const isGroupChat = detectGroupChat(payload, normalizedPhone);
@@ -513,6 +631,8 @@ async function upsertConversation(
     media_thumbnail_url: chosenMedia?.thumbnailUrl ?? null,
     media_caption: chosenMedia?.caption ?? null,
     media_view_once: typeof chosenMedia?.viewOnce === 'boolean' ? chosenMedia.viewOnce : null,
+    delivery_status: normalizedStatus ?? null,
+    delivery_status_updated_at: normalizedStatusTimestamp ?? null,
   };
 
   const insertRecord = {
@@ -525,7 +645,7 @@ async function upsertConversation(
   try {
     const { data: existing, error: fetchError } = await supabase
       .from('whatsapp_conversations')
-      .select('id')
+      .select('id, delivery_status, delivery_status_updated_at, read_status')
       .eq('message_id', messageId)
       .maybeSingle();
 
@@ -539,7 +659,7 @@ async function upsertConversation(
         message_text: baseRecord.message_text,
         message_type: baseRecord.message_type,
         timestamp: baseRecord.timestamp,
-        read_status: baseRecord.read_status,
+        read_status: baseRecord.read_status || existing.read_status,
         media_url: baseRecord.media_url,
         media_type: baseRecord.media_type,
         media_mime_type: baseRecord.media_mime_type,
@@ -548,6 +668,20 @@ async function upsertConversation(
         media_caption: baseRecord.media_caption,
         media_view_once: baseRecord.media_view_once,
       };
+
+      if (typeof normalizedStatus === 'string') {
+        const existingStatus = normalizeDeliveryStatus(existing.delivery_status);
+        const shouldUpdateStatus =
+          !existingStatus ||
+          overrides.deliveryStatus !== undefined ||
+          DELIVERY_STATUS_PRECEDENCE[normalizedStatus] >= DELIVERY_STATUS_PRECEDENCE[existingStatus];
+
+        if (shouldUpdateStatus) {
+          updateRecord.delivery_status = normalizedStatus;
+          updateRecord.delivery_status_updated_at =
+            normalizedStatusTimestamp ?? existing.delivery_status_updated_at ?? new Date().toISOString();
+        }
+      }
 
       if (senderName) {
         updateRecord.sender_name = senderName;

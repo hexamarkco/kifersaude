@@ -1,4 +1,8 @@
-import { supabase, WhatsAppConversation } from './supabase';
+import {
+  supabase,
+  WhatsAppConversation,
+  WhatsAppMessageDeliveryStatus,
+} from './supabase';
 
 export interface ZAPIConfig {
   instanceId: string;
@@ -30,6 +34,8 @@ export interface ZAPIMessage {
   type: 'sent' | 'received';
   timestamp: number;
   fromMe: boolean;
+  deliveryStatus?: WhatsAppMessageDeliveryStatus;
+  deliveryStatusUpdatedAt?: string;
   mediaUrl?: string;
   mediaType?: ZAPIMediaType;
   mediaMimeType?: string;
@@ -125,6 +131,77 @@ export interface ZAPITypingPresenceCallbacks {
 }
 
 const CLIENT_TOKEN = 'Faca52aa7804f429186a4a7734f8a3d66S';
+
+const ACK_DELIVERY_STATUS_MAP: Record<number, WhatsAppMessageDeliveryStatus> = {
+  [-1]: 'failed',
+  0: 'pending',
+  1: 'sent',
+  2: 'received',
+  3: 'read',
+  4: 'played',
+};
+
+const RAW_DELIVERY_STATUS_MAP: Record<string, WhatsAppMessageDeliveryStatus> = {
+  pending: 'pending',
+  waiting: 'pending',
+  sending: 'pending',
+  sent: 'sent',
+  delivered: 'received',
+  delivery: 'received',
+  received: 'received',
+  read: 'read',
+  viewed: 'read',
+  seen: 'read',
+  played: 'played',
+  read_by_me: 'read_by_me',
+  failed: 'failed',
+  error: 'failed',
+};
+
+const normalizeDeliveryStatus = (
+  value: unknown,
+): WhatsAppMessageDeliveryStatus | undefined => {
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return RAW_DELIVERY_STATUS_MAP[normalized] ?? RAW_DELIVERY_STATUS_MAP[normalized.replace(/\s+/g, '_')];
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return ACK_DELIVERY_STATUS_MAP[Math.trunc(value)] ?? undefined;
+  }
+
+  return undefined;
+};
+
+const normalizeStatusTimestamp = (value: unknown): string | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const timestamp = Math.trunc(value);
+    const millis = timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000;
+    const date = new Date(millis);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  return undefined;
+};
 
 class ZAPIService {
   private baseUrl = 'https://api.z-api.io';
@@ -1353,34 +1430,47 @@ class ZAPIService {
     contractId?: string
   ): Promise<void> {
     try {
-      const conversations: Partial<WhatsAppConversation>[] = messages.map((msg) => ({
-        lead_id: leadId,
-        contract_id: contractId,
-        phone_number: phoneNumber,
-        message_id: msg.messageId,
-        message_text: msg.text || this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
-        message_type: msg.fromMe ? 'sent' : 'received',
-        timestamp: new Date(msg.timestamp * 1000).toISOString(),
-        read_status: true,
-        media_url: msg.mediaUrl,
-        media_type: msg.mediaType,
-        media_mime_type: msg.mediaMimeType,
-        media_duration_seconds:
-          typeof msg.mediaDurationSeconds === 'number' ? Math.round(msg.mediaDurationSeconds) : undefined,
-        media_thumbnail_url: msg.mediaThumbnailUrl,
-        media_caption: msg.mediaCaption,
-        media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
-        sender_name: msg.senderName,
-        sender_photo: msg.senderPhoto,
-        chat_name: msg.chatName,
-        quoted_message_id: msg.quotedMessageId,
-        quoted_message_text: msg.quotedText,
-        quoted_message_sender: msg.quotedSenderName,
-        quoted_message_from_me:
-          typeof msg.quotedFromMe === 'boolean' ? msg.quotedFromMe : undefined,
-        quoted_message_type: msg.quotedMediaType,
-        quoted_message_media_url: msg.quotedMediaUrl,
-      }));
+      const conversations: Partial<WhatsAppConversation>[] = messages.map((msg) => {
+        const record: Partial<WhatsAppConversation> = {
+          lead_id: leadId,
+          contract_id: contractId,
+          phone_number: phoneNumber,
+          message_id: msg.messageId,
+          message_text: msg.text || this.getMediaFallbackText(msg.mediaType, msg.mediaDurationSeconds),
+          message_type: msg.fromMe ? 'sent' : 'received',
+          timestamp: new Date(msg.timestamp * 1000).toISOString(),
+          read_status: true,
+          media_url: msg.mediaUrl,
+          media_type: msg.mediaType,
+          media_mime_type: msg.mediaMimeType,
+          media_duration_seconds:
+            typeof msg.mediaDurationSeconds === 'number' ? Math.round(msg.mediaDurationSeconds) : undefined,
+          media_thumbnail_url: msg.mediaThumbnailUrl,
+          media_caption: msg.mediaCaption,
+          media_view_once: typeof msg.mediaViewOnce === 'boolean' ? msg.mediaViewOnce : undefined,
+          sender_name: msg.senderName,
+          sender_photo: msg.senderPhoto,
+          chat_name: msg.chatName,
+          quoted_message_id: msg.quotedMessageId,
+          quoted_message_text: msg.quotedText,
+          quoted_message_sender: msg.quotedSenderName,
+          quoted_message_from_me:
+            typeof msg.quotedFromMe === 'boolean' ? msg.quotedFromMe : undefined,
+          quoted_message_type: msg.quotedMediaType,
+          quoted_message_media_url: msg.quotedMediaUrl,
+        };
+
+        const fallbackStatus: WhatsAppMessageDeliveryStatus | undefined =
+          msg.deliveryStatus ?? (msg.fromMe ? 'sent' : msg.type === 'received' ? 'received' : undefined);
+
+        if (fallbackStatus) {
+          record.delivery_status = fallbackStatus;
+          record.delivery_status_updated_at =
+            msg.deliveryStatusUpdatedAt ?? new Date(msg.timestamp * 1000).toISOString();
+        }
+
+        return record;
+      });
 
       for (const conv of conversations) {
         const { error } = await supabase
@@ -2540,6 +2630,54 @@ class ZAPIService {
       const senderPhoto = this.extractSenderPhotoFromMessage(msg);
       const quotedInfo = extractQuotedMessageInfo(msg);
 
+      const statusCandidates: unknown[] = [
+        msg.deliveryStatus,
+        msg.status,
+        msg.statusMessage,
+        msg.statusName,
+        msg.messageStatus,
+        msg.ackName,
+        msg.ackStatus,
+        msg.statusCode,
+      ];
+
+      if (typeof msg.ack === 'number') {
+        statusCandidates.push(msg.ack);
+      }
+
+      let deliveryStatus = statusCandidates.reduce<WhatsAppMessageDeliveryStatus | undefined>((acc, candidate) => {
+        if (acc) {
+          return acc;
+        }
+        return normalizeDeliveryStatus(candidate);
+      }, undefined);
+
+      if (!deliveryStatus) {
+        deliveryStatus = msg.fromMe ? 'sent' : msg.fromMe === false ? 'received' : undefined;
+      }
+
+      const statusTimestampCandidates: unknown[] = [
+        msg.statusTimestamp,
+        msg.statusAt,
+        msg.statusTime,
+        msg.statusMoment,
+        msg.statusMomment,
+        msg.deliveryStatusAt,
+        msg.updatedAt,
+        msg.lastUpdateAt,
+      ];
+
+      let deliveryStatusUpdatedAt = statusTimestampCandidates.reduce<string | undefined>((acc, candidate) => {
+        if (acc) {
+          return acc;
+        }
+        return normalizeStatusTimestamp(candidate);
+      }, undefined);
+
+      if (!deliveryStatusUpdatedAt && deliveryStatus) {
+        deliveryStatusUpdatedAt = new Date(msg.timestamp * 1000).toISOString();
+      }
+
       normalizedMessages.push({
         messageId: msg.messageId || msg.id || String(Date.now()),
         phone: phoneValue,
@@ -2547,6 +2685,8 @@ class ZAPIService {
         type: (msg.fromMe ? 'sent' : 'received') as 'sent' | 'received',
         timestamp: msg.timestamp || Math.floor(Date.now() / 1000),
         fromMe: msg.fromMe || false,
+        deliveryStatus,
+        deliveryStatusUpdatedAt,
         mediaUrl: mediaUrl || undefined,
         mediaType: resolvedMediaType,
         mediaMimeType:

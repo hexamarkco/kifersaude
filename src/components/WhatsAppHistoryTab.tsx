@@ -370,7 +370,7 @@ const isChatPreferencesTableMissingError = (error: PostgrestError | null | undef
   if (!error) return false;
 
   const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
-  if (['PGRST302', 'PGRST301', '42P01', 'PGRST404'].includes(normalizedCode)) {
+  if (['PGRST302', 'PGRST301', '42P01', 'PGRST404', 'PGRST205'].includes(normalizedCode)) {
     return true;
   }
 

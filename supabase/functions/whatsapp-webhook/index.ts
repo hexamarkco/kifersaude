@@ -1166,12 +1166,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (eventType === 'DELIVERYCALLBACK' || path.includes('on-message-send')) {
+      console.log('on-message-send payload:', JSON.stringify(event, null, 2));
       const result = await handleDeliveryCallback(supabase, event, messageId);
       results.push(result);
       continue;
     }
 
     if (eventType === 'RECEIVEDCALLBACK' || path.includes('on-message-received')) {
+      console.log('on-message-received payload:', JSON.stringify(event, null, 2));
       const result = await handleReceivedCallback(supabase, event, messageId);
       results.push(result);
       continue;

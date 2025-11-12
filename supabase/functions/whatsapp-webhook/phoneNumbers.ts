@@ -88,7 +88,7 @@ export function normalizePhoneNumber(raw: unknown): string | null {
   }
 
   if (digits.length === 11) {
-    return `55${digits}`;
+    return digits;
   }
 
   return digits;

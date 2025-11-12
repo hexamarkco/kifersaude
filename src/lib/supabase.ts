@@ -298,6 +298,27 @@ export type WhatsAppConversation = {
   created_at: string;
 };
 
+export type WhatsAppScheduledMessageStatus =
+  | 'pending'
+  | 'scheduled'
+  | 'sent'
+  | 'failed'
+  | 'cancelled';
+
+export type WhatsAppScheduledMessage = {
+  id: string;
+  phone_number: string;
+  message_text?: string | null;
+  media_payload?: Record<string, unknown> | null;
+  scheduled_for: string;
+  status: WhatsAppScheduledMessageStatus;
+  timezone?: string | null;
+  reply_to_message_id?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  error_message?: string | null;
+};
+
 export type WhatsAppChatPreference = {
   phone_number: string;
   archived: boolean;

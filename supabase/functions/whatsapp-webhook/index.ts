@@ -701,7 +701,13 @@ async function upsertConversation(
 
   const { text: derivedText, media: derivedMedia } = describePayload(payload);
   const chosenMedia = overrides.media ?? derivedMedia;
-  const chosenText = overrides.text ?? derivedText ?? 'Mensagem recebida';
+  const overrideText = typeof overrides.text === 'string' ? overrides.text : undefined;
+  const derivedTextValue = typeof derivedText === 'string' ? derivedText : undefined;
+  const rawChosenText = overrideText ?? derivedTextValue;
+  const normalizedChosenText = rawChosenText?.trim();
+  const hasMeaningfulText = Boolean(normalizedChosenText);
+  const chosenText = hasMeaningfulText ? rawChosenText! : null;
+  const fallbackText = chosenText ?? 'Mensagem recebida';
   const readStatus =
     typeof overrides.readStatus === 'boolean'
       ? overrides.readStatus
@@ -732,7 +738,7 @@ async function upsertConversation(
   const baseRecord = {
     phone_number: basePhoneNumber ?? 'unknown',
     message_id: messageId,
-    message_text: chosenText || 'Mensagem recebida',
+    message_text: fallbackText,
     message_type: messageType,
     timestamp,
     read_status: readStatus,
@@ -759,7 +765,7 @@ async function upsertConversation(
   try {
     const { data: existing, error: fetchError } = await supabase
       .from('whatsapp_conversations')
-      .select('id, delivery_status, delivery_status_updated_at, read_status, target_phone')
+      .select('id, delivery_status, delivery_status_updated_at, read_status, target_phone, message_text')
       .eq('message_id', messageId)
       .maybeSingle();
 
@@ -769,7 +775,6 @@ async function upsertConversation(
 
     if (existing) {
       const updateRecord: Record<string, any> = {
-        message_text: baseRecord.message_text,
         message_type: baseRecord.message_type,
         timestamp: baseRecord.timestamp,
         read_status: baseRecord.read_status || existing.read_status,
@@ -781,6 +786,10 @@ async function upsertConversation(
         media_caption: baseRecord.media_caption,
         media_view_once: baseRecord.media_view_once,
       };
+
+      if (hasMeaningfulText || !existing.message_text) {
+        updateRecord.message_text = baseRecord.message_text;
+      }
 
       const chosenTargetPhone = normalizedTargetPhone ?? existing.target_phone ?? null;
       if (baseRecord.message_type === 'sent' && chosenTargetPhone) {

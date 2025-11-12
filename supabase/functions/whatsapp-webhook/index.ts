@@ -301,19 +301,25 @@ function extractNormalizedPhoneNumber(payload: any): string | null {
     return groupCandidateBySuffix;
   }
 
-  if (payload?.fromMe && connectedNumbers.size > 0) {
-    for (const candidate of candidatePhones) {
-      if (!connectedNumbers.has(candidate)) {
-        return candidate;
+  if (payload?.fromMe) {
+    if (connectedNumbers.size > 0) {
+      for (const candidate of candidatePhones) {
+        if (!connectedNumbers.has(candidate)) {
+          return candidate;
+        }
       }
+
+      return null;
     }
+
+    return candidatePhones[0] ?? null;
   }
 
   if (candidatePhones.length > 0) {
     return candidatePhones[0];
   }
 
-  if (!payload?.fromMe && connectedNumbers.size > 0) {
+  if (connectedNumbers.size > 0) {
     return Array.from(connectedNumbers)[0] ?? null;
   }
 
@@ -902,7 +908,9 @@ async function upsertConversation(
   }
 
   const normalizedPhone =
-    overrides.phoneNumber ?? extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
+    overrides.phoneNumber !== undefined
+      ? overrides.phoneNumber
+      : extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
 
   const messageType: 'sent' | 'received' = overrides.messageType ?? (payload?.fromMe ? 'sent' : 'received');
 
@@ -1080,8 +1088,9 @@ async function handleDeliveryCallback(
   messageId: string
 ): Promise<EventProcessingResult> {
   const targetPhone = extractNormalizedTargetPhone(payload);
-  const normalizedPhone =
-    targetPhone ?? extractNormalizedPhoneNumber(payload?.fromMe ? payload : { ...payload, fromMe: true }) ?? null;
+  const basePayload = payload?.fromMe ? { ...payload } : { ...payload, fromMe: true };
+  const normalizedCandidate = extractNormalizedPhoneNumber(basePayload);
+  const normalizedPhone = targetPhone ?? normalizedCandidate ?? null;
 
   const overrides: NonNullable<Parameters<typeof upsertConversation>[3]> = {
     messageType: 'sent',
@@ -1092,7 +1101,11 @@ async function handleDeliveryCallback(
     overrides.targetPhone = targetPhone;
   }
 
-  return upsertConversation(supabase, payload?.fromMe ? payload : { ...payload, fromMe: true }, messageId, overrides);
+  if (normalizedPhone === null) {
+    delete basePayload.connectedPhone;
+  }
+
+  return upsertConversation(supabase, basePayload, messageId, overrides);
 }
 
 Deno.serve(async (req: Request) => {

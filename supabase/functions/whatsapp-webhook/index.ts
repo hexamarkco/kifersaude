@@ -202,6 +202,101 @@ function formatTimestamp(value: unknown): string | null {
   }
 }
 
+function normalizeNotificationType(notification: unknown): string | null {
+  const normalizeString = (value: string | null | undefined): string | null => {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed ? trimmed.toUpperCase() : null;
+  };
+
+  if (typeof notification === 'string') {
+    return normalizeString(notification);
+  }
+
+  if (typeof notification === 'number' && Number.isFinite(notification)) {
+    return String(notification);
+  }
+
+  if (Array.isArray(notification)) {
+    for (const item of notification) {
+      const normalized = normalizeNotificationType(item);
+      if (normalized) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  if (notification && typeof notification === 'object') {
+    const candidateKeys = ['type', 'notificationType', 'notification', 'name', 'code', 'event'];
+    for (const key of candidateKeys) {
+      const candidate = (notification as Record<string, unknown>)[key];
+      const normalized = normalizeNotificationType(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    if (typeof (notification as { toString?: () => string }).toString === 'function') {
+      const representation = (notification as { toString: () => string }).toString();
+      const normalized = normalizeString(representation);
+      if (normalized && normalized !== '[OBJECT OBJECT]') {
+        return normalized;
+      }
+    }
+  }
+
+  return null;
+}
+
+const NOTIFICATION_DESCRIPTIONS: Record<string, string> = {
+  MEMBERSHIP_APPROVAL_REQUEST: 'Solicitação de entrada no grupo recebida',
+  REVOKED_MEMBERSHIP_REQUESTS: 'Solicitação de entrada cancelada pelo participante',
+  GROUP_PARTICIPANT_ADD: 'Participante adicionado ao grupo',
+  GROUP_PARTICIPANT_REMOVE: 'Participante removido do grupo',
+  GROUP_PARTICIPANT_LEAVE: 'Participante saiu do grupo',
+  GROUP_CREATE: 'Grupo criado',
+  GROUP_PARTICIPANT_INVITE: 'Convite de grupo enviado',
+  CALL_VOICE: 'Chamada de voz recebida',
+  CALL_MISSED_VOICE: 'Chamada de voz perdida',
+  CALL_MISSED_VIDEO: 'Chamada de vídeo perdida',
+  E2E_ENCRYPTED: 'Mensagens protegidas com criptografia de ponta a ponta',
+  CIPHERTEXT: 'Mensagens protegidas com criptografia de ponta a ponta',
+  BLUE_MSG_SELF_PREMISE_UNVERIFIED: 'Conta comercial não verificada pelo WhatsApp',
+  BLUE_MSG_SELF_PREMISE_VERIFIED: 'Conta comercial verificada pelo WhatsApp',
+  BIZ_MOVE_TO_CONSUMER_APP: 'Conta comercial convertida em conta pessoal',
+  REVOKE: 'Uma mensagem foi apagada',
+  NEWSLETTER_ADMIN_PROMOTE: 'Administrador promovido no canal',
+  NEWSLETTER_ADMIN_DEMOTE: 'Administrador removido do canal',
+  PROFILE_NAME_UPDATED: 'Nome do perfil atualizado',
+  PROFILE_PICTURE_UPDATED: 'Foto do perfil atualizada',
+  CHAT_LABEL_ASSOCIATION: 'Etiquetas do chat foram atualizadas',
+  PAYMENT_ACTION_REQUEST_DECLINED: 'Pedido de pagamento recusado',
+};
+
+function describeNotificationMessage(type: string | null): string | null {
+  if (!type) {
+    return null;
+  }
+
+  const normalized = type.toUpperCase();
+
+  if (NOTIFICATION_DESCRIPTIONS[normalized]) {
+    return NOTIFICATION_DESCRIPTIONS[normalized];
+  }
+
+  const formatted = normalized
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
+
+  return formatted || normalized;
+}
+
 function extractSenderName(payload: any): string | null {
   return pickFirstString(
     payload?.contact?.displayName,

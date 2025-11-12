@@ -408,6 +408,57 @@ function pickFirstString(...candidates: unknown[]): string | null {
   return null;
 }
 
+function joinNonEmptyParts(parts: (string | null | undefined)[], separator: string = ' • '): string | null {
+  const filtered = parts
+    .map((part) => (typeof part === 'string' ? part.trim() : ''))
+    .filter((part): part is string => Boolean(part));
+
+  return filtered.length > 0 ? filtered.join(separator) : null;
+}
+
+function formatCurrencyValue(value: unknown, currencyCode?: string | null): string | null {
+  let amount: number | null = null;
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    amount = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    const normalized = Number(value.replace(',', '.'));
+    if (Number.isFinite(normalized)) {
+      amount = normalized;
+    }
+  }
+
+  if (amount === null) {
+    return null;
+  }
+
+  const normalizedCurrency = typeof currencyCode === 'string' && currencyCode.trim() ? currencyCode.trim().toUpperCase() : null;
+
+  try {
+    if (normalizedCurrency) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: normalizedCurrency }).format(amount);
+    }
+  } catch (error) {
+    console.warn('Não foi possível formatar valor monetário:', error);
+  }
+
+  return normalizedCurrency ? `${normalizedCurrency} ${amount}` : String(amount);
+}
+
+function formatTimestamp(value: unknown): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const milliseconds = value > 1e12 ? value : value * 1000;
+
+  try {
+    return new Date(milliseconds).toLocaleString('pt-BR');
+  } catch {
+    return new Date(milliseconds).toISOString();
+  }
+}
+
 function extractSenderName(payload: any): string | null {
   return pickFirstString(
     payload?.contact?.displayName,
@@ -487,7 +538,11 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
     pickFirstString(payload?.text?.message, payload?.text?.body, payload?.text?.text),
     pickFirstString(payload?.message, payload?.body, payload?.content),
     pickFirstString(payload?.image?.caption, payload?.video?.caption, payload?.document?.title),
-    pickFirstString(payload?.buttonsResponseMessage?.message, payload?.listResponseMessage?.message),
+    pickFirstString(
+      payload?.buttonsResponseMessage?.message,
+      payload?.listResponseMessage?.message,
+      payload?.buttonsMessage?.message
+    ),
     pickFirstString(payload?.hydratedTemplate?.message),
     pickFirstString(payload?.pixKeyMessage?.message),
   ];
@@ -590,7 +645,12 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
     payload?.buttonsMessage?.imageUrl,
     payload?.buttonsMessage?.videoUrl,
     payload?.location?.thumbnailUrl,
-    payload?.statusImage?.imageUrl
+    payload?.statusImage?.imageUrl,
+    payload?.product?.productImage,
+    payload?.order?.thumbnailUrl,
+    payload?.externalAdReply?.thumbnailUrl,
+    payload?.hydratedTemplate?.header?.image?.imageUrl,
+    payload?.hydratedTemplate?.header?.image?.thumbnailUrl
   );
 
   if (fallbackMediaUrl) {
@@ -605,6 +665,8 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       const notificationType = normalizeNotificationType(payload.notification);
       ensureMetadata().notificationType = notificationType;
       text = describeNotificationMessage(notificationType) ?? 'Notificação recebida';
+    } else if (payload?.waitingMessage === true) {
+      text = 'Mensagem aguardando confirmação do WhatsApp';
     } else if (payload?.poll?.question) {
       const options = Array.isArray(payload?.poll?.options)
         ? payload.poll.options.map((opt: any) => opt?.name).filter(Boolean).join(', ')
@@ -621,6 +683,42 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       const name = payload.location?.name ? `${payload.location.name}` : 'Localização';
       const address = payload.location?.address ? ` - ${payload.location.address}` : '';
       text = `${name}${address}`;
+    } else if (payload?.buttonsMessage) {
+      const buttonCount = Array.isArray(payload.buttonsMessage?.buttons) ? payload.buttonsMessage.buttons.length : 0;
+      const summary = joinNonEmptyParts([
+        'Mensagem com botões',
+        pickFirstString(payload.buttonsMessage?.message),
+        buttonCount > 0 ? `${buttonCount} botão${buttonCount > 1 ? 'es' : ''}` : null,
+      ]);
+      text = summary ?? 'Mensagem com botões';
+    } else if (payload?.listResponseMessage) {
+      const response = payload.listResponseMessage;
+      const summary = joinNonEmptyParts([
+        'Resposta de lista',
+        pickFirstString(response?.title) ? `Lista: ${pickFirstString(response?.title)}` : null,
+        pickFirstString(response?.message),
+        pickFirstString(response?.selectedRowId) ? `Opção ID: ${pickFirstString(response?.selectedRowId)}` : null,
+      ]);
+      text = summary ?? 'Resposta de lista recebida';
+    } else if (payload?.hydratedTemplate) {
+      const template = payload.hydratedTemplate;
+      const buttonCount = Array.isArray(template?.hydratedButtons) ? template.hydratedButtons.length : 0;
+      const headerLocation = template?.header?.location
+        ? joinNonEmptyParts([
+            pickFirstString(template.header.location?.name),
+            pickFirstString(template.header.location?.address),
+          ])
+        : null;
+      const summary = joinNonEmptyParts([
+        'Template recebido',
+        headerLocation ? `Local: ${headerLocation}` : null,
+        pickFirstString(template?.header?.text, template?.header?.title, template?.header?.subtitle),
+        pickFirstString(template?.title),
+        pickFirstString(template?.message),
+        pickFirstString(template?.footer),
+        buttonCount > 0 ? `${buttonCount} botão${buttonCount > 1 ? 'es' : ''}` : null,
+      ]);
+      text = summary ?? 'Template recebido';
     } else if (media?.type === 'audio' || payload?.audio) {
       const duration =
         typeof media?.durationSeconds === 'number'
@@ -644,12 +742,128 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       text = name ? `Documento recebido: ${name}` : 'Documento recebido';
     } else if (payload?.sticker) {
       text = 'Sticker recebido';
+    } else if (payload?.pixKeyMessage) {
+      const pix = payload.pixKeyMessage;
+      const summary = joinNonEmptyParts([
+        'Chave PIX recebida',
+        pix?.key ? `Chave: ${pix.key}` : null,
+        pix?.keyType ? `Tipo: ${pix.keyType}` : null,
+        pix?.referenceId ? `Referência: ${pix.referenceId}` : null,
+        pix?.merchantName ? `Nome: ${pix.merchantName}` : null,
+        pix?.currency ? `Moeda: ${pix.currency}` : null,
+      ]);
+      text = summary ?? 'Chave PIX recebida';
+    } else if (payload?.product) {
+      const product = payload.product;
+      const summary = joinNonEmptyParts([
+        'Produto recebido',
+        pickFirstString(product?.title, product?.description),
+        product?.price ? `Preço: ${formatCurrencyValue(product.price, product.currencyCode)}` : null,
+        product?.url ? `Link: ${product.url}` : null,
+      ]);
+      text = summary ?? 'Produto recebido';
     } else if (payload?.order?.orderTitle) {
-      text = `Pedido recebido: ${payload.order.orderTitle}`;
+      const order = payload.order;
+      const summary = joinNonEmptyParts([
+        'Pedido recebido',
+        order?.orderTitle,
+        typeof order?.itemCount === 'number' ? `${order.itemCount} item(s)` : null,
+        order?.total ? `Total: ${formatCurrencyValue(order.total, order.currency)}` : null,
+      ]);
+      text = summary ?? `Pedido recebido: ${payload.order.orderTitle}`;
     } else if (payload?.reviewAndPay?.referenceId) {
-      text = `Pedido enviado (${payload.reviewAndPay.referenceId})`;
+      const review = payload.reviewAndPay;
+      const summary = joinNonEmptyParts([
+        'Pedido enviado',
+        review?.referenceId ? `Referência: ${review.referenceId}` : null,
+        review?.orderStatus ? `Status: ${review.orderStatus}` : null,
+        review?.paymentStatus ? `Pagamento: ${review.paymentStatus}` : null,
+        review?.total ? `Total: ${formatCurrencyValue(review.total, review.currency)}` : null,
+      ]);
+      text = summary ?? `Pedido enviado (${payload.reviewAndPay.referenceId})`;
+    } else if (payload?.reviewOrder?.referenceId || payload?.reviewOrder?.orderStatus) {
+      const review = payload.reviewOrder;
+      const summary = joinNonEmptyParts([
+        'Atualização de pedido',
+        review?.referenceId ? `Referência: ${review.referenceId}` : null,
+        review?.orderStatus ? `Status: ${review.orderStatus}` : null,
+        review?.paymentStatus ? `Pagamento: ${review.paymentStatus}` : null,
+        review?.total ? `Total: ${formatCurrencyValue(review.total, review.currency)}` : null,
+      ]);
+      text = summary ?? 'Atualização de pedido';
+    } else if (payload?.requestPayment) {
+      const request = payload.requestPayment;
+      const expiration = formatTimestamp(request?.expiration);
+      const summary = joinNonEmptyParts([
+        'Solicitação de pagamento',
+        request?.value ? `Valor: ${formatCurrencyValue(request.value, request.currencyCode)}` : null,
+        request?.requestPhone ? `Solicitante: ${request.requestPhone}` : null,
+        expiration ? `Expira em: ${expiration}` : null,
+        request?.paymentInfo?.status ? `Status: ${request.paymentInfo.status}` : null,
+      ]);
+      text = summary ?? 'Solicitação de pagamento';
+    } else if (payload?.sendPayment?.paymentInfo) {
+      const info = payload.sendPayment?.paymentInfo;
+      const summary = joinNonEmptyParts([
+        'Pagamento recebido',
+        info?.value ? `Valor: ${formatCurrencyValue(info.value, info.currencyCode)}` : null,
+        info?.transactionStatus ? `Status: ${info.transactionStatus}` : null,
+        info?.receiverPhone ? `Destinatário: ${info.receiverPhone}` : null,
+      ]);
+      text = summary ?? 'Pagamento recebido';
     } else if (payload?.carouselMessage?.text) {
-      text = payload.carouselMessage.text;
+      const carousel = payload.carouselMessage;
+      const cardCount = Array.isArray(carousel?.cards) ? carousel.cards.length : 0;
+      const summary = joinNonEmptyParts([
+        'Mensagem em carrossel',
+        pickFirstString(carousel?.text),
+        cardCount > 0 ? `${cardCount} cartão${cardCount > 1 ? 's' : ''}` : null,
+      ]);
+      text = summary ?? payload.carouselMessage.text;
+    } else if (payload?.externalAdReply) {
+      const ad = payload.externalAdReply;
+      const summary = joinNonEmptyParts([
+        'Mensagem de anúncio',
+        pickFirstString(ad?.title),
+        pickFirstString(ad?.body),
+        pickFirstString(ad?.sourceUrl),
+      ]);
+      text = summary ?? 'Mensagem de anúncio recebida';
+    } else if (payload?.event?.name || payload?.event?.description) {
+      const event = payload.event;
+      const schedule = formatTimestamp(event?.scheduleTime);
+      const summary = joinNonEmptyParts([
+        'Evento no grupo',
+        pickFirstString(event?.name),
+        event?.description,
+        schedule ? `Agendado para: ${schedule}` : null,
+        event?.joinLink ? `Link: ${event.joinLink}` : null,
+      ]);
+      text = summary ?? 'Evento recebido';
+    } else if (payload?.eventResponse?.response) {
+      const response = payload.eventResponse;
+      const summary = joinNonEmptyParts([
+        'Resposta ao evento',
+        response?.response,
+        response?.responseFrom ? `De: ${response.responseFrom}` : null,
+      ]);
+      text = summary ?? 'Resposta ao evento';
+    } else if (payload?.newsletterAdminInvite) {
+      const invite = payload.newsletterAdminInvite;
+      const summary = joinNonEmptyParts([
+        'Convite para administrador de canal',
+        invite?.newsletterName,
+        invite?.text,
+      ]);
+      text = summary ?? 'Convite para administrador de canal';
+    } else if (payload?.pinMessage) {
+      const pin = payload.pinMessage;
+      const action = pin?.action === 'unpin' ? 'Mensagem desafixada' : 'Mensagem fixada';
+      const summary = joinNonEmptyParts([
+        action,
+        typeof pin?.pinDurationInSecs === 'number' ? `Duração: ${pin.pinDurationInSecs}s` : null,
+      ]);
+      text = summary ?? action;
     } else if (payload?.statusImage) {
       text = 'Resposta de status';
       ensureMetadata().isStatusReply = true;

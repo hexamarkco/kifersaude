@@ -71,6 +71,8 @@ import {
   MapPin,
   Navigation,
   Edit,
+  Play,
+  Scissors,
 } from 'lucide-react';
 import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -613,6 +615,15 @@ type AttachmentItem = FileAttachmentItem | LocationAttachmentItem;
 
 const isFileAttachment = (attachment: AttachmentItem): attachment is FileAttachmentItem =>
   attachment.type !== 'location';
+
+type TrimPreviewState = {
+  blob: Blob;
+  file: File;
+  url: string;
+  base64: string;
+  mimeType: string;
+  selection: { start: number; end: number };
+};
 
 const DEFAULT_ATTACHMENT_ACCEPT = 'application/pdf,image/*,video/*,audio/*';
 
@@ -7372,6 +7383,189 @@ const getOutgoingMessageStatus = (
         )}
       </div>
       </div>
+
+      {isAudioEditorOpen && recordedAudio && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">
+          <div
+            className="relative w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="audio-editor-title"
+          >
+            <button
+              type="button"
+              onClick={handleCloseAudioEditor}
+              className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar editor de áudio"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="space-y-6 p-6">
+              <div>
+                <h2 id="audio-editor-title" className="text-lg font-semibold text-slate-900">
+                  Editar áudio gravado
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Selecione o trecho que deseja remover, gere uma prévia para ouvir o resultado e aplique o corte apenas quando estiver satisfeito.
+                </p>
+              </div>
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">Áudio original</span>
+                  <span className="text-xs text-slate-500">
+                    Duração:{' '}
+                    {audioDuration
+                      ? formatDuration(audioDuration) ?? `${trimValueFormatter.format(audioDuration)}s`
+                      : '--:--'}
+                  </span>
+                </div>
+                <audio controls src={recordedAudio.url} className="w-full">
+                  Seu navegador não suporta reprodução de áudio.
+                </audio>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-start">
+                    Início ({trimValueFormatter.format(trimSelection.start)} s)
+                  </label>
+                  <input
+                    id="audio-trim-start"
+                    type="range"
+                    min={0}
+                    max={audioDuration ?? 0}
+                    step={0.1}
+                    value={Math.min(trimSelection.start, audioDuration ?? trimSelection.start)}
+                    onChange={(event) =>
+                      handleTrimSliderChange('start', Number.parseFloat(event.target.value))
+                    }
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full"
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={audioDuration ?? undefined}
+                    step={0.1}
+                    value={trimSelection.start}
+                    onChange={(event) => handleTrimNumericChange('start', event.target.value)}
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-end">
+                    Fim ({trimValueFormatter.format(trimSelection.end)} s)
+                  </label>
+                  <input
+                    id="audio-trim-end"
+                    type="range"
+                    min={0}
+                    max={audioDuration ?? 0}
+                    step={0.1}
+                    value={Math.min(trimSelection.end, audioDuration ?? trimSelection.end)}
+                    onChange={(event) =>
+                      handleTrimSliderChange('end', Number.parseFloat(event.target.value))
+                    }
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full"
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={audioDuration ?? undefined}
+                    step={0.1}
+                    value={trimSelection.end}
+                    onChange={(event) => handleTrimNumericChange('end', event.target.value)}
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                  />
+                </div>
+              </div>
+              <div className="space-y-3 rounded-lg border border-dashed border-slate-200 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">Prévia do áudio editado</span>
+                  <span className="text-[11px] text-slate-500">
+                    Duração estimada:{' '}
+                    {estimatedEditedDuration !== null
+                      ? formatDuration(estimatedEditedDuration) ??
+                        `${trimValueFormatter.format(estimatedEditedDuration)}s`
+                      : '--:--'}
+                  </span>
+                </div>
+                {trimPreview && isTrimPreviewCurrent ? (
+                  <audio controls src={trimPreview.url} className="w-full">
+                    Seu navegador não suporta reprodução de áudio.
+                  </audio>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Gere uma prévia para ouvir como o áudio ficará após remover o trecho selecionado.
+                  </p>
+                )}
+                {trimPreview && !isTrimPreviewCurrent && (
+                  <p className="text-[11px] text-amber-600">
+                    A prévia exibida não corresponde à seleção atual. Gere uma nova prévia para ouvir as alterações.
+                  </p>
+                )}
+              </div>
+              {audioEditError && <p className="text-sm text-red-600">{audioEditError}</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateTrimPreview()}
+                  disabled={
+                    !audioDuration || !hasValidTrimSelection || isGeneratingTrimPreview || isApplyingAudioTrim
+                  }
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors ${
+                    !audioDuration || !hasValidTrimSelection || isGeneratingTrimPreview || isApplyingAudioTrim
+                      ? 'bg-teal-300'
+                      : 'bg-teal-600 hover:bg-teal-700'
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isGeneratingTrimPreview ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  Gerar prévia
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleApplyAudioTrim()}
+                  disabled={
+                    !audioDuration ||
+                    !hasValidTrimSelection ||
+                    !isTrimPreviewCurrent ||
+                    isApplyingAudioTrim ||
+                    isGeneratingTrimPreview
+                  }
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors ${
+                    !audioDuration || !hasValidTrimSelection || !isTrimPreviewCurrent || isApplyingAudioTrim || isGeneratingTrimPreview
+                      ? 'bg-teal-300'
+                      : 'bg-teal-600 hover:bg-teal-700'
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isApplyingAudioTrim ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Scissors className="h-4 w-4" />
+                  )}
+                  Aplicar corte
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetTrimSelection}
+                  disabled={isApplyingAudioTrim || isGeneratingTrimPreview}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Limpar seleção
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isStartConversationModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">

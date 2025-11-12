@@ -101,6 +101,13 @@ import {
   type ZAPIContact,
   type ZAPITypingPresenceEvent,
 } from '../lib/zapiService';
+import { configService } from '../lib/configService';
+import {
+  formatPhoneToE164,
+  resolveNameWithPriority,
+  shouldBlockChatName,
+  type ChatNameState,
+} from './whatsappChatNamingPolicy';
 import {
   buildPhoneLookupKeys,
   collectCrmLeadsWithoutContacts,
@@ -140,6 +147,126 @@ const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏
 const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
 const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 const WHATSAPP_CONVERSATIONS_LIMIT = 500;
+const CONTACTS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+const CONTACT_NAME_PRIORITY = (contact: ZAPIContact | null | undefined): number => {
+  if (!contact) {
+    return 0;
+  }
+
+  if (contact.name && contact.name.trim()) {
+    return 4;
+  }
+
+  if (contact.short && contact.short.trim()) {
+    return 3;
+  }
+
+  if (contact.vname && contact.vname.trim()) {
+    return 2;
+  }
+
+  if (contact.notify && contact.notify.trim()) {
+    return 1;
+  }
+
+  return 0;
+};
+
+const deriveContactName = (contact: ZAPIContact | null | undefined): string | null => {
+  if (!contact) {
+    return null;
+  }
+
+  const candidates = [contact.name, contact.short, contact.vname];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+};
+
+const collectPhoneLookupSet = (value?: string | null): Set<string> => {
+  const keys = new Set<string>();
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) {
+      keys.add(trimmed);
+    }
+  }
+
+  const normalized = normalizePhoneForChat(value ?? '');
+  if (normalized) {
+    keys.add(normalized);
+    keys.add(`+${normalized}`);
+  }
+
+  const digits = sanitizePhoneDigits(value);
+  if (digits) {
+    keys.add(digits);
+  }
+
+  buildPhoneLookupKeys(value ?? '')
+    .filter(Boolean)
+    .forEach((key) => keys.add(key));
+
+  return keys;
+};
+
+const buildContactIndex = (contacts: ZAPIContact[]): Map<string, ZAPIContact> => {
+  const map = new Map<string, ZAPIContact>();
+
+  contacts.forEach((contact) => {
+    const keys = collectPhoneLookupSet(contact.phone);
+    keys.forEach((key) => {
+      if (!key) {
+        return;
+      }
+      map.set(key, contact);
+    });
+  });
+
+  return map;
+};
+
+const selectPreferredContact = (
+  current: ZAPIContact | undefined,
+  candidate: ZAPIContact,
+): ZAPIContact => {
+  if (!current) {
+    return candidate;
+  }
+
+  const currentScore = CONTACT_NAME_PRIORITY(current);
+  const candidateScore = CONTACT_NAME_PRIORITY(candidate);
+
+  if (candidateScore > currentScore) {
+    return candidate;
+  }
+
+  return current;
+};
+
+const buildChatStateKey = (phone: string, isGroup: boolean): string | null => {
+  if (isGroup) {
+    return null;
+  }
+
+  const normalized = normalizePhoneForChat(phone);
+  if (normalized) {
+    return normalized;
+  }
+
+  const digits = sanitizePhoneDigits(phone);
+  if (digits) {
+    return digits;
+  }
+
+  const trimmed = phone.trim();
+  return trimmed || null;
+};
 
 const parseNumberFromEnv = (value: unknown, fallback: number): number => {
   if (typeof value === 'number') {
@@ -1061,6 +1188,63 @@ export default function WhatsAppHistoryTab({
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
   const leadsMapRef = useRef(leadsMap);
+  const leadPhoneIndex = useMemo(() => {
+    const index = new Map<string, LeadPreview[]>();
+
+    leadsMap.forEach((lead) => {
+      const keys = collectPhoneLookupSet(lead.telefone);
+      keys.forEach((key) => {
+        if (!key) {
+          return;
+        }
+        const list = index.get(key) ?? [];
+        list.push(lead);
+        index.set(key, list);
+      });
+    });
+
+    return index;
+  }, [leadsMap]);
+  const findContactForPhone = useCallback(
+    (phone: string): ZAPIContact | undefined => {
+      const keys = collectPhoneLookupSet(phone);
+      for (const key of keys) {
+        if (!key) {
+          continue;
+        }
+        const candidate = contactsMap.get(key);
+        if (candidate) {
+          return candidate;
+        }
+      }
+      return undefined;
+    },
+    [contactsMap],
+  );
+  const collectLeadsForPhone = useCallback(
+    (phone: string): LeadPreview[] => {
+      const keys = collectPhoneLookupSet(phone);
+      const results = new Map<string, LeadPreview>();
+
+      for (const key of keys) {
+        if (!key) {
+          continue;
+        }
+        const candidates = leadPhoneIndex.get(key);
+        if (!candidates) {
+          continue;
+        }
+        candidates.forEach((lead) => {
+          if (!results.has(lead.id)) {
+            results.set(lead.id, lead);
+          }
+        });
+      }
+
+      return Array.from(results.values());
+    },
+    [leadPhoneIndex],
+  );
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [activePhone, setActivePhone] = useState<string | null>(null);
   const [selectionActionState, setSelectionActionState] = useState<SelectionActionState>({
@@ -1070,6 +1254,9 @@ export default function WhatsAppHistoryTab({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
   const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
+  const [contactsMap, setContactsMap] = useState<Map<string, ZAPIContact>>(new Map());
+  const [chatNameStateMap, setChatNameStateMap] = useState<Map<string, ChatNameState>>(new Map());
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [startConversationLoading, setStartConversationLoading] = useState(false);
   const [startConversationError, setStartConversationError] = useState<string | null>(null);
   const [startConversationSearch, setStartConversationSearch] = useState('');
@@ -1092,6 +1279,8 @@ export default function WhatsAppHistoryTab({
     Map<string, ChatTypingPresenceState>
   >(() => new Map());
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
+  const contactsFetchPromiseRef = useRef<Promise<ZAPIContact[]> | null>(null);
+  const blockedNameLogRef = useRef<Set<string>>(new Set());
   const [fullscreenMedia, setFullscreenMedia] = useState<
     | {
         url: string;
@@ -1311,6 +1500,86 @@ export default function WhatsAppHistoryTab({
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
   const [activeLeadDetails, setActiveLeadDetails] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCompanySettings = async () => {
+      try {
+        const settings = await configService.getSystemSettings();
+        if (!isMounted) {
+          return;
+        }
+        setCompanyName(settings?.company_name?.trim() || null);
+      } catch (error) {
+        console.error('Erro ao carregar configurações do sistema:', error);
+      }
+    };
+
+    void loadCompanySettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  const blockedNameSet = useMemo(() => {
+    const set = new Set<string>();
+    if (companyName) {
+      set.add(companyName);
+    }
+    return set;
+  }, [companyName]);
+  useEffect(() => {
+    setChatNameStateMap((previous) => {
+      const next = new Map<string, ChatNameState>();
+
+      chatsWithPreferences.forEach((chat) => {
+        const key = buildChatStateKey(chat.phone, chat.isGroup);
+        if (!key) {
+          return;
+        }
+
+        const normalizedPhone = normalizePhoneForChat(chat.phone);
+        const fallbackDisplay = formatPhoneForDisplay(chat.phone);
+        const contact = findContactForPhone(chat.phone);
+        let contactName = deriveContactName(contact);
+
+        if (!contactName && chat.messages.length === 0 && chat.displayName) {
+          const trimmed = chat.displayName.trim();
+          if (trimmed) {
+            contactName = trimmed;
+          }
+        }
+
+        const leadCandidates = collectLeadsForPhone(chat.phone);
+        const leadNames = leadCandidates
+          .map((lead) => (typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : ''))
+          .filter((name): name is string => Boolean(name));
+        const hasLeadConflict = leadCandidates.length > 1;
+        const previousState = previous.get(key) ?? null;
+
+        const decision = resolveNameWithPriority({
+          normalizedPhone,
+          contactName,
+          leadNames,
+          hasLeadConflict,
+          fallbackDisplay,
+          previous: previousState,
+        });
+
+        if (decision.promoted) {
+          console.info('Nome do chat promovido', {
+            phone: formatPhoneToE164(normalizedPhone, fallbackDisplay),
+            valor: decision.state.value,
+            fonte: decision.state.source,
+          });
+        }
+
+        next.set(key, decision.state);
+      });
+
+      return next;
+    });
+  }, [chatsWithPreferences, collectLeadsForPhone, findContactForPhone]);
   const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
   const [isLeadDetailsPanelOpen, setIsLeadDetailsPanelOpen] = useState(false);
   const [manualReminderPrompt, setManualReminderPrompt] = useState<ReminderPromptConfig | null>(null);
@@ -1902,20 +2171,22 @@ export default function WhatsAppHistoryTab({
         return groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone);
       }
 
-      const lead =
-        (chat.leadId ? leadsMap.get(chat.leadId) : undefined) ??
-        leadsByPhoneMap.get(sanitizePhoneDigits(chat.phone)) ??
-        leadsByPhoneMap.get(chat.phone.trim());
-      const chatMetadata = getChatMetadataForPhone(chat.phone);
+      const key = buildChatStateKey(chat.phone, chat.isGroup);
+      const normalizedPhone = normalizePhoneForChat(chat.phone);
+      const fallback = formatPhoneToE164(normalizedPhone, formatPhoneForDisplay(chat.phone));
 
-      return (
-        lead?.nome_completo ||
-        chatMetadata?.displayName ||
-        chat.displayName ||
-        formatPhoneForDisplay(chat.phone)
-      );
+      if (!key) {
+        return fallback;
+      }
+
+      const resolved = chatNameStateMap.get(key);
+      if (resolved && resolved.value) {
+        return resolved.value;
+      }
+
+      return fallback;
     },
-    [getChatMetadataForPhone, getGroupMetadataForPhone, leadsByPhoneMap, leadsMap]
+    [chatNameStateMap, getGroupMetadataForPhone]
   );
 
   const releaseAttachmentPreview = useCallback((attachment: AttachmentItem) => {
@@ -2546,12 +2817,13 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
-  const loadStartConversationContacts = useCallback(async () => {
-    setStartConversationLoading(true);
-    setStartConversationError(null);
+  const fetchAndIndexContacts = useCallback(async (): Promise<ZAPIContact[]> => {
+    if (contactsFetchPromiseRef.current) {
+      return contactsFetchPromiseRef.current;
+    }
 
-    try {
-      const aggregatedContacts = new Map<string, ZAPIContact>();
+    const promise = (async () => {
+      const aggregated = new Map<string, ZAPIContact>();
       const pageSize = 100;
       let currentPage = 1;
 
@@ -2564,11 +2836,16 @@ export default function WhatsAppHistoryTab({
         const contacts = result.data ?? [];
 
         contacts.forEach((contact) => {
-          const key = sanitizePhoneDigits(contact.phone);
-          if (!key || aggregatedContacts.has(key)) {
+          const normalized = normalizePhoneForChat(contact.phone);
+          const digits = sanitizePhoneDigits(contact.phone);
+          const trimmed = typeof contact.phone === 'string' ? contact.phone.trim() : '';
+          const primaryKey = normalized || digits || trimmed;
+          if (!primaryKey) {
             return;
           }
-          aggregatedContacts.set(key, contact);
+
+          const existing = aggregated.get(primaryKey);
+          aggregated.set(primaryKey, selectPreferredContact(existing, contact));
         });
 
         if (!result.hasMore || contacts.length < pageSize) {
@@ -2578,8 +2855,9 @@ export default function WhatsAppHistoryTab({
         currentPage += 1;
       }
 
-      const sortedContacts = Array.from(aggregatedContacts.values()).sort((a, b) => {
-        const getDisplayName = (contact: ZAPIContact) =>
+      const uniqueContacts = Array.from(new Set(aggregated.values()));
+      const sortedContacts = uniqueContacts.sort((a, b) => {
+        const normalize = (contact: ZAPIContact) =>
           (
             contact.name ||
             contact.short ||
@@ -2591,12 +2869,29 @@ export default function WhatsAppHistoryTab({
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
 
-        const nameA = getDisplayName(a);
-        const nameB = getDisplayName(b);
-
-        return nameA.localeCompare(nameB, 'pt-BR');
+        return normalize(a).localeCompare(normalize(b), 'pt-BR');
       });
 
+      setContactsMap(buildContactIndex(sortedContacts));
+
+      return sortedContacts;
+    })();
+
+    contactsFetchPromiseRef.current = promise;
+
+    try {
+      return await promise;
+    } finally {
+      contactsFetchPromiseRef.current = null;
+    }
+  }, []);
+
+  const loadStartConversationContacts = useCallback(async () => {
+    setStartConversationLoading(true);
+    setStartConversationError(null);
+
+    try {
+      const sortedContacts = await fetchAndIndexContacts();
       setStartConversationContacts(sortedContacts);
     } catch (error) {
       setStartConversationError(
@@ -2605,7 +2900,7 @@ export default function WhatsAppHistoryTab({
     } finally {
       setStartConversationLoading(false);
     }
-  }, []);
+  }, [fetchAndIndexContacts]);
 
   const loadStartConversationLeads = useCallback(async (force = false) => {
     if (startConversationLeadsLoading || (!force && hasLoadedStartConversationLeads)) {
@@ -2687,6 +2982,41 @@ export default function WhatsAppHistoryTab({
     loadStartConversationLeads,
     startConversationContacts.length,
   ]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadContacts = async () => {
+      try {
+        const contacts = await fetchAndIndexContacts();
+        if (!isActive) {
+          return;
+        }
+        setStartConversationContacts(contacts);
+      } catch (error) {
+        console.error('Erro ao atualizar cache de contatos:', error);
+      }
+    };
+
+    void loadContacts();
+
+    if (typeof window === 'undefined') {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    const intervalId = window.setInterval(() => {
+      fetchAndIndexContacts().catch((error) => {
+        console.error('Erro ao atualizar cache de contatos:', error);
+      });
+    }, CONTACTS_REFRESH_INTERVAL_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [fetchAndIndexContacts]);
 
   const handleCloseStartConversationModal = useCallback(() => {
     setIsStartConversationModalOpen(false);
@@ -3427,11 +3757,12 @@ export default function WhatsAppHistoryTab({
       const leadResponsavelLabel = lead?.responsavel
         ? responsavelLabelMap.get(lead.responsavel)?.toLowerCase() ?? ''
         : '';
+      const resolvedDisplayName = getChatDisplayName(chat).toLowerCase();
       return (
         chat.phone.toLowerCase().includes(query) ||
         (numericQuery ? sanitizedPhone.includes(numericQuery) : false) ||
         chat.messages.some((message) => (message.message_text || '').toLowerCase().includes(query)) ||
-        (chat.displayName?.toLowerCase().includes(query) ?? false) ||
+        resolvedDisplayName.includes(query) ||
         (chatMetadata?.displayName ? chatMetadata.displayName.toLowerCase().includes(query) : false) ||
         (groupMetadata?.subject ? groupMetadata.subject.toLowerCase().includes(query) : false) ||
         (lead?.nome_completo?.toLowerCase().includes(query) ?? false) ||
@@ -3458,6 +3789,7 @@ export default function WhatsAppHistoryTab({
     chatListFilter,
     getChatMetadataForPhone,
     getGroupMetadataForPhone,
+    getChatDisplayName,
     leadsByPhoneMap,
     leadsMap,
     selectedResponsavel,
@@ -3505,6 +3837,38 @@ export default function WhatsAppHistoryTab({
       selectPrimaryPhone(filteredChats[0].phone);
     }
   }, [externalSelectionContext, filteredChats, selectedPhone, selectPrimaryPhone]);
+
+  useEffect(() => {
+    if (blockedNameSet.size === 0) {
+      return;
+    }
+
+    conversations.forEach((conversation) => {
+      const chatName = conversation.chat_name?.trim();
+      if (!chatName) {
+        return;
+      }
+
+      if (!shouldBlockChatName(chatName, blockedNameSet)) {
+        return;
+      }
+
+      const phoneCandidate = conversation.phone_number || conversation.target_phone || '';
+      const normalized = normalizePhoneForChat(phoneCandidate);
+      const fallback = formatPhoneToE164(normalized, formatPhoneForDisplay(phoneCandidate));
+      const logKey = `conversation:${normalized ?? phoneCandidate}:${chatName}`;
+
+      if (blockedNameLogRef.current.has(logKey)) {
+        return;
+      }
+
+      blockedNameLogRef.current.add(logKey);
+      console.info('Ignorando chat_name bloqueado recebido do webhook', {
+        phone: fallback,
+        valor: chatName,
+      });
+    });
+  }, [blockedNameSet, conversations]);
 
   useEffect(() => {
     if (selectedPhones.size === 0) {
@@ -4230,7 +4594,18 @@ export default function WhatsAppHistoryTab({
         try {
           const result = await zapiService.getChatMetadata(normalizedPhone);
           if (result.success && result.data) {
-            const metadata = result.data as ZAPIChatMetadata;
+            let metadata = result.data as ZAPIChatMetadata;
+            if (shouldBlockChatName(metadata.displayName ?? null, blockedNameSet)) {
+              const logKey = `metadata:${normalizedPhone}:${metadata.displayName ?? ''}`;
+              if (!blockedNameLogRef.current.has(logKey) && metadata.displayName) {
+                console.info('Ignorando nome de chat bloqueado recebido do webhook', {
+                  phone: formatPhoneToE164(normalizedPhone, normalizedPhone),
+                  valor: metadata.displayName,
+                });
+                blockedNameLogRef.current.add(logKey);
+              }
+              metadata = { ...metadata, displayName: null };
+            }
             metadataKey = normalizeChatMetadataKey(metadata.phone);
             setChatMetadataMap((prev) => {
               const next = new Map(prev);
@@ -4277,7 +4652,7 @@ export default function WhatsAppHistoryTab({
         }
       }
     })();
-  }, [chatMetadataMap, chatsWithPreferences]);
+  }, [blockedNameSet, chatMetadataMap, chatsWithPreferences]);
 
   useEffect(() => {
     if (chatsWithPreferences.length === 0) {
@@ -6977,9 +7352,7 @@ const getOutgoingMessageStatus = (
                     const isSelected = selectedPhones.has(chat.phone);
                     const groupMetadata = chat.isGroup ? getGroupMetadataForPhone(chat.phone) : undefined;
                     const chatMetadata = chat.isGroup ? undefined : getChatMetadataForPhone(chat.phone);
-                    const displayName = chat.isGroup
-                      ? groupMetadata?.subject || chat.displayName || formatPhoneForDisplay(chat.phone)
-                      : lead?.nome_completo || chatMetadata?.displayName || chat.displayName || formatPhoneForDisplay(chat.phone);
+                    const displayName = getChatDisplayName(chat);
                     const chatPhotoUrl = chat.photoUrl || chatMetadata?.profileThumbnail || null;
                     const leadResponsavelValue = lead?.responsavel ?? '';
                     const leadResponsavelLabel = leadResponsavelValue

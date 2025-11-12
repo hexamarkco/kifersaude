@@ -7,20 +7,34 @@ import { pathToFileURL } from 'node:url';
 const tempDir = mkdtempSync(join(tmpdir(), 'kifersaude-tests-'));
 
 try {
-  const outfile = join(tempDir, 'startConversationUtils.test.mjs');
+  const tests = [
+    {
+      entry: 'src/components/__tests__/startConversationUtils.test.ts',
+      outfile: 'startConversationUtils.test.mjs',
+    },
+    {
+      entry: 'supabase/functions/whatsapp-webhook/__tests__/normalization.test.ts',
+      outfile: 'whatsappWebhookNormalization.test.mjs',
+    },
+  ];
 
-  await build({
-    entryPoints: ['src/components/__tests__/startConversationUtils.test.ts'],
-    outfile,
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    sourcemap: 'inline',
-    logLevel: 'silent',
-  });
+  for (const { entry, outfile } of tests) {
+    const compiledFile = join(tempDir, outfile);
 
-  const moduleUrl = pathToFileURL(outfile);
-  await import(moduleUrl.href);
+    await build({
+      entryPoints: [entry],
+      outfile: compiledFile,
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      sourcemap: 'inline',
+      logLevel: 'silent',
+      external: ['npm:@supabase/supabase-js@2.57.4'],
+    });
+
+    const moduleUrl = pathToFileURL(compiledFile);
+    await import(moduleUrl.href);
+  }
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }

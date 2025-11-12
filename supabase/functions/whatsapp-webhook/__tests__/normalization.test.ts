@@ -3,7 +3,7 @@ import {
   normalizePhoneNumber,
   extractNormalizedPhoneNumber,
   extractNormalizedTargetPhone,
-} from '../phoneNumbers';
+} from '../phoneNumbers.ts';
 
 const normalizedWithLid = normalizePhoneNumber('5511987654321@lid');
 assert.strictEqual(normalizedWithLid, '5511987654321');

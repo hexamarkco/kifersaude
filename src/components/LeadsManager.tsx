@@ -93,14 +93,12 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       if (eventType === 'DELETE' && oldLead) {
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
-        setFollowUpLead((current) => (current && current.id === oldLead.id ? null : current));
         return;
       }
 
       if (newLead) {
         setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
         setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
-        setFollowUpLead((current) => (current && current.id === newLead.id ? newLead : current));
       }
     },
     []

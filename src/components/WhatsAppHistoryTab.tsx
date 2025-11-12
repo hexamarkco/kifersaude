@@ -5098,8 +5098,6 @@ export default function WhatsAppHistoryTab({
 
   const handleAttachmentPaste = useCallback(
     (event: ReactClipboardEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
       const { clipboardData } = event;
       const selectedType = nextAttachmentType;
 
@@ -5156,12 +5154,16 @@ export default function WhatsAppHistoryTab({
       const files = itemFiles.length > 0 ? itemFiles : fallbackFiles;
 
       if (files.length > 0) {
+        event.preventDefault();
         appendFilesAsAttachments(files, selectedType);
+
+        setNextAttachmentType(null);
+        setComposerError(null);
+        setComposerSuccess(null);
+        return;
       }
 
       setNextAttachmentType(null);
-      setComposerError(null);
-      setComposerSuccess(null);
     },
     [appendFilesAsAttachments, nextAttachmentType],
   );

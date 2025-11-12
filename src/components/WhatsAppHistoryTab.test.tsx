@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, createEvent } from '@testing-library/react';
 import WhatsAppHistoryTab from './WhatsAppHistoryTab';
 import { vi } from 'vitest';
 
@@ -157,5 +157,24 @@ describe('WhatsAppHistoryTab attachments via drag and paste', () => {
 
     const attachment = await screen.findByText('contract.pdf');
     expect(attachment).toBeTruthy();
+  });
+
+  it('does not block pasting plain text into the composer', async () => {
+    renderComponent();
+
+    const composer = await screen.findByPlaceholderText('Escreva uma mensagem...');
+
+    const pasteEvent = createEvent.paste(composer, {
+      clipboardData: {
+        types: ['text/plain'],
+        getData: (type: string) => (type === 'text/plain' ? 'Mensagem colada' : ''),
+        files: [],
+        items: [],
+      },
+    });
+
+    fireEvent(composer, pasteEvent);
+
+    expect(pasteEvent.defaultPrevented).toBe(false);
   });
 });

@@ -1910,6 +1910,18 @@ export default function WhatsAppHistoryTab({
     }
   }, []);
 
+  const clearAttachments = useCallback(() => {
+    setAttachments((prev) => {
+      prev.forEach(releaseAttachmentPreview);
+      return [];
+    });
+    setRecordedAudio(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
+    }
+  }, [releaseAttachmentPreview]);
+
   const resetLocationForm = useCallback(() => {
     setLocationForm(createEmptyLocationForm());
     setLocationFormError(null);
@@ -4787,18 +4799,6 @@ export default function WhatsAppHistoryTab({
     },
     [createPreviewUrl, inferAttachmentType, setAttachments]
   );
-
-  const clearAttachments = useCallback(() => {
-    setAttachments((prev) => {
-      prev.forEach(releaseAttachmentPreview);
-      return [];
-    });
-    setRecordedAudio(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
-    }
-  }, [releaseAttachmentPreview]);
 
   const removeRecordedAudioAttachment = useCallback(() => {
     if (!recordedAudio) {

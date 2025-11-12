@@ -1,5 +1,7 @@
 import {
   ChangeEvent,
+  ClipboardEvent as ReactClipboardEvent,
+  DragEvent as ReactDragEvent,
   FormEvent,
   KeyboardEvent as ReactKeyboardEvent,
   SyntheticEvent,
@@ -4402,38 +4404,13 @@ export default function WhatsAppHistoryTab({
   };
 
   const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
     const selectedType = nextAttachmentType;
-    if (!files || files.length === 0) {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        fileInputRef.current.accept = DEFAULT_ATTACHMENT_ACCEPT;
-      }
-      setNextAttachmentType(null);
-      return;
-    }
+    const filesList = event.target.files;
+    const files = filesList ? Array.from(filesList).filter((file): file is File => file instanceof File) : [];
 
-    const filesArray = Array.from(files);
-    setAttachments((prev) => {
-      const existingKeys = new Set(
-        prev
-          .filter((attachment): attachment is FileAttachmentItem => isFileAttachment(attachment))
-          .map((attachment) => `${attachment.file.name}-${attachment.file.size}`)
-      );
-      const uniqueFiles = filesArray.filter(
-        (file) => !existingKeys.has(`${file.name}-${file.size}`)
-      );
-      const newAttachments = uniqueFiles.map((file) => {
-        const resolvedType: FileAttachmentType =
-          selectedType && selectedType !== 'location' ? selectedType : inferAttachmentType(file);
-        return {
-          file,
-          type: resolvedType,
-          previewUrl: createPreviewUrl(file, resolvedType),
-        };
-      });
-      return [...prev, ...newAttachments];
-    });
+    if (files.length > 0) {
+      appendFilesAsAttachments(files, selectedType);
+    }
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -4441,10 +4418,121 @@ export default function WhatsAppHistoryTab({
     }
 
     setNextAttachmentType(null);
-
     setComposerError(null);
     setComposerSuccess(null);
   };
+
+  const handleComposerDragOver = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleAttachmentDrop = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      const dataTransfer = event.dataTransfer;
+      const selectedType = nextAttachmentType;
+
+      const itemFiles = dataTransfer
+        ? Array.from(dataTransfer.items ?? [])
+            .map((item) => {
+              if (item.kind !== 'file') {
+                return null;
+              }
+              const file = item.getAsFile();
+              return file ?? null;
+            })
+            .filter((file): file is File => file !== null)
+        : [];
+
+      const fallbackFiles = dataTransfer ? Array.from(dataTransfer.files ?? []) : [];
+      const files = itemFiles.length > 0 ? itemFiles : fallbackFiles;
+
+      appendFilesAsAttachments(files, selectedType);
+
+      if (dataTransfer?.items && typeof dataTransfer.items.clear === 'function') {
+        dataTransfer.items.clear();
+      }
+
+      setNextAttachmentType(null);
+      setComposerError(null);
+      setComposerSuccess(null);
+    },
+    [appendFilesAsAttachments, nextAttachmentType],
+  );
+
+  const handleAttachmentPaste = useCallback(
+    (event: ReactClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      const { clipboardData } = event;
+      const selectedType = nextAttachmentType;
+
+      if (!clipboardData) {
+        setNextAttachmentType(null);
+        setComposerError(null);
+        setComposerSuccess(null);
+        return;
+      }
+
+      const itemFiles = Array.from(clipboardData.items ?? [])
+        .map((item, index) => {
+          if (item.kind !== 'file') {
+            return null;
+          }
+          const file = item.getAsFile();
+          if (!file) {
+            return null;
+          }
+          if (file.name && file.name.trim().length > 0) {
+            return file;
+          }
+          const extension = (() => {
+            if (!file.type) {
+              return '';
+            }
+            const [, subtype] = file.type.split('/');
+            return subtype ? `.${subtype}` : '';
+          })();
+          return new File([file], `clipboard-attachment-${index}${extension}`, {
+            type: file.type,
+            lastModified: file.lastModified,
+          });
+        })
+        .filter((file): file is File => file !== null);
+
+      const fallbackFiles = Array.from(clipboardData.files ?? []).map((file, index) => {
+        if (file.name && file.name.trim().length > 0) {
+          return file;
+        }
+        const extension = (() => {
+          if (!file.type) {
+            return '';
+          }
+          const [, subtype] = file.type.split('/');
+          return subtype ? `.${subtype}` : '';
+        })();
+        return new File([file], `clipboard-attachment-${index}${extension}`, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+      });
+
+      const files = itemFiles.length > 0 ? itemFiles : fallbackFiles;
+
+      if (files.length > 0) {
+        appendFilesAsAttachments(files, selectedType);
+      }
+
+      setNextAttachmentType(null);
+      setComposerError(null);
+      setComposerSuccess(null);
+    },
+    [appendFilesAsAttachments, nextAttachmentType],
+  );
 
   const handleRemoveAttachment = (index: number) => {
     let shouldClearRecordedAudio = false;
@@ -6947,7 +7035,12 @@ const getOutgoingMessageStatus = (
                     />
                     <div className="flex items-center">
                       <div className="flex-1">
-                        <div className="group relative flex min-h-[3.75rem] items-stretch rounded-xl border border-slate-300 bg-white shadow-sm transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500">
+                        <div
+                          className="group relative flex min-h-[3.75rem] items-stretch rounded-xl border border-slate-300 bg-white shadow-sm transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500"
+                          onDragOver={handleComposerDragOver}
+                          onDrop={handleAttachmentDrop}
+                          onPaste={handleAttachmentPaste}
+                        >
                           <div className="flex items-center gap-2 border-r border-slate-200/70 px-2">
                             <div className="relative">
                               <button

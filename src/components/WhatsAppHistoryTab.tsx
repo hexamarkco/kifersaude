@@ -4156,6 +4156,34 @@ export default function WhatsAppHistoryTab({
     return URL.createObjectURL(file);
   };
 
+  const appendFilesAsAttachments = useCallback(
+    (files: File[], selectedType: AttachmentType | null) => {
+      if (files.length === 0) {
+        return;
+      }
+
+      setAttachments((previous) => {
+        const nextAttachments = [...previous];
+
+        for (const file of files) {
+          const resolvedType: FileAttachmentType =
+            selectedType && selectedType !== 'location'
+              ? (selectedType as FileAttachmentType)
+              : inferAttachmentType(file);
+
+          nextAttachments.push({
+            file,
+            type: resolvedType,
+            previewUrl: createPreviewUrl(file, resolvedType),
+          });
+        }
+
+        return nextAttachments;
+      });
+    },
+    [createPreviewUrl, inferAttachmentType, setAttachments]
+  );
+
   const clearAttachments = useCallback(() => {
     setAttachments((prev) => {
       prev.forEach(releaseAttachmentPreview);

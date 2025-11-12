@@ -78,6 +78,11 @@ import {
 import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import {
+  ChatMetricsBadges,
+  computeChatMetrics,
+  type ChatMetrics,
+} from './ChatMetricsBadges';
+import {
   zapiService,
   type ZAPIMediaType,
   type ZAPILocationPayload,
@@ -124,6 +129,36 @@ const DEFAULT_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏
 const TYPING_INACTIVITY_TIMEOUT_MS = 15000;
 const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 const WHATSAPP_CONVERSATIONS_LIMIT = 500;
+
+const parseNumberFromEnv = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.max(0, value) : fallback;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
+  }
+
+  return fallback;
+};
+
+const DEFAULT_SLA_WARNING_MINUTES = 30;
+const DEFAULT_SLA_CRITICAL_MINUTES = 60;
+
+const parsedWarningMinutes = parseNumberFromEnv(
+  import.meta.env.VITE_WHATSAPP_SLA_WARNING_MINUTES,
+  DEFAULT_SLA_WARNING_MINUTES
+);
+
+const parsedCriticalMinutes = parseNumberFromEnv(
+  import.meta.env.VITE_WHATSAPP_SLA_CRITICAL_MINUTES,
+  DEFAULT_SLA_CRITICAL_MINUTES
+);
+
+const SLA_WARNING_MINUTES = parsedWarningMinutes;
+const SLA_CRITICAL_MINUTES = Math.max(parsedWarningMinutes, parsedCriticalMinutes);
+
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -3148,6 +3183,8 @@ export default function WhatsAppHistoryTab({
     return chatsWithPreferences.find(group => group.phone === selectedPhone);
   }, [chatsWithPreferences, selectedPhone]);
 
+  const isGroupChat = selectedChat?.isGroup ?? false;
+
   const selectedChatMetadata = useMemo(() => {
     if (!selectedChat) {
       return undefined;
@@ -3765,6 +3802,11 @@ export default function WhatsAppHistoryTab({
 
     return processed;
   }, [selectedChatDisplayName, selectedChatMessages]);
+
+  const chatMetrics = useMemo<ChatMetrics>(
+    () => computeChatMetrics(processedSelectedMessages),
+    [processedSelectedMessages]
+  );
 
   const messageIdToInternalId = useMemo(() => {
     const map = new Map<string, string>();
@@ -6438,6 +6480,12 @@ const getOutgoingMessageStatus = (
                               {selectedChatPresenceLabel}
                             </p>
                           )}
+                          <ChatMetricsBadges
+                            stats={chatMetrics}
+                            isGroupChat={isGroupChat}
+                            warningThresholdMinutes={SLA_WARNING_MINUTES}
+                            criticalThresholdMinutes={SLA_CRITICAL_MINUTES}
+                          />
                         </div>
                       </button>
                       <div className="flex flex-col items-end space-y-2 text-xs text-teal-100">

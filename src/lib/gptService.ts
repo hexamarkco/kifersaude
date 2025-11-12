@@ -181,7 +181,7 @@ class GPTService {
 
     const suggestionCandidates = content
       .split(/\n+/)
-      .map((line) => line.replace(/^[-*\d\.\)\s]+/, '').trim())
+      .map((line) => line.replace(/^[-*\d.)\s]+/, '').trim())
       .filter(Boolean);
 
     if (suggestionCandidates.length === 0) {

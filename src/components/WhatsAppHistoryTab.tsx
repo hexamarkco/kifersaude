@@ -2843,7 +2843,7 @@ export default function WhatsAppHistoryTab({
     });
 
     skipAutoSelectRef.current = true;
-    setSelectedPhone(normalizedPhone);
+    setActivePhone(normalizedPhone);
 
     setExternalSelectionContext({
       phone: normalizedPhone,

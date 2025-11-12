@@ -246,7 +246,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         }]);
 
       const normalizedStatus = newStatus.trim().toLowerCase();
-      if (normalizedStatus === 'proposta recebida') {
+      if (normalizedStatus === 'proposta enviada') {
         setReminderLead({ ...lead, status: newStatus });
       }
     } catch (error) {
@@ -555,7 +555,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             setReminderLead(null);
             loadLeads();
           }}
-          promptMessage="Deseja agendar o primeiro lembrete após a proposta recebida?"
+          promptMessage="Deseja agendar o primeiro lembrete após a proposta enviada?"
           defaultType="Follow-up"
         />
       )}

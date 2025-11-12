@@ -4583,10 +4583,10 @@ export default function WhatsAppHistoryTab({
         ]);
 
         const normalizedStatus = newStatus.trim().toLowerCase();
-        if (normalizedStatus === 'proposta recebida') {
+        if (normalizedStatus === 'proposta enviada') {
           setManualReminderPrompt({
             lead: optimisticLead,
-            promptMessage: 'Deseja agendar um lembrete após a proposta recebida?',
+            promptMessage: 'Deseja agendar um lembrete após a proposta enviada?',
             defaultType: 'Follow-up',
           });
         }

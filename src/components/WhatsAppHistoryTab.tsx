@@ -57,6 +57,7 @@ import {
   FileVideo,
   FileAudio,
   Square,
+  CheckSquare,
   CornerUpRight,
   SmilePlus,
   Share2,

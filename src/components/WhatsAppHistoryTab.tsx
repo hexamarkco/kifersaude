@@ -2,6 +2,7 @@ import {
   ChangeEvent,
   FormEvent,
   KeyboardEvent as ReactKeyboardEvent,
+  SyntheticEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -70,6 +71,8 @@ import {
   MapPin,
   Navigation,
   Edit,
+  Play,
+  Scissors,
 } from 'lucide-react';
 import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -366,6 +369,172 @@ const convertBlobToMp3 = async (blob: Blob): Promise<Blob> => {
   }
 };
 
+const convertBlobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Falha ao converter áudio para Base64.'));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Falha ao ler áudio para conversão em Base64.'));
+    reader.readAsDataURL(blob);
+  });
+
+const audioBufferToWavBlob = (audioBuffer: AudioBuffer): Blob => {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const bufferLength = audioBuffer.length;
+  const dataLength = bufferLength * blockAlign;
+  const arrayBuffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      view.setUint8(offset + i, value.charCodeAt(i) ?? 0);
+    }
+  };
+
+  let offset = 0;
+  writeString(offset, 'RIFF');
+  offset += 4;
+  view.setUint32(offset, 36 + dataLength, true);
+  offset += 4;
+  writeString(offset, 'WAVE');
+  offset += 4;
+  writeString(offset, 'fmt ');
+  offset += 4;
+  view.setUint32(offset, 16, true);
+  offset += 4;
+  view.setUint16(offset, 1, true);
+  offset += 2;
+  view.setUint16(offset, numChannels, true);
+  offset += 2;
+  view.setUint32(offset, sampleRate, true);
+  offset += 4;
+  view.setUint32(offset, sampleRate * blockAlign, true);
+  offset += 4;
+  view.setUint16(offset, blockAlign, true);
+  offset += 2;
+  view.setUint16(offset, bitsPerSample, true);
+  offset += 2;
+  writeString(offset, 'data');
+  offset += 4;
+  view.setUint32(offset, dataLength, true);
+  offset += 4;
+
+  const channelData = Array.from({ length: numChannels }, (_, channelIndex) =>
+    audioBuffer.getChannelData(channelIndex)
+  );
+
+  for (let sampleIndex = 0; sampleIndex < bufferLength; sampleIndex += 1) {
+    for (let channelIndex = 0; channelIndex < numChannels; channelIndex += 1) {
+      const sample = channelData[channelIndex]?.[sampleIndex] ?? 0;
+      const clampedSample = Math.max(-1, Math.min(1, sample));
+      view.setInt16(offset, clampedSample < 0 ? clampedSample * 0x8000 : clampedSample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+};
+
+const removeSegmentFromAudioBlob = async (
+  blob: Blob,
+  startTime: number,
+  endTime: number
+): Promise<{ blob: Blob; file: File; url: string; base64: string; mimeType: string }> => {
+  if (typeof window === 'undefined') {
+    throw new Error('Edição de áudio não suportada neste ambiente.');
+  }
+
+  const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
+  if (!AudioContextClass) {
+    throw new Error('Este navegador não suporta edição de áudio.');
+  }
+
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContextClass();
+
+  try {
+    const audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+      const handleSuccess = (buffer: AudioBuffer) => resolve(buffer);
+      const handleError = (error?: DOMException | null) => {
+        reject(error ?? new Error('Falha ao decodificar áudio gravado.'));
+      };
+
+      const decodeResult = audioContext.decodeAudioData(arrayBuffer.slice(0), handleSuccess, handleError);
+
+      if (decodeResult instanceof Promise) {
+        decodeResult.then(resolve).catch(reject);
+      }
+    });
+
+    const clampedStart = Math.max(0, Math.min(startTime, audioBuffer.duration));
+    const clampedEnd = Math.max(0, Math.min(endTime, audioBuffer.duration));
+    const selectionStart = Math.min(clampedStart, clampedEnd);
+    const selectionEnd = Math.max(clampedStart, clampedEnd);
+
+    const startSample = Math.floor(selectionStart * audioBuffer.sampleRate);
+    const endSample = Math.floor(selectionEnd * audioBuffer.sampleRate);
+
+    if (endSample <= startSample) {
+      throw new Error('Selecione um intervalo válido para remover.');
+    }
+
+    const newLength = startSample + Math.max(0, audioBuffer.length - endSample);
+
+    if (newLength <= 0) {
+      throw new Error('O corte selecionado removeria todo o áudio.');
+    }
+
+    const trimmedBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      newLength,
+      audioBuffer.sampleRate
+    );
+
+    for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
+      const originalChannelData = audioBuffer.getChannelData(channelIndex);
+      const trimmedChannelData = trimmedBuffer.getChannelData(channelIndex);
+
+      trimmedChannelData.set(originalChannelData.subarray(0, startSample), 0);
+      trimmedChannelData.set(
+        originalChannelData.subarray(endSample, originalChannelData.length),
+        startSample
+      );
+    }
+
+    const wavBlob = audioBufferToWavBlob(trimmedBuffer);
+
+    let finalBlob: Blob = wavBlob;
+    let mimeType = 'audio/wav';
+
+    try {
+      finalBlob = await convertBlobToMp3(wavBlob);
+      mimeType = 'audio/mpeg';
+    } catch (error) {
+      console.warn('Falha ao converter áudio editado para MP3, utilizando WAV.', error);
+    }
+
+    const extension = mimeType === 'audio/mpeg' ? 'mp3' : 'wav';
+    const file = new File([finalBlob], `gravacao-editada-${Date.now()}.${extension}`, { type: mimeType });
+    const base64 = await convertBlobToDataUrl(finalBlob);
+    const url = URL.createObjectURL(finalBlob);
+
+    return { blob: finalBlob, file, base64, url, mimeType };
+  } finally {
+    await audioContext.close().catch(() => {
+      // Ignora erros ao fechar o contexto
+    });
+  }
+};
+
 const isChatPreferencesTableMissingError = (error: PostgrestError | null | undefined) => {
   if (!error) return false;
 
@@ -446,6 +615,15 @@ type AttachmentItem = FileAttachmentItem | LocationAttachmentItem;
 
 const isFileAttachment = (attachment: AttachmentItem): attachment is FileAttachmentItem =>
   attachment.type !== 'location';
+
+type TrimPreviewState = {
+  blob: Blob;
+  file: File;
+  url: string;
+  base64: string;
+  mimeType: string;
+  selection: { start: number; end: number };
+};
 
 const DEFAULT_ATTACHMENT_ACCEPT = 'application/pdf,image/*,video/*,audio/*';
 
@@ -791,6 +969,48 @@ export default function WhatsAppHistoryTab({
   const animationFrameRef = useRef<number | null>(null);
   const [recordingLevels, setRecordingLevels] = useState<number[]>(
     () => Array(RECORDING_WAVEFORM_BARS).fill(0)
+  );
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const [trimSelection, setTrimSelection] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 0,
+  });
+  const [isAudioEditorOpen, setIsAudioEditorOpen] = useState(false);
+  const [isApplyingAudioTrim, setIsApplyingAudioTrim] = useState(false);
+  const [isGeneratingTrimPreview, setIsGeneratingTrimPreview] = useState(false);
+  const [trimPreview, setTrimPreview] = useState<TrimPreviewState | null>(null);
+  const [audioEditError, setAudioEditError] = useState<string | null>(null);
+  const trimValueFormatter = useMemo(
+    () => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+    []
+  );
+  const clearTrimPreview = useCallback(
+    (options?: { preserveUrl?: boolean }) => {
+      setTrimPreview((prev) => {
+        if (prev && !options?.preserveUrl && prev.url && typeof URL !== 'undefined') {
+          URL.revokeObjectURL(prev.url);
+        }
+        return null;
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    setAudioDuration(null);
+    setTrimSelection({ start: 0, end: 0 });
+    setAudioEditError(null);
+    clearTrimPreview();
+    setIsAudioEditorOpen(false);
+    setIsApplyingAudioTrim(false);
+    setIsGeneratingTrimPreview(false);
+  }, [recordedAudio, clearTrimPreview]);
+
+  useEffect(
+    () => () => {
+      clearTrimPreview();
+    },
+    [clearTrimPreview]
   );
   const [leadContractsMap, setLeadContractsMap] = useState<Map<string, Contract[]>>(new Map());
   const leadContractsMapRef = useRef<Map<string, Contract[]>>(leadContractsMap);
@@ -3884,6 +4104,213 @@ export default function WhatsAppHistoryTab({
     setRecordedAudio(null);
   }, [recordedAudio, releaseAttachmentPreview]);
 
+  const handleRecordedAudioMetadataLoaded = useCallback(
+    (event: SyntheticEvent<HTMLAudioElement>) => {
+      const duration = event.currentTarget.duration;
+
+      if (!Number.isFinite(duration) || duration <= 0) {
+        setAudioDuration(null);
+        return;
+      }
+
+      setAudioDuration(duration);
+      setTrimSelection({ start: 0, end: duration });
+      setAudioEditError(null);
+    },
+    []
+  );
+
+  const handleTrimSliderChange = useCallback(
+    (point: 'start' | 'end', value: number) => {
+      const duration = audioDuration ?? 0;
+      const clampedValue = Math.max(0, Math.min(value, duration));
+      setTrimSelection((prev) => ({ ...prev, [point]: clampedValue }));
+      setAudioEditError(null);
+      clearTrimPreview();
+    },
+    [audioDuration, clearTrimPreview]
+  );
+
+  const handleTrimNumericChange = useCallback(
+    (point: 'start' | 'end', rawValue: string) => {
+      const parsedValue = Number.parseFloat(rawValue);
+      if (Number.isNaN(parsedValue)) {
+        setTrimSelection((prev) => ({ ...prev, [point]: 0 }));
+        return;
+      }
+
+      const duration = audioDuration ?? 0;
+      const clampedValue = Math.max(0, Math.min(parsedValue, duration));
+      setTrimSelection((prev) => ({ ...prev, [point]: clampedValue }));
+      setAudioEditError(null);
+      clearTrimPreview();
+    },
+    [audioDuration, clearTrimPreview]
+  );
+
+  const handleResetTrimSelection = useCallback(() => {
+    setTrimSelection({ start: 0, end: 0 });
+    setAudioEditError(null);
+    clearTrimPreview();
+  }, [clearTrimPreview]);
+
+  const normalizedTrimStart = Math.min(trimSelection.start, trimSelection.end);
+  const normalizedTrimEnd = Math.max(trimSelection.start, trimSelection.end);
+  const hasValidTrimSelection = normalizedTrimEnd - normalizedTrimStart > 0;
+  const isTrimPreviewCurrent =
+    !!trimPreview &&
+    trimPreview.selection.start === normalizedTrimStart &&
+    trimPreview.selection.end === normalizedTrimEnd;
+  const estimatedEditedDuration =
+    audioDuration !== null
+      ? Math.max(0, audioDuration - (normalizedTrimEnd - normalizedTrimStart))
+      : null;
+
+  const handleOpenAudioEditor = useCallback(() => {
+    if (!recordedAudio) {
+      return;
+    }
+    setIsAudioEditorOpen(true);
+    setAudioEditError(null);
+  }, [recordedAudio]);
+
+  const handleCloseAudioEditor = useCallback(() => {
+    setIsAudioEditorOpen(false);
+    setAudioEditError(null);
+    setIsApplyingAudioTrim(false);
+    setIsGeneratingTrimPreview(false);
+    clearTrimPreview();
+  }, [clearTrimPreview]);
+
+  const handleGenerateTrimPreview = useCallback(async () => {
+    if (!recordedAudio) {
+      return;
+    }
+
+    if (!hasValidTrimSelection) {
+      setAudioEditError('Selecione um intervalo válido para remover.');
+      return;
+    }
+
+    setIsGeneratingTrimPreview(true);
+    setAudioEditError(null);
+
+    try {
+      const editedAudio = await removeSegmentFromAudioBlob(
+        recordedAudio.blob,
+        normalizedTrimStart,
+        normalizedTrimEnd
+      );
+
+      setTrimPreview((prev) => {
+        if (prev && prev.url && typeof URL !== 'undefined') {
+          URL.revokeObjectURL(prev.url);
+        }
+
+        return {
+          ...editedAudio,
+          selection: { start: normalizedTrimStart, end: normalizedTrimEnd },
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao gerar prévia do áudio gravado:', error);
+      setAudioEditError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível gerar a prévia do corte. Tente novamente.'
+      );
+    } finally {
+      setIsGeneratingTrimPreview(false);
+    }
+  }, [recordedAudio, hasValidTrimSelection, normalizedTrimEnd, normalizedTrimStart]);
+
+  const handleApplyAudioTrim = useCallback(async () => {
+    if (!recordedAudio) {
+      return;
+    }
+
+    if (!hasValidTrimSelection) {
+      setAudioEditError('Selecione um intervalo válido para remover.');
+      return;
+    }
+
+    setIsApplyingAudioTrim(true);
+    setAudioEditError(null);
+
+    try {
+      let editedAudio: TrimPreviewState;
+      let shouldPreservePreviewUrl = false;
+
+      if (isTrimPreviewCurrent && trimPreview) {
+        editedAudio = trimPreview;
+        shouldPreservePreviewUrl = true;
+      } else {
+        const result = await removeSegmentFromAudioBlob(
+          recordedAudio.blob,
+          normalizedTrimStart,
+          normalizedTrimEnd
+        );
+
+        editedAudio = {
+          ...result,
+          selection: { start: normalizedTrimStart, end: normalizedTrimEnd },
+        };
+      }
+
+      setAttachments((prev) => {
+        const filtered = prev.filter((attachment) => {
+          if (isFileAttachment(attachment) && attachment.file === recordedAudio.file) {
+            releaseAttachmentPreview(attachment);
+            return false;
+          }
+          return true;
+        });
+
+        return [
+          ...filtered,
+          {
+            file: editedAudio.file,
+            type: 'audio',
+            previewUrl: editedAudio.url,
+          },
+        ];
+      });
+
+      if (recordedAudio.url) {
+        URL.revokeObjectURL(recordedAudio.url);
+      }
+
+      setRecordedAudio({
+        blob: editedAudio.blob,
+        url: editedAudio.url,
+        file: editedAudio.file,
+        base64: editedAudio.base64,
+      });
+
+      setIsAudioEditorOpen(false);
+      clearTrimPreview({ preserveUrl: shouldPreservePreviewUrl });
+    } catch (error) {
+      console.error('Erro ao editar áudio gravado:', error);
+      setAudioEditError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível aplicar o corte no áudio. Tente novamente.'
+      );
+    } finally {
+      setIsApplyingAudioTrim(false);
+    }
+  }, [
+    recordedAudio,
+    hasValidTrimSelection,
+    normalizedTrimEnd,
+    normalizedTrimStart,
+    isTrimPreviewCurrent,
+    trimPreview,
+    setAttachments,
+    releaseAttachmentPreview,
+    clearTrimPreview,
+  ]);
+
   const handleAttachmentButtonClick = () => {
     if (isSendingMessage) {
       return;
@@ -4063,21 +4490,6 @@ export default function WhatsAppHistoryTab({
           }
 
           const audioUrl = URL.createObjectURL(finalBlob);
-
-          const convertBlobToDataUrl = (blob: Blob): Promise<string> =>
-            new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                if (typeof reader.result === 'string') {
-                  resolve(reader.result);
-                } else {
-                  reject(new Error('Falha ao converter áudio para Base64.'));
-                }
-              };
-              reader.onerror = () =>
-                reject(reader.error ?? new Error('Falha ao ler áudio para conversão em Base64.'));
-              reader.readAsDataURL(blob);
-            });
 
           const audioFile = new File([finalBlob], `gravacao-${Date.now()}.${fileExtension}`, {
             type: finalMimeType,
@@ -6786,7 +7198,7 @@ const getOutgoingMessageStatus = (
                     )}
 
                     {recordedAudio && (
-                      <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold uppercase text-slate-500">Áudio gravado</p>
                           <button
@@ -6798,12 +7210,30 @@ const getOutgoingMessageStatus = (
                           </button>
                         </div>
                         <div className="w-full min-w-[264px] sm:min-w-[344px]">
-                          <audio controls src={recordedAudio.url} className="w-full">
+                          <audio
+                            controls
+                            src={recordedAudio.url}
+                            className="w-full"
+                            onLoadedMetadata={handleRecordedAudioMetadataLoaded}
+                          >
                             Seu navegador não suporta reprodução de áudio.
                           </audio>
                         </div>
                         <p className="text-[11px] text-slate-500">
                           Ouça o áudio antes de enviar para garantir a qualidade.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleOpenAudioEditor}
+                            className="flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar ou cortar áudio
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Caso precise remover um trecho, utilize o editor para gerar uma prévia antes de aplicar o corte.
                         </p>
                       </div>
                     )}
@@ -6849,6 +7279,189 @@ const getOutgoingMessageStatus = (
         )}
       </div>
       </div>
+
+      {isAudioEditorOpen && recordedAudio && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">
+          <div
+            className="relative w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="audio-editor-title"
+          >
+            <button
+              type="button"
+              onClick={handleCloseAudioEditor}
+              className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar editor de áudio"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="space-y-6 p-6">
+              <div>
+                <h2 id="audio-editor-title" className="text-lg font-semibold text-slate-900">
+                  Editar áudio gravado
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Selecione o trecho que deseja remover, gere uma prévia para ouvir o resultado e aplique o corte apenas quando estiver satisfeito.
+                </p>
+              </div>
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">Áudio original</span>
+                  <span className="text-xs text-slate-500">
+                    Duração:{' '}
+                    {audioDuration
+                      ? formatDuration(audioDuration) ?? `${trimValueFormatter.format(audioDuration)}s`
+                      : '--:--'}
+                  </span>
+                </div>
+                <audio controls src={recordedAudio.url} className="w-full">
+                  Seu navegador não suporta reprodução de áudio.
+                </audio>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-start">
+                    Início ({trimValueFormatter.format(trimSelection.start)} s)
+                  </label>
+                  <input
+                    id="audio-trim-start"
+                    type="range"
+                    min={0}
+                    max={audioDuration ?? 0}
+                    step={0.1}
+                    value={Math.min(trimSelection.start, audioDuration ?? trimSelection.start)}
+                    onChange={(event) =>
+                      handleTrimSliderChange('start', Number.parseFloat(event.target.value))
+                    }
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full"
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={audioDuration ?? undefined}
+                    step={0.1}
+                    value={trimSelection.start}
+                    onChange={(event) => handleTrimNumericChange('start', event.target.value)}
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-end">
+                    Fim ({trimValueFormatter.format(trimSelection.end)} s)
+                  </label>
+                  <input
+                    id="audio-trim-end"
+                    type="range"
+                    min={0}
+                    max={audioDuration ?? 0}
+                    step={0.1}
+                    value={Math.min(trimSelection.end, audioDuration ?? trimSelection.end)}
+                    onChange={(event) =>
+                      handleTrimSliderChange('end', Number.parseFloat(event.target.value))
+                    }
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full"
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={audioDuration ?? undefined}
+                    step={0.1}
+                    value={trimSelection.end}
+                    onChange={(event) => handleTrimNumericChange('end', event.target.value)}
+                    disabled={!audioDuration || isApplyingAudioTrim || isGeneratingTrimPreview}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                  />
+                </div>
+              </div>
+              <div className="space-y-3 rounded-lg border border-dashed border-slate-200 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">Prévia do áudio editado</span>
+                  <span className="text-[11px] text-slate-500">
+                    Duração estimada:{' '}
+                    {estimatedEditedDuration !== null
+                      ? formatDuration(estimatedEditedDuration) ??
+                        `${trimValueFormatter.format(estimatedEditedDuration)}s`
+                      : '--:--'}
+                  </span>
+                </div>
+                {trimPreview && isTrimPreviewCurrent ? (
+                  <audio controls src={trimPreview.url} className="w-full">
+                    Seu navegador não suporta reprodução de áudio.
+                  </audio>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Gere uma prévia para ouvir como o áudio ficará após remover o trecho selecionado.
+                  </p>
+                )}
+                {trimPreview && !isTrimPreviewCurrent && (
+                  <p className="text-[11px] text-amber-600">
+                    A prévia exibida não corresponde à seleção atual. Gere uma nova prévia para ouvir as alterações.
+                  </p>
+                )}
+              </div>
+              {audioEditError && <p className="text-sm text-red-600">{audioEditError}</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateTrimPreview()}
+                  disabled={
+                    !audioDuration || !hasValidTrimSelection || isGeneratingTrimPreview || isApplyingAudioTrim
+                  }
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors ${
+                    !audioDuration || !hasValidTrimSelection || isGeneratingTrimPreview || isApplyingAudioTrim
+                      ? 'bg-teal-300'
+                      : 'bg-teal-600 hover:bg-teal-700'
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isGeneratingTrimPreview ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  Gerar prévia
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleApplyAudioTrim()}
+                  disabled={
+                    !audioDuration ||
+                    !hasValidTrimSelection ||
+                    !isTrimPreviewCurrent ||
+                    isApplyingAudioTrim ||
+                    isGeneratingTrimPreview
+                  }
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors ${
+                    !audioDuration || !hasValidTrimSelection || !isTrimPreviewCurrent || isApplyingAudioTrim || isGeneratingTrimPreview
+                      ? 'bg-teal-300'
+                      : 'bg-teal-600 hover:bg-teal-700'
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isApplyingAudioTrim ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Scissors className="h-4 w-4" />
+                  )}
+                  Aplicar corte
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetTrimSelection}
+                  disabled={isApplyingAudioTrim || isGeneratingTrimPreview}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Limpar seleção
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isStartConversationModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">

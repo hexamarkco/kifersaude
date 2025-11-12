@@ -555,6 +555,9 @@ class GPTService {
       let prompt = `Reescreva a mensagem abaixo para enviá-la a ${leadName} pelo WhatsApp, mantendo a intenção original.`;
       prompt += `\nUse este tom: ${toneDescriptions[tone] ?? toneDescriptions.friendly}`;
       prompt += `\nConsidere o histórico recente:\n${conversationSummary}`;
+      prompt += `\nNão adicione saudações, apresentações, perguntas ou novas informações que não estejam presentes na mensagem original.`;
+      prompt += `\nApenas reorganize e melhore a clareza do texto mantendo o mesmo conteúdo e sentido.`;
+      prompt += `\nMantenha a extensão semelhante à mensagem original, evitando alongar a resposta.`;
       if (customInstructions?.trim()) {
         prompt += `\nInstruções adicionais: ${customInstructions.trim()}`;
       }

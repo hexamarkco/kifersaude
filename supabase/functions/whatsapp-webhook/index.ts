@@ -1132,6 +1132,16 @@ Deno.serve(async (req: Request) => {
     return respond({ success: false, error: 'Payload inválido' }, { status: 400 });
   }
 
+  try {
+    console.log('Webhook do WhatsApp recebido:', {
+      method: req.method,
+      path,
+      payload,
+    });
+  } catch (logError) {
+    console.error('Erro ao registrar payload do webhook:', logError);
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 

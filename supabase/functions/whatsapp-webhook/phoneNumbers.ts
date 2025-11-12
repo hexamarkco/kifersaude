@@ -1,5 +1,18 @@
 const LID_IDENTIFIER_REGEX = /@lid\b|\blid@|:lid\b|\blid:/i;
 
+function extractChatIdentifierValue(raw: unknown): string | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return LID_IDENTIFIER_REGEX.test(trimmed.toLowerCase()) ? trimmed : null;
+}
+
 function collectChatIdentifiers(payload: any): string[] {
   const candidateValues: unknown[] = [
     payload?.chatLid,
@@ -125,6 +138,15 @@ export function extractNormalizedPhoneNumber(payload: any): string | null {
       return;
     }
 
+    const chatIdentifier = extractChatIdentifierValue(value);
+    if (chatIdentifier) {
+      if (!seenCandidates.has(chatIdentifier)) {
+        candidatePhones.push(chatIdentifier);
+        seenCandidates.add(chatIdentifier);
+      }
+      return;
+    }
+
     pushNormalized(value);
   };
 
@@ -205,7 +227,8 @@ export function extractNormalizedPhoneNumber(payload: any): string | null {
       candidate = String(Math.trunc(candidate));
     }
 
-    const normalized = normalizePhoneNumber(candidate);
+    const chatIdentifier = extractChatIdentifierValue(candidate);
+    const normalized = chatIdentifier ?? normalizePhoneNumber(candidate);
     if (normalized) {
       connectedNumbers.add(normalized);
       const digitsOnly = normalized.replace(/\D/g, '');
@@ -317,7 +340,8 @@ export function extractNormalizedTargetPhone(payload: any): string | null {
       candidate = String(Math.trunc(candidate));
     }
 
-    const normalized = normalizePhoneNumber(candidate);
+    const chatIdentifier = extractChatIdentifierValue(candidate);
+    const normalized = chatIdentifier ?? normalizePhoneNumber(candidate);
     if (normalized) {
       connectedNumbers.add(normalized);
       const digitsOnly = normalized.replace(/\D/g, '');
@@ -352,7 +376,8 @@ export function extractNormalizedTargetPhone(payload: any): string | null {
       continue;
     }
 
-    const normalized = normalizePhoneNumber(candidate);
+    const chatIdentifier = extractChatIdentifierValue(candidate);
+    const normalized = chatIdentifier ?? normalizePhoneNumber(candidate);
     if (normalized && !connectedNumbers.has(normalized)) {
       return normalized;
     }

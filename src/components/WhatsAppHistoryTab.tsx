@@ -1071,6 +1071,8 @@ export default function WhatsAppHistoryTab({
   );
   const [startConversationSelectedLeadId, setStartConversationSelectedLeadId] =
     useState<string | null>(null);
+  const [startConversationLeadsLoading, setStartConversationLeadsLoading] = useState(false);
+  const [hasLoadedStartConversationLeads, setHasLoadedStartConversationLeads] = useState(false);
   const [manualChatPlaceholders, setManualChatPlaceholders] = useState<
     Map<string, ManualChatPlaceholder>
   >(new Map());
@@ -2593,6 +2595,58 @@ export default function WhatsAppHistoryTab({
     }
   }, []);
 
+  const loadStartConversationLeads = useCallback(async (force = false) => {
+    if (startConversationLeadsLoading || (!force && hasLoadedStartConversationLeads)) {
+      return;
+    }
+
+    setStartConversationLeadsLoading(true);
+
+    try {
+      const pageSize = 500;
+      let from = 0;
+
+      while (true) {
+        const { data, error } = await supabase
+          .from('leads')
+          .select('id, nome_completo, telefone, status, responsavel, observacoes')
+          .not('telefone', 'is', null)
+          .neq('telefone', '')
+          .range(from, from + pageSize - 1);
+
+        if (error) {
+          throw error;
+        }
+
+        const leadsBatch = (data as LeadPreview[] | null) ?? [];
+        const sanitized = leadsBatch.filter((lead) => sanitizePhoneDigits(lead.telefone).length > 0);
+
+        if (sanitized.length > 0) {
+          upsertLeadsIntoMaps(sanitized);
+        }
+
+        if (!data || data.length < pageSize) {
+          break;
+        }
+
+        from += pageSize;
+      }
+
+      setHasLoadedStartConversationLeads(true);
+    } catch (error) {
+      console.error('Erro ao carregar leads do CRM:', error);
+      setStartConversationError(
+        error instanceof Error ? error.message : 'Erro ao carregar leads do CRM.',
+      );
+    } finally {
+      setStartConversationLeadsLoading(false);
+    }
+  }, [
+    hasLoadedStartConversationLeads,
+    startConversationLeadsLoading,
+    upsertLeadsIntoMaps,
+  ]);
+
   useEffect(() => {
     if (activeView === 'ai-messages') {
       loadAIMessages();
@@ -2614,7 +2668,13 @@ export default function WhatsAppHistoryTab({
     if (startConversationContacts.length === 0) {
       void loadStartConversationContacts();
     }
-  }, [loadStartConversationContacts, startConversationContacts.length]);
+    void loadStartConversationLeads(hasLoadedStartConversationLeads);
+  }, [
+    hasLoadedStartConversationLeads,
+    loadStartConversationContacts,
+    loadStartConversationLeads,
+    startConversationContacts.length,
+  ]);
 
   const handleCloseStartConversationModal = useCallback(() => {
     setIsStartConversationModalOpen(false);
@@ -8975,11 +9035,18 @@ const getOutgoingMessageStatus = (
                               })}
                             </ul>
                           )
+                        ) : startConversationLeadsLoading && filteredStartConversationCrmLeads.length === 0 ? (
+                          <div className="flex h-40 items-center justify-center text-slate-500">
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Loader className="h-4 w-4 animate-spin" />
+                              <span>Carregando leads do CRM...</span>
+                            </div>
+                          </div>
                         ) : filteredStartConversationCrmLeads.length === 0 ? (
                           <div className="flex h-40 items-center justify-center px-4 text-center text-slate-500">
                             <p className="text-sm">
                               {startConversationCrmLeads.length === 0
-                                ? 'Nenhum lead disponível sem contato sincronizado.'
+                                ? 'Nenhum lead do CRM disponível para iniciar conversa.'
                                 : 'Nenhum lead encontrado para os filtros informados.'}
                             </p>
                           </div>

@@ -900,7 +900,15 @@ if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
     const events = Array.isArray(payload) ? payload : [payload];
     const results: EventProcessingResult[] = [];
 
+    let eventIndex = 0;
     for (const event of events) {
+      const currentIndex = eventIndex++;
+      console.log('Processando webhook event:', {
+        index: currentIndex,
+        type: event?.type,
+        fromMe: event?.fromMe,
+        payload: event,
+      });
       const messageId =
         pickFirstString(event?.messageId, event?.id, event?.zaapId, crypto.randomUUID()) ??
         crypto.randomUUID();

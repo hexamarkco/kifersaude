@@ -1,5 +1,6 @@
 import type { Lead } from '../lib/supabase';
 import type { ZAPIContact } from '../lib/zapiService';
+import { normalizePeerPhone } from '../lib/whatsappPeers';
 
 export const sanitizePhoneDigits = (value?: string | null): string => {
   if (!value || typeof value !== 'string') return '';
@@ -19,35 +20,30 @@ export const formatPhoneForDisplay = (phone: string): string => {
 };
 
 export const normalizePhoneForChat = (phone: string): string => {
-  const digits = sanitizePhoneDigits(phone);
-  if (!digits) {
-    return '';
-  }
-
-  if (digits.startsWith('55')) {
-    return digits;
-  }
-
-  if (digits.length === 11) {
-    return `55${digits}`;
-  }
-
-  return digits;
+  return normalizePeerPhone(phone);
 };
 
 export const buildPhoneLookupKeys = (value?: string | null): string[] => {
-  const digits = sanitizePhoneDigits(value);
-  if (!digits) return [];
+  const normalized = normalizePeerPhone(value);
+  if (!normalized) {
+    return [];
+  }
 
+  const sanitizedOriginal = sanitizePhoneDigits(value);
   const keys = new Set<string>();
-  keys.add(digits);
 
-  if (digits.startsWith('55') && digits.length > 2) {
-    keys.add(digits.slice(2));
-    keys.add(`+${digits}`);
-  } else if (digits.length === 11) {
-    keys.add(`55${digits}`);
-    keys.add(`+55${digits}`);
+  keys.add(normalized);
+
+  if (normalized.startsWith('55') && normalized.length > 2) {
+    const withoutDdi = normalized.slice(2);
+    if (withoutDdi) {
+      keys.add(withoutDdi);
+    }
+    keys.add(`+${normalized}`);
+  }
+
+  if (sanitizedOriginal && sanitizedOriginal !== normalized) {
+    keys.add(sanitizedOriginal);
   }
 
   return Array.from(keys);

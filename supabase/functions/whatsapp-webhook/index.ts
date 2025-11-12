@@ -4,6 +4,7 @@ import {
   extractNormalizedPhoneNumber,
   extractNormalizedTargetPhone,
 } from './phoneNumbers.ts';
+import { ensurePeerAssociation, type PeerResolution } from './peers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -643,7 +644,7 @@ async function upsertConversation(
     normalizedTargetPhone = normalizePhoneNumber(targetPhoneOverrideRaw) ?? targetPhoneOverrideRaw.trim();
   }
 
-  const normalizedPhone =
+  let normalizedPhone =
     overrides.phoneNumber !== undefined
       ? overrides.phoneNumber
       : extractNormalizedPhoneNumber(payload) ?? normalizePhoneNumber(payload?.connectedPhone);
@@ -654,6 +655,38 @@ async function upsertConversation(
     const extractedTarget = extractNormalizedTargetPhone(payload);
     if (extractedTarget) {
       normalizedTargetPhone = extractedTarget;
+    }
+  }
+
+  const basePhoneCandidate =
+    messageType === 'sent' && normalizedTargetPhone ? normalizedTargetPhone : normalizedPhone;
+
+  const isGroupChat = detectGroupChat(payload, basePhoneCandidate ?? normalizedPhone);
+
+  let peerResolution: PeerResolution | null = null;
+
+  if (!isGroupChat) {
+    try {
+      peerResolution = await ensurePeerAssociation({
+        supabase,
+        payload,
+        normalizedPhone: normalizedPhone ?? null,
+        normalizedTargetPhone: normalizedTargetPhone ?? null,
+        isGroupChat,
+      });
+    } catch (peerError) {
+      console.warn('Não foi possível garantir vínculo de peer para conversa do WhatsApp:', peerError);
+    }
+
+    if (peerResolution?.canonicalPhone) {
+      normalizedPhone = peerResolution.canonicalPhone;
+      if (messageType === 'sent' || !normalizedTargetPhone) {
+        normalizedTargetPhone = peerResolution.canonicalPhone;
+      }
+    }
+
+    if (!normalizedTargetPhone && peerResolution?.normalizedChatLid) {
+      normalizedTargetPhone = peerResolution.normalizedChatLid;
     }
   }
 
@@ -689,7 +722,6 @@ async function upsertConversation(
 
   const senderName = extractSenderName(payload);
   const basePhoneNumber = messageType === 'sent' && normalizedTargetPhone ? normalizedTargetPhone : normalizedPhone;
-  const isGroupChat = detectGroupChat(payload, basePhoneNumber ?? normalizedPhone);
   const chatName = extractChatName(payload, senderName, isGroupChat);
   const senderPhoto = extractSenderPhoto(payload);
 

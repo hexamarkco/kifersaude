@@ -3,6 +3,9 @@ import {
   normalizePhoneNumber,
   extractNormalizedPhoneNumber,
   extractNormalizedTargetPhone,
+  normalizePeerPhoneDigits,
+  normalizePeerChatIdentifier,
+  normalizePeerLookupKey,
 } from '../phoneNumbers.ts';
 
 const normalizedWithLid = normalizePhoneNumber('5511987654321@lid');
@@ -61,5 +64,23 @@ const outgoingWithChatLid = {
 
 const normalizedTargetChatLid = extractNormalizedTargetPhone(outgoingWithChatLid);
 assert.strictEqual(normalizedTargetChatLid, '195670287876281@lid');
+
+const canonicalDigits = normalizePeerPhoneDigits('5511987654321@lid');
+assert.strictEqual(canonicalDigits, '5511987654321');
+
+const canonicalWithoutDdi = normalizePeerPhoneDigits('011987654321');
+assert.strictEqual(canonicalWithoutDdi, '5511987654321');
+
+const peerChatIdentifier = normalizePeerChatIdentifier('5511987654321@lid');
+assert.deepEqual(peerChatIdentifier, {
+  normalized: '5511987654321',
+  raw: '5511987654321@lid',
+});
+
+const peerLookupFromChat = normalizePeerLookupKey('5511987654321@lid');
+assert.deepEqual(peerLookupFromChat, { key: '5511987654321', isGroup: false });
+
+const peerLookupFromGroup = normalizePeerLookupKey('5511987654321@g.us');
+assert.deepEqual(peerLookupFromGroup, { key: '5511987654321@g.us', isGroup: true });
 
 console.log('whatsapp webhook normalization tests passed');

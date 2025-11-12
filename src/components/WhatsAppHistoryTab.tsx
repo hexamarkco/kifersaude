@@ -110,6 +110,7 @@ import {
   resolveStartConversationSelection,
   sanitizePhoneDigits,
 } from './startConversationHelpers';
+import { normalizePeerLookupKey } from '../lib/whatsappPeers';
 
 declare global {
   interface Window {
@@ -982,12 +983,23 @@ const getChatIdentifierForConversation = (
   }
 
   const targetPhone = conversation.target_phone?.trim();
-  if (targetPhone) {
-    return targetPhone;
+  const phoneNumber = conversation.phone_number?.trim();
+  const candidate = targetPhone || phoneNumber || '';
+
+  if (!candidate) {
+    return '';
   }
 
-  const phoneNumber = conversation.phone_number?.trim();
-  return phoneNumber || '';
+  const normalized = normalizePeerLookupKey(candidate);
+  if (!normalized) {
+    return candidate.trim();
+  }
+
+  if (normalized.isGroup) {
+    return candidate.trim();
+  }
+
+  return normalized.key;
 };
 
 const resolveChatIdentifier = (

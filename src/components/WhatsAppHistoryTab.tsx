@@ -30,6 +30,7 @@ import {
   deleteWhatsAppQuickReply,
   type WhatsAppQuickReply,
 } from '../lib/whatsappQuickRepliesService';
+import { findTopQuickReplies } from '../lib/quickReplyRanking';
 import {
   listScheduledWhatsAppMessages,
   scheduleWhatsAppMessage,
@@ -213,20 +214,6 @@ const getOutgoingDeliveryStatusVisual = (
   return OUTGOING_STATUS_VISUALS[status] ?? null;
 };
 
-const tokenizeText = (text: string | null | undefined): string[] => {
-  if (!text) {
-    return [];
-  }
-
-  const normalized = text
-    .normalize('NFD')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-
-  return normalized.match(/[a-z0-9]{3,}/g) ?? [];
-};
-
 const buildContextualQuickReplySuggestions = (
   quickReplies: WhatsAppQuickReply[],
   messages: WhatsAppConversation[],
@@ -236,96 +223,28 @@ const buildContextualQuickReplySuggestions = (
     return [];
   }
 
-  const incomingMessages = messages
-    .filter((message) => message.message_type === 'received')
-    .slice(-QUICK_REPLY_CONTEXT_MESSAGES);
+  const additionalKeywords = lead
+    ? ([
+        lead.status,
+        lead.origem,
+        lead.tipo_contratacao,
+        lead.observacoes,
+        lead.cidade,
+        lead.regiao,
+        lead.estado,
+      ].filter((value): value is string => Boolean(value && value.trim().length > 0)))
+    : undefined;
 
-  const conversationTokens = new Set<string>();
-  let lastIncoming: WhatsAppConversation | undefined;
+  const contextMessages = messages.slice(-QUICK_REPLY_CONTEXT_MESSAGES);
 
-  incomingMessages.forEach((message) => {
-    const combined = [
-      message.message_text,
-      message.media_caption,
-      message.quoted_message_text,
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    tokenizeText(combined).forEach((token) => conversationTokens.add(token));
-    lastIncoming = message;
-  });
-
-  const lastIncomingText =
-    lastIncoming?.message_text || lastIncoming?.media_caption || lastIncoming?.quoted_message_text || '';
-
-  const leadTokens = new Set<string>();
-  if (lead) {
-    const leadRelatedFields = [
-      lead.status,
-      lead.origem,
-      lead.tipo_contratacao,
-      lead.observacoes,
-      lead.cidade,
-      lead.regiao,
-      lead.estado,
-    ];
-
-    leadRelatedFields
-      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      .forEach((value) => {
-        tokenizeText(value).forEach((token) => leadTokens.add(token));
-      });
-  }
-
-  const scored = quickReplies.map((reply) => {
-    const replyTokens = new Set(
-      tokenizeText(`${reply.title} ${reply.content} ${reply.category ?? ''}`)
-    );
-    let score = 0;
-
-    replyTokens.forEach((token) => {
-      if (conversationTokens.has(token)) {
-        score += 3;
-      }
-      if (leadTokens.has(token)) {
-        score += 1;
-      }
-    });
-
-    if (reply.category) {
-      tokenizeText(reply.category).forEach((token) => {
-        if (conversationTokens.has(token)) {
-          score += 1;
-        }
-      });
-    }
-
-    if (reply.is_favorite) {
-      score += 1;
-    }
-
-    const replyContainsQuestion = reply.content.includes('?');
-    if (replyContainsQuestion && lastIncomingText?.includes('?')) {
-      score += 1;
-    }
-
-    return { reply, score };
-  });
-
-  const ranked = scored
-    .filter(({ score }) => score > 0)
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      if (a.reply.is_favorite !== b.reply.is_favorite) {
-        return Number(b.reply.is_favorite) - Number(a.reply.is_favorite);
-      }
-      return a.reply.title.localeCompare(b.reply.title);
-    })
-    .slice(0, 3)
-    .map(({ reply }) => reply);
+  const ranked = findTopQuickReplies(
+    quickReplies,
+    {
+      conversationHistory: contextMessages,
+      additionalKeywords,
+    },
+    3
+  );
 
   if (ranked.length > 0) {
     return ranked;

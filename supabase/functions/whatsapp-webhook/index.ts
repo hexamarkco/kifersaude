@@ -501,7 +501,6 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       text = `Reação: ${payload.reaction.value}`;
     } else if (payload?.notification) {
       const notificationType = normalizeNotificationType(payload.notification);
-      ensureMetadata().notificationType = notificationType;
       text = describeNotificationMessage(notificationType) ?? 'Notificação recebida';
     } else if (payload?.waitingMessage === true) {
       text = 'Mensagem aguardando confirmação do WhatsApp';
@@ -704,7 +703,6 @@ function describePayload(payload: any): { text: string; media?: MediaDetails } {
       text = summary ?? action;
     } else if (payload?.statusImage) {
       text = 'Resposta de status';
-      ensureMetadata().isStatusReply = true;
     } else {
       text = 'Mensagem recebida';
     }

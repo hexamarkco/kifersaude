@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Reminder } from '../lib/supabase';
 import { ChevronLeft, ChevronRight, X, Bell, Clock, AlertCircle } from 'lucide-react';
-import { formatDateTimeFullBR, getDateKey, SAO_PAULO_TIMEZONE } from '../lib/dateUtils';
+import {
+  formatDateTimeFullBR,
+  getDateKey,
+  getDateKeyFromParts,
+  SAO_PAULO_TIMEZONE,
+} from '../lib/dateUtils';
 
 type RemindersCalendarProps = {
   reminders: Reminder[];
@@ -11,54 +16,92 @@ type RemindersCalendarProps = {
 
 export default function RemindersCalendar({ reminders, onClose, onReminderClick }: RemindersCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+
+  const extractPartNumber = (parts: Intl.DateTimeFormatPart[], type: string) => {
+    const part = parts.find((item) => item.type === type);
+    return part ? parseInt(part.value, 10) : Number.NaN;
+  };
+
+  const currentMonthFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SAO_PAULO_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const currentMonthParts = currentMonthFormatter.formatToParts(currentDate);
+  const currentYearInTimeZone = extractPartNumber(currentMonthParts, 'year');
+  const currentMonthInTimeZone = extractPartNumber(currentMonthParts, 'month');
+  const calendarYear = Number.isNaN(currentYearInTimeZone)
+    ? currentDate.getFullYear()
+    : currentYearInTimeZone;
+  const calendarMonth = Number.isNaN(currentMonthInTimeZone)
+    ? currentDate.getMonth() + 1
+    : currentMonthInTimeZone;
+  const calendarReferenceDate = new Date(Date.UTC(calendarYear, calendarMonth - 1, 1, 12));
 
   const getMonthYear = () => {
-    return currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return new Intl.DateTimeFormat('pt-BR', {
+      timeZone: SAO_PAULO_TIMEZONE,
+      month: 'long',
+      year: 'numeric',
+    }).format(calendarReferenceDate);
   };
 
   const getDaysInMonth = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    return new Date(year, month + 1, 0).getDate();
+    return new Date(Date.UTC(calendarYear, calendarMonth, 0, 12)).getUTCDate();
   };
 
   const getFirstDayOfMonth = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    return new Date(year, month, 1).getDay();
+    return new Date(Date.UTC(calendarYear, calendarMonth - 1, 1, 12)).getUTCDay();
   };
 
   const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-    setSelectedDate(null);
+    setCurrentDate(new Date(Date.UTC(calendarYear, calendarMonth - 2, 1, 12)));
+    setSelectedDateKey(null);
   };
 
   const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    setSelectedDate(null);
+    setCurrentDate(new Date(Date.UTC(calendarYear, calendarMonth, 1, 12)));
+    setSelectedDateKey(null);
   };
 
   const getRemindersForDate = (day: number) => {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dateKey = getDateKey(date, SAO_PAULO_TIMEZONE);
+    const dateKey = getDateKeyFromParts(calendarYear, calendarMonth, day, SAO_PAULO_TIMEZONE);
 
     return reminders.filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === dateKey);
   };
 
   const handleDateClick = (day: number) => {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    setSelectedDate(date);
+    const dateKey = getDateKeyFromParts(calendarYear, calendarMonth, day, SAO_PAULO_TIMEZONE);
+    setSelectedDateKey(dateKey || null);
   };
 
   const getDayReminders = () => {
-    if (!selectedDate) return [];
+    if (!selectedDateKey) return [];
 
-    const dateKey = getDateKey(selectedDate, SAO_PAULO_TIMEZONE);
     return reminders
-      .filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === dateKey)
+      .filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === selectedDateKey)
       .sort((a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime());
   };
+
+  const formatDateKeyForDisplay = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    if ([year, month, day].some((value) => Number.isNaN(value))) {
+      return '';
+    }
+
+    const referenceDate = new Date(Date.UTC(year, month - 1, day, 12));
+    return new Intl.DateTimeFormat('pt-BR', {
+      timeZone: SAO_PAULO_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(referenceDate);
+  };
+
+  const selectedDateLabel = selectedDateKey ? formatDateKeyForDisplay(selectedDateKey) : '';
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth();
@@ -72,10 +115,9 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dayReminders = getRemindersForDate(day);
-      const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
-      const cellKey = getDateKey(cellDate, SAO_PAULO_TIMEZONE);
-      const selectedKey = selectedDate ? getDateKey(selectedDate, SAO_PAULO_TIMEZONE) : null;
+      const cellKey = getDateKeyFromParts(calendarYear, calendarMonth, day, SAO_PAULO_TIMEZONE);
+      const selectedKey = selectedDateKey;
       const isToday = cellKey === todayKey;
       const isSelected = selectedKey === cellKey;
 
@@ -174,9 +216,9 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
             <div>
               <div className="bg-white rounded-xl border border-slate-200 p-4">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                  {selectedDate ? (
+                  {selectedDateKey ? (
                     <>
-                      Lembretes de {selectedDate.toLocaleDateString('pt-BR')}
+                      Lembretes de {selectedDateLabel}
                       <span className="ml-2 text-sm font-normal text-slate-600">
                         ({dayReminders.length})
                       </span>
@@ -186,7 +228,7 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
                   )}
                 </h3>
 
-                {selectedDate ? (
+                {selectedDateKey ? (
                   dayReminders.length > 0 ? (
                     <div className="space-y-3 max-h-[500px] overflow-y-auto">
                       {dayReminders.map((reminder) => (

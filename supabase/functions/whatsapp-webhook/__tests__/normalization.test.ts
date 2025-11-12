@@ -35,9 +35,31 @@ const outgoingPayload = {
 };
 
 const extractedPhone = extractNormalizedPhoneNumber(outgoingPayload);
-assert.strictEqual(extractedPhone, '5511977776666');
+assert.strictEqual(extractedPhone, '5511977776666@lid');
 
 const extractedTarget = extractNormalizedTargetPhone(outgoingPayload);
-assert.strictEqual(extractedTarget, '5511977776666');
+assert.strictEqual(extractedTarget, '5511977776666@lid');
+
+const incomingWithChatLid = {
+  chatLid: '195670287876281@lid',
+  phone: '5521988306718',
+  connectedPhone: '5521979302389',
+};
+
+const normalizedChatLidPhone = extractNormalizedPhoneNumber(incomingWithChatLid);
+assert.strictEqual(normalizedChatLidPhone, '195670287876281@lid');
+
+const outgoingWithChatLid = {
+  fromMe: true,
+  chatLid: '195670287876281@lid',
+  phone: '195670287876281@lid',
+  connectedPhone: '5521979302389',
+  me: {
+    phone: '5521979302389',
+  },
+};
+
+const normalizedTargetChatLid = extractNormalizedTargetPhone(outgoingWithChatLid);
+assert.strictEqual(normalizedTargetChatLid, '195670287876281@lid');
 
 console.log('whatsapp webhook normalization tests passed');

@@ -1,5 +1,64 @@
 const LID_IDENTIFIER_REGEX = /@lid\b|\blid@|:lid\b|\blid:/i;
 
+function collectChatIdentifiers(payload: any): string[] {
+  const candidateValues: unknown[] = [
+    payload?.chatLid,
+    payload?.chat?.lid,
+    payload?.chat?.chatLid,
+    payload?.chat?.id,
+    payload?.chat?.jid,
+    payload?.message?.chatLid,
+    payload?.message?.chat?.lid,
+    payload?.message?.chat?.id,
+    payload?.message?.remoteJid,
+    payload?.message?.jid,
+    payload?.message?.key?.remoteJid,
+    payload?.contextInfo?.chatLid,
+    payload?.contextInfo?.chat?.lid,
+    payload?.contextInfo?.remoteJid,
+    payload?.conversationLid,
+    payload?.conversation?.lid,
+    payload?.conversation?.chatLid,
+    payload?.remoteLid,
+    payload?.lid,
+    payload?.chatId,
+    payload?.remoteJid,
+    payload?.jid,
+    payload?.phone,
+  ];
+
+  const preferred: string[] = [];
+  const secondary: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of candidateValues) {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      continue;
+    }
+
+    const stringValue = typeof value === 'number' && Number.isFinite(value) ? String(Math.trunc(value)) : String(value);
+    const trimmed = stringValue.trim();
+
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+
+    seen.add(trimmed);
+    const lower = trimmed.toLowerCase();
+
+    if (LID_IDENTIFIER_REGEX.test(lower)) {
+      preferred.push(trimmed);
+      continue;
+    }
+
+    if (lower.includes('@g.us') || lower.includes('-group')) {
+      secondary.push(trimmed);
+    }
+  }
+
+  return preferred.length > 0 ? preferred : secondary;
+}
+
 export function normalizePhoneNumber(raw: unknown): string | null {
   if (!raw || typeof raw !== 'string') {
     return null;
@@ -152,6 +211,21 @@ export function extractNormalizedPhoneNumber(payload: any): string | null {
     }
   });
 
+  const chatIdentifiers = collectChatIdentifiers(payload);
+  for (const identifier of chatIdentifiers) {
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const numericOnly = trimmed.replace(/\D/g, '');
+    if (numericOnly && connectedNumbers.has(numericOnly)) {
+      continue;
+    }
+
+    return trimmed;
+  }
+
   const groupCandidateByJid = candidatePhones.find((candidate) =>
     candidate.toLowerCase().includes('@g.us')
   );
@@ -244,6 +318,21 @@ export function extractNormalizedTargetPhone(payload: any): string | null {
       connectedNumbers.add(normalized);
     }
   });
+
+  const chatIdentifiers = collectChatIdentifiers(payload);
+  for (const identifier of chatIdentifiers) {
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const numericOnly = trimmed.replace(/\D/g, '');
+    if (numericOnly && connectedNumbers.has(numericOnly)) {
+      continue;
+    }
+
+    return trimmed;
+  }
 
   for (const value of candidateValues) {
     let candidate = value;

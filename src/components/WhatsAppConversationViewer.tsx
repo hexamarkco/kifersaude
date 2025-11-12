@@ -83,7 +83,11 @@ export default function WhatsAppConversationViewer({
     }
   };
 
-  const groupMessagesByDate = () => {
+  const groupedMessages = useMemo(() => {
+    if (messages.length === 0) {
+      return [] as { date: string; messages: ZAPIMessage[] }[];
+    }
+
     const groups: { date: string; messages: ZAPIMessage[] }[] = [];
     let currentDate: string | null = null;
 
@@ -97,28 +101,7 @@ export default function WhatsAppConversationViewer({
     });
 
     return groups;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-b from-teal-50 to-white rounded-lg">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-600 border-t-transparent mb-4"></div>
-        <p className="text-slate-600">Carregando histórico de conversas...</p>
-      </div>
-    );
-  }
-
-  if (messages.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-b from-slate-50 to-white rounded-lg border-2 border-dashed border-slate-300">
-        <MessageCircle className="w-16 h-16 text-slate-400 mb-4" />
-        <p className="text-lg font-medium text-slate-700 mb-2">Nenhuma conversa encontrada</p>
-        <p className="text-sm text-slate-500">Não há histórico de mensagens com {leadName}</p>
-      </div>
-    );
-  }
-
-  const groupedMessages = groupMessagesByDate();
+  }, [messages]);
 
   const isGroupChat = useMemo(() => {
     if (messages.length === 0) {
@@ -150,6 +133,25 @@ export default function WhatsAppConversationViewer({
 
     return leadName;
   }, [isGroupChat, leadName, messages]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-b from-teal-50 to-white rounded-lg">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-600 border-t-transparent mb-4"></div>
+        <p className="text-slate-600">Carregando histórico de conversas...</p>
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-b from-slate-50 to-white rounded-lg border-2 border-dashed border-slate-300">
+        <MessageCircle className="w-16 h-16 text-slate-400 mb-4" />
+        <p className="text-lg font-medium text-slate-700 mb-2">Nenhuma conversa encontrada</p>
+        <p className="text-sm text-slate-500">Não há histórico de mensagens com {leadName}</p>
+      </div>
+    );
+  }
 
   const deriveMediaTypeFromUrl = (url?: string, mimeType?: string): ZAPIMediaType | undefined => {
     if (!url && !mimeType) return undefined;

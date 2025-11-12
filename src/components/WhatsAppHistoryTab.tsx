@@ -835,6 +835,7 @@ export default function WhatsAppHistoryTab({
   );
   const [startConversationSelectedLeadId, setStartConversationSelectedLeadId] =
     useState<string | null>(null);
+  const [hasLoadedStartConversationLeads, setHasLoadedStartConversationLeads] = useState(false);
   const [manualChatPlaceholders, setManualChatPlaceholders] = useState<
     Map<string, ManualChatPlaceholder>
   >(new Map());
@@ -842,6 +843,7 @@ export default function WhatsAppHistoryTab({
     Map<string, ChatTypingPresenceState>
   >(() => new Map());
   const loadedPhoneLeadsRef = useRef<Set<string>>(new Set());
+  const startConversationCrmLeadsLoadingRef = useRef(false);
   const [fullscreenMedia, setFullscreenMedia] = useState<
     | {
         url: string;
@@ -2148,6 +2150,37 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
 
+  const loadStartConversationCrmLeads = useCallback(async () => {
+    if (hasLoadedStartConversationLeads || startConversationCrmLeadsLoadingRef.current) {
+      return;
+    }
+
+    startConversationCrmLeadsLoadingRef.current = true;
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, nome_completo, telefone, status, responsavel, observacoes')
+        .eq('arquivado', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        upsertLeadsIntoMaps(data as LeadPreview[]);
+      }
+
+      setHasLoadedStartConversationLeads(true);
+    } catch (error) {
+      console.error('Erro ao carregar leads do CRM:', error);
+      setStartConversationError((previous) => previous ?? 'Erro ao carregar leads do CRM.');
+    } finally {
+      startConversationCrmLeadsLoadingRef.current = false;
+    }
+  }, [hasLoadedStartConversationLeads, upsertLeadsIntoMaps]);
+
   const loadStartConversationContacts = useCallback(async () => {
     setStartConversationLoading(true);
     setStartConversationError(null);
@@ -2230,7 +2263,15 @@ export default function WhatsAppHistoryTab({
     if (startConversationContacts.length === 0) {
       void loadStartConversationContacts();
     }
-  }, [loadStartConversationContacts, startConversationContacts.length]);
+    if (!hasLoadedStartConversationLeads) {
+      void loadStartConversationCrmLeads();
+    }
+  }, [
+    hasLoadedStartConversationLeads,
+    loadStartConversationContacts,
+    loadStartConversationCrmLeads,
+    startConversationContacts.length,
+  ]);
 
   const handleCloseStartConversationModal = useCallback(() => {
     setIsStartConversationModalOpen(false);

@@ -105,6 +105,12 @@ vi.mock('../lib/zapiService', () => ({
   },
 }));
 
+vi.mock('../lib/configService', () => ({
+  configService: {
+    getSystemSettings: vi.fn(() => Promise.resolve({ company_name: 'Kifer Saúde' })),
+  },
+}));
+
 describe('WhatsAppHistoryTab attachments via drag and paste', () => {
   const renderComponent = () =>
     render(

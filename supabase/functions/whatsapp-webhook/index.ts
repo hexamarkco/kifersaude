@@ -813,11 +813,9 @@ async function handleReceivedCallback(
   payload: any,
   messageId: string
 ): Promise<EventProcessingResult> {
-  const basePayload = payload?.fromMe ? { ...payload, fromMe: false } : { ...payload };
+  const basePayload = { ...payload };
 
-  return upsertConversation(supabase, basePayload, messageId, {
-    messageType: 'received',
-  });
+  return upsertConversation(supabase, basePayload, messageId);
 }
 
 async function handleDeliveryCallback(

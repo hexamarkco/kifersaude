@@ -71,15 +71,15 @@ export function normalizePhoneNumber(raw: unknown): string | null {
 
   const lowerTrimmed = trimmed.toLowerCase();
   const hasLidIdentifier = LID_IDENTIFIER_REGEX.test(lowerTrimmed);
+  if (hasLidIdentifier) {
+    return trimmed;
+  }
   if (lowerTrimmed.includes('-group') || lowerTrimmed.includes('@g.us')) {
     return trimmed;
   }
 
   const digits = trimmed.replace(/\D/g, '');
   if (!digits) {
-    if (hasLidIdentifier) {
-      return null;
-    }
     return trimmed.includes('@') ? trimmed : null;
   }
 
@@ -208,6 +208,10 @@ export function extractNormalizedPhoneNumber(payload: any): string | null {
     const normalized = normalizePhoneNumber(candidate);
     if (normalized) {
       connectedNumbers.add(normalized);
+      const digitsOnly = normalized.replace(/\D/g, '');
+      if (digitsOnly) {
+        connectedNumbers.add(digitsOnly);
+      }
     }
   });
 
@@ -316,6 +320,10 @@ export function extractNormalizedTargetPhone(payload: any): string | null {
     const normalized = normalizePhoneNumber(candidate);
     if (normalized) {
       connectedNumbers.add(normalized);
+      const digitsOnly = normalized.replace(/\D/g, '');
+      if (digitsOnly) {
+        connectedNumbers.add(digitsOnly);
+      }
     }
   });
 

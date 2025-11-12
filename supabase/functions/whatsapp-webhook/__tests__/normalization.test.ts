@@ -6,13 +6,13 @@ import {
 } from '../phoneNumbers.ts';
 
 const normalizedWithLid = normalizePhoneNumber('5511987654321@lid');
-assert.strictEqual(normalizedWithLid, '5511987654321');
+assert.strictEqual(normalizedWithLid, '5511987654321@lid');
 
 const normalizedWithPrefixlessLid = normalizePhoneNumber('11987654321@lid');
-assert.strictEqual(normalizedWithPrefixlessLid, '5511987654321');
+assert.strictEqual(normalizedWithPrefixlessLid, '11987654321@lid');
 
 const normalizedWithLidSuffix = normalizePhoneNumber('5511987654321:lid');
-assert.strictEqual(normalizedWithLidSuffix, '5511987654321');
+assert.strictEqual(normalizedWithLidSuffix, '5511987654321:lid');
 
 const outgoingPayload = {
   fromMe: true,

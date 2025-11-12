@@ -3,6 +3,7 @@ import {
   WhatsAppConversation,
   WhatsAppMessageDeliveryStatus,
 } from './supabase';
+import { normalizePeerPhone } from './whatsappPeers';
 
 export interface ZAPIConfig {
   instanceId: string;
@@ -211,8 +212,18 @@ class ZAPIService {
   private clientToken = CLIENT_TOKEN;
 
   private normalizePhoneNumber(phoneNumber: string): string {
+    const normalized = normalizePeerPhone(phoneNumber);
+    if (normalized) {
+      return normalized;
+    }
+
     const cleanPhone = phoneNumber.replace(/\D/g, '');
-    return cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    const trimmed = cleanPhone.replace(/^0+/, '');
+    if (!trimmed) {
+      return cleanPhone;
+    }
+
+    return trimmed.startsWith('55') ? trimmed : `55${trimmed}`;
   }
 
   private getMediaFallbackText(mediaType?: ZAPIMediaType, durationSeconds?: number): string {

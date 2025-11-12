@@ -1,4 +1,5 @@
 const LID_IDENTIFIER_REGEX = /@lid\b|\blid@|:lid\b|\blid:/i;
+const GROUP_IDENTIFIER_REGEX = /@g\.us\b|[-_]group\b/i;
 
 function extractChatIdentifierValue(raw: unknown): string | null {
   if (typeof raw !== 'string') {
@@ -13,7 +14,7 @@ function extractChatIdentifierValue(raw: unknown): string | null {
   return LID_IDENTIFIER_REGEX.test(trimmed.toLowerCase()) ? trimmed : null;
 }
 
-function collectChatIdentifiers(payload: any): string[] {
+export function collectChatIdentifiers(payload: any): string[] {
   const candidateValues: unknown[] = [
     payload?.chatLid,
     payload?.chat?.lid,
@@ -70,6 +71,116 @@ function collectChatIdentifiers(payload: any): string[] {
   }
 
   return preferred.length > 0 ? preferred : secondary;
+}
+
+export function normalizePeerPhoneDigits(raw: unknown): string | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    raw = String(Math.trunc(raw));
+  }
+
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (GROUP_IDENTIFIER_REGEX.test(lower)) {
+    return null;
+  }
+
+  let sanitized = trimmed.replace(/^lid@/i, '').replace(/(@|:)lid$/i, '');
+  sanitized = sanitized.replace(/@s\.whatsapp\.net$/i, '');
+
+  const digits = sanitized.replace(/\D/g, '');
+  if (!digits) {
+    return null;
+  }
+
+  let normalized = digits.replace(/^0+/, '');
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.startsWith('55')) {
+    if (normalized.length >= 13 && normalized.startsWith('550')) {
+      normalized = `55${normalized.slice(3)}`;
+    }
+    return normalized;
+  }
+
+  if (normalized.length === 11 || normalized.length === 10) {
+    normalized = `55${normalized}`;
+  }
+
+  return normalized;
+}
+
+export function normalizePeerChatIdentifier(raw: unknown): { normalized: string; raw: string } | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    raw = String(Math.trunc(raw));
+  }
+
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (GROUP_IDENTIFIER_REGEX.test(lower)) {
+    return null;
+  }
+
+  if (!LID_IDENTIFIER_REGEX.test(lower)) {
+    return null;
+  }
+
+  const normalized = normalizePeerPhoneDigits(trimmed);
+  if (!normalized) {
+    return null;
+  }
+
+  return { normalized, raw: trimmed };
+}
+
+export function normalizePeerLookupKey(raw: unknown): { key: string; isGroup: boolean } | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    raw = String(Math.trunc(raw));
+  }
+
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (GROUP_IDENTIFIER_REGEX.test(lower)) {
+    return { key: lower, isGroup: true };
+  }
+
+  const chat = normalizePeerChatIdentifier(trimmed);
+  if (chat) {
+    return { key: chat.normalized, isGroup: false };
+  }
+
+  const phone = normalizePeerPhoneDigits(trimmed);
+  if (phone) {
+    return { key: phone, isGroup: false };
+  }
+
+  return { key: trimmed, isGroup: false };
 }
 
 export function normalizePhoneNumber(raw: unknown): string | null {

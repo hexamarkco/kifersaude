@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   content text NOT NULL,
+  category text,
+  is_favorite boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

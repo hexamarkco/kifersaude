@@ -8,8 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "npm run test:build && node --test --loader ./scripts/node-test-loader.mjs ./dist-tests/components/__tests__/ChatMetricsBadges.test.js",
-    "test:build": "tsc --project tsconfig.test.json",
+    "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {

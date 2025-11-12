@@ -40,9 +40,102 @@ export function formatDateTimeForInput(date: string | null | undefined): string 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-export function convertLocalToUTC(localDateTimeString: string): string {
-  const localDate = new Date(localDateTimeString);
-  return localDate.toISOString();
+const DATE_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
+
+const TIMEZONE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false
+});
+
+const getFormatterPartValue = (
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes
+) => {
+  const part = parts.find((item) => item.type === type);
+  return part ? parseInt(part.value, 10) : 0;
+};
+
+export function convertLocalToUTC(
+  localDateTimeString: string,
+  timeZone: string = SAO_PAULO_TIMEZONE
+): string {
+  if (!localDateTimeString) {
+    return '';
+  }
+
+  const [datePart, timePart] = localDateTimeString.split('T');
+  if (!datePart || !timePart) {
+    const parsed = new Date(localDateTimeString);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  }
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+
+  if ([year, month, day, hour, minute].some((value) => Number.isNaN(value))) {
+    const parsed = new Date(localDateTimeString);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  }
+
+  const baseUtcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const formatter = timeZone === SAO_PAULO_TIMEZONE
+    ? TIMEZONE_FORMATTER
+    : new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+  const parts = formatter.formatToParts(baseUtcDate);
+
+  const tzRepresentation = Date.UTC(
+    getFormatterPartValue(parts, 'year'),
+    getFormatterPartValue(parts, 'month') - 1,
+    getFormatterPartValue(parts, 'day'),
+    getFormatterPartValue(parts, 'hour'),
+    getFormatterPartValue(parts, 'minute'),
+    getFormatterPartValue(parts, 'second')
+  );
+
+  const offset = tzRepresentation - baseUtcDate.getTime();
+  return new Date(baseUtcDate.getTime() - offset).toISOString();
+}
+
+export function getDateKey(
+  date: Date | string,
+  timeZone: string = SAO_PAULO_TIMEZONE
+): string {
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+
+  if (Number.isNaN(targetDate.getTime())) {
+    return '';
+  }
+
+  if (timeZone === SAO_PAULO_TIMEZONE) {
+    return DATE_KEY_FORMATTER.format(targetDate);
+  }
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(targetDate);
 }
 
 export function formatDateTimeBR(date: string): string {

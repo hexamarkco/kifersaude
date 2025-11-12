@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Reminder } from '../lib/supabase';
 import { ChevronLeft, ChevronRight, X, Bell, Clock, AlertCircle } from 'lucide-react';
-import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { formatDateTimeFullBR, getDateKey, SAO_PAULO_TIMEZONE } from '../lib/dateUtils';
 
 type RemindersCalendarProps = {
   reminders: Reminder[];
@@ -41,12 +41,9 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
 
   const getRemindersForDate = (day: number) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateKey = getDateKey(date, SAO_PAULO_TIMEZONE);
 
-    return reminders.filter(reminder => {
-      const reminderDate = new Date(reminder.data_lembrete).toISOString().split('T')[0];
-      return reminderDate === dateStr;
-    });
+    return reminders.filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === dateKey);
   };
 
   const handleDateClick = (day: number) => {
@@ -57,11 +54,10 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
   const getDayReminders = () => {
     if (!selectedDate) return [];
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    return reminders.filter(reminder => {
-      const reminderDate = new Date(reminder.data_lembrete).toISOString().split('T')[0];
-      return reminderDate === dateStr;
-    }).sort((a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime());
+    const dateKey = getDateKey(selectedDate, SAO_PAULO_TIMEZONE);
+    return reminders
+      .filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === dateKey)
+      .sort((a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime());
   };
 
   const renderCalendar = () => {
@@ -76,15 +72,12 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dayReminders = getRemindersForDate(day);
-      const isToday =
-        day === new Date().getDate() &&
-        currentDate.getMonth() === new Date().getMonth() &&
-        currentDate.getFullYear() === new Date().getFullYear();
-      const isSelected =
-        selectedDate &&
-        day === selectedDate.getDate() &&
-        currentDate.getMonth() === selectedDate.getMonth() &&
-        currentDate.getFullYear() === selectedDate.getFullYear();
+      const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
+      const cellKey = getDateKey(cellDate, SAO_PAULO_TIMEZONE);
+      const selectedKey = selectedDate ? getDateKey(selectedDate, SAO_PAULO_TIMEZONE) : null;
+      const isToday = cellKey === todayKey;
+      const isSelected = selectedKey === cellKey;
 
       days.push(
         <button

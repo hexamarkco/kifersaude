@@ -19,6 +19,7 @@ import {
   Lead,
   Contract,
   WhatsAppChatPreference,
+  WhatsAppScheduledMessage,
 } from '../lib/supabase';
 import { gptService } from '../lib/gptService';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
@@ -29,6 +30,11 @@ import {
   deleteWhatsAppQuickReply,
   type WhatsAppQuickReply,
 } from '../lib/whatsappQuickRepliesService';
+import {
+  listScheduledWhatsAppMessages,
+  scheduleWhatsAppMessage,
+  cancelScheduledWhatsAppMessage,
+} from '../lib/whatsappSchedulingService';
 import StatusDropdown from './StatusDropdown';
 import LeadDetails from './LeadDetails';
 import LeadForm from './LeadForm';
@@ -76,6 +82,8 @@ import {
   Edit,
   Play,
   Scissors,
+  CalendarClock,
+  Copy,
 } from 'lucide-react';
 import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -161,6 +169,11 @@ const parsedCriticalMinutes = parseNumberFromEnv(
 const SLA_WARNING_MINUTES = parsedWarningMinutes;
 const SLA_CRITICAL_MINUTES = Math.max(parsedWarningMinutes, parsedCriticalMinutes);
 
+const QUICK_REPLY_CONTEXT_MESSAGES = 8;
+const AUDIO_AUTO_TRANSCRIBE_LIMIT = 6;
+const MINIMUM_SCHEDULE_OFFSET_MINUTES = 2;
+const DEFAULT_SCHEDULE_OFFSET_MINUTES = 30;
+
 
 let lameJsLoadPromise: Promise<typeof window.lamejs> | null = null;
 
@@ -200,6 +213,172 @@ const getOutgoingDeliveryStatusVisual = (
   return OUTGOING_STATUS_VISUALS[status] ?? null;
 };
 
+const tokenizeText = (text: string | null | undefined): string[] => {
+  if (!text) {
+    return [];
+  }
+
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  return normalized.match(/[a-z0-9]{3,}/g) ?? [];
+};
+
+const buildContextualQuickReplySuggestions = (
+  quickReplies: WhatsAppQuickReply[],
+  messages: WhatsAppConversation[],
+  lead?: Lead
+): WhatsAppQuickReply[] => {
+  if (quickReplies.length === 0) {
+    return [];
+  }
+
+  const incomingMessages = messages
+    .filter((message) => message.message_type === 'received')
+    .slice(-QUICK_REPLY_CONTEXT_MESSAGES);
+
+  const conversationTokens = new Set<string>();
+  let lastIncoming: WhatsAppConversation | undefined;
+
+  incomingMessages.forEach((message) => {
+    const combined = [
+      message.message_text,
+      message.media_caption,
+      message.quoted_message_text,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    tokenizeText(combined).forEach((token) => conversationTokens.add(token));
+    lastIncoming = message;
+  });
+
+  const lastIncomingText =
+    lastIncoming?.message_text || lastIncoming?.media_caption || lastIncoming?.quoted_message_text || '';
+
+  const leadTokens = new Set<string>();
+  if (lead) {
+    const leadRelatedFields = [
+      lead.status,
+      lead.origem,
+      lead.tipo_contratacao,
+      lead.observacoes,
+      lead.cidade,
+      lead.regiao,
+      lead.estado,
+    ];
+
+    leadRelatedFields
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .forEach((value) => {
+        tokenizeText(value).forEach((token) => leadTokens.add(token));
+      });
+  }
+
+  const scored = quickReplies.map((reply) => {
+    const replyTokens = new Set(
+      tokenizeText(`${reply.title} ${reply.content} ${reply.category ?? ''}`)
+    );
+    let score = 0;
+
+    replyTokens.forEach((token) => {
+      if (conversationTokens.has(token)) {
+        score += 3;
+      }
+      if (leadTokens.has(token)) {
+        score += 1;
+      }
+    });
+
+    if (reply.category) {
+      tokenizeText(reply.category).forEach((token) => {
+        if (conversationTokens.has(token)) {
+          score += 1;
+        }
+      });
+    }
+
+    if (reply.is_favorite) {
+      score += 1;
+    }
+
+    const replyContainsQuestion = reply.content.includes('?');
+    if (replyContainsQuestion && lastIncomingText?.includes('?')) {
+      score += 1;
+    }
+
+    return { reply, score };
+  });
+
+  const ranked = scored
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      if (a.reply.is_favorite !== b.reply.is_favorite) {
+        return Number(b.reply.is_favorite) - Number(a.reply.is_favorite);
+      }
+      return a.reply.title.localeCompare(b.reply.title);
+    })
+    .slice(0, 3)
+    .map(({ reply }) => reply);
+
+  if (ranked.length > 0) {
+    return ranked;
+  }
+
+  const favoriteFallback = quickReplies.filter((reply) => reply.is_favorite).slice(0, 3);
+  if (favoriteFallback.length > 0) {
+    return favoriteFallback;
+  }
+
+  return quickReplies.slice(0, 3);
+};
+
+const formatDatetimeLocalValue = (date: Date): string => {
+  const pad = (value: number) => value.toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const parseDatetimeLocalString = (value: string): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const getScheduledMessageStatusLabel = (status?: string | null): string => {
+  switch (status) {
+    case 'pending':
+    case 'scheduled':
+      return 'Agendado';
+    case 'sent':
+      return 'Enviado';
+    case 'failed':
+      return 'Falhou';
+    case 'cancelled':
+      return 'Cancelado';
+    default:
+      return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Desconhecido';
+  }
+};
+
 type MessageReactionDetail = {
   name: string;
   timestamp: string;
@@ -218,6 +397,26 @@ type ReactionModalState = {
   message: MessageWithReactions;
   summary: MessageReactionSummary;
 };
+
+type AudioInsightState = {
+  isProcessing: boolean;
+  isSummarizing: boolean;
+  transcription?: string | null;
+  summary?: string | null;
+  error?: string | null;
+  summaryError?: string | null;
+  updatedAt?: string | null;
+};
+
+const createEmptyAudioInsightState = (): AudioInsightState => ({
+  isProcessing: false,
+  isSummarizing: false,
+  transcription: null,
+  summary: null,
+  error: null,
+  summaryError: null,
+  updatedAt: null,
+});
 
 type ChatTypingPresenceState = {
   isTyping: boolean;
@@ -928,6 +1127,44 @@ export default function WhatsAppHistoryTab({
     category: '',
     is_favorite: false,
   }));
+  const [scheduledMessages, setScheduledMessages] = useState<WhatsAppScheduledMessage[]>([]);
+  const [isScheduledMessagesLoading, setIsScheduledMessagesLoading] = useState(false);
+  const [scheduledMessagesError, setScheduledMessagesError] = useState<string | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleDateTime, setScheduleDateTime] = useState('');
+  const [isSchedulingMessage, setIsSchedulingMessage] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [cancellingScheduledMessageId, setCancellingScheduledMessageId] = useState<string | null>(null);
+  const [audioInsightsMap, setAudioInsightsMap] = useState<Map<string, AudioInsightState>>(new Map());
+  const audioInsightsRef = useRef(audioInsightsMap);
+  const computeDefaultScheduleDateTime = useCallback(() => {
+    const base = new Date();
+    base.setMinutes(base.getMinutes() + DEFAULT_SCHEDULE_OFFSET_MINUTES);
+    base.setSeconds(0, 0);
+    return formatDatetimeLocalValue(base);
+  }, []);
+  const scheduleTimezone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (error) {
+      console.warn('Não foi possível determinar o fuso horário local:', error);
+      return 'Horário local';
+    }
+  }, []);
+  const updateAudioInsight = useCallback(
+    (
+      messageId: string,
+      updater: (previous: AudioInsightState) => AudioInsightState
+    ) => {
+      setAudioInsightsMap((current) => {
+        const next = new Map(current);
+        const previous = current.get(messageId) ?? createEmptyAudioInsightState();
+        next.set(messageId, updater(previous));
+        return next;
+      });
+    },
+    []
+  );
   const [composerReplyMessage, setComposerReplyMessage] = useState<MessageWithReactions | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [manualScrollTargetId, setManualScrollTargetId] = useState<string | null>(null);
@@ -1074,6 +1311,10 @@ export default function WhatsAppHistoryTab({
   const highlightTimeoutRef = useRef<number | null>(null);
   const reactionMenuRef = useRef<HTMLDivElement | null>(null);
   const selectionFeedbackTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    audioInsightsRef.current = audioInsightsMap;
+  }, [audioInsightsMap]);
 
   const selectedPhone = activePhone;
   const hasSelectedPhones = selectedPhones.size > 0;
@@ -2120,6 +2361,34 @@ export default function WhatsAppHistoryTab({
     },
     []
   );
+
+  const loadScheduledMessagesForChat = useCallback(async () => {
+    if (!selectedPhone) {
+      setScheduledMessages([]);
+      setScheduledMessagesError(null);
+      return;
+    }
+
+    setIsScheduledMessagesLoading(true);
+    setScheduledMessagesError(null);
+
+    try {
+      const items = await listScheduledWhatsAppMessages(selectedPhone, {
+        includePast: false,
+        limit: 25,
+      });
+      setScheduledMessages(items);
+    } catch (error) {
+      console.error('Erro ao carregar mensagens agendadas:', error);
+      setScheduledMessagesError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as mensagens agendadas.'
+      );
+    } finally {
+      setIsScheduledMessagesLoading(false);
+    }
+  }, [selectedPhone]);
 
   const handleLeadDataUpdated = useCallback(
     async (leadId: string) => {
@@ -3252,6 +3521,14 @@ export default function WhatsAppHistoryTab({
 
   const selectedLeadId = selectedChatLead?.id ?? null;
 
+  const contextualQuickReplies = useMemo(() => {
+    return buildContextualQuickReplySuggestions(
+      quickReplies,
+      selectedChatMessages,
+      selectedChatLead
+    );
+  }, [quickReplies, selectedChatMessages, selectedChatLead]);
+
   const selectedLeadContracts = useMemo(() => {
     if (!selectedLeadId) {
       return undefined;
@@ -3337,9 +3614,336 @@ export default function WhatsAppHistoryTab({
     }
   }, [composerText, selectedChatLead, selectedChatMessages, composerTextareaRef]);
 
+  const handleOpenScheduleModal = useCallback(() => {
+    if (!selectedPhone) {
+      setComposerError('Selecione uma conversa para agendar mensagens.');
+      return;
+    }
+
+    setScheduleError(null);
+    setIsScheduleModalOpen(true);
+    setScheduleDateTime((current) => current || computeDefaultScheduleDateTime());
+    void loadScheduledMessagesForChat();
+  }, [
+    computeDefaultScheduleDateTime,
+    loadScheduledMessagesForChat,
+    selectedPhone,
+  ]);
+
+  const handleCloseScheduleModal = useCallback(() => {
+    setIsScheduleModalOpen(false);
+    setScheduleError(null);
+  }, []);
+
+  const handleConfirmScheduleMessage = useCallback(async () => {
+    if (!selectedPhone) {
+      setScheduleError('Selecione uma conversa para agendar mensagens.');
+      return;
+    }
+
+    const trimmedMessage = composerText.trim();
+    if (!trimmedMessage) {
+      setScheduleError('Digite uma mensagem antes de agendar.');
+      return;
+    }
+
+    if (attachments.length > 0) {
+      setScheduleError('Envio agendado com anexos ainda não é suportado.');
+      return;
+    }
+
+    const parsedDate = parseDatetimeLocalString(scheduleDateTime);
+    if (!parsedDate) {
+      setScheduleError('Informe uma data e hora válidas.');
+      return;
+    }
+
+    const now = new Date();
+    if (parsedDate.getTime() < now.getTime() + MINIMUM_SCHEDULE_OFFSET_MINUTES * 60 * 1000) {
+      setScheduleError(
+        `Escolha um horário pelo menos ${MINIMUM_SCHEDULE_OFFSET_MINUTES} minutos no futuro.`
+      );
+      return;
+    }
+
+    setIsSchedulingMessage(true);
+    setScheduleError(null);
+    setComposerError(null);
+
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await scheduleWhatsAppMessage({
+        phoneNumber: selectedPhone,
+        message: trimmedMessage,
+        scheduledAt: parsedDate.toISOString(),
+        timezone,
+        replyMessageId: composerReplyMessage?.message_id ?? null,
+      });
+
+      setComposerSuccess('Mensagem agendada com sucesso!');
+      setComposerText('');
+      setComposerReplyMessage(null);
+      clearAttachments();
+      setIsScheduleModalOpen(false);
+      await loadScheduledMessagesForChat();
+    } catch (error) {
+      setScheduleError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível agendar a mensagem. Tente novamente mais tarde.'
+      );
+    } finally {
+      setIsSchedulingMessage(false);
+    }
+  }, [
+    attachments.length,
+    clearAttachments,
+    composerReplyMessage,
+    composerText,
+    loadScheduledMessagesForChat,
+    scheduleDateTime,
+    selectedPhone,
+  ]);
+
+  const handleCancelScheduledMessage = useCallback(
+    async (message: WhatsAppScheduledMessage) => {
+      if (!message?.id) {
+        return;
+      }
+
+      setScheduleError(null);
+      setCancellingScheduledMessageId(message.id);
+
+      try {
+        await cancelScheduledWhatsAppMessage(message.id);
+        setComposerSuccess('Agendamento cancelado com sucesso.');
+        await loadScheduledMessagesForChat();
+      } catch (error) {
+        setScheduleError(
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível cancelar a mensagem agendada.'
+        );
+      } finally {
+        setCancellingScheduledMessageId(null);
+      }
+    },
+    [loadScheduledMessagesForChat]
+  );
+
+  const handleApplyQuickScheduleOffset = useCallback((minutes: number) => {
+    const target = new Date();
+    target.setMinutes(target.getMinutes() + minutes);
+    target.setSeconds(0, 0);
+    setScheduleDateTime(formatDatetimeLocalValue(target));
+    setScheduleError(null);
+  }, []);
+
+  const handleApplyScheduleTomorrowMorning = useCallback(() => {
+    const target = new Date();
+    target.setDate(target.getDate() + 1);
+    target.setHours(9, 0, 0, 0);
+    setScheduleDateTime(formatDatetimeLocalValue(target));
+    setScheduleError(null);
+  }, []);
+
+  const handleApplyScheduleNextWeekMorning = useCallback(() => {
+    const target = new Date();
+    target.setDate(target.getDate() + 7);
+    target.setHours(9, 0, 0, 0);
+    setScheduleDateTime(formatDatetimeLocalValue(target));
+    setScheduleError(null);
+  }, []);
+
+  const handleTranscribeAudioMessage = useCallback(
+    async (
+      message: Pick<WhatsAppConversation, 'id' | 'message_id' | 'media_url' | 'media_type'>,
+      options: { force?: boolean } = {}
+    ) => {
+      const messageKey = message.message_id ?? message.id;
+      const mediaUrl = message.media_url;
+      const mediaType = message.media_type?.toLowerCase();
+
+      if (!messageKey || !mediaUrl || mediaType !== 'audio') {
+        return;
+      }
+
+      const currentInsight = audioInsightsRef.current.get(messageKey);
+      if (!options.force && currentInsight) {
+        if (currentInsight.isProcessing) {
+          return;
+        }
+        if (currentInsight.transcription || currentInsight.error) {
+          return;
+        }
+      }
+
+      updateAudioInsight(messageKey, (previous) => ({
+        ...previous,
+        isProcessing: true,
+        isSummarizing: previous.isSummarizing && !!previous.summary,
+        error: null,
+      }));
+
+      try {
+        const result = await gptService.transcribeAudioFromUrl(mediaUrl);
+        if (!result.success || !result.transcription) {
+          throw new Error(result.error || 'Falha ao transcrever o áudio.');
+        }
+
+        updateAudioInsight(messageKey, (previous) => ({
+          ...previous,
+          isProcessing: false,
+          error: null,
+          transcription: result.transcription,
+          updatedAt: new Date().toISOString(),
+        }));
+      } catch (error) {
+        updateAudioInsight(messageKey, (previous) => ({
+          ...previous,
+          isProcessing: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível transcrever o áudio.',
+        }));
+      }
+    },
+    [updateAudioInsight]
+  );
+
+  const handleGenerateAudioSummary = useCallback(
+    async (message: MessageWithReactions) => {
+      const messageKey = message.message_id ?? message.id;
+      if (!messageKey) {
+        return;
+      }
+
+      const currentInsight = audioInsightsRef.current.get(messageKey);
+      if (!currentInsight?.transcription) {
+        await handleTranscribeAudioMessage(message, { force: true });
+      }
+
+      const refreshedInsight = audioInsightsRef.current.get(messageKey);
+      if (!refreshedInsight?.transcription) {
+        updateAudioInsight(messageKey, (previous) => ({
+          ...previous,
+          summaryError: 'Transcrição indisponível para gerar o resumo.',
+        }));
+        return;
+      }
+
+      if (refreshedInsight.isSummarizing) {
+        return;
+      }
+
+      updateAudioInsight(messageKey, (previous) => ({
+        ...previous,
+        isSummarizing: true,
+        summaryError: null,
+      }));
+
+      try {
+        const result = await gptService.summarizeTranscription(refreshedInsight.transcription, {
+          lead: selectedChatLead ?? undefined,
+        });
+
+        if (!result.success || !result.summary) {
+          throw new Error(result.error || 'Falha ao gerar resumo do áudio.');
+        }
+
+        updateAudioInsight(messageKey, (previous) => ({
+          ...previous,
+          isSummarizing: false,
+          summary: result.summary,
+          summaryError: null,
+        }));
+      } catch (error) {
+        updateAudioInsight(messageKey, (previous) => ({
+          ...previous,
+          isSummarizing: false,
+          summaryError:
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível gerar o resumo do áudio.',
+        }));
+      }
+    },
+    [handleTranscribeAudioMessage, selectedChatLead, updateAudioInsight]
+  );
+
+  const handleRefreshAudioTranscription = useCallback(
+    async (message: MessageWithReactions) => {
+      await handleTranscribeAudioMessage(message, { force: true });
+    },
+    [handleTranscribeAudioMessage]
+  );
+
+  const handleCopyTranscriptionToClipboard = useCallback(
+    async (transcription: string) => {
+      if (!transcription) {
+        return;
+      }
+
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        setComposerError('Copie o texto manualmente: recurso indisponível neste navegador.');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(transcription);
+        setComposerSuccess('Transcrição copiada para a área de transferência.');
+      } catch (error) {
+        console.error('Erro ao copiar transcrição:', error);
+        setComposerError('Não foi possível copiar a transcrição. Tente novamente ou copie manualmente.');
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     setIsLeadDetailsPanelOpen(false);
+    setIsScheduleModalOpen(false);
+    setScheduleError(null);
+    setScheduleDateTime('');
   }, [selectedPhone]);
+
+  useEffect(() => {
+    if (!selectedPhone) {
+      setScheduledMessages([]);
+      setScheduledMessagesError(null);
+      return;
+    }
+
+    void loadScheduledMessagesForChat();
+  }, [loadScheduledMessagesForChat, selectedPhone]);
+
+  useEffect(() => {
+    const audioMessages = selectedChatMessages
+      .filter((message) => message.media_type?.toLowerCase() === 'audio' && message.media_url)
+      .slice(-AUDIO_AUTO_TRANSCRIBE_LIMIT);
+
+    audioMessages.forEach((message, index) => {
+      const messageKey = message.message_id ?? message.id;
+      if (!messageKey) {
+        return;
+      }
+
+      const insight = audioInsightsRef.current.get(messageKey);
+      if (insight && (insight.transcription || insight.isProcessing || insight.error)) {
+        return;
+      }
+
+      const delay = index * 200;
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          void handleTranscribeAudioMessage(message);
+        }, delay);
+      } else {
+        void handleTranscribeAudioMessage(message);
+      }
+    });
+  }, [handleTranscribeAudioMessage, selectedChatMessages]);
 
   const handleToggleLeadDetailsPanel = useCallback(() => {
     if (!selectedPhone) {
@@ -6722,6 +7326,11 @@ const getOutgoingMessageStatus = (
                               const outgoingStatusVisual = getOutgoingDeliveryStatusVisual(outgoingStatus);
                               const OutgoingStatusIcon = outgoingStatusVisual?.icon;
                               const messageKey = message.message_id || message.id || '';
+                              const audioInsight = messageKey
+                                ? audioInsightsMap.get(messageKey)
+                                : undefined;
+                              const isAudioMessage =
+                                message.media_type?.toLowerCase() === 'audio' && Boolean(message.media_url);
                               const isMessageSelectedForForward =
                                 Boolean(messageKey) && forwardingMessageIds.includes(messageKey);
                               const isForwardSelectionActive = isSelectingForwardMessages;
@@ -6841,6 +7450,100 @@ const getOutgoingMessageStatus = (
                                       <p className="text-sm whitespace-pre-wrap break-words">{bubbleText}</p>
                                     )}
                                     {mediaContent}
+                                    {isAudioMessage && (
+                                      <div
+                                        className={`w-full space-y-2 rounded-lg border px-3 py-2 text-xs ${
+                                          message.message_type === 'sent'
+                                            ? 'border-white/30 bg-white/10 text-teal-50'
+                                            : 'border-slate-200 bg-slate-50 text-slate-600'
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="font-semibold uppercase tracking-wide text-[10px]">
+                                            Transcrição automática
+                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => void handleRefreshAudioTranscription(message)}
+                                              className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-1 text-[11px] font-medium transition-colors hover:border-teal-200 hover:text-teal-700"
+                                            >
+                                              <RefreshCcw className="h-3.5 w-3.5" /> Atualizar
+                                            </button>
+                                            {audioInsight?.transcription && (
+                                              <button
+                                                type="button"
+                                                onClick={() => void handleCopyTranscriptionToClipboard(audioInsight.transcription ?? '')}
+                                                className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-1 text-[11px] font-medium transition-colors hover:border-teal-200 hover:text-teal-700"
+                                              >
+                                                <Copy className="h-3.5 w-3.5" /> Copiar
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {audioInsight?.isProcessing ? (
+                                          <div className="flex items-center gap-2 text-[11px]">
+                                            <Loader className="h-3.5 w-3.5 animate-spin" /> Transcrevendo áudio...
+                                          </div>
+                                        ) : audioInsight?.transcription ? (
+                                          <p className="whitespace-pre-wrap break-words text-sm">
+                                            {audioInsight.transcription}
+                                          </p>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleTranscribeAudioMessage(message, { force: true })}
+                                            className="inline-flex items-center gap-2 rounded-md border border-teal-200 bg-white px-3 py-1.5 text-[11px] font-medium text-teal-600 transition-colors hover:bg-teal-50"
+                                          >
+                                            <Sparkles className="h-3.5 w-3.5" /> Gerar transcrição
+                                          </button>
+                                        )}
+                                        {audioInsight?.error && (
+                                          <p className="text-[11px] text-amber-600">{audioInsight.error}</p>
+                                        )}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleGenerateAudioSummary(message)}
+                                            disabled={!audioInsight?.transcription || audioInsight?.isSummarizing}
+                                            className={`inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+                                              !audioInsight?.transcription || audioInsight?.isSummarizing
+                                                ? 'cursor-not-allowed border-slate-200 text-slate-400'
+                                                : 'border-teal-200 text-teal-600 hover:border-teal-300 hover:text-teal-700'
+                                            }`}
+                                          >
+                                            {audioInsight?.isSummarizing ? (
+                                              <Loader className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                              <Sparkles className="h-3.5 w-3.5" />
+                                            )}
+                                            Resumo rápido
+                                          </button>
+                                          {audioInsight?.updatedAt && (
+                                            <span className="text-[10px] text-slate-400">
+                                              Atualizado em {formatDateTimeFullBR(audioInsight.updatedAt)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {audioInsight?.summary && (
+                                          <div
+                                            className={`rounded-md border px-3 py-2 text-xs ${
+                                              message.message_type === 'sent'
+                                                ? 'border-white/20 bg-white/10 text-teal-50'
+                                                : 'border-teal-200 bg-teal-50 text-teal-900'
+                                            }`}
+                                          >
+                                            <p className="font-semibold uppercase tracking-wide text-[10px]">Resumo</p>
+                                            <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+                                              {audioInsight.summary}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {audioInsight?.summaryError && (
+                                          <p className="text-[11px] text-amber-600">{audioInsight.summaryError}</p>
+                                        )}
+                                      </div>
+                                    )}
                                     <div
                                       className={`flex items-center justify-end space-x-2 text-[11px] ${timestampColor}`}
                                     >
@@ -7417,6 +8120,19 @@ const getOutgoingMessageStatus = (
                           <div className="flex items-center px-2">
                             <button
                               type="button"
+                              onClick={handleOpenScheduleModal}
+                              disabled={isSendingMessage || !selectedPhone}
+                              className={`mr-2 flex h-10 w-10 items-center justify-center rounded-full text-teal-600 transition-colors ${
+                                !selectedPhone || isSendingMessage
+                                  ? 'bg-teal-100 text-teal-300 cursor-not-allowed'
+                                  : 'bg-teal-100 hover:bg-teal-200'
+                              } disabled:cursor-not-allowed`}
+                              title="Agendar envio"
+                            >
+                              <CalendarClock className="h-5 w-5" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => void handleSendMessage()}
                               disabled={!hasContentToSend || isSendingMessage}
                               className={`flex h-10 w-10 items-center justify-center rounded-full text-white shadow transition-colors ${
@@ -7443,6 +8159,44 @@ const getOutgoingMessageStatus = (
                         )}
                       </div>
                     </div>
+
+                    {contextualQuickReplies.length > 0 && (
+                      <div className="space-y-2 rounded-lg border border-slate-200 bg-white/80 p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <MessageSquare className="h-3.5 w-3.5 text-teal-500" />
+                            Sugestões rápidas
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsQuickRepliesMenuOpen(true);
+                              setQuickRepliesView('favorites');
+                            }}
+                            className="text-[11px] font-medium text-teal-600 transition-colors hover:text-teal-700"
+                          >
+                            Ver todas
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {contextualQuickReplies.map((reply) => (
+                            <button
+                              key={reply.id}
+                              type="button"
+                              onClick={() => handleInsertQuickReply(reply)}
+                              className="flex min-w-[160px] flex-1 flex-col items-start gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 transition-colors hover:border-teal-200 hover:bg-teal-50/70 hover:text-teal-700"
+                            >
+                              <span className="text-sm font-semibold text-slate-800 line-clamp-1">
+                                {reply.title}
+                              </span>
+                              <span className="line-clamp-2 text-[11px] leading-snug text-slate-500">
+                                {reply.content}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {attachmentsWithoutRecordedAudio.length > 0 && (
                       <div className="space-y-2">
@@ -7701,6 +8455,211 @@ const getOutgoingMessageStatus = (
         )}
       </div>
       </div>
+
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">
+          <div
+            className="relative w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-message-title"
+          >
+            <button
+              type="button"
+              onClick={handleCloseScheduleModal}
+              className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label="Fechar modal de agendamento"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="space-y-6 p-6">
+              <div className="space-y-1">
+                <h2 id="schedule-message-title" className="text-lg font-semibold text-slate-900">
+                  Agendar mensagem
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Defina data e hora para enviar esta mensagem automaticamente. Fuso horário:{' '}
+                  <span className="font-medium text-slate-700">{scheduleTimezone}</span>.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <span className="text-xs font-semibold uppercase text-slate-500">Mensagem atual</span>
+                <div className="min-h-[72px] whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  {composerText.trim() || 'Digite a mensagem que deseja agendar.'}
+                </div>
+                {composerReplyMessage && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    <span className="font-semibold text-slate-700">Responder a:</span>{' '}
+                    {getMessageSenderLabel(composerReplyMessage)} — {getComposerReplyPreviewText(composerReplyMessage)}
+                  </div>
+                )}
+                {attachments.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    O agendamento com anexos ainda não é suportado. Remova os anexos para prosseguir.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700" htmlFor="schedule-date">
+                    Data e hora de envio
+                  </label>
+                  <input
+                    id="schedule-date"
+                    type="datetime-local"
+                    value={scheduleDateTime}
+                    onChange={(event) => setScheduleDateTime(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                  />
+                  <p className="text-xs text-slate-500">Fuso horário: {scheduleTimezone}</p>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Sugestões rápidas</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyQuickScheduleOffset(15)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Em 15 min
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyQuickScheduleOffset(30)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Em 30 min
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyQuickScheduleOffset(60)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Em 1 hora
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyQuickScheduleOffset(120)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Em 2 horas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApplyScheduleTomorrowMorning}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Amanhã às 9h
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApplyScheduleNextWeekMorning}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    >
+                      Próxima semana
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {scheduleError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {scheduleError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-700">Próximas mensagens agendadas</h3>
+                  <button
+                    type="button"
+                    onClick={() => void loadScheduledMessagesForChat()}
+                    className="text-xs font-medium text-teal-600 transition-colors hover:text-teal-700"
+                  >
+                    Atualizar
+                  </button>
+                </div>
+                {isScheduledMessagesLoading ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                    <Loader className="h-4 w-4 animate-spin" /> Carregando agendamentos...
+                  </div>
+                ) : scheduledMessagesError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                    {scheduledMessagesError}
+                  </div>
+                ) : scheduledMessages.length === 0 ? (
+                  <p className="text-sm text-slate-500">Nenhuma mensagem agendada para este contato.</p>
+                ) : (
+                  <ul className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                    {scheduledMessages.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-800">
+                              {item.message_text?.trim() || '(Mensagem sem texto)'}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {formatDateTimeFullBR(item.scheduled_for)}
+                            </p>
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              {getScheduledMessageStatusLabel(item.status)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleCancelScheduledMessage(item)}
+                            disabled={cancellingScheduledMessageId === item.id}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {cancellingScheduledMessageId === item.id ? (
+                              <Loader className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                            Cancelar
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseScheduleModal}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmScheduleMessage()}
+                  disabled={isSchedulingMessage || !composerTextHasContent || attachments.length > 0}
+                  className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors ${
+                    isSchedulingMessage || !composerTextHasContent || attachments.length > 0
+                      ? 'bg-teal-300 cursor-not-allowed'
+                      : 'bg-teal-600 hover:bg-teal-700'
+                  }`}
+                >
+                  {isSchedulingMessage ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CalendarClock className="h-4 w-4" />
+                  )}
+                  Confirmar agendamento
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isAudioEditorOpen && recordedAudio && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4 py-6">

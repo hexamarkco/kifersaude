@@ -64,6 +64,20 @@ export interface RewriteMessageResult {
   error?: string;
 }
 
+export interface AudioTranscriptionResult {
+  success: boolean;
+  transcription?: string;
+  error?: string;
+}
+
+export interface AudioSummaryResult {
+  success: boolean;
+  summary?: string;
+  tokensUsed?: number;
+  costEstimate?: number;
+  error?: string;
+}
+
 class GPTService {
   private openaiUrl = 'https://api.openai.com/v1/chat/completions';
 
@@ -598,6 +612,190 @@ class GPTService {
       };
     } catch (error) {
       return { success: false, error: String(error) };
+    }
+  }
+
+  async transcribeAudioFromUrl(
+    url: string,
+    signal?: AbortSignal
+  ): Promise<AudioTranscriptionResult> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'GPT não configurado ou desabilitado' };
+      }
+
+      const response = await fetch(url, { signal });
+      if (!response.ok) {
+        return {
+          success: false,
+          error: 'Não foi possível baixar o áudio para transcrição.',
+        };
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) {
+        return {
+          success: false,
+          error: 'Arquivo de áudio vazio ou indisponível.',
+        };
+      }
+
+      const extension = (() => {
+        const mime = blob.type?.toLowerCase();
+        if (mime?.includes('ogg')) return 'ogg';
+        if (mime?.includes('wav')) return 'wav';
+        if (mime?.includes('m4a')) return 'm4a';
+        if (mime?.includes('aac')) return 'aac';
+        if (mime?.includes('mp3')) return 'mp3';
+        return 'mp3';
+      })();
+
+      const fileName = `audio-${Date.now()}.${extension}`;
+      const formData = new FormData();
+      formData.append('file', blob, fileName);
+      formData.append('model', 'whisper-1');
+      formData.append('response_format', 'json');
+      formData.append('temperature', '0');
+      formData.append('language', 'pt');
+
+      const transcriptionResponse = await fetch(
+        'https://api.openai.com/v1/audio/transcriptions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: formData,
+          signal,
+        }
+      );
+
+      if (!transcriptionResponse.ok) {
+        let errorMessage = 'Falha ao gerar transcrição do áudio.';
+        try {
+          const errorData = await transcriptionResponse.json();
+          errorMessage = errorData?.error?.message || errorMessage;
+        } catch (error) {
+          console.error('Erro ao interpretar resposta da transcrição:', error);
+        }
+
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      const data = await transcriptionResponse.json();
+      const transcription = typeof data?.text === 'string' ? data.text.trim() : '';
+
+      if (!transcription) {
+        return {
+          success: false,
+          error: 'Transcrição vazia retornada pelo serviço.',
+        };
+      }
+
+      return {
+        success: true,
+        transcription,
+      };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return { success: false, error: 'Transcrição cancelada.' };
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async summarizeTranscription(
+    transcription: string,
+    options: { lead?: Lead; maxSentences?: number } = {}
+  ): Promise<AudioSummaryResult> {
+    try {
+      const config = await this.getConfig();
+      if (!config) {
+        return { success: false, error: 'GPT não configurado ou desabilitado' };
+      }
+
+      const trimmed = transcription.trim();
+      if (!trimmed) {
+        return { success: false, error: 'Transcrição vazia para resumir.' };
+      }
+
+      const sentences = Math.max(1, Math.min(options.maxSentences ?? 3, 6));
+      const leadName = options.lead?.nome_completo?.trim();
+      const promptParts = [
+        `Resuma o áudio a seguir em até ${sentences} frases curtas em português.`,
+        'Use linguagem clara, objetiva e inclua os principais pontos mencionados.',
+        'Texto do áudio:',
+        trimmed,
+      ];
+
+      if (leadName) {
+        promptParts.splice(
+          1,
+          0,
+          `Considere que o áudio foi enviado por ${leadName}.`
+        );
+      }
+
+      const response = await fetch(this.openaiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é um assistente que resume mensagens de áudio em português de forma objetiva e amigável.',
+            },
+            {
+              role: 'user',
+              content: promptParts.join('\n\n'),
+            },
+          ],
+          temperature: Math.min(config.temperature, 0.7),
+          max_tokens: Math.max(256, Math.min(config.maxTokens, 512)),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData?.error?.message || 'Falha ao gerar resumo do áudio.',
+        };
+      }
+
+      const data = await response.json();
+      const summary = data?.choices?.[0]?.message?.content?.trim();
+      if (!summary) {
+        return { success: false, error: 'Resumo vazio retornado pelo modelo.' };
+      }
+
+      const tokensUsed = data?.usage?.total_tokens || 0;
+      const costEstimate = this.calculateCost(config.model, tokensUsed);
+
+      return {
+        success: true,
+        summary,
+        tokensUsed,
+        costEstimate,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 }

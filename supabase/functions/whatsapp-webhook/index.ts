@@ -3,7 +3,7 @@ import {
   normalizePhoneNumber,
   extractNormalizedPhoneNumber,
   extractNormalizedTargetPhone,
-} from './phoneNumbers';
+} from './phoneNumbers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -703,11 +703,13 @@ async function upsertConversation(
   const chosenMedia = overrides.media ?? derivedMedia;
   const overrideText = typeof overrides.text === 'string' ? overrides.text : undefined;
   const derivedTextValue = typeof derivedText === 'string' ? derivedText : undefined;
+  const defaultMessageCopy = 'Mensagem recebida';
   const rawChosenText = overrideText ?? derivedTextValue;
   const normalizedChosenText = rawChosenText?.trim();
-  const hasMeaningfulText = Boolean(normalizedChosenText);
+  const isDefaultCopy = normalizedChosenText === defaultMessageCopy;
+  const hasMeaningfulText = Boolean(normalizedChosenText) && !isDefaultCopy;
   const chosenText = hasMeaningfulText ? rawChosenText! : null;
-  const fallbackText = chosenText ?? 'Mensagem recebida';
+  const fallbackText = chosenText ?? defaultMessageCopy;
   const readStatus =
     typeof overrides.readStatus === 'boolean'
       ? overrides.readStatus

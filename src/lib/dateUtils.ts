@@ -138,6 +138,20 @@ export function getDateKey(
   }).format(targetDate);
 }
 
+export function getDateKeyFromParts(
+  year: number,
+  month: number,
+  day: number,
+  timeZone: string = SAO_PAULO_TIMEZONE
+): string {
+  if ([year, month, day].some((value) => Number.isNaN(value))) {
+    return '';
+  }
+
+  const referenceDate = new Date(Date.UTC(year, month - 1, day, 12));
+  return getDateKey(referenceDate, timeZone);
+}
+
 export function formatDateTimeBR(date: string): string {
   const d = new Date(date);
   return d.toLocaleDateString('pt-BR', {

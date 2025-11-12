@@ -936,6 +936,7 @@ export default function WhatsAppHistoryTab({
   const [reactionError, setReactionError] = useState<string | null>(null);
   const [sendingReactionMessageId, setSendingReactionMessageId] = useState<string | null>(null);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [isSelectingForwardMessages, setIsSelectingForwardMessages] = useState(false);
   const [forwardingMessageIds, setForwardingMessageIds] = useState<string[]>([]);
   const [forwardSelectedTargetPhones, setForwardSelectedTargetPhones] = useState<string[]>([]);
   const [forwardSourcePhone, setForwardSourcePhone] = useState<string | null>(null);
@@ -943,7 +944,6 @@ export default function WhatsAppHistoryTab({
   const [forwardError, setForwardError] = useState<string | null>(null);
   const [forwardSuccess, setForwardSuccess] = useState<string | null>(null);
   const [isForwardingMessage, setIsForwardingMessage] = useState(false);
-  const [forwardStep, setForwardStep] = useState<'messages' | 'targets'>('messages');
   const skipAutoSelectRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<AttachmentItem[]>([]);
@@ -975,43 +975,17 @@ export default function WhatsAppHistoryTab({
     start: 0,
     end: 0,
   });
-  const [isAudioEditorOpen, setIsAudioEditorOpen] = useState(false);
   const [isApplyingAudioTrim, setIsApplyingAudioTrim] = useState(false);
-  const [isGeneratingTrimPreview, setIsGeneratingTrimPreview] = useState(false);
-  const [trimPreview, setTrimPreview] = useState<TrimPreviewState | null>(null);
   const [audioEditError, setAudioEditError] = useState<string | null>(null);
   const trimValueFormatter = useMemo(
     () => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
     []
   );
-  const clearTrimPreview = useCallback(
-    (options?: { preserveUrl?: boolean }) => {
-      setTrimPreview((prev) => {
-        if (prev && !options?.preserveUrl && prev.url && typeof URL !== 'undefined') {
-          URL.revokeObjectURL(prev.url);
-        }
-        return null;
-      });
-    },
-    []
-  );
-
   useEffect(() => {
     setAudioDuration(null);
     setTrimSelection({ start: 0, end: 0 });
     setAudioEditError(null);
-    clearTrimPreview();
-    setIsAudioEditorOpen(false);
-    setIsApplyingAudioTrim(false);
-    setIsGeneratingTrimPreview(false);
-  }, [recordedAudio, clearTrimPreview]);
-
-  useEffect(
-    () => () => {
-      clearTrimPreview();
-    },
-    [clearTrimPreview]
-  );
+  }, [recordedAudio]);
   const [leadContractsMap, setLeadContractsMap] = useState<Map<string, Contract[]>>(new Map());
   const leadContractsMapRef = useRef<Map<string, Contract[]>>(leadContractsMap);
   const [loadingContractsLeadId, setLoadingContractsLeadId] = useState<string | null>(null);
@@ -4114,7 +4088,11 @@ export default function WhatsAppHistoryTab({
       }
 
       setAudioDuration(duration);
-      setTrimSelection({ start: 0, end: duration });
+      setTrimSelection((prev) => {
+        const clampedStart = Math.max(0, Math.min(prev.start, duration));
+        const clampedEnd = Math.max(0, Math.min(prev.end, duration));
+        return { start: clampedStart, end: clampedEnd };
+      });
       setAudioEditError(null);
     },
     []
@@ -4126,9 +4104,8 @@ export default function WhatsAppHistoryTab({
       const clampedValue = Math.max(0, Math.min(value, duration));
       setTrimSelection((prev) => ({ ...prev, [point]: clampedValue }));
       setAudioEditError(null);
-      clearTrimPreview();
     },
-    [audioDuration, clearTrimPreview]
+    [audioDuration]
   );
 
   const handleTrimNumericChange = useCallback(
@@ -4143,93 +4120,24 @@ export default function WhatsAppHistoryTab({
       const clampedValue = Math.max(0, Math.min(parsedValue, duration));
       setTrimSelection((prev) => ({ ...prev, [point]: clampedValue }));
       setAudioEditError(null);
-      clearTrimPreview();
     },
-    [audioDuration, clearTrimPreview]
+    [audioDuration]
   );
 
   const handleResetTrimSelection = useCallback(() => {
     setTrimSelection({ start: 0, end: 0 });
     setAudioEditError(null);
-    clearTrimPreview();
-  }, [clearTrimPreview]);
-
-  const normalizedTrimStart = Math.min(trimSelection.start, trimSelection.end);
-  const normalizedTrimEnd = Math.max(trimSelection.start, trimSelection.end);
-  const hasValidTrimSelection = normalizedTrimEnd - normalizedTrimStart > 0;
-  const isTrimPreviewCurrent =
-    !!trimPreview &&
-    trimPreview.selection.start === normalizedTrimStart &&
-    trimPreview.selection.end === normalizedTrimEnd;
-  const estimatedEditedDuration =
-    audioDuration !== null
-      ? Math.max(0, audioDuration - (normalizedTrimEnd - normalizedTrimStart))
-      : null;
-
-  const handleOpenAudioEditor = useCallback(() => {
-    if (!recordedAudio) {
-      return;
-    }
-    setIsAudioEditorOpen(true);
-    setAudioEditError(null);
-  }, [recordedAudio]);
-
-  const handleCloseAudioEditor = useCallback(() => {
-    setIsAudioEditorOpen(false);
-    setAudioEditError(null);
-    setIsApplyingAudioTrim(false);
-    setIsGeneratingTrimPreview(false);
-    clearTrimPreview();
-  }, [clearTrimPreview]);
-
-  const handleGenerateTrimPreview = useCallback(async () => {
-    if (!recordedAudio) {
-      return;
-    }
-
-    if (!hasValidTrimSelection) {
-      setAudioEditError('Selecione um intervalo válido para remover.');
-      return;
-    }
-
-    setIsGeneratingTrimPreview(true);
-    setAudioEditError(null);
-
-    try {
-      const editedAudio = await removeSegmentFromAudioBlob(
-        recordedAudio.blob,
-        normalizedTrimStart,
-        normalizedTrimEnd
-      );
-
-      setTrimPreview((prev) => {
-        if (prev && prev.url && typeof URL !== 'undefined') {
-          URL.revokeObjectURL(prev.url);
-        }
-
-        return {
-          ...editedAudio,
-          selection: { start: normalizedTrimStart, end: normalizedTrimEnd },
-        };
-      });
-    } catch (error) {
-      console.error('Erro ao gerar prévia do áudio gravado:', error);
-      setAudioEditError(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível gerar a prévia do corte. Tente novamente.'
-      );
-    } finally {
-      setIsGeneratingTrimPreview(false);
-    }
-  }, [recordedAudio, hasValidTrimSelection, normalizedTrimEnd, normalizedTrimStart]);
+  }, []);
 
   const handleApplyAudioTrim = useCallback(async () => {
     if (!recordedAudio) {
       return;
     }
 
-    if (!hasValidTrimSelection) {
+    const selectionStart = Math.min(trimSelection.start, trimSelection.end);
+    const selectionEnd = Math.max(trimSelection.start, trimSelection.end);
+
+    if (selectionEnd - selectionStart <= 0) {
       setAudioEditError('Selecione um intervalo válido para remover.');
       return;
     }
@@ -4238,24 +4146,11 @@ export default function WhatsAppHistoryTab({
     setAudioEditError(null);
 
     try {
-      let editedAudio: TrimPreviewState;
-      let shouldPreservePreviewUrl = false;
-
-      if (isTrimPreviewCurrent && trimPreview) {
-        editedAudio = trimPreview;
-        shouldPreservePreviewUrl = true;
-      } else {
-        const result = await removeSegmentFromAudioBlob(
-          recordedAudio.blob,
-          normalizedTrimStart,
-          normalizedTrimEnd
-        );
-
-        editedAudio = {
-          ...result,
-          selection: { start: normalizedTrimStart, end: normalizedTrimEnd },
-        };
-      }
+      const editedAudio = await removeSegmentFromAudioBlob(
+        recordedAudio.blob,
+        selectionStart,
+        selectionEnd
+      );
 
       setAttachments((prev) => {
         const filtered = prev.filter((attachment) => {
@@ -4286,9 +4181,6 @@ export default function WhatsAppHistoryTab({
         file: editedAudio.file,
         base64: editedAudio.base64,
       });
-
-      setIsAudioEditorOpen(false);
-      clearTrimPreview({ preserveUrl: shouldPreservePreviewUrl });
     } catch (error) {
       console.error('Erro ao editar áudio gravado:', error);
       setAudioEditError(
@@ -4299,17 +4191,7 @@ export default function WhatsAppHistoryTab({
     } finally {
       setIsApplyingAudioTrim(false);
     }
-  }, [
-    recordedAudio,
-    hasValidTrimSelection,
-    normalizedTrimEnd,
-    normalizedTrimStart,
-    isTrimPreviewCurrent,
-    trimPreview,
-    setAttachments,
-    releaseAttachmentPreview,
-    clearTrimPreview,
-  ]);
+  }, [recordedAudio, trimSelection, setAttachments, releaseAttachmentPreview]);
 
   const handleAttachmentButtonClick = () => {
     if (isSendingMessage) {
@@ -5037,28 +4919,39 @@ const getOutgoingMessageStatus = (
     [isObserver]
   );
 
-  const handleOpenForwardModal = useCallback(
+  const handleStartForwardSelection = useCallback(
     (message: MessageWithReactions) => {
       if (isObserver) {
         return;
       }
 
       const messageKey = message.id || message.message_id || null;
-
-      setIsForwardModalOpen(true);
-      setForwardingMessageIds(messageKey ? [messageKey] : []);
-      setForwardSelectedTargetPhones([]);
       const identifier = resolveChatIdentifier(message, selectedPhone);
-      setForwardSourcePhone(identifier || null);
+
+      setIsForwardModalOpen(false);
+      setIsSelectingForwardMessages(true);
+      setForwardSelectedTargetPhones([]);
       setForwardChatSearchTerm('');
       setForwardError(null);
       setForwardSuccess(null);
-      setForwardStep('messages');
+      setIsForwardingMessage(false);
+      setForwardSourcePhone(identifier || null);
+      setForwardingMessageIds(messageKey ? [messageKey] : []);
     },
     [isObserver, selectedPhone]
   );
 
   const handleCloseForwardModal = useCallback(() => {
+    setIsForwardModalOpen(false);
+    setForwardSelectedTargetPhones([]);
+    setForwardChatSearchTerm('');
+    setForwardError(null);
+    setForwardSuccess(null);
+    setIsForwardingMessage(false);
+  }, []);
+
+  const handleCancelForwardSelection = useCallback(() => {
+    setIsSelectingForwardMessages(false);
     setIsForwardModalOpen(false);
     setForwardingMessageIds([]);
     setForwardSelectedTargetPhones([]);
@@ -5067,8 +4960,19 @@ const getOutgoingMessageStatus = (
     setForwardError(null);
     setForwardSuccess(null);
     setIsForwardingMessage(false);
-    setForwardStep('messages');
   }, []);
+
+  const handleOpenForwardTargetsModal = useCallback(() => {
+    if (isObserver || forwardingMessageIds.length === 0) {
+      return;
+    }
+
+    setIsForwardModalOpen(true);
+    setForwardSelectedTargetPhones([]);
+    setForwardChatSearchTerm('');
+    setForwardError(null);
+    setForwardSuccess(null);
+  }, [forwardingMessageIds, isObserver]);
 
   const selectedMessagesMap = useMemo(() => {
     const map = new Map<string, MessageWithReactions>();
@@ -5091,29 +4995,8 @@ const getOutgoingMessageStatus = (
     [forwardingMessageIds, selectedMessagesMap]
   );
 
-  const handleForwardAdvanceToTargets = useCallback(() => {
-    if (forwardingMessageIds.length === 0) {
-      setForwardError('Selecione ao menos uma mensagem para encaminhar.');
-      return;
-    }
-
-    setForwardError(null);
-    setForwardStep('targets');
-  }, [forwardingMessageIds]);
-
-  const handleForwardBackToMessages = useCallback(() => {
-    setForwardStep('messages');
-    setForwardError(null);
-    setForwardSuccess(null);
-  }, []);
-
   const handleConfirmForwardMessage = useCallback(async () => {
     if (!isForwardModalOpen || isObserver) {
-      return;
-    }
-
-    if (forwardStep !== 'targets') {
-      setForwardError('Selecione primeiro os chats de destino.');
       return;
     }
 
@@ -5177,7 +5060,7 @@ const getOutgoingMessageStatus = (
 
       setForwardSuccess('Mensagens encaminhadas com sucesso!');
       setTimeout(() => {
-        handleCloseForwardModal();
+        handleCancelForwardSelection();
       }, 1500);
     } catch (error) {
       console.error('Erro ao encaminhar mensagem:', error);
@@ -5190,8 +5073,7 @@ const getOutgoingMessageStatus = (
   }, [
     forwardSelectedTargetPhones,
     forwardSourcePhone,
-    forwardStep,
-    handleCloseForwardModal,
+    handleCancelForwardSelection,
     isForwardModalOpen,
     isObserver,
     messagesSelectedForForward,
@@ -5199,39 +5081,65 @@ const getOutgoingMessageStatus = (
   ]);
 
   const handleToggleForwardMessageSelection = useCallback(
-    (messageId: string, isChecked: boolean) => {
+    (message: MessageWithReactions) => {
+      if (isObserver) {
+        return;
+      }
+
+      const messageKey = message.id || message.message_id;
+      if (!messageKey) {
+        return;
+      }
+
+      let shouldCancelSelection = false;
+      let shouldEnsureSource = false;
+      let resolvedSource: string | null = null;
+
       setForwardingMessageIds((prev) => {
-        let next: string[] = prev;
+        let next: string[];
 
-        if (isChecked) {
-          if (prev.includes(messageId)) {
-            next = prev;
-          } else {
-            const orderMap = new Map<string, number>();
-            processedSelectedMessages.forEach((message, index) => {
-              if (message.id) {
-                orderMap.set(message.id, index);
-              }
-              if (message.message_id) {
-                orderMap.set(message.message_id, index);
-              }
-            });
-
-            next = [...prev, messageId];
-            next.sort((a, b) => (orderMap.get(a) ?? 0) - (orderMap.get(b) ?? 0));
-          }
+        if (prev.includes(messageKey)) {
+          next = prev.filter((id) => id !== messageKey);
         } else {
-          next = prev.filter((id) => id !== messageId);
+          const orderMap = new Map<string, number>();
+          processedSelectedMessages.forEach((item, index) => {
+            if (item.id) {
+              orderMap.set(item.id, index);
+            }
+            if (item.message_id) {
+              orderMap.set(item.message_id, index);
+            }
+          });
+
+          next = [...prev, messageKey];
+          next.sort((a, b) => (orderMap.get(a) ?? 0) - (orderMap.get(b) ?? 0));
+          shouldEnsureSource = true;
+          resolvedSource = resolveChatIdentifier(message, selectedPhone) || null;
         }
 
-        if (forwardStep === 'messages' && next.length > 0) {
-          setForwardError(null);
+        if (next.length === 0) {
+          shouldCancelSelection = true;
         }
 
         return next;
       });
+
+      if (shouldCancelSelection) {
+        handleCancelForwardSelection();
+      } else {
+        setForwardError(null);
+        setIsSelectingForwardMessages(true);
+        if (shouldEnsureSource) {
+          setForwardSourcePhone((current) => current || resolvedSource);
+        }
+      }
     },
-    [forwardStep, processedSelectedMessages]
+    [
+      handleCancelForwardSelection,
+      isObserver,
+      processedSelectedMessages,
+      selectedPhone,
+    ]
   );
 
   const handleToggleForwardTarget = useCallback((phone: string, isChecked: boolean) => {
@@ -6510,6 +6418,21 @@ const getOutgoingMessageStatus = (
                               const outgoingStatus = getOutgoingMessageStatus(message);
                               const outgoingStatusVisual = getOutgoingDeliveryStatusVisual(outgoingStatus);
                               const OutgoingStatusIcon = outgoingStatusVisual?.icon;
+                              const messageKey = message.message_id || message.id || '';
+                              const isMessageSelectedForForward =
+                                Boolean(messageKey) && forwardingMessageIds.includes(messageKey);
+                              const isForwardSelectionActive = isSelectingForwardMessages;
+                              const forwardSelectionOutlineClasses = isForwardSelectionActive
+                                ? isMessageSelectedForForward
+                                  ? 'outline outline-2 outline-teal-500'
+                                  : 'outline outline-2 outline-teal-200'
+                                : '';
+                              const combinedBubbleHighlightClasses = [
+                                bubbleHighlightClasses,
+                                forwardSelectionOutlineClasses,
+                              ]
+                                .filter(Boolean)
+                                .join(' ');
 
                               return (
                                 <div
@@ -6530,12 +6453,65 @@ const getOutgoingMessageStatus = (
                                   }`}
                                 >
                                   <div className="relative group/message">
+                                    {isForwardSelectionActive && (
+                                      <button
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          event.preventDefault();
+                                          handleToggleForwardMessageSelection(message);
+                                        }}
+                                        className={`absolute top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border text-sm transition-colors ${
+                                          message.message_type === 'sent'
+                                            ? '-right-10'
+                                            : '-left-10'
+                                        } ${
+                                          isMessageSelectedForForward
+                                            ? 'border-teal-500 bg-teal-500 text-white shadow'
+                                            : 'border-slate-300 bg-white text-slate-400 shadow-sm hover:border-teal-400 hover:text-teal-500'
+                                        }`}
+                                        aria-label={
+                                          isMessageSelectedForForward
+                                            ? 'Remover mensagem da seleção'
+                                            : 'Selecionar mensagem para encaminhar'
+                                        }
+                                      >
+                                        {isMessageSelectedForForward ? (
+                                          <Check className="h-4 w-4" />
+                                        ) : (
+                                          <span className="block h-2 w-2 rounded-full bg-current opacity-60" />
+                                        )}
+                                      </button>
+                                    )}
                                     <div
                                       className={`max-w-[100%] rounded-2xl px-4 py-3 shadow-sm flex flex-col space-y-2 items-start ${
                                         message.message_type === 'sent'
                                           ? 'bg-teal-500 text-white rounded-br-sm ml-auto min-w-[10rem]'
                                           : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm min-w-[9rem]'
-                                      } ${bubbleHighlightClasses}`}
+                                      } ${combinedBubbleHighlightClasses} ${
+                                        isForwardSelectionActive ? 'cursor-pointer select-none' : ''
+                                      }`}
+                                      onClick={
+                                        isForwardSelectionActive
+                                          ? (event) => {
+                                              event.stopPropagation();
+                                              event.preventDefault();
+                                              handleToggleForwardMessageSelection(message);
+                                            }
+                                          : undefined
+                                      }
+                                      role={isForwardSelectionActive ? 'button' : undefined}
+                                      tabIndex={isForwardSelectionActive ? 0 : undefined}
+                                      onKeyDown={
+                                        isForwardSelectionActive
+                                          ? (event) => {
+                                              if (event.key === ' ' || event.key === 'Enter') {
+                                                event.preventDefault();
+                                                handleToggleForwardMessageSelection(message);
+                                              }
+                                            }
+                                          : undefined
+                                      }
                                     >
                                       {senderLabel && (
                                         <span className={senderLabelClass}>{senderLabel}</span>
@@ -6601,7 +6577,7 @@ const getOutgoingMessageStatus = (
                                       </div>
                                     )}
                                     </div>
-                                    {!isObserver && (
+                                    {!isObserver && !isForwardSelectionActive && (
                                       <div
                                         className={`absolute top-1/2 right-0 flex -translate-y-1/2 translate-x-full flex-col gap-2 transition-opacity ${
                                           isObserver
@@ -6700,7 +6676,7 @@ const getOutgoingMessageStatus = (
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => handleOpenForwardModal(message)}
+                                          onClick={() => handleStartForwardSelection(message)}
                                           className="pointer-events-auto rounded-full bg-white p-1 text-teal-600 shadow-sm transition-colors hover:bg-teal-50"
                                           aria-label="Encaminhar mensagem"
                                         >
@@ -6712,15 +6688,50 @@ const getOutgoingMessageStatus = (
                                 </div>
                               );
                             })}
-                          </div>
-                        </div>
-                      ))
-                    )}
                   </div>
+                </div>
+              ))
+            )}
+          </div>
 
-                  <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 space-y-3">
-                    {composerReplyMessage && (
-                      <div className="flex items-start gap-3 rounded-lg border border-teal-200 bg-teal-50/80 px-3 py-2">
+          {isSelectingForwardMessages && forwardingMessageIds.length > 0 && (
+            <div className="px-5">
+              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-teal-700">
+                    {forwardingMessageIds.length} mensagem
+                    {forwardingMessageIds.length > 1 ? 's' : ''} selecionada
+                    {forwardingMessageIds.length > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-teal-600">
+                    Toque nas mensagens para ajustar a seleção e escolha os destinos quando estiver pronto.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelForwardSelection}
+                    className="rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-100/60"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenForwardTargetsModal}
+                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={forwardingMessageIds.length === 0}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Escolher destinos
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 space-y-3">
+            {composerReplyMessage && (
+              <div className="flex items-start gap-3 rounded-lg border border-teal-200 bg-teal-50/80 px-3 py-2">
                         <div className="border-l-4 border-teal-400 pl-3 flex-1">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-700">
                             Respondendo a {getMessageSenderLabel(composerReplyMessage)}
@@ -7222,19 +7233,112 @@ const getOutgoingMessageStatus = (
                         <p className="text-[11px] text-slate-500">
                           Ouça o áudio antes de enviar para garantir a qualidade.
                         </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleOpenAudioEditor}
-                            className="flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Editar ou cortar áudio
-                          </button>
+                        <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs font-semibold uppercase text-slate-500">Editor de áudio</p>
+                            <span className="text-[11px] text-slate-500">
+                              Duração atual:{' '}
+                              {audioDuration
+                                ? formatDuration(audioDuration) ?? `${trimValueFormatter.format(audioDuration)}s`
+                                : '--:--'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            Ajuste os marcadores para remover um trecho específico. O restante do áudio será mantido.
+                          </p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-start">
+                                Início ({trimValueFormatter.format(trimSelection.start)} s)
+                              </label>
+                              <input
+                                id="audio-trim-start"
+                                type="range"
+                                min={0}
+                                max={audioDuration ?? 0}
+                                step={0.1}
+                                value={Math.min(trimSelection.start, audioDuration ?? trimSelection.start)}
+                                onChange={(event) =>
+                                  handleTrimSliderChange('start', Number.parseFloat(event.target.value))
+                                }
+                                disabled={!audioDuration || isApplyingAudioTrim}
+                                className="w-full"
+                              />
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                max={audioDuration ?? undefined}
+                                step={0.1}
+                                value={trimSelection.start}
+                                onChange={(event) => handleTrimNumericChange('start', event.target.value)}
+                                disabled={!audioDuration || isApplyingAudioTrim}
+                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-slate-600" htmlFor="audio-trim-end">
+                                Fim ({trimValueFormatter.format(trimSelection.end)} s)
+                              </label>
+                              <input
+                                id="audio-trim-end"
+                                type="range"
+                                min={0}
+                                max={audioDuration ?? 0}
+                                step={0.1}
+                                value={Math.min(trimSelection.end, audioDuration ?? trimSelection.end)}
+                                onChange={(event) =>
+                                  handleTrimSliderChange('end', Number.parseFloat(event.target.value))
+                                }
+                                disabled={!audioDuration || isApplyingAudioTrim}
+                                className="w-full"
+                              />
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                max={audioDuration ?? undefined}
+                                step={0.1}
+                                value={trimSelection.end}
+                                onChange={(event) => handleTrimNumericChange('end', event.target.value)}
+                                disabled={!audioDuration || isApplyingAudioTrim}
+                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleApplyAudioTrim()}
+                              disabled={
+                                !audioDuration || isApplyingAudioTrim || trimSelection.end === trimSelection.start
+                              }
+                              className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors ${
+                                !audioDuration || trimSelection.end === trimSelection.start || isApplyingAudioTrim
+                                  ? 'bg-teal-300'
+                                  : 'bg-teal-600 hover:bg-teal-700'
+                              } disabled:cursor-not-allowed`}
+                            >
+                              {isApplyingAudioTrim ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
+                              Remover trecho selecionado
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleResetTrimSelection}
+                              disabled={isApplyingAudioTrim}
+                              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Limpar seleção
+                            </button>
+                          </div>
+                          {audioEditError && (
+                            <p className="text-xs text-red-600">{audioEditError}</p>
+                          )}
                         </div>
-                        <p className="text-[11px] text-slate-500">
-                          Caso precise remover um trecho, utilize o editor para gerar uma prévia antes de aplicar o corte.
-                        </p>
                       </div>
                     )}
 
@@ -7978,50 +8082,76 @@ const getOutgoingMessageStatus = (
               <X className="h-4 w-4" />
             </button>
             <div className="mb-4 space-y-1">
-              <p className="text-xs font-semibold uppercase text-teal-600">
-                Etapa {forwardStep === 'messages' ? '1' : '2'} de 2
-              </p>
               <h3 className="text-lg font-semibold text-slate-800">Encaminhar mensagens</h3>
               <p className="text-sm text-slate-500">
-                {forwardStep === 'messages'
-                  ? 'Selecione as mensagens da conversa que deseja encaminhar.'
-                  : 'Escolha os chats de destino para encaminhar as mensagens selecionadas. O envio utilizará um delay padrão de 1 segundo.'}
+                Revise as mensagens selecionadas e escolha os chats de destino. O envio utilizará um delay padrão de 1 segundo.
               </p>
             </div>
             <div className="space-y-5">
-              {forwardStep === 'messages' ? (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase text-slate-500">
-                      Mensagens da conversa
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {forwardingMessageIds.length > 0
-                        ? `${forwardingMessageIds.length} selecionada${
-                            forwardingMessageIds.length > 1 ? 's' : ''
-                          }`
-                        : 'Nenhuma selecionada'}
-                    </span>
-                  </div>
-                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
-                    {processedSelectedMessages.length === 0 ? (
-                      <p className="text-sm text-slate-500">
-                        Nenhuma mensagem disponível para encaminhamento.
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">
+                    Mensagens selecionadas
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {forwardingMessageIds.length > 0
+                      ? `${forwardingMessageIds.length} selecionada${
+                          forwardingMessageIds.length > 1 ? 's' : ''
+                        }`
+                      : 'Nenhuma selecionada'}
+                  </span>
+                </div>
+                <div className="mt-2 max-h-36 space-y-2 overflow-y-auto pr-1">
+                  {messagesSelectedForForward.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nenhuma mensagem selecionada.</p>
+                  ) : (
+                    messagesSelectedForForward.map((message) => {
+                      const preview = getComposerReplyPreviewText(message);
+
+                      return (
+                        <div
+                          key={message.id || message.message_id || message.timestamp}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        >
+                          <p className="text-xs font-semibold uppercase text-slate-400">
+                            {getMessageSenderLabel(message)}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">{preview}</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {formatDateLabel(message.timestamp)} às {formatTime(message.timestamp)}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold uppercase text-slate-500">
+                  Chats de destino
+                </span>
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={forwardChatSearchTerm}
+                    onChange={(event) => setForwardChatSearchTerm(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    placeholder="Pesquisar nome ou número"
+                  />
+                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {forwardChatOptions.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-slate-500">
+                        Nenhum chat encontrado.
                       </p>
                     ) : (
-                      processedSelectedMessages.map((message) => {
-                        const messageKey = message.id || message.message_id;
-                        if (!messageKey) {
-                          return null;
-                        }
-
-                        const isChecked = forwardingMessageIds.includes(messageKey);
-                        const preview = getComposerReplyPreviewText(message);
+                      forwardChatOptions.map(({ chat, displayName, photoUrl, phoneDisplay }) => {
+                        const isChecked = forwardSelectedTargetPhones.includes(chat.phone);
 
                         return (
                           <label
-                            key={message.id || message.message_id || message.timestamp}
-                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                            key={chat.phone}
+                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
                               isChecked
                                 ? 'border-teal-500 bg-teal-50 shadow-sm'
                                 : 'border-slate-200 bg-white hover:border-teal-300'
@@ -8029,22 +8159,30 @@ const getOutgoingMessageStatus = (
                           >
                             <input
                               type="checkbox"
-                              className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                               checked={isChecked}
                               onChange={(event) =>
-                                handleToggleForwardMessageSelection(messageKey, event.target.checked)
+                                handleToggleForwardTarget(chat.phone, event.target.checked)
                               }
                             />
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold uppercase text-slate-400">
-                                {getMessageSenderLabel(message)}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
-                                {preview}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-400">
-                                {formatDateLabel(message.timestamp)} às {formatTime(message.timestamp)}
-                              </p>
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-teal-100">
+                                {photoUrl ? (
+                                  <img
+                                    src={photoUrl}
+                                    alt={displayName}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <Phone className="h-4 w-4 text-teal-600" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800">
+                                  {displayName}
+                                </p>
+                                <p className="text-xs text-slate-500">{phoneDisplay}</p>
+                              </div>
                             </div>
                           </label>
                         );
@@ -8052,124 +8190,14 @@ const getOutgoingMessageStatus = (
                     )}
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase text-slate-500">
-                        Mensagens selecionadas
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleForwardBackToMessages}
-                        className="text-xs font-semibold text-teal-600 transition-colors hover:text-teal-700"
-                      >
-                        Alterar seleção
-                      </button>
-                    </div>
-                    <div className="mt-2 max-h-36 space-y-2 overflow-y-auto pr-1">
-                      {messagesSelectedForForward.length === 0 ? (
-                        <p className="text-sm text-slate-500">
-                          Nenhuma mensagem selecionada.
-                        </p>
-                      ) : (
-                        messagesSelectedForForward.map((message) => {
-                          const preview = getComposerReplyPreviewText(message);
-
-                          return (
-                            <div
-                              key={message.id || message.message_id || message.timestamp}
-                              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                            >
-                              <p className="text-xs font-semibold uppercase text-slate-400">
-                                {getMessageSenderLabel(message)}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap break-words">
-                                {preview}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-400">
-                                {formatDateLabel(message.timestamp)} às {formatTime(message.timestamp)}
-                              </p>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-semibold uppercase text-slate-500">
-                      Chats de destino
-                    </span>
-                    <div className="mt-2 space-y-2">
-                      <input
-                        type="text"
-                        value={forwardChatSearchTerm}
-                        onChange={(event) => setForwardChatSearchTerm(event.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                        placeholder="Pesquisar nome ou número"
-                      />
-                      <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                        {forwardChatOptions.length === 0 ? (
-                          <p className="py-4 text-center text-sm text-slate-500">
-                            Nenhum chat encontrado.
-                          </p>
-                        ) : (
-                          forwardChatOptions.map(({ chat, displayName, photoUrl, phoneDisplay }) => {
-                            const isChecked = forwardSelectedTargetPhones.includes(chat.phone);
-
-                            return (
-                              <label
-                                key={chat.phone}
-                                className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                                  isChecked
-                                    ? 'border-teal-500 bg-teal-50 shadow-sm'
-                                    : 'border-slate-200 bg-white hover:border-teal-300'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                                  checked={isChecked}
-                                  onChange={(event) =>
-                                    handleToggleForwardTarget(chat.phone, event.target.checked)
-                                  }
-                                />
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-teal-100">
-                                    {photoUrl ? (
-                                      <img
-                                        src={photoUrl}
-                                        alt={displayName}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <Phone className="h-4 w-4 text-teal-600" />
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-slate-800">
-                                      {displayName}
-                                    </p>
-                                    <p className="text-xs text-slate-500">{phoneDisplay}</p>
-                                  </div>
-                                </div>
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+              </div>
             </div>
             {forwardError && (
               <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {forwardError}
               </div>
             )}
-            {forwardStep === 'targets' && forwardSuccess && (
+            {forwardSuccess && (
               <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {forwardSuccess}
               </div>
@@ -8180,44 +8208,23 @@ const getOutgoingMessageStatus = (
                 onClick={handleCloseForwardModal}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
               >
-                Cancelar
+                Fechar
               </button>
-              {forwardStep === 'messages' ? (
-                <button
-                  type="button"
-                  onClick={handleForwardAdvanceToTargets}
-                  disabled={forwardingMessageIds.length === 0}
-                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  Continuar
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleForwardBackToMessages}
-                    disabled={isForwardingMessage}
-                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleConfirmForwardMessage()}
-                    disabled={isForwardingMessage}
-                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isForwardingMessage ? (
-                      <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Encaminhando...
-                      </>
-                    ) : (
-                      'Encaminhar'
-                    )}
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => void handleConfirmForwardMessage()}
+                disabled={isForwardingMessage}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isForwardingMessage ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Encaminhando...
+                  </>
+                ) : (
+                  'Encaminhar'
+                )}
+              </button>
             </div>
           </div>
         </div>

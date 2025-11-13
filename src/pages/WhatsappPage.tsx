@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
 const formatDateTime = (value: string | null) => {
@@ -66,6 +68,18 @@ const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T>
   return response.json() as Promise<T>;
 };
 
+const sortMessagesByMoment = (messageList: OptimisticMessage[]) => {
+  return [...messageList].sort((first, second) => {
+    const firstMoment = first.moment ? new Date(first.moment).getTime() : 0;
+    const secondMoment = second.moment ? new Date(second.moment).getTime() : 0;
+
+    const safeFirstMoment = Number.isNaN(firstMoment) ? 0 : firstMoment;
+    const safeSecondMoment = Number.isNaN(secondMoment) ? 0 : secondMoment;
+
+    return safeFirstMoment - safeSecondMoment;
+  });
+};
+
 export default function WhatsappPage() {
   const [chats, setChats] = useState<WhatsappChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
@@ -75,6 +89,7 @@ export default function WhatsappPage() {
   const [messageInput, setMessageInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const selectedChatIdRef = useRef<string | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
@@ -102,6 +117,99 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     loadChats();
+  }, [loadChats]);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('whatsapp-messages-listener')
+      .on<RealtimePostgresChangesPayload<WhatsappMessage>>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_messages' },
+        payload => {
+          if (payload.eventType === 'DELETE') {
+            const deletedMessage = payload.old;
+            if (!deletedMessage) {
+              return;
+            }
+
+            setMessages(previousMessages => {
+              const currentChatId = selectedChatIdRef.current;
+              if (!currentChatId || deletedMessage.chat_id !== currentChatId) {
+                return previousMessages;
+              }
+
+              return previousMessages.filter(message => message.id !== deletedMessage.id);
+            });
+            return;
+          }
+
+          const incomingMessage = payload.new;
+          if (!incomingMessage) {
+            return;
+          }
+
+          const normalizedMessage: OptimisticMessage = {
+            ...incomingMessage,
+            isOptimistic: false,
+          };
+
+          setMessages(previousMessages => {
+            const currentChatId = selectedChatIdRef.current;
+            if (currentChatId !== normalizedMessage.chat_id) {
+              return previousMessages;
+            }
+
+            const existingIndex = previousMessages.findIndex(
+              message => message.id === normalizedMessage.id,
+            );
+
+            if (existingIndex !== -1) {
+              const updatedMessages = [...previousMessages];
+              updatedMessages[existingIndex] = normalizedMessage;
+              return sortMessagesByMoment(updatedMessages);
+            }
+
+            return sortMessagesByMoment([...previousMessages, normalizedMessage]);
+          });
+
+          let chatExists = true;
+          setChats(previousChats => {
+            const existingIndex = previousChats.findIndex(
+              chat => chat.id === normalizedMessage.chat_id,
+            );
+
+            if (existingIndex === -1) {
+              chatExists = false;
+              return previousChats;
+            }
+
+            const existingChat = previousChats[existingIndex];
+            const updatedChat: WhatsappChat = {
+              ...existingChat,
+              last_message_preview:
+                normalizedMessage.text ?? existingChat.last_message_preview ?? null,
+              last_message_at:
+                normalizedMessage.moment ?? existingChat.last_message_at ?? null,
+            };
+
+            const otherChats = previousChats.filter(chat => chat.id !== normalizedMessage.chat_id);
+            return [updatedChat, ...otherChats];
+          });
+
+          if (!chatExists) {
+            void loadChats();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [loadChats]);
 
   useEffect(() => {

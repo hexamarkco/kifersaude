@@ -230,6 +230,21 @@ const upsertChatRecord = async (input: {
   return insertedChat;
 };
 
+const normalizeMessageStatus = (
+  status: string | null | undefined,
+  fromMe: boolean,
+): string | null => {
+  if (!status) {
+    return null;
+  }
+
+  if (fromMe && status.toUpperCase() === 'RECEIVED') {
+    return 'SENT';
+  }
+
+  return status;
+};
+
 const insertWhatsappMessage = async (input: {
   chatId: string;
   messageId?: string | null;
@@ -250,6 +265,7 @@ const insertWhatsappMessage = async (input: {
   }
 
   const normalizedMoment = toIsoStringOrNull(moment);
+  const normalizedStatus = normalizeMessageStatus(status, fromMe);
 
   const { data: insertedMessage, error: insertError } = await supabaseAdmin
     .from('whatsapp_messages')
@@ -257,7 +273,7 @@ const insertWhatsappMessage = async (input: {
       chat_id: chatId,
       message_id: messageId ?? null,
       from_me: fromMe,
-      status: status ?? null,
+      status: normalizedStatus,
       text: text ?? null,
       moment: normalizedMoment,
       raw_payload: rawPayload ?? null,

@@ -467,8 +467,7 @@ export type ConfigCategory =
   | 'contract_modalidade'
   | 'contract_abrangencia'
   | 'contract_acomodacao'
-  | 'contract_carencia'
-  | 'whatsapp_quick_messages';
+  | 'contract_carencia';
 
 export const configService = {
   async getSystemSettings(): Promise<SystemSettings | null> {

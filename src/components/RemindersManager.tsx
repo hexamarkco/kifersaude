@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder, Lead } from '../lib/supabase';
-import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, MessageCircle, UserCheck, Plus } from 'lucide-react';
+import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
-import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import { createAdditionalFollowUps } from '../lib/followUpService';
 
 export default function RemindersManager() {
@@ -340,23 +339,6 @@ export default function RemindersManager() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    {reminder.lead_id && leadsMap.get(reminder.lead_id) && (
-                      <button
-                        onClick={() => {
-                          const lead = leadsMap.get(reminder.lead_id!);
-                          if (lead && lead.telefone) {
-                            openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo, {
-                              leadId: lead.id,
-                              source: 'reminders',
-                            });
-                          }
-                        }}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Abrir WhatsApp com o lead"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                      </button>
-                    )}
                     {!reminder.lido && reminder.lead_id && (
                       <button
                         onClick={() => setRespondingReminder(reminder.id)}

@@ -253,12 +253,6 @@ export default function SystemSettingsTab() {
             description="Configure as opções de carência disponíveis."
             placeholder="Ex: Padrão"
           />
-          <ConfigOptionManager
-            category="whatsapp_quick_messages"
-            title="Mensagens Rápidas do WhatsApp"
-            description="Cadastre respostas prontas para reutilizar durante as conversas."
-            placeholder="Ex: Olá! Tudo bem? Posso ajudar com alguma dúvida?"
-          />
         </div>
       )}
     </div>

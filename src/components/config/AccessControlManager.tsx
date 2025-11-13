@@ -8,7 +8,6 @@ const MODULES = [
   { id: 'leads', label: 'Leads', description: 'Gestão completa do funil de leads.' },
   { id: 'contracts', label: 'Contratos', description: 'Gestão de contratos, titulares e dependentes.' },
   { id: 'reminders', label: 'Lembretes', description: 'Agenda e lembretes automáticos para acompanhamento.' },
-  { id: 'whatsapp-history', label: 'Histórico WhatsApp', description: 'Conversa com leads e clientes via WhatsApp.' },
   { id: 'email', label: 'Email', description: 'Comunicação via email e templates.' },
   { id: 'blog', label: 'Blog', description: 'Gestão de conteúdo do blog e SEO.' },
   { id: 'config', label: 'Configurações', description: 'Personalização do sistema e cadastros auxiliares.' },

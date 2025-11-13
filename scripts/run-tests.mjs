@@ -7,20 +7,7 @@ import { pathToFileURL } from 'node:url';
 const tempDir = mkdtempSync(join(tmpdir(), 'kifersaude-tests-'));
 
 try {
-  const tests = [
-    {
-      entry: 'src/components/__tests__/startConversationUtils.test.ts',
-      outfile: 'startConversationUtils.test.mjs',
-    },
-    {
-      entry: 'supabase/functions/whatsapp-webhook/__tests__/normalization.test.ts',
-      outfile: 'whatsappWebhookNormalization.test.mjs',
-    },
-    {
-      entry: 'supabase/functions/whatsapp-webhook/__tests__/peers.test.ts',
-      outfile: 'whatsappWebhookPeers.test.mjs',
-    },
-  ];
+  const tests = [];
 
   for (const { entry, outfile } of tests) {
     const compiledFile = join(tempDir, outfile);

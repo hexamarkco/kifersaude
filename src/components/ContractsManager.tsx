@@ -185,7 +185,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
         {!isObserver && (
           <button
@@ -193,7 +193,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
               setEditingContract(null);
               setShowForm(true);
             }}
-            className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+            className="flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors w-full sm:w-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Novo Contrato</span>
@@ -202,7 +202,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -244,9 +244,9 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
               <option value="Nick">Nick</option>
             </select>
           </div>
-          <div className="text-sm text-slate-600 flex items-center justify-end">
-            <span className="font-medium">{filteredContracts.length}</span>
-            <span className="ml-1">contrato(s) encontrado(s)</span>
+          <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
+            <span className="font-medium w-full sm:w-auto">{filteredContracts.length}</span>
+            <span className="ml-0 sm:ml-1 w-full sm:w-auto">contrato(s) encontrado(s)</span>
           </div>
         </div>
       </div>
@@ -256,11 +256,11 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
         {paginatedContracts.map((contract) => (
           <div
             key={contract.id}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all"
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-all"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <h3 className="text-lg font-semibold text-slate-900">{contract.codigo_contrato}</h3>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
                     {contract.status}
@@ -278,7 +278,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                 <div className="mb-3">
                   <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm text-slate-600">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
                   <div>
                     <span className="font-medium">Operadora:</span> {contract.operadora}
                   </div>
@@ -300,15 +300,17 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                       <span className="font-medium">Pag. Bonificação:</span>{' '}
                       {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
                     </div>
-                  )}
+                    )}
                 </div>
               </div>
-              <div className="text-right text-sm text-slate-500">
-                <div>Responsável: <span className="font-medium text-slate-700">{contract.responsavel}</span></div>
+              <div className="text-sm text-slate-500 lg:text-right">
+                <div>
+                  Responsável: <span className="font-medium text-slate-700">{contract.responsavel}</span>
+                </div>
                 <div className="mt-1">Criado: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</div>
               </div>
             </div>
-            <div className="flex items-center space-x-2 pt-4 border-t border-slate-200">
+            <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
               <button
                 onClick={() => setSelectedContract(contract)}
                 className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"

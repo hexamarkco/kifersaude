@@ -76,15 +76,17 @@ export default function FilterMultiSelect({
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left flex items-center justify-between"
+        className="relative w-full h-11 pl-10 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left flex items-center justify-between"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <Icon className="absolute left-3 w-5 h-5 text-slate-400" />
+        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         <span className={selectedOptions.length === 0 ? 'text-slate-400 text-sm' : 'text-slate-700 text-sm'}>
           {displayText}
         </span>
-        <ChevronDown className={`absolute right-3 w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (

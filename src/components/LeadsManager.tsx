@@ -346,7 +346,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -386,9 +386,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               ))}
             </select>
           </div>
-          <div className="text-sm text-slate-600 flex items-center justify-end">
-            <span className="font-medium">{filteredLeads.length}</span>
-            <span className="ml-1">lead(s) encontrado(s)</span>
+          <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
+            <span className="font-medium w-full sm:w-auto">{filteredLeads.length}</span>
+            <span className="ml-0 sm:ml-1 w-full sm:w-auto">lead(s) encontrado(s)</span>
           </div>
         </div>
       </div>
@@ -404,13 +404,13 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
           {paginatedLeads.map((lead) => (
           <div
             key={lead.id}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all"
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-all"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold text-slate-900">{lead.nome_completo}</h3>
                       {!isObserver ? (
                         <StatusDropdown
@@ -425,8 +425,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
-                      <div className="flex items-center space-x-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
+                      <div className="flex items-center space-x-2 break-words">
                         <Phone className="w-4 h-4" />
                         <span>{lead.telefone}</span>
                       </div>
@@ -456,8 +456,10 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                       </div>
                     )}
                   </div>
-                  <div className="text-right text-sm text-slate-500">
-                    <div>Responsável: <span className="font-medium text-slate-700">{lead.responsavel}</span></div>
+                  <div className="text-sm text-slate-500 lg:text-right">
+                    <div>
+                      Responsável: <span className="font-medium text-slate-700">{lead.responsavel}</span>
+                    </div>
                     <div className="mt-1">Criado: {new Date(lead.data_criacao).toLocaleDateString('pt-BR')}</div>
                   </div>
                 </div>

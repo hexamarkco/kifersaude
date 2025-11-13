@@ -1528,6 +1528,197 @@ export default function WhatsAppHistoryTab({
     }
     return set;
   }, [companyName]);
+  const chatGroups = useMemo<ChatGroupBase[]>(() => {
+    const groups = new Map<
+      string,
+      {
+        phone: string;
+        messages: WhatsAppConversation[];
+        leadId?: string | null;
+        contractId?: string | null;
+        lastMessage?: WhatsAppConversation;
+        displayName?: string | null;
+        photoUrl?: string | null;
+        isGroup: boolean;
+        unreadCount: number;
+      }
+    >();
+
+    conversations.forEach((conv) => {
+      const chatIdentifier = getChatIdentifierForConversation(conv);
+      if (!chatIdentifier) {
+        return;
+      }
+
+      const normalizedChatName = conv.chat_name?.trim() || null;
+      const normalizedSenderName = conv.sender_name?.trim() || null;
+      const isGroupChat =
+        isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
+      const existing = groups.get(chatIdentifier);
+
+      if (!existing) {
+        groups.set(chatIdentifier, {
+          phone: chatIdentifier,
+          messages: [conv],
+          leadId: conv.lead_id,
+          contractId: conv.contract_id || null,
+          lastMessage: conv,
+          displayName: isGroupChat
+            ? normalizedChatName || null
+            : normalizedSenderName || normalizedChatName || null,
+          photoUrl: conv.sender_photo || null,
+          isGroup: isGroupChat,
+          unreadCount:
+            conv.message_type === 'received' && !conv.read_status ? 1 : 0,
+        });
+      } else {
+        existing.messages.push(conv);
+        if (!existing.leadId && conv.lead_id) {
+          existing.leadId = conv.lead_id;
+        }
+        if (!existing.contractId && conv.contract_id) {
+          existing.contractId = conv.contract_id;
+        }
+        if (!existing.photoUrl && conv.sender_photo) {
+          existing.photoUrl = conv.sender_photo;
+        }
+        if (!existing.isGroup && isGroupChat) {
+          existing.isGroup = true;
+        }
+
+        if (isGroupChat) {
+          if (normalizedChatName) {
+            existing.displayName = normalizedChatName;
+          }
+        } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
+          existing.displayName = normalizedSenderName || normalizedChatName;
+        }
+
+        if (
+          !existing.lastMessage ||
+          new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
+        ) {
+          existing.lastMessage = conv;
+        }
+
+        if (conv.message_type === 'received' && !conv.read_status) {
+          existing.unreadCount += 1;
+        }
+      }
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        messages: group.messages.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        ),
+      }))
+      .sort((a, b) => {
+        const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+        const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+  }, [conversations]);
+
+  useEffect(() => {
+    setManualChatPlaceholders((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+
+      const existingDigits = new Set(
+        conversations
+          .map((conversation) =>
+            sanitizePhoneDigits(getChatIdentifierForConversation(conversation))
+          )
+          .filter((value) => value.length > 0)
+      );
+
+      if (existingDigits.size === 0) {
+        return prev;
+      }
+
+      let changed = false;
+      const next = new Map(prev);
+
+      prev.forEach((placeholder, key) => {
+        const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+        if (normalizedPlaceholder && existingDigits.has(normalizedPlaceholder)) {
+          next.delete(key);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [conversations]);
+
+  const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
+    const baseChats = chatGroups.map((group) => {
+      const preference = chatPreferences.get(group.phone);
+      return {
+        ...group,
+        archived: preference?.archived ?? false,
+        pinned: preference?.pinned ?? false,
+      };
+    });
+
+    if (manualChatPlaceholders.size === 0) {
+      return baseChats;
+    }
+
+    const normalizedExisting = new Set(
+      baseChats
+        .map((chat) => sanitizePhoneDigits(chat.phone))
+        .filter((value) => value.length > 0)
+    );
+
+    const mergedChats = [...baseChats];
+
+    manualChatPlaceholders.forEach((placeholder) => {
+      const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
+      if (normalizedPlaceholder && normalizedExisting.has(normalizedPlaceholder)) {
+        return;
+      }
+
+      if (normalizedPlaceholder) {
+        normalizedExisting.add(normalizedPlaceholder);
+      }
+
+      let placeholderLead: LeadPreview | undefined;
+      if (placeholder.phone) {
+        const lookupKeys = [placeholder.phone, ...buildPhoneLookupKeys(placeholder.phone)];
+        for (const key of lookupKeys) {
+          if (!key) continue;
+          const candidate = leadsByPhoneMap.get(key);
+          if (candidate) {
+            placeholderLead = candidate;
+            break;
+          }
+        }
+      }
+
+      mergedChats.push({
+        phone: placeholder.phone,
+        messages: [],
+        leadId: placeholderLead?.id ?? null,
+        lastMessage: undefined,
+        displayName:
+          placeholder.displayName ||
+          placeholderLead?.nome_completo ||
+          formatPhoneForDisplay(placeholder.phone),
+        photoUrl: null,
+        isGroup: false,
+        unreadCount: 0,
+        archived: false,
+        pinned: false,
+      });
+    });
+
+    return mergedChats;
+  }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
+
   useEffect(() => {
     setChatNameStateMap((previous) => {
       const next = new Map<string, ChatNameState>();
@@ -3511,197 +3702,6 @@ export default function WhatsAppHistoryTab({
     }
     return true;
   });
-
-  const chatGroups = useMemo<ChatGroupBase[]>(() => {
-    const groups = new Map<
-      string,
-      {
-        phone: string;
-        messages: WhatsAppConversation[];
-        leadId?: string | null;
-        contractId?: string | null;
-        lastMessage?: WhatsAppConversation;
-        displayName?: string | null;
-        photoUrl?: string | null;
-        isGroup: boolean;
-        unreadCount: number;
-      }
-    >();
-
-    conversations.forEach((conv) => {
-      const chatIdentifier = getChatIdentifierForConversation(conv);
-      if (!chatIdentifier) {
-        return;
-      }
-
-      const normalizedChatName = conv.chat_name?.trim() || null;
-      const normalizedSenderName = conv.sender_name?.trim() || null;
-      const isGroupChat =
-        isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
-      const existing = groups.get(chatIdentifier);
-
-      if (!existing) {
-        groups.set(chatIdentifier, {
-          phone: chatIdentifier,
-          messages: [conv],
-          leadId: conv.lead_id,
-          contractId: conv.contract_id || null,
-          lastMessage: conv,
-          displayName: isGroupChat
-            ? normalizedChatName || null
-            : normalizedSenderName || normalizedChatName || null,
-          photoUrl: conv.sender_photo || null,
-          isGroup: isGroupChat,
-          unreadCount:
-            conv.message_type === 'received' && !conv.read_status ? 1 : 0,
-        });
-      } else {
-        existing.messages.push(conv);
-        if (!existing.leadId && conv.lead_id) {
-          existing.leadId = conv.lead_id;
-        }
-        if (!existing.contractId && conv.contract_id) {
-          existing.contractId = conv.contract_id;
-        }
-        if (!existing.photoUrl && conv.sender_photo) {
-          existing.photoUrl = conv.sender_photo;
-        }
-        if (!existing.isGroup && isGroupChat) {
-          existing.isGroup = true;
-        }
-
-        if (isGroupChat) {
-          if (normalizedChatName) {
-            existing.displayName = normalizedChatName;
-          }
-        } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
-          existing.displayName = normalizedSenderName || normalizedChatName;
-        }
-
-        if (
-          !existing.lastMessage ||
-          new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
-        ) {
-          existing.lastMessage = conv;
-        }
-
-        if (conv.message_type === 'received' && !conv.read_status) {
-          existing.unreadCount += 1;
-        }
-      }
-    });
-
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        messages: group.messages.sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        ),
-      }))
-      .sort((a, b) => {
-        const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
-        const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
-        return bTime - aTime;
-      });
-  }, [conversations]);
-
-  useEffect(() => {
-    setManualChatPlaceholders((prev) => {
-      if (prev.size === 0) {
-        return prev;
-      }
-
-      const existingDigits = new Set(
-        conversations
-          .map((conversation) =>
-            sanitizePhoneDigits(getChatIdentifierForConversation(conversation))
-          )
-          .filter((value) => value.length > 0)
-      );
-
-      if (existingDigits.size === 0) {
-        return prev;
-      }
-
-      let changed = false;
-      const next = new Map(prev);
-
-      prev.forEach((placeholder, key) => {
-        const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
-        if (normalizedPlaceholder && existingDigits.has(normalizedPlaceholder)) {
-          next.delete(key);
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, [conversations]);
-
-  const chatsWithPreferences = useMemo<ChatGroup[]>(() => {
-    const baseChats = chatGroups.map((group) => {
-      const preference = chatPreferences.get(group.phone);
-      return {
-        ...group,
-        archived: preference?.archived ?? false,
-        pinned: preference?.pinned ?? false,
-      };
-    });
-
-    if (manualChatPlaceholders.size === 0) {
-      return baseChats;
-    }
-
-    const normalizedExisting = new Set(
-      baseChats
-        .map((chat) => sanitizePhoneDigits(chat.phone))
-        .filter((value) => value.length > 0)
-    );
-
-    const mergedChats = [...baseChats];
-
-    manualChatPlaceholders.forEach((placeholder) => {
-      const normalizedPlaceholder = sanitizePhoneDigits(placeholder.phone);
-      if (normalizedPlaceholder && normalizedExisting.has(normalizedPlaceholder)) {
-        return;
-      }
-
-      if (normalizedPlaceholder) {
-        normalizedExisting.add(normalizedPlaceholder);
-      }
-
-      let placeholderLead: LeadPreview | undefined;
-      if (placeholder.phone) {
-        const lookupKeys = [placeholder.phone, ...buildPhoneLookupKeys(placeholder.phone)];
-        for (const key of lookupKeys) {
-          if (!key) continue;
-          const candidate = leadsByPhoneMap.get(key);
-          if (candidate) {
-            placeholderLead = candidate;
-            break;
-          }
-        }
-      }
-
-      mergedChats.push({
-        phone: placeholder.phone,
-        messages: [],
-        leadId: placeholderLead?.id ?? null,
-        lastMessage: undefined,
-        displayName:
-          placeholder.displayName ||
-          placeholderLead?.nome_completo ||
-          formatPhoneForDisplay(placeholder.phone),
-        photoUrl: null,
-        isGroup: false,
-        unreadCount: 0,
-        archived: false,
-        pinned: false,
-      });
-    });
-
-    return mergedChats;
-  }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
 
   const filteredChats = useMemo(() => {
     const resolveLeadForChat = (chat: ChatGroup) => {

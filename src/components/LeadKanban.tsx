@@ -156,7 +156,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
+    <div className="overflow-x-auto pb-4 snap-x snap-mandatory">
       <div className="flex space-x-4 min-w-max">
         {statusColumns.map((column) => {
           const columnLeads = getLeadsByStatus(column.nome);
@@ -166,7 +166,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
           return (
             <div
               key={column.id}
-              className="flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4"
+              className="flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4 snap-start"
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.nome)}
             >

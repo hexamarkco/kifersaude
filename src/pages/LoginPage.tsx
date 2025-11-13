@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { Lock, User, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,10 +16,10 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(username, password);
 
     if (error) {
-      setError('Email ou senha inválidos');
+      setError('Usuário ou senha inválidos');
       setLoading(false);
     } else {
       navigate('/painel');
@@ -47,19 +47,19 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                Email
+              <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-2">
+                Usuário
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="seu@email.com"
+                  placeholder="seu.usuario"
                 />
               </div>
             </div>

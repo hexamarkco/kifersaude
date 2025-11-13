@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase, UserProfile } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Mail, Shield, Trash2, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon } from 'lucide-react';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserUsername, setNewUserUsername] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'observer'>('observer');
@@ -46,6 +47,28 @@ export default function UsersTab() {
     setActionLoading(true);
 
     try {
+      const trimmedUsername = newUserUsername.trim();
+
+      if (!trimmedUsername) {
+        showMessage('error', 'Informe um nome de usuário');
+        return;
+      }
+
+      const { data: existingUser, error: existingUserError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('username', trimmedUsername)
+        .maybeSingle();
+
+      if (existingUserError && existingUserError.code !== 'PGRST116') {
+        throw existingUserError;
+      }
+
+      if (existingUser) {
+        showMessage('error', 'Nome de usuário já está em uso');
+        return;
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUserEmail,
         password: newUserPassword,
@@ -56,13 +79,14 @@ export default function UsersTab() {
       if (authData.user) {
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .update({ role: newUserRole, created_by: user?.id })
+          .update({ role: newUserRole, created_by: user?.id, username: trimmedUsername })
           .eq('id', authData.user.id);
 
         if (profileError) throw profileError;
       }
 
       showMessage('success', 'Usuário criado com sucesso');
+      setNewUserUsername('');
       setNewUserEmail('');
       setNewUserPassword('');
       setNewUserRole('observer');
@@ -167,7 +191,21 @@ export default function UsersTab() {
           <form onSubmit={handleCreateUser} className="bg-slate-50 rounded-lg p-6 mb-6">
             <h4 className="text-lg font-semibold text-slate-900 mb-4">Adicionar Novo Usuário</h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Usuário
+                </label>
+                <input
+                  type="text"
+                  value={newUserUsername}
+                  onChange={(e) => setNewUserUsername(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="nome.usuario"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Email
@@ -197,7 +235,7 @@ export default function UsersTab() {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Permissão
                 </label>
@@ -245,10 +283,11 @@ export default function UsersTab() {
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-white" />
+                    <UserIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">{userProfile.email}</p>
+                    <p className="font-medium text-slate-900">@{userProfile.username || 'sem-usuario'}</p>
+                    <p className="text-sm text-slate-600">{userProfile.email}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Shield className={`w-4 h-4 ${userProfile.role === 'admin' ? 'text-amber-600' : 'text-blue-600'}`} />
                       <span className={`text-sm ${userProfile.role === 'admin' ? 'text-amber-700' : 'text-blue-700'}`}>

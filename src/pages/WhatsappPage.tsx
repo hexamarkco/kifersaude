@@ -89,6 +89,7 @@ export default function WhatsappPage() {
   const [messageInput, setMessageInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showChatListMobile, setShowChatListMobile] = useState(true);
   const selectedChatIdRef = useRef<string | null>(null);
 
   const selectedChat = useMemo(
@@ -241,7 +242,22 @@ export default function WhatsappPage() {
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowChatListMobile(false);
+    }
   };
+
+  const handleBackToChats = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowChatListMobile(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedChatId) {
+      setShowChatListMobile(true);
+    }
+  }, [selectedChatId]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -315,8 +331,12 @@ export default function WhatsappPage() {
   };
 
   return (
-    <div className="flex h-full min-h-[600px] bg-white rounded-lg border border-slate-200 overflow-hidden">
-      <aside className="w-72 border-r border-slate-200 flex flex-col">
+    <div className="w-full flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[720px] min-h-[520px] md:min-h-[600px] max-h-[calc(100vh-80px)] bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <aside
+        className={`w-full md:w-72 flex-1 md:flex-none border-b md:border-b-0 md:border-r border-slate-200 flex-col ${
+          showChatListMobile ? 'flex' : 'hidden'
+        } md:flex`}
+      >
         <div className="p-4 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-slate-800">Conversas</h2>
           {errorMessage && (
@@ -358,11 +378,21 @@ export default function WhatsappPage() {
         </div>
       </aside>
 
-      <section className="flex-1 flex flex-col">
+      <section
+        className={`${showChatListMobile ? 'hidden' : 'flex'} md:flex flex-1 flex-col`}
+      >
         {selectedChat ? (
           <>
             <header className="p-4 border-b border-slate-200">
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleBackToChats}
+                  className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-600"
+                  aria-label="Voltar para lista de conversas"
+                >
+                  ←
+                </button>
                 {selectedChat.sender_photo ? (
                   <img
                     src={selectedChat.sender_photo}

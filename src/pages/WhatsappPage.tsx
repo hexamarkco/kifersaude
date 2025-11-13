@@ -90,12 +90,32 @@ export default function WhatsappPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showChatListMobile, setShowChatListMobile] = useState(true);
+  const [chatSearchTerm, setChatSearchTerm] = useState('');
   const selectedChatIdRef = useRef<string | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+
+  const filteredChats = useMemo(() => {
+    if (!chatSearchTerm.trim()) {
+      return chats;
+    }
+
+    const normalizedTerm = chatSearchTerm.trim().toLowerCase();
+    return chats.filter(chat => {
+      const name = chat.chat_name?.toLowerCase() ?? '';
+      const phone = chat.phone?.toLowerCase() ?? '';
+      const preview = chat.last_message_preview?.toLowerCase() ?? '';
+
+      return (
+        name.includes(normalizedTerm) ||
+        phone.includes(normalizedTerm) ||
+        preview.includes(normalizedTerm)
+      );
+    });
+  }, [chatSearchTerm, chats]);
 
   const loadChats = useCallback(async () => {
     setChatsLoading(true);
@@ -340,14 +360,30 @@ export default function WhatsappPage() {
           {errorMessage && (
             <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
           )}
+          <div className="mt-3">
+            <label className="sr-only" htmlFor="whatsapp-chat-search">
+              Pesquisar conversas
+            </label>
+            <input
+              id="whatsapp-chat-search"
+              type="search"
+              value={chatSearchTerm}
+              onChange={event => setChatSearchTerm(event.target.value)}
+              placeholder="Pesquisar conversas"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              autoComplete="off"
+            />
+          </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
           {chatsLoading && chats.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Carregando conversas...</p>
           ) : chats.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada.</p>
+          ) : filteredChats.length === 0 ? (
+            <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada para a pesquisa.</p>
           ) : (
-            chats.map(chat => {
+            filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
               return (
                 <button

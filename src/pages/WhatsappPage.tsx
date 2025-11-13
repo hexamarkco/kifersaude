@@ -331,19 +331,17 @@ export default function WhatsappPage() {
   };
 
   return (
-    <div className="w-full flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[720px] min-h-[520px] md:min-h-[600px] max-h-[calc(100vh-80px)] bg-white rounded-lg border border-slate-200 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside
-        className={`w-full md:w-72 flex-1 md:flex-none border-b md:border-b-0 md:border-r border-slate-200 flex-col ${
-          showChatListMobile ? 'flex' : 'hidden'
-        } md:flex`}
+        className={`${showChatListMobile ? 'flex' : 'hidden'} md:flex w-full flex-1 flex-col border-b border-slate-200 md:w-80 md:flex-none md:border-b-0 md:border-r min-h-0`}
       >
-        <div className="p-4 border-b border-slate-200">
+        <div className="flex-shrink-0 border-b border-slate-200 p-4">
           <h2 className="text-lg font-semibold text-slate-800">Conversas</h2>
           {errorMessage && (
             <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+        <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
           {chatsLoading && chats.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Carregando conversas...</p>
           ) : chats.length === 0 ? (
@@ -378,12 +376,10 @@ export default function WhatsappPage() {
         </div>
       </aside>
 
-      <section
-        className={`${showChatListMobile ? 'hidden' : 'flex'} md:flex flex-1 flex-col`}
-      >
+      <section className={`${showChatListMobile ? 'hidden' : 'flex'} md:flex flex-1 min-h-0 flex-col`}>
         {selectedChat ? (
           <>
-            <header className="p-4 border-b border-slate-200">
+            <header className="flex-shrink-0 border-b border-slate-200 p-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -415,7 +411,7 @@ export default function WhatsappPage() {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-4 space-y-3">
+            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4">
               {messagesLoading && messages.length === 0 ? (
                 <p className="text-sm text-slate-500">Carregando mensagens...</p>
               ) : messages.length === 0 ? (
@@ -447,10 +443,14 @@ export default function WhatsappPage() {
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 border-t border-slate-200 bg-white">
+            <form
+              onSubmit={handleSubmit}
+              className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
+            >
               <div className="flex items-end gap-3">
                 <textarea
                   className="flex-1 resize-none rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  maxLength={1000}
                   rows={2}
                   value={messageInput}
                   onChange={event => setMessageInput(event.target.value)}

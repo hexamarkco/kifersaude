@@ -1847,9 +1847,9 @@ export default function WhatsAppHistoryTab({
         return;
       }
 
-      const marker = resolveReadMarkerForIdentifier(chatIdentifier);
+      const marker = resolveReadMarkerForIdentifier(groupKey);
       const isGroupChat =
-        isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
+        isGroupWhatsAppJid(groupKey) || isGroupWhatsAppJid(conv.phone_number);
       const normalizedChatName = conv.chat_name?.trim() || null;
       const normalizedSenderName = conv.sender_name?.trim() || null;
       const computedReadStatus = computeMessageReadStatus(conv, marker);
@@ -1860,11 +1860,11 @@ export default function WhatsAppHistoryTab({
             ? conv
             : { ...conv, read_status: true };
 
-      const existing = groups.get(chatIdentifier);
+      const existing = groups.get(groupKey);
 
       if (!existing) {
-        groups.set(chatIdentifier, {
-          phone: chatIdentifier,
+        groups.set(groupKey, {
+          phone: groupKey,
           messages: [messageForGroup],
           leadId: conv.lead_id,
           contractId: conv.contract_id || null,

@@ -20,6 +20,7 @@ import {
   Contract,
   WhatsAppChatPreference,
   WhatsAppScheduledMessage,
+  WhatsAppChatPeer,
 } from '../lib/supabase';
 import { gptService } from '../lib/gptService';
 import { type WhatsAppChatRequestDetail } from '../lib/whatsappService';
@@ -1117,6 +1118,153 @@ type ManualChatPlaceholder = {
   displayName?: string | null;
 };
 
+type ChatReadMarker = {
+  peerId: string | null;
+  lastReadMessageId: string | null;
+  lastReadAt: string | null;
+};
+
+type ChatReadMarkerState = {
+  byKey: Map<string, ChatReadMarker>;
+  byPeerId: Map<string, Set<string>>;
+};
+
+const createEmptyChatReadMarkerState = (): ChatReadMarkerState => ({
+  byKey: new Map(),
+  byPeerId: new Map(),
+});
+
+const extractMessageTimestamp = (
+  message: Pick<WhatsAppConversation, 'timestamp' | 'created_at'>,
+): string | null => message.timestamp ?? message.created_at ?? null;
+
+const computeMessageReadStatus = (
+  message: Pick<WhatsAppConversation, 'id' | 'message_type' | 'timestamp' | 'created_at'>,
+  marker?: ChatReadMarker | null,
+): boolean => {
+  if (message.message_type !== 'received') {
+    return true;
+  }
+
+  if (!marker) {
+    return false;
+  }
+
+  if (marker.lastReadMessageId && marker.lastReadMessageId === message.id) {
+    return true;
+  }
+
+  if (!marker.lastReadAt) {
+    return false;
+  }
+
+  const messageTimestamp = parseTimestampValue(extractMessageTimestamp(message));
+  const markerTimestamp = parseTimestampValue(marker.lastReadAt);
+
+  return Number.isFinite(markerTimestamp) && messageTimestamp <= markerTimestamp;
+};
+
+const buildPeerLookupKeys = (peer: Partial<WhatsAppChatPeer>): string[] => {
+  const keys = new Set<string>();
+
+  const pushCandidates = (value?: string | null) => {
+    if (!value) {
+      return;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    keys.add(trimmed);
+    buildPresenceKeyCandidates(trimmed, trimmed).forEach((candidate) => {
+      if (candidate) {
+        keys.add(candidate);
+      }
+    });
+  };
+
+  pushCandidates(peer.normalized_phone);
+  pushCandidates(peer.normalized_chat_lid);
+  pushCandidates(peer.raw_chat_lid);
+
+  return Array.from(keys);
+};
+
+const mergeChatReadMarkers = (
+  previous: ChatReadMarkerState,
+  peer: Partial<WhatsAppChatPeer> | null | undefined,
+  action: 'upsert' | 'delete',
+): ChatReadMarkerState => {
+  if (!peer) {
+    return previous;
+  }
+
+  const nextByKey = new Map(previous.byKey);
+  const nextByPeerId = new Map(previous.byPeerId);
+
+  const peerId = peer.id ?? null;
+  if (peerId) {
+    const existingKeys = nextByPeerId.get(peerId);
+    if (existingKeys) {
+      existingKeys.forEach((key) => nextByKey.delete(key));
+      nextByPeerId.delete(peerId);
+    }
+  }
+
+  if (action === 'delete') {
+    return { byKey: nextByKey, byPeerId: nextByPeerId };
+  }
+
+  const marker: ChatReadMarker = {
+    peerId,
+    lastReadMessageId: peer.last_read_message_id ?? null,
+    lastReadAt: peer.last_read_at ?? null,
+  };
+
+  const keys = buildPeerLookupKeys(peer);
+  const keySet = new Set<string>();
+
+  keys.forEach((key) => {
+    if (!key) {
+      return;
+    }
+
+    nextByKey.set(key, marker);
+    keySet.add(key);
+  });
+
+  if (peerId && keySet.size > 0) {
+    nextByPeerId.set(peerId, keySet);
+  }
+
+  return { byKey: nextByKey, byPeerId: nextByPeerId };
+};
+
+const buildPeerUpsertPayload = (
+  chatIdentifier: string,
+  overrides: Partial<WhatsAppChatPeer> = {},
+): { payload: Partial<WhatsAppChatPeer>; onConflict: 'normalized_phone' | 'normalized_chat_lid' } => {
+  const normalized = normalizePeerLookupKey(chatIdentifier);
+  const digits = sanitizePhoneDigits(chatIdentifier);
+  const payload: Partial<WhatsAppChatPeer> = {
+    is_group: normalized?.isGroup ?? false,
+    ...overrides,
+  };
+
+  if (normalized?.isGroup) {
+    const normalizedChatLid = overrides.normalized_chat_lid ?? digits || normalized.key || chatIdentifier;
+    payload.normalized_chat_lid = normalizedChatLid;
+    payload.raw_chat_lid = overrides.raw_chat_lid ?? chatIdentifier;
+    return { payload, onConflict: 'normalized_chat_lid' };
+  }
+
+  const normalizedPhone = overrides.normalized_phone ?? digits || normalized?.key || chatIdentifier;
+  payload.normalized_phone = normalizedPhone;
+  return { payload, onConflict: 'normalized_phone' };
+};
+
 const getChatIdentifierForConversation = (
   conversation?: Pick<WhatsAppConversation, 'phone_number' | 'target_phone'> | null
 ): string => {
@@ -1258,6 +1406,9 @@ export default function WhatsAppHistoryTab({
 }: WhatsAppHistoryTabProps) {
   const [aiMessages, setAIMessages] = useState<AIGeneratedMessage[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
+  const [chatReadMarkerState, setChatReadMarkerState] = useState<ChatReadMarkerState>(
+    () => createEmptyChatReadMarkerState(),
+  );
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'chat' | 'ai-messages'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1345,6 +1496,48 @@ export default function WhatsAppHistoryTab({
       return Array.from(results.values());
     },
     [leadPhoneIndex],
+  );
+  const resolveReadMarkerForIdentifier = useCallback(
+    (identifier: string): ChatReadMarker | null => {
+      if (!identifier) {
+        return null;
+      }
+
+      const direct = chatReadMarkerState.byKey.get(identifier);
+      if (direct) {
+        return direct;
+      }
+
+      const candidates = buildPresenceKeyCandidates(identifier, identifier);
+      for (const candidate of candidates) {
+        const marker = chatReadMarkerState.byKey.get(candidate);
+        if (marker) {
+          return marker;
+        }
+      }
+
+      return null;
+    },
+    [chatReadMarkerState],
+  );
+  const synchronizeChatReadMarkers = useCallback((peers: WhatsAppChatPeer[] | null | undefined) => {
+    if (!peers || peers.length === 0) {
+      setChatReadMarkerState(createEmptyChatReadMarkerState());
+      return;
+    }
+
+    const aggregated = peers.reduce<ChatReadMarkerState>(
+      (state, peer) => mergeChatReadMarkers(state, peer, 'upsert'),
+      createEmptyChatReadMarkerState(),
+    );
+
+    setChatReadMarkerState(aggregated);
+  }, []);
+  const applyChatPeerUpdate = useCallback(
+    (peer: Partial<WhatsAppChatPeer> | null | undefined, action: 'upsert' | 'delete') => {
+      setChatReadMarkerState((previous) => mergeChatReadMarkers(previous, peer, action));
+    },
+    [],
   );
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [activePhone, setActivePhone] = useState<string | null>(null);
@@ -1652,73 +1845,70 @@ export default function WhatsAppHistoryTab({
         return;
       }
 
-      const chatIdentifier = getChatIdentifierForConversation(conv);
-      const normalizedChatName = conv.chat_name?.trim() || null;
-      const normalizedSenderName = conv.sender_name?.trim() || null;
+      const marker = resolveReadMarkerForIdentifier(chatIdentifier);
       const isGroupChat =
         isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
-      const displayPhone = resolveChatIdentifier(conv);
-      const peerId = conv.peer_id?.trim() || null;
-      const existing = groups.get(groupKey);
+      const normalizedChatName = conv.chat_name?.trim() || null;
+      const normalizedSenderName = conv.sender_name?.trim() || null;
+      const computedReadStatus = computeMessageReadStatus(conv, marker);
+      const messageForGroup: WhatsAppConversation =
+        conv.message_type === 'received'
+          ? { ...conv, read_status: computedReadStatus }
+          : conv.read_status
+            ? conv
+            : { ...conv, read_status: true };
+
+      const existing = groups.get(chatIdentifier);
 
       if (!existing) {
-        groups.set(groupKey, {
-          phone: displayPhone || chatIdentifier,
-          messages: [conv],
+        groups.set(chatIdentifier, {
+          phone: chatIdentifier,
+          messages: [messageForGroup],
           leadId: conv.lead_id,
           contractId: conv.contract_id || null,
-          lastMessage: conv,
+          lastMessage: messageForGroup,
           displayName: isGroupChat
             ? normalizedChatName || null
             : normalizedSenderName || normalizedChatName || null,
           photoUrl: conv.sender_photo || null,
           isGroup: isGroupChat,
           unreadCount:
-            conv.message_type === 'received' && !conv.read_status ? 1 : 0,
-          peerId,
+            messageForGroup.message_type === 'received' && !messageForGroup.read_status ? 1 : 0,
         });
-      } else {
-        if (peerId && !existing.peerId) {
-          existing.peerId = peerId;
-        }
+        return;
+      }
 
-        const candidatePhone = resolveChatIdentifier(conv, existing.phone);
-        if (shouldReplaceConversationPhone(existing.phone, candidatePhone)) {
-          existing.phone = candidatePhone;
-        }
+      existing.messages.push(messageForGroup);
+      if (!existing.leadId && conv.lead_id) {
+        existing.leadId = conv.lead_id;
+      }
+      if (!existing.contractId && conv.contract_id) {
+        existing.contractId = conv.contract_id;
+      }
+      if (!existing.photoUrl && conv.sender_photo) {
+        existing.photoUrl = conv.sender_photo;
+      }
+      if (!existing.isGroup && isGroupChat) {
+        existing.isGroup = true;
+      }
 
-        existing.messages.push(conv);
-        if (!existing.leadId && conv.lead_id) {
-          existing.leadId = conv.lead_id;
+      if (isGroupChat) {
+        if (normalizedChatName) {
+          existing.displayName = normalizedChatName;
         }
-        if (!existing.contractId && conv.contract_id) {
-          existing.contractId = conv.contract_id;
-        }
-        if (!existing.photoUrl && conv.sender_photo) {
-          existing.photoUrl = conv.sender_photo;
-        }
-        if (!existing.isGroup && isGroupChat) {
-          existing.isGroup = true;
-        }
+      } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
+        existing.displayName = normalizedSenderName || normalizedChatName;
+      }
 
-        if (isGroupChat) {
-          if (normalizedChatName) {
-            existing.displayName = normalizedChatName;
-          }
-        } else if (!existing.displayName && (normalizedSenderName || normalizedChatName)) {
-          existing.displayName = normalizedSenderName || normalizedChatName;
-        }
+      const existingLastMessage = existing.lastMessage;
+      const candidateTimestamp = parseTimestampValue(messageForGroup.timestamp);
+      const existingTimestamp = parseTimestampValue(existingLastMessage?.timestamp);
+      if (!existingLastMessage || candidateTimestamp >= existingTimestamp) {
+        existing.lastMessage = messageForGroup;
+      }
 
-        if (
-          !existing.lastMessage ||
-          new Date(conv.timestamp).getTime() > new Date(existing.lastMessage.timestamp).getTime()
-        ) {
-          existing.lastMessage = conv;
-        }
-
-        if (conv.message_type === 'received' && !conv.read_status) {
-          existing.unreadCount += 1;
-        }
+      if (messageForGroup.message_type === 'received' && !messageForGroup.read_status) {
+        existing.unreadCount += 1;
       }
     });
 
@@ -1726,15 +1916,15 @@ export default function WhatsAppHistoryTab({
       .map((group) => ({
         ...group,
         messages: group.messages.sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          (a, b) => parseTimestampValue(a.timestamp) - parseTimestampValue(b.timestamp)
         ),
       }))
       .sort((a, b) => {
-        const aTime = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
-        const bTime = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+        const aTime = a.lastMessage ? parseTimestampValue(a.lastMessage.timestamp) : 0;
+        const bTime = b.lastMessage ? parseTimestampValue(b.lastMessage.timestamp) : 0;
         return bTime - aTime;
       });
-  }, [conversations]);
+  }, [conversations, resolveReadMarkerForIdentifier]);
 
   useEffect(() => {
     setManualChatPlaceholders((prev) => {
@@ -3116,40 +3306,67 @@ export default function WhatsAppHistoryTab({
     }
   }, [loadLeads]);
 
-  const loadConversations = useCallback(async (showLoader = true) => {
-    if (showLoader) {
-      setLoading(true);
-    }
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(WHATSAPP_CONVERSATIONS_LIMIT);
-
-      if (error) throw error;
-      setConversations(data || []);
-
-      const leadIds = [...new Set((data || []).map(c => c.lead_id).filter(Boolean) as string[])];
-      await loadLeads(leadIds);
-      const phoneNumbers = [
-        ...new Set(
-          (data || [])
-            .flatMap((c) => [c.phone_number, c.target_phone])
-            .filter((value): value is string => Boolean(value))
-        ),
-      ];
-      await loadLeadsByPhones(phoneNumbers);
-      await loadChatPreferences();
-    } catch (error) {
-      console.error('Erro ao carregar conversas:', error);
-    } finally {
+  const loadConversations = useCallback(
+    async (showLoader = true) => {
       if (showLoader) {
-        setLoading(false);
+        setLoading(true);
       }
-      setIsRefreshing(false);
-    }
-  }, [loadChatPreferences, loadLeads, loadLeadsByPhones]);
+      try {
+        const [conversationsResult, peersResult] = await Promise.all([
+          supabase
+            .from('whatsapp_conversations')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(WHATSAPP_CONVERSATIONS_LIMIT),
+          supabase
+            .from('whatsapp_chat_peers')
+            .select(
+              'id, normalized_phone, normalized_chat_lid, raw_chat_lid, last_read_message_id, last_read_at'
+            ),
+        ]);
+
+        const { data, error } = conversationsResult;
+        const { data: peerData, error: peersError } = peersResult;
+
+        if (error) {
+          throw error;
+        }
+
+        setConversations(data || []);
+
+        if (peersError) {
+          console.error('Erro ao carregar marcadores de leitura dos chats:', peersError);
+        } else {
+          synchronizeChatReadMarkers((peerData as WhatsAppChatPeer[] | null | undefined) ?? []);
+        }
+
+        const leadIds = [...new Set((data || []).map((c) => c.lead_id).filter(Boolean) as string[])];
+        await loadLeads(leadIds);
+        const phoneNumbers = [
+          ...new Set(
+            (data || [])
+              .flatMap((c) => [c.phone_number, c.target_phone])
+              .filter((value): value is string => Boolean(value))
+          ),
+        ];
+        await loadLeadsByPhones(phoneNumbers);
+        await loadChatPreferences();
+      } catch (error) {
+        console.error('Erro ao carregar conversas:', error);
+      } finally {
+        if (showLoader) {
+          setLoading(false);
+        }
+        setIsRefreshing(false);
+      }
+    },
+    [
+      loadChatPreferences,
+      loadLeads,
+      loadLeadsByPhones,
+      synchronizeChatReadMarkers,
+    ]
+  );
 
   const fetchAndIndexContacts = useCallback(async (): Promise<ZAPIContact[]> => {
     if (contactsFetchPromiseRef.current) {
@@ -3665,6 +3882,21 @@ export default function WhatsAppHistoryTab({
         },
       );
 
+    const chatPeersChannel = supabase
+      .channel('whatsapp-chat-peers-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_chat_peers' },
+        (payload) => {
+          const record =
+            (payload.eventType === 'DELETE' ? payload.old : payload.new) as
+              | WhatsAppChatPeer
+              | null;
+          const action = payload.eventType === 'DELETE' ? 'delete' : 'upsert';
+          applyChatPeerUpdate(record ?? null, action);
+        },
+      );
+
     const aiMessagesChannel = supabase
       .channel('ai-generated-messages-realtime')
       .on(
@@ -3676,13 +3908,20 @@ export default function WhatsAppHistoryTab({
       );
 
     void conversationsChannel.subscribe();
+    void chatPeersChannel.subscribe();
     void aiMessagesChannel.subscribe();
 
     return () => {
       void conversationsChannel.unsubscribe();
+      void chatPeersChannel.unsubscribe();
       void aiMessagesChannel.unsubscribe();
     };
-  }, [handleRealtimeConversationChange, loadConversations, loadAIMessages]);
+  }, [
+    applyChatPeerUpdate,
+    handleRealtimeConversationChange,
+    loadConversations,
+    loadAIMessages,
+  ]);
 
   useEffect(() => {
     const unsubscribe = zapiService.subscribeToTypingPresence({
@@ -6880,118 +7119,227 @@ const getOutgoingMessageStatus = (
         messagesOverride ??
         conversations.filter((message) => doesMessageBelongToChat(message, trimmedPhone));
 
-      const unreadMessages = relevantMessages.filter(
-        (message) => message.message_type === 'received' && !message.read_status
-      );
-
-      if (unreadMessages.length === 0) {
+      if (relevantMessages.length === 0) {
         return;
       }
 
-      const messageIdsToMark = Array.from(
-        new Set(
-          unreadMessages
-            .map((message) => message.message_id?.trim())
-            .filter((id): id is string => Boolean(id))
-        )
+      const existingMarker = resolveReadMarkerForIdentifier(trimmedPhone);
+      const hasUnreadMessages = relevantMessages.some(
+        (message) =>
+          message.message_type === 'received' && !computeMessageReadStatus(message, existingMarker)
       );
 
+      const sortedMessages = [...relevantMessages].sort(
+        (a, b) => parseTimestampValue(extractMessageTimestamp(a)) - parseTimestampValue(extractMessageTimestamp(b))
+      );
+      const lastMessage = sortedMessages[sortedMessages.length - 1];
+      if (!lastMessage) {
+        return;
+      }
+
+      const lastReadAt = extractMessageTimestamp(lastMessage) ?? new Date().toISOString();
+      const lastReadMessageId = lastMessage.id ?? null;
+
+      if (!hasUnreadMessages && existingMarker) {
+        const markerTimestamp = existingMarker.lastReadAt ?? null;
+        if (
+          existingMarker.lastReadMessageId === lastReadMessageId &&
+          (markerTimestamp === lastReadAt || !markerTimestamp)
+        ) {
+          return;
+        }
+      }
+
+      const { payload, onConflict } = buildPeerUpsertPayload(trimmedPhone, {
+        last_read_message_id: lastReadMessageId,
+        last_read_at: lastReadAt,
+      });
+
       try {
-        const chatStatusResult = await zapiService.modifyChatStatus(trimmedPhone, 'read');
-        if (!chatStatusResult.success) {
-          throw new Error(
-            chatStatusResult.error || `Falha ao marcar chat ${trimmedPhone} como lido no Z-API.`
-          );
+        const { data: peerData, error: upsertError } = await supabase
+          .from('whatsapp_chat_peers')
+          .upsert(payload, { onConflict })
+          .select(
+            'id, normalized_phone, normalized_chat_lid, raw_chat_lid, last_read_message_id, last_read_at'
+          )
+          .maybeSingle();
+
+        if (upsertError) {
+          throw upsertError;
         }
 
-        if (messageIdsToMark.length > 0) {
-          await Promise.allSettled(
-            messageIdsToMark.map(async (messageId) => {
-              const result = await zapiService.markMessageAsRead(trimmedPhone, messageId);
-              if (!result.success) {
-                console.error(
-                  `Erro ao marcar mensagem ${messageId} como lida no Z-API:`,
-                  result.error
-                );
-              }
-            })
-          );
-        }
+        const peerRecord =
+          (peerData as WhatsAppChatPeer | null) ?? ({ ...payload, id: null } as Partial<WhatsAppChatPeer>);
+
+        applyChatPeerUpdate(peerRecord, 'upsert');
 
         const encodedPhone = encodeURIComponent(trimmedPhone);
-        const readStatusCondition = 'read_status.is.false,read_status.is.null';
+        const encodedTimestamp = encodeURIComponent(lastReadAt);
         const filterClauses = [
-          `and(phone_number.eq.${encodedPhone},message_type.eq.received,or(${readStatusCondition}))`,
-          `and(target_phone.eq.${encodedPhone},message_type.eq.received,or(${readStatusCondition}))`,
+          `and(phone_number.eq.${encodedPhone},message_type.eq.received,timestamp.lte.${encodedTimestamp})`,
+          `and(target_phone.eq.${encodedPhone},message_type.eq.received,timestamp.lte.${encodedTimestamp})`,
+          `and(phone_number.eq.${encodedPhone},message_type.eq.received,timestamp.is.null,created_at.lte.${encodedTimestamp})`,
+          `and(target_phone.eq.${encodedPhone},message_type.eq.received,timestamp.is.null,created_at.lte.${encodedTimestamp})`,
         ];
 
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('whatsapp_conversations')
           .update({ read_status: true })
           .or(filterClauses.join(','));
 
-        if (error) {
-          throw error;
+        if (updateError) {
+          throw updateError;
         }
 
+        const markerForUpdate: ChatReadMarker = {
+          peerId: peerRecord.id ?? null,
+          lastReadMessageId: peerRecord.last_read_message_id ?? lastReadMessageId,
+          lastReadAt: peerRecord.last_read_at ?? lastReadAt,
+        };
+
         setConversations((prev) =>
-          prev.map((message) =>
-            doesMessageBelongToChat(message, trimmedPhone) &&
-            message.message_type === 'received'
-              ? { ...message, read_status: true }
-              : message
-          )
+          prev.map((message) => {
+            if (!doesMessageBelongToChat(message, trimmedPhone)) {
+              return message;
+            }
+
+            if (message.message_type !== 'received') {
+              return message.read_status ? message : { ...message, read_status: true };
+            }
+
+            const updatedStatus = computeMessageReadStatus(message, markerForUpdate);
+            if (message.read_status === updatedStatus) {
+              return message;
+            }
+
+            return { ...message, read_status: updatedStatus };
+          })
         );
       } catch (error) {
         console.error('Erro ao marcar mensagens como lidas:', error);
         throw error;
       }
     },
-    [conversations]
+    [applyChatPeerUpdate, conversations, resolveReadMarkerForIdentifier]
   );
 
-  const markChatMessagesAsUnread = useCallback(async (phone: string) => {
-    const trimmedPhone = phone.trim();
-    if (!trimmedPhone) {
-      return;
-    }
-
-    try {
-      const chatStatusResult = await zapiService.modifyChatStatus(trimmedPhone, 'unread');
-      if (!chatStatusResult.success) {
-        throw new Error(
-          chatStatusResult.error || `Falha ao marcar chat ${trimmedPhone} como não lido no Z-API.`
-        );
+  const markChatMessagesAsUnread = useCallback(
+    async (phone: string) => {
+      const trimmedPhone = phone.trim();
+      if (!trimmedPhone) {
+        return;
       }
 
-      const encodedPhone = encodeURIComponent(trimmedPhone);
-      const filterClauses = [
-        `and(phone_number.eq.${encodedPhone},message_type.eq.received)`,
-        `and(target_phone.eq.${encodedPhone},message_type.eq.received)`,
-      ];
+      const relevantMessages = conversations
+        .filter((message) => doesMessageBelongToChat(message, trimmedPhone))
+        .sort(
+          (a, b) =>
+            parseTimestampValue(extractMessageTimestamp(a)) -
+            parseTimestampValue(extractMessageTimestamp(b))
+        );
 
-      const { error } = await supabase
-        .from('whatsapp_conversations')
-        .update({ read_status: false })
-        .or(filterClauses.join(','));
+      const lastReceivedIndex = (() => {
+        for (let index = relevantMessages.length - 1; index >= 0; index -= 1) {
+          if (relevantMessages[index]?.message_type === 'received') {
+            return index;
+          }
+        }
+        return -1;
+      })();
 
-      if (error) {
+      const markerMessage =
+        lastReceivedIndex > 0 ? relevantMessages[lastReceivedIndex - 1] ?? null : null;
+      const lastReadMessageId = markerMessage?.id ?? null;
+      const lastReadAt = markerMessage ? extractMessageTimestamp(markerMessage) : null;
+
+      const { payload, onConflict } = buildPeerUpsertPayload(trimmedPhone, {
+        last_read_message_id: lastReadMessageId,
+        last_read_at: lastReadAt,
+      });
+
+      try {
+        const { data: peerData, error: upsertError } = await supabase
+          .from('whatsapp_chat_peers')
+          .upsert(payload, { onConflict })
+          .select(
+            'id, normalized_phone, normalized_chat_lid, raw_chat_lid, last_read_message_id, last_read_at'
+          )
+          .maybeSingle();
+
+        if (upsertError) {
+          throw upsertError;
+        }
+
+        const peerRecord =
+          (peerData as WhatsAppChatPeer | null) ?? ({ ...payload, id: null } as Partial<WhatsAppChatPeer>);
+
+        applyChatPeerUpdate(peerRecord, 'upsert');
+
+        const encodedPhone = encodeURIComponent(trimmedPhone);
+        const baseClauses = [
+          `and(phone_number.eq.${encodedPhone},message_type.eq.received)`,
+          `and(target_phone.eq.${encodedPhone},message_type.eq.received)`,
+        ];
+
+        const { error: resetError } = await supabase
+          .from('whatsapp_conversations')
+          .update({ read_status: false })
+          .or(baseClauses.join(','));
+
+        if (resetError) {
+          throw resetError;
+        }
+
+        if (lastReadAt) {
+          const encodedTimestamp = encodeURIComponent(lastReadAt);
+          const clausesToRead = [
+            `and(phone_number.eq.${encodedPhone},message_type.eq.received,timestamp.lte.${encodedTimestamp})`,
+            `and(target_phone.eq.${encodedPhone},message_type.eq.received,timestamp.lte.${encodedTimestamp})`,
+            `and(phone_number.eq.${encodedPhone},message_type.eq.received,timestamp.is.null,created_at.lte.${encodedTimestamp})`,
+            `and(target_phone.eq.${encodedPhone},message_type.eq.received,timestamp.is.null,created_at.lte.${encodedTimestamp})`,
+          ];
+
+          const { error: markReadError } = await supabase
+            .from('whatsapp_conversations')
+            .update({ read_status: true })
+            .or(clausesToRead.join(','));
+
+          if (markReadError) {
+            throw markReadError;
+          }
+        }
+
+        const markerForUpdate: ChatReadMarker = {
+          peerId: peerRecord.id ?? null,
+          lastReadMessageId: peerRecord.last_read_message_id ?? lastReadMessageId,
+          lastReadAt: peerRecord.last_read_at ?? lastReadAt,
+        };
+
+        setConversations((prev) =>
+          prev.map((message) => {
+            if (!doesMessageBelongToChat(message, trimmedPhone)) {
+              return message;
+            }
+
+            if (message.message_type !== 'received') {
+              return message;
+            }
+
+            const updatedStatus = computeMessageReadStatus(message, markerForUpdate);
+            if (message.read_status === updatedStatus) {
+              return message;
+            }
+
+            return { ...message, read_status: updatedStatus };
+          })
+        );
+      } catch (error) {
+        console.error('Erro ao marcar chat como não lido:', error);
         throw error;
       }
-
-      setConversations((prev) =>
-        prev.map((message) =>
-          doesMessageBelongToChat(message, trimmedPhone) &&
-          message.message_type === 'received'
-            ? { ...message, read_status: false }
-            : message
-        )
-      );
-    } catch (error) {
-      console.error('Erro ao marcar chat como não lido:', error);
-      throw error;
-    }
-  }, []);
+    },
+    [applyChatPeerUpdate, conversations]
+  );
 
   const executeSelectionAction = useCallback(
     async ({

@@ -299,6 +299,19 @@ export type WhatsAppConversation = {
   created_at: string;
 };
 
+export type WhatsAppChatPeer = {
+  id: string;
+  normalized_phone?: string | null;
+  normalized_chat_lid?: string | null;
+  raw_chat_lid?: string | null;
+  chat_lid_history?: string[] | null;
+  is_group: boolean;
+  last_read_message_id?: string | null;
+  last_read_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WhatsAppScheduledMessageStatus =
   | 'pending'
   | 'scheduled'

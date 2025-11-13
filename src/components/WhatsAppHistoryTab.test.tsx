@@ -37,22 +37,43 @@ vi.mock('../contexts/AuthContext', () => ({
 
 const createQueryResult = () => Promise.resolve({ data: [], error: null });
 
+const createMutationBuilder = () => {
+  const mutationPromise = Promise.resolve({ error: null });
+  const queryPromise = createQueryResult();
+  return {
+    eq: vi.fn(() => mutationPromise),
+    or: vi.fn(() => mutationPromise),
+    select: vi.fn(() => ({
+      maybeSingle: vi.fn(() => queryPromise),
+      single: vi.fn(() => queryPromise),
+      then: (resolve: any, reject: any) => queryPromise.then(resolve, reject),
+    })),
+    maybeSingle: vi.fn(() => queryPromise),
+    single: vi.fn(() => queryPromise),
+    then: (resolve: any, reject: any) => mutationPromise.then(resolve, reject),
+  };
+};
+
 const createQueryBuilder = () => {
+  const queryPromise = createQueryResult();
   const builder: any = {
     eq: vi.fn(() => builder),
     in: vi.fn(() => builder),
+    is: vi.fn(() => builder),
+    lte: vi.fn(() => builder),
+    gte: vi.fn(() => builder),
     or: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
     range: vi.fn(() => builder),
-    maybeSingle: vi.fn(() => createQueryResult()),
-    single: vi.fn(() => createQueryResult()),
     select: vi.fn(() => builder),
-    update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
-    insert: vi.fn(() => Promise.resolve({ error: null })),
-    delete: vi.fn(() => Promise.resolve({ error: null })),
-    upsert: vi.fn(() => Promise.resolve({ error: null })),
-    then: (resolve: any, reject: any) => createQueryResult().then(resolve, reject),
+    update: vi.fn(() => createMutationBuilder()),
+    insert: vi.fn(() => createMutationBuilder()),
+    delete: vi.fn(() => createMutationBuilder()),
+    upsert: vi.fn(() => createMutationBuilder()),
+    maybeSingle: vi.fn(() => queryPromise),
+    single: vi.fn(() => queryPromise),
+    then: (resolve: any, reject: any) => queryPromise.then(resolve, reject),
   };
 
   return builder;

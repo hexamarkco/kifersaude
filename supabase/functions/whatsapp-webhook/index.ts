@@ -337,7 +337,7 @@ const handleOnMessageSend = async (req: Request) => {
     return respondJson(405, { success: false, error: 'Método não permitido' });
   }
 
-  const payload = await ensureJsonBody<Record<string, unknown>>(req);
+  const payload = (await ensureJsonBody<ZapiWebhookPayload>(req)) ?? {};
 
   try {
     console.log('whatsapp-webhook on-message-send payload:', JSON.stringify(payload));
@@ -345,7 +345,97 @@ const handleOnMessageSend = async (req: Request) => {
     console.error('Não foi possível registrar o payload do webhook de envio.');
   }
 
-  return respondJson(200, { success: true, acknowledged: true });
+  if (payload.type !== 'DeliveryCallback') {
+    return respondJson(200, { success: true, ignored: true });
+  }
+
+  const phone = typeof payload.phone === 'string' ? payload.phone : undefined;
+
+  if (!phone) {
+    return respondJson(400, { success: false, error: 'Campo phone é obrigatório' });
+  }
+
+  try {
+    const messageText = resolveMessageText(payload);
+    const momentDate = parseMoment(payload.momment) ?? new Date();
+    const status = typeof payload.status === 'string' ? payload.status : null;
+    const messageId = typeof payload.messageId === 'string' ? payload.messageId : null;
+    const isGroup = payload.isGroup === true || phone.endsWith('-group');
+    const chatName = payload.chatName ?? payload.senderName ?? phone;
+    const senderPhoto = payload.senderPhoto ?? null;
+
+    const chat = await upsertChatRecord({
+      phone,
+      chatName,
+      isGroup,
+      senderPhoto,
+      lastMessageAt: momentDate,
+      lastMessagePreview: messageText,
+    });
+
+    let message: WhatsappMessage;
+
+    if (messageId) {
+      const { data: existingMessage, error: fetchError } = await supabaseAdmin
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('message_id', messageId)
+        .maybeSingle<WhatsappMessage>();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (existingMessage) {
+        const { data: updatedMessage, error: updateError } = await supabaseAdmin
+          .from('whatsapp_messages')
+          .update({
+            status,
+            moment: toIsoStringOrNull(momentDate),
+            raw_payload: payload as Record<string, any>,
+            from_me: true,
+          })
+          .eq('id', existingMessage.id)
+          .select('*')
+          .single<WhatsappMessage>();
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        if (!updatedMessage) {
+          throw new Error('Failed to update WhatsApp message');
+        }
+
+        message = updatedMessage;
+      } else {
+        message = await insertWhatsappMessage({
+          chatId: chat.id,
+          messageId,
+          fromMe: true,
+          status,
+          text: messageText,
+          moment: momentDate,
+          rawPayload: payload as Record<string, any>,
+        });
+      }
+    } else {
+      message = await insertWhatsappMessage({
+        chatId: chat.id,
+        messageId,
+        fromMe: true,
+        status,
+        text: messageText,
+        moment: momentDate,
+        rawPayload: payload as Record<string, any>,
+      });
+    }
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    console.error('Erro ao processar webhook de envio da Z-API:', error);
+    return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
+  }
 };
 
 const handleSendMessage = async (req: Request) => {

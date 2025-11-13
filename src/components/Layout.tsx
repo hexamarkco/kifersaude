@@ -268,7 +268,7 @@ export default function Layout({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
@@ -457,8 +457,20 @@ export default function Layout({
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
+      <main
+        className={`flex-1 ${
+          activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'
+        }`}
+      >
+        <div
+          className={`mx-auto w-full ${
+            activeTab === 'whatsapp'
+              ? 'h-full max-w-7xl px-2 py-4 sm:px-4 lg:px-6'
+              : 'max-w-7xl px-4 py-8 sm:px-6 lg:px-8'
+          }`}
+        >
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -538,7 +538,7 @@ export default function RemindersManagerEnhanced() {
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
                 </div>
                 {overdue && !reminder.lido && (
-                  <span className="text-red-600 font-medium">Atrasado</span>
+                  <span className="text-red-600 font-medium">Atrasado </span>
                 )}
                 {reminder.snooze_count && reminder.snooze_count > 0 && (
                   <span className="text-orange-600 text-xs">

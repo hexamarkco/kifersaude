@@ -16,6 +16,10 @@ try {
       entry: 'supabase/functions/whatsapp-webhook/__tests__/normalization.test.ts',
       outfile: 'whatsappWebhookNormalization.test.mjs',
     },
+    {
+      entry: 'supabase/functions/whatsapp-webhook/__tests__/peers.test.ts',
+      outfile: 'whatsappWebhookPeers.test.mjs',
+    },
   ];
 
   for (const { entry, outfile } of tests) {

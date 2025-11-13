@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
@@ -46,6 +46,7 @@ export default function RemindersManagerEnhanced() {
     defaultDescription?: string;
     defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
   } | null>(null);
+  const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     loadReminders();
@@ -59,7 +60,16 @@ export default function RemindersManagerEnhanced() {
           schema: 'public',
           table: 'reminders'
         },
-        () => {
+        payload => {
+          const newReminder = payload.new as Reminder | null;
+          const oldReminder = payload.old as Reminder | null;
+          const affectedId = newReminder?.id ?? oldReminder?.id;
+
+          if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
+            pendingRefreshIdsRef.current.delete(affectedId);
+            return;
+          }
+
           loadReminders();
         }
       )
@@ -161,7 +171,24 @@ export default function RemindersManagerEnhanced() {
           });
         }
       }
-      loadReminders();
+      setReminders(currentReminders =>
+        currentReminders.map(reminderItem =>
+          reminderItem.id === id
+            ? {
+                ...reminderItem,
+                lido: !currentStatus,
+                concluido_em: completionDate ?? undefined,
+              }
+            : reminderItem
+        )
+      );
+      setSelectedReminders(prev => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      pendingRefreshIdsRef.current.add(id);
     } catch (error) {
       console.error('Erro ao atualizar lembrete:', error);
       alert('Erro ao atualizar lembrete');
@@ -178,7 +205,14 @@ export default function RemindersManagerEnhanced() {
         .eq('id', id);
 
       if (error) throw error;
-      loadReminders();
+      setReminders(currentReminders => currentReminders.filter(reminder => reminder.id !== id));
+      setSelectedReminders(prev => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      pendingRefreshIdsRef.current.add(id);
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
       alert('Erro ao remover lembrete');

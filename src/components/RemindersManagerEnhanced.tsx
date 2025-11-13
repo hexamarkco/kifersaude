@@ -3,7 +3,7 @@ import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X
+  ChevronDown, ChevronUp, Tag, X, MessageCircle
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
@@ -414,10 +414,23 @@ export default function RemindersManagerEnhanced() {
     return <Icon className="w-5 h-5" />;
   };
 
+  const getWhatsAppLink = (phone?: string) => {
+    if (!phone) return undefined;
+
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return undefined;
+
+    const phoneWithCountry = digits.startsWith('55') ? digits : `55${digits}`;
+
+    return `https://api.whatsapp.com/send/?phone=${phoneWithCountry}`;
+  };
+
   const renderReminderCard = (reminder: Reminder) => {
     const overdue = isOverdue(reminder.data_lembrete);
     const urgency = getUrgencyLevel(reminder);
     const isSelected = selectedReminders.has(reminder.id);
+    const leadInfo = reminder.lead_id ? leadsMap.get(reminder.lead_id) : undefined;
+    const whatsappLink = leadInfo?.telefone ? getWhatsAppLink(leadInfo.telefone) : undefined;
 
     return (
       <div
@@ -509,6 +522,17 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            {whatsappLink && (
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Conversar via WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </a>
+            )}
             {!reminder.lido && (
               <div className="relative">
                 <button

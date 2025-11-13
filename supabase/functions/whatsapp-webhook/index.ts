@@ -49,6 +49,17 @@ type SendMessageBody = {
   message?: string;
 };
 
+type PendingReceivedEntry = {
+  payload: ZapiWebhookPayload;
+  receivedAt: number;
+};
+
+type PendingSendEntry = {
+  payload: Record<string, unknown>;
+  phone?: string;
+  receivedAt: number;
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -64,6 +75,27 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
       },
     })
   : null;
+
+const pendingReceivedFromMeMessages = new Map<string, PendingReceivedEntry>();
+const pendingSendPayloads = new Map<string, PendingSendEntry>();
+
+const PENDING_ENTRY_TTL_MS = 5 * 60 * 1000;
+
+const cleanupPendingEntries = () => {
+  const now = Date.now();
+
+  for (const [messageId, entry] of pendingReceivedFromMeMessages.entries()) {
+    if (now - entry.receivedAt > PENDING_ENTRY_TTL_MS) {
+      pendingReceivedFromMeMessages.delete(messageId);
+    }
+  }
+
+  for (const [messageId, entry] of pendingSendPayloads.entries()) {
+    if (now - entry.receivedAt > PENDING_ENTRY_TTL_MS) {
+      pendingSendPayloads.delete(messageId);
+    }
+  }
+};
 
 const toIsoStringOrNull = (value: Date | string | number | null | undefined): string | null => {
   if (value === null || value === undefined) {
@@ -128,6 +160,50 @@ const respondJson = (status: number, body: Record<string, unknown>) =>
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+
+const persistReceivedMessage = async (
+  payload: ZapiWebhookPayload,
+  options?: { overridePhone?: string }
+): Promise<{ chat: WhatsappChat; message: WhatsappMessage }> => {
+  const phoneFromPayload = typeof payload.phone === 'string' ? payload.phone : undefined;
+  const phone = options?.overridePhone ?? phoneFromPayload;
+
+  if (!phone) {
+    throw new Error('Campo phone é obrigatório');
+  }
+
+  const messageText = resolveMessageText(payload);
+  const momentDate = parseMoment(payload.momment) ?? new Date();
+  const isGroup = payload.isGroup === true || phone.endsWith('-group');
+  const chatName = payload.chatName ?? payload.senderName ?? phone;
+  const senderPhoto = payload.senderPhoto ?? null;
+
+  const chat = await upsertChatRecord({
+    phone,
+    chatName,
+    isGroup,
+    senderPhoto,
+    lastMessageAt: momentDate,
+    lastMessagePreview: messageText,
+  });
+
+  const normalizedRawPayload: Record<string, any> = {
+    ...(payload as Record<string, any>),
+    phone,
+  };
+
+  const message = await insertWhatsappMessage({
+    chatId: chat.id,
+    messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
+    fromMe: payload.fromMe === true,
+    status: typeof payload.status === 'string' ? payload.status : null,
+    text: messageText,
+    moment: momentDate,
+    rawPayload: normalizedRawPayload,
+  });
+
+  return { chat, message };
+};
 
 const upsertChatRecord = async (input: {
   phone: string;
@@ -297,6 +373,8 @@ const handleOnMessageReceived = async (req: Request) => {
     return respondJson(405, { success: false, error: 'Método não permitido' });
   }
 
+  cleanupPendingEntries();
+
   const payload = (await ensureJsonBody<ZapiWebhookPayload>(req)) ?? {};
 
   try {
@@ -309,40 +387,51 @@ const handleOnMessageReceived = async (req: Request) => {
     return respondJson(200, { success: true, ignored: true });
   }
 
-  const phone = typeof payload.phone === 'string' ? payload.phone : undefined;
-
-  if (!phone) {
-    return respondJson(400, { success: false, error: 'Campo phone é obrigatório' });
-  }
+  const fromMe = payload.fromMe === true;
+  const messageId = typeof payload.messageId === 'string' ? payload.messageId : undefined;
 
   try {
-    const messageText = resolveMessageText(payload);
-    const momentDate = parseMoment(payload.momment) ?? new Date();
-    const isGroup = payload.isGroup === true || phone.endsWith('-group');
-    const chatName = payload.chatName ?? payload.senderName ?? phone;
-    const senderPhoto = payload.senderPhoto ?? null;
+    if (fromMe) {
+      if (!messageId) {
+        return respondJson(400, {
+          success: false,
+          error: 'Campo messageId é obrigatório para mensagens enviadas pelo próprio número',
+        });
+      }
 
-    const chat = await upsertChatRecord({
-      phone,
-      chatName,
-      isGroup,
-      senderPhoto,
-      lastMessageAt: momentDate,
-      lastMessagePreview: messageText,
-    });
+      pendingReceivedFromMeMessages.set(messageId, {
+        payload,
+        receivedAt: Date.now(),
+      });
 
-    const message = await insertWhatsappMessage({
-      chatId: chat.id,
-      messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
-      fromMe: payload.fromMe === true,
-      status: typeof payload.status === 'string' ? payload.status : null,
-      text: messageText,
-      moment: momentDate,
-      rawPayload: payload as Record<string, any>,
-    });
+      const pendingSend = pendingSendPayloads.get(messageId);
+      const pendingPhone = pendingSend?.phone;
+
+      if (pendingSend && typeof pendingPhone === 'string') {
+        try {
+          const { chat, message } = await persistReceivedMessage(payload, { overridePhone: pendingPhone });
+          pendingReceivedFromMeMessages.delete(messageId);
+          pendingSendPayloads.delete(messageId);
+
+          return respondJson(200, { success: true, chat, message, matched: true });
+        } catch (error) {
+          console.error('Erro ao persistir mensagem enviada (resolução via received):', error);
+          return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
+        }
+      }
+
+      return respondJson(200, { success: true, deferred: true });
+    }
+
+    const { chat, message } = await persistReceivedMessage(payload);
 
     return respondJson(200, { success: true, chat, message });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Campo phone é obrigatório') {
+      console.error('Payload recebido sem phone válido:', error);
+      return respondJson(400, { success: false, error: error.message });
+    }
+
     console.error('Erro ao processar webhook da Z-API:', error);
     return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
   }
@@ -353,7 +442,9 @@ const handleOnMessageSend = async (req: Request) => {
     return respondJson(405, { success: false, error: 'Método não permitido' });
   }
 
-  const payload = await ensureJsonBody<Record<string, unknown>>(req);
+  cleanupPendingEntries();
+
+  const payload = (await ensureJsonBody<Record<string, unknown>>(req)) ?? {};
 
   try {
     console.log('whatsapp-webhook on-message-send payload:', JSON.stringify(payload));
@@ -361,7 +452,35 @@ const handleOnMessageSend = async (req: Request) => {
     console.error('Não foi possível registrar o payload do webhook de envio.');
   }
 
-  return respondJson(200, { success: true, acknowledged: true });
+  const messageId = typeof payload?.messageId === 'string' ? (payload.messageId as string) : undefined;
+  const phone = typeof payload?.phone === 'string' ? (payload.phone as string) : undefined;
+
+  if (!messageId) {
+    return respondJson(400, { success: false, error: 'Campo messageId é obrigatório' });
+  }
+
+  if (!phone) {
+    return respondJson(400, { success: false, error: 'Campo phone é obrigatório' });
+  }
+
+  const pendingReceived = pendingReceivedFromMeMessages.get(messageId);
+
+  if (pendingReceived) {
+    try {
+      const { chat, message } = await persistReceivedMessage(pendingReceived.payload, { overridePhone: phone });
+      pendingReceivedFromMeMessages.delete(messageId);
+      pendingSendPayloads.delete(messageId);
+
+      return respondJson(200, { success: true, chat, message, matched: true });
+    } catch (error) {
+      console.error('Erro ao persistir mensagem enviada (resolução via send):', error);
+      return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
+    }
+  }
+
+  pendingSendPayloads.set(messageId, { payload, phone, receivedAt: Date.now() });
+
+  return respondJson(200, { success: true, deferred: true });
 };
 
 const handleSendMessage = async (req: Request) => {

@@ -33,6 +33,9 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
 
@@ -173,6 +176,13 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLeads = filteredLeads.slice(startIndex, startIndex + itemsPerPage);
+  const selectedLeadIdsSet = useMemo(() => new Set(selectedLeadIds), [selectedLeadIds]);
+  const paginatedLeadIds = useMemo(() => paginatedLeads.map((lead) => lead.id), [paginatedLeads]);
+  const areAllPageLeadsSelected = useMemo(
+    () => paginatedLeadIds.length > 0 && paginatedLeadIds.every((id) => selectedLeadIdsSet.has(id)),
+    [paginatedLeadIds, selectedLeadIdsSet]
+  );
+  const canSelectLeads = !isObserver && viewMode === 'list';
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -182,6 +192,62 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
+  };
+
+  const toggleLeadSelection = (leadId: string) => {
+    if (!canSelectLeads || isBulkUpdating) return;
+
+    setSelectedLeadIds((current) => {
+      if (current.includes(leadId)) {
+        return current.filter((id) => id !== leadId);
+      }
+      return [...current, leadId];
+    });
+  };
+
+  const toggleSelectAllCurrentPage = () => {
+    if (!canSelectLeads || isBulkUpdating) return;
+
+    setSelectedLeadIds((current) => {
+      const currentSet = new Set(current);
+      const shouldSelectAll = !paginatedLeadIds.every((id) => currentSet.has(id));
+
+      if (!shouldSelectAll) {
+        return current.filter((id) => !paginatedLeadIds.includes(id));
+      }
+
+      const updated = new Set(current);
+      paginatedLeadIds.forEach((id) => updated.add(id));
+      return Array.from(updated);
+    });
+  };
+
+  const clearSelection = useCallback(() => {
+    setSelectedLeadIds([]);
+    setBulkStatus('');
+  }, []);
+
+  const handleBulkStatusApply = async () => {
+    if (!bulkStatus || selectedLeadIds.length === 0) return;
+
+    setIsBulkUpdating(true);
+    let hasError = false;
+
+    for (const leadId of selectedLeadIds) {
+      try {
+        await handleStatusChange(leadId, bulkStatus);
+      } catch (error) {
+        console.error('Erro ao atualizar status do lead em massa:', error);
+        hasError = true;
+      }
+    }
+
+    if (hasError) {
+      alert('Alguns leads não puderam ter o status atualizado. Verifique e tente novamente.');
+    }
+
+    setIsBulkUpdating(false);
+    clearSelection();
   };
 
   const handleArchive = async (id: string) => {
@@ -333,6 +399,38 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
   };
 
+  useEffect(() => {
+    if (viewMode !== 'list') {
+      clearSelection();
+    }
+  }, [viewMode, clearSelection]);
+
+  useEffect(() => {
+    if (showArchived) {
+      clearSelection();
+    }
+  }, [showArchived, clearSelection]);
+
+  useEffect(() => {
+    if (isObserver) {
+      clearSelection();
+    }
+  }, [isObserver, clearSelection]);
+
+  useEffect(() => {
+    setSelectedLeadIds((current) => {
+      const filteredIds = new Set(filteredLeads.map((lead) => lead.id));
+      const updated = current.filter((id) => filteredIds.has(id));
+      return updated.length === current.length ? current : updated;
+    });
+  }, [filteredLeads]);
+
+  useEffect(() => {
+    if (selectedLeadIds.length === 0) {
+      setBulkStatus('');
+    }
+  }, [selectedLeadIds.length]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -471,6 +569,62 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         />
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          {!isObserver && paginatedLeads.length > 0 && (
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 py-3 border-b border-slate-200">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  checked={areAllPageLeadsSelected}
+                  onChange={toggleSelectAllCurrentPage}
+                />
+                Selecionar todos desta página
+              </label>
+
+              {selectedLeadIds.length > 0 && (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="text-sm font-medium text-teal-700">
+                    {selectedLeadIds.length} lead(s) selecionado(s)
+                  </span>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                    <select
+                      value={bulkStatus}
+                      onChange={(event) => setBulkStatus(event.target.value)}
+                      className="w-full sm:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    >
+                      <option value="" disabled>
+                        Selecionar novo status
+                      </option>
+                      {activeLeadStatuses.map((status) => (
+                        <option key={status.id} value={status.nome}>
+                          {status.nome}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleBulkStatusApply}
+                        disabled={!bulkStatus || isBulkUpdating}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isBulkUpdating ? 'Atualizando...' : 'Aplicar Status'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                        disabled={isBulkUpdating}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         <div className="grid grid-cols-1 gap-4 p-4">
           {paginatedLeads.map((lead) => (
           <div
@@ -482,12 +636,22 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {canSelectLeads && (
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIdsSet.has(lead.id)}
+                          onChange={() => toggleLeadSelection(lead.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          aria-label={`Selecionar lead ${lead.nome_completo}`}
+                        />
+                      )}
                       <h3 className="text-lg font-semibold text-slate-900">{lead.nome_completo}</h3>
                       {!isObserver ? (
                         <StatusDropdown
                           currentStatus={lead.status}
                           leadId={lead.id}
                           onStatusChange={handleStatusChange}
+                          disabled={isBulkUpdating}
                           statusOptions={activeLeadStatuses}
                         />
                       ) : (

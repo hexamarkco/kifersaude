@@ -1188,6 +1188,7 @@ export default function WhatsAppHistoryTab({
   const [leadsMap, setLeadsMap] = useState<Map<string, LeadPreview>>(new Map());
   const [leadsByPhoneMap, setLeadsByPhoneMap] = useState<Map<string, LeadPreview>>(new Map());
   const leadsMapRef = useRef(leadsMap);
+  const [contactsMap, setContactsMap] = useState<Map<string, ZAPIContact>>(new Map());
   const leadPhoneIndex = useMemo(() => {
     const index = new Map<string, LeadPreview[]>();
 
@@ -1254,7 +1255,6 @@ export default function WhatsAppHistoryTab({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
   const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
-  const [contactsMap, setContactsMap] = useState<Map<string, ZAPIContact>>(new Map());
   const [chatNameStateMap, setChatNameStateMap] = useState<Map<string, ChatNameState>>(new Map());
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [startConversationLoading, setStartConversationLoading] = useState(false);

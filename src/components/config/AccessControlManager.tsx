@@ -16,15 +16,15 @@ const MODULES = [
 const ensureRole = (roles: string[], role: string) => (roles.includes(role) ? roles : [...roles, role]);
 
 export default function AccessControlManager() {
-  const { roleAccessRules, refreshRoleAccessRules } = useConfig();
+  const { profilePermissions, refreshProfilePermissions } = useConfig();
 
   const roles = useMemo(() => {
-    const unique = Array.from(new Set(roleAccessRules.map(rule => rule.role)));
+    const unique = Array.from(new Set(profilePermissions.map(rule => rule.role)));
     return ensureRole(ensureRole(unique, 'admin'), 'observer');
-  }, [roleAccessRules]);
+  }, [profilePermissions]);
 
   const getPermission = (role: string, module: string) => {
-    const rule = roleAccessRules.find(r => r.role === role && r.module === module);
+    const rule = profilePermissions.find(r => r.role === role && r.module === module);
     if (rule) return rule;
     if (role === 'admin') {
       return { id: '', role, module, can_view: true, can_edit: true, created_at: '', updated_at: '' };
@@ -37,11 +37,11 @@ export default function AccessControlManager() {
     if (current && getPermission(role, module).can_edit) {
       updates['can_edit'] = false;
     }
-    const { error } = await configService.upsertRoleAccessRule(role, module, updates);
+    const { error } = await configService.upsertProfilePermission(role, module, updates);
     if (error) {
       alert('Erro ao atualizar permissão');
     } else {
-      await refreshRoleAccessRules();
+      await refreshProfilePermissions();
     }
   };
 
@@ -50,11 +50,11 @@ export default function AccessControlManager() {
     if (!current) {
       updates['can_view'] = true;
     }
-    const { error } = await configService.upsertRoleAccessRule(role, module, updates);
+    const { error } = await configService.upsertProfilePermission(role, module, updates);
     if (error) {
       alert('Erro ao atualizar permissão');
     } else {
-      await refreshRoleAccessRules();
+      await refreshProfilePermissions();
     }
   };
 

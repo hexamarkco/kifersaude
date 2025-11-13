@@ -422,7 +422,7 @@ export default function RemindersManagerEnhanced() {
 
     const phoneWithCountry = digits.startsWith('55') ? digits : `55${digits}`;
 
-    return `https://api.whatsapp.com/send/?phone=${phoneWithCountry}`;
+    return `https://web.whatsapp.com/send?phone=${phoneWithCountry}`;
   };
 
   const renderReminderCard = (reminder: Reminder) => {

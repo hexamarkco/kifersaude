@@ -7,6 +7,7 @@ import {
   LogOut,
   Settings,
   MessageCircle,
+  MessageSquareText,
   ChevronDown,
   Briefcase,
   Mail,
@@ -63,6 +64,7 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquareText },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },

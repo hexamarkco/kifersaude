@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -214,6 +214,25 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     if (!url) return;
     if (typeof window !== 'undefined') {
       window.open(url, '_blank');
+    }
+  };
+
+  const buildEmailUrl = (lead: Lead) => {
+    if (!lead.email) return '';
+    const subject = 'Contato sobre plano de saúde';
+    const body = `Olá ${getLeadFirstName(lead.nome_completo)}, tudo bem?`;
+    const params = new URLSearchParams({
+      subject,
+      body,
+    });
+    return `mailto:${lead.email}?${params.toString()}`;
+  };
+
+  const handleEmailContact = (lead: Lead) => {
+    const url = buildEmailUrl(lead);
+    if (!url) return;
+    if (typeof window !== 'undefined') {
+      window.location.href = url;
     }
   };
 
@@ -433,13 +452,32 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                       )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
-                      <div className="flex items-center space-x-2 break-words">
-                        <Phone className="w-4 h-4" />
+                      <div className="flex items-center gap-2 break-words">
+                        {lead.telefone && (
+                          <button
+                            type="button"
+                            onClick={() => handleWhatsAppContact(lead)}
+                            className="text-teal-600 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full p-1"
+                            title="Conversar no WhatsApp"
+                            aria-label={`Conversar com ${lead.nome_completo} no WhatsApp`}
+                          >
+                            <Phone className="w-4 h-4" />
+                          </button>
+                        )}
                         <span>{lead.telefone}</span>
                       </div>
                       {lead.email && (
-                        <div className="truncate">
-                          <span>{lead.email}</span>
+                        <div className="flex items-center gap-2 truncate">
+                          <button
+                            type="button"
+                            onClick={() => handleEmailContact(lead)}
+                            className="text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded-full p-1"
+                            title="Enviar e-mail"
+                            aria-label={`Enviar e-mail para ${lead.nome_completo}`}
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+                          <span className="truncate">{lead.email}</span>
                         </div>
                       )}
                       <div>
@@ -475,22 +513,12 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
               <button
                 onClick={() => setSelectedLead(lead)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                aria-label="Ver detalhes do lead"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Ver Detalhes</span>
-                <span className="sm:hidden">Detalhes</span>
               </button>
-              {lead.telefone && (
-                <button
-                  onClick={() => handleWhatsAppContact(lead)}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                  title="Enviar mensagem no WhatsApp"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>WhatsApp</span>
-                </button>
-              )}
               {!isObserver && (
                 <>
                   <button
@@ -498,21 +526,23 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                       setEditingLead(lead);
                       setShowForm(true);
                     }}
-                    className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    aria-label="Editar lead"
                   >
-                    Editar
+                    <Pencil className="w-4 h-4" />
+                    <span className="hidden sm:inline">Editar</span>
                   </button>
                   <button
                     onClick={() => handleConvertToContract(lead)}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+                    className="hidden md:inline-flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden md:inline">Converter em Contrato</span>
-                    <span className="md:hidden">Contrato</span>
+                    <span>Converter em Contrato</span>
                   </button>
                   <button
                     onClick={() => handleArchive(lead.id)}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
+                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
+                    aria-label="Arquivar lead"
                   >
                     <Archive className="w-4 h-4" />
                     <span className="hidden sm:inline">Arquivar</span>

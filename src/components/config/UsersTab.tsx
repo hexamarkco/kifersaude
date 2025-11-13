@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, UserProfile, getUserManagementId } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon } from 'lucide-react';
+import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
@@ -12,6 +12,11 @@ export default function UsersTab() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'observer'>('observer');
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editUserUsername, setEditUserUsername] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserPassword, setEditUserPassword] = useState('');
+  const [editUserRole, setEditUserRole] = useState<'admin' | 'observer'>('observer');
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -66,6 +71,7 @@ export default function UsersTab() {
 
       if (existingUser) {
         showMessage('error', 'Nome de usuário já está em uso');
+        setActionLoading(false);
         return;
       }
 
@@ -100,6 +106,121 @@ export default function UsersTab() {
     } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
       showMessage('error', error.message || 'Erro ao criar usuário');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startEditingUser = (userProfile: UserProfile) => {
+    setShowAddUser(false);
+    setEditingUser(userProfile);
+    setEditUserUsername(userProfile.username);
+    setEditUserEmail(userProfile.email);
+    setEditUserPassword('');
+    setEditUserRole(userProfile.role);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    const trimmedUsername = editUserUsername.trim();
+    const trimmedEmail = editUserEmail.trim();
+
+    if (!trimmedUsername) {
+      showMessage('error', 'Informe um nome de usuário');
+      return;
+    }
+
+    if (!trimmedEmail) {
+      showMessage('error', 'Informe um email válido');
+      return;
+    }
+
+    if (editUserPassword && editUserPassword.length < 6) {
+      showMessage('error', 'A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setActionLoading(true);
+
+    const previousProfile = {
+      username: editingUser.username,
+      email: editingUser.email,
+      role: editingUser.role,
+    };
+    let profileUpdated = false;
+
+    try {
+      const { data: existingUser, error: existingUserError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('username', trimmedUsername)
+        .neq('id', editingUser.id)
+        .maybeSingle();
+
+      if (existingUserError && existingUserError.code !== 'PGRST116') {
+        throw existingUserError;
+      }
+
+      if (existingUser) {
+        showMessage('error', 'Nome de usuário já está em uso');
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          username: trimmedUsername,
+          email: trimmedEmail,
+          role: editUserRole,
+        })
+        .eq('id', editingUser.id);
+
+      if (profileError) throw profileError;
+      profileUpdated = true;
+
+      const authUpdates: { email?: string; password?: string } = {};
+
+      if (trimmedEmail !== editingUser.email) {
+        authUpdates.email = trimmedEmail;
+      }
+
+      if (editUserPassword) {
+        authUpdates.password = editUserPassword;
+      }
+
+      if (Object.keys(authUpdates).length > 0) {
+        const { error: authError } = await supabase.auth.admin.updateUserById(editingUser.id, authUpdates);
+        if (authError) throw authError;
+      }
+
+      showMessage('success', 'Usuário atualizado com sucesso');
+      setEditingUser(null);
+      setEditUserPassword('');
+
+      const currentProfileId = getUserManagementId(user) ?? user?.id;
+      if (currentProfileId && editingUser.id === currentProfileId) {
+        await refreshProfile();
+      }
+
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Erro ao atualizar usuário:', error);
+      if (profileUpdated) {
+        try {
+          await supabase
+            .from('user_profiles')
+            .update(previousProfile)
+            .eq('id', editingUser.id);
+          setEditUserUsername(previousProfile.username);
+          setEditUserEmail(previousProfile.email);
+          setEditUserRole(previousProfile.role);
+        } catch (revertError) {
+          console.error('Erro ao reverter alterações do usuário:', revertError);
+        }
+      }
+      showMessage('error', error.message || 'Erro ao atualizar usuário');
     } finally {
       setActionLoading(false);
     }
@@ -275,6 +396,83 @@ export default function UsersTab() {
           </form>
         )}
 
+        {editingUser && (
+          <form onSubmit={handleUpdateUser} className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
+            <h4 className="text-lg font-semibold text-amber-900 mb-4">Editar Usuário</h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-amber-900 mb-2">Usuário</label>
+                <input
+                  type="text"
+                  value={editUserUsername}
+                  onChange={(e) => setEditUserUsername(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="nome.usuario"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-amber-900 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={editUserEmail}
+                  onChange={(e) => setEditUserEmail(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="usuario@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-amber-900 mb-2">Nova Senha</label>
+                <input
+                  type="password"
+                  value={editUserPassword}
+                  onChange={(e) => setEditUserPassword(e.target.value)}
+                  minLength={6}
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Deixe em branco para manter"
+                />
+                <p className="text-xs text-amber-700 mt-1">Deixe em branco para manter a senha atual</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-amber-900 mb-2">Permissão</label>
+                <select
+                  value={editUserRole}
+                  onChange={(e) => setEditUserRole(e.target.value as 'admin' | 'observer')}
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                >
+                  <option value="observer">Observador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditUserPassword('');
+                }}
+                className="px-4 py-2 text-amber-800 hover:bg-amber-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
         <div className="space-y-3">
           {users.length === 0 ? (
             <div className="text-center py-12">
@@ -304,6 +502,15 @@ export default function UsersTab() {
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => startEditingUser(userProfile)}
+                    disabled={actionLoading}
+                    className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                    title="Editar usuário"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
                   {userProfile.id !== user?.id && (
                     <>
                       <select

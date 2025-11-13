@@ -53,9 +53,15 @@ export default function UsersTab() {
 
     try {
       const trimmedUsername = newUserUsername.trim();
+      const trimmedEmail = newUserEmail.trim();
 
       if (!trimmedUsername) {
         showMessage('error', 'Informe um nome de usuário');
+        return;
+      }
+
+      if (!trimmedEmail) {
+        showMessage('error', 'Informe um email válido');
         return;
       }
 
@@ -76,7 +82,7 @@ export default function UsersTab() {
       }
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserEmail,
+        email: trimmedEmail,
         password: newUserPassword,
       });
 
@@ -90,6 +96,7 @@ export default function UsersTab() {
             role: newUserRole,
             created_by: getUserManagementId(user) ?? user?.id ?? null,
             username: trimmedUsername,
+            email: trimmedEmail,
           })
           .eq('id', newProfileId);
 
@@ -191,8 +198,17 @@ export default function UsersTab() {
       }
 
       if (Object.keys(authUpdates).length > 0) {
-        const { error: authError } = await supabase.auth.admin.updateUserById(editingUser.id, authUpdates);
-        if (authError) throw authError;
+        const { error: functionError } = await supabase.functions.invoke('manage-users', {
+          body: {
+            action: 'updateUser',
+            userId: editingUser.id,
+            updates: authUpdates,
+          },
+        });
+
+        if (functionError) {
+          throw new Error(functionError.message || 'Erro ao atualizar credenciais do usuário');
+        }
       }
 
       showMessage('success', 'Usuário atualizado com sucesso');
@@ -231,9 +247,16 @@ export default function UsersTab() {
 
     setActionLoading(true);
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'deleteUser',
+          userId,
+        },
+      });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Erro ao excluir usuário');
+      }
 
       showMessage('success', 'Usuário excluído com sucesso');
       loadUsers();

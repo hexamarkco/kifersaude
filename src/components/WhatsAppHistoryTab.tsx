@@ -149,6 +149,20 @@ const TYPING_PRESENCE_SWEEP_INTERVAL_MS = 5000;
 const WHATSAPP_CONVERSATIONS_LIMIT = 500;
 const CONTACTS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
+const parseBlockedChatNamesFromEnv = (): string[] => {
+  const raw = import.meta.env.VITE_WHATSAPP_BLOCKED_CHAT_NAMES;
+  if (typeof raw !== 'string') {
+    return [];
+  }
+
+  return raw
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+};
+
+const STATIC_BLOCKED_CHAT_NAMES = parseBlockedChatNamesFromEnv();
+
 const CONTACT_NAME_PRIORITY = (contact: ZAPIContact | null | undefined): number => {
   if (!contact) {
     return 0;
@@ -1522,7 +1536,7 @@ export default function WhatsAppHistoryTab({
     };
   }, []);
   const blockedNameSet = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(STATIC_BLOCKED_CHAT_NAMES);
     if (companyName) {
       set.add(companyName);
     }
@@ -1757,12 +1771,21 @@ export default function WhatsAppHistoryTab({
           previous: previousState,
         });
 
-        if (decision.promoted) {
-          console.info('Nome do chat promovido', {
+        if (decision.changed) {
+          const logPayload = {
             phone: formatPhoneToE164(normalizedPhone, fallbackDisplay),
             valor: decision.state.value,
             fonte: decision.state.source,
-          });
+            contato: contactName || null,
+            leads: leadNames,
+            conflito: decision.state.hasLeadConflict ?? false,
+          };
+
+          if (decision.promoted) {
+            console.info('Nome do chat promovido', logPayload);
+          } else {
+            console.debug('Nome do chat atualizado', logPayload);
+          }
         }
 
         next.set(key, decision.state);
@@ -3925,18 +3948,16 @@ export default function WhatsAppHistoryTab({
       return undefined;
     }
 
+    if (selectedChat?.isGroup) {
+      return undefined;
+    }
+
     const normalizedSelected = sanitizePhoneDigits(selectedPhone);
     const trimmedSelected = selectedPhone.trim();
 
-    if (selectedChat && !selectedChat.isGroup) {
-      const leadFromChat =
-        (selectedChat.leadId ? leadsMap.get(selectedChat.leadId) : undefined) ??
-        leadsByPhoneMap.get(sanitizePhoneDigits(selectedChat.phone)) ??
-        leadsByPhoneMap.get(selectedChat.phone.trim());
-
-      if (leadFromChat) {
-        return leadFromChat;
-      }
+    const leadFromChat = selectedChat?.leadId ? leadsMap.get(selectedChat.leadId) : undefined;
+    if (leadFromChat) {
+      return leadFromChat;
     }
 
     if (externalSelectionContext?.leadId) {
@@ -3949,9 +3970,27 @@ export default function WhatsAppHistoryTab({
       }
     }
 
+    const lookupPhone = selectedChat?.phone ?? selectedPhone;
+    const leadCandidates = collectLeadsForPhone(lookupPhone);
+
+    if (leadCandidates.length === 1) {
+      return leadCandidates[0];
+    }
+
+    if (leadCandidates.length > 1) {
+      console.debug('Múltiplos leads encontrados para o telefone selecionado', {
+        phone: formatPhoneToE164(
+          normalizePhoneForChat(lookupPhone),
+          formatPhoneForDisplay(lookupPhone),
+        ),
+        leadIds: leadCandidates.map((lead) => lead.id),
+      });
+      return leadCandidates[0];
+    }
+
     if (normalizedSelected) {
       const fallbackLead =
-        leadsByPhoneMap.get(normalizedSelected) ||
+        leadsByPhoneMap.get(normalizedSelected) ??
         leadsByPhoneMap.get(trimmedSelected);
       if (fallbackLead) {
         return fallbackLead;
@@ -3960,6 +3999,7 @@ export default function WhatsAppHistoryTab({
 
     return undefined;
   }, [
+    collectLeadsForPhone,
     externalSelectionContext,
     leadsByPhoneMap,
     leadsMap,
@@ -4731,45 +4771,37 @@ export default function WhatsAppHistoryTab({
       return '';
     }
 
-    if (!selectedChat) {
-      if (selectedChatLead?.nome_completo) {
-        return selectedChatLead.nome_completo;
-      }
-
-      if (externalSelectionContext?.phone) {
-        const contextDigits = sanitizePhoneDigits(externalSelectionContext.phone);
-        const selectedDigits = sanitizePhoneDigits(selectedPhone);
-        if (contextDigits && selectedDigits && contextDigits === selectedDigits) {
-          return (
-            externalSelectionContext.leadName ||
-            formatPhoneForDisplay(selectedPhone)
-          );
-        }
-      }
-
-      return formatPhoneForDisplay(selectedPhone);
+    if (selectedChat) {
+      return getChatDisplayName(selectedChat);
     }
 
-    if (selectedChat.isGroup) {
-      return (
-        selectedGroupMetadata?.subject ||
-        selectedChat.displayName ||
-        formatPhoneForDisplay(selectedChat.phone)
-      );
-    }
+    const fallbackDisplay = formatPhoneForDisplay(selectedPhone);
+    const normalizedPhone = normalizePhoneForChat(selectedPhone);
+    const stateKey = buildChatStateKey(selectedPhone, false);
+    const previousState = stateKey ? chatNameStateMap.get(stateKey) ?? null : null;
+    const contact = findContactForPhone(selectedPhone);
+    const contactName = deriveContactName(contact);
+    const leadCandidates = collectLeadsForPhone(selectedPhone);
+    const leadNames = leadCandidates
+      .map((lead) => (typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : ''))
+      .filter((name): name is string => Boolean(name));
 
-    return (
-      selectedChatLead?.nome_completo ||
-      selectedChatMetadata?.displayName ||
-      selectedChat.displayName ||
-      formatPhoneForDisplay(selectedChat.phone)
-    );
+    const decision = resolveNameWithPriority({
+      normalizedPhone,
+      contactName,
+      leadNames,
+      hasLeadConflict: leadCandidates.length > 1,
+      fallbackDisplay,
+      previous: previousState,
+    });
+
+    return decision.state.value;
   }, [
-    externalSelectionContext,
-    selectedChatMetadata,
+    chatNameStateMap,
+    collectLeadsForPhone,
+    findContactForPhone,
+    getChatDisplayName,
     selectedChat,
-    selectedChatLead,
-    selectedGroupMetadata,
     selectedPhone,
   ]);
 

@@ -47,8 +47,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const instanceId = getEnvVar('ZAPI_INSTANCE_ID');
   const token = getEnvVar('ZAPI_TOKEN');
+  const clientToken = getEnvVar('ZAPI_CLIENT_TOKEN');
 
-  if (!instanceId || !token) {
+  if (!instanceId || !token || !clientToken) {
     return res.status(500).json({ error: 'Credenciais da Z-API não configuradas' });
   }
 
@@ -60,6 +61,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Client-Token': clientToken,
       },
       body: JSON.stringify({ phone, message }),
     });

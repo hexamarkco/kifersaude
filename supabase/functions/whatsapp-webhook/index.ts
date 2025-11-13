@@ -363,8 +363,9 @@ const handleSendMessage = async (req: Request) => {
 
   const instanceId = Deno.env.get('ZAPI_INSTANCE_ID');
   const token = Deno.env.get('ZAPI_TOKEN');
+  const clientToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
 
-  if (!instanceId || !token) {
+  if (!instanceId || !token || !clientToken) {
     return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
   }
 
@@ -375,7 +376,7 @@ const handleSendMessage = async (req: Request) => {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Client-Token': clientToken },
       body: JSON.stringify({ phone, message }),
     });
 

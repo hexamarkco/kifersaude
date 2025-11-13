@@ -40,6 +40,8 @@ export default function RemindersManagerEnhanced() {
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [showCalendar, setShowCalendar] = useState(false);
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
+  const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [manualReminderPrompt, setManualReminderPrompt] = useState<{
     lead: Lead;
     promptMessage: string;

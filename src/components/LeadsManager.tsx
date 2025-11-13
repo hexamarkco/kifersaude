@@ -193,6 +193,30 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
   };
 
+  const getLeadFirstName = (fullName: string) => {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) return '';
+    const [firstName] = trimmedName.split(/\s+/);
+    return firstName;
+  };
+
+  const buildWhatsAppUrl = (lead: Lead) => {
+    const phoneDigits = lead.telefone.replace(/\D/g, '');
+    if (!phoneDigits) return '';
+    const phoneWithCountry = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
+    const message = `Olá *${getLeadFirstName(lead.nome_completo)}*, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`;
+    return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`;
+  };
+
+  const handleWhatsAppContact = (lead: Lead) => {
+    if (!lead.telefone) return;
+    const url = buildWhatsAppUrl(lead);
+    if (!url) return;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleConvertToContract = (lead: Lead) => {
     if (onConvertToContract) {
       onConvertToContract(lead);
@@ -448,6 +472,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                 <span className="hidden sm:inline">Ver Detalhes</span>
                 <span className="sm:hidden">Detalhes</span>
               </button>
+              {lead.telefone && (
+                <button
+                  onClick={() => handleWhatsAppContact(lead)}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                  title="Enviar mensagem no WhatsApp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+              )}
               {!isObserver && (
                 <>
                   <button

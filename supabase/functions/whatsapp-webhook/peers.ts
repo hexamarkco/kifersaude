@@ -30,9 +30,11 @@ type EnsurePeerOptions = {
   normalizedPhone: string | null;
   normalizedTargetPhone: string | null;
   isGroupChat: boolean;
+  messageDirection: 'sent' | 'received';
 };
 
 const WHATSAPP_CHAT_PEERS_TABLE = 'whatsapp_chat_peers';
+const CHAT_LID_MARKER_REGEX = /@lid\b|\blid@|:lid\b|\blid:/i;
 
 function unique<T>(values: Iterable<T>): T[] {
   return Array.from(new Set(values));
@@ -129,28 +131,67 @@ function mergeChatLidHistory(existing: string[] | null | undefined, additions: I
   return history.size > 0 ? Array.from(history) : null;
 }
 
+type PhoneCandidateMeta = {
+  hasRealPhone: boolean;
+};
+
+function looksLikeChatIdentifierValue(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return CHAT_LID_MARKER_REGEX.test(trimmed.toLowerCase());
+}
+
 export async function ensurePeerAssociation(options: EnsurePeerOptions): Promise<PeerResolution | null> {
-  const { supabase, payload, normalizedPhone, normalizedTargetPhone, isGroupChat } = options;
+  const {
+    supabase,
+    payload,
+    normalizedPhone,
+    normalizedTargetPhone,
+    isGroupChat,
+    messageDirection,
+  } = options;
 
   if (isGroupChat) {
     return null;
   }
 
-  const phoneCandidates = new Set<string>();
+  const phoneCandidates = new Map<string, PhoneCandidateMeta>();
   const chatLidCandidates = new Map<string, string>();
 
   const addPhoneCandidate = (value: unknown) => {
     const normalized = normalizePeerPhoneDigits(value);
-    if (normalized) {
-      phoneCandidates.add(normalized);
+    if (!normalized) {
+      return;
     }
+
+    const chatIdentifier = normalizePeerChatIdentifier(value);
+    const existing = phoneCandidates.get(normalized);
+    if (existing) {
+      if (!chatIdentifier) {
+        existing.hasRealPhone = true;
+      }
+      return;
+    }
+
+    phoneCandidates.set(normalized, {
+      hasRealPhone: !chatIdentifier,
+    });
   };
 
   const addChatLidCandidate = (value: unknown) => {
     const normalized = normalizePeerChatIdentifier(value);
     if (normalized) {
       chatLidCandidates.set(normalized.normalized, normalized.raw);
-      phoneCandidates.add(normalized.normalized);
+      if (!phoneCandidates.has(normalized.normalized)) {
+        phoneCandidates.set(normalized.normalized, { hasRealPhone: false });
+      }
     }
   };
 
@@ -182,7 +223,8 @@ export async function ensurePeerAssociation(options: EnsurePeerOptions): Promise
     return null;
   }
 
-  const phoneList = unique(phoneCandidates);
+  const phoneList = unique(phoneCandidates.keys());
+  const realPhoneCandidates = phoneList.filter((phone) => phoneCandidates.get(phone)?.hasRealPhone);
   const chatLidList = unique(chatLidCandidates.keys());
 
   const peerRecords = await loadPeersByIdentifiers(supabase, phoneList, chatLidList);
@@ -191,8 +233,11 @@ export async function ensurePeerAssociation(options: EnsurePeerOptions): Promise
 
   if (!primaryPeer) {
     const chatLidHistory = chatLidList.map((candidate) => chatLidCandidates.get(candidate) ?? candidate);
+    const primaryPhoneCandidate =
+      messageDirection === 'received' ? realPhoneCandidates[0] ?? null : null;
+
     const insertPayload: Record<string, unknown> = {
-      normalized_phone: phoneList[0] ?? null,
+      normalized_phone: primaryPhoneCandidate,
       normalized_chat_lid: chatLidList[0] ?? null,
       raw_chat_lid: chatLidList.length > 0 ? chatLidCandidates.get(chatLidList[0]!) ?? chatLidList[0] : null,
       chat_lid_history: chatLidHistory.length > 0 ? chatLidHistory : null,
@@ -231,9 +276,23 @@ export async function ensurePeerAssociation(options: EnsurePeerOptions): Promise
 
   const updates: Record<string, unknown> = {};
 
-  if (!primaryPeer.normalized_phone && phoneList.length > 0) {
-    updates.normalized_phone = phoneList[0];
-    primaryPeer.normalized_phone = phoneList[0];
+  const phoneCandidateForUpdate =
+    messageDirection === 'received' ? realPhoneCandidates[0] ?? null : null;
+  const existingNormalizedPhone = primaryPeer.normalized_phone?.trim() ?? null;
+  const storedPhoneIsEmpty = !existingNormalizedPhone;
+  const storedPhoneContainsChatMarker = looksLikeChatIdentifierValue(existingNormalizedPhone);
+  const storedPhoneMatchesNormalizedChat =
+    Boolean(existingNormalizedPhone) &&
+    Boolean(primaryPeer.normalized_chat_lid) &&
+    existingNormalizedPhone === primaryPeer.normalized_chat_lid;
+
+  if (
+    phoneCandidateForUpdate &&
+    (storedPhoneIsEmpty || storedPhoneContainsChatMarker || storedPhoneMatchesNormalizedChat) &&
+    existingNormalizedPhone !== phoneCandidateForUpdate
+  ) {
+    updates.normalized_phone = phoneCandidateForUpdate;
+    primaryPeer.normalized_phone = phoneCandidateForUpdate;
   }
 
   if (!primaryPeer.normalized_chat_lid && chatLidList.length > 0) {
@@ -272,7 +331,7 @@ export async function ensurePeerAssociation(options: EnsurePeerOptions): Promise
 
   return {
     peerId: primaryPeer.id,
-    canonicalPhone: primaryPeer.normalized_phone ?? phoneList[0] ?? null,
+    canonicalPhone: primaryPeer.normalized_phone ?? realPhoneCandidates[0] ?? phoneList[0] ?? null,
     normalizedChatLid: primaryPeer.normalized_chat_lid ?? chatLidList[0] ?? null,
     rawChatLid: primaryPeer.raw_chat_lid ?? rawChatLids[0] ?? null,
   };

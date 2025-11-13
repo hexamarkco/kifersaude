@@ -768,6 +768,7 @@ async function upsertConversation(
         normalizedPhone: normalizedPhone ?? null,
         normalizedTargetPhone: normalizedTargetPhone ?? null,
         isGroupChat,
+        messageDirection: messageType,
       });
     } catch (peerError) {
       console.warn('Não foi possível garantir vínculo de peer para conversa do WhatsApp:', peerError);

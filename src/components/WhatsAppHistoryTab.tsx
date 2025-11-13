@@ -1841,15 +1841,19 @@ export default function WhatsAppHistoryTab({
       }
     >();
 
-    conversations.forEach((conv) => {
-      const groupKey = getConversationGroupKey(conv);
-      if (!groupKey) {
-        return;
-      }
+      conversations.forEach((conv) => {
+        const groupKey = getConversationGroupKey(conv);
+        if (!groupKey) {
+          return;
+        }
 
-      const marker = resolveReadMarkerForIdentifier(groupKey);
-      const isGroupChat =
-        isGroupWhatsAppJid(groupKey) || isGroupWhatsAppJid(conv.phone_number);
+        const marker = resolveReadMarkerForIdentifier(groupKey);
+        const chatIdentifier = getChatIdentifierForConversation(conv);
+        const identifierForGroupDetection =
+          chatIdentifier || conv.phone_number?.trim() || conv.target_phone?.trim() || '';
+        const isGroupChat =
+          isGroupWhatsAppJid(identifierForGroupDetection) ||
+          isGroupWhatsAppJid(conv.phone_number);
       const normalizedChatName = conv.chat_name?.trim() || null;
       const normalizedSenderName = conv.sender_name?.trim() || null;
       const computedReadStatus = computeMessageReadStatus(conv, marker);
@@ -1862,9 +1866,9 @@ export default function WhatsAppHistoryTab({
 
       const existing = groups.get(groupKey);
 
-      if (!existing) {
-        groups.set(groupKey, {
-          phone: groupKey,
+        if (!existing) {
+          groups.set(groupKey, {
+            phone: identifierForGroupDetection || groupKey,
           messages: [messageForGroup],
           leadId: conv.lead_id,
           contractId: conv.contract_id || null,

@@ -70,7 +70,8 @@ export default function ReminderSchedulerModal({
       return;
     }
 
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       alert('Informe um título para o lembrete.');
       return;
     }
@@ -80,23 +81,29 @@ export default function ReminderSchedulerModal({
     try {
       const reminderDateUTC = convertLocalToUTC(scheduledFor);
 
+      if (!reminderDateUTC) {
+        alert('Data do lembrete inválida. Verifique e tente novamente.');
+        return;
+      }
+
       const trimmedDescription = description.trim();
       const finalDescription = trimmedDescription ? trimmedDescription : null;
 
-      await supabase.from('reminders').insert([
+      const { error: insertError } = await supabase.from('reminders').insert([
         {
           lead_id: lead.id,
           tipo: type,
-          titulo: title.trim(),
+          titulo: trimmedTitle,
           descricao: finalDescription,
           data_lembrete: reminderDateUTC,
           lido: false,
           prioridade: priority,
-          responsavel: lead.responsavel ?? null,
         },
       ]);
 
-      await supabase
+      if (insertError) throw insertError;
+
+      const { error: leadUpdateError } = await supabase
         .from('leads')
         .update({
           proximo_retorno: reminderDateUTC,
@@ -104,10 +111,12 @@ export default function ReminderSchedulerModal({
         })
         .eq('id', lead.id);
 
+      if (leadUpdateError) throw leadUpdateError;
+
       onScheduled?.({
         reminderDate: reminderDateUTC,
         type,
-        title: title.trim(),
+        title: trimmedTitle,
         description: finalDescription,
         priority,
       });

@@ -3,7 +3,7 @@ import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X, MessageCircle
+  ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
@@ -19,6 +19,7 @@ import {
 } from '../lib/reminderUtils';
 import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
+import LeadForm from './LeadForm';
 
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -123,6 +124,46 @@ export default function RemindersManagerEnhanced() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenLead = async (leadId: string) => {
+    if (!leadId) {
+      return;
+    }
+
+    setLoadingLeadId(leadId);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        alert('Não foi possível localizar os dados deste lead.');
+        return;
+      }
+
+      const leadData = data as Lead;
+      setLeadsMap((current) => {
+        const next = new Map(current);
+        next.set(leadData.id, leadData);
+        return next;
+      });
+      setEditingLead(leadData);
+    } catch (error) {
+      console.error('Erro ao carregar dados do lead:', error);
+      alert('Erro ao carregar dados do lead');
+    } finally {
+      setLoadingLeadId(null);
+    }
+  };
+
+  const handleLeadSaved = () => {
+    setEditingLead(null);
+    loadReminders();
   };
 
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
@@ -549,6 +590,9 @@ export default function RemindersManagerEnhanced() {
                   <ReminderContextLink
                     leadId={reminder.lead_id}
                     contractId={reminder.contract_id}
+                    leadName={leadInfo?.nome_completo}
+                    onLeadClick={handleOpenLead}
+                    isLoading={loadingLeadId === reminder.lead_id}
                   />
                 )}
               </div>
@@ -955,16 +999,56 @@ export default function RemindersManagerEnhanced() {
           defaultType={manualReminderPrompt.defaultType}
         />
       )}
+
+      {loadingLeadId && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="flex items-center space-x-2 rounded-lg bg-white px-4 py-3 shadow-lg">
+            <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+            <span className="text-sm font-medium text-slate-700">Carregando lead...</span>
+          </div>
+        </div>
+      )}
+
+      {editingLead && (
+        <LeadForm
+          lead={editingLead}
+          onClose={() => setEditingLead(null)}
+          onSave={handleLeadSaved}
+        />
+      )}
     </div>
   );
 }
 
-function ReminderContextLink({ leadId, contractId }: { leadId?: string; contractId?: string }) {
-  const [contextInfo, setContextInfo] = useState<string>('');
+type ReminderContextLinkProps = {
+  leadId?: string;
+  contractId?: string;
+  leadName?: string;
+  onLeadClick?: (leadId: string) => void;
+  isLoading?: boolean;
+};
+
+type ContextInfo =
+  | { type: 'lead'; label: string }
+  | { type: 'contract'; label: string };
+
+function ReminderContextLink({
+  leadId,
+  contractId,
+  leadName,
+  onLeadClick,
+  isLoading,
+}: ReminderContextLinkProps) {
+  const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
 
   useEffect(() => {
     const loadContext = async () => {
       if (leadId) {
+        if (leadName) {
+          setContextInfo({ type: 'lead', label: leadName });
+          return;
+        }
+
         const { data } = await supabase
           .from('leads')
           .select('nome_completo')
@@ -972,7 +1056,7 @@ function ReminderContextLink({ leadId, contractId }: { leadId?: string; contract
           .maybeSingle();
 
         if (data) {
-          setContextInfo(`Lead: ${data.nome_completo}`);
+          setContextInfo({ type: 'lead', label: data.nome_completo });
         }
       } else if (contractId) {
         const { data } = await supabase
@@ -982,20 +1066,55 @@ function ReminderContextLink({ leadId, contractId }: { leadId?: string; contract
           .maybeSingle();
 
         if (data) {
-          setContextInfo(`Contrato: ${data.codigo_contrato}`);
+          setContextInfo({ type: 'contract', label: data.codigo_contrato });
         }
+      } else {
+        setContextInfo(null);
       }
     };
 
     loadContext();
-  }, [leadId, contractId]);
+  }, [leadId, contractId, leadName]);
 
   if (!contextInfo) return null;
 
+  const baseClassName = 'flex items-center space-x-1 text-xs text-teal-600';
+
+  if (contextInfo.type === 'lead' && leadId) {
+    if (isLoading) {
+      return (
+        <span className={baseClassName}>
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Carregando lead...</span>
+        </span>
+      );
+    }
+
+    if (onLeadClick) {
+      return (
+        <button
+          type="button"
+          onClick={() => onLeadClick(leadId)}
+          className={`${baseClassName} hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded transition-colors`}
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span>Lead: {contextInfo.label}</span>
+        </button>
+      );
+    }
+
+    return (
+      <span className={baseClassName}>
+        <ExternalLink className="w-3 h-3" />
+        <span>Lead: {contextInfo.label}</span>
+      </span>
+    );
+  }
+
   return (
-    <span className="flex items-center space-x-1 text-xs text-teal-600">
+    <span className={baseClassName}>
       <ExternalLink className="w-3 h-3" />
-      <span>{contextInfo}</span>
+      <span>Contrato: {contextInfo.label}</span>
     </span>
   );
 }

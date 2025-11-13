@@ -1254,13 +1254,15 @@ const buildPeerUpsertPayload = (
   };
 
   if (normalized?.isGroup) {
-    const normalizedChatLid = overrides.normalized_chat_lid ?? digits || normalized.key || chatIdentifier;
+    const normalizedChatLid = overrides.normalized_chat_lid ??
+      (digits || normalized.key || chatIdentifier);
     payload.normalized_chat_lid = normalizedChatLid;
     payload.raw_chat_lid = overrides.raw_chat_lid ?? chatIdentifier;
     return { payload, onConflict: 'normalized_chat_lid' };
   }
 
-  const normalizedPhone = overrides.normalized_phone ?? digits || normalized?.key || chatIdentifier;
+  const normalizedPhone = overrides.normalized_phone ??
+    (digits || normalized?.key || chatIdentifier);
   payload.normalized_phone = normalizedPhone;
   return { payload, onConflict: 'normalized_phone' };
 };

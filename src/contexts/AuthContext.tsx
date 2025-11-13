@@ -126,6 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 
+      let emailToUse: string | null = null;
+
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('email')
@@ -136,12 +138,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: profileError };
       }
 
-      if (!profile?.email) {
+      if (profile?.email) {
+        emailToUse = profile.email;
+      } else if (normalizedUsername.includes('@')) {
+        emailToUse = normalizedUsername;
+      }
+
+      if (!emailToUse) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email: profile.email,
+        email: emailToUse,
         password,
       });
 

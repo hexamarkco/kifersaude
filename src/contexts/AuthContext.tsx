@@ -9,7 +9,7 @@ type AuthContextType = {
   isAdmin: boolean;
   isObserver: boolean;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (username: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -118,12 +118,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+  const signIn = async (username: string, password: string) => {
+    try {
+      const normalizedUsername = username.trim();
+
+      if (!normalizedUsername) {
+        return { error: { message: 'Usuário não encontrado' } };
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('email')
+        .eq('username', normalizedUsername)
+        .maybeSingle();
+
+      if (profileError) {
+        return { error: profileError };
+      }
+
+      if (!profile?.email) {
+        return { error: { message: 'Usuário não encontrado' } };
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password,
+      });
+
+      return { error };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const signUp = async (email: string, password: string) => {

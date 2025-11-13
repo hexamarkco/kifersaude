@@ -152,6 +152,7 @@ export type LeadStatusHistory = {
 export type UserProfile = {
   id: string;
   email: string;
+  username?: string;
   role: 'admin' | 'observer';
   created_at: string;
   created_by?: string;

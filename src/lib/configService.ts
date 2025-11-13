@@ -40,10 +40,21 @@ type RoleAccessConfigRow = {
 const normalizeConfigOption = (option: ConfigOption & { active?: boolean | null }): ConfigOption => {
   const ativoValue = option?.ativo ?? option?.active;
   const fallbackValue = typeof option.value === 'string' && option.value.length > 0 ? option.value : option.label;
+  const normalizedLabel =
+    typeof option.label === 'string' && option.label.length > 0
+      ? option.label
+      : typeof fallbackValue === 'string'
+        ? fallbackValue
+        : '';
+  const normalizedOrdem = typeof option.ordem === 'number' && Number.isFinite(option.ordem) ? option.ordem : 0;
+  const metadata = option?.metadata && isRecord(option.metadata) ? option.metadata : null;
   return {
     ...option,
+    label: normalizedLabel,
     value: fallbackValue,
+    ordem: normalizedOrdem,
     ativo: ativoValue === undefined || ativoValue === null ? true : Boolean(ativoValue),
+    metadata,
   };
 };
 
@@ -744,12 +755,21 @@ export const configService = {
 
   async getConfigOptions(category: ConfigCategory): Promise<ConfigOption[]> {
     try {
-      const { data, error } = await supabase
-        .from('system_configurations')
-        .select('*')
-        .eq('category', category)
-        .order('ordem', { ascending: true })
-        .order('label', { ascending: true });
+      const baseQuery = () =>
+        supabase
+          .from('system_configurations')
+          .select('*')
+          .eq('category', category);
+
+      let { data, error } = await baseQuery().order('ordem', { ascending: true }).order('label', { ascending: true });
+
+      if (error && isMissingColumnError(error, 'ordem')) {
+        ({ data, error } = await baseQuery().order('label', { ascending: true }));
+      }
+
+      if (error && isMissingColumnError(error, 'label')) {
+        ({ data, error } = await baseQuery());
+      }
 
       if (error) throw error;
       return (data || []).map(normalizeConfigOption);
@@ -764,7 +784,7 @@ export const configService = {
     option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
   ): Promise<{ data: ConfigOption | null; error: any }> {
     try {
-      const basePayload = {
+      const basePayload: Record<string, any> = {
         category,
         label: option.label,
         value: option.value || option.label,
@@ -777,25 +797,52 @@ export const configService = {
       const insert = async (payload: Record<string, any>) =>
         supabase.from('system_configurations').insert([payload]).select().single();
 
-      let payloadWithAtivo: Record<string, any> = { ...basePayload, ativo: ativoValue };
-      let { data, error } = await insert(payloadWithAtivo);
+      let payload: Record<string, any> = { ...basePayload, ativo: ativoValue };
+      let { data, error } = await insert(payload);
+      const triedColumns = new Set<string>();
 
-      if (error && isMissingColumnError(error, 'ativo')) {
-        payloadWithAtivo = { ...basePayload, active: ativoValue };
-        ({ data, error } = await insert(payloadWithAtivo));
+      while (error) {
+        if (isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+          triedColumns.add('ativo');
+          const { ativo, ...rest } = payload;
+          payload = { ...rest, active: ativo ?? ativoValue };
+        } else if (isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+          triedColumns.add('active');
+          const { active: _omitActive, ...rest } = payload;
+          payload = rest;
+        } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+          triedColumns.add('metadata');
+          const { metadata: _omitMetadata, ...rest } = payload;
+          payload = rest;
+        } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
+          triedColumns.add('description');
+          const { description: _omitDescription, ...rest } = payload;
+          payload = rest;
+        } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
+          triedColumns.add('ordem');
+          const { ordem: _omitOrdem, ...rest } = payload;
+          payload = rest;
+        } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+          triedColumns.add('value');
+          const { value: _omitValue, ...rest } = payload;
+          payload = rest;
+        } else if (isMissingColumnError(error, 'label') || isMissingColumnError(error, 'category')) {
+          break;
+        } else {
+          break;
+        }
+
+        ({ data, error } = await insert(payload));
       }
 
-      if (error && isMissingColumnError(error, 'value')) {
-        const { value: _omit, ...withoutValue } = payloadWithAtivo;
-        ({ data, error } = await insert(withoutValue));
+      if (error) {
+        return { data: null, error: toPostgrestError(error) };
       }
-
-      if (error) throw error;
 
       return { data: data ? normalizeConfigOption(data as ConfigOption) : null, error: null };
     } catch (error) {
       console.error('Error creating config option:', error);
-      return { data: null, error };
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 
@@ -806,28 +853,54 @@ export const configService = {
     try {
       const { ativo, ...rest } = updates;
       const timestamp = new Date().toISOString();
-      const basePayload: Record<string, any> = { ...rest, updated_at: timestamp };
+      let payload: Record<string, any> = { ...rest, updated_at: timestamp };
 
       if (ativo !== undefined) {
-        basePayload.ativo = ativo;
+        payload.ativo = ativo;
       }
 
-      let { error } = await supabase.from('system_configurations').update(basePayload).eq('id', id);
+      const performUpdate = (data: Record<string, any>) =>
+        supabase.from('system_configurations').update(data).eq('id', id);
 
-      if (error && ativo !== undefined && isMissingColumnError(error, 'ativo')) {
-        const retryPayload: Record<string, any> = { ...rest, updated_at: timestamp, active: ativo };
-        ({ error } = await supabase.from('system_configurations').update(retryPayload).eq('id', id));
+      let { error } = await performUpdate(payload);
+      const triedColumns = new Set<string>();
+
+      while (error) {
+        if (ativo !== undefined && isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+          triedColumns.add('ativo');
+          const { ativo: _omitAtivo, ...restPayload } = payload;
+          payload = { ...restPayload, active: ativo };
+        } else if (ativo !== undefined && isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+          triedColumns.add('active');
+          const { active: _omitActive, ...restPayload } = payload;
+          payload = restPayload;
+        } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+          triedColumns.add('metadata');
+          const { metadata: _omitMetadata, ...restPayload } = payload;
+          payload = restPayload;
+        } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
+          triedColumns.add('description');
+          const { description: _omitDescription, ...restPayload } = payload;
+          payload = restPayload;
+        } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
+          triedColumns.add('ordem');
+          const { ordem: _omitOrdem, ...restPayload } = payload;
+          payload = restPayload;
+        } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+          triedColumns.add('value');
+          const { value: _omitValue, ...restPayload } = payload;
+          payload = restPayload;
+        } else {
+          break;
+        }
+
+        ({ error } = await performUpdate(payload));
       }
 
-      if (error && isMissingColumnError(error, 'value')) {
-        const { value: _omit, ...retryWithoutValue } = basePayload;
-        ({ error } = await supabase.from('system_configurations').update(retryWithoutValue).eq('id', id));
-      }
-
-      return { error };
+      return { error: error ? toPostgrestError(error) : null };
     } catch (error) {
       console.error('Error updating config option:', error);
-      return { error };
+      return { error: toPostgrestError(error) };
     }
   },
 

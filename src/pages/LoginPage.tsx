@@ -27,9 +27,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-500 via-cyan-600 to-blue-600 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+    <div className="flex min-h-dvh w-full items-center justify-center overflow-hidden bg-gradient-to-br from-teal-500 via-cyan-600 to-blue-600 px-4 py-6 sm:py-12">
+      <div className="w-full max-w-sm sm:max-w-md">
+        <div className="rounded-3xl bg-white/95 p-6 shadow-2xl backdrop-blur-sm sm:p-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full mb-4">
               <Lock className="w-8 h-8 text-white" />

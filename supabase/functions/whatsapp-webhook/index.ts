@@ -81,6 +81,46 @@ const pendingSendPayloads = new Map<string, PendingSendEntry>();
 
 const PENDING_ENTRY_TTL_MS = 5 * 60 * 1000;
 
+const safeJsonStringify = (value: unknown): string => {
+  const seenObjects = new WeakSet<object>();
+
+  try {
+    return JSON.stringify(value, (_key, serializedValue) => {
+      if (typeof serializedValue === 'bigint') {
+        return serializedValue.toString();
+      }
+
+      if (typeof serializedValue === 'object' && serializedValue !== null) {
+        if (seenObjects.has(serializedValue as object)) {
+          return '[Circular]';
+        }
+
+        seenObjects.add(serializedValue as object);
+      }
+
+      return serializedValue;
+    });
+  } catch (_error) {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    try {
+      return String(value);
+    } catch (_stringError) {
+      return '[unserializable value]';
+    }
+  }
+};
+
+const logWebhookPayload = (label: string, payload: unknown) => {
+  try {
+    console.log(label, safeJsonStringify(payload));
+  } catch (error) {
+    console.error(`Não foi possível registrar o payload do webhook ${label}.`, error);
+  }
+};
+
 const cleanupPendingEntries = () => {
   const now = Date.now();
 
@@ -378,7 +418,7 @@ const handleOnMessageReceived = async (req: Request) => {
   const payload = (await ensureJsonBody<ZapiWebhookPayload>(req)) ?? {};
 
   try {
-    console.log('whatsapp-webhook on-message-received payload:', JSON.stringify(payload));
+    logWebhookPayload('whatsapp-webhook on-message-received payload:', payload);
   } catch (_error) {
     console.error('Não foi possível registrar o payload do webhook recebido.');
   }
@@ -447,7 +487,7 @@ const handleOnMessageSend = async (req: Request) => {
   const payload = (await ensureJsonBody<Record<string, unknown>>(req)) ?? {};
 
   try {
-    console.log('whatsapp-webhook on-message-send payload:', JSON.stringify(payload));
+    logWebhookPayload('whatsapp-webhook on-message-send payload:', payload);
   } catch (_error) {
     console.error('Não foi possível registrar o payload do webhook de envio.');
   }

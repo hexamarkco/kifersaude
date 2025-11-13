@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, UserProfile } from '../lib/supabase';
+import { supabase, UserProfile, getUserManagementId } from '../lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
@@ -24,21 +24,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
 
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfile = async (profileId: string | null) => {
+    if (!profileId) {
+      setUserProfile(null);
+      return;
+    }
+
     // Prevent duplicate calls
-    if (loadingProfileRef[userId]) {
+    if (loadingProfileRef[profileId]) {
       console.log('⏭️ Pulando carregamento duplicado do perfil');
       return;
     }
 
-    loadingProfileRef[userId] = true;
+    loadingProfileRef[profileId] = true;
 
     try {
       console.log('📥 Carregando perfil...');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', profileId)
         .maybeSingle();
 
       if (error) {
@@ -53,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('❌ Erro ao carregar perfil do usuário:', error);
       setUserProfile(null);
     } finally {
-      loadingProfileRef[userId] = false;
+      loadingProfileRef[profileId] = false;
     }
   };
 
@@ -78,8 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          console.log('👤 Carregando perfil do usuário:', session.user.id);
-          await loadUserProfile(session.user.id);
+          const profileId = getUserManagementId(session.user);
+          console.log('👤 Carregando perfil do usuário:', profileId ?? 'indisponível');
+          await loadUserProfile(profileId);
         }
 
         setLoading(false);
@@ -105,7 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Only load profile on SIGNED_IN event, not on INITIAL_SESSION
       if (_event === 'SIGNED_IN' && session?.user) {
         (async () => {
-          await loadUserProfile(session.user.id);
+          const profileId = getUserManagementId(session.user);
+          await loadUserProfile(profileId);
         })();
       } else if (!session?.user) {
         setUserProfile(null);
@@ -174,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      await loadUserProfile(user.id);
+      await loadUserProfile(getUserManagementId(user));
     }
   };
 

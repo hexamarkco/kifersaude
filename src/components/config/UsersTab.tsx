@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, UserProfile } from '../../lib/supabase';
+import { supabase, UserProfile, getUserManagementId } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon } from 'lucide-react';
 
@@ -77,10 +77,15 @@ export default function UsersTab() {
       if (authError) throw authError;
 
       if (authData.user) {
+        const newProfileId = getUserManagementId(authData.user) ?? authData.user.id;
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .update({ role: newUserRole, created_by: user?.id, username: trimmedUsername })
-          .eq('id', authData.user.id);
+          .update({
+            role: newUserRole,
+            created_by: getUserManagementId(user) ?? user?.id ?? null,
+            username: trimmedUsername,
+          })
+          .eq('id', newProfileId);
 
         if (profileError) throw profileError;
       }
@@ -133,7 +138,8 @@ export default function UsersTab() {
 
       showMessage('success', 'Permissão alterada com sucesso');
 
-      if (userId === user?.id) {
+      const currentProfileId = getUserManagementId(user) ?? user?.id;
+      if (currentProfileId && userId === currentProfileId) {
         await refreshProfile();
       }
 

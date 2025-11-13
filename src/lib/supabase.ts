@@ -1,9 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidates = [
+    user.user_metadata?.user_management_id,
+    user.user_metadata?.user_management_user_id,
+    user.user_metadata?.user_id,
+    user.app_metadata?.user_management_id,
+    user.app_metadata?.user_id,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+  }
+
+  return user.id ?? null;
+}
 
 export type Lead = {
   id: string;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -32,6 +32,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [showArchived, setShowArchived] = useState(false);
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
 
@@ -41,7 +42,6 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('arquivado', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -64,14 +64,12 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
 
         switch (eventType) {
           case 'INSERT':
-            if (!newLead || newLead.arquivado) return current;
+            if (!newLead) return current;
             updatedLeads = [newLead, ...current.filter((lead) => lead.id !== newLead.id)];
             break;
           case 'UPDATE':
             if (!newLead) return current;
-            if (newLead.arquivado) {
-              updatedLeads = current.filter((lead) => lead.id !== newLead.id);
-            } else {
+            {
               const otherLeads = current.filter((lead) => lead.id !== newLead.id);
               updatedLeads = [newLead, ...otherLeads];
             }
@@ -129,7 +127,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   }, [searchTerm, filterStatus, filterResponsavel, itemsPerPage]);
 
   const filteredLeads = useMemo(() => {
-    let filtered = leads.filter((lead) => !lead.arquivado);
+    let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
 
     if (isObserver) {
       filtered = filtered.filter((lead) => lead.origem !== 'Ully');
@@ -153,7 +151,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     }
 
     return filtered;
-  }, [leads, searchTerm, filterStatus, filterResponsavel, isObserver]);
+  }, [leads, searchTerm, filterStatus, filterResponsavel, isObserver, showArchived]);
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
@@ -161,6 +159,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       setCurrentPage(total);
     }
   }, [filteredLeads.length, itemsPerPage, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showArchived]);
+
+  useEffect(() => {
+    if (showArchived && viewMode === 'kanban') {
+      setViewMode('list');
+    }
+  }, [showArchived, viewMode]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -190,6 +198,23 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     } catch (error) {
       console.error('Erro ao arquivar lead:', error);
       alert('Erro ao arquivar lead');
+    }
+  };
+
+  const handleUnarchive = async (id: string) => {
+    if (!confirm('Deseja reativar este lead?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ arquivado: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      loadLeads();
+    } catch (error) {
+      console.error('Erro ao reativar lead:', error);
+      alert('Erro ao reativar lead');
     }
   };
 
@@ -320,7 +345,14 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     <div>
       <ObserverBanner />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>
+          {showArchived && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+              Arquivados
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-100 rounded-lg p-1 w-full sm:w-auto">
             <button
@@ -356,6 +388,19 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             <BookOpen className="w-5 h-5" />
             <span>API Docs</span>
           </a>
+          <button
+            onClick={() => setShowArchived((current) => !current)}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto ${
+              showArchived
+                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+            aria-pressed={showArchived}
+            type="button"
+          >
+            <Archive className="w-5 h-5" />
+            <span>{showArchived ? 'Ver Leads Ativos' : 'Ver Leads Arquivados'}</span>
+          </button>
           <button
             onClick={() => {
               setEditingLead(null);
@@ -540,13 +585,33 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
                     <span>Converter em Contrato</span>
                   </button>
                   <button
-                    onClick={() => handleArchive(lead.id)}
-                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
-                    aria-label="Arquivar lead"
+                    onClick={() => setReminderLead(lead)}
+                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                    aria-label="Agendar lembrete"
+                    type="button"
                   >
-                    <Archive className="w-4 h-4" />
-                    <span className="hidden sm:inline">Arquivar</span>
+                    <Bell className="w-4 h-4" />
+                    <span className="hidden sm:inline">Agendar Lembrete</span>
                   </button>
+                  {!showArchived ? (
+                    <button
+                      onClick={() => handleArchive(lead.id)}
+                      className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
+                      aria-label="Arquivar lead"
+                    >
+                      <Archive className="w-4 h-4" />
+                      <span className="hidden sm:inline">Arquivar</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleUnarchive(lead.id)}
+                      className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors sm:ml-auto"
+                      aria-label="Reativar lead"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="hidden sm:inline">Reativar</span>
+                    </button>
+                  )}
                 </>
               )}
             </div>

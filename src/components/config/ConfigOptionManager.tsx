@@ -43,7 +43,7 @@ export default function ConfigOptionManager({ category, title, description, plac
   };
 
   const handleUpdate = async (id: string, updates: Record<string, any>) => {
-    const { error } = await configService.updateConfigOption(id, updates);
+    const { error } = await configService.updateConfigOption(category, id, updates);
     if (error) {
       alert('Erro ao atualizar opção');
     } else {
@@ -53,7 +53,7 @@ export default function ConfigOptionManager({ category, title, description, plac
 
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja remover esta opção?')) return;
-    const { error } = await configService.deleteConfigOption(id);
+    const { error } = await configService.deleteConfigOption(category, id);
     if (error) {
       alert('Erro ao remover opção');
     } else {

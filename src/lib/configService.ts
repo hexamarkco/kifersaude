@@ -11,6 +11,15 @@ import {
   RoleAccessRule,
 } from './supabase';
 
+export type ConfigCategory =
+  | 'lead_tipo_contratacao'
+  | 'lead_responsavel'
+  | 'contract_status'
+  | 'contract_modalidade'
+  | 'contract_abrangencia'
+  | 'contract_acomodacao'
+  | 'contract_carencia';
+
 type RoleAccessMetadata = {
   role?: string;
   module?: string;
@@ -37,25 +46,226 @@ type RoleAccessConfigRow = {
   updated_at?: string;
 };
 
-const normalizeConfigOption = (option: ConfigOption & { active?: boolean | null }): ConfigOption => {
-  const ativoValue = option?.ativo ?? option?.active;
-  const fallbackValue = typeof option.value === 'string' && option.value.length > 0 ? option.value : option.label;
+type RawConfigOption = Partial<ConfigOption> & {
+  id: string;
+  label: string;
+  value?: string | null;
+  description?: string | null;
+  ordem?: number | null;
+  ativo?: boolean | null;
+  active?: boolean | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  category?: string | null;
+};
+
+const normalizeConfigOption = (category: ConfigCategory, option: RawConfigOption): ConfigOption => {
+  const fallbackValue =
+    typeof option.value === 'string' && option.value.length > 0 ? option.value : (option.label ?? '');
+
   const normalizedLabel =
     typeof option.label === 'string' && option.label.length > 0
       ? option.label
-      : typeof fallbackValue === 'string'
+      : typeof fallbackValue === 'string' && fallbackValue.length > 0
         ? fallbackValue
         : '';
+
   const normalizedOrdem = typeof option.ordem === 'number' && Number.isFinite(option.ordem) ? option.ordem : 0;
-  const metadata = option?.metadata && isRecord(option.metadata) ? option.metadata : null;
+  const ativoValue = option?.ativo ?? option?.active;
+  const metadata =
+    option?.metadata && isRecord(option.metadata) ? (option.metadata as Record<string, any>) : null;
+
+  const createdAt = option?.created_at ?? new Date().toISOString();
+  const updatedAt = option?.updated_at ?? createdAt;
+
   return {
-    ...option,
+    id: option.id,
+    category: option.category ?? category,
     label: normalizedLabel,
-    value: fallbackValue,
+    value: typeof fallbackValue === 'string' && fallbackValue.length > 0 ? fallbackValue : normalizedLabel,
+    description: option.description ?? null,
     ordem: normalizedOrdem,
     ativo: ativoValue === undefined || ativoValue === null ? true : Boolean(ativoValue),
     metadata,
+    created_at: createdAt,
+    updated_at: updatedAt,
   };
+};
+
+const CONFIG_CATEGORY_TABLE_MAP: Record<ConfigCategory, string> = {
+  lead_tipo_contratacao: 'lead_tipos_contratacao',
+  lead_responsavel: 'lead_responsaveis',
+  contract_status: 'contract_status_config',
+  contract_modalidade: 'contract_modalidades',
+  contract_abrangencia: 'contract_abrangencias',
+  contract_acomodacao: 'contract_acomodacoes',
+  contract_carencia: 'contract_carencias',
+};
+
+const fetchLegacyConfigOptions = async (category: ConfigCategory): Promise<ConfigOption[]> => {
+  try {
+    const baseQuery = () =>
+      supabase
+        .from('system_configurations')
+        .select('*')
+        .eq('category', category);
+
+    let { data, error } = await baseQuery().order('ordem', { ascending: true }).order('label', { ascending: true });
+
+    if (error && isMissingColumnError(error, 'ordem')) {
+      ({ data, error } = await baseQuery().order('label', { ascending: true }));
+    }
+
+    if (error && isMissingColumnError(error, 'label')) {
+      ({ data, error } = await baseQuery());
+    }
+
+    if (error) throw error;
+    return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
+  } catch (error) {
+    console.error('Error loading config options:', error);
+    return [];
+  }
+};
+
+const createLegacyConfigOption = async (
+  category: ConfigCategory,
+  option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
+): Promise<{ data: ConfigOption | null; error: any }> => {
+  try {
+    const basePayload: Record<string, any> = {
+      category,
+      label: option.label,
+      value: option.value || option.label,
+      description: option.description || null,
+      ordem: option.ordem ?? 0,
+      metadata: option.metadata || null,
+    };
+    const ativoValue = option.ativo ?? true;
+
+    const insert = async (payload: Record<string, any>) =>
+      supabase.from('system_configurations').insert([payload]).select().single();
+
+    let payload: Record<string, any> = { ...basePayload, ativo: ativoValue };
+    let { data, error } = await insert(payload);
+    const triedColumns = new Set<string>();
+
+    while (error) {
+      if (isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+        triedColumns.add('ativo');
+        const { ativo, ...rest } = payload;
+        payload = { ...rest, active: ativo ?? ativoValue };
+      } else if (isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+        triedColumns.add('active');
+        const { active: _omitActive, ...rest } = payload;
+        payload = rest;
+      } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+        triedColumns.add('metadata');
+        const { metadata: _omitMetadata, ...rest } = payload;
+        payload = rest;
+      } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
+        triedColumns.add('description');
+        const { description: _omitDescription, ...rest } = payload;
+        payload = rest;
+      } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
+        triedColumns.add('ordem');
+        const { ordem: _omitOrdem, ...rest } = payload;
+        payload = rest;
+      } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+        triedColumns.add('value');
+        const { value: _omitValue, ...rest } = payload;
+        payload = rest;
+      } else if (isMissingColumnError(error, 'label') || isMissingColumnError(error, 'category')) {
+        break;
+      } else {
+        break;
+      }
+
+      ({ data, error } = await insert(payload));
+    }
+
+    if (error) {
+      return { data: null, error: toPostgrestError(error) };
+    }
+
+    return { data: data ? normalizeConfigOption(category, data as RawConfigOption) : null, error: null };
+  } catch (error) {
+    console.error('Error creating config option:', error);
+    return { data: null, error: toPostgrestError(error) };
+  }
+};
+
+const updateLegacyConfigOption = async (
+  id: string,
+  updates: Partial<Pick<ConfigOption, 'label' | 'value' | 'description' | 'ordem' | 'ativo' | 'metadata'>>,
+): Promise<{ error: any }> => {
+  try {
+    const { ativo, ...rest } = updates;
+    const timestamp = new Date().toISOString();
+    let payload: Record<string, any> = { ...rest, updated_at: timestamp };
+
+    if (ativo !== undefined) {
+      payload.ativo = ativo;
+    }
+
+    const performUpdate = (data: Record<string, any>) =>
+      supabase.from('system_configurations').update(data).eq('id', id);
+
+    let { error } = await performUpdate(payload);
+    const triedColumns = new Set<string>();
+
+    while (error) {
+      if (ativo !== undefined && isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
+        triedColumns.add('ativo');
+        const { ativo: _omitAtivo, ...restPayload } = payload;
+        payload = { ...restPayload, active: ativo };
+      } else if (ativo !== undefined && isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
+        triedColumns.add('active');
+        const { active: _omitActive, ...restPayload } = payload;
+        payload = restPayload;
+      } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
+        triedColumns.add('metadata');
+        const { metadata: _omitMetadata, ...restPayload } = payload;
+        payload = restPayload;
+      } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
+        triedColumns.add('description');
+        const { description: _omitDescription, ...restPayload } = payload;
+        payload = restPayload;
+      } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
+        triedColumns.add('ordem');
+        const { ordem: _omitOrdem, ...restPayload } = payload;
+        payload = restPayload;
+      } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
+        triedColumns.add('value');
+        const { value: _omitValue, ...restPayload } = payload;
+        payload = restPayload;
+      } else {
+        break;
+      }
+
+      ({ error } = await performUpdate(payload));
+    }
+
+    return { error: error ? toPostgrestError(error) : null };
+  } catch (error) {
+    console.error('Error updating config option:', error);
+    return { error: toPostgrestError(error) };
+  }
+};
+
+const deleteLegacyConfigOption = async (id: string): Promise<{ error: any }> => {
+  try {
+    const { error } = await supabase
+      .from('system_configurations')
+      .delete()
+      .eq('id', id);
+
+    return { error: error ? toPostgrestError(error) : null };
+  } catch (error) {
+    console.error('Error deleting config option:', error);
+    return { error: toPostgrestError(error) };
+  }
 };
 
 const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) => {
@@ -471,15 +681,6 @@ const deleteFallbackRoleAccessRule = async (id: string): Promise<{ error: Postgr
   return { error };
 };
 
-export type ConfigCategory =
-  | 'lead_tipo_contratacao'
-  | 'lead_responsavel'
-  | 'contract_status'
-  | 'contract_modalidade'
-  | 'contract_abrangencia'
-  | 'contract_acomodacao'
-  | 'contract_carencia';
-
 export const configService = {
   async getSystemSettings(): Promise<SystemSettings | null> {
     try {
@@ -754,168 +955,158 @@ export const configService = {
   },
 
   async getConfigOptions(category: ConfigCategory): Promise<ConfigOption[]> {
-    try {
-      const baseQuery = () =>
-        supabase
-          .from('system_configurations')
+    const table = CONFIG_CATEGORY_TABLE_MAP[category];
+
+    if (table) {
+      try {
+        const { data, error } = await supabase
+          .from(table)
           .select('*')
-          .eq('category', category);
+          .order('ordem', { ascending: true })
+          .order('label', { ascending: true });
 
-      let { data, error } = await baseQuery().order('ordem', { ascending: true }).order('label', { ascending: true });
+        if (error) {
+          if (isTableMissingError(error, table)) {
+            return await fetchLegacyConfigOptions(category);
+          }
+          throw error;
+        }
 
-      if (error && isMissingColumnError(error, 'ordem')) {
-        ({ data, error } = await baseQuery().order('label', { ascending: true }));
+        return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          return await fetchLegacyConfigOptions(category);
+        }
+        console.error('Error loading config options:', error);
+        return [];
       }
-
-      if (error && isMissingColumnError(error, 'label')) {
-        ({ data, error } = await baseQuery());
-      }
-
-      if (error) throw error;
-      return (data || []).map(normalizeConfigOption);
-    } catch (error) {
-      console.error('Error loading config options:', error);
-      return [];
     }
+
+    return await fetchLegacyConfigOptions(category);
   },
 
   async createConfigOption(
     category: ConfigCategory,
     option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
   ): Promise<{ data: ConfigOption | null; error: any }> {
-    try {
-      const basePayload: Record<string, any> = {
-        category,
-        label: option.label,
-        value: option.value || option.label,
-        description: option.description || null,
-        ordem: option.ordem ?? 0,
-        metadata: option.metadata || null,
-      };
-      const ativoValue = option.ativo ?? true;
+    const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
-      const insert = async (payload: Record<string, any>) =>
-        supabase.from('system_configurations').insert([payload]).select().single();
+    if (table) {
+      try {
+        const payload: Record<string, any> = {
+          label: option.label,
+          value: option.value || option.label,
+          description: option.description ?? null,
+          ordem: option.ordem ?? 0,
+          ativo: option.ativo ?? true,
+          metadata: option.metadata ?? null,
+        };
 
-      let payload: Record<string, any> = { ...basePayload, ativo: ativoValue };
-      let { data, error } = await insert(payload);
-      const triedColumns = new Set<string>();
+        const { data, error } = await supabase.from(table).insert([payload]).select().single();
 
-      while (error) {
-        if (isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
-          triedColumns.add('ativo');
-          const { ativo, ...rest } = payload;
-          payload = { ...rest, active: ativo ?? ativoValue };
-        } else if (isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
-          triedColumns.add('active');
-          const { active: _omitActive, ...rest } = payload;
-          payload = rest;
-        } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
-          triedColumns.add('metadata');
-          const { metadata: _omitMetadata, ...rest } = payload;
-          payload = rest;
-        } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
-          triedColumns.add('description');
-          const { description: _omitDescription, ...rest } = payload;
-          payload = rest;
-        } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
-          triedColumns.add('ordem');
-          const { ordem: _omitOrdem, ...rest } = payload;
-          payload = rest;
-        } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
-          triedColumns.add('value');
-          const { value: _omitValue, ...rest } = payload;
-          payload = rest;
-        } else if (isMissingColumnError(error, 'label') || isMissingColumnError(error, 'category')) {
-          break;
-        } else {
-          break;
+        if (error) {
+          if (isTableMissingError(error, table)) {
+            return await createLegacyConfigOption(category, option);
+          }
+          return { data: null, error: toPostgrestError(error) };
         }
 
-        ({ data, error } = await insert(payload));
-      }
-
-      if (error) {
+        return { data: data ? normalizeConfigOption(category, data as RawConfigOption) : null, error: null };
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          return await createLegacyConfigOption(category, option);
+        }
+        console.error('Error creating config option:', error);
         return { data: null, error: toPostgrestError(error) };
       }
-
-      return { data: data ? normalizeConfigOption(data as ConfigOption) : null, error: null };
-    } catch (error) {
-      console.error('Error creating config option:', error);
-      return { data: null, error: toPostgrestError(error) };
     }
+
+    return await createLegacyConfigOption(category, option);
   },
 
   async updateConfigOption(
+    category: ConfigCategory,
     id: string,
     updates: Partial<Pick<ConfigOption, 'label' | 'value' | 'description' | 'ordem' | 'ativo' | 'metadata'>>,
   ): Promise<{ error: any }> {
-    try {
-      const { ativo, ...rest } = updates;
-      const timestamp = new Date().toISOString();
-      let payload: Record<string, any> = { ...rest, updated_at: timestamp };
+    const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
-      if (ativo !== undefined) {
-        payload.ativo = ativo;
+    if (table) {
+      const payload: Record<string, any> = {};
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
+        payload.label = updates.label ?? '';
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'value')) {
+        payload.value = updates.value ?? '';
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'description')) {
+        payload.description = updates.description ?? null;
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'ordem')) {
+        payload.ordem = updates.ordem ?? 0;
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'ativo')) {
+        payload.ativo = updates.ativo;
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'metadata')) {
+        payload.metadata = updates.metadata ?? null;
       }
 
-      const performUpdate = (data: Record<string, any>) =>
-        supabase.from('system_configurations').update(data).eq('id', id);
+      if (Object.keys(payload).length === 0) {
+        return { error: null };
+      }
 
-      let { error } = await performUpdate(payload);
-      const triedColumns = new Set<string>();
+      payload.updated_at = new Date().toISOString();
 
-      while (error) {
-        if (ativo !== undefined && isMissingColumnError(error, 'ativo') && !triedColumns.has('ativo')) {
-          triedColumns.add('ativo');
-          const { ativo: _omitAtivo, ...restPayload } = payload;
-          payload = { ...restPayload, active: ativo };
-        } else if (ativo !== undefined && isMissingColumnError(error, 'active') && !triedColumns.has('active')) {
-          triedColumns.add('active');
-          const { active: _omitActive, ...restPayload } = payload;
-          payload = restPayload;
-        } else if (isMissingColumnError(error, 'metadata') && !triedColumns.has('metadata')) {
-          triedColumns.add('metadata');
-          const { metadata: _omitMetadata, ...restPayload } = payload;
-          payload = restPayload;
-        } else if (isMissingColumnError(error, 'description') && !triedColumns.has('description')) {
-          triedColumns.add('description');
-          const { description: _omitDescription, ...restPayload } = payload;
-          payload = restPayload;
-        } else if (isMissingColumnError(error, 'ordem') && !triedColumns.has('ordem')) {
-          triedColumns.add('ordem');
-          const { ordem: _omitOrdem, ...restPayload } = payload;
-          payload = restPayload;
-        } else if (isMissingColumnError(error, 'value') && !triedColumns.has('value')) {
-          triedColumns.add('value');
-          const { value: _omitValue, ...restPayload } = payload;
-          payload = restPayload;
-        } else {
-          break;
+      try {
+        const { error } = await supabase.from(table).update(payload).eq('id', id);
+
+        if (error) {
+          if (isTableMissingError(error, table)) {
+            return await updateLegacyConfigOption(id, updates);
+          }
+          return { error: toPostgrestError(error) };
         }
 
-        ({ error } = await performUpdate(payload));
+        return { error: null };
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          return await updateLegacyConfigOption(id, updates);
+        }
+        console.error('Error updating config option:', error);
+        return { error: toPostgrestError(error) };
       }
-
-      return { error: error ? toPostgrestError(error) : null };
-    } catch (error) {
-      console.error('Error updating config option:', error);
-      return { error: toPostgrestError(error) };
     }
+
+    return await updateLegacyConfigOption(id, updates);
   },
 
-  async deleteConfigOption(id: string): Promise<{ error: any }> {
-    try {
-      const { error } = await supabase
-        .from('system_configurations')
-        .delete()
-        .eq('id', id);
+  async deleteConfigOption(category: ConfigCategory, id: string): Promise<{ error: any }> {
+    const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
-      return { error };
-    } catch (error) {
-      console.error('Error deleting config option:', error);
-      return { error };
+    if (table) {
+      try {
+        const { error } = await supabase.from(table).delete().eq('id', id);
+
+        if (error) {
+          if (isTableMissingError(error, table)) {
+            return await deleteLegacyConfigOption(id);
+          }
+          return { error: toPostgrestError(error) };
+        }
+
+        return { error: null };
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          return await deleteLegacyConfigOption(id);
+        }
+        console.error('Error deleting config option:', error);
+        return { error: toPostgrestError(error) };
+      }
     }
+
+    return await deleteLegacyConfigOption(id);
   },
 
   async getRoleAccessRules(): Promise<RoleAccessRule[]> {

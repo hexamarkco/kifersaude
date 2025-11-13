@@ -1205,22 +1205,6 @@ export default function WhatsAppHistoryTab({
 
     return index;
   }, [leadsMap]);
-  const findContactForPhone = useCallback(
-    (phone: string): ZAPIContact | undefined => {
-      const keys = collectPhoneLookupSet(phone);
-      for (const key of keys) {
-        if (!key) {
-          continue;
-        }
-        const candidate = contactsMap.get(key);
-        if (candidate) {
-          return candidate;
-        }
-      }
-      return undefined;
-    },
-    [contactsMap],
-  );
   const collectLeadsForPhone = useCallback(
     (phone: string): LeadPreview[] => {
       const keys = collectPhoneLookupSet(phone);
@@ -1255,6 +1239,22 @@ export default function WhatsAppHistoryTab({
   const [isStartConversationModalOpen, setIsStartConversationModalOpen] = useState(false);
   const [startConversationContacts, setStartConversationContacts] = useState<ZAPIContact[]>([]);
   const [contactsMap, setContactsMap] = useState<Map<string, ZAPIContact>>(new Map());
+  const findContactForPhone = useCallback(
+    (phone: string): ZAPIContact | undefined => {
+      const keys = collectPhoneLookupSet(phone);
+      for (const key of keys) {
+        if (!key) {
+          continue;
+        }
+        const candidate = contactsMap.get(key);
+        if (candidate) {
+          return candidate;
+        }
+      }
+      return undefined;
+    },
+    [contactsMap],
+  );
   const [chatNameStateMap, setChatNameStateMap] = useState<Map<string, ChatNameState>>(new Map());
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [startConversationLoading, setStartConversationLoading] = useState(false);

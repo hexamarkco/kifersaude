@@ -5,15 +5,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export type WhatsAppMessageDeliveryStatus =
-  | 'pending'
-  | 'sent'
-  | 'received'
-  | 'read'
-  | 'read_by_me'
-  | 'played'
-  | 'failed';
-
 export type Lead = {
   id: string;
   nome_completo: string;
@@ -243,121 +234,6 @@ export type RoleAccessRule = {
   module: string;
   can_view: boolean;
   can_edit: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ApiIntegration = {
-  id: string;
-  zapi_instance_id?: string;
-  zapi_token?: string;
-  openai_api_key?: string;
-  openai_model: string;
-  openai_temperature: number;
-  openai_max_tokens: number;
-  zapi_enabled: boolean;
-  openai_enabled: boolean;
-  monthly_cost_limit: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type WhatsAppConversation = {
-  id: string;
-  lead_id?: string | null;
-  contract_id?: string | null;
-  peer_id?: string | null;
-  phone_number: string;
-  target_phone?: string | null;
-  message_id?: string | null;
-  message_text: string;
-  message_type: 'sent' | 'received';
-  timestamp: string;
-  read_status: boolean;
-  media_url?: string | null;
-  media_type?: string | null;
-  media_mime_type?: string | null;
-  media_duration_seconds?: number | null;
-  media_thumbnail_url?: string | null;
-  media_caption?: string | null;
-  media_view_once?: boolean | null;
-  sender_name?: string | null;
-  sender_photo?: string | null;
-  chat_name?: string | null;
-  notification_type?: string | null;
-  call_id?: string | null;
-  waiting_message?: boolean | null;
-  is_status_reply?: boolean | null;
-  quoted_message_id?: string | null;
-  quoted_message_text?: string | null;
-  quoted_message_sender?: string | null;
-  quoted_message_from_me?: boolean | null;
-  quoted_message_type?: string | null;
-  quoted_message_media_url?: string | null;
-  delivery_status?: WhatsAppMessageDeliveryStatus | null;
-  delivery_status_updated_at?: string | null;
-  created_at: string;
-};
-
-export type WhatsAppChatPeer = {
-  id: string;
-  normalized_phone?: string | null;
-  normalized_chat_lid?: string | null;
-  raw_chat_lid?: string | null;
-  chat_lid_history?: string[] | null;
-  is_group: boolean;
-  last_read_message_id?: string | null;
-  last_read_at?: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type WhatsAppScheduledMessageStatus =
-  | 'pending'
-  | 'scheduled'
-  | 'sent'
-  | 'failed'
-  | 'cancelled';
-
-export type WhatsAppScheduledMessage = {
-  id: string;
-  phone_number: string;
-  message_text?: string | null;
-  media_payload?: Record<string, unknown> | null;
-  scheduled_for: string;
-  status: WhatsAppScheduledMessageStatus;
-  timezone?: string | null;
-  reply_to_message_id?: string | null;
-  created_at: string;
-  updated_at?: string | null;
-  error_message?: string | null;
-};
-
-export type WhatsAppChatPreference = {
-  phone_number: string;
-  archived: boolean;
-  pinned: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-export type AIGeneratedMessage = {
-  id: string;
-  reminder_id: string;
-  lead_id: string;
-  contract_id?: string;
-  prompt_used: string;
-  message_generated: string;
-  message_edited?: string;
-  status: 'draft' | 'approved' | 'sent' | 'failed';
-  tone: 'professional' | 'friendly' | 'urgent' | 'casual';
-  tokens_used: number;
-  cost_estimate: number;
-  conversation_context?: any;
-  generated_by: string;
-  approved_by?: string;
-  sent_at?: string;
-  error_message?: string;
   created_at: string;
   updated_at: string;
 };

@@ -64,7 +64,6 @@ export default function Layout({
 
   const comunicacaoChildren = [
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
-    { id: 'whatsapp-history', label: 'WhatsApp', icon: MessageCircle },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));

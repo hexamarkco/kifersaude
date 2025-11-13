@@ -14,8 +14,6 @@ import { notificationService } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
 import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab';
 import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
-import WhatsAppHistoryTab from '../components/WhatsAppHistoryTab';
-import { WHATSAPP_CHAT_EVENT, type WhatsAppChatRequestDetail } from '../lib/whatsappService';
 
 export default function PainelPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -25,23 +23,12 @@ export default function PainelPage() {
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
-  const [pendingWhatsAppChat, setPendingWhatsAppChat] = useState<(WhatsAppChatRequestDetail & { requestId: number }) | null>(null);
 
   useEffect(() => {
     loadUnreadReminders();
     const interval = setInterval(loadUnreadReminders, 60000);
 
     notificationService.start(30000);
-
-    const handleWhatsAppChatRequest = (event: Event) => {
-      const customEvent = event as CustomEvent<WhatsAppChatRequestDetail>;
-      if (!customEvent.detail) return;
-
-      setActiveTab('whatsapp-history');
-      setPendingWhatsAppChat({ ...customEvent.detail, requestId: Date.now() });
-    };
-
-    window.addEventListener(WHATSAPP_CHAT_EVENT, handleWhatsAppChatRequest as EventListener);
 
     const unsubscribe = notificationService.subscribe((reminder) => {
       setActiveNotifications((prev) => [...prev, reminder]);
@@ -61,7 +48,6 @@ export default function PainelPage() {
       notificationService.stop();
       unsubscribe();
       unsubscribeLeads();
-      window.removeEventListener(WHATSAPP_CHAT_EVENT, handleWhatsAppChatRequest as EventListener);
     };
   }, []);
 
@@ -131,13 +117,6 @@ export default function PainelPage() {
         return <FinanceiroAgendaTab />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
-      case 'whatsapp-history':
-        return (
-          <WhatsAppHistoryTab
-            externalChatRequest={pendingWhatsAppChat}
-            onConsumeExternalChatRequest={() => setPendingWhatsAppChat(null)}
-          />
-        );
       case 'email':
         return <EmailManager />;
       case 'blog':

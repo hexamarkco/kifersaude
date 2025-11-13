@@ -25,7 +25,6 @@ const DEFAULT_OPTIONS: ConfigCategoryMap = {
   contract_abrangencia: [],
   contract_acomodacao: [],
   contract_carencia: [],
-  whatsapp_quick_messages: [],
 };
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -72,7 +71,6 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         loadCategory('contract_abrangencia'),
         loadCategory('contract_acomodacao'),
         loadCategory('contract_carencia'),
-        loadCategory('whatsapp_quick_messages'),
         loadRoleAccessRules(),
       ]);
       if (mounted) {

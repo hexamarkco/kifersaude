@@ -78,7 +78,6 @@ INSERT INTO role_access_rules (role, module, can_view, can_edit) VALUES
   ('admin', 'leads', true, true),
   ('admin', 'contracts', true, true),
   ('admin', 'reminders', true, true),
-  ('admin', 'whatsapp-history', true, true),
   ('admin', 'email', true, true),
   ('admin', 'blog', true, true),
   ('admin', 'config', true, true),
@@ -86,7 +85,6 @@ INSERT INTO role_access_rules (role, module, can_view, can_edit) VALUES
   ('observer', 'leads', true, false),
   ('observer', 'contracts', true, false),
   ('observer', 'reminders', true, false),
-  ('observer', 'whatsapp-history', false, false),
   ('observer', 'email', false, false),
   ('observer', 'blog', false, false),
   ('observer', 'config', false, false)

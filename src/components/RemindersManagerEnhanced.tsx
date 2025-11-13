@@ -3,11 +3,10 @@ import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X, MessageCircle, Sparkles
+  ChevronDown, ChevronUp, Tag, X
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
-import { openWhatsAppInBackgroundTab } from '../lib/whatsappService';
 import {
   groupRemindersByPeriod,
   getPeriodLabel,
@@ -19,7 +18,6 @@ import {
   ReminderPeriod
 } from '../lib/reminderUtils';
 import RemindersCalendar from './RemindersCalendar';
-import AIMessageGeneratorModal from './AIMessageGeneratorModal';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 
 export default function RemindersManagerEnhanced() {
@@ -40,8 +38,6 @@ export default function RemindersManagerEnhanced() {
   const [customSnoozeDateTime, setCustomSnoozeDateTime] = useState('');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [selectedReminderForAI, setSelectedReminderForAI] = useState<Reminder | null>(null);
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
   const [manualReminderPrompt, setManualReminderPrompt] = useState<{
     lead: Lead;
@@ -513,36 +509,6 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
-            {reminder.lead_id && leadsMap.get(reminder.lead_id) && !reminder.lido && (
-              <button
-                onClick={() => {
-                  setSelectedReminderForAI(reminder);
-                  setShowAIModal(true);
-                }}
-                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                title="Gerar mensagem com IA"
-              >
-                <Sparkles className="w-5 h-5" />
-              </button>
-            )}
-            {reminder.lead_id && leadsMap.get(reminder.lead_id) && (
-              <button
-                onClick={() => {
-                  const lead = leadsMap.get(reminder.lead_id!);
-                  if (lead && lead.telefone) {
-                    openWhatsAppInBackgroundTab(lead.telefone, lead.nome_completo, {
-                      withMessage: false,
-                      leadId: lead.id,
-                      source: 'reminders',
-                    });
-                  }
-                }}
-                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                title="Abrir WhatsApp com o lead"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </button>
-            )}
             {!reminder.lido && (
               <div className="relative">
                 <button
@@ -908,21 +874,6 @@ export default function RemindersManagerEnhanced() {
         <RemindersCalendar
           reminders={reminders}
           onClose={() => setShowCalendar(false)}
-        />
-      )}
-
-      {showAIModal && selectedReminderForAI && selectedReminderForAI.lead_id && (
-        <AIMessageGeneratorModal
-          reminder={selectedReminderForAI}
-          lead={leadsMap.get(selectedReminderForAI.lead_id) || ({} as Lead)}
-          contract={selectedReminderForAI.contract_id ? contractsMap.get(selectedReminderForAI.contract_id) : undefined}
-          onClose={() => {
-            setShowAIModal(false);
-            setSelectedReminderForAI(null);
-          }}
-          onMessageSent={() => {
-            loadReminders();
-          }}
         />
       )}
 

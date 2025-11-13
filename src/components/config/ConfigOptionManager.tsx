@@ -13,7 +13,6 @@ type ConfigOptionManagerProps = {
 export default function ConfigOptionManager({ category, title, description, placeholder }: ConfigOptionManagerProps) {
   const { options, refreshCategory } = useConfig();
   const [newLabel, setNewLabel] = useState('');
-  const [newValue, setNewValue] = useState('');
   const [saving, setSaving] = useState(false);
 
   const items = options[category] || [];
@@ -27,7 +26,6 @@ export default function ConfigOptionManager({ category, title, description, plac
     setSaving(true);
     const { error } = await configService.createConfigOption(category, {
       label: newLabel.trim(),
-      value: newValue.trim() || newLabel.trim(),
       ordem: items.length + 1,
       ativo: true,
     });
@@ -36,7 +34,6 @@ export default function ConfigOptionManager({ category, title, description, plac
       alert('Erro ao adicionar opção');
     } else {
       setNewLabel('');
-      setNewValue('');
       await refreshCategory(category);
     }
     setSaving(false);
@@ -73,22 +70,13 @@ export default function ConfigOptionManager({ category, title, description, plac
       <div className="space-y-3">
         {items.map(item => (
           <div key={item.id} className="flex flex-col md:flex-row md:items-center md:space-x-3 space-y-3 md:space-y-0 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="flex flex-col text-xs text-slate-600">
                 Rótulo
                 <input
                   type="text"
                   value={item.label}
                   onChange={(e) => handleUpdate(item.id, { label: e.target.value })}
-                  className="mt-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                />
-              </label>
-              <label className="flex flex-col text-xs text-slate-600">
-                Valor salvo
-                <input
-                  type="text"
-                  value={item.value}
-                  onChange={(e) => handleUpdate(item.id, { value: e.target.value })}
                   className="mt-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </label>
@@ -132,7 +120,7 @@ export default function ConfigOptionManager({ category, title, description, plac
 
       <div className="mt-6 pt-6 border-t border-slate-200">
         <h4 className="text-sm font-semibold text-slate-900 mb-3">Adicionar nova opção</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           <div className="md:col-span-1">
             <label className="block text-xs font-medium text-slate-600 mb-1">Rótulo</label>
             <input
@@ -141,16 +129,6 @@ export default function ConfigOptionManager({ category, title, description, plac
               onChange={(e) => setNewLabel(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
               placeholder={placeholder || 'Ex: Valor visível para o usuário'}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <label className="block text-xs font-medium text-slate-600 mb-1">Valor salvo (opcional)</label>
-            <input
-              type="text"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-              placeholder="Ex: valor_armazenado"
             />
           </div>
         </div>

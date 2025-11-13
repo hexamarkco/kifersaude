@@ -8,6 +8,7 @@ import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
 import EmailManager from '../components/EmailManager';
 import BlogTab from '../components/config/BlogTab';
 import ConfigPage from './ConfigPage';
+import WhatsappPage from './WhatsappPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import { notificationService } from '../lib/notificationService';
@@ -115,6 +116,8 @@ export default function PainelPage() {
         return <FinanceiroComissoesTab />;
       case 'financeiro-agenda':
         return <FinanceiroAgendaTab />;
+      case 'whatsapp':
+        return <WhatsappPage />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
       case 'email':

@@ -1096,6 +1096,7 @@ const toLeadPreview = (lead: Lead): LeadPreview => ({
 
 type ChatGroupBase = {
   phone: string;
+  peerId?: string | null;
   messages: WhatsAppConversation[];
   leadId?: string | null;
   contractId?: string | null;
@@ -1154,6 +1155,91 @@ const resolveChatIdentifier = (
 
   const fallbackValue = fallback?.trim();
   return fallbackValue || '';
+};
+
+const getConversationGroupKey = (
+  conversation?: Pick<WhatsAppConversation, 'peer_id' | 'phone_number' | 'target_phone'> | null,
+): string => {
+  if (!conversation) {
+    return '';
+  }
+
+  const peerId = conversation.peer_id?.trim();
+  if (peerId) {
+    return `peer:${peerId}`;
+  }
+
+  return getChatIdentifierForConversation(conversation);
+};
+
+const isLikelyRealPhoneIdentifier = (value?: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes('@')) {
+    return false;
+  }
+
+  const digits = sanitizePhoneDigits(trimmed);
+  return digits.length >= 8;
+};
+
+const shouldReplaceConversationPhone = (
+  currentValue: string | null | undefined,
+  candidateValue: string | null | undefined,
+): boolean => {
+  const candidate = candidateValue?.trim() ?? '';
+  if (!candidate) {
+    return false;
+  }
+
+  const current = currentValue?.trim() ?? '';
+  if (!current) {
+    return true;
+  }
+
+  if (candidate === current) {
+    return false;
+  }
+
+  const candidateLooksLikePhone = isLikelyRealPhoneIdentifier(candidate);
+  const currentLooksLikePhone = isLikelyRealPhoneIdentifier(current);
+
+  if (candidateLooksLikePhone && !currentLooksLikePhone) {
+    return true;
+  }
+
+  if (!candidateLooksLikePhone && currentLooksLikePhone) {
+    return false;
+  }
+
+  if (candidateLooksLikePhone && currentLooksLikePhone) {
+    const candidateDigits = sanitizePhoneDigits(candidate);
+    const currentDigits = sanitizePhoneDigits(current);
+    if (candidateDigits.length > currentDigits.length) {
+      return true;
+    }
+    if (
+      candidateDigits.length === currentDigits.length &&
+      candidate !== current &&
+      !candidate.includes('@') &&
+      current.includes('@')
+    ) {
+      return true;
+    }
+  }
+
+  if (!candidate.includes('@') && current.includes('@')) {
+    return true;
+  }
+
+  return candidate.length > current.length;
 };
 
 const doesMessageBelongToChat = (
@@ -1262,6 +1348,7 @@ export default function WhatsAppHistoryTab({
   );
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [activePhone, setActivePhone] = useState<string | null>(null);
+  const [activePeerId, setActivePeerId] = useState<string | null>(null);
   const [selectionActionState, setSelectionActionState] = useState<SelectionActionState>({
     status: 'idle',
   });
@@ -1555,24 +1642,28 @@ export default function WhatsAppHistoryTab({
         photoUrl?: string | null;
         isGroup: boolean;
         unreadCount: number;
+        peerId?: string | null;
       }
     >();
 
     conversations.forEach((conv) => {
-      const chatIdentifier = getChatIdentifierForConversation(conv);
-      if (!chatIdentifier) {
+      const groupKey = getConversationGroupKey(conv);
+      if (!groupKey) {
         return;
       }
 
+      const chatIdentifier = getChatIdentifierForConversation(conv);
       const normalizedChatName = conv.chat_name?.trim() || null;
       const normalizedSenderName = conv.sender_name?.trim() || null;
       const isGroupChat =
         isGroupWhatsAppJid(chatIdentifier) || isGroupWhatsAppJid(conv.phone_number);
-      const existing = groups.get(chatIdentifier);
+      const displayPhone = resolveChatIdentifier(conv);
+      const peerId = conv.peer_id?.trim() || null;
+      const existing = groups.get(groupKey);
 
       if (!existing) {
-        groups.set(chatIdentifier, {
-          phone: chatIdentifier,
+        groups.set(groupKey, {
+          phone: displayPhone || chatIdentifier,
           messages: [conv],
           leadId: conv.lead_id,
           contractId: conv.contract_id || null,
@@ -1584,8 +1675,18 @@ export default function WhatsAppHistoryTab({
           isGroup: isGroupChat,
           unreadCount:
             conv.message_type === 'received' && !conv.read_status ? 1 : 0,
+          peerId,
         });
       } else {
+        if (peerId && !existing.peerId) {
+          existing.peerId = peerId;
+        }
+
+        const candidatePhone = resolveChatIdentifier(conv, existing.phone);
+        if (shouldReplaceConversationPhone(existing.phone, candidatePhone)) {
+          existing.phone = candidatePhone;
+        }
+
         existing.messages.push(conv);
         if (!existing.leadId && conv.lead_id) {
           existing.leadId = conv.lead_id;
@@ -1734,6 +1835,24 @@ export default function WhatsAppHistoryTab({
   }, [chatGroups, chatPreferences, leadsByPhoneMap, manualChatPlaceholders]);
 
   useEffect(() => {
+    if (!activePeerId) {
+      return;
+    }
+
+    const matchedChat = chatsWithPreferences.find(
+      (chat) => chat.peerId && chat.peerId === activePeerId,
+    );
+
+    if (!matchedChat) {
+      return;
+    }
+
+    if (matchedChat.phone !== activePhone) {
+      setActivePhone(matchedChat.phone);
+    }
+  }, [activePeerId, activePhone, chatsWithPreferences]);
+
+  useEffect(() => {
     setChatNameStateMap((previous) => {
       const next = new Map<string, ChatNameState>();
 
@@ -1847,8 +1966,9 @@ export default function WhatsAppHistoryTab({
     [clearSelectionFeedbackTimeout]
   );
 
-  const selectPrimaryPhone = useCallback((phone: string) => {
+  const selectPrimaryPhone = useCallback((phone: string, peerId?: string | null) => {
     setActivePhone(phone);
+    setActivePeerId(peerId ?? null);
   }, []);
 
   const togglePhoneSelection = useCallback((phone: string) => {
@@ -3400,6 +3520,7 @@ export default function WhatsAppHistoryTab({
 
     skipAutoSelectRef.current = true;
     setActivePhone(normalizedPhone);
+    setActivePeerId(null);
 
     setExternalSelectionContext({
       phone: normalizedPhone,
@@ -3831,7 +3952,7 @@ export default function WhatsAppHistoryTab({
     }
 
     if (!selectedPhone) {
-      selectPrimaryPhone(filteredChats[0].phone);
+      selectPrimaryPhone(filteredChats[0].phone, filteredChats[0].peerId ?? null);
       return;
     }
 
@@ -3857,7 +3978,7 @@ export default function WhatsAppHistoryTab({
         return;
       }
 
-      selectPrimaryPhone(filteredChats[0].phone);
+      selectPrimaryPhone(filteredChats[0].phone, filteredChats[0].peerId ?? null);
     }
   }, [externalSelectionContext, filteredChats, selectedPhone, selectPrimaryPhone]);
 
@@ -4552,14 +4673,14 @@ export default function WhatsAppHistoryTab({
       }
 
       skipAutoSelectRef.current = true;
-      selectPrimaryPhone(matchedChat.phone);
+      selectPrimaryPhone(matchedChat.phone, matchedChat.peerId ?? null);
     } else if (phone) {
       if (chatListFilter !== 'active') {
         setChatListFilter('active');
       }
 
       skipAutoSelectRef.current = true;
-      selectPrimaryPhone(phone);
+      selectPrimaryPhone(phone, null);
     }
 
     if (prefillMessage && !composerText.trim()) {
@@ -7457,11 +7578,11 @@ const getOutgoingMessageStatus = (
                         key={chat.phone}
                         role="button"
                         tabIndex={0}
-                        onClick={() => selectPrimaryPhone(chat.phone)}
+                        onClick={() => selectPrimaryPhone(chat.phone, chat.peerId ?? null)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            selectPrimaryPhone(chat.phone);
+                            selectPrimaryPhone(chat.phone, chat.peerId ?? null);
                           }
                         }}
                         className={`w-full px-4 py-3 border-b border-slate-200 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 ${

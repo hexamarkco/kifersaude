@@ -759,6 +759,7 @@ async function upsertConversation(
   const isGroupChat = detectGroupChat(payload, basePhoneCandidate ?? normalizedPhone);
 
   let peerResolution: PeerResolution | null = null;
+  let peerId: string | null = null;
 
   if (!isGroupChat) {
     try {
@@ -770,8 +771,13 @@ async function upsertConversation(
         isGroupChat,
         messageDirection: messageType,
       });
+      peerId = peerResolution?.peerId ?? null;
     } catch (peerError) {
       console.warn('Não foi possível garantir vínculo de peer para conversa do WhatsApp:', peerError);
+    }
+
+    if (!peerId && peerResolution?.peerId) {
+      peerId = peerResolution.peerId;
     }
 
     if (peerResolution?.canonicalPhone) {
@@ -839,6 +845,7 @@ async function upsertConversation(
     delivery_status: normalizedStatus ?? null,
     delivery_status_updated_at: normalizedStatusTimestamp ?? null,
     target_phone: normalizedTargetPhone ?? null,
+    peer_id: peerId ?? null,
   };
 
   const insertRecord = {
@@ -851,7 +858,7 @@ async function upsertConversation(
   try {
     const { data: existing, error: fetchError } = await supabase
       .from('whatsapp_conversations')
-      .select('id, delivery_status, delivery_status_updated_at, read_status, target_phone, message_text')
+      .select('id, delivery_status, delivery_status_updated_at, read_status, target_phone, message_text, peer_id')
       .eq('message_id', messageId)
       .maybeSingle();
 
@@ -886,6 +893,10 @@ async function upsertConversation(
 
       if (normalizedTargetPhone && normalizedTargetPhone !== existing.target_phone) {
         updateRecord.target_phone = normalizedTargetPhone;
+      }
+
+      if (peerId && existing.peer_id !== peerId) {
+        updateRecord.peer_id = peerId;
       }
 
       if (typeof normalizedStatus === 'string') {

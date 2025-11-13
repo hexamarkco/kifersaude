@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet';
 import { supabase, Lead, Reminder } from '../lib/supabase';
 import Layout from '../components/Layout';
 import Dashboard from '../components/Dashboard';
@@ -133,6 +134,9 @@ export default function PainelPage() {
 
   return (
     <>
+      <Helmet>
+        <title>KS Workspace</title>
+      </Helmet>
       <Layout
         activeTab={activeTab}
         onTabChange={handleTabChange}

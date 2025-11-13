@@ -9,6 +9,8 @@ import {
   MessageCircle,
   MessageSquareText,
   ChevronDown,
+  Menu,
+  X,
   Briefcase,
   Mail,
   BookOpen,
@@ -51,6 +53,8 @@ export default function Layout({
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
+  const [expandedMobileParent, setExpandedMobileParent] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
@@ -108,6 +112,7 @@ export default function Layout({
     } else {
       onTabChange(tab.id);
       setExpandedParent(null);
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -195,22 +200,95 @@ export default function Layout({
     };
   }, [expandedParent, updateDropdownAlignment]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsMobileMenuOpen(false);
+        setExpandedMobileParent(null);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setExpandedMobileParent(null);
+  }, [activeTab]);
+
+  const toggleMobileParent = (parentId: string) => {
+    setExpandedMobileParent(current => (current === parentId ? null : parentId));
+  };
+
+  const renderMobileChildren = (tab: TabConfig) => {
+    if (!tab.children || tab.children.length === 0 || expandedMobileParent !== tab.id) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2 space-y-1 pl-10">
+        {tab.children.map((child) => {
+          const ChildIcon = child.icon;
+          return (
+            <button
+              key={child.id}
+              onClick={() => {
+                onTabChange(child.id);
+                setIsMobileMenuOpen(false);
+                setExpandedMobileParent(null);
+              }}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                activeTab === child.id ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ChildIcon className="h-4 w-4" />
+                <span>{child.label}</span>
+              </div>
+              {child.badge !== undefined && child.badge > 0 && (
+                <span
+                  className={`${
+                    child.badgeColor || 'bg-orange-500'
+                  } text-white text-xs font-semibold inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 ${
+                    child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                  } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                >
+                  {child.badge > 9 ? '9+' : child.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">K</span>
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                <span className="text-lg font-bold text-white">K</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Kifer Saúde</h1>
-                <p className="text-xs text-slate-500">Sistema de Gestão</p>
-              </div>
+              <span className="sr-only">Kifer Saúde - Sistema de Gestão</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <nav className="flex flex-wrap gap-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(current => !current)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 lg:hidden"
+                aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+                aria-expanded={isMobileMenuOpen}
+              >
+                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <nav className="hidden items-center gap-2 lg:flex">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = isParentActive(tab);
@@ -224,27 +302,28 @@ export default function Layout({
                           triggerRefs.current[tab.id] = element;
                         }}
                         onClick={() => handleTabClick(tab)}
-                        className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-orange-50 text-orange-700'
-                            : 'text-slate-600 hover:bg-slate-100'
+                        className={`relative flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors ${
+                          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
                         }`}
+                        aria-expanded={isExpanded}
+                        aria-haspopup={tab.children && tab.children.length > 0 ? 'menu' : undefined}
+                        title={tab.label}
                       >
-                        <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4" />
-                          <span>{tab.label}</span>
-                          {tab.children && tab.children.length > 0 && (
-                            <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                          )}
-                        </div>
+                        <Icon className="h-5 w-5" />
+                        <span className="hidden xl:inline">{tab.label}</span>
+                        {tab.children && tab.children.length > 0 && (
+                          <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        )}
                         {totalBadge > 0 && (
-                          <span className={`absolute -top-1 -right-1 ${
-                            tab.badgeColor || 'bg-orange-500'
-                          } text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
-                            hasActiveNotification && (tab.id === 'comunicacao' || activeTab === 'reminders') ? 'animate-pulse' : ''
-                          } ${
-                            (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                          }`}>
+                          <span
+                            className={`absolute -top-1 -right-1 ${
+                              tab.badgeColor || 'bg-orange-500'
+                            } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                              hasActiveNotification && (tab.id === 'comunicacao' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                            } ${
+                              (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
+                            }`}
+                          >
                             {totalBadge > 9 ? '9+' : totalBadge}
                           </span>
                         )}
@@ -255,7 +334,7 @@ export default function Layout({
                           ref={(element) => {
                             dropdownRefs.current[tab.id] = element;
                           }}
-                          className={`absolute top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[180px] z-50 ${
+                          className={`absolute top-full mt-1 min-w-[180px] rounded-lg border border-slate-200 bg-white py-1 shadow-xl ${
                             dropdownAlignment[tab.id] === 'right' ? 'right-0 left-auto' : 'left-0'
                           }`}
                         >
@@ -268,24 +347,22 @@ export default function Layout({
                                   onTabChange(child.id);
                                   setExpandedParent(null);
                                 }}
-                                className={`w-full px-4 py-2 text-left text-sm font-medium transition-colors flex items-center justify-between ${
-                                  activeTab === child.id
-                                    ? 'bg-orange-50 text-orange-700'
-                                    : 'text-slate-700 hover:bg-slate-50'
+                                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm font-medium transition-colors ${
+                                  activeTab === child.id ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-50'
                                 }`}
                               >
-                                <div className="flex items-center space-x-2">
-                                  <ChildIcon className="w-4 h-4" />
+                                <div className="flex items-center gap-2">
+                                  <ChildIcon className="h-4 w-4" />
                                   <span>{child.label}</span>
                                 </div>
                                 {child.badge !== undefined && child.badge > 0 && (
-                                  <span className={`${
-                                    child.badgeColor || 'bg-orange-500'
-                                  } text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
-                                    child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
-                                  } ${
-                                    child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''
-                                  }`}>
+                                  <span
+                                    className={`${
+                                      child.badgeColor || 'bg-orange-500'
+                                    } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                                      child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                                    } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                                  >
                                     {child.badge > 9 ? '9+' : child.badge}
                                   </span>
                                 )}
@@ -300,16 +377,87 @@ export default function Layout({
               </nav>
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"
                 title="Sair"
               >
                 <LogOut className="w-5 h-5" />
+                <span className="sr-only">Sair</span>
               </button>
             </div>
           </div>
+          {isMobileMenuOpen && (
+            <div className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl lg:hidden">
+              <nav className="flex flex-col gap-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const totalBadge = getTotalBadge(tab);
+                  const isExpanded = expandedMobileParent === tab.id;
+                  const isActive = isParentActive(tab);
+
+                  return (
+                    <div key={tab.id} className="flex flex-col">
+                      <button
+                        onClick={() => {
+                          if (tab.children && tab.children.length > 0) {
+                            toggleMobileParent(tab.id);
+                          } else {
+                            onTabChange(tab.id);
+                          }
+                        }}
+                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                              isActive ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <div className="flex flex-col text-left">
+                            <span>{tab.label}</span>
+                            {tab.children && tab.children.length > 0 && (
+                              <span className="text-xs font-normal text-slate-500">
+                                {isExpanded ? 'Recolher' : 'Expandir'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {totalBadge > 0 && (
+                            <span
+                              className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs font-semibold text-white ${
+                                tab.badgeColor || 'bg-orange-500'
+                              } ${
+                                hasActiveNotification && (tab.id === 'comunicacao' || activeTab === 'reminders')
+                                  ? 'animate-pulse'
+                                  : ''
+                              } ${
+                                (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0
+                                  ? 'animate-pulse'
+                                  : ''
+                              }`}
+                            >
+                              {totalBadge > 9 ? '9+' : totalBadge}
+                            </span>
+                          )}
+                          {tab.children && tab.children.length > 0 && (
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          )}
+                        </div>
+                      </button>
+                      {renderMobileChildren(tab)}
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

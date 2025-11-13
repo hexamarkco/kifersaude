@@ -538,62 +538,64 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           </div>
         </div>
       )}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">Dashboard</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>
+          <p className="mt-1 text-sm text-slate-600">
             Visão geral do seu negócio em tempo real
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-5 h-5 text-slate-400" />
-            <select
-              value={periodFilter}
-              onChange={(e) => {
-                setPeriodFilter(e.target.value as 'mes-atual' | 'todo-periodo' | 'personalizado');
-                if (e.target.value !== 'personalizado') {
-                  setCustomStartDate('');
-                  setCustomEndDate('');
-                }
-              }}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm font-medium bg-white"
-            >
-              <option value="mes-atual">Mês Atual</option>
-              <option value="todo-periodo">Todo Período</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
-          </div>
-
-          {periodFilter === 'personalizado' && (
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={customStartDate}
-                onChange={handleStartDateChange}
-                placeholder="DD/MM/AAAA"
-                maxLength={10}
-                className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm ${
-                  customStartDate && !validateDate(customStartDate)
-                    ? 'border-red-300 bg-red-50'
-                    : 'border-slate-300'
-                }`}
-              />
-              <span className="text-slate-500 text-sm">até</span>
-              <input
-                type="text"
-                value={customEndDate}
-                onChange={handleEndDateChange}
-                placeholder="DD/MM/AAAA"
-                maxLength={10}
-                className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm ${
-                  customEndDate && !validateDate(customEndDate)
-                    ? 'border-red-300 bg-red-50'
-                    : 'border-slate-300'
-                }`}
-              />
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-400" />
+              <select
+                value={periodFilter}
+                onChange={(e) => {
+                  setPeriodFilter(e.target.value as 'mes-atual' | 'todo-periodo' | 'personalizado');
+                  if (e.target.value !== 'personalizado') {
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }
+                }}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-auto"
+              >
+                <option value="mes-atual">Mês Atual</option>
+                <option value="todo-periodo">Todo Período</option>
+                <option value="personalizado">Personalizado</option>
+              </select>
             </div>
-          )}
+            {periodFilter === 'personalizado' && (
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                <input
+                  type="text"
+                  value={customStartDate}
+                  onChange={handleStartDateChange}
+                  placeholder="DD/MM/AAAA"
+                  maxLength={10}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-32 ${
+                    customStartDate && !validateDate(customStartDate)
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-slate-300'
+                  }`}
+                />
+                <span className="text-center text-xs text-slate-500 sm:hidden">até</span>
+                <span className="hidden text-sm text-slate-500 sm:inline">até</span>
+                <input
+                  type="text"
+                  value={customEndDate}
+                  onChange={handleEndDateChange}
+                  placeholder="DD/MM/AAAA"
+                  maxLength={10}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-32 ${
+                    customEndDate && !validateDate(customEndDate)
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-slate-300'
+                  }`}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

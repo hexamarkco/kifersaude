@@ -49,13 +49,13 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Funil de Vendas</h3>
-          <p className="text-sm text-slate-600 mt-1">Visualização do pipeline e taxas de conversão</p>
+          <p className="mt-1 text-sm text-slate-600">Visualização do pipeline e taxas de conversão</p>
         </div>
-        <div className="flex items-center space-x-2 text-sm">
-          <Users className="w-4 h-4 text-slate-500" />
+        <div className="flex items-center justify-between gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:text-sm">
+          <Users className="h-4 w-4 text-slate-500" />
           <span className="font-semibold text-slate-900">{totalLeads}</span>
           <span className="text-slate-600">leads ativos</span>
         </div>
@@ -73,27 +73,23 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
           return (
             <div key={stage.id} className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: color }}
                   ></div>
                   <span className="font-medium text-slate-900">{stage.nome}</span>
                 </div>
-                <div className="flex items-center space-x-4 text-sm">
+                <div className="flex flex-wrap items-center gap-4 text-sm">
                   {index > 0 && (
-                    <div className="flex items-center space-x-1">
-                      <TrendingDown className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-slate-600">
-                        {conversionRate.toFixed(0)}%
-                      </span>
+                    <div className="flex items-center gap-1 text-xs sm:text-sm">
+                      <TrendingDown className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-slate-600">{conversionRate.toFixed(0)}%</span>
                     </div>
                   )}
                   <span className="font-semibold text-slate-900">{count}</span>
-                  <span className="text-slate-500 w-16 text-right">
-                    {percentage.toFixed(1)}%
-                  </span>
+                  <span className="w-16 text-right text-slate-500">{percentage.toFixed(1)}%</span>
                 </div>
               </div>
 

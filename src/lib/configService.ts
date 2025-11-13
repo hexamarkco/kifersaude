@@ -295,6 +295,7 @@ const isColumnTypeError = (error: PostgrestError | null | undefined, column: str
 };
 
 const FALLBACK_ROLE_ACCESS_CATEGORY = 'role_access_rules';
+const ROLE_ACCESS_TABLES = ['profile_permissions', 'role_access_rules'] as const;
 
 const ensureBoolean = (value: unknown, defaultValue = false) => {
   if (typeof value === 'boolean') return value;
@@ -1110,32 +1111,36 @@ export const configService = {
   },
 
   async getRoleAccessRules(): Promise<RoleAccessRule[]> {
+    for (const table of ROLE_ACCESS_TABLES) {
+      try {
+        const { data, error, status } = await supabase
+          .from(table)
+          .select('*')
+          .order('role', { ascending: true })
+          .order('module', { ascending: true });
+
+        if (error) {
+          if (status === 404 || isTableMissingError(error, table)) {
+            continue;
+          }
+          throw error;
+        }
+
+        return (data as RoleAccessRule[] | null) ?? [];
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          continue;
+        }
+
+        console.error(`Error loading role access rules from ${table}:`, error);
+        break;
+      }
+    }
+
     try {
-      const { data, error, status } = await supabase
-        .from('role_access_rules')
-        .select('*')
-        .order('role', { ascending: true })
-        .order('module', { ascending: true });
-
-      if (error) {
-        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
-          return await getFallbackRoleAccessRules();
-        }
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error loading role access rules:', error);
-
-      if (isTableMissingError(error, 'role_access_rules')) {
-        try {
-          return await getFallbackRoleAccessRules();
-        } catch (fallbackError) {
-          console.error('Fallback role access rules failed:', fallbackError);
-        }
-      }
-
+      return await getFallbackRoleAccessRules();
+    } catch (fallbackError) {
+      console.error('Fallback role access rules failed:', fallbackError);
       return [];
     }
   },
@@ -1145,63 +1150,66 @@ export const configService = {
     module: string,
     updates: Partial<Pick<RoleAccessRule, 'can_view' | 'can_edit'>>,
   ): Promise<{ data: RoleAccessRule | null; error: PostgrestError | null }> {
-    try {
-      const { data, error, status } = await supabase
-        .from('role_access_rules')
-        .upsert(
-          {
-            role,
-            module,
-            ...updates,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'role,module', ignoreDuplicates: false },
-        )
-        .select()
-        .single();
+    for (const table of ROLE_ACCESS_TABLES) {
+      try {
+        const { data, error, status } = await supabase
+          .from(table)
+          .upsert(
+            {
+              role,
+              module,
+              ...updates,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'role,module', ignoreDuplicates: false },
+          )
+          .select()
+          .single();
 
-      if (error) {
-        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
-          return await upsertFallbackRoleAccessRule(role, module, updates);
+        if (error) {
+          if (status === 404 || isTableMissingError(error, table)) {
+            continue;
+          }
+          return { data: null, error };
         }
-        return { data: null, error };
+
+        return { data: (data as RoleAccessRule) ?? null, error: null };
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          continue;
+        }
+
+        console.error(`Error upserting role access rule in ${table}:`, error);
+        return { data: null, error: toPostgrestError(error) };
       }
-
-      return { data, error: null };
-    } catch (error) {
-      console.error('Error upserting role access rule:', error);
-
-      if (isTableMissingError(error, 'role_access_rules')) {
-        return await upsertFallbackRoleAccessRule(role, module, updates);
-      }
-
-      return { data: null, error: toPostgrestError(error) };
     }
+
+    return await upsertFallbackRoleAccessRule(role, module, updates);
   },
 
   async deleteRoleAccessRule(id: string): Promise<{ error: PostgrestError | null }> {
-    try {
-      const { error, status } = await supabase
-        .from('role_access_rules')
-        .delete()
-        .eq('id', id);
+    for (const table of ROLE_ACCESS_TABLES) {
+      try {
+        const { error, status } = await supabase.from(table).delete().eq('id', id);
 
-      if (error) {
-        if (status === 404 || isTableMissingError(error, 'role_access_rules')) {
-          return await deleteFallbackRoleAccessRule(id);
+        if (error) {
+          if (status === 404 || isTableMissingError(error, table)) {
+            continue;
+          }
+          return { error };
         }
-        return { error };
+
+        return { error: null };
+      } catch (error) {
+        if (isTableMissingError(error, table)) {
+          continue;
+        }
+
+        console.error(`Error deleting role access rule from ${table}:`, error);
+        return { error: toPostgrestError(error) };
       }
-
-      return { error: null };
-    } catch (error) {
-      console.error('Error deleting role access rule:', error);
-
-      if (isTableMissingError(error, 'role_access_rules')) {
-        return await deleteFallbackRoleAccessRule(id);
-      }
-
-      return { error: toPostgrestError(error) };
     }
+
+    return await deleteFallbackRoleAccessRule(id);
   },
 };

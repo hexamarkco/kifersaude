@@ -286,7 +286,7 @@ export default function UsersTab() {
                     <UserIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">@{userProfile.username || 'sem-usuario'}</p>
+                    <p className="font-medium text-slate-900">@{userProfile.username}</p>
                     <p className="text-sm text-slate-600">{userProfile.email}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Shield className={`w-4 h-4 ${userProfile.role === 'admin' ? 'text-amber-600' : 'text-blue-600'}`} />

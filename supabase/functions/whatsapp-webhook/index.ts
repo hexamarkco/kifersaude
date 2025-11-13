@@ -31,6 +31,7 @@ type WhatsappMessage = {
 type ZapiWebhookPayload = {
   type?: string;
   phone?: string;
+  chatLid?: string;
   fromMe?: boolean;
   momment?: number | string;
   status?: string;
@@ -201,12 +202,55 @@ const respondJson = (status: number, body: Record<string, unknown>) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+const normalizePhoneIdentifier = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.endsWith('-group')) {
+    return trimmed;
+  }
+
+  const withoutAt = trimmed.includes('@') ? trimmed.slice(0, trimmed.indexOf('@')) : trimmed;
+  if (withoutAt.endsWith('-group')) {
+    return withoutAt;
+  }
+
+  const digitsOnly = withoutAt.replace(/\D+/g, '');
+
+  if (digitsOnly.length >= 5) {
+    return digitsOnly;
+  }
+
+  return null;
+};
+
+const resolvePhoneFromPayload = (payload: ZapiWebhookPayload): string | null => {
+  const candidates = [payload.phone, payload.chatLid, payload.chatName];
+
+  for (const candidate of candidates) {
+    const normalized = normalizePhoneIdentifier(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
+};
+
 const persistReceivedMessage = async (
   payload: ZapiWebhookPayload,
-  options?: { overridePhone?: string }
+  options?: { overridePhone?: string | null; originalPhone?: string | null }
 ): Promise<{ chat: WhatsappChat; message: WhatsappMessage }> => {
   const phoneFromPayload = typeof payload.phone === 'string' ? payload.phone : undefined;
-  const phone = options?.overridePhone ?? phoneFromPayload;
+  const normalizedOverride = normalizePhoneIdentifier(options?.overridePhone ?? null);
+  const phone = normalizedOverride ?? normalizePhoneIdentifier(phoneFromPayload) ?? undefined;
+  const originalPhone = options?.originalPhone ?? phoneFromPayload ?? null;
 
   if (!phone) {
     throw new Error('Campo phone é obrigatório');
@@ -231,6 +275,10 @@ const persistReceivedMessage = async (
     ...(payload as Record<string, any>),
     phone,
   };
+
+  if (phone && originalPhone && phone !== originalPhone) {
+    normalizedRawPayload._originalPhone = originalPhone;
+  }
 
   const message = await insertWhatsappMessage({
     chatId: chat.id,
@@ -439,17 +487,16 @@ const handleOnMessageReceived = async (req: Request) => {
         });
       }
 
-      pendingReceivedFromMeMessages.set(messageId, {
-        payload,
-        receivedAt: Date.now(),
-      });
-
       const pendingSend = pendingSendPayloads.get(messageId);
       const pendingPhone = pendingSend?.phone;
 
       if (pendingSend && typeof pendingPhone === 'string') {
         try {
-          const { chat, message } = await persistReceivedMessage(payload, { overridePhone: pendingPhone });
+          const resolvedPhone = normalizePhoneIdentifier(pendingPhone) ?? pendingPhone;
+          const { chat, message } = await persistReceivedMessage(payload, {
+            overridePhone: resolvedPhone,
+            originalPhone: typeof payload.phone === 'string' ? payload.phone : null,
+          });
           pendingReceivedFromMeMessages.delete(messageId);
           pendingSendPayloads.delete(messageId);
 
@@ -460,10 +507,34 @@ const handleOnMessageReceived = async (req: Request) => {
         }
       }
 
+      const derivedPhone = resolvePhoneFromPayload(payload);
+
+      if (derivedPhone) {
+        try {
+          const { chat, message } = await persistReceivedMessage(payload, {
+            overridePhone: derivedPhone,
+            originalPhone: typeof payload.phone === 'string' ? payload.phone : null,
+          });
+          pendingSendPayloads.delete(messageId);
+
+          return respondJson(200, { success: true, chat, message, matched: false, derived: true });
+        } catch (error) {
+          console.error('Erro ao persistir mensagem enviada (derivação local):', error);
+          return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
+        }
+      }
+
+      pendingReceivedFromMeMessages.set(messageId, {
+        payload,
+        receivedAt: Date.now(),
+      });
+
       return respondJson(200, { success: true, deferred: true });
     }
 
-    const { chat, message } = await persistReceivedMessage(payload);
+    const { chat, message } = await persistReceivedMessage(payload, {
+      originalPhone: typeof payload.phone === 'string' ? payload.phone : null,
+    });
 
     return respondJson(200, { success: true, chat, message });
   } catch (error) {
@@ -507,7 +578,11 @@ const handleOnMessageSend = async (req: Request) => {
 
   if (pendingReceived) {
     try {
-      const { chat, message } = await persistReceivedMessage(pendingReceived.payload, { overridePhone: phone });
+      const { chat, message } = await persistReceivedMessage(pendingReceived.payload, {
+        overridePhone: phone,
+        originalPhone:
+          typeof pendingReceived.payload?.phone === 'string' ? pendingReceived.payload.phone : null,
+      });
       pendingReceivedFromMeMessages.delete(messageId);
       pendingSendPayloads.delete(messageId);
 

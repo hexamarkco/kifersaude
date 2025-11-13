@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import FilterMultiSelect from './FilterMultiSelect';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
@@ -23,10 +24,10 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('todos');
-  const [filterResponsavel, setFilterResponsavel] = useState('todos');
-  const [filterOrigem, setFilterOrigem] = useState('todas');
-  const [filterTipoContratacao, setFilterTipoContratacao] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
+  const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
+  const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -44,6 +45,22 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const tipoContratacaoOptions = useMemo(
     () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
     [options.lead_tipo_contratacao]
+  );
+  const statusFilterOptions = useMemo(
+    () => activeLeadStatuses.map((status) => ({ value: status.nome, label: status.nome })),
+    [activeLeadStatuses]
+  );
+  const responsavelFilterOptions = useMemo(
+    () => responsavelOptions.map((option) => ({ value: option.value, label: option.label })),
+    [responsavelOptions]
+  );
+  const origemFilterOptions = useMemo(
+    () => activeLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome })),
+    [activeLeadOrigins]
+  );
+  const tipoContratacaoFilterOptions = useMemo(
+    () => tipoContratacaoOptions.map((option) => ({ value: option.value, label: option.label })),
+    [tipoContratacaoOptions]
   );
 
   const loadLeads = useCallback(async () => {
@@ -136,8 +153,41 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, itemsPerPage]);
 
+  useEffect(() => {
+    setFilterStatus((current) => {
+      const valid = current.filter((value) => activeLeadStatuses.some((status) => status.nome === value));
+      return valid.length === current.length ? current : valid;
+    });
+  }, [activeLeadStatuses]);
+
+  useEffect(() => {
+    setFilterResponsavel((current) => {
+      const valid = current.filter((value) => responsavelOptions.some((option) => option.value === value));
+      return valid.length === current.length ? current : valid;
+    });
+  }, [responsavelOptions]);
+
+  useEffect(() => {
+    setFilterOrigem((current) => {
+      const valid = current.filter((value) => activeLeadOrigins.some((origin) => origin.nome === value));
+      return valid.length === current.length ? current : valid;
+    });
+  }, [activeLeadOrigins]);
+
+  useEffect(() => {
+    setFilterTipoContratacao((current) => {
+      const valid = current.filter((value) => tipoContratacaoOptions.some((option) => option.value === value));
+      return valid.length === current.length ? current : valid;
+    });
+  }, [tipoContratacaoOptions]);
+
   const filteredLeads = useMemo(() => {
     let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
+
+    const selectedStatusSet = new Set(filterStatus);
+    const selectedResponsavelSet = new Set(filterResponsavel);
+    const selectedOrigemSet = new Set(filterOrigem);
+    const selectedTipoSet = new Set(filterTipoContratacao);
 
     if (isObserver) {
       filtered = filtered.filter((lead) => lead.origem !== 'Ully');
@@ -152,24 +202,33 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       );
     }
 
-    if (filterStatus !== 'todos') {
-      filtered = filtered.filter((lead) => lead.status === filterStatus);
+    if (selectedStatusSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.status && selectedStatusSet.has(lead.status));
     }
 
-    if (filterResponsavel !== 'todos') {
-      filtered = filtered.filter((lead) => lead.responsavel === filterResponsavel);
+    if (selectedResponsavelSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.responsavel && selectedResponsavelSet.has(lead.responsavel));
     }
 
-    if (filterOrigem !== 'todas') {
-      filtered = filtered.filter((lead) => lead.origem === filterOrigem);
+    if (selectedOrigemSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.origem && selectedOrigemSet.has(lead.origem));
     }
 
-    if (filterTipoContratacao !== 'todos') {
-      filtered = filtered.filter((lead) => lead.tipo_contratacao === filterTipoContratacao);
+    if (selectedTipoSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.tipo_contratacao && selectedTipoSet.has(lead.tipo_contratacao));
     }
 
     return filtered;
-  }, [leads, searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, isObserver, showArchived]);
+  }, [
+    leads,
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    isObserver,
+    showArchived,
+  ]);
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
@@ -541,66 +600,34 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
-            >
-              <option value="todos">Todos os status</option>
-              {activeLeadStatuses.map(status => (
-                <option key={status.id} value={status.nome}>
-                  {status.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-            <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <select
-              value={filterResponsavel}
-              onChange={(e) => setFilterResponsavel(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
-            >
-              <option value="todos">Todos os responsáveis</option>
-              {responsavelOptions.map(option => (
-                <option key={option.id} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <select
-              value={filterOrigem}
-              onChange={(e) => setFilterOrigem(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
-            >
-              <option value="todas">Todas as origens</option>
-              {activeLeadOrigins.map(origin => (
-                <option key={origin.id} value={origin.nome}>
-                  {origin.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-            <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <select
-              value={filterTipoContratacao}
-              onChange={(e) => setFilterTipoContratacao(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
-            >
-              <option value="todos">Todos os tipos</option>
-              {tipoContratacaoOptions.map(option => (
-                <option key={option.id} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FilterMultiSelect
+            icon={Filter}
+            options={statusFilterOptions}
+            placeholder="Todos os status"
+            values={filterStatus}
+            onChange={setFilterStatus}
+          />
+          <FilterMultiSelect
+            icon={UserCircle}
+            options={responsavelFilterOptions}
+            placeholder="Todos os responsáveis"
+            values={filterResponsavel}
+            onChange={setFilterResponsavel}
+          />
+          <FilterMultiSelect
+            icon={MapPin}
+            options={origemFilterOptions}
+            placeholder="Todas as origens"
+            values={filterOrigem}
+            onChange={setFilterOrigem}
+          />
+          <FilterMultiSelect
+            icon={Layers}
+            options={tipoContratacaoFilterOptions}
+            placeholder="Todos os tipos"
+            values={filterTipoContratacao}
+            onChange={setFilterTipoContratacao}
+          />
           <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
             <span className="font-medium w-full sm:w-auto">{filteredLeads.length}</span>
             <span className="ml-0 sm:ml-1 w-full sm:w-auto">lead(s) encontrado(s)</span>

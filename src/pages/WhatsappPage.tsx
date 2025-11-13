@@ -72,7 +72,9 @@ export default function WhatsappPage() {
     setChatsLoading(true);
     setErrorMessage(null);
     try {
-      const data = await fetchJson<{ chats: WhatsappChat[] }>('/api/chats');
+      const data = await fetchJson<{ chats: WhatsappChat[] }>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/chats'),
+      );
       setChats(data.chats);
       if (!selectedChatId && data.chats.length > 0) {
         setSelectedChatId(data.chats[0].id);
@@ -99,7 +101,11 @@ export default function WhatsappPage() {
       setMessagesLoading(true);
       setErrorMessage(null);
       try {
-        const data = await fetchJson<{ messages: WhatsappMessage[] }>(`/api/chats/${selectedChatId}/messages`);
+        const data = await fetchJson<{ messages: WhatsappMessage[] }>(
+          getWhatsappFunctionUrl(
+            `/whatsapp-webhook/chats/${encodeURIComponent(selectedChatId)}/messages`,
+          ),
+        );
         setMessages(data.messages.map(message => ({ ...message, isOptimistic: false })));
       } catch (error: any) {
         console.error('Erro ao carregar mensagens:', error);

@@ -439,6 +439,59 @@ const handleHealthcheck = async (req: Request) => {
   });
 };
 
+const handleListChats = async (req: Request) => {
+  if (req.method !== 'GET') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .order('last_message_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return respondJson(200, { chats: data ?? [] });
+  } catch (error) {
+    console.error('Erro ao listar chats do WhatsApp:', error);
+    return respondJson(500, { success: false, error: 'Falha ao carregar chats' });
+  }
+};
+
+const handleListChatMessages = async (req: Request, chatId: string) => {
+  if (req.method !== 'GET') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('moment', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return respondJson(200, { messages: data ?? [] });
+  } catch (error) {
+    console.error('Erro ao listar mensagens do WhatsApp:', error);
+    return respondJson(500, { success: false, error: 'Falha ao carregar mensagens' });
+  }
+};
+
 const resolveSubPath = (pathname: string): string => {
   const segments = pathname.split('/').filter(Boolean);
   const functionIndex = segments.indexOf('whatsapp-webhook');
@@ -461,6 +514,17 @@ serve(async (req) => {
 
   const { pathname } = new URL(req.url);
   const subPath = resolveSubPath(pathname);
+
+  const chatMessagesMatch = subPath.match(/^\/chats\/([^/]+)\/messages$/);
+
+  if (subPath === '/chats') {
+    return handleListChats(req);
+  }
+
+  if (chatMessagesMatch) {
+    const chatId = decodeURIComponent(chatMessagesMatch[1]);
+    return handleListChatMessages(req, chatId);
+  }
 
   switch (subPath) {
     case '/on-message-received':

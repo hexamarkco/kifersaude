@@ -63,13 +63,15 @@ export default function AnimatedStatCard({
     <>
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
 
-      <div className="relative p-6">
-        <div className="flex items-start justify-between mb-4">
+      <div className="relative p-4 sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-600 mb-1">{label}</p>
-            <div className="flex items-baseline space-x-1">
-              {prefix && <span className="text-2xl font-bold text-slate-900">{prefix}</span>}
-              <p className="text-3xl font-bold text-slate-900">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 sm:text-sm sm:normal-case sm:tracking-normal">
+              {label}
+            </p>
+            <div className="flex items-baseline gap-1">
+              {prefix && <span className="text-xl font-bold text-slate-900 sm:text-2xl">{prefix}</span>}
+              <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
                 {isNumeric
                   ? displayValue.toLocaleString('pt-BR', {
                       minimumFractionDigits: prefix === 'R$' ? 2 : 0,
@@ -77,13 +79,13 @@ export default function AnimatedStatCard({
                     })
                   : displayValue}
               </p>
-              {suffix && <span className="text-lg font-semibold text-slate-600">{suffix}</span>}
+              {suffix && <span className="text-base font-semibold text-slate-600 sm:text-lg">{suffix}</span>}
             </div>
             {subtitle && (
-              <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
             )}
             {trend && (
-              <div className="mt-2 flex items-center space-x-1">
+              <div className="mt-2 flex items-center gap-1 text-xs sm:text-sm">
                 <span
                   className={`text-sm font-semibold ${
                     trend.isPositive ? 'text-green-600' : 'text-red-600'
@@ -96,9 +98,9 @@ export default function AnimatedStatCard({
             )}
           </div>
           <div
-            className={`${iconBg} p-4 rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-300`}
+            className={`${iconBg} rounded-xl p-3 shadow-sm transition-transform duration-300 group-hover:scale-110 sm:p-4`}
           >
-            <Icon className="w-6 h-6 text-white" />
+            <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
           </div>
         </div>
       </div>

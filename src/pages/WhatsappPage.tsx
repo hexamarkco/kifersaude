@@ -33,6 +33,17 @@ type SendMessageResponse =
       error?: string;
     };
 
+const getWhatsappFunctionUrl = (path: string) => {
+  const baseUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+  if (!baseUrl) {
+    throw new Error('Variável VITE_SUPABASE_FUNCTIONS_URL não configurada.');
+  }
+
+  const normalizedBase = baseUrl.replace(/\/$/, '');
+  const normalizedPath = path.replace(/^\/+/, '');
+  return `${normalizedBase}/${normalizedPath}`;
+};
+
 const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T> => {
   const response = await fetch(input, init);
   if (!response.ok) {
@@ -135,11 +146,14 @@ export default function WhatsappPage() {
     setErrorMessage(null);
 
     try {
-      const response = await fetchJson<SendMessageResponse>('/api/zapi/send-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: selectedChat.phone, message: trimmedMessage }),
-      });
+      const response = await fetchJson<SendMessageResponse>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/send-message'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: selectedChat.phone, message: trimmedMessage }),
+        },
+      );
 
       if (!response.success) {
         throw new Error(response.error || 'Resposta inválida do servidor');

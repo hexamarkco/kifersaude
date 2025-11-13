@@ -34,12 +34,25 @@ type SendMessageResponse =
     };
 
 const getWhatsappFunctionUrl = (path: string) => {
-  const baseUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
-  if (!baseUrl) {
-    throw new Error('Variável VITE_SUPABASE_FUNCTIONS_URL não configurada.');
+  const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.trim();
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+
+  if (!functionsUrl && !supabaseUrl) {
+    throw new Error(
+      'Variáveis VITE_SUPABASE_FUNCTIONS_URL ou VITE_SUPABASE_URL não configuradas.',
+    );
   }
 
-  const normalizedBase = baseUrl.replace(/\/$/, '');
+  const normalizedBase = (() => {
+    if (functionsUrl) {
+      return functionsUrl.replace(/\/+$/, '');
+    }
+
+    // supabaseUrl is guaranteed to exist here because of the guard above
+    const trimmedSupabase = supabaseUrl!.replace(/\/+$/, '');
+    return `${trimmedSupabase}/functions/v1`;
+  })();
+
   const normalizedPath = path.replace(/^\/+/, '');
   return `${normalizedBase}/${normalizedPath}`;
 };

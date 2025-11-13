@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Skeleton } from '../components/ui/Skeleton';
+import { skeletonSurfaces } from '../components/ui/skeletonStyles';
 
 interface BlogPost {
   id: string;
@@ -18,6 +20,70 @@ interface BlogPost {
   meta_title?: string;
   meta_description?: string;
 }
+
+const BlogFooter = () => (
+  <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 mt-12">
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <div>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+              <Heart className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold">Kifer Saúde</span>
+          </div>
+          <p className="text-slate-400 leading-relaxed">
+            Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
+          <ul className="space-y-3 text-slate-400">
+            <li><a href="/" className="hover:text-orange-400 transition-colors">Home</a></li>
+            <li><a href="/#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
+            <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
+            <li><a href="/#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold mb-4">Contato</h3>
+          <div className="space-y-3 text-slate-400">
+            <div className="flex items-start">
+              <MapPin className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+              <span>Rio de Janeiro, RJ</span>
+            </div>
+            <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-400 transition-colors">
+              <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+              <span>contato@kifersaude.com.br</span>
+            </a>
+            <a
+              href="https://instagram.com/souluizakifer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start hover:text-orange-400 transition-colors"
+            >
+              <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
+              <span>@souluizakifer</span>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold mb-4">Legal</h3>
+          <div className="space-y-2 text-slate-400">
+            <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
+        <p>&copy; 2025 Kifer Saúde. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+);
 
 export default function BlogPage() {
   const { slug } = useParams();
@@ -126,6 +192,91 @@ export default function BlogPage() {
       alert('Link copiado para a área de transferência!');
     });
   };
+
+  const isLoadingPost = Boolean(slug) && loading;
+
+  if (isLoadingPost) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/blog')}
+                className="flex items-center text-slate-600 hover:text-orange-600 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Voltar para o blog
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-slate-900">Kifer Saúde</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+          <div className="mb-4 rounded-2xl overflow-hidden shadow-lg">
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+
+          <div className={`${skeletonSurfaces.panel} p-8 md:p-12 space-y-8`}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Skeleton variant="line" className="h-8 w-28" />
+              <Skeleton variant="line" className="h-6 w-32" />
+              <Skeleton variant="line" className="h-6 w-20" />
+              <Skeleton variant="line" className="h-6 w-24" />
+            </div>
+
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-6 w-2/3" />
+
+            <div className="flex flex-wrap items-center gap-3 mb-4 pb-6 border-b border-slate-200">
+              <Skeleton variant="line" className="h-10 w-32" />
+              <Skeleton variant="line" className="h-10 w-32" />
+              <Skeleton variant="line" className="h-10 w-32" />
+              <Skeleton variant="line" className="h-10 w-32" />
+            </div>
+
+            <div className="space-y-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <Skeleton key={index} className="h-4 w-full" />
+              ))}
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-200">
+              <div className={`${skeletonSurfaces.card} p-8 text-center space-y-4`}>
+                <Skeleton className="h-8 w-1/2 mx-auto" />
+                <Skeleton className="h-5 w-3/4 mx-auto" />
+                <Skeleton variant="line" className="h-12 w-40 mx-auto" />
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-200 space-y-6">
+              <Skeleton className="h-7 w-48" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>
+                    <Skeleton className="h-48 w-full" />
+                    <div className="p-4 space-y-3">
+                      <Skeleton variant="line" className="h-6 w-24" />
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <BlogFooter />
+      </div>
+    );
+  }
 
   if (selectedPost) {
     return (
@@ -330,62 +481,7 @@ export default function BlogPage() {
           </div>
         </article>
 
-        <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 mt-12">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-              <div>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                    <Heart className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold">Kifer Saúde</span>
-                </div>
-                <p className="text-slate-400 leading-relaxed">
-                  Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
-                <ul className="space-y-3 text-slate-400">
-                  <li><a href="/" className="hover:text-orange-400 transition-colors">Home</a></li>
-                  <li><a href="/#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
-                  <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
-                  <li><a href="/#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4">Contato</h3>
-                <div className="space-y-3 text-slate-400">
-                  <div className="flex items-start">
-                    <MapPin className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                    <span>Rio de Janeiro, RJ</span>
-                  </div>
-                  <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-400 transition-colors">
-                    <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                    <span>contato@kifersaude.com.br</span>
-                  </a>
-                  <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
-                    <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                    <span>@souluizakifer</span>
-                  </a>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4">Legal</h3>
-                <div className="space-y-2 text-slate-400">
-                  <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-              <p>&copy; 2025 Kifer Saúde. Todos os direitos reservados.</p>
-            </div>
-          </div>
-        </footer>
+        <BlogFooter />
       </div>
     );
   }
@@ -429,24 +525,46 @@ export default function BlogPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 justify-center mb-12">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                selectedCategory === category
-                  ? 'bg-orange-600 text-white shadow-lg'
-                  : 'bg-white text-slate-600 hover:bg-orange-50'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} variant="line" className="h-11 w-28" />
+              ))
+            : categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-6 py-2 rounded-full font-semibold transition-all ${
+                    selectedCategory === category
+                      ? 'bg-orange-600 text-white shadow-lg'
+                      : 'bg-white text-slate-600 hover:bg-orange-50'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
         </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <article key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>
+                <Skeleton className="h-56 w-full" />
+                <div className="p-6 space-y-5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Skeleton variant="line" className="h-7 w-24" />
+                    <Skeleton variant="line" className="h-5 w-20" />
+                    <Skeleton variant="line" className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-7 w-3/4" />
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-5/6" />
+                  <div className="flex items-center justify-between">
+                    <Skeleton variant="line" className="h-6 w-32" />
+                    <Skeleton variant="line" className="h-6 w-14" />
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-20">
@@ -509,62 +627,7 @@ export default function BlogPage() {
         )}
       </div>
 
-      <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold">Kifer Saúde</span>
-              </div>
-              <p className="text-slate-400 leading-relaxed">
-                Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
-              <ul className="space-y-3 text-slate-400">
-                <li><a href="/" className="hover:text-orange-400 transition-colors">Home</a></li>
-                <li><a href="/#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
-                <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
-                <li><a href="/#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-4">Contato</h3>
-              <div className="space-y-3 text-slate-400">
-                <div className="flex items-start">
-                  <MapPin className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                  <span>Rio de Janeiro, RJ</span>
-                </div>
-                <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-400 transition-colors">
-                  <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                  <span>contato@kifersaude.com.br</span>
-                </a>
-                <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
-                  <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
-                  <span>@souluizakifer</span>
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-4">Legal</h3>
-              <div className="space-y-2 text-slate-400">
-                <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-            <p>&copy; 2025 Kifer Saúde. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </footer>
+      <BlogFooter />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -153,7 +154,11 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <Helmet>
+        <title>Kifer Saúde | Planos de Saúde</title>
+      </Helmet>
+      <div className="min-h-screen bg-white">
       <nav className={`fixed top-0 w-full z-40 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/95 backdrop-blur-sm shadow-sm'
@@ -1259,6 +1264,7 @@ export default function LandingPage() {
         </div>
       )}
 
-    </div>
+      </div>
+    </>
   );
 }

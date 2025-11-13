@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -19,12 +19,14 @@ type LeadsManagerProps = {
 
 export default function LeadsManager({ onConvertToContract }: LeadsManagerProps) {
   const { isObserver } = useAuth();
-  const { leadStatuses, options } = useConfig();
+  const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterResponsavel, setFilterResponsavel] = useState('todos');
+  const [filterOrigem, setFilterOrigem] = useState('todas');
+  const [filterTipoContratacao, setFilterTipoContratacao] = useState('todos');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -38,6 +40,11 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
+  const activeLeadOrigins = useMemo(() => leadOrigins.filter(origin => origin.ativo), [leadOrigins]);
+  const tipoContratacaoOptions = useMemo(
+    () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
+    [options.lead_tipo_contratacao]
+  );
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -127,7 +134,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterResponsavel, itemsPerPage]);
+  }, [searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, itemsPerPage]);
 
   const filteredLeads = useMemo(() => {
     let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
@@ -153,8 +160,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       filtered = filtered.filter((lead) => lead.responsavel === filterResponsavel);
     }
 
+    if (filterOrigem !== 'todas') {
+      filtered = filtered.filter((lead) => lead.origem === filterOrigem);
+    }
+
+    if (filterTipoContratacao !== 'todos') {
+      filtered = filtered.filter((lead) => lead.tipo_contratacao === filterTipoContratacao);
+    }
+
     return filtered;
-  }, [leads, searchTerm, filterStatus, filterResponsavel, isObserver, showArchived]);
+  }, [leads, searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, isObserver, showArchived]);
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(filteredLeads.length / itemsPerPage));
@@ -515,8 +530,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+          <div className="relative xl:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -549,6 +564,36 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
             >
               <option value="todos">Todos os responsáveis</option>
               {responsavelOptions.map(option => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <select
+              value={filterOrigem}
+              onChange={(e) => setFilterOrigem(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
+            >
+              <option value="todas">Todas as origens</option>
+              {activeLeadOrigins.map(origin => (
+                <option key={origin.id} value={origin.nome}>
+                  {origin.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <select
+              value={filterTipoContratacao}
+              onChange={(e) => setFilterTipoContratacao(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
+            >
+              <option value="todos">Todos os tipos</option>
+              {tipoContratacaoOptions.map(option => (
                 <option key={option.id} value={option.value}>
                   {option.label}
                 </option>

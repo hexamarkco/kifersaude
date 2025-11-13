@@ -269,6 +269,13 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       const normalizedStatus = newStatus.trim().toLowerCase();
       if (normalizedStatus === 'proposta enviada') {
         setReminderLead({ ...lead, status: newStatus });
+      } else if (normalizedStatus === 'perdido') {
+        const { error: deleteRemindersError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('lead_id', leadId);
+
+        if (deleteRemindersError) throw deleteRemindersError;
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);

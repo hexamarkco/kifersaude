@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Skeleton } from '../components/ui/Skeleton';
+import { skeletonSurfaces } from '../components/ui/skeletonStyles';
 
 interface BlogPost {
   id: string;
@@ -660,8 +662,25 @@ export default function LandingPage() {
           </div>
 
           {loadingPosts ? (
-            <div className="text-center py-12">
-              <div className="inline-block w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <article key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>
+                  <Skeleton className="h-48 w-full" />
+                  <div className="p-6 space-y-5">
+                    <div className="flex items-center gap-4">
+                      <Skeleton variant="line" className="h-8 w-24" />
+                      <Skeleton variant="line" className="h-6 w-32" />
+                    </div>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-5/6" />
+                    <div className="flex items-center justify-between">
+                      <Skeleton variant="line" className="h-6 w-28" />
+                      <Skeleton variant="line" className="h-6 w-16" />
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           ) : blogPosts.length === 0 ? (
             <div className="text-center py-12">

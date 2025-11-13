@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../types';
 import { upsertChatRecord, insertWhatsappMessage } from '../../../server/whatsappStorage';
+import { rememberOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
 
 const globalProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
 
@@ -72,6 +73,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       responseBody = null;
     }
 
+    console.info('Z-API send-text response:', {
+      status: response.status,
+      body: responseBody,
+    });
+
     if (!response.ok) {
       return res.status(response.status).json({
         error: 'Falha ao enviar mensagem pela Z-API',
@@ -82,14 +88,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const now = new Date();
     const zapiStatus = typeof responseBody?.status === 'string' ? responseBody.status : 'SENT';
     const messageId = typeof responseBody?.messageId === 'string' ? responseBody.messageId : null;
+    const responsePhone = typeof responseBody?.phone === 'string' ? responseBody.phone : phone;
     const chatName = typeof responseBody?.chatName === 'string' ? responseBody.chatName : undefined;
     const senderPhoto = typeof responseBody?.senderPhoto === 'string' ? responseBody.senderPhoto : undefined;
 
     const chat = await upsertChatRecord({
-      phone,
+      phone: responsePhone,
       chatName,
       senderPhoto,
-      isGroup: phone.endsWith('-group'),
+      isGroup: responsePhone.endsWith('-group'),
       lastMessageAt: now,
       lastMessagePreview: message,
     });
@@ -103,6 +110,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       moment: now,
       rawPayload: responseBody,
     });
+
+    if (messageId && responsePhone) {
+      rememberOutgoingMessagePhone(messageId, responsePhone);
+    }
 
     return res.status(200).json({ success: true, message: insertedMessage, chat });
   } catch (error: any) {

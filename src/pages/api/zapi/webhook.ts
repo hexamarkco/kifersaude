@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../types';
 import { upsertChatRecord, insertWhatsappMessage } from '../../../server/whatsappStorage';
+import { resolveOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
 
@@ -74,11 +75,33 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const payload = ensureJson(req.body);
 
+  console.info('Z-API received webhook payload:', payload);
+
   if (payload.type !== 'ReceivedCallback') {
     return res.status(200).json({ success: true, ignored: true });
   }
 
-  const phone = typeof payload.phone === 'string' ? payload.phone : undefined;
+  let phone = typeof payload.phone === 'string' ? payload.phone : undefined;
+  const messageId = typeof payload.messageId === 'string' ? payload.messageId : undefined;
+  const isFromMe = payload.fromMe === true;
+
+  if (isFromMe && messageId) {
+    const resolvedPhone = resolveOutgoingMessagePhone(messageId);
+
+    if (resolvedPhone) {
+      console.info('Resolved WhatsApp phone from send payload', {
+        messageId,
+        originalPhone: phone,
+        resolvedPhone,
+      });
+      phone = resolvedPhone;
+    } else {
+      console.warn('Received fromMe webhook without matching send payload', {
+        messageId,
+        originalPhone: phone,
+      });
+    }
+  }
 
   if (!phone) {
     return res.status(400).json({ error: 'Campo phone é obrigatório' });
@@ -102,8 +125,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const message = await insertWhatsappMessage({
       chatId: chat.id,
-      messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
-      fromMe: payload.fromMe === true,
+      messageId: messageId ?? null,
+      fromMe: isFromMe,
       status: typeof payload.status === 'string' ? payload.status : null,
       text: messageText,
       moment: momentDate,

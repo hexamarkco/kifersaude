@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { configService, ConfigCategory } from '../lib/configService';
-import { ConfigOption, LeadOrigem, LeadStatusConfig, RoleAccessRule } from '../lib/supabase';
+import { ConfigOption, LeadOrigem, LeadStatusConfig, ProfilePermission } from '../lib/supabase';
 
 export type ConfigCategoryMap = Record<ConfigCategory, ConfigOption[]>;
 
@@ -9,11 +9,11 @@ type ConfigContextType = {
   leadStatuses: LeadStatusConfig[];
   leadOrigins: LeadOrigem[];
   options: ConfigCategoryMap;
-  roleAccessRules: RoleAccessRule[];
+  profilePermissions: ProfilePermission[];
   refreshLeadStatuses: () => Promise<void>;
   refreshLeadOrigins: () => Promise<void>;
   refreshCategory: (category: ConfigCategory) => Promise<void>;
-  refreshRoleAccessRules: () => Promise<void>;
+  refreshProfilePermissions: () => Promise<void>;
   getRoleModulePermission: (role: string | null | undefined, module: string) => { can_view: boolean; can_edit: boolean };
 };
 
@@ -33,7 +33,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [leadOrigins, setLeadOrigins] = useState<LeadOrigem[]>([]);
   const [options, setOptions] = useState<ConfigCategoryMap>({ ...DEFAULT_OPTIONS });
-  const [roleAccessRules, setRoleAccessRules] = useState<RoleAccessRule[]>([]);
+  const [profilePermissions, setProfilePermissions] = useState<ProfilePermission[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadLeadStatuses = async () => {
@@ -51,9 +51,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     setOptions(prev => ({ ...prev, [category]: data }));
   };
 
-  const loadRoleAccessRules = async () => {
-    const data = await configService.getRoleAccessRules();
-    setRoleAccessRules(data);
+  const loadProfilePermissions = async () => {
+    const data = await configService.getProfilePermissions();
+    setProfilePermissions(data);
   };
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         loadCategory('contract_abrangencia'),
         loadCategory('contract_acomodacao'),
         loadCategory('contract_carencia'),
-        loadRoleAccessRules(),
+        loadProfilePermissions(),
       ]);
       if (mounted) {
         setLoading(false);
@@ -95,25 +95,25 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         return { can_view: true, can_edit: true };
       }
 
-      const rule = roleAccessRules.find(r => r.role === role && r.module === module);
+      const rule = profilePermissions.find(r => r.role === role && r.module === module);
       if (rule) {
         return { can_view: rule.can_view, can_edit: rule.can_edit };
       }
 
       return { can_view: false, can_edit: false };
     };
-  }, [roleAccessRules]);
+  }, [profilePermissions]);
 
   const value: ConfigContextType = {
     loading,
     leadStatuses,
     leadOrigins,
     options,
-    roleAccessRules,
+    profilePermissions,
     refreshLeadStatuses: loadLeadStatuses,
     refreshLeadOrigins: loadLeadOrigins,
     refreshCategory: loadCategory,
-    refreshRoleAccessRules: loadRoleAccessRules,
+    refreshProfilePermissions: loadProfilePermissions,
     getRoleModulePermission,
   };
 

@@ -8,7 +8,7 @@ import {
   LeadStatusConfig,
   LeadOrigem,
   ConfigOption,
-  RoleAccessRule,
+  ProfilePermission,
 } from './supabase';
 
 export type ConfigCategory =
@@ -268,7 +268,7 @@ const isColumnTypeError = (error: PostgrestError | null | undefined, column: str
   return normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower);
 };
 
-const ROLE_ACCESS_TABLES = ['profile_permissions', 'role_access_rules'] as const;
+const PROFILE_PERMISSIONS_TABLE = 'profile_permissions';
 
 const isTableMissingError = (error: unknown, table: string) => {
   if (!error || typeof error !== 'object') return false;
@@ -738,118 +738,126 @@ export const configService = {
     return await deleteLegacyConfigOption(id);
   },
 
-  async getRoleAccessRules(): Promise<RoleAccessRule[]> {
-    for (const table of ROLE_ACCESS_TABLES) {
-      try {
-        const { data, error, status } = await supabase
-          .from(table)
-          .select('*')
-          .order('role', { ascending: true })
-          .order('module', { ascending: true });
+  async getProfilePermissions(): Promise<ProfilePermission[]> {
+    try {
+      const { data, error, status } = await supabase
+        .from(PROFILE_PERMISSIONS_TABLE)
+        .select('*')
+        .order('role', { ascending: true })
+        .order('module', { ascending: true });
 
-        if (error) {
-          if (status === 404 || isTableMissingError(error, table)) {
-            continue;
-          }
-          throw error;
+      if (error) {
+        if (status === 404 || isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+          return [];
         }
-
-        return (data as RoleAccessRule[] | null) ?? [];
-      } catch (error) {
-        if (isTableMissingError(error, table)) {
-          continue;
-        }
-
-        console.error(`Error loading role access rules from ${table}:`, error);
-        break;
+        throw error;
       }
-    }
 
-    return [];
+      return (data as ProfilePermission[] | null) ?? [];
+    } catch (error) {
+      if (isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+        return [];
+      }
+
+      console.error('Error loading profile permissions:', error);
+      return [];
+    }
   },
 
-  async upsertRoleAccessRule(
+  async upsertProfilePermission(
     role: string,
     module: string,
-    updates: Partial<Pick<RoleAccessRule, 'can_view' | 'can_edit'>>,
-  ): Promise<{ data: RoleAccessRule | null; error: PostgrestError | null }> {
-    for (const table of ROLE_ACCESS_TABLES) {
-      try {
-        const { data, error, status } = await supabase
-          .from(table)
-          .upsert(
-            {
-              role,
-              module,
-              ...updates,
-              updated_at: new Date().toISOString(),
+    updates: Partial<Pick<ProfilePermission, 'can_view' | 'can_edit'>>,
+  ): Promise<{ data: ProfilePermission | null; error: PostgrestError | null }> {
+    try {
+      const { data, error, status } = await supabase
+        .from(PROFILE_PERMISSIONS_TABLE)
+        .upsert(
+          {
+            role,
+            module,
+            ...updates,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'role,module', ignoreDuplicates: false },
+        )
+        .select()
+        .single();
+
+      if (error) {
+        if (status === 404 || isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+          return {
+            data: null,
+            error: {
+              message: 'Tabela de permissões não encontrada.',
+              details: 'A tabela profile_permissions não está disponível no banco de dados.',
+              hint: '',
+              code: 'PGRST404',
+              name: 'PostgrestError',
             },
-            { onConflict: 'role,module', ignoreDuplicates: false },
-          )
-          .select()
-          .single();
-
-        if (error) {
-          if (status === 404 || isTableMissingError(error, table)) {
-            continue;
-          }
-          return { data: null, error };
+          };
         }
-
-        return { data: (data as RoleAccessRule) ?? null, error: null };
-      } catch (error) {
-        if (isTableMissingError(error, table)) {
-          continue;
-        }
-
-        console.error(`Error upserting role access rule in ${table}:`, error);
-        return { data: null, error: toPostgrestError(error) };
+        return { data: null, error };
       }
-    }
 
-    return {
-      data: null,
-      error: {
-        message: 'Tabela de permissões não encontrada.',
-        details: 'Nenhuma tabela de permissões disponível para armazenar as configurações.',
-        hint: '',
-        code: 'PGRST404',
-        name: 'PostgrestError',
-      },
-    };
+      return { data: (data as ProfilePermission) ?? null, error: null };
+    } catch (error) {
+      if (isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+        return {
+          data: null,
+          error: {
+            message: 'Tabela de permissões não encontrada.',
+            details: 'A tabela profile_permissions não está disponível no banco de dados.',
+            hint: '',
+            code: 'PGRST404',
+            name: 'PostgrestError',
+          },
+        };
+      }
+
+      console.error('Error upserting profile permission:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
   },
 
-  async deleteRoleAccessRule(id: string): Promise<{ error: PostgrestError | null }> {
-    for (const table of ROLE_ACCESS_TABLES) {
-      try {
-        const { error, status } = await supabase.from(table).delete().eq('id', id);
+  async deleteProfilePermission(id: string): Promise<{ error: PostgrestError | null }> {
+    try {
+      const { error, status } = await supabase
+        .from(PROFILE_PERMISSIONS_TABLE)
+        .delete()
+        .eq('id', id);
 
-        if (error) {
-          if (status === 404 || isTableMissingError(error, table)) {
-            continue;
-          }
-          return { error };
+      if (error) {
+        if (status === 404 || isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+          return {
+            error: {
+              message: 'Tabela de permissões não encontrada.',
+              details: 'A tabela profile_permissions não está disponível no banco de dados.',
+              hint: '',
+              code: 'PGRST404',
+              name: 'PostgrestError',
+            },
+          };
         }
-
-        return { error: null };
-      } catch (error) {
-        if (isTableMissingError(error, table)) {
-          continue;
-        }
-
-        console.error(`Error deleting role access rule from ${table}:`, error);
-        return { error: toPostgrestError(error) };
+        return { error };
       }
-    }
 
-    return {
-      error: {
-        message: 'Tabela de permissões não encontrada.',
-        details: 'Nenhuma tabela de permissões disponível para armazenar as configurações.',
-        hint: '',
-        code: 'PGRST404',
-        name: 'PostgrestError',
-      },
-    };
+      return { error: null };
+    } catch (error) {
+      if (isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+        return {
+          error: {
+            message: 'Tabela de permissões não encontrada.',
+            details: 'A tabela profile_permissions não está disponível no banco de dados.',
+            hint: '',
+            code: 'PGRST404',
+            name: 'PostgrestError',
+          },
+        };
+      }
+
+      console.error('Error deleting profile permission:', error);
+      return { error: toPostgrestError(error) };
+    }
   },
 };

@@ -91,3 +91,5 @@ CREATE TRIGGER trg_profile_permissions_updated_at
   BEFORE UPDATE ON profile_permissions
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
+
+DROP TABLE IF EXISTS role_access_rules;

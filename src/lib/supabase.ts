@@ -219,7 +219,7 @@ export type ConfigOption = {
   category: string;
   label: string;
   value: string;
-  description?: string;
+  description?: string | null;
   ordem: number;
   ativo: boolean;
   active?: boolean;
@@ -228,7 +228,7 @@ export type ConfigOption = {
   updated_at: string;
 };
 
-export type RoleAccessRule = {
+export type ProfilePermission = {
   id: string;
   role: string;
   module: string;

@@ -513,15 +513,6 @@ export default function UsersTab() {
                   </button>
                   {userProfile.id !== user?.id && (
                     <>
-                      <select
-                        value={userProfile.role}
-                        onChange={(e) => handleChangeRole(userProfile.id, e.target.value as 'admin' | 'observer')}
-                        disabled={actionLoading}
-                        className="px-3 py-1 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      >
-                        <option value="observer">Observador</option>
-                        <option value="admin">Administrador</option>
-                      </select>
                       <button
                         onClick={() => handleDeleteUser(userProfile.id)}
                         disabled={actionLoading}

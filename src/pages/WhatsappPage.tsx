@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Image as ImageIcon, MapPin, Paperclip, Send, UserPlus } from 'lucide-react';
+import { FileText, Image as ImageIcon, MapPin, Paperclip, Send, UserPlus, X } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -76,6 +76,22 @@ type WhatsappMessageRawPayload = {
 };
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
+
+type PendingMediaAttachment = {
+  kind: 'image' | 'video';
+  dataUrl: string;
+  fileName: string | null;
+  mimeType: string;
+};
+
+type PendingDocumentAttachment = {
+  kind: 'document';
+  dataUrl: string;
+  fileName: string | null;
+  extension: string;
+};
+
+type PendingAttachment = PendingMediaAttachment | PendingDocumentAttachment;
 
 const toNonEmptyString = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -195,6 +211,60 @@ const sortMessagesByMoment = (messageList: OptimisticMessage[]) => {
   });
 };
 
+const mergeMessageRecords = (
+  current: OptimisticMessage,
+  incoming: OptimisticMessage,
+): OptimisticMessage => {
+  const resolvedRawPayload =
+    incoming.raw_payload !== undefined && incoming.raw_payload !== null
+      ? incoming.raw_payload
+      : current.raw_payload ?? null;
+
+  return {
+    ...current,
+    ...incoming,
+    id: incoming.id,
+    message_id: incoming.message_id ?? current.message_id ?? null,
+    text: incoming.text ?? current.text ?? null,
+    status: incoming.status ?? current.status ?? null,
+    moment: incoming.moment ?? current.moment ?? null,
+    raw_payload: resolvedRawPayload,
+    isOptimistic: incoming.isOptimistic ?? current.isOptimistic ?? false,
+  };
+};
+
+const mergeMessageIntoList = (
+  messages: OptimisticMessage[],
+  incoming: OptimisticMessage,
+): OptimisticMessage[] => {
+  const byIdIndex = messages.findIndex(message => message.id === incoming.id);
+  if (byIdIndex !== -1) {
+    const updated = [...messages];
+    updated[byIdIndex] = mergeMessageRecords(messages[byIdIndex], incoming);
+    return updated;
+  }
+
+  if (incoming.message_id) {
+    const byMessageIdIndex = messages.findIndex(
+      message => message.message_id && message.message_id === incoming.message_id,
+    );
+
+    if (byMessageIdIndex !== -1) {
+      const updated = [...messages];
+      updated[byMessageIdIndex] = mergeMessageRecords(messages[byMessageIdIndex], incoming);
+      return updated;
+    }
+  }
+
+  return [...messages, incoming];
+};
+
+const dedupeMessagesByMessageId = (messages: OptimisticMessage[]) => {
+  return messages.reduce<OptimisticMessage[]>((accumulator, message) => {
+    return mergeMessageIntoList(accumulator, message);
+  }, []);
+};
+
 export default function WhatsappPage() {
   const [chats, setChats] = useState<WhatsappChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
@@ -202,6 +272,7 @@ export default function WhatsappPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showChatListMobile, setShowChatListMobile] = useState(true);
@@ -294,7 +365,7 @@ export default function WhatsappPage() {
         { event: '*', schema: 'public', table: 'whatsapp_messages' },
         payload => {
           if (payload.eventType === 'DELETE') {
-            const deletedMessage = payload.old;
+            const deletedMessage = (payload.old as WhatsappMessage | null) ?? null;
             if (!deletedMessage) {
               return;
             }
@@ -310,7 +381,9 @@ export default function WhatsappPage() {
             return;
           }
 
-          const incomingMessage = payload.new;
+          const incomingMessage = payload.new
+            ? ((payload.new as unknown) as WhatsappMessage)
+            : null;
           if (!incomingMessage) {
             return;
           }
@@ -326,17 +399,8 @@ export default function WhatsappPage() {
               return previousMessages;
             }
 
-            const existingIndex = previousMessages.findIndex(
-              message => message.id === normalizedMessage.id,
-            );
-
-            if (existingIndex !== -1) {
-              const updatedMessages = [...previousMessages];
-              updatedMessages[existingIndex] = normalizedMessage;
-              return sortMessagesByMoment(updatedMessages);
-            }
-
-            return sortMessagesByMoment([...previousMessages, normalizedMessage]);
+            const mergedMessages = mergeMessageIntoList(previousMessages, normalizedMessage);
+            return sortMessagesByMoment(mergedMessages);
           });
 
           let chatExists = true;
@@ -390,7 +454,10 @@ export default function WhatsappPage() {
             `/whatsapp-webhook/chats/${encodeURIComponent(selectedChatId)}/messages`,
           ),
         );
-        setMessages(data.messages.map(message => ({ ...message, isOptimistic: false })));
+        const normalizedMessages = dedupeMessagesByMessageId(
+          data.messages.map(message => ({ ...message, isOptimistic: false })),
+        );
+        setMessages(sortMessagesByMoment(normalizedMessages));
       } catch (error: any) {
         console.error('Erro ao carregar mensagens:', error);
         setErrorMessage('Não foi possível carregar as mensagens.');
@@ -423,6 +490,7 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     setShowAttachmentMenu(false);
+    setPendingAttachment(null);
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -487,11 +555,11 @@ export default function WhatsappPage() {
           isOptimistic: false,
         };
 
-        setMessages(previous =>
-          sortMessagesByMoment(
-            previous.map(message => (message.id === optimisticId ? serverMessage : message)),
-          ),
-        );
+        setMessages(previous => {
+          const withoutOptimistic = previous.filter(message => message.id !== optimisticId);
+          const mergedMessages = mergeMessageIntoList(withoutOptimistic, serverMessage);
+          return sortMessagesByMoment(mergedMessages);
+        });
 
         setChats(previous => {
           const updatedChat: WhatsappChat = {
@@ -504,10 +572,13 @@ export default function WhatsappPage() {
           const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
           return [updatedChat, ...otherChats];
         });
+
+        return true;
       } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
         setMessages(previous => previous.filter(message => message.id !== optimisticId));
         setErrorMessage(errorFallback ?? 'Não foi possível enviar a mensagem.');
+        return false;
       } finally {
         setSendingMessage(false);
       }
@@ -515,9 +586,125 @@ export default function WhatsappPage() {
     [setChats],
   );
 
+  const sendPendingAttachment = async (
+    attachment: PendingAttachment,
+    caption: string,
+  ): Promise<boolean> => {
+    if (!selectedChat) {
+      return false;
+    }
+
+    const normalizedCaption = caption.trim();
+    const captionOrNull = normalizedCaption.length > 0 ? normalizedCaption : null;
+
+    if (attachment.kind === 'document') {
+      const fileName = attachment.fileName?.trim() || null;
+      const previewText = captionOrNull ?? (fileName ? `📄 ${fileName}` : '📄 Documento enviado');
+      const optimisticMessage = createOptimisticMessage({
+        text: previewText,
+        raw_payload: {
+          document: {
+            documentUrl: attachment.dataUrl,
+            fileName,
+            title: fileName,
+            caption: captionOrNull,
+          },
+        },
+      });
+
+      const body: Record<string, unknown> = {
+        phone: selectedChat.phone,
+        document: attachment.dataUrl,
+        extension: attachment.extension,
+      };
+
+      if (fileName) {
+        body.fileName = fileName;
+      }
+
+      if (captionOrNull) {
+        body.caption = captionOrNull;
+      }
+
+      return sendWhatsappMessage({
+        endpoint: '/whatsapp-webhook/send-document',
+        body,
+        optimisticMessage,
+        errorFallback: 'Não foi possível enviar o documento.',
+      });
+    }
+
+    if (attachment.kind === 'image') {
+      const fileName = attachment.fileName?.trim() || null;
+      const previewText = captionOrNull ?? (fileName ? `🖼️ ${fileName}` : '🖼️ Imagem enviada');
+      const optimisticMessage = createOptimisticMessage({
+        text: previewText,
+        raw_payload: {
+          image: {
+            imageUrl: attachment.dataUrl,
+            caption: captionOrNull,
+          },
+        },
+      });
+
+      const body: Record<string, unknown> = {
+        phone: selectedChat.phone,
+        image: attachment.dataUrl,
+      };
+
+      if (captionOrNull) {
+        body.caption = captionOrNull;
+      }
+
+      return sendWhatsappMessage({
+        endpoint: '/whatsapp-webhook/send-image',
+        body,
+        optimisticMessage,
+        errorFallback: 'Não foi possível enviar a imagem.',
+      });
+    }
+
+    const fileName = attachment.fileName?.trim() || null;
+    const previewText = captionOrNull ?? (fileName ? `🎬 ${fileName}` : '🎬 Vídeo enviado');
+    const optimisticMessage = createOptimisticMessage({
+      text: previewText,
+      raw_payload: {
+        video: {
+          videoUrl: attachment.dataUrl,
+          caption: captionOrNull,
+        },
+      },
+    });
+
+    const body: Record<string, unknown> = {
+      phone: selectedChat.phone,
+      video: attachment.dataUrl,
+    };
+
+    if (captionOrNull) {
+      body.caption = captionOrNull;
+    }
+
+    return sendWhatsappMessage({
+      endpoint: '/whatsapp-webhook/send-video',
+      body,
+      optimisticMessage,
+      errorFallback: 'Não foi possível enviar o vídeo.',
+    });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedChat || sendingMessage) {
+      return;
+    }
+
+    if (pendingAttachment) {
+      const wasSent = await sendPendingAttachment(pendingAttachment, messageInput);
+      if (wasSent) {
+        setMessageInput('');
+        setPendingAttachment(null);
+      }
       return;
     }
 
@@ -529,12 +716,16 @@ export default function WhatsappPage() {
     const optimisticMessage = createOptimisticMessage({ text: trimmedMessage });
     setMessageInput('');
 
-    await sendWhatsappMessage({
+    const wasSent = await sendWhatsappMessage({
       endpoint: '/whatsapp-webhook/send-message',
       body: { phone: selectedChat.phone, message: trimmedMessage },
       optimisticMessage,
       errorFallback: 'Não foi possível enviar a mensagem.',
     });
+
+    if (!wasSent) {
+      setMessageInput(trimmedMessage);
+    }
   };
 
   const toggleAttachmentMenu = () => {
@@ -567,13 +758,18 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || !selectedChat || sendingMessage) {
+    if (!file || sendingMessage) {
+      return;
+    }
+
+    if (!selectedChat) {
+      setErrorMessage('Selecione uma conversa antes de enviar documentos.');
       return;
     }
 
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      const fileName = file.name || null;
+      const fileName = file.name?.trim() || null;
       const extension =
         extractFileExtension(fileName) ?? extractExtensionFromMime(file.type) ?? null;
 
@@ -582,29 +778,13 @@ export default function WhatsappPage() {
         return;
       }
 
-      const optimisticMessage = createOptimisticMessage({
-        text: fileName ? `📄 ${fileName}` : '📄 Documento enviado',
-        raw_payload: {
-          document: {
-            documentUrl: dataUrl,
-            fileName,
-            title: fileName,
-            caption: null,
-          },
-        },
+      setPendingAttachment({
+        kind: 'document',
+        dataUrl,
+        fileName,
+        extension,
       });
-
-      await sendWhatsappMessage({
-        endpoint: '/whatsapp-webhook/send-document',
-        body: {
-          phone: selectedChat.phone,
-          document: dataUrl,
-          fileName: fileName ?? undefined,
-          extension,
-        },
-        optimisticMessage,
-        errorFallback: 'Não foi possível enviar o documento.',
-      });
+      setShowAttachmentMenu(false);
     } catch (error) {
       console.error('Erro ao preparar documento para envio:', error);
       setErrorMessage('Não foi possível preparar o documento para envio.');
@@ -615,7 +795,12 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || !selectedChat || sendingMessage) {
+    if (!file || sendingMessage) {
+      return;
+    }
+
+    if (!selectedChat) {
+      setErrorMessage('Selecione uma conversa antes de enviar mídias.');
       return;
     }
 
@@ -629,42 +814,23 @@ export default function WhatsappPage() {
         return;
       }
 
-      if (isImage) {
-        const optimisticMessage = createOptimisticMessage({
-          text: file.name ? `🖼️ ${file.name}` : '🖼️ Imagem enviada',
-          raw_payload: {
-            image: {
-              imageUrl: dataUrl,
-              caption: null,
-            },
-          },
-        });
+      const fileName = file.name?.trim() || null;
+      const nextAttachment: PendingAttachment = isImage
+        ? {
+            kind: 'image',
+            dataUrl,
+            fileName,
+            mimeType: file.type,
+          }
+        : {
+            kind: 'video',
+            dataUrl,
+            fileName,
+            mimeType: file.type,
+          };
 
-        await sendWhatsappMessage({
-          endpoint: '/whatsapp-webhook/send-image',
-          body: { phone: selectedChat.phone, image: dataUrl },
-          optimisticMessage,
-          errorFallback: 'Não foi possível enviar a imagem.',
-        });
-        return;
-      }
-
-      const optimisticMessage = createOptimisticMessage({
-        text: file.name ? `🎬 ${file.name}` : '🎬 Vídeo enviado',
-        raw_payload: {
-          video: {
-            videoUrl: dataUrl,
-            caption: null,
-          },
-        },
-      });
-
-      await sendWhatsappMessage({
-        endpoint: '/whatsapp-webhook/send-video',
-        body: { phone: selectedChat.phone, video: dataUrl },
-        optimisticMessage,
-        errorFallback: 'Não foi possível enviar o vídeo.',
-      });
+      setPendingAttachment(nextAttachment);
+      setShowAttachmentMenu(false);
     } catch (error) {
       console.error('Erro ao preparar mídia para envio:', error);
       setErrorMessage('Não foi possível preparar a mídia selecionada.');
@@ -816,6 +982,11 @@ export default function WhatsappPage() {
     const isFromMe = message.from_me;
 
     const attachments: JSX.Element[] = [];
+    const payload =
+      message.raw_payload && typeof message.raw_payload === 'object'
+        ? (message.raw_payload as WhatsappMessageRawPayload)
+        : null;
+    const attachmentCardBaseClass = 'flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800';
 
     if (attachmentInfo.imageUrl) {
       attachments.push(
@@ -1040,6 +1211,12 @@ export default function WhatsappPage() {
     );
   };
 
+  const trimmedMessageInput = messageInput.trim();
+  const isSendDisabled = sendingMessage || (!pendingAttachment && trimmedMessageInput.length === 0);
+  const messagePlaceholder = pendingAttachment
+    ? 'Adicione uma legenda (opcional)'
+    : 'Digite sua mensagem';
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside
@@ -1181,106 +1358,165 @@ export default function WhatsappPage() {
             >
               <div
                 ref={attachmentMenuRef}
-                className="relative flex w-full items-center gap-3 rounded border border-slate-200 bg-slate-50/60 px-3 py-2"
+                className="relative flex w-full flex-col gap-3 rounded border border-slate-200 bg-slate-50/60 px-3 py-3"
               >
-                <button
-                  type="button"
-                  onClick={toggleAttachmentMenu}
-                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Abrir opções de anexos"
-                  aria-haspopup="menu"
-                  aria-expanded={showAttachmentMenu}
-                  disabled={sendingMessage}
-                >
-                  <Paperclip className="h-5 w-5" />
-                </button>
-
-                {showAttachmentMenu ? (
-                  <div
-                    className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
-                    role="menu"
-                  >
-                    <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Enviar
-                    </div>
-                    <div className="pb-2">
+                {pendingAttachment ? (
+                  <div className="flex flex-col gap-2 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                        Pré-visualização do anexo
+                      </span>
                       <button
                         type="button"
-                        onClick={openDocumentPicker}
-                        role="menuitem"
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                        onClick={() => setPendingAttachment(null)}
+                        className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        aria-label="Remover anexo pendente"
                       >
-                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                          <FileText className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className="block font-medium">Documentos</span>
-                          <span className="block text-xs text-slate-500">PDF, planilhas e outros formatos</span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={openMediaPicker}
-                        role="menuitem"
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
-                      >
-                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-                          <ImageIcon className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className="block font-medium">Fotos e vídeos</span>
-                          <span className="block text-xs text-slate-500">Compartilhe mídias em segundos</span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSendContactPrompt}
-                        role="menuitem"
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
-                      >
-                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <UserPlus className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className="block font-medium">Contato</span>
-                          <span className="block text-xs text-slate-500">Envie dados de um contato rapidamente</span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSendLocationPrompt}
-                        role="menuitem"
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
-                      >
-                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                          <MapPin className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className="block font-medium">Localização</span>
-                          <span className="block text-xs text-slate-500">Compartilhe um endereço com poucos cliques</span>
-                        </span>
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
+                    {pendingAttachment.kind === 'document' ? (
+                      <div className="flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-2">
+                        <FileText className="h-5 w-5 flex-shrink-0 text-slate-600" />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-700">
+                            {pendingAttachment.fileName ?? 'Documento selecionado'}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            .{pendingAttachment.extension.toLowerCase()}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <div className="overflow-hidden rounded-lg border border-slate-200 bg-black/5">
+                          {pendingAttachment.kind === 'image' ? (
+                            <img
+                              src={pendingAttachment.dataUrl}
+                              alt={pendingAttachment.fileName ?? 'Pré-visualização da imagem selecionada'}
+                              className="max-h-64 w-full object-contain"
+                            />
+                          ) : (
+                            <video
+                              src={pendingAttachment.dataUrl}
+                              controls
+                              className="max-h-64 w-full bg-black"
+                            />
+                          )}
+                        </div>
+                        {pendingAttachment.fileName ? (
+                          <p className="truncate text-xs text-slate-500">
+                            {pendingAttachment.fileName}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      O texto digitado será enviado junto ao anexo como legenda.
+                    </p>
                   </div>
                 ) : null}
 
-                <textarea
-                  className="flex-1 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-                  maxLength={1000}
-                  rows={1}
-                  value={messageInput}
-                  onChange={event => setMessageInput(event.target.value)}
-                  placeholder="Digite sua mensagem"
-                  disabled={sendingMessage}
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={sendingMessage}
-                  aria-label="Enviar mensagem"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleAttachmentMenu}
+                    className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Abrir opções de anexos"
+                    aria-haspopup="menu"
+                    aria-expanded={showAttachmentMenu}
+                    disabled={sendingMessage}
+                  >
+                    <Paperclip className="h-5 w-5" />
+                  </button>
+
+                  {showAttachmentMenu ? (
+                    <div
+                      className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+                      role="menu"
+                    >
+                      <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Enviar
+                      </div>
+                      <div className="pb-2">
+                        <button
+                          type="button"
+                          onClick={openDocumentPicker}
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                        >
+                          <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                            <FileText className="h-4 w-4" />
+                          </span>
+                          <span>
+                            <span className="block font-medium">Documentos</span>
+                            <span className="block text-xs text-slate-500">PDF, planilhas e outros formatos</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openMediaPicker}
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                        >
+                          <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                            <ImageIcon className="h-4 w-4" />
+                          </span>
+                          <span>
+                            <span className="block font-medium">Fotos e vídeos</span>
+                            <span className="block text-xs text-slate-500">Compartilhe mídias em segundos</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendContactPrompt}
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                        >
+                          <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                            <UserPlus className="h-4 w-4" />
+                          </span>
+                          <span>
+                            <span className="block font-medium">Contato</span>
+                            <span className="block text-xs text-slate-500">Envie dados de um contato rapidamente</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendLocationPrompt}
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                        >
+                          <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                            <MapPin className="h-4 w-4" />
+                          </span>
+                          <span>
+                            <span className="block font-medium">Localização</span>
+                            <span className="block text-xs text-slate-500">Compartilhe um endereço com poucos cliques</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <textarea
+                    className="flex-1 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                    maxLength={1000}
+                    rows={1}
+                    value={messageInput}
+                    onChange={event => setMessageInput(event.target.value)}
+                    placeholder={messagePlaceholder}
+                    disabled={sendingMessage}
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSendDisabled}
+                    aria-label="Enviar mensagem"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
 
                 <input
                   ref={documentInputRef}

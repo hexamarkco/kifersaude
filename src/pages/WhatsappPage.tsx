@@ -1060,10 +1060,10 @@ export default function WhatsappPage() {
           <img
             src={attachmentInfo.imageUrl}
             alt={attachmentInfo.imageCaption ?? 'Imagem recebida'}
-            className="block max-h-80 w-full bg-slate-200/40 object-contain"
+            className="block h-auto max-h-80 w-auto max-w-full object-contain"
           />
           {attachmentInfo.imageCaption ? (
-            <div className={`px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
+            <div className={`self-stretch px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
               <p className="whitespace-pre-wrap break-words">{attachmentInfo.imageCaption}</p>
             </div>
           ) : null}
@@ -1414,7 +1414,7 @@ export default function WhatsappPage() {
                         </span>
                       ) : null}
                       <div
-                        className={`max-w-[75%] rounded-2xl shadow-sm ${
+                        className={`inline-flex max-w-[75%] flex-col rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
                         } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses}`}
                       >

@@ -897,8 +897,14 @@ const fetchLeadNamesByPhones = async (
         const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
         const name = typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : '';
 
-        if (normalizedPhone && name && !leadsMap.has(normalizedPhone)) {
-          leadsMap.set(normalizedPhone, name);
+        if (!normalizedPhone || !name) {
+          continue;
+        }
+
+        for (const variant of buildPhoneVariants(normalizedPhone)) {
+          if (!leadsMap.has(variant)) {
+            leadsMap.set(variant, name);
+          }
         }
       }
     }
@@ -948,9 +954,11 @@ const resolveChatDisplayName = (
     return contactName;
   }
 
-  const leadName = leadsMap.get(normalizedPhone);
-  if (leadName) {
-    return leadName;
+  for (const variant of buildPhoneVariants(normalizedPhone)) {
+    const leadName = leadsMap.get(variant);
+    if (leadName) {
+      return leadName;
+    }
   }
 
   return formatPhoneForDisplay(normalizedPhone) ?? chat.chat_name ?? chat.phone ?? null;

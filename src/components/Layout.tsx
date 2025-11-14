@@ -49,7 +49,7 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0
 }: LayoutProps) {
-  const { signOut, isObserver, userProfile } = useAuth();
+  const { signOut, isObserver, role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function Layout({
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
-  const currentRole = userProfile?.role || (isObserver ? 'observer' : 'admin');
+  const currentRole = role;
   const isWhatsappActive = activeTab === 'whatsapp';
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;

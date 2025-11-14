@@ -6,6 +6,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   userProfile: UserProfile | null;
+  role: 'admin' | 'observer';
   isAdmin: boolean;
   isObserver: boolean;
   loading: boolean;
@@ -23,6 +24,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
+
+  const resolveRoleFromMetadata = (userToResolve: User | null): 'admin' | 'observer' | null => {
+    if (!userToResolve) {
+      return null;
+    }
+
+    const metadataCandidates = [
+      userToResolve.app_metadata?.role,
+      userToResolve.user_metadata?.role,
+      userToResolve.app_metadata?.assigned_role,
+      userToResolve.user_metadata?.assigned_role,
+    ];
+
+    for (const candidate of metadataCandidates) {
+      if (typeof candidate !== 'string') {
+        continue;
+      }
+
+      const normalized = candidate.trim().toLowerCase();
+
+      if (normalized === 'admin' || normalized === 'observer') {
+        return normalized;
+      }
+    }
+
+    return null;
+  };
 
   const loadUserProfile = async (profileId: string | null) => {
     if (!profileId) {
@@ -208,13 +236,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isAdmin = userProfile?.role === 'admin';
-  const isObserver = userProfile?.role === 'observer';
+  const metadataRole = resolveRoleFromMetadata(user);
+  const role = userProfile?.role ?? metadataRole ?? 'observer';
+  const isAdmin = role === 'admin';
+  const isObserver = role === 'observer';
 
   const value = {
     user,
     session,
     userProfile,
+    role,
     isAdmin,
     isObserver,
     loading,

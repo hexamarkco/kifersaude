@@ -11,6 +11,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const { data, error } = await supabaseAdmin
       .from('whatsapp_chats')
       .select('*')
+      .order('is_archived', { ascending: true })
+      .order('is_pinned', { ascending: false })
       .order('last_message_at', { ascending: false });
 
     if (error) {

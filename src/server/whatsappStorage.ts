@@ -104,6 +104,8 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
       last_message_preview: lastMessagePreview ?? null,
       is_group: Boolean(isGroup),
       sender_photo: senderPhoto ?? null,
+      is_archived: false,
+      is_pinned: false,
     })
     .select('*')
     .single<WhatsappChat>();

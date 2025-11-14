@@ -6,6 +6,8 @@ export type WhatsappChat = {
   last_message_preview: string | null;
   is_group: boolean;
   sender_photo: string | null;
+  is_archived: boolean;
+  is_pinned: boolean;
   display_name?: string | null;
 };
 

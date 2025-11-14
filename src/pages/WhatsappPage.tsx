@@ -1,10 +1,14 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
   FileText,
   Image as ImageIcon,
   MessageCirclePlus,
   MapPin,
   Mic,
+  Pin,
+  PinOff,
   Paperclip,
   Send,
   User,
@@ -16,7 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { WhatsappChat, WhatsappChatMetadata, WhatsappMessage } from '../types/whatsapp';
+import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -38,8 +42,6 @@ const formatDateTime = (value: string | null) => {
 };
 
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
-
-const CHAT_METADATA_REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos
 
 type ChatPreviewInfo = {
   icon: LucideIcon | null;
@@ -174,9 +176,13 @@ type SendMessageResponse =
       error?: string;
     };
 
-type ChatMetadataResponse = {
+type UpdateChatFlagsPayload = {
+  is_archived?: boolean;
+  is_pinned?: boolean;
+};
+
+type UpdateChatFlagsResponse = {
   success: boolean;
-  metadata?: WhatsappChatMetadata | null;
   chat?: WhatsappChat | null;
   error?: string;
 };
@@ -496,6 +502,7 @@ const dedupeMessagesByMessageId = (messages: OptimisticMessage[]) => {
 export default function WhatsappPage() {
   const [chats, setChats] = useState<WhatsappChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
+  const [showArchivedChats, setShowArchivedChats] = useState(false);
   const [messages, setMessages] = useState<OptimisticMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -503,6 +510,7 @@ export default function WhatsappPage() {
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const selectedChatIdRef = useRef<string | null>(null);
@@ -536,13 +544,72 @@ export default function WhatsappPage() {
     [selectedChat],
   );
 
+  const selectedChatIsArchived = selectedChat?.is_archived ?? false;
+  const selectedChatIsPinned = selectedChat?.is_pinned ?? false;
+  const selectedChatActionLoading = selectedChat
+    ? Boolean(chatActionLoading[selectedChat.id])
+    : false;
+  const selectedChatPinButtonLabel = selectedChatIsPinned
+    ? 'Desafixar conversa'
+    : 'Fixar conversa';
+  const selectedChatArchiveButtonLabel = selectedChatIsArchived
+    ? 'Desarquivar conversa'
+    : 'Arquivar conversa';
+
+  const getChatSortTimestamp = useCallback((chat: WhatsappChat) => {
+    if (!chat.last_message_at) {
+      return 0;
+    }
+
+    const date = new Date(chat.last_message_at);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  }, []);
+
+  const sortChatsForView = useCallback(
+    (list: WhatsappChat[]): WhatsappChat[] => {
+      const pinned = list.filter(chat => chat.is_pinned);
+      const regular = list.filter(chat => !chat.is_pinned);
+      const sorter = (a: WhatsappChat, b: WhatsappChat) =>
+        getChatSortTimestamp(b) - getChatSortTimestamp(a);
+
+      pinned.sort(sorter);
+      regular.sort(sorter);
+
+      return [...pinned, ...regular];
+    },
+    [getChatSortTimestamp],
+  );
+
+  const chatsByStatus = useMemo(() => {
+    const active = sortChatsForView(chats.filter(chat => !chat.is_archived));
+    const archived = sortChatsForView(chats.filter(chat => chat.is_archived));
+
+    return { active, archived };
+  }, [chats, sortChatsForView]);
+
+  const archivedChatsCount = chatsByStatus.archived.length;
+  const hasArchivedChats = archivedChatsCount > 0;
+  const archivedToggleLabel = showArchivedChats
+    ? 'Ver conversas ativas'
+    : hasArchivedChats
+    ? `Arquivados (${archivedChatsCount})`
+    : 'Arquivados';
+  const emptyChatsMessage = showArchivedChats
+    ? 'Nenhuma conversa arquivada.'
+    : 'Nenhuma conversa encontrada.';
+  const emptySearchMessage = showArchivedChats
+    ? 'Nenhuma conversa arquivada encontrada para a pesquisa.'
+    : 'Nenhuma conversa encontrada para a pesquisa.';
+
   const filteredChats = useMemo(() => {
+    const baseList = showArchivedChats ? chatsByStatus.archived : chatsByStatus.active;
+
     if (!chatSearchTerm.trim()) {
-      return chats;
+      return baseList;
     }
 
     const normalizedTerm = chatSearchTerm.trim().toLowerCase();
-    return chats.filter(chat => {
+    return baseList.filter(chat => {
       const displayName = getChatDisplayName(chat).toLowerCase();
       const phone = chat.phone?.toLowerCase() ?? '';
       const preview = chat.last_message_preview?.toLowerCase() ?? '';
@@ -553,7 +620,9 @@ export default function WhatsappPage() {
         preview.includes(normalizedTerm)
       );
     });
-  }, [chatSearchTerm, chats]);
+  }, [chatSearchTerm, chatsByStatus, showArchivedChats]);
+
+  const visibleChatsBase = showArchivedChats ? chatsByStatus.archived : chatsByStatus.active;
 
   const loadContacts = useCallback(async () => {
     setContactsLoading(true);
@@ -685,7 +754,8 @@ export default function WhatsappPage() {
       );
       setChats(data.chats);
       if (!selectedChatId && data.chats.length > 0) {
-        setSelectedChatId(data.chats[0].id);
+        const firstActiveChat = data.chats.find(chat => !chat.is_archived) ?? data.chats[0];
+        setSelectedChatId(firstActiveChat.id);
       }
     } catch (error: any) {
       console.error('Erro ao carregar chats:', error);
@@ -694,6 +764,112 @@ export default function WhatsappPage() {
       setChatsLoading(false);
     }
   }, [selectedChatId]);
+
+  const updateChatFlags = useCallback(
+    async (chatId: string, payload: UpdateChatFlagsPayload): Promise<WhatsappChat> => {
+      const response = await fetchJson<UpdateChatFlagsResponse>(
+        getWhatsappFunctionUrl(
+          `/whatsapp-webhook/chats/${encodeURIComponent(chatId)}/flags`,
+        ),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.success || !response.chat) {
+        throw new Error(response.error ?? 'Falha ao atualizar a conversa.');
+      }
+
+      return response.chat;
+    },
+    [],
+  );
+
+  const mergeUpdatedChat = useCallback(
+    (chatId: string, updatedChat: WhatsappChat) => {
+      setChats(previous =>
+        previous.map(chat => {
+          if (chat.id !== chatId) {
+            return chat;
+          }
+
+          return {
+            ...chat,
+            ...updatedChat,
+            display_name:
+              updatedChat.display_name ?? chat.display_name ?? null,
+          };
+        }),
+      );
+    },
+    [setChats],
+  );
+
+  const handleArchiveStatusChange = useCallback(
+    async (chat: WhatsappChat, shouldArchive: boolean) => {
+      if (chat.is_archived === shouldArchive) {
+        return;
+      }
+
+      setChatActionLoading(previous => ({ ...previous, [chat.id]: true }));
+      setErrorMessage(null);
+
+      try {
+        const updated = await updateChatFlags(chat.id, {
+          is_archived: shouldArchive,
+        });
+        mergeUpdatedChat(chat.id, updated);
+
+        if (!shouldArchive && showArchivedChats) {
+          setShowArchivedChats(false);
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar arquivamento do chat:', error);
+        setErrorMessage('Não foi possível atualizar o status da conversa.');
+      } finally {
+        setChatActionLoading(previous => {
+          const { [chat.id]: _removed, ...rest } = previous;
+          return rest;
+        });
+      }
+    },
+    [
+      mergeUpdatedChat,
+      setErrorMessage,
+      setShowArchivedChats,
+      showArchivedChats,
+      updateChatFlags,
+    ],
+  );
+
+  const handlePinStatusChange = useCallback(
+    async (chat: WhatsappChat, shouldPin: boolean) => {
+      if (chat.is_pinned === shouldPin) {
+        return;
+      }
+
+      setChatActionLoading(previous => ({ ...previous, [chat.id]: true }));
+      setErrorMessage(null);
+
+      try {
+        const updated = await updateChatFlags(chat.id, {
+          is_pinned: shouldPin,
+        });
+        mergeUpdatedChat(chat.id, updated);
+      } catch (error) {
+        console.error('Erro ao atualizar fixação do chat:', error);
+        setErrorMessage('Não foi possível atualizar o status da conversa.');
+      } finally {
+        setChatActionLoading(previous => {
+          const { [chat.id]: _removed, ...rest } = previous;
+          return rest;
+        });
+      }
+    },
+    [mergeUpdatedChat, setErrorMessage, updateChatFlags],
+  );
 
   useEffect(() => {
     loadChats();
@@ -1772,14 +1948,29 @@ export default function WhatsappPage() {
               autoComplete="off"
             />
           </div>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setShowArchivedChats(previous => !previous)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!hasArchivedChats && !showArchivedChats}
+            >
+              {showArchivedChats ? (
+                <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              <span>{archivedToggleLabel}</span>
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
-          {chatsLoading && chats.length === 0 ? (
+          {chatsLoading && visibleChatsBase.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Carregando conversas...</p>
-          ) : chats.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada.</p>
+          ) : visibleChatsBase.length === 0 ? (
+            <p className="p-4 text-sm text-slate-500">{emptyChatsMessage}</p>
           ) : filteredChats.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada para a pesquisa.</p>
+            <p className="p-4 text-sm text-slate-500">{emptySearchMessage}</p>
           ) : (
             filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
@@ -1791,6 +1982,13 @@ export default function WhatsappPage() {
                 PreviewIcon && previewText !== CHAT_PREVIEW_FALLBACK_TEXT;
               const avatarSeed = chat.sender_photo || chat.phone || chat.chat_name || 'default';
               const avatarColors = getAvatarColorStyles(avatarSeed);
+              const isPinned = chat.is_pinned;
+              const isArchived = chat.is_archived;
+              const isChatActionLoading = Boolean(chatActionLoading[chat.id]);
+              const pinLabel = isPinned ? 'Desafixar conversa' : 'Fixar conversa';
+              const archiveLabel = isArchived
+                ? 'Desarquivar conversa'
+                : 'Arquivar conversa';
 
               return (
                 <button
@@ -1819,7 +2017,12 @@ export default function WhatsappPage() {
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium text-slate-800">{displayName}</span>
+                        <span className="flex min-w-0 items-center gap-1 truncate font-medium text-slate-800">
+                          {isPinned ? (
+                            <Pin className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+                          ) : null}
+                          <span className="truncate">{displayName}</span>
+                        </span>
                         <span className="whitespace-nowrap text-xs text-slate-500">
                           {formatDateTime(chat.last_message_at)}
                         </span>
@@ -1833,6 +2036,47 @@ export default function WhatsappPage() {
                         ) : null}
                         <span className="block min-w-0 truncate">{previewText}</span>
                       </div>
+                      {showArchivedChats ? (
+                        <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="ml-3 flex flex-col gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={event => {
+                          event.stopPropagation();
+                          handlePinStatusChange(chat, !isPinned);
+                        }}
+                        aria-label={pinLabel}
+                        title={pinLabel}
+                        disabled={isChatActionLoading}
+                      >
+                        {isPinned ? (
+                          <PinOff className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <Pin className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={event => {
+                          event.stopPropagation();
+                          handleArchiveStatusChange(chat, !isArchived);
+                        }}
+                        aria-label={archiveLabel}
+                        title={archiveLabel}
+                        disabled={isChatActionLoading}
+                      >
+                        {isArchived ? (
+                          <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <Archive className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </button>
@@ -1846,33 +2090,79 @@ export default function WhatsappPage() {
         {selectedChat ? (
           <>
             <header className="flex-shrink-0 border-b border-slate-200 p-4">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleBackToChats}
-                  className="md:hidden inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
-                  aria-label="Voltar para lista de conversas"
-                >
-                  ←
-                </button>
-                {selectedChat.sender_photo ? (
-                  <img
-                    src={selectedChat.sender_photo}
-                    alt={selectedChatDisplayName || selectedChat.phone}
-                    className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
-                    {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-1 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleBackToChats}
+                    className="md:hidden inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
+                    aria-label="Voltar para lista de conversas"
+                  >
+                    ←
+                  </button>
+                  {selectedChat.sender_photo ? (
+                    <img
+                      src={selectedChat.sender_photo}
+                      alt={selectedChatDisplayName || selectedChat.phone}
+                      className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
+                      {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-800">
+                      {selectedChatDisplayName}
+                    </p>
+                    <p className="truncate text-sm text-slate-500">
+                      {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
+                    </p>
+                    {(selectedChatIsPinned || selectedChatIsArchived) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+                        {selectedChatIsPinned ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Pin className="h-3.5 w-3.5" aria-hidden="true" /> Fixado
+                          </span>
+                        ) : null}
+                        {selectedChatIsArchived ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-slate-800">
-                    {selectedChatDisplayName}
-                  </p>
-                  <p className="truncate text-sm text-slate-500">
-                    {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
-                  </p>
+                </div>
+                <div className="flex flex-none items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePinStatusChange(selectedChat, !selectedChatIsPinned)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={selectedChatPinButtonLabel}
+                    title={selectedChatPinButtonLabel}
+                    disabled={selectedChatActionLoading}
+                  >
+                    {selectedChatIsPinned ? (
+                      <PinOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Pin className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleArchiveStatusChange(selectedChat, !selectedChatIsArchived)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={selectedChatArchiveButtonLabel}
+                    title={selectedChatArchiveButtonLabel}
+                    disabled={selectedChatActionLoading}
+                  >
+                    {selectedChatIsArchived ? (
+                      <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Archive className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
                 </div>
               </div>
             </header>

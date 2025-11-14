@@ -15,6 +15,8 @@ type WhatsappChat = {
   last_message_preview: string | null;
   is_group: boolean;
   sender_photo: string | null;
+  is_archived: boolean;
+  is_pinned: boolean;
   display_name?: string | null;
 };
 
@@ -118,6 +120,11 @@ type PendingSendEntry = {
   payload: Record<string, unknown>;
   phone?: string;
   receivedAt: number;
+};
+
+type UpdateChatFlagsBody = {
+  is_archived?: boolean;
+  is_pinned?: boolean;
 };
 
 type ZapiChatMetadata = {
@@ -1093,6 +1100,8 @@ const upsertChatRecord = async (input: {
       last_message_preview: lastMessagePreview ?? null,
       is_group: Boolean(isGroup),
       sender_photo: senderPhoto ?? null,
+      is_archived: false,
+      is_pinned: false,
     })
     .select('*')
     .single<WhatsappChat>();
@@ -2009,6 +2018,8 @@ const handleListChats = async (req: Request) => {
     const { data, error } = await supabaseAdmin
       .from('whatsapp_chats')
       .select('*')
+      .order('is_archived', { ascending: true })
+      .order('is_pinned', { ascending: false })
       .order('last_message_at', { ascending: false });
 
     if (error) {
@@ -2041,6 +2052,57 @@ const handleListChats = async (req: Request) => {
   } catch (error) {
     console.error('Erro ao listar chats do WhatsApp:', error);
     return respondJson(500, { success: false, error: 'Falha ao carregar chats' });
+  }
+};
+
+const handleUpdateChatFlags = async (req: Request, chatId: string) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  const body = (await ensureJsonBody<UpdateChatFlagsBody>(req)) ?? {};
+
+  const updatePayload: Record<string, boolean> = {};
+
+  if (typeof body.is_archived === 'boolean') {
+    updatePayload.is_archived = body.is_archived;
+    if (body.is_archived) {
+      updatePayload.is_pinned = false;
+    }
+  }
+
+  if (typeof body.is_pinned === 'boolean') {
+    updatePayload.is_pinned = body.is_archived === true ? false : body.is_pinned;
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
+    return respondJson(400, { success: false, error: 'Nenhuma alteração informada.' });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .update(updatePayload)
+      .eq('id', chatId)
+      .select('*')
+      .maybeSingle<WhatsappChat>();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      return respondJson(404, { success: false, error: 'Conversa não encontrada.' });
+    }
+
+    return respondJson(200, { success: true, chat: data });
+  } catch (error) {
+    console.error('Erro ao atualizar flags do chat:', error);
+    return respondJson(500, { success: false, error: 'Falha ao atualizar conversa' });
   }
 };
 
@@ -2096,6 +2158,7 @@ serve(async (req) => {
 
   const chatMetadataMatch = subPath.match(/^\/chats\/([^/]+)\/metadata$/);
   const chatMessagesMatch = subPath.match(/^\/chats\/([^/]+)\/messages$/);
+  const chatFlagsMatch = subPath.match(/^\/chats\/([^/]+)\/flags$/);
 
   if (subPath === '/chats') {
     return handleListChats(req);
@@ -2108,6 +2171,11 @@ serve(async (req) => {
   if (chatMessagesMatch) {
     const chatId = decodeURIComponent(chatMessagesMatch[1]);
     return handleListChatMessages(req, chatId);
+  }
+
+  if (chatFlagsMatch) {
+    const chatId = decodeURIComponent(chatFlagsMatch[1]);
+    return handleUpdateChatFlags(req, chatId);
   }
 
   switch (subPath) {

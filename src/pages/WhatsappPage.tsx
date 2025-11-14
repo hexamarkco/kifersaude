@@ -988,11 +988,6 @@ export default function WhatsappPage() {
         : null;
     const attachmentCardBaseClass = 'flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800';
 
-    const payload =
-      message.raw_payload && typeof message.raw_payload === 'object'
-        ? (message.raw_payload as WhatsappMessageRawPayload)
-        : null;
-
     if (attachmentInfo.imageUrl) {
       attachments.push(
         <div key="image" className="flex flex-col">

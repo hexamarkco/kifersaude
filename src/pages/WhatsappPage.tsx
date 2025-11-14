@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
+import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
@@ -311,6 +312,13 @@ type PendingDocumentAttachment = {
   extension: string;
 };
 
+type PendingAudioAttachment = {
+  kind: 'audio';
+  dataUrl: string;
+  durationSeconds: number | null;
+  mimeType: string;
+};
+
 type WhatsappContactListEntry = {
   phone: string;
   name: string | null;
@@ -336,7 +344,16 @@ type UpdateLeadStatusResponse = {
   error?: string;
 };
 
-type PendingAttachment = PendingMediaAttachment | PendingDocumentAttachment;
+type PendingAttachment =
+  | PendingMediaAttachment
+  | PendingDocumentAttachment
+  | PendingAudioAttachment;
+
+type SendAttachmentResult = {
+  wasSent: boolean;
+  preserveCaption?: boolean;
+  captionValue?: string;
+};
 
 const toNonEmptyString = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -642,6 +659,81 @@ const readFileAsDataUrl = (file: File): Promise<string> => {
   });
 };
 
+const readBlobAsDataUrl = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result);
+      } else {
+        reject(new Error('Não foi possível ler os dados do áudio.'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Erro ao ler os dados do áudio.'));
+    };
+
+    reader.readAsDataURL(blob);
+  });
+};
+
+const getAudioDurationFromBlob = (blob: Blob): Promise<number | null> => {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(blob);
+    const audioElement = document.createElement('audio');
+    audioElement.preload = 'metadata';
+    audioElement.src = url;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+    };
+
+    audioElement.onloadedmetadata = () => {
+      const duration = Number.isFinite(audioElement.duration)
+        ? Math.max(audioElement.duration, 0)
+        : null;
+      cleanup();
+      resolve(duration);
+    };
+
+    audioElement.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+  });
+};
+
+const getPreferredAudioMimeType = (): string | null => {
+  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+    return null;
+  }
+
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ];
+
+  for (const candidate of candidates) {
+    if ((MediaRecorder as typeof MediaRecorder).isTypeSupported(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const formatSecondsLabel = (value: number): string => {
+  const safeValue = Number.isFinite(value) && value > 0 ? value : 0;
+  const minutes = Math.floor(safeValue / 60);
+  const seconds = Math.floor(safeValue % 60);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 const sortMessagesByMoment = (messageList: OptimisticMessage[]) => {
   return [...messageList].sort((first, second) => {
     const firstMoment = first.moment ? new Date(first.moment).getTime() : 0;
@@ -717,6 +809,9 @@ export default function WhatsappPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [waveformValues, setWaveformValues] = useState<number[]>([]);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
@@ -729,6 +824,15 @@ export default function WhatsappPage() {
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
+  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const durationIntervalRef = useRef<number | null>(null);
+  const recordingStartRef = useRef<number | null>(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatTab, setNewChatTab] = useState<'contacts' | 'leads' | 'manual'>('contacts');
   const [contacts, setContacts] = useState<WhatsappContactListEntry[]>([]);
@@ -754,6 +858,307 @@ export default function WhatsappPage() {
     () => leadStatuses.filter(status => status.ativo),
     [leadStatuses],
   );
+
+  const stopWaveformAnimation = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+
+  const stopDurationTimer = useCallback(() => {
+    if (durationIntervalRef.current !== null) {
+      window.clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+  }, []);
+
+  const resetAudioResources = useCallback(() => {
+    stopWaveformAnimation();
+    stopDurationTimer();
+
+    audioChunksRef.current = [];
+    recordingStartRef.current = null;
+
+    if (analyserNodeRef.current) {
+      analyserNodeRef.current.disconnect();
+      analyserNodeRef.current = null;
+    }
+
+    if (sourceNodeRef.current) {
+      try {
+        sourceNodeRef.current.disconnect();
+      } catch (error) {
+        console.warn('Falha ao desconectar fonte de áudio:', error);
+      }
+      sourceNodeRef.current = null;
+    }
+
+    const stream = audioStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (error) {
+          console.warn('Falha ao encerrar trilha de áudio:', error);
+        }
+      });
+      audioStreamRef.current = null;
+    }
+
+    const audioContext = audioContextRef.current;
+    if (audioContext) {
+      audioContext.close().catch(() => undefined);
+      audioContextRef.current = null;
+    }
+
+    mediaRecorderRef.current = null;
+  }, [stopDurationTimer, stopWaveformAnimation]);
+
+  const resetAudioUiState = useCallback(() => {
+    setIsRecordingAudio(false);
+    setRecordingDuration(0);
+    setWaveformValues([]);
+  }, []);
+
+  const stopAudioRecording = useCallback(
+    async ({ shouldSave }: { shouldSave: boolean }) => {
+      const recorder = mediaRecorderRef.current;
+
+      if (!recorder) {
+        resetAudioResources();
+        resetAudioUiState();
+        if (shouldSave) {
+          setErrorMessage('Não foi possível finalizar a gravação de áudio.');
+        }
+        return;
+      }
+
+      await new Promise<void>(resolve => {
+        const handleStop = async () => {
+          recorder.removeEventListener('stop', handleStop);
+          const recordedChunks = audioChunksRef.current.slice();
+          const approximateDuration = recordingDuration;
+
+          resetAudioResources();
+          resetAudioUiState();
+
+          if (shouldSave) {
+            if (recordedChunks.length === 0) {
+              setErrorMessage('Nenhum áudio foi capturado durante a gravação.');
+              resolve();
+              return;
+            }
+
+            const mimeType =
+              recorder.mimeType || getPreferredAudioMimeType() || 'audio/webm';
+            const audioBlob = new Blob(recordedChunks, { type: mimeType });
+
+            try {
+              const [dataUrl, detectedDuration] = await Promise.all([
+                readBlobAsDataUrl(audioBlob),
+                getAudioDurationFromBlob(audioBlob),
+              ]);
+
+              const resolvedDuration =
+                detectedDuration !== null
+                  ? detectedDuration
+                  : Number.isFinite(approximateDuration)
+                    ? approximateDuration
+                    : null;
+
+              setPendingAttachment({
+                kind: 'audio',
+                dataUrl,
+                durationSeconds: resolvedDuration,
+                mimeType,
+              });
+            } catch (error) {
+              console.error('Erro ao preparar áudio gravado para envio:', error);
+              setErrorMessage('Não foi possível preparar o áudio gravado para envio.');
+            }
+          }
+
+          resolve();
+        };
+
+        recorder.addEventListener('stop', handleStop);
+
+        try {
+          recorder.stop();
+        } catch (error) {
+          recorder.removeEventListener('stop', handleStop);
+          console.error('Erro ao finalizar a gravação de áudio:', error);
+          resetAudioResources();
+          resetAudioUiState();
+          if (shouldSave) {
+            setErrorMessage('Não foi possível finalizar a gravação de áudio.');
+          }
+          resolve();
+        }
+      });
+    },
+    [
+      recordingDuration,
+      resetAudioResources,
+      resetAudioUiState,
+      setErrorMessage,
+      setPendingAttachment,
+    ],
+  );
+
+  const handleStartAudioRecording = useCallback(async () => {
+    if (sendingMessage || isRecordingAudio) {
+      return;
+    }
+
+    if (!selectedChat) {
+      setErrorMessage('Selecione uma conversa antes de gravar áudios.');
+      return;
+    }
+
+    if (pendingAttachment) {
+      setErrorMessage('Finalize ou remova o anexo atual antes de gravar um áudio.');
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setErrorMessage('Seu navegador não suporta captura de áudio.');
+      return;
+    }
+
+    if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+      setErrorMessage('A gravação de áudio não é suportada neste navegador.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+
+      const preferredMimeType = getPreferredAudioMimeType();
+      const recorderOptions = preferredMimeType ? { mimeType: preferredMimeType } : undefined;
+      const recorder = new MediaRecorder(stream, recorderOptions);
+      audioChunksRef.current = [];
+
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      });
+
+      recorder.addEventListener('error', event => {
+        console.error('Erro durante a gravação de áudio:', event);
+        setErrorMessage('Ocorreu um erro durante a gravação de áudio.');
+      });
+
+      mediaRecorderRef.current = recorder;
+
+      const AudioContextCtor =
+        window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (AudioContextCtor) {
+        try {
+          const audioContext = new AudioContextCtor();
+          audioContextRef.current = audioContext;
+          const sourceNode = audioContext.createMediaStreamSource(stream);
+          sourceNodeRef.current = sourceNode;
+          const analyserNode = audioContext.createAnalyser();
+          analyserNode.fftSize = 512;
+          analyserNodeRef.current = analyserNode;
+          sourceNode.connect(analyserNode);
+
+          const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+          const barCount = 32;
+
+          setWaveformValues(new Array(barCount).fill(0));
+
+          const updateWaveform = () => {
+            if (!analyserNodeRef.current) {
+              return;
+            }
+
+            analyserNodeRef.current.getByteTimeDomainData(dataArray);
+            const chunkSize = Math.max(1, Math.floor(dataArray.length / barCount));
+            const values: number[] = [];
+
+            for (let index = 0; index < barCount; index += 1) {
+              let sum = 0;
+              for (let offset = 0; offset < chunkSize; offset += 1) {
+                const sampleIndex = index * chunkSize + offset;
+                if (sampleIndex >= dataArray.length) {
+                  break;
+                }
+                sum += Math.abs(dataArray[sampleIndex] - 128);
+              }
+              const average = sum / chunkSize;
+              values.push(Math.min(average / 128, 1));
+            }
+
+            setWaveformValues(values);
+            animationFrameRef.current = requestAnimationFrame(updateWaveform);
+          };
+
+          updateWaveform();
+        } catch (error) {
+          console.error('Não foi possível inicializar a visualização de áudio:', error);
+          setWaveformValues([]);
+        }
+      }
+
+      recordingStartRef.current = performance.now();
+      stopDurationTimer();
+      durationIntervalRef.current = window.setInterval(() => {
+        if (recordingStartRef.current !== null) {
+          const elapsedMs = performance.now() - recordingStartRef.current;
+          setRecordingDuration(elapsedMs / 1000);
+        }
+      }, 200);
+
+      setShowAttachmentMenu(false);
+      setIsRecordingAudio(true);
+      setErrorMessage(null);
+      recorder.start();
+    } catch (error) {
+      console.error('Erro ao iniciar gravação de áudio:', error);
+      resetAudioResources();
+      resetAudioUiState();
+      setErrorMessage('Não foi possível iniciar a gravação de áudio. Verifique as permissões do microfone.');
+    }
+  }, [
+    isRecordingAudio,
+    pendingAttachment,
+    resetAudioResources,
+    resetAudioUiState,
+    selectedChat,
+    sendingMessage,
+    stopDurationTimer,
+    setErrorMessage,
+    setShowAttachmentMenu,
+  ]);
+
+  const handleCancelAudioRecording = useCallback(() => {
+    if (!isRecordingAudio && !mediaRecorderRef.current) {
+      return;
+    }
+
+    void stopAudioRecording({ shouldSave: false });
+  }, [isRecordingAudio, stopAudioRecording]);
+
+  const handleConcludeAudioRecording = useCallback(() => {
+    if (!isRecordingAudio && !mediaRecorderRef.current) {
+      return;
+    }
+
+    void stopAudioRecording({ shouldSave: true });
+  }, [isRecordingAudio, stopAudioRecording]);
+
+  useEffect(() => {
+    return () => {
+      resetAudioResources();
+      resetAudioUiState();
+    };
+  }, [resetAudioResources, resetAudioUiState]);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
@@ -1629,13 +2034,68 @@ export default function WhatsappPage() {
   const sendPendingAttachment = async (
     attachment: PendingAttachment,
     caption: string,
-  ): Promise<boolean> => {
+  ): Promise<SendAttachmentResult> => {
     if (!selectedChat) {
-      return false;
+      return { wasSent: false };
     }
 
     const normalizedCaption = caption.trim();
     const captionOrNull = normalizedCaption.length > 0 ? normalizedCaption : null;
+
+    if (attachment.kind === 'audio') {
+      const previewText = captionOrNull ?? '🎤 Áudio enviado';
+      const optimisticMessage = createOptimisticMessage({
+        text: previewText,
+        raw_payload: {
+          audio: {
+            audioUrl: attachment.dataUrl,
+            seconds: attachment.durationSeconds ?? null,
+            ptt: true,
+          },
+        },
+      });
+
+      const body: Record<string, unknown> = {
+        phone: selectedChat.phone,
+        audio: attachment.dataUrl,
+        ptt: true,
+      };
+
+      if (attachment.durationSeconds !== null && Number.isFinite(attachment.durationSeconds)) {
+        body.seconds = Number(attachment.durationSeconds.toFixed(2));
+      }
+
+      if (attachment.mimeType) {
+        body.mimeType = attachment.mimeType;
+      }
+
+      const audioWasSent = await sendWhatsappMessage({
+        endpoint: '/whatsapp-webhook/send-audio',
+        body,
+        optimisticMessage,
+        errorFallback: 'Não foi possível enviar o áudio.',
+      });
+
+      if (!audioWasSent) {
+        return { wasSent: false };
+      }
+
+      if (captionOrNull) {
+        const textOptimisticMessage = createOptimisticMessage({ text: captionOrNull });
+        const textWasSent = await sendWhatsappMessage({
+          endpoint: '/whatsapp-webhook/send-message',
+          body: { phone: selectedChat.phone, message: captionOrNull },
+          optimisticMessage: textOptimisticMessage,
+          errorFallback: 'Não foi possível enviar a mensagem.',
+        });
+
+        if (!textWasSent) {
+          return { wasSent: true, preserveCaption: true, captionValue: captionOrNull };
+        }
+      }
+
+      return { wasSent: true };
+    }
 
     if (attachment.kind === 'document') {
       const fileName = attachment.fileName?.trim() || null;
@@ -1666,12 +2126,14 @@ export default function WhatsappPage() {
         body.caption = captionOrNull;
       }
 
-      return sendWhatsappMessage({
+      const wasSent = await sendWhatsappMessage({
         endpoint: '/whatsapp-webhook/send-document',
         body,
         optimisticMessage,
         errorFallback: 'Não foi possível enviar o documento.',
       });
+
+      return { wasSent };
     }
 
     if (attachment.kind === 'image') {
@@ -1696,12 +2158,14 @@ export default function WhatsappPage() {
         body.caption = captionOrNull;
       }
 
-      return sendWhatsappMessage({
+      const wasSent = await sendWhatsappMessage({
         endpoint: '/whatsapp-webhook/send-image',
         body,
         optimisticMessage,
         errorFallback: 'Não foi possível enviar a imagem.',
       });
+
+      return { wasSent };
     }
 
     const fileName = attachment.fileName?.trim() || null;
@@ -1725,25 +2189,31 @@ export default function WhatsappPage() {
       body.caption = captionOrNull;
     }
 
-    return sendWhatsappMessage({
+    const wasSent = await sendWhatsappMessage({
       endpoint: '/whatsapp-webhook/send-video',
       body,
       optimisticMessage,
       errorFallback: 'Não foi possível enviar o vídeo.',
     });
+
+    return { wasSent };
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedChat || sendingMessage) {
+    if (!selectedChat || sendingMessage || isRecordingAudio) {
       return;
     }
 
     if (pendingAttachment) {
-      const wasSent = await sendPendingAttachment(pendingAttachment, messageInput);
-      if (wasSent) {
-        setMessageInput('');
+      const result = await sendPendingAttachment(pendingAttachment, messageInput);
+      if (result.wasSent) {
         setPendingAttachment(null);
+        if (result.preserveCaption) {
+          setMessageInput(result.captionValue ?? '');
+        } else {
+          setMessageInput('');
+        }
       }
       return;
     }
@@ -1769,7 +2239,7 @@ export default function WhatsappPage() {
   };
 
   const toggleAttachmentMenu = () => {
-    if (sendingMessage) {
+    if (sendingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1777,7 +2247,7 @@ export default function WhatsappPage() {
   };
 
   const openDocumentPicker = () => {
-    if (sendingMessage) {
+    if (sendingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1786,7 +2256,7 @@ export default function WhatsappPage() {
   };
 
   const openMediaPicker = () => {
-    if (sendingMessage) {
+    if (sendingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1798,7 +2268,7 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || sendingMessage) {
+    if (!file || sendingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1835,7 +2305,7 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || sendingMessage) {
+    if (!file || sendingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1976,19 +2446,6 @@ export default function WhatsappPage() {
       errorFallback: 'Não foi possível enviar a localização.',
     });
   };
-
-  const handleStartAudioRecording = useCallback(() => {
-    if (sendingMessage) {
-      return;
-    }
-
-    if (!selectedChat) {
-      setErrorMessage('Selecione uma conversa antes de gravar áudios.');
-      return;
-    }
-
-    console.info('Iniciar gravação de áudio para', selectedChat.phone);
-  }, [selectedChat, sendingMessage]);
 
   type MessageAttachmentInfo = {
     imageUrl: string | null;
@@ -2371,10 +2828,17 @@ export default function WhatsappPage() {
 
   const trimmedMessageInput = messageInput.trim();
   const shouldShowAudioAction = !pendingAttachment && trimmedMessageInput.length === 0;
-  const isSendDisabled = sendingMessage || (!pendingAttachment && trimmedMessageInput.length === 0);
-  const isActionButtonDisabled = shouldShowAudioAction ? sendingMessage : isSendDisabled;
+  const isSendDisabled =
+    sendingMessage ||
+    isRecordingAudio ||
+    (!pendingAttachment && trimmedMessageInput.length === 0);
+  const isActionButtonDisabled = shouldShowAudioAction
+    ? sendingMessage || isRecordingAudio
+    : isSendDisabled;
   const messagePlaceholder = pendingAttachment
-    ? 'Adicione uma legenda (opcional)'
+    ? pendingAttachment.kind === 'audio'
+      ? 'Adicione uma mensagem (opcional)'
+      : 'Adicione uma legenda (opcional)'
     : 'Digite sua mensagem';
 
   return (
@@ -2885,8 +3349,42 @@ export default function WhatsappPage() {
                 ref={attachmentMenuRef}
                 className="relative flex w-full flex-col gap-3 rounded border border-slate-200 bg-slate-50/60 px-3 py-3"
               >
+                {isRecordingAudio ? (
+                  <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                        <span className="relative flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" />
+                        </span>
+                        <span>Gravando áudio</span>
+                        <span className="text-xs font-medium text-emerald-600">
+                          {formatSecondsLabel(recordingDuration)}
+                        </span>
+                      </div>
+                    </div>
+                    <LiveAudioVisualizer values={waveformValues} />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelAudioRecording}
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-rose-400 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-400/30"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConcludeAudioRecording}
+                        className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      >
+                        Concluir
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
                 {pendingAttachment ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
+                  <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                         Pré-visualização do anexo
@@ -2901,19 +3399,34 @@ export default function WhatsappPage() {
                       </button>
                     </div>
                     {pendingAttachment.kind === 'document' ? (
-                      <div className="flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-2">
-                        <FileText className="h-5 w-5 flex-shrink-0 text-slate-600" />
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-slate-700">
-                            {pendingAttachment.fileName ?? 'Documento selecionado'}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            .{pendingAttachment.extension.toLowerCase()}
-                          </p>
+                      <>
+                        <div className="flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-2">
+                          <FileText className="h-5 w-5 flex-shrink-0 text-slate-600" />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-slate-700">
+                              {pendingAttachment.fileName ?? 'Documento selecionado'}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              .{pendingAttachment.extension.toLowerCase()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                        <p className="text-xs text-slate-500">
+                          O texto digitado será enviado junto ao anexo como legenda.
+                        </p>
+                      </>
+                    ) : pendingAttachment.kind === 'audio' ? (
+                      <>
+                        <AudioMessageBubble
+                          src={pendingAttachment.dataUrl}
+                          seconds={pendingAttachment.durationSeconds}
+                        />
+                        <p className="text-xs text-slate-500">
+                          Clique em enviar para mandar o áudio. Se adicionar uma mensagem, ela será enviada em seguida.
+                        </p>
+                      </>
                     ) : (
-                      <div className="flex flex-col gap-2">
+                      <>
                         <div className="overflow-hidden rounded-lg border border-slate-200 bg-black/5">
                           {pendingAttachment.kind === 'image' ? (
                             <img
@@ -2934,11 +3447,11 @@ export default function WhatsappPage() {
                             {pendingAttachment.fileName}
                           </p>
                         ) : null}
-                      </div>
+                        <p className="text-xs text-slate-500">
+                          O texto digitado será enviado junto ao anexo como legenda.
+                        </p>
+                      </>
                     )}
-                    <p className="text-xs text-slate-500">
-                      O texto digitado será enviado junto ao anexo como legenda.
-                    </p>
                   </div>
                 ) : null}
 
@@ -2950,7 +3463,7 @@ export default function WhatsappPage() {
                     aria-label="Abrir opções de anexos"
                     aria-haspopup="menu"
                     aria-expanded={showAttachmentMenu}
-                    disabled={sendingMessage}
+                    disabled={sendingMessage || isRecordingAudio}
                   >
                     <Paperclip className="h-5 w-5" />
                   </button>
@@ -3037,10 +3550,26 @@ export default function WhatsappPage() {
                     type={shouldShowAudioAction ? 'button' : 'submit'}
                     className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isActionButtonDisabled}
-                    aria-label={shouldShowAudioAction ? 'Gravar áudio' : 'Enviar mensagem'}
-                    onClick={shouldShowAudioAction ? handleStartAudioRecording : undefined}
+                    aria-label={
+                      shouldShowAudioAction
+                        ? isRecordingAudio
+                          ? 'Gravando áudio'
+                          : 'Gravar áudio'
+                        : 'Enviar mensagem'
+                    }
+                    onClick={
+                      shouldShowAudioAction && !isRecordingAudio
+                        ? () => {
+                            void handleStartAudioRecording();
+                          }
+                        : undefined
+                    }
                   >
-                    {shouldShowAudioAction ? <Mic className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                    {shouldShowAudioAction ? (
+                      <Mic className={`h-4 w-4 ${isRecordingAudio ? 'animate-pulse' : ''}`} />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
 

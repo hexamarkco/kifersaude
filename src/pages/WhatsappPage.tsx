@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Send } from 'lucide-react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
@@ -483,9 +484,9 @@ export default function WhatsappPage() {
               onSubmit={handleSubmit}
               className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
-              <div className="flex items-end gap-3">
+              <div className="relative">
                 <textarea
-                  className="flex-1 resize-none rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full resize-none rounded-full border border-slate-200 bg-slate-50/60 px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   maxLength={1000}
                   rows={2}
                   value={messageInput}
@@ -495,10 +496,11 @@ export default function WhatsappPage() {
                 />
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
+                  className="absolute bottom-2.5 right-2.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
                   disabled={sendingMessage}
+                  aria-label="Enviar mensagem"
                 >
-                  Enviar
+                  <Send className="h-4 w-4" />
                 </button>
               </div>
             </form>

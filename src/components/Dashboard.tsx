@@ -84,6 +84,48 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     [restrictedOriginNamesForObservers],
   );
 
+  const visibleLeadIdsForObserver = useMemo(() => {
+    if (!isObserver) {
+      return null;
+    }
+
+    return new Set(leads.map((lead) => lead.id));
+  }, [isObserver, leads]);
+
+  const contractsVisibleToUser = useMemo(() => {
+    if (!isObserver || !visibleLeadIdsForObserver) {
+      return contracts;
+    }
+
+    return contracts.filter((contract) => {
+      if (!contract.lead_id) {
+        return true;
+      }
+
+      return visibleLeadIdsForObserver.has(contract.lead_id);
+    });
+  }, [contracts, isObserver, visibleLeadIdsForObserver]);
+
+  const visibleContractIds = useMemo(() => new Set(contractsVisibleToUser.map((contract) => contract.id)), [
+    contractsVisibleToUser,
+  ]);
+
+  const holdersVisibleToUser = useMemo(() => {
+    if (!isObserver) {
+      return holders;
+    }
+
+    return holders.filter((holder) => visibleContractIds.has(holder.contract_id));
+  }, [holders, isObserver, visibleContractIds]);
+
+  const dependentsVisibleToUser = useMemo(() => {
+    if (!isObserver) {
+      return dependents;
+    }
+
+    return dependents.filter((dependent) => visibleContractIds.has(dependent.contract_id));
+  }, [dependents, isObserver, visibleContractIds]);
+
   const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
     return [...items].sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : NaN;
@@ -401,7 +443,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return parseDateValue(dateValue);
   });
 
-  const filteredContracts = filterByPeriod(contracts, (contract) => {
+  const filteredContracts = filterByPeriod(contractsVisibleToUser, (contract) => {
     return (
       parseDateValue(contract.data_inicio) ||
       parseDateValue(contract.previsao_recebimento_comissao) ||
@@ -415,8 +457,8 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
   const activeContracts = useMemo(
-    () => contracts.filter((contract) => contract.status === 'Ativo'),
-    [contracts]
+    () => contractsVisibleToUser.filter((contract) => contract.status === 'Ativo'),
+    [contractsVisibleToUser]
   );
   const comissaoTotal = contratosAtivos.reduce((sum, c) => sum + (c.comissao_prevista || 0), 0);
 
@@ -451,9 +493,9 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
     const activeContractIds = activeContracts.map(c => c.id);
     const contractsMap = new Map(activeContracts.map(c => [c.id, c]));
-    const holdersMap = new Map(holders.map(h => [h.contract_id, h]));
+    const holdersMap = new Map(holdersVisibleToUser.map(h => [h.contract_id, h]));
 
-    holders
+    holdersVisibleToUser
       .filter(h => activeContractIds.includes(h.contract_id))
       .forEach(h => {
         birthdays.push({
@@ -467,7 +509,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         });
       });
 
-    dependents
+    dependentsVisibleToUser
       .filter(d => activeContractIds.includes(d.contract_id))
       .forEach(d => {
         birthdays.push({

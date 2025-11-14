@@ -268,6 +268,49 @@ const toNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const sanitizeChatPreviewText = (
+  previewText: string,
+  chat: WhatsappChat,
+  displayName: string,
+): string => {
+  const trimmedPreview = previewText.trim();
+  if (!trimmedPreview) {
+    return CHAT_PREVIEW_FALLBACK_TEXT;
+  }
+
+  const formattedLastMessageMoment = formatDateTime(chat.last_message_at);
+  let withoutRepeatedMoment = trimmedPreview;
+
+  if (formattedLastMessageMoment) {
+    const normalizedPreview = trimmedPreview.toLowerCase();
+    const normalizedMoment = formattedLastMessageMoment.toLowerCase();
+
+    if (normalizedPreview.endsWith(normalizedMoment)) {
+      const baseLength = trimmedPreview.length - formattedLastMessageMoment.length;
+      const truncated = trimmedPreview.slice(0, baseLength).trimEnd();
+      withoutRepeatedMoment = truncated.replace(/(?:[•·:;,-]+\s*)+$/u, '').trimEnd();
+    }
+  }
+
+  const normalizedPreviewWithoutMoment = withoutRepeatedMoment.trim();
+  if (!normalizedPreviewWithoutMoment) {
+    return CHAT_PREVIEW_FALLBACK_TEXT;
+  }
+
+  const normalizedDisplayName = toNonEmptyString(displayName)?.toLowerCase() ?? null;
+  const normalizedPhone = toNonEmptyString(chat.phone)?.toLowerCase() ?? null;
+  const normalizedPreviewLower = normalizedPreviewWithoutMoment.toLowerCase();
+
+  if (
+    (normalizedDisplayName && normalizedPreviewLower === normalizedDisplayName) ||
+    (normalizedPhone && normalizedPreviewLower === normalizedPhone)
+  ) {
+    return CHAT_PREVIEW_FALLBACK_TEXT;
+  }
+
+  return withoutRepeatedMoment;
+};
+
 const getChatDisplayName = (chat: WhatsappChat): string => {
   const normalizedDisplayName = toNonEmptyString(chat.display_name);
   if (normalizedDisplayName) {
@@ -1740,11 +1783,15 @@ export default function WhatsappPage() {
           ) : (
             filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
+              const displayName = getChatDisplayName(chat);
               const previewInfo = getChatPreviewInfo(chat.last_message_preview);
+              const previewText = sanitizeChatPreviewText(previewInfo.text, chat, displayName);
               const PreviewIcon = previewInfo.icon;
-              const avatarSeed = chat.chat_name || chat.phone || chat.id;
+              const shouldShowPreviewIcon =
+                PreviewIcon && previewText !== CHAT_PREVIEW_FALLBACK_TEXT;
+              const avatarSeed = chat.sender_photo || chat.phone || chat.chat_name || 'default';
               const avatarColors = getAvatarColorStyles(avatarSeed);
-              const chatDisplayName = getChatDisplayName(chat);
+
               return (
                 <button
                   key={chat.id}
@@ -1754,19 +1801,12 @@ export default function WhatsappPage() {
                     isActive ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-slate-800 truncate">
-                      {chatDisplayName}
-                    </span>
-                    <span className="text-xs text-slate-500 whitespace-nowrap">
-                      {formatDateTime(chat.last_message_at)}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
-                    {PreviewIcon ? (
-                      <PreviewIcon
-                        aria-hidden="true"
-                        className="h-4 w-4 flex-shrink-0 text-slate-400"
+                  <div className="flex items-center gap-3">
+                    {chat.sender_photo ? (
+                      <img
+                        src={chat.sender_photo}
+                        alt={displayName || chat.phone}
+                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
                       />
                     ) : (
                       <div
@@ -1779,21 +1819,19 @@ export default function WhatsappPage() {
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium text-slate-800">
-                          {chat.chat_name || chat.phone}
-                        </span>
+                        <span className="truncate font-medium text-slate-800">{displayName}</span>
                         <span className="whitespace-nowrap text-xs text-slate-500">
                           {formatDateTime(chat.last_message_at)}
                         </span>
                       </div>
                       <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
-                        {PreviewIcon ? (
+                        {shouldShowPreviewIcon ? (
                           <PreviewIcon
                             aria-hidden="true"
                             className="h-4 w-4 flex-shrink-0 text-slate-400"
                           />
                         ) : null}
-                        <span className="block min-w-0 truncate">{previewInfo.text}</span>
+                        <span className="block min-w-0 truncate">{previewText}</span>
                       </div>
                     </div>
                   </div>
@@ -1833,7 +1871,7 @@ export default function WhatsappPage() {
                     {selectedChatDisplayName}
                   </p>
                   <p className="truncate text-sm text-slate-500">
-                    {selectedChat.is_group ? 'Grupo' : 'Contato'} • {selectedChat.phone}
+                    {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
                   </p>
                 </div>
               </div>

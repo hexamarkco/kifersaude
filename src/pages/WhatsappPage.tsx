@@ -1735,6 +1735,7 @@ export default function WhatsappPage() {
               const PreviewIcon = previewInfo.icon;
               const avatarSeed = chat.chat_name || chat.phone || chat.id;
               const avatarColors = getAvatarColorStyles(avatarSeed);
+              const chatDisplayName = getChatDisplayName(chat);
               return (
                 <button
                   key={chat.id}

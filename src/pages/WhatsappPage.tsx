@@ -395,6 +395,11 @@ export default function WhatsappPage() {
     [chats, selectedChatId],
   );
 
+  const selectedChatDisplayName = useMemo(
+    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
+    [selectedChat],
+  );
+
   const filteredChats = useMemo(() => {
     if (!chatSearchTerm.trim()) {
       return chats;
@@ -402,12 +407,12 @@ export default function WhatsappPage() {
 
     const normalizedTerm = chatSearchTerm.trim().toLowerCase();
     return chats.filter(chat => {
-      const name = chat.chat_name?.toLowerCase() ?? '';
+      const displayName = getChatDisplayName(chat).toLowerCase();
       const phone = chat.phone?.toLowerCase() ?? '';
       const preview = chat.last_message_preview?.toLowerCase() ?? '';
 
       return (
-        name.includes(normalizedTerm) ||
+        displayName.includes(normalizedTerm) ||
         phone.includes(normalizedTerm) ||
         preview.includes(normalizedTerm)
       );
@@ -1432,7 +1437,7 @@ export default function WhatsappPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-slate-800 truncate">
-                      {chat.chat_name || chat.phone}
+                      {chatDisplayName}
                     </span>
                     <span className="text-xs text-slate-500 whitespace-nowrap">
                       {formatDateTime(chat.last_message_at)}
@@ -1470,17 +1475,17 @@ export default function WhatsappPage() {
                 {selectedChat.sender_photo ? (
                   <img
                     src={selectedChat.sender_photo}
-                    alt={selectedChat.chat_name || selectedChat.phone}
+                    alt={selectedChatDisplayName || selectedChat.phone}
                     className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
                   />
                 ) : (
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
-                    {(selectedChat.chat_name || selectedChat.phone).charAt(0).toUpperCase()}
+                    {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-800">
-                    {selectedChat.chat_name || selectedChat.phone}
+                    {selectedChatDisplayName}
                   </p>
                   <p className="truncate text-sm text-slate-500">
                     {selectedChat.is_group ? 'Grupo' : 'Contato'} • {selectedChat.phone}

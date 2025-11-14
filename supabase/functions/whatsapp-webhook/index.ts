@@ -106,6 +106,14 @@ type SendVideoBody = {
   async?: boolean;
 };
 
+type SendAudioBody = {
+  phone?: string;
+  audio?: string;
+  seconds?: number;
+  mimeType?: string;
+  ptt?: boolean;
+};
+
 type SendLocationBody = {
   phone?: string;
   title?: string;
@@ -1626,6 +1634,69 @@ const handleSendVideo = async (req: Request) => {
   }
 };
 
+const handleSendAudio = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendAudioBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const audio = typeof body.audio === 'string' ? body.audio.trim() : '';
+
+  if (!phone || !audio) {
+    return respondJson(400, { success: false, error: 'Os campos phone e audio são obrigatórios' });
+  }
+
+  const seconds =
+    typeof body.seconds === 'number' && Number.isFinite(body.seconds) && body.seconds >= 0
+      ? Number(body.seconds.toFixed(2))
+      : null;
+  const mimeType = toNonEmptyString(body.mimeType);
+  const ptt = typeof body.ptt === 'boolean' ? body.ptt : true;
+
+  const requestBody: Record<string, unknown> = { phone, audio, ptt };
+
+  if (seconds !== null) {
+    requestBody.seconds = seconds;
+  }
+
+  if (mimeType) {
+    requestBody.mimeType = mimeType;
+  }
+
+  try {
+    const rawPayloadOverride: Record<string, unknown> = {
+      audio: {
+        audioUrl: audio,
+        seconds,
+        mimeType: mimeType ?? null,
+        ptt,
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-audio',
+      body: requestBody,
+      messagePreview: '🎤 Áudio enviado',
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar áudio pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar áudio' });
+  }
+};
+
 const handleSendLocation = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -2393,6 +2464,8 @@ serve(async (req) => {
       return handleSendDocument(req);
     case '/send-image':
       return handleSendImage(req);
+    case '/send-audio':
+      return handleSendAudio(req);
     case '/send-video':
       return handleSendVideo(req);
     case '/send-location':

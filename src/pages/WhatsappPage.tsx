@@ -314,6 +314,17 @@ type LeadSummary = {
   responsavel: string | null;
 };
 
+type UpdateLeadStatusResponse = {
+  success: boolean;
+  lead?: {
+    id: string;
+    status: string | null;
+    ultimo_contato: string | null;
+    responsavel: string | null;
+  };
+  error?: string;
+};
+
 type PendingAttachment = PendingMediaAttachment | PendingDocumentAttachment;
 
 const toNonEmptyString = (value: unknown): string | null => {
@@ -1009,7 +1020,6 @@ export default function WhatsappPage() {
       const previousUltimoContato = selectedChatLead.ultimo_contato ?? null;
       const nowIso = new Date().toISOString();
       const responsavel = selectedChatLead.responsavel ?? 'Sistema';
-      const statusAnteriorRegistro = currentStatus || 'Sem status';
 
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
@@ -1030,35 +1040,45 @@ export default function WhatsappPage() {
       );
 
       try {
-        const { error: updateError } = await supabase
-          .from('leads')
-          .update({
-            status: normalizedNewStatus,
-            ultimo_contato: nowIso,
-          })
-          .eq('id', leadId);
+        const response = await fetchJson<UpdateLeadStatusResponse>(
+          getWhatsappFunctionUrl('/whatsapp-webhook/leads/update-status'),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId,
+              newStatus: normalizedNewStatus,
+              responsavel,
+            }),
+          },
+        );
 
-        if (updateError) {
-          throw updateError;
+        if (!response.success) {
+          throw new Error(response.error ?? 'Falha ao atualizar status do lead.');
         }
 
-        await supabase.from('interactions').insert([
-          {
-            lead_id: leadId,
-            tipo: 'Observação',
-            descricao: `Status alterado de "${statusAnteriorRegistro}" para "${normalizedNewStatus}" pelo chat do WhatsApp`,
-            responsavel,
-          },
-        ]);
+        if (response.lead) {
+          const { status, ultimo_contato: updatedUltimoContato, responsavel: updatedResponsavel } =
+            response.lead;
 
-        await supabase.from('lead_status_history').insert([
-          {
-            lead_id: leadId,
-            status_anterior: statusAnteriorRegistro,
-            status_novo: normalizedNewStatus,
-            responsavel,
-          },
-        ]);
+          setChats(previousChats =>
+            previousChats.map(chat => {
+              if (chat.crm_lead?.id !== leadId) {
+                return chat;
+              }
+
+              return {
+                ...chat,
+                crm_lead: {
+                  ...chat.crm_lead,
+                  status: status ?? normalizedNewStatus,
+                  ultimo_contato: updatedUltimoContato ?? nowIso,
+                  responsavel: updatedResponsavel ?? chat.crm_lead.responsavel ?? responsavel,
+                },
+              };
+            }),
+          );
+        }
       } catch (error) {
         console.error('Erro ao atualizar status do lead via chat:', error);
         setChats(previousChats =>

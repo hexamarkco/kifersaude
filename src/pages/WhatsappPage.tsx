@@ -239,6 +239,17 @@ type UpdateChatFlagsResponse = {
 };
 
 type WhatsappMessageRawPayload = {
+  reaction?: {
+    value?: string | null;
+    time?: string | number | null;
+    reactionBy?: string | null;
+    referencedMessage?: {
+      messageId?: string | null;
+      fromMe?: boolean | null;
+      phone?: string | null;
+      participant?: string | null;
+    } | null;
+  } | null;
   image?: {
     imageUrl?: string | null;
     caption?: string | null;
@@ -334,6 +345,142 @@ const toNonEmptyString = (value: unknown): string | null => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const parseDateValue = (value: unknown): Date | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? new Date(value) : null;
+  }
+
+  if (typeof value === 'string') {
+    const numeric = Number(value);
+    if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+      return new Date(numeric);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+};
+
+const formatReactionTime = (date: Date | null): string => {
+  if (!date) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatReactionPhoneNumber = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const digits = value.replace(/\D+/g, '');
+
+  if (!digits) {
+    return value.trim() || null;
+  }
+
+  const countryCodeLength = digits.length > 11 ? digits.length - 11 : Math.max(digits.length - 9, 0);
+  const countryCode = countryCodeLength > 0 ? digits.slice(0, countryCodeLength) : '';
+  const remainingAfterCountry = digits.slice(countryCodeLength);
+
+  const areaCodeLength = remainingAfterCountry.length > 9 ? 2 : 0;
+  const areaCode = areaCodeLength ? remainingAfterCountry.slice(0, areaCodeLength) : '';
+  const localNumber = remainingAfterCountry.slice(areaCodeLength);
+
+  let formattedLocal = localNumber;
+  if (localNumber.length === 9) {
+    formattedLocal = `${localNumber.slice(0, 5)}-${localNumber.slice(5)}`;
+  } else if (localNumber.length === 8) {
+    formattedLocal = `${localNumber.slice(0, 4)}-${localNumber.slice(4)}`;
+  }
+
+  const pieces = [
+    countryCode ? `+${countryCode}` : '',
+    areaCode ? `(${areaCode})` : '',
+    formattedLocal,
+  ].filter(Boolean);
+
+  return pieces.length > 0 ? pieces.join(' ') : value.trim();
+};
+
+type MessageReactionParticipant = {
+  participantId: string;
+  displayName: string | null;
+  phone: string | null;
+  isFromMe: boolean;
+  reactedAt: Date | null;
+};
+
+type MessageReactionSummaryEntry = {
+  emoji: string;
+  count: number;
+  participants: MessageReactionParticipant[];
+};
+
+type MessageReactionSummary = {
+  totalCount: number;
+  entries: MessageReactionSummaryEntry[];
+};
+
+const getMessageSenderDisplayName = (message: OptimisticMessage): string | null => {
+  if (message.from_me) {
+    return 'Você';
+  }
+
+  const payload =
+    message.raw_payload && typeof message.raw_payload === 'object'
+      ? (message.raw_payload as WhatsappMessageRawPayload)
+      : null;
+
+  if (!payload) {
+    return null;
+  }
+
+  const directName =
+    toNonEmptyString(payload.senderName) ??
+    toNonEmptyString(payload.pushName) ??
+    toNonEmptyString(payload.participant) ??
+    toNonEmptyString(payload.author);
+
+  if (directName) {
+    return directName;
+  }
+
+  const keyParticipant = (() => {
+    const key = payload.key;
+    if (!key || typeof key !== 'object') {
+      return null;
+    }
+
+    return toNonEmptyString((key as { participant?: unknown })?.participant);
+  })();
+
+  if (keyParticipant) {
+    return keyParticipant;
+  }
+
+  const phone = toNonEmptyString(payload.phone);
+  if (phone) {
+    return phone;
+  }
+
+  return null;
 };
 
 const sanitizeChatPreviewText = (
@@ -599,6 +746,8 @@ export default function WhatsappPage() {
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [showLeadDetails, setShowLeadDetails] = useState(false);
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
+  const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
+  const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
 
   const { leadStatuses } = useConfig();
   const activeLeadStatuses = useMemo(
@@ -1351,6 +1500,7 @@ export default function WhatsappPage() {
   useEffect(() => {
     setShowAttachmentMenu(false);
     setPendingAttachment(null);
+    setReactionDetailsMessageId(null);
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -1358,6 +1508,36 @@ export default function WhatsappPage() {
       setShowAttachmentMenu(false);
     }
   }, [sendingMessage]);
+
+  useEffect(() => {
+    if (!reactionDetailsMessageId) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        reactionDetailsPopoverRef.current &&
+        !reactionDetailsPopoverRef.current.contains(target)
+      ) {
+        setReactionDetailsMessageId(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReactionDetailsMessageId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [reactionDetailsMessageId]);
 
   const createOptimisticMessage = (overrides: Partial<OptimisticMessage>): OptimisticMessage => {
     if (!selectedChat) {
@@ -1851,50 +2031,110 @@ export default function WhatsappPage() {
     };
   };
 
-  const getMessageSenderDisplayName = (message: OptimisticMessage): string | null => {
-    if (message.from_me) {
-      return 'Você';
-    }
+  const { renderableMessages, reactionSummaries } = useMemo(() => {
+    const baseMessages: OptimisticMessage[] = [];
+    const reactionAccumulator = new Map<string, Map<string, MessageReactionParticipant[]>>();
 
-    const payload =
-      message.raw_payload && typeof message.raw_payload === 'object'
-        ? (message.raw_payload as WhatsappMessageRawPayload)
+    for (const message of messages) {
+      const payload =
+        message.raw_payload && typeof message.raw_payload === 'object'
+          ? (message.raw_payload as WhatsappMessageRawPayload)
+          : null;
+
+      const reactionPayload = payload?.reaction ?? null;
+      const referencedMessageId = reactionPayload
+        ? toNonEmptyString(reactionPayload.referencedMessage?.messageId)
         : null;
 
-    if (!payload) {
-      return null;
-    }
+      const participantId = reactionPayload
+        ? toNonEmptyString(reactionPayload.reactionBy) ?? toNonEmptyString(payload?.phone)
+        : null;
 
-    const directName =
-      toNonEmptyString(payload.senderName) ??
-      toNonEmptyString(payload.pushName) ??
-      toNonEmptyString(payload.participant) ??
-      toNonEmptyString(payload.author);
+      const reactionValue = reactionPayload ? toNonEmptyString(reactionPayload.value) : null;
 
-    if (directName) {
-      return directName;
-    }
+      if (referencedMessageId && participantId) {
+        const participantsByEmoji =
+          reactionAccumulator.get(referencedMessageId) ??
+          new Map<string, MessageReactionParticipant[]>();
 
-    const keyParticipant = (() => {
-      const key = payload.key;
-      if (!key || typeof key !== 'object') {
-        return null;
+        // Remove any previous reaction by the same participant before applying the latest event
+        for (const [emoji, participantList] of participantsByEmoji.entries()) {
+          const index = participantList.findIndex(
+            participant => participant.participantId === participantId,
+          );
+
+          if (index !== -1) {
+            participantList.splice(index, 1);
+            if (participantList.length === 0) {
+              participantsByEmoji.delete(emoji);
+            }
+          }
+        }
+
+        if (reactionValue) {
+          const reactionTime = parseDateValue(reactionPayload?.time ?? null);
+          const displayName = getMessageSenderDisplayName(message);
+
+          const participantInfo: MessageReactionParticipant = {
+            participantId,
+            displayName: displayName ?? (message.from_me ? 'Você' : null),
+            phone: toNonEmptyString(reactionPayload.reactionBy) ?? toNonEmptyString(payload?.phone),
+            isFromMe: message.from_me,
+            reactedAt: reactionTime,
+          };
+
+          const participantList = participantsByEmoji.get(reactionValue) ?? [];
+          participantList.push(participantInfo);
+          participantsByEmoji.set(reactionValue, participantList);
+        }
+
+        reactionAccumulator.set(referencedMessageId, participantsByEmoji);
+        continue;
       }
 
-      return toNonEmptyString((key as { participant?: unknown })?.participant);
-    })();
-
-    if (keyParticipant) {
-      return keyParticipant;
+      baseMessages.push(message);
     }
 
-    const phone = toNonEmptyString(payload.phone);
-    if (phone) {
-      return phone;
-    }
+    const summaries: Record<string, MessageReactionSummary> = {};
 
-    return null;
-  };
+    reactionAccumulator.forEach((emojiMap, messageId) => {
+      const entries: MessageReactionSummaryEntry[] = Array.from(emojiMap.entries())
+        .map(([emoji, participants]) => {
+          const sortedParticipants = [...participants].sort((first, second) => {
+            const firstTime = first.reactedAt?.getTime() ?? 0;
+            const secondTime = second.reactedAt?.getTime() ?? 0;
+            return secondTime - firstTime;
+          });
+
+          return {
+            emoji,
+            count: sortedParticipants.length,
+            participants: sortedParticipants,
+          };
+        })
+        .filter(entry => entry.count > 0);
+
+      entries.sort((first, second) => {
+        const countDifference = second.count - first.count;
+        if (countDifference !== 0) {
+          return countDifference;
+        }
+
+        return first.emoji.localeCompare(second.emoji);
+      });
+
+      const totalCount = entries.reduce((accumulator, entry) => accumulator + entry.count, 0);
+
+      if (totalCount > 0) {
+        summaries[messageId] = {
+          totalCount,
+          entries,
+        };
+      }
+    });
+
+    return { renderableMessages: baseMessages, reactionSummaries: summaries };
+  }, [messages]);
 
   const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
@@ -2432,12 +2672,12 @@ export default function WhatsappPage() {
               ref={messagesContainerRef}
               className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4"
             >
-              {messagesLoading && messages.length === 0 ? (
+              {messagesLoading && renderableMessages.length === 0 ? (
                 <p className="text-sm text-slate-500">Carregando mensagens...</p>
-              ) : messages.length === 0 ? (
+              ) : renderableMessages.length === 0 ? (
                 <p className="text-sm text-slate-500">Nenhuma mensagem neste chat.</p>
               ) : (
-                messages.map(message => {
+                renderableMessages.map(message => {
                   const isFromMe = message.from_me;
                   const attachmentInfo = getMessageAttachmentInfo(message);
                   const alignment = isFromMe ? 'items-end text-right' : 'items-start text-left';
@@ -2454,6 +2694,56 @@ export default function WhatsappPage() {
                   const senderDisplayName = shouldShowSenderName
                     ? getMessageSenderDisplayName(message)
                     : null;
+                  const messageIdKey = message.message_id ?? null;
+                  const reactionSummary =
+                    messageIdKey && reactionSummaries[messageIdKey]
+                      ? reactionSummaries[messageIdKey]
+                      : null;
+                  const hasReactions = Boolean(reactionSummary);
+                  const isGroupChat = selectedChat.is_group;
+                  const summaryInteractive = Boolean(isGroupChat && messageIdKey);
+                  const isReactionDetailsOpen = Boolean(
+                    summaryInteractive && reactionDetailsMessageId === messageIdKey,
+                  );
+                  const summaryWrapperClassName = hasOnlyMediaWithoutPadding
+                    ? `relative absolute ${isFromMe ? 'right-2' : 'left-2'} bottom-2`
+                    : `relative mt-2 flex w-full flex-wrap ${
+                        isFromMe ? 'justify-end' : 'justify-start'
+                      }`;
+                  const summaryButtonClassName = [
+                    'inline-flex flex-wrap items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold shadow-sm',
+                    hasOnlyMediaWithoutPadding
+                      ? 'bg-black/60 text-white backdrop-blur-sm'
+                      : isFromMe
+                      ? 'bg-emerald-600/20 text-white'
+                      : 'bg-slate-100 text-slate-700',
+                    summaryInteractive
+                      ? 'cursor-pointer transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-emerald-500/40'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+                  const summaryChipClassName =
+                    hasOnlyMediaWithoutPadding || isFromMe
+                      ? 'inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] text-white'
+                      : 'inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-700 shadow-sm';
+
+                  const reactionSummaryContent = reactionSummary ? (
+                    <>
+                      {reactionSummary.entries.map(entry => (
+                        <span
+                          key={`summary-${message.id}-${entry.emoji}`}
+                          className={summaryChipClassName}
+                        >
+                          <span className="text-base leading-none">{entry.emoji}</span>
+                          <span>{entry.count}</span>
+                        </span>
+                      ))}
+                      <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide opacity-80">
+                        {reactionSummary.totalCount}
+                      </span>
+                    </>
+                  ) : null;
 
                   return (
                     <div key={message.id} className={`flex flex-col ${alignment}`}>
@@ -2463,11 +2753,119 @@ export default function WhatsappPage() {
                         </span>
                       ) : null}
                       <div
-                        className={`inline-flex max-w-[75%] flex-col rounded-2xl shadow-sm ${
+                        className={`relative inline-flex max-w-[75%] flex-col rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
                         } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses}`}
                       >
                         {renderMessageContent(message, attachmentInfo)}
+                        {hasReactions && reactionSummary ? (
+                          <div className={summaryWrapperClassName}>
+                            {summaryInteractive ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!messageIdKey) {
+                                    return;
+                                  }
+                                  setReactionDetailsMessageId(previous =>
+                                    previous === messageIdKey ? null : messageIdKey,
+                                  );
+                                }}
+                                className={summaryButtonClassName}
+                                aria-expanded={isReactionDetailsOpen}
+                                aria-label="Ver detalhes das reações"
+                              >
+                                {reactionSummaryContent}
+                              </button>
+                            ) : (
+                              <div className={summaryButtonClassName}>{reactionSummaryContent}</div>
+                            )}
+                            {summaryInteractive && isReactionDetailsOpen && messageIdKey ? (
+                              <div
+                                ref={reactionDetailsPopoverRef}
+                                className={`absolute ${
+                                  hasOnlyMediaWithoutPadding ? 'bottom-full mb-2' : 'top-full mt-2'
+                                } ${
+                                  isFromMe ? 'right-0' : 'left-0'
+                                } z-50 w-72 max-w-[calc(100vw-4rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-2xl`}
+                              >
+                                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2">
+                                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Reações
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                      Total {reactionSummary.totalCount}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReactionDetailsMessageId(null)}
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                      aria-label="Fechar detalhes das reações"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-1 border-b border-slate-100 px-3 py-2">
+                                  {reactionSummary.entries.map(entry => (
+                                    <span
+                                      key={`summary-chip-${message.id}-${entry.emoji}`}
+                                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+                                    >
+                                      <span className="text-base leading-none">{entry.emoji}</span>
+                                      <span>{entry.count}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                                <div className="max-h-60 overflow-y-auto">
+                                  {reactionSummary.entries.map(entry => (
+                                    <div
+                                      key={`details-${message.id}-${entry.emoji}`}
+                                      className="border-b border-slate-100 px-3 py-2 last:border-b-0"
+                                    >
+                                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                        <span className="text-lg leading-none">{entry.emoji}</span>
+                                        <span className="text-xs font-medium text-slate-500">
+                                          {entry.count} {entry.count === 1 ? 'reação' : 'reações'}
+                                        </span>
+                                      </div>
+                                      <ul className="mt-2 space-y-2">
+                                        {entry.participants.map(participant => {
+                                          const phoneLabel = participant.phone
+                                            ? formatReactionPhoneNumber(participant.phone)
+                                            : null;
+                                          return (
+                                            <li
+                                              key={`${participant.participantId}-${
+                                                participant.reactedAt?.getTime() ?? 'sem-horario'
+                                              }-${entry.emoji}`}
+                                              className="flex items-center justify-between gap-3 text-sm text-slate-600"
+                                            >
+                                              <div className="min-w-0">
+                                                <p className="truncate font-medium text-slate-700">
+                                                  {participant.displayName ?? phoneLabel ?? 'Participante'}
+                                                </p>
+                                                {phoneLabel ? (
+                                                  <p className="truncate text-xs text-slate-500">{phoneLabel}</p>
+                                                ) : null}
+                                              </div>
+                                              {participant.reactedAt ? (
+                                                <span className="whitespace-nowrap text-xs text-slate-400">
+                                                  {formatReactionTime(participant.reactedAt)}
+                                                </span>
+                                              ) : null}
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <span className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
                         {formatDateTime(message.moment)}{' '}

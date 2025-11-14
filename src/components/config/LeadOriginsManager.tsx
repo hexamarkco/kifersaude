@@ -17,7 +17,11 @@ export default function LeadOriginsManager() {
     }
 
     setSaving(true);
-    const { error } = await configService.createLeadOrigem({ nome: newOrigin.trim(), ativo: true });
+    const { error } = await configService.createLeadOrigem({
+      nome: newOrigin.trim(),
+      ativo: true,
+      visivel_para_observadores: true,
+    });
     if (error) {
       alert('Erro ao adicionar origem');
     } else {
@@ -27,10 +31,21 @@ export default function LeadOriginsManager() {
     setSaving(false);
   };
 
-  const handleToggle = async (id: string, ativo: boolean) => {
+  const handleToggleAtivo = async (id: string, ativo: boolean) => {
     const { error } = await configService.updateLeadOrigem(id, { ativo });
     if (error) {
       alert('Erro ao atualizar origem');
+    } else {
+      await refreshLeadOrigins();
+    }
+  };
+
+  const handleToggleObserverVisibility = async (id: string, visivel: boolean) => {
+    const { error } = await configService.updateLeadOrigem(id, {
+      visivel_para_observadores: visivel,
+    });
+    if (error) {
+      alert('Erro ao atualizar visibilidade para observadores');
     } else {
       await refreshLeadOrigins();
     }
@@ -95,17 +110,35 @@ export default function LeadOriginsManager() {
               ) : (
                 <p className="text-sm font-medium text-slate-900">{origin.nome}</p>
               )}
-              <p className="text-xs text-slate-500 mt-1">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
+              <div className="flex flex-col gap-1 mt-1">
+                <p className="text-xs text-slate-500">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
+                <p className="text-xs text-slate-500">
+                  {origin.visivel_para_observadores
+                    ? 'Visível para observadores'
+                    : 'Oculto para observadores'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
                 <input
                   type="checkbox"
                   checked={origin.ativo}
-                  onChange={(e) => handleToggle(origin.id, e.target.checked)}
+                  onChange={(e) => handleToggleAtivo(origin.id, e.target.checked)}
                   className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                 />
                 <span>Ativo</span>
+              </label>
+              <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={origin.visivel_para_observadores}
+                  onChange={(e) =>
+                    handleToggleObserverVisibility(origin.id, e.target.checked)
+                  }
+                  className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+                />
+                <span>Visível para observadores</span>
               </label>
               {editingId === origin.id ? (
                 <div className="flex items-center space-x-2">

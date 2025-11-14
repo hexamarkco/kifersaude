@@ -48,7 +48,7 @@ type Dependent = {
 
 export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const { isObserver } = useAuth();
-  const { leadStatuses } = useConfig();
+  const { leadStatuses, leadOrigins } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -68,6 +68,21 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     });
     return map;
   }, [leadStatuses]);
+
+  const restrictedOriginNamesForObservers = useMemo(
+    () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
+    [leadOrigins],
+  );
+
+  const isOriginVisibleToObserver = useCallback(
+    (originName: string | null | undefined) => {
+      if (!originName) {
+        return true;
+      }
+      return !restrictedOriginNamesForObservers.includes(originName);
+    },
+    [restrictedOriginNamesForObservers],
+  );
 
   const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
     return [...items].sort((a, b) => {
@@ -98,7 +113,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
       let filteredLeads = leadsRes.data || [];
       if (isObserver) {
-        filteredLeads = filteredLeads.filter(lead => lead.origem !== 'Ully');
+        filteredLeads = filteredLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
       }
 
       setLeads(filteredLeads);
@@ -118,7 +133,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         setIsInitialLoad(false);
       }
     }
-  }, [isObserver]);
+  }, [isObserver, isOriginVisibleToObserver]);
 
   useEffect(() => {
     loadData();
@@ -143,7 +158,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             switch (eventType) {
               case 'INSERT':
                 if (!newLead) return currentLeads;
-                if (isObserver && newLead.origem === 'Ully') {
+                if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
                   return currentLeads.filter((lead) => lead.id !== newLead.id);
                 }
                 updatedLeads = [newLead, ...currentLeads.filter((lead) => lead.id !== newLead.id)];
@@ -151,7 +166,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
               case 'UPDATE':
                 if (!newLead) return currentLeads;
                 updatedLeads = currentLeads.filter((lead) => lead.id !== newLead.id);
-                if (!(isObserver && newLead.origem === 'Ully')) {
+                if (!(isObserver && !isOriginVisibleToObserver(newLead.origem))) {
                   updatedLeads = [...updatedLeads, newLead];
                 }
                 break;
@@ -296,7 +311,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(contractsChannel);
     };
-  }, [isObserver, loadData]);
+  }, [isObserver, isOriginVisibleToObserver, loadData]);
 
   const getStartOfMonth = () => {
     const now = new Date();

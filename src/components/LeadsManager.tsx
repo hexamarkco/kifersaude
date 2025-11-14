@@ -41,10 +41,26 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
+  const restrictedOriginNamesForObservers = useMemo(
+    () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
+    [leadOrigins],
+  );
+  const isOriginVisibleToObserver = useCallback(
+    (originName: string | null | undefined) => {
+      if (!originName) {
+        return true;
+      }
+      return !restrictedOriginNamesForObservers.includes(originName);
+    },
+    [restrictedOriginNamesForObservers],
+  );
   const activeLeadOrigins = useMemo(() => leadOrigins.filter(origin => origin.ativo), [leadOrigins]);
   const visibleLeadOrigins = useMemo(
-    () => activeLeadOrigins.filter((origin) => !(isObserver && origin.nome === 'Ully')),
-    [activeLeadOrigins, isObserver]
+    () =>
+      activeLeadOrigins.filter(
+        (origin) => !isObserver || isOriginVisibleToObserver(origin.nome),
+      ),
+    [activeLeadOrigins, isObserver, isOriginVisibleToObserver],
   );
   const tipoContratacaoOptions = useMemo(
     () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
@@ -76,13 +92,17 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLeads(data || []);
+      let fetchedLeads = data || [];
+      if (isObserver) {
+        fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
+      }
+      setLeads(fetchedLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isObserver, isOriginVisibleToObserver]);
 
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
@@ -96,13 +116,20 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
         switch (eventType) {
           case 'INSERT':
             if (!newLead) return current;
+            if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+              return current.filter((lead) => lead.id !== newLead.id);
+            }
             updatedLeads = [newLead, ...current.filter((lead) => lead.id !== newLead.id)];
             break;
           case 'UPDATE':
             if (!newLead) return current;
             {
               const otherLeads = current.filter((lead) => lead.id !== newLead.id);
-              updatedLeads = [newLead, ...otherLeads];
+              if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+                updatedLeads = otherLeads;
+              } else {
+                updatedLeads = [newLead, ...otherLeads];
+              }
             }
             break;
           case 'DELETE':
@@ -125,11 +152,16 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
       }
 
       if (newLead) {
-        setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
-        setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
+        if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+          setSelectedLead((current) => (current && current.id === newLead.id ? null : current));
+          setEditingLead((current) => (current && current.id === newLead.id ? null : current));
+        } else {
+          setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
+          setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
+        }
       }
     },
-    []
+    [isObserver, isOriginVisibleToObserver]
   );
 
   useEffect(() => {
@@ -194,7 +226,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     const selectedTipoSet = new Set(filterTipoContratacao);
 
     if (isObserver) {
-      filtered = filtered.filter((lead) => lead.origem !== 'Ully');
+      filtered = filtered.filter((lead) => isOriginVisibleToObserver(lead.origem));
     }
 
     if (searchTerm) {
@@ -231,6 +263,7 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     filterOrigem,
     filterTipoContratacao,
     isObserver,
+    isOriginVisibleToObserver,
     showArchived,
   ]);
 

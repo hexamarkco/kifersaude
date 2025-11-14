@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { X, Search } from 'lucide-react';
 import { formatDateTimeForInput, convertLocalToUTC } from '../lib/dateUtils';
 import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
+import { useAuth } from '../contexts/AuthContext';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -13,6 +14,7 @@ type LeadFormProps = {
 
 export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
+  const { isObserver } = useAuth();
   const [formData, setFormData] = useState({
     nome_completo: lead?.nome_completo || '',
     telefone: lead?.telefone || '',
@@ -34,7 +36,18 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   const [loadingCep, setLoadingCep] = useState(false);
   const activeLeadStatuses = leadStatuses.filter(status => status.ativo);
   const defaultStatus = activeLeadStatuses.find(status => status.padrao) || activeLeadStatuses[0];
-  const activeOrigins = leadOrigins.filter(origin => origin.ativo);
+  const restrictedOriginNames = useMemo(
+    () => leadOrigins.filter(origin => origin.visivel_para_observadores === false).map(origin => origin.nome),
+    [leadOrigins],
+  );
+  const activeOrigins = useMemo(
+    () =>
+      leadOrigins.filter(
+        origin =>
+          origin.ativo && (!isObserver || !restrictedOriginNames.includes(origin.nome)),
+      ),
+    [leadOrigins, isObserver, restrictedOriginNames],
+  );
   const tipoContratacaoOptions = (options.lead_tipo_contratacao || []).filter(option => option.ativo);
   const responsavelOptions = (options.lead_responsavel || []).filter(option => option.ativo);
 

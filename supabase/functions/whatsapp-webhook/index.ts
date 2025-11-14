@@ -50,6 +50,45 @@ type SendMessageBody = {
   message?: string;
 };
 
+type SendDocumentBody = {
+  phone?: string;
+  document?: string;
+  fileName?: string;
+  caption?: string;
+  extension?: string;
+};
+
+type SendImageBody = {
+  phone?: string;
+  image?: string;
+  caption?: string;
+  viewOnce?: boolean;
+};
+
+type SendVideoBody = {
+  phone?: string;
+  video?: string;
+  caption?: string;
+  viewOnce?: boolean;
+  async?: boolean;
+};
+
+type SendLocationBody = {
+  phone?: string;
+  title?: string;
+  address?: string;
+  latitude?: string;
+  longitude?: string;
+};
+
+type SendContactBody = {
+  phone?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactBusinessDescription?: string;
+  delayMessage?: number;
+};
+
 type PendingReceivedEntry = {
   payload: ZapiWebhookPayload;
   receivedAt: number;
@@ -233,7 +272,90 @@ const resolveMessageText = (payload: ZapiWebhookPayload): string => {
     return `Documento recebido${descriptor ? `: ${descriptor}` : ''}`;
   }
 
+  const locationPayload = rawPayload?.location;
+  if (locationPayload && typeof locationPayload === 'object') {
+    const { title } = locationPayload as { title?: unknown };
+    const titleText = toNonEmptyString(title);
+    return `Localização recebida${titleText ? `: ${titleText}` : ''}`;
+  }
+
+  const contactPayload = rawPayload?.contact;
+  if (contactPayload && typeof contactPayload === 'object') {
+    const { name } = contactPayload as { name?: unknown };
+    const nameText = toNonEmptyString(name);
+    return `Contato recebido${nameText ? `: ${nameText}` : ''}`;
+  }
+
+  const contactsPayload = rawPayload?.contacts;
+  if (Array.isArray(contactsPayload) && contactsPayload.length > 0) {
+    const firstContact = contactsPayload[0] as { name?: unknown };
+    const nameText = toNonEmptyString(firstContact?.name);
+    return `Contato recebido${nameText ? `: ${nameText}` : ''}`;
+  }
+
   return UNSUPPORTED_MESSAGE_PLACEHOLDER;
+};
+
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/zip': 'zip',
+  'application/x-rar-compressed': 'rar',
+  'application/json': 'json',
+  'text/plain': 'txt',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+};
+
+const extractExtensionFromFileName = (fileName: string | null): string | null => {
+  if (!fileName) {
+    return null;
+  }
+
+  const trimmed = fileName.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/\.([A-Za-z0-9]+)$/);
+  return match ? match[1].toLowerCase() : null;
+};
+
+const extractExtensionFromDataUrl = (value: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/^data:([^;,]+)[;,]/i);
+  if (!match) {
+    return null;
+  }
+
+  const mime = match[1]?.toLowerCase();
+  return mime ? MIME_EXTENSION_MAP[mime] ?? null : null;
+};
+
+const sanitizeExtension = (extension: string | null): string | null => {
+  if (!extension) {
+    return null;
+  }
+
+  const trimmed = extension.trim().toLowerCase().replace(/^[.]+/, '');
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.replace(/[^a-z0-9]/g, '');
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -249,6 +371,122 @@ const respondJson = (status: number, body: Record<string, unknown>) =>
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+
+const getZapiCredentials = () => {
+  const instanceId = Deno.env.get('ZAPI_INSTANCE_ID');
+  const token = Deno.env.get('ZAPI_TOKEN');
+  const clientToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
+
+  if (!instanceId || !token || !clientToken) {
+    return null;
+  }
+
+  return { instanceId, token, clientToken };
+};
+
+class ZapiRequestError extends Error {
+  status: number;
+
+  details: Record<string, unknown> | null;
+
+  constructor(status: number, message: string, details: Record<string, unknown> | null = null) {
+    super(message);
+    this.name = 'ZapiRequestError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
+const buildCombinedRawPayload = (
+  responseBody: unknown,
+  override: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null => {
+  const normalizedResponse =
+    responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)
+      ? (responseBody as Record<string, unknown>)
+      : null;
+
+  if (!override) {
+    return normalizedResponse;
+  }
+
+  return {
+    ...(normalizedResponse ?? {}),
+    ...override,
+  };
+};
+
+const sendZapiAndPersist = async (input: {
+  phone: string;
+  endpoint: string;
+  body: Record<string, unknown>;
+  messagePreview: string | null;
+  rawPayloadOverride?: Record<string, unknown> | null;
+}): Promise<{ chat: WhatsappChat; message: WhatsappMessage }> => {
+  const credentials = getZapiCredentials();
+
+  if (!credentials) {
+    throw new Error('Credenciais da Z-API não configuradas');
+  }
+
+  const { instanceId, token, clientToken } = credentials;
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}${input.endpoint}`;
+
+  let responseBody: Record<string, unknown> | null = null;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Client-Token': clientToken },
+    body: JSON.stringify(input.body),
+  });
+
+  try {
+    responseBody = (await response.json()) as Record<string, unknown>;
+  } catch (_error) {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    throw new ZapiRequestError(response.status, 'Falha ao enviar mensagem pela Z-API', responseBody);
+  }
+
+  const now = new Date();
+  const zapiStatus =
+    typeof responseBody?.status === 'string' ? (responseBody.status as string) : 'SENT';
+  const messageId =
+    typeof responseBody?.messageId === 'string' ? (responseBody.messageId as string) : null;
+  const responsePhone =
+    typeof responseBody?.phone === 'string' && responseBody.phone
+      ? (responseBody.phone as string)
+      : input.phone;
+  const chatName =
+    typeof responseBody?.chatName === 'string' ? (responseBody.chatName as string) : undefined;
+  const senderPhoto =
+    typeof responseBody?.senderPhoto === 'string' ? (responseBody.senderPhoto as string) : undefined;
+
+  const chat = await upsertChatRecord({
+    phone: responsePhone,
+    chatName,
+    senderPhoto,
+    isGroup: responsePhone.endsWith('-group'),
+    lastMessageAt: now,
+    lastMessagePreview: input.messagePreview ?? null,
+  });
+
+  const mergedRawPayload = buildCombinedRawPayload(responseBody, input.rawPayloadOverride);
+
+  const message = await insertWhatsappMessage({
+    chatId: chat.id,
+    messageId,
+    fromMe: true,
+    status: zapiStatus,
+    text: input.messagePreview,
+    moment: now,
+    rawPayload: mergedRawPayload,
+  });
+
+  return { chat, message };
+};
 
 const normalizePhoneIdentifier = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -658,70 +896,344 @@ const handleSendMessage = async (req: Request) => {
   if (!phone || !message) {
     return respondJson(400, { success: false, error: 'Os campos phone e message são obrigatórios' });
   }
-
-  const instanceId = Deno.env.get('ZAPI_INSTANCE_ID');
-  const token = Deno.env.get('ZAPI_TOKEN');
-  const clientToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
-
-  if (!instanceId || !token || !clientToken) {
-    return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
-  }
-
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
-
-  let responseBody: Record<string, unknown> | null = null;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Client-Token': clientToken },
-      body: JSON.stringify({ phone, message }),
-    });
-
-    try {
-      responseBody = await response.json();
-    } catch (_error) {
-      responseBody = null;
-    }
-
-    if (!response.ok) {
-      return respondJson(response.status, {
-        success: false,
-        error: 'Falha ao enviar mensagem pela Z-API',
-        details: responseBody,
-      });
-    }
-
-    const now = new Date();
-    const zapiStatus = typeof responseBody?.status === 'string' ? (responseBody.status as string) : 'SENT';
-    const messageId = typeof responseBody?.messageId === 'string' ? (responseBody.messageId as string) : null;
-    const chatName = typeof responseBody?.chatName === 'string' ? (responseBody.chatName as string) : undefined;
-    const senderPhoto =
-      typeof responseBody?.senderPhoto === 'string' ? (responseBody.senderPhoto as string) : undefined;
-
-    const chat = await upsertChatRecord({
+    const { chat, message: insertedMessage } = await sendZapiAndPersist({
       phone,
-      chatName,
-      senderPhoto,
-      isGroup: phone.endsWith('-group'),
-      lastMessageAt: now,
-      lastMessagePreview: message,
-    });
-
-    const insertedMessage = await insertWhatsappMessage({
-      chatId: chat.id,
-      messageId,
-      fromMe: true,
-      status: zapiStatus,
-      text: message,
-      moment: now,
-      rawPayload: responseBody,
+      endpoint: '/send-text',
+      body: { phone, message },
+      messagePreview: message,
     });
 
     return respondJson(200, { success: true, message: insertedMessage, chat });
   } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
     console.error('Erro ao enviar mensagem pela Z-API:', error);
     return respondJson(500, { success: false, error: 'Erro interno ao enviar mensagem' });
+  }
+};
+
+const handleSendDocument = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendDocumentBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const document = typeof body.document === 'string' ? body.document.trim() : '';
+
+  if (!phone || !document) {
+    return respondJson(400, { success: false, error: 'Os campos phone e document são obrigatórios' });
+  }
+
+  const fileName = toNonEmptyString(body.fileName);
+  const caption = toNonEmptyString(body.caption);
+  const rawExtension =
+    toNonEmptyString(body.extension) ??
+    extractExtensionFromFileName(fileName ?? null) ??
+    extractExtensionFromDataUrl(document);
+  const extension = sanitizeExtension(rawExtension);
+
+  if (!extension) {
+    return respondJson(400, {
+      success: false,
+      error: 'Não foi possível determinar a extensão do arquivo. Informe o campo extension.',
+    });
+  }
+
+  const requestBody: Record<string, unknown> = { phone, document };
+
+  if (fileName) {
+    requestBody.fileName = fileName;
+  }
+
+  if (caption) {
+    requestBody.caption = caption;
+  }
+
+  try {
+    const previewText = caption ?? (fileName ? `📄 ${fileName}` : '📄 Documento enviado');
+    const rawPayloadOverride: Record<string, unknown> = {
+      document: {
+        documentUrl: document,
+        fileName: fileName ?? null,
+        title: fileName ?? null,
+        caption: caption ?? null,
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: `/send-document/${extension}`,
+      body: requestBody,
+      messagePreview: previewText,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar documento pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar documento' });
+  }
+};
+
+const handleSendImage = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendImageBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const image = typeof body.image === 'string' ? body.image.trim() : '';
+
+  if (!phone || !image) {
+    return respondJson(400, { success: false, error: 'Os campos phone e image são obrigatórios' });
+  }
+
+  const caption = toNonEmptyString(body.caption);
+  const requestBody: Record<string, unknown> = { phone, image };
+
+  if (caption) {
+    requestBody.caption = caption;
+  }
+
+  if (typeof body.viewOnce === 'boolean') {
+    requestBody.viewOnce = body.viewOnce;
+  }
+
+  try {
+    const previewText = caption ?? '🖼️ Imagem enviada';
+    const rawPayloadOverride: Record<string, unknown> = {
+      image: {
+        imageUrl: image,
+        caption: caption ?? null,
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-image',
+      body: requestBody,
+      messagePreview: previewText,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar imagem pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar imagem' });
+  }
+};
+
+const handleSendVideo = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendVideoBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const video = typeof body.video === 'string' ? body.video.trim() : '';
+
+  if (!phone || !video) {
+    return respondJson(400, { success: false, error: 'Os campos phone e video são obrigatórios' });
+  }
+
+  const caption = toNonEmptyString(body.caption);
+  const requestBody: Record<string, unknown> = { phone, video };
+
+  if (caption) {
+    requestBody.caption = caption;
+  }
+
+  if (typeof body.viewOnce === 'boolean') {
+    requestBody.viewOnce = body.viewOnce;
+  }
+
+  if (typeof body.async === 'boolean') {
+    requestBody.async = body.async;
+  }
+
+  try {
+    const previewText = caption ?? '🎬 Vídeo enviado';
+    const rawPayloadOverride: Record<string, unknown> = {
+      video: {
+        videoUrl: video,
+        caption: caption ?? null,
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-video',
+      body: requestBody,
+      messagePreview: previewText,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar vídeo pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar vídeo' });
+  }
+};
+
+const handleSendLocation = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendLocationBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const title = toNonEmptyString(body.title);
+  const address = toNonEmptyString(body.address);
+  const latitude = toNonEmptyString(body.latitude);
+  const longitude = toNonEmptyString(body.longitude);
+
+  if (!phone || !title || !address || !latitude || !longitude) {
+    return respondJson(400, {
+      success: false,
+      error:
+        'Os campos phone, title, address, latitude e longitude são obrigatórios para enviar localização.',
+    });
+  }
+
+  const requestBody: Record<string, unknown> = {
+    phone,
+    title,
+    address,
+    latitude,
+    longitude,
+  };
+
+  try {
+    const previewText = `📍 ${title}`;
+    const rawPayloadOverride: Record<string, unknown> = {
+      location: {
+        title,
+        address,
+        latitude,
+        longitude,
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-location',
+      body: requestBody,
+      messagePreview: previewText,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar localização pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar localização' });
+  }
+};
+
+const handleSendContact = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendContactBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const contactName = toNonEmptyString(body.contactName);
+  const contactPhone = toNonEmptyString(body.contactPhone);
+  const businessDescription = toNonEmptyString(body.contactBusinessDescription);
+
+  if (!phone || !contactName || !contactPhone) {
+    return respondJson(400, {
+      success: false,
+      error: 'Os campos phone, contactName e contactPhone são obrigatórios para enviar contato.',
+    });
+  }
+
+  const requestBody: Record<string, unknown> = {
+    phone,
+    contactName,
+    contactPhone,
+  };
+
+  if (businessDescription) {
+    requestBody.contactBusinessDescription = businessDescription;
+  }
+
+  if (typeof body.delayMessage === 'number' && Number.isFinite(body.delayMessage)) {
+    const normalizedDelay = Math.max(1, Math.min(15, Math.floor(body.delayMessage)));
+    requestBody.delayMessage = normalizedDelay;
+  }
+
+  try {
+    const previewText = `👤 ${contactName}`;
+    const rawPayloadOverride: Record<string, unknown> = {
+      contacts: [
+        {
+          name: contactName,
+          phones: [contactPhone],
+          businessDescription: businessDescription ?? null,
+        },
+      ],
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-contact',
+      body: requestBody,
+      messagePreview: previewText,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar contato pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar contato' });
   }
 };
 
@@ -831,6 +1343,16 @@ serve(async (req) => {
       return handleOnMessageSend(req);
     case '/send-message':
       return handleSendMessage(req);
+    case '/send-document':
+      return handleSendDocument(req);
+    case '/send-image':
+      return handleSendImage(req);
+    case '/send-video':
+      return handleSendVideo(req);
+    case '/send-location':
+      return handleSendLocation(req);
+    case '/send-contact':
+      return handleSendContact(req);
     case '/health':
       return handleHealthcheck(req);
     case '/':

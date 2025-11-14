@@ -53,6 +53,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
+  const [hiddenLeadIdsForObserver, setHiddenLeadIdsForObserver] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -157,12 +158,22 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         supabase.from('dependents').select('*'),
       ]);
 
-      let filteredLeads = leadsRes.data || [];
+      const allLeads = leadsRes.data || [];
+
       if (isObserver) {
-        filteredLeads = filteredLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
+        const hiddenLeadIds = new Set(
+          allLeads
+            .filter((lead) => !isOriginVisibleToObserver(lead.origem))
+            .map((lead) => lead.id),
+        );
+
+        setHiddenLeadIdsForObserver(hiddenLeadIds);
+        setLeads(allLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
+      } else {
+        setHiddenLeadIdsForObserver(new Set());
+        setLeads(allLeads);
       }
 
-      setLeads(filteredLeads);
       setContracts(contractsRes.data || []);
       setHolders(holdersRes.data || []);
       setDependents(dependentsRes.data || []);
@@ -230,6 +241,38 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
             return sortByCreatedAtDesc(updatedLeads);
           });
+
+          setHiddenLeadIdsForObserver((currentHidden) => {
+            if (!isObserver) {
+              return new Set();
+            }
+
+            const updatedHidden = new Set(currentHidden);
+
+            switch (eventType) {
+              case 'INSERT':
+              case 'UPDATE':
+                if (!newLead) {
+                  return updatedHidden;
+                }
+
+                if (isOriginVisibleToObserver(newLead.origem)) {
+                  updatedHidden.delete(newLead.id);
+                } else {
+                  updatedHidden.add(newLead.id);
+                }
+                break;
+              case 'DELETE':
+                if (oldLead) {
+                  updatedHidden.delete(oldLead.id);
+                }
+                break;
+              default:
+                return updatedHidden;
+            }
+
+            return updatedHidden;
+          });
         }
       )
       .subscribe();
@@ -258,6 +301,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             dependents?: Dependent[];
           }) | null;
           const contractId = newContract?.id || oldContract?.id;
+          const newContractVisible = isContractVisibleToObserver(newContract);
 
           setContracts((currentContracts) => {
             let updatedContracts = currentContracts;
@@ -265,6 +309,9 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             switch (eventType) {
               case 'INSERT':
                 if (!newContract) return currentContracts;
+                if (!newContractVisible) {
+                  return currentContracts.filter((contract) => contract.id !== newContract.id);
+                }
                 updatedContracts = [
                   newContract,
                   ...currentContracts.filter((contract) => contract.id !== newContract.id),
@@ -272,10 +319,15 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                 break;
               case 'UPDATE':
                 if (!newContract) return currentContracts;
-                updatedContracts = [
-                  ...currentContracts.filter((contract) => contract.id !== newContract.id),
-                  newContract,
-                ];
+                updatedContracts = currentContracts.filter(
+                  (contract) => contract.id !== newContract.id,
+                );
+
+                if (!newContractVisible) {
+                  return sortByCreatedAtDesc(updatedContracts);
+                }
+
+                updatedContracts = [...updatedContracts, newContract];
                 break;
               case 'DELETE':
                 if (!oldContract) return currentContracts;
@@ -295,6 +347,10 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
             const hasHolderPayload =
               !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'holders');
+
+            if (isObserver && newContract && !newContractVisible) {
+              return currentHolders.filter((holder) => holder.contract_id !== contractId);
+            }
 
             switch (eventType) {
               case 'DELETE':
@@ -326,6 +382,10 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
             const hasDependentPayload =
               !!newContract && Object.prototype.hasOwnProperty.call(newContract, 'dependents');
+
+            if (isObserver && newContract && !newContractVisible) {
+              return currentDependents.filter((dependent) => dependent.contract_id !== contractId);
+            }
 
             switch (eventType) {
               case 'DELETE':
@@ -361,7 +421,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(contractsChannel);
     };
-  }, [configLoading, isObserver, isOriginVisibleToObserver, loadData]);
+  }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
 
   const getStartOfMonth = () => {
     const now = new Date();

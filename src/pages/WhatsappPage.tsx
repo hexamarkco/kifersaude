@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Image as ImageIcon, MapPin, Paperclip, Send, UserPlus, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, MapPin, Mic, Paperclip, Send, UserPlus, X } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -937,6 +937,19 @@ export default function WhatsappPage() {
     });
   };
 
+  const handleStartAudioRecording = useCallback(() => {
+    if (sendingMessage) {
+      return;
+    }
+
+    if (!selectedChat) {
+      setErrorMessage('Selecione uma conversa antes de gravar áudios.');
+      return;
+    }
+
+    console.info('Iniciar gravação de áudio para', selectedChat.phone);
+  }, [selectedChat, sendingMessage]);
+
   type MessageAttachmentInfo = {
     imageUrl: string | null;
     imageCaption: string | null;
@@ -1212,7 +1225,9 @@ export default function WhatsappPage() {
   };
 
   const trimmedMessageInput = messageInput.trim();
+  const shouldShowAudioAction = !pendingAttachment && trimmedMessageInput.length === 0;
   const isSendDisabled = sendingMessage || (!pendingAttachment && trimmedMessageInput.length === 0);
+  const isActionButtonDisabled = shouldShowAudioAction ? sendingMessage : isSendDisabled;
   const messagePlaceholder = pendingAttachment
     ? 'Adicione uma legenda (opcional)'
     : 'Digite sua mensagem';
@@ -1509,12 +1524,13 @@ export default function WhatsappPage() {
                     disabled={sendingMessage}
                   />
                   <button
-                    type="submit"
+                    type={shouldShowAudioAction ? 'button' : 'submit'}
                     className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSendDisabled}
-                    aria-label="Enviar mensagem"
+                    disabled={isActionButtonDisabled}
+                    aria-label={shouldShowAudioAction ? 'Gravar áudio' : 'Enviar mensagem'}
+                    onClick={shouldShowAudioAction ? handleStartAudioRecording : undefined}
                   >
-                    <Send className="h-4 w-4" />
+                    {shouldShowAudioAction ? <Mic className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                   </button>
                 </div>
 

@@ -6,6 +6,7 @@ import {
   Mic,
   Paperclip,
   Send,
+  User,
   UserPlus,
   Video as VideoIcon,
   X,
@@ -40,6 +41,27 @@ const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
 type ChatPreviewInfo = {
   icon: LucideIcon | null;
   text: string;
+};
+
+const getAvatarColorStyles = (
+  seed: string,
+): {
+  background: string;
+  icon: string;
+} => {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = seed.charCodeAt(index) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  const saturation = 70;
+  const lightnessBase = 60;
+
+  return {
+    background: `hsl(${hue} ${saturation}% ${lightnessBase + 20}%)`,
+    icon: `hsl(${hue} ${saturation}% ${Math.max(0, lightnessBase - 25)}%)`,
+  };
 };
 
 const removeDiacritics = (value: string): string =>
@@ -1426,6 +1448,8 @@ export default function WhatsappPage() {
               const isActive = chat.id === selectedChatId;
               const previewInfo = getChatPreviewInfo(chat.last_message_preview);
               const PreviewIcon = previewInfo.icon;
+              const avatarSeed = chat.chat_name || chat.phone || chat.id;
+              const avatarColors = getAvatarColorStyles(avatarSeed);
               return (
                 <button
                   key={chat.id}
@@ -1449,8 +1473,34 @@ export default function WhatsappPage() {
                         aria-hidden="true"
                         className="h-4 w-4 flex-shrink-0 text-slate-400"
                       />
-                    ) : null}
-                    <span className="block min-w-0 truncate">{previewInfo.text}</span>
+                    ) : (
+                      <div
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: avatarColors.background }}
+                        aria-hidden="true"
+                      >
+                        <User className="h-5 w-5" style={{ color: avatarColors.icon }} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate font-medium text-slate-800">
+                          {chat.chat_name || chat.phone}
+                        </span>
+                        <span className="whitespace-nowrap text-xs text-slate-500">
+                          {formatDateTime(chat.last_message_at)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
+                        {PreviewIcon ? (
+                          <PreviewIcon
+                            aria-hidden="true"
+                            className="h-4 w-4 flex-shrink-0 text-slate-400"
+                          />
+                        ) : null}
+                        <span className="block min-w-0 truncate">{previewInfo.text}</span>
+                      </div>
+                    </div>
                   </div>
                 </button>
               );

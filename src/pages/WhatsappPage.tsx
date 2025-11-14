@@ -552,6 +552,8 @@ export default function WhatsappPage() {
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousChatIdRef = useRef<string | null>(null);
   const selectedChatIdRef = useRef<string | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
@@ -913,6 +915,35 @@ export default function WhatsappPage() {
   useEffect(() => {
     loadChats();
   }, [loadChats]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    const previousChatId = previousChatIdRef.current;
+    const chatChanged = selectedChatId !== previousChatId;
+
+    previousChatIdRef.current = selectedChatId;
+
+    if (!container) {
+      return;
+    }
+
+    const distanceToBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceToBottom <= 120;
+
+    if (!chatChanged && !isNearBottom) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const target = messagesContainerRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.scrollTop = target.scrollHeight;
+    });
+  }, [messages, selectedChatId]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -2176,7 +2207,10 @@ export default function WhatsappPage() {
               </div>
             </header>
 
-            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4"
+            >
               {messagesLoading && messages.length === 0 ? (
                 <p className="text-sm text-slate-500">Carregando mensagens...</p>
               ) : messages.length === 0 ? (

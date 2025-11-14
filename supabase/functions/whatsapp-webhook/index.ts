@@ -633,12 +633,14 @@ const sendZapiAndPersist = async (input: {
     typeof responseBody?.chatName === 'string' ? (responseBody.chatName as string) : undefined;
   const senderPhoto =
     typeof responseBody?.senderPhoto === 'string' ? (responseBody.senderPhoto as string) : undefined;
+  const isGroupChat = responsePhone.endsWith('-group');
+  const resolvedSenderPhoto = isGroupChat ? undefined : senderPhoto;
 
   const chat = await upsertChatRecord({
     phone: responsePhone,
     chatName,
-    senderPhoto,
-    isGroup: responsePhone.endsWith('-group'),
+    senderPhoto: resolvedSenderPhoto,
+    isGroup: isGroupChat,
     lastMessageAt: now,
     lastMessagePreview: input.messagePreview ?? null,
   });
@@ -909,12 +911,13 @@ const persistReceivedMessage = async (
   const isGroup = payload.isGroup === true || phone.endsWith('-group');
   const chatName = payload.chatName ?? payload.senderName ?? phone;
   const senderPhoto = payload.senderPhoto ?? null;
+  const resolvedSenderPhoto = isGroup ? undefined : senderPhoto;
 
   const chat = await upsertChatRecord({
     phone,
     chatName,
     isGroup,
-    senderPhoto,
+    senderPhoto: resolvedSenderPhoto,
     lastMessageAt: momentDate,
     lastMessagePreview: messageText,
   });

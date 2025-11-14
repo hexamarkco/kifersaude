@@ -804,7 +804,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           gradient="from-teal-500 to-cyan-600"
           iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
           subtitle="Vigentes"
-          onClick={() => onNavigateToTab?.('contracts')}
+          onClick={!isObserver ? () => onNavigateToTab?.('contracts') : undefined}
         />
         <AnimatedStatCard
           label="Comissão Prevista"
@@ -814,7 +814,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
           prefix="R$"
           subtitle="Mensal"
-          onClick={() => onNavigateToTab?.('financeiro-comissoes')}
+          onClick={!isObserver ? () => onNavigateToTab?.('financeiro-comissoes') : undefined}
         />
       </div>
 

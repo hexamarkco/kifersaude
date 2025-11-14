@@ -417,6 +417,11 @@ export default function WhatsappPage() {
     [chats, selectedChatId],
   );
 
+  const selectedChatDisplayName = useMemo(
+    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
+    [selectedChat],
+  );
+
   const filteredChats = useMemo(() => {
     if (!chatSearchTerm.trim()) {
       return chats;
@@ -424,12 +429,12 @@ export default function WhatsappPage() {
 
     const normalizedTerm = chatSearchTerm.trim().toLowerCase();
     return chats.filter(chat => {
-      const name = chat.chat_name?.toLowerCase() ?? '';
+      const displayName = getChatDisplayName(chat).toLowerCase();
       const phone = chat.phone?.toLowerCase() ?? '';
       const preview = chat.last_message_preview?.toLowerCase() ?? '';
 
       return (
-        name.includes(normalizedTerm) ||
+        displayName.includes(normalizedTerm) ||
         phone.includes(normalizedTerm) ||
         preview.includes(normalizedTerm)
       );
@@ -1454,12 +1459,19 @@ export default function WhatsappPage() {
                     isActive ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    {chat.sender_photo ? (
-                      <img
-                        src={chat.sender_photo}
-                        alt="Foto do contato"
-                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-800 truncate">
+                      {chatDisplayName}
+                    </span>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      {formatDateTime(chat.last_message_at)}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
+                    {PreviewIcon ? (
+                      <PreviewIcon
+                        aria-hidden="true"
+                        className="h-4 w-4 flex-shrink-0 text-slate-400"
                       />
                     ) : (
                       <div
@@ -1513,17 +1525,17 @@ export default function WhatsappPage() {
                 {selectedChat.sender_photo ? (
                   <img
                     src={selectedChat.sender_photo}
-                    alt={selectedChat.chat_name || selectedChat.phone}
+                    alt={selectedChatDisplayName || selectedChat.phone}
                     className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
                   />
                 ) : (
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
-                    {(selectedChat.chat_name || selectedChat.phone).charAt(0).toUpperCase()}
+                    {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-800">
-                    {selectedChat.chat_name || selectedChat.phone}
+                    {selectedChatDisplayName}
                   </p>
                   <p className="truncate text-sm text-slate-500">
                     {selectedChat.is_group ? 'Grupo' : 'Contato'} • {selectedChat.phone}

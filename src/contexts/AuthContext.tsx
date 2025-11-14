@@ -135,19 +135,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       let emailToUse: string | null = null;
 
-      const { data: emailFromUsername, error: emailLookupError } = await supabase.rpc(
-        'get_email_by_username',
-        { p_username: normalizedUsername }
-      );
+      const resolveEmailFromUsername = async () => {
+        const { data: emailFromRpc, error: emailLookupError } = await supabase.rpc(
+          'get_email_by_username',
+          { p_username: normalizedUsername }
+        );
 
-      if (emailLookupError) {
-        return { error: emailLookupError };
-      }
+        if (emailLookupError) {
+          return { email: null, error: emailLookupError } as const;
+        }
 
-      if (emailFromUsername) {
-        emailToUse = emailFromUsername;
-      } else if (normalizedUsername.includes('@')) {
+        if (emailFromRpc) {
+          return { email: emailFromRpc as string, error: null } as const;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('username', normalizedUsername)
+          .maybeSingle();
+
+        if (profileError) {
+          return { email: null, error: profileError } as const;
+        }
+
+        return { email: profile?.email ?? null, error: null } as const;
+      };
+
+      if (normalizedUsername.includes('@')) {
         emailToUse = normalizedUsername;
+      } else {
+        const { email, error } = await resolveEmailFromUsername();
+
+        if (error) {
+          return { error };
+        }
+
+        emailToUse = email;
       }
 
       if (!emailToUse) {

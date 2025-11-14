@@ -421,7 +421,7 @@ export default function WhatsappPage() {
                 <button
                   type="button"
                   onClick={handleBackToChats}
-                  className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-600"
+                  className="md:hidden inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
                   aria-label="Voltar para lista de conversas"
                 >
                   ←
@@ -430,18 +430,18 @@ export default function WhatsappPage() {
                   <img
                     src={selectedChat.sender_photo}
                     alt={selectedChat.chat_name || selectedChat.phone}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-semibold">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
                     {(selectedChat.chat_name || selectedChat.phone).charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div>
-                  <p className="font-semibold text-slate-800">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-slate-800">
                     {selectedChat.chat_name || selectedChat.phone}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="truncate text-sm text-slate-500">
                     {selectedChat.is_group ? 'Grupo' : 'Contato'} • {selectedChat.phone}
                   </p>
                 </div>

@@ -41,6 +41,45 @@ const formatDateTime = (value: string | null) => {
   });
 };
 
+const formatChatListTimestamp = (value: string | null) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const oneDayInMs = 24 * 60 * 60 * 1000;
+  const diffInDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / oneDayInMs);
+
+  if (diffInDays === 0) {
+    return date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  if (diffInDays === 1) {
+    return 'Ontem';
+  }
+
+  if (diffInDays === 2) {
+    return 'Anteontem';
+  }
+
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
 
 type ChatPreviewInfo = {
@@ -2024,7 +2063,7 @@ export default function WhatsappPage() {
                           <span className="truncate">{displayName}</span>
                         </span>
                         <span className="whitespace-nowrap text-xs text-slate-500">
-                          {formatDateTime(chat.last_message_at)}
+                          {formatChatListTimestamp(chat.last_message_at)}
                         </span>
                       </div>
                       <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">

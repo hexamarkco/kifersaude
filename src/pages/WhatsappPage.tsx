@@ -15,7 +15,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
+import type { WhatsappChat, WhatsappChatMetadata, WhatsappMessage } from '../types/whatsapp';
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -37,6 +37,8 @@ const formatDateTime = (value: string | null) => {
 };
 
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
+
+const CHAT_METADATA_REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos
 
 type ChatPreviewInfo = {
   icon: LucideIcon | null;
@@ -157,6 +159,13 @@ type SendMessageResponse =
       success: false;
       error?: string;
     };
+
+type ChatMetadataResponse = {
+  success: boolean;
+  metadata?: WhatsappChatMetadata | null;
+  chat?: WhatsappChat | null;
+  error?: string;
+};
 
 type WhatsappMessageRawPayload = {
   image?: {
@@ -411,6 +420,9 @@ export default function WhatsappPage() {
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const metadataFetchTimestampsRef = useRef<Map<string, number>>(new Map());
+  const metadataCacheRef = useRef<Map<string, WhatsappChatMetadata | null>>(new Map());
+  const metadataFetchControllerRef = useRef<AbortController | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
@@ -602,6 +614,104 @@ export default function WhatsappPage() {
 
     loadMessages();
   }, [selectedChatId]);
+
+  useEffect(() => {
+    const chatId = selectedChat?.id;
+    if (!chatId) {
+      return;
+    }
+
+    let active = true;
+
+    const maybeFetchMetadata = async () => {
+      if (!active) {
+        return;
+      }
+
+      const lastFetch = metadataFetchTimestampsRef.current.get(chatId);
+      const now = Date.now();
+
+      if (lastFetch && now - lastFetch < CHAT_METADATA_REFRESH_INTERVAL_MS) {
+        return;
+      }
+
+      metadataFetchControllerRef.current?.abort();
+      const controller = new AbortController();
+      metadataFetchControllerRef.current = controller;
+
+      try {
+        const data = await fetchJson<ChatMetadataResponse>(
+          getWhatsappFunctionUrl(`/whatsapp-webhook/chats/${encodeURIComponent(chatId)}/metadata`),
+          { signal: controller.signal },
+        );
+
+        if (!active) {
+          return;
+        }
+
+        if (!data.success) {
+          throw new Error(data.error || 'Falha ao atualizar metadata do chat');
+        }
+
+        metadataFetchTimestampsRef.current.set(chatId, Date.now());
+        metadataCacheRef.current.set(chatId, data.metadata ?? null);
+
+        if (metadataFetchControllerRef.current === controller) {
+          metadataFetchControllerRef.current = null;
+        }
+
+        if (data.chat) {
+          let chatExists = false;
+          setChats(previousChats => {
+            const index = previousChats.findIndex(chat => chat.id === data.chat!.id);
+            if (index === -1) {
+              return previousChats;
+            }
+
+            chatExists = true;
+            const updated = [...previousChats];
+            updated[index] = { ...previousChats[index], ...data.chat! };
+            return updated;
+          });
+
+          if (!chatExists) {
+            void loadChats();
+          }
+        }
+      } catch (error: any) {
+        if (metadataFetchControllerRef.current === controller) {
+          metadataFetchControllerRef.current = null;
+        }
+
+        if (controller.signal.aborted || !active) {
+          return;
+        }
+
+        metadataFetchTimestampsRef.current.delete(chatId);
+        console.error('Erro ao atualizar metadata do chat:', error);
+      }
+    };
+
+    void maybeFetchMetadata();
+
+    let intervalId: number | null = null;
+    if (typeof window !== 'undefined') {
+      intervalId = window.setInterval(() => {
+        void maybeFetchMetadata();
+      }, CHAT_METADATA_REFRESH_INTERVAL_MS);
+    }
+
+    return () => {
+      active = false;
+      if (metadataFetchControllerRef.current) {
+        metadataFetchControllerRef.current.abort();
+        metadataFetchControllerRef.current = null;
+      }
+      if (typeof window !== 'undefined' && intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [selectedChat?.id, loadChats]);
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);

@@ -160,6 +160,17 @@ const toIsoStringOrNull = (value: Date | string | number | null | undefined): st
   return null;
 };
 
+const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
+
+const toNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const parseMoment = (value: number | string | undefined): Date | null => {
   if (value === undefined || value === null) {
     return null;
@@ -175,17 +186,54 @@ const parseMoment = (value: number | string | undefined): Date | null => {
 };
 
 const resolveMessageText = (payload: ZapiWebhookPayload): string => {
-  const textMessage = payload?.text?.message;
-  if (typeof textMessage === 'string' && textMessage.trim().length > 0) {
+  const textMessage = toNonEmptyString(payload?.text?.message);
+  if (textMessage) {
     return textMessage;
   }
 
-  const hydratedTemplateMessage = payload?.hydratedTemplate?.message;
-  if (typeof hydratedTemplateMessage === 'string' && hydratedTemplateMessage.trim().length > 0) {
+  const hydratedTemplateMessage = toNonEmptyString(payload?.hydratedTemplate?.message);
+  if (hydratedTemplateMessage) {
     return hydratedTemplateMessage;
   }
 
-  return '[tipo de mensagem não suportado ainda]';
+  const rawPayload = (payload ?? null) as Record<string, unknown> | null;
+
+  const imagePayload = rawPayload?.image;
+  if (imagePayload && typeof imagePayload === 'object') {
+    const { caption } = imagePayload as { caption?: unknown };
+    const captionText = toNonEmptyString(caption);
+    return `Imagem recebida${captionText ? ` - ${captionText}` : ''}`;
+  }
+
+  const audioPayload = rawPayload?.audio;
+  if (audioPayload && typeof audioPayload === 'object') {
+    const { seconds } = audioPayload as { seconds?: unknown };
+    const secondsNumber =
+      typeof seconds === 'number' && Number.isFinite(seconds)
+        ? Math.round(seconds)
+        : null;
+    const secondsText = secondsNumber !== null ? ` (${secondsNumber}s)` : '';
+    return `Áudio recebido${secondsText}`;
+  }
+
+  const videoPayload = rawPayload?.video;
+  if (videoPayload && typeof videoPayload === 'object') {
+    const { caption } = videoPayload as { caption?: unknown };
+    const captionText = toNonEmptyString(caption);
+    return `Vídeo recebido${captionText ? ` - ${captionText}` : ''}`;
+  }
+
+  const documentPayload = rawPayload?.document;
+  if (documentPayload && typeof documentPayload === 'object') {
+    const { title, fileName } = documentPayload as {
+      title?: unknown;
+      fileName?: unknown;
+    };
+    const descriptor = toNonEmptyString(title) ?? toNonEmptyString(fileName) ?? null;
+    return `Documento recebido${descriptor ? `: ${descriptor}` : ''}`;
+  }
+
+  return UNSUPPORTED_MESSAGE_PLACEHOLDER;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {

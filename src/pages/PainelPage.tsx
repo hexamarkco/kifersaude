@@ -21,7 +21,7 @@ import { useConfig } from '../contexts/ConfigContext';
 
 export default function PainelPage() {
   const { isObserver } = useAuth();
-  const { leadOrigins } = useConfig();
+  const { leadOrigins, loading: configLoading } = useConfig();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
@@ -80,6 +80,10 @@ export default function PainelPage() {
   }, [loadUnreadReminders]);
 
   useEffect(() => {
+    if (configLoading) {
+      return;
+    }
+
     const unsubscribeLeads = notificationService.subscribeToLeads((lead) => {
       if (isObserver && !isOriginVisibleToObserver(lead.origem)) {
         return;
@@ -93,7 +97,7 @@ export default function PainelPage() {
     return () => {
       unsubscribeLeads();
     };
-  }, [isObserver, isOriginVisibleToObserver]);
+  }, [configLoading, isObserver, isOriginVisibleToObserver]);
 
   const handleConvertLead = (lead: Lead) => {
     setLeadToConvert(lead);
@@ -159,6 +163,14 @@ export default function PainelPage() {
         return <Dashboard />;
     }
   };
+
+  if (configLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <>

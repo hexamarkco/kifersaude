@@ -48,7 +48,7 @@ type Dependent = {
 
 export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const { isObserver } = useAuth();
-  const { leadStatuses, leadOrigins } = useConfig();
+  const { leadStatuses, leadOrigins, loading: configLoading } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -95,6 +95,10 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   };
 
   const loadData = useCallback(async () => {
+    if (configLoading) {
+      return;
+    }
+
     if (isInitialLoadRef.current) {
       setIsInitialLoad(true);
     } else {
@@ -133,9 +137,13 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         setIsInitialLoad(false);
       }
     }
-  }, [isObserver, isOriginVisibleToObserver]);
+  }, [configLoading, isObserver, isOriginVisibleToObserver]);
 
   useEffect(() => {
+    if (configLoading) {
+      return;
+    }
+
     loadData();
 
     const leadsChannel = supabase
@@ -311,7 +319,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(contractsChannel);
     };
-  }, [isObserver, isOriginVisibleToObserver, loadData]);
+  }, [configLoading, isObserver, isOriginVisibleToObserver, loadData]);
 
   const getStartOfMonth = () => {
     const now = new Date();

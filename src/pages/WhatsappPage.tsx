@@ -314,6 +314,17 @@ type LeadSummary = {
   responsavel: string | null;
 };
 
+type UpdateLeadStatusResponse = {
+  success: boolean;
+  lead?: {
+    id: string;
+    status: string | null;
+    ultimo_contato: string | null;
+    responsavel: string | null;
+  };
+  error?: string;
+};
+
 type PendingAttachment = PendingMediaAttachment | PendingDocumentAttachment;
 
 const toNonEmptyString = (value: unknown): string | null => {
@@ -1009,7 +1020,6 @@ export default function WhatsappPage() {
       const previousUltimoContato = selectedChatLead.ultimo_contato ?? null;
       const nowIso = new Date().toISOString();
       const responsavel = selectedChatLead.responsavel ?? 'Sistema';
-      const statusAnteriorRegistro = currentStatus || 'Sem status';
 
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
@@ -1030,35 +1040,45 @@ export default function WhatsappPage() {
       );
 
       try {
-        const { error: updateError } = await supabase
-          .from('leads')
-          .update({
-            status: normalizedNewStatus,
-            ultimo_contato: nowIso,
-          })
-          .eq('id', leadId);
+        const response = await fetchJson<UpdateLeadStatusResponse>(
+          getWhatsappFunctionUrl('/whatsapp-webhook/leads/update-status'),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId,
+              newStatus: normalizedNewStatus,
+              responsavel,
+            }),
+          },
+        );
 
-        if (updateError) {
-          throw updateError;
+        if (!response.success) {
+          throw new Error(response.error ?? 'Falha ao atualizar status do lead.');
         }
 
-        await supabase.from('interactions').insert([
-          {
-            lead_id: leadId,
-            tipo: 'Observação',
-            descricao: `Status alterado de "${statusAnteriorRegistro}" para "${normalizedNewStatus}" pelo chat do WhatsApp`,
-            responsavel,
-          },
-        ]);
+        if (response.lead) {
+          const { status, ultimo_contato: updatedUltimoContato, responsavel: updatedResponsavel } =
+            response.lead;
 
-        await supabase.from('lead_status_history').insert([
-          {
-            lead_id: leadId,
-            status_anterior: statusAnteriorRegistro,
-            status_novo: normalizedNewStatus,
-            responsavel,
-          },
-        ]);
+          setChats(previousChats =>
+            previousChats.map(chat => {
+              if (chat.crm_lead?.id !== leadId) {
+                return chat;
+              }
+
+              return {
+                ...chat,
+                crm_lead: {
+                  ...chat.crm_lead,
+                  status: status ?? normalizedNewStatus,
+                  ultimo_contato: updatedUltimoContato ?? nowIso,
+                  responsavel: updatedResponsavel ?? chat.crm_lead.responsavel ?? responsavel,
+                },
+              };
+            }),
+          );
+        }
       } catch (error) {
         console.error('Erro ao atualizar status do lead via chat:', error);
         setChats(previousChats =>
@@ -2304,97 +2324,107 @@ export default function WhatsappPage() {
                   >
                     ←
                   </button>
-                  <div
-                    className={`flex min-w-0 flex-1 items-center gap-3 ${
-                      selectedChatLead
-                        ? 'cursor-pointer rounded-lg px-2 py-1 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
-                        : ''
-                    }`}
-                    onClick={selectedChatLead ? handleChatHeaderClick : undefined}
-                    onKeyDown={selectedChatLead ? handleChatHeaderKeyDown : undefined}
-                    role={selectedChatLead ? 'button' : undefined}
-                    tabIndex={selectedChatLead ? 0 : undefined}
-                    aria-label={
-                      selectedChatLead
-                        ? 'Ver histórico do lead e informações do CRM'
-                        : undefined
-                    }
-                    title={
-                      selectedChatLead
-                        ? 'Clique para visualizar o histórico do lead'
-                        : undefined
-                    }
-                  >
-                    {selectedChat.sender_photo ? (
-                      <img
-                        src={selectedChat.sender_photo}
-                        alt={selectedChatDisplayName || selectedChat.phone}
-                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
-                        {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-slate-800">
-                        {selectedChatDisplayName}
-                      </p>
-                      <p className="truncate text-sm text-slate-500">
-                        {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
-                      </p>
-                      {(selectedChatIsPinned || selectedChatIsArchived) && (
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-                          {selectedChatIsPinned ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Pin className="h-3.5 w-3.5" aria-hidden="true" /> Fixado
-                            </span>
-                          ) : null}
-                          {selectedChatIsArchived ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
-                            </span>
-                          ) : null}
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div
+                        className={`flex min-w-0 flex-1 items-center gap-3 ${
+                          selectedChatLead
+                            ? 'cursor-pointer rounded-lg px-2 py-1 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
+                            : ''
+                        }`}
+                        onClick={selectedChatLead ? handleChatHeaderClick : undefined}
+                        onKeyDown={selectedChatLead ? handleChatHeaderKeyDown : undefined}
+                        role={selectedChatLead ? 'button' : undefined}
+                        tabIndex={selectedChatLead ? 0 : undefined}
+                        aria-label={
+                          selectedChatLead
+                            ? 'Ver histórico do lead e informações do CRM'
+                            : undefined
+                        }
+                        title={
+                          selectedChatLead
+                            ? 'Clique para visualizar o histórico do lead'
+                            : undefined
+                        }
+                      >
+                        {selectedChat.sender_photo ? (
+                          <img
+                            src={selectedChat.sender_photo}
+                            alt={selectedChatDisplayName || selectedChat.phone}
+                            className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
+                            {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-slate-800">
+                            {selectedChatDisplayName}
+                          </p>
+                          <p className="truncate text-sm text-slate-500">
+                            {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
+                          </p>
+                          {(selectedChatIsPinned || selectedChatIsArchived) && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+                              {selectedChatIsPinned ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <Pin className="h-3.5 w-3.5" aria-hidden="true" /> Fixado
+                                </span>
+                              ) : null}
+                              {selectedChatIsArchived ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
+                                </span>
+                              ) : null}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
+                      {selectedChatLead ? (
+                        <div className="flex items-center gap-2">
+                          {activeLeadStatuses.length > 0 ? (
+                            <StatusDropdown
+                              currentStatus={selectedChatLead.status ?? 'Sem status'}
+                              leadId={selectedChatLead.id}
+                              onStatusChange={handleChatLeadStatusChange}
+                              disabled={updatingLeadStatus}
+                              statusOptions={activeLeadStatuses}
+                            />
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                              Status: {selectedChatLead.status ?? 'Não informado'}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
+
+                    {selectedChatLead ? (
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                          Lead do CRM
+                        </span>
+                        {selectedChatLead.responsavel ? (
+                          <span>Resp.: {selectedChatLead.responsavel}</span>
+                        ) : null}
+                        {selectedChatLead.ultimo_contato ? (
+                          <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
+                        ) : null}
+                        {selectedChatLead.proximo_retorno ? (
+                          <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setShowLeadDetails(true)}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        >
+                          Ver histórico
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-
-                {selectedChatLead ? (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
-                      Lead do CRM
-                    </span>
-                    {activeLeadStatuses.length > 0 ? (
-                      <StatusDropdown
-                        currentStatus={selectedChatLead.status ?? 'Sem status'}
-                        leadId={selectedChatLead.id}
-                        onStatusChange={handleChatLeadStatusChange}
-                        disabled={updatingLeadStatus}
-                        statusOptions={activeLeadStatuses}
-                      />
-                    ) : (
-                      <span>Status: {selectedChatLead.status ?? 'Não informado'}</span>
-                    )}
-                    {selectedChatLead.responsavel ? (
-                      <span>Resp.: {selectedChatLead.responsavel}</span>
-                    ) : null}
-                    {selectedChatLead.ultimo_contato ? (
-                      <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
-                    ) : null}
-                    {selectedChatLead.proximo_retorno ? (
-                      <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setShowLeadDetails(true)}
-                      className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    >
-                      Ver histórico
-                    </button>
-                  </div>
-                ) : null}
               </div>
             </header>
 

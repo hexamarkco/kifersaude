@@ -127,6 +127,19 @@ type UpdateChatFlagsBody = {
   is_pinned?: boolean;
 };
 
+type UpdateLeadStatusBody = {
+  leadId?: string;
+  newStatus?: string;
+  responsavel?: string | null;
+};
+
+type LeadStatusUpdateResult = {
+  id: string;
+  status: string;
+  ultimo_contato: string;
+  responsavel: string;
+};
+
 type ZapiChatMetadata = {
   phone?: string;
   unread?: string | number;
@@ -2063,6 +2076,118 @@ const handleListChats = async (req: Request) => {
   }
 };
 
+const handleUpdateLeadStatus = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  const body = (await ensureJsonBody<UpdateLeadStatusBody>(req)) ?? {};
+  const leadId = toNonEmptyString(body.leadId);
+  const newStatus = toNonEmptyString(body.newStatus);
+
+  if (!leadId) {
+    return respondJson(400, {
+      success: false,
+      error: 'Identificador do lead não informado.',
+    });
+  }
+
+  if (!newStatus) {
+    return respondJson(400, {
+      success: false,
+      error: 'Informe um status válido para o lead.',
+    });
+  }
+
+  try {
+    const { data: leadRecord, error: fetchError } = await supabaseAdmin
+      .from('leads')
+      .select('id, status, responsavel')
+      .eq('id', leadId)
+      .maybeSingle<{ id: string; status: string | null; responsavel: string | null }>();
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    if (!leadRecord) {
+      return respondJson(404, {
+        success: false,
+        error: 'Lead não encontrado.',
+      });
+    }
+
+    const statusAnterior = toNonEmptyString(leadRecord.status) ?? 'Sem status';
+    const responsavelRegistro =
+      toNonEmptyString(body.responsavel) ?? toNonEmptyString(leadRecord.responsavel) ?? 'Sistema';
+    const nowIso = new Date().toISOString();
+
+    const { error: updateLeadError } = await supabaseAdmin
+      .from('leads')
+      .update({
+        status: newStatus,
+        ultimo_contato: nowIso,
+      })
+      .eq('id', leadId);
+
+    if (updateLeadError) {
+      throw updateLeadError;
+    }
+
+    const descricao = `Status alterado de "${statusAnterior}" para "${newStatus}" pelo chat do WhatsApp`;
+
+    const [interactionResult, historyResult] = await Promise.all([
+      supabaseAdmin
+        .from('interactions')
+        .insert([
+          {
+            lead_id: leadId,
+            tipo: 'Observação',
+            descricao,
+            responsavel: responsavelRegistro,
+          },
+        ]),
+      supabaseAdmin
+        .from('lead_status_history')
+        .insert([
+          {
+            lead_id: leadId,
+            status_anterior: statusAnterior,
+            status_novo: newStatus,
+            responsavel: responsavelRegistro,
+          },
+        ]),
+    ]);
+
+    if (interactionResult.error) {
+      throw interactionResult.error;
+    }
+
+    if (historyResult.error) {
+      throw historyResult.error;
+    }
+
+    const responsePayload: LeadStatusUpdateResult = {
+      id: leadId,
+      status: newStatus,
+      ultimo_contato: nowIso,
+      responsavel: responsavelRegistro,
+    };
+
+    return respondJson(200, { success: true, lead: responsePayload });
+  } catch (error) {
+    console.error('Erro ao atualizar status do lead via WhatsApp:', error);
+    return respondJson(500, {
+      success: false,
+      error: 'Erro ao atualizar status do lead.',
+    });
+  }
+};
+
 const handleUpdateChatFlags = async (req: Request, chatId: string) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -2174,6 +2299,10 @@ serve(async (req) => {
 
   if (subPath === '/contacts') {
     return handleListContacts(req);
+  }
+
+  if (subPath === '/leads/update-status') {
+    return handleUpdateLeadStatus(req);
   }
 
   if (chatMessagesMatch) {

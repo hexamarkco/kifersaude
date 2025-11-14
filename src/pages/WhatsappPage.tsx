@@ -1,5 +1,16 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Image as ImageIcon, MapPin, Mic, Paperclip, Send, UserPlus, X } from 'lucide-react';
+import {
+  FileText,
+  Image as ImageIcon,
+  MapPin,
+  Mic,
+  Paperclip,
+  Send,
+  UserPlus,
+  Video as VideoIcon,
+  X,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -24,19 +35,92 @@ const formatDateTime = (value: string | null) => {
   });
 };
 
-const getChatDisplayName = (chat: WhatsappChat): string => {
-  const candidates = [chat.display_name, chat.chat_name, chat.phone];
+const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
 
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string') {
-      const trimmed = candidate.trim();
-      if (trimmed) {
-        return trimmed;
+type ChatPreviewInfo = {
+  icon: LucideIcon | null;
+  text: string;
+};
+
+const removeDiacritics = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const LEADING_PREVIEW_EMOJI_MAP: Array<{ icon: LucideIcon; emojis: string[] }> = [
+  { icon: ImageIcon, emojis: ['🖼️'] },
+  { icon: VideoIcon, emojis: ['🎬'] },
+  { icon: FileText, emojis: ['📄'] },
+  { icon: MapPin, emojis: ['📍'] },
+  { icon: Mic, emojis: ['🎙️', '🎙', '🎤', '🎧'] },
+];
+
+const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = [
+  { icon: ImageIcon, prefixes: ['imagem recebida', 'imagem enviada'] },
+  { icon: VideoIcon, prefixes: ['video recebido', 'video enviado'] },
+  { icon: Mic, prefixes: ['audio recebido', 'audio enviado'] },
+  { icon: FileText, prefixes: ['documento recebido', 'documento enviado'] },
+  { icon: MapPin, prefixes: ['localizacao recebida', 'localizacao enviada'] },
+  { icon: UserPlus, prefixes: ['contato recebido', 'contato enviado'] },
+];
+
+const stripLeadingPreviewEmoji = (
+  value: string,
+): { icon: LucideIcon | null; text: string } => {
+  for (const { icon, emojis } of LEADING_PREVIEW_EMOJI_MAP) {
+    for (const emoji of emojis) {
+      if (value.startsWith(emoji)) {
+        const stripped = value.slice(emoji.length).trimStart();
+        return { icon, text: stripped };
       }
     }
   }
 
-  return chat.phone;
+  return { icon: null, text: value };
+};
+
+const getChatPreviewInfo = (preview: string | null): ChatPreviewInfo => {
+  if (!preview) {
+    return { icon: null, text: CHAT_PREVIEW_FALLBACK_TEXT };
+  }
+
+  const trimmedPreview = preview.trim();
+  if (!trimmedPreview) {
+    return { icon: null, text: CHAT_PREVIEW_FALLBACK_TEXT };
+  }
+
+  const { icon: emojiIcon, text: withoutEmoji } = stripLeadingPreviewEmoji(trimmedPreview);
+  const sanitizedPreview = withoutEmoji.trim();
+
+  if (!sanitizedPreview) {
+    return {
+      icon: emojiIcon,
+      text: CHAT_PREVIEW_FALLBACK_TEXT,
+    };
+  }
+
+  const normalizedPreview = removeDiacritics(sanitizedPreview).toLowerCase();
+
+  for (const { icon, prefixes } of MEDIA_PREVIEW_PATTERNS) {
+    if (prefixes.some(prefix => normalizedPreview.startsWith(prefix))) {
+      return {
+        icon,
+        text: sanitizedPreview,
+      };
+    }
+  }
+
+  if (emojiIcon) {
+    return {
+      icon: emojiIcon,
+      text: sanitizedPreview,
+    };
+  }
+
+  return {
+    icon: null,
+    text: sanitizedPreview,
+  };
 };
 
 type OptimisticMessage = WhatsappMessage & { isOptimistic?: boolean };
@@ -1335,17 +1419,18 @@ export default function WhatsappPage() {
             <p className="p-4 text-sm text-slate-500">Carregando conversas...</p>
           ) : chats.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada.</p>
-        ) : filteredChats.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada para a pesquisa.</p>
-        ) : (
-          filteredChats.map(chat => {
-            const isActive = chat.id === selectedChatId;
-            const chatDisplayName = getChatDisplayName(chat);
-            return (
-              <button
-                key={chat.id}
-                type="button"
-                onClick={() => handleSelectChat(chat.id)}
+          ) : filteredChats.length === 0 ? (
+            <p className="p-4 text-sm text-slate-500">Nenhuma conversa encontrada para a pesquisa.</p>
+          ) : (
+            filteredChats.map(chat => {
+              const isActive = chat.id === selectedChatId;
+              const previewInfo = getChatPreviewInfo(chat.last_message_preview);
+              const PreviewIcon = previewInfo.icon;
+              return (
+                <button
+                  key={chat.id}
+                  type="button"
+                  onClick={() => handleSelectChat(chat.id)}
                   className={`w-full text-left p-4 transition-colors ${
                     isActive ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'hover:bg-slate-50'
                   }`}
@@ -1358,9 +1443,15 @@ export default function WhatsappPage() {
                       {formatDateTime(chat.last_message_at)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500 truncate">
-                    {chat.last_message_preview || 'Sem mensagens recentes'}
-                  </p>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
+                    {PreviewIcon ? (
+                      <PreviewIcon
+                        aria-hidden="true"
+                        className="h-4 w-4 flex-shrink-0 text-slate-400"
+                      />
+                    ) : null}
+                    <span className="block min-w-0 truncate">{previewInfo.text}</span>
+                  </div>
                 </button>
               );
             })

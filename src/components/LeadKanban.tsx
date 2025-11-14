@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { Users, Phone, Mail, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
+import { useAuth } from '../contexts/AuthContext';
 import { getContrastTextColor } from '../lib/colorUtils';
 
 type LeadKanbanProps = {
@@ -11,7 +12,8 @@ type LeadKanbanProps = {
 };
 
 export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKanbanProps) {
-  const { leadStatuses } = useConfig();
+  const { leadStatuses, leadOrigins } = useConfig();
+  const { isObserver } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
@@ -20,6 +22,53 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     () => leadStatuses.filter(status => status.ativo).sort((a, b) => a.ordem - b.ordem),
     [leadStatuses]
   );
+
+  const restrictedOriginNamesForObservers = useMemo(
+    () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
+    [leadOrigins],
+  );
+
+  const isOriginVisibleToObserver = useCallback(
+    (originName: string | null | undefined) => {
+      if (!originName) {
+        return true;
+      }
+
+      return !restrictedOriginNamesForObservers.includes(originName);
+    },
+    [restrictedOriginNamesForObservers],
+  );
+
+  const loadLeads = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (statusColumns.length === 0) {
+        setLeads([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('arquivado', false)
+        .in('status', statusColumns.map(column => column.nome))
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      let fetchedLeads = data || [];
+      if (isObserver) {
+        fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
+      }
+
+      setLeads(fetchedLeads);
+    } catch (error) {
+      console.error('Erro ao carregar leads:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isObserver, isOriginVisibleToObserver, statusColumns]);
 
   useEffect(() => {
     loadLeads();
@@ -43,32 +92,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [statusColumns]);
-
-  const loadLeads = async () => {
-    setLoading(true);
-    try {
-      if (statusColumns.length === 0) {
-        setLeads([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false)
-        .in('status', statusColumns.map(column => column.nome))
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar leads:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadLeads]);
 
   const handleDragStart = (lead: Lead) => {
     setDraggedLead(lead);

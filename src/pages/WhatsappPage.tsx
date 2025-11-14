@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Send } from 'lucide-react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, Image as ImageIcon, MapPin, Paperclip, Send, UserPlus } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -56,6 +56,22 @@ type WhatsappMessageRawPayload = {
     title?: string | null;
     caption?: string | null;
   } | null;
+  location?: {
+    title?: string | null;
+    address?: string | null;
+    latitude?: string | null;
+    longitude?: string | null;
+  } | null;
+  contact?: {
+    name?: string | null;
+    phones?: string[] | null;
+    businessDescription?: string | null;
+  } | null;
+  contacts?: Array<{
+    name?: string | null;
+    phones?: string[] | null;
+    businessDescription?: string | null;
+  }> | null;
   [key: string]: unknown;
 };
 
@@ -103,6 +119,70 @@ const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T>
   return response.json() as Promise<T>;
 };
 
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/zip': 'zip',
+  'application/x-rar-compressed': 'rar',
+  'text/plain': 'txt',
+  'application/json': 'json',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+};
+
+const extractFileExtension = (fileName: string | null | undefined): string | null => {
+  if (!fileName) {
+    return null;
+  }
+
+  const trimmed = fileName.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/\.([a-zA-Z0-9]+)$/);
+  return match ? match[1].toLowerCase() : null;
+};
+
+const extractExtensionFromMime = (mime: string | null | undefined): string | null => {
+  if (!mime) {
+    return null;
+  }
+
+  const normalized = mime.toLowerCase();
+  return MIME_EXTENSION_MAP[normalized] ?? null;
+};
+
+const readFileAsDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result);
+      } else {
+        reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Erro ao ler o arquivo selecionado.'));
+    };
+
+    reader.readAsDataURL(file);
+  });
+};
+
 const sortMessagesByMoment = (messageList: OptimisticMessage[]) => {
   return [...messageList].sort((first, second) => {
     const firstMoment = first.moment ? new Date(first.moment).getTime() : 0;
@@ -127,6 +207,10 @@ export default function WhatsappPage() {
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const selectedChatIdRef = useRef<string | null>(null);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
@@ -178,6 +262,29 @@ export default function WhatsappPage() {
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!attachmentMenuRef.current) {
+        return;
+      }
+
+      const target = event.target as Node | null;
+      if (target && attachmentMenuRef.current.contains(target)) {
+        return;
+      }
+
+      setShowAttachmentMenu(false);
+    };
+
+    if (showAttachmentMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showAttachmentMenu]);
 
   useEffect(() => {
     const channel = supabase
@@ -314,7 +421,101 @@ export default function WhatsappPage() {
     }
   }, [selectedChatId]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    setShowAttachmentMenu(false);
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    if (sendingMessage) {
+      setShowAttachmentMenu(false);
+    }
+  }, [sendingMessage]);
+
+  const createOptimisticMessage = (overrides: Partial<OptimisticMessage>): OptimisticMessage => {
+    if (!selectedChat) {
+      throw new Error('Nenhum chat selecionado');
+    }
+
+    return {
+      id: `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      chat_id: selectedChat.id,
+      message_id: null,
+      from_me: true,
+      status: 'SENDING',
+      text: null,
+      moment: new Date().toISOString(),
+      raw_payload: null,
+      isOptimistic: true,
+      ...overrides,
+    };
+  };
+
+  const sendWhatsappMessage = useCallback(
+    async ({
+      endpoint,
+      body,
+      optimisticMessage,
+      errorFallback,
+    }: {
+      endpoint: string;
+      body: Record<string, unknown>;
+      optimisticMessage: OptimisticMessage;
+      errorFallback?: string;
+    }) => {
+      const optimisticId = optimisticMessage.id;
+
+      setMessages(previous => sortMessagesByMoment([...previous, optimisticMessage]));
+      setSendingMessage(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await fetchJson<SendMessageResponse>(
+          getWhatsappFunctionUrl(endpoint),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+        );
+
+        if (!response.success) {
+          throw new Error(response.error || 'Resposta inválida do servidor');
+        }
+
+        const serverMessage: OptimisticMessage = {
+          ...response.message,
+          isOptimistic: false,
+        };
+
+        setMessages(previous =>
+          sortMessagesByMoment(
+            previous.map(message => (message.id === optimisticId ? serverMessage : message)),
+          ),
+        );
+
+        setChats(previous => {
+          const updatedChat: WhatsappChat = {
+            ...response.chat,
+            last_message_preview:
+              response.message.text ?? response.chat.last_message_preview ?? null,
+            last_message_at: response.message.moment ?? response.chat.last_message_at ?? null,
+          };
+
+          const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
+          return [updatedChat, ...otherChats];
+        });
+      } catch (error) {
+        console.error('Erro ao enviar mensagem:', error);
+        setMessages(previous => previous.filter(message => message.id !== optimisticId));
+        setErrorMessage(errorFallback ?? 'Não foi possível enviar a mensagem.');
+      } finally {
+        setSendingMessage(false);
+      }
+    },
+    [setChats],
+  );
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedChat || sendingMessage) {
       return;
@@ -325,64 +526,249 @@ export default function WhatsappPage() {
       return;
     }
 
-    const optimisticId = `optimistic-${Date.now()}`;
-    const optimisticMessage: OptimisticMessage = {
-      id: optimisticId,
-      chat_id: selectedChat.id,
-      message_id: null,
-      from_me: true,
-      status: 'SENDING',
-      text: trimmedMessage,
-      moment: new Date().toISOString(),
-      raw_payload: null,
-      isOptimistic: true,
-    };
-
-    setMessages(previous => [...previous, optimisticMessage]);
+    const optimisticMessage = createOptimisticMessage({ text: trimmedMessage });
     setMessageInput('');
-    setSendingMessage(true);
-    setErrorMessage(null);
+
+    await sendWhatsappMessage({
+      endpoint: '/whatsapp-webhook/send-message',
+      body: { phone: selectedChat.phone, message: trimmedMessage },
+      optimisticMessage,
+      errorFallback: 'Não foi possível enviar a mensagem.',
+    });
+  };
+
+  const toggleAttachmentMenu = () => {
+    if (sendingMessage) {
+      return;
+    }
+
+    setShowAttachmentMenu(previous => !previous);
+  };
+
+  const openDocumentPicker = () => {
+    if (sendingMessage) {
+      return;
+    }
+
+    setShowAttachmentMenu(false);
+    documentInputRef.current?.click();
+  };
+
+  const openMediaPicker = () => {
+    if (sendingMessage) {
+      return;
+    }
+
+    setShowAttachmentMenu(false);
+    mediaInputRef.current?.click();
+  };
+
+  const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+
+    if (!file || !selectedChat || sendingMessage) {
+      return;
+    }
 
     try {
-      const response = await fetchJson<SendMessageResponse>(
-        getWhatsappFunctionUrl('/whatsapp-webhook/send-message'),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: selectedChat.phone, message: trimmedMessage }),
-        },
-      );
+      const dataUrl = await readFileAsDataUrl(file);
+      const fileName = file.name || null;
+      const extension =
+        extractFileExtension(fileName) ?? extractExtensionFromMime(file.type) ?? null;
 
-      if (!response.success) {
-        throw new Error(response.error || 'Resposta inválida do servidor');
+      if (!extension) {
+        setErrorMessage('Não foi possível identificar a extensão do documento selecionado.');
+        return;
       }
 
-      const serverMessage: OptimisticMessage = {
-        ...response.message,
-        isOptimistic: false,
-      };
-
-      setMessages(previous =>
-        previous.map(message => (message.id === optimisticId ? serverMessage : message)),
-      );
-
-      setChats(previous => {
-        const updatedChat: WhatsappChat = {
-          ...response.chat,
-          last_message_preview: response.message.text ?? response.chat.last_message_preview ?? null,
-          last_message_at: response.message.moment ?? response.chat.last_message_at ?? null,
-        };
-
-        const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
-        return [updatedChat, ...otherChats];
+      const optimisticMessage = createOptimisticMessage({
+        text: fileName ? `📄 ${fileName}` : '📄 Documento enviado',
+        raw_payload: {
+          document: {
+            documentUrl: dataUrl,
+            fileName,
+            title: fileName,
+            caption: null,
+          },
+        },
       });
-    } catch (error: any) {
-      console.error('Erro ao enviar mensagem:', error);
-      setMessages(previous => previous.filter(message => message.id !== optimisticId));
-      setErrorMessage('Não foi possível enviar a mensagem.');
-    } finally {
-      setSendingMessage(false);
+
+      await sendWhatsappMessage({
+        endpoint: '/whatsapp-webhook/send-document',
+        body: {
+          phone: selectedChat.phone,
+          document: dataUrl,
+          fileName: fileName ?? undefined,
+          extension,
+        },
+        optimisticMessage,
+        errorFallback: 'Não foi possível enviar o documento.',
+      });
+    } catch (error) {
+      console.error('Erro ao preparar documento para envio:', error);
+      setErrorMessage('Não foi possível preparar o documento para envio.');
     }
+  };
+
+  const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+
+    if (!file || !selectedChat || sendingMessage) {
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+
+      if (!isImage && !isVideo) {
+        setErrorMessage('Selecione um arquivo de imagem ou vídeo válido.');
+        return;
+      }
+
+      if (isImage) {
+        const optimisticMessage = createOptimisticMessage({
+          text: file.name ? `🖼️ ${file.name}` : '🖼️ Imagem enviada',
+          raw_payload: {
+            image: {
+              imageUrl: dataUrl,
+              caption: null,
+            },
+          },
+        });
+
+        await sendWhatsappMessage({
+          endpoint: '/whatsapp-webhook/send-image',
+          body: { phone: selectedChat.phone, image: dataUrl },
+          optimisticMessage,
+          errorFallback: 'Não foi possível enviar a imagem.',
+        });
+        return;
+      }
+
+      const optimisticMessage = createOptimisticMessage({
+        text: file.name ? `🎬 ${file.name}` : '🎬 Vídeo enviado',
+        raw_payload: {
+          video: {
+            videoUrl: dataUrl,
+            caption: null,
+          },
+        },
+      });
+
+      await sendWhatsappMessage({
+        endpoint: '/whatsapp-webhook/send-video',
+        body: { phone: selectedChat.phone, video: dataUrl },
+        optimisticMessage,
+        errorFallback: 'Não foi possível enviar o vídeo.',
+      });
+    } catch (error) {
+      console.error('Erro ao preparar mídia para envio:', error);
+      setErrorMessage('Não foi possível preparar a mídia selecionada.');
+    }
+  };
+
+  const handleSendContactPrompt = async () => {
+    if (!selectedChat || sendingMessage) {
+      return;
+    }
+
+    setShowAttachmentMenu(false);
+
+    const contactName = window.prompt('Nome do contato')?.trim();
+    if (!contactName) {
+      return;
+    }
+
+    const contactPhoneRaw = window.prompt('Telefone do contato (apenas números)');
+    if (contactPhoneRaw === null) {
+      return;
+    }
+
+    const contactPhoneInput = contactPhoneRaw.replace(/\D/g, '').trim();
+
+    if (!contactPhoneInput) {
+      setErrorMessage('Informe um telefone válido para o contato.');
+      return;
+    }
+
+    const optimisticMessage = createOptimisticMessage({
+      text: `👤 ${contactName}`,
+      raw_payload: {
+        contacts: [
+          {
+            name: contactName,
+            phones: [contactPhoneInput],
+            businessDescription: null,
+          },
+        ],
+      },
+    });
+
+    await sendWhatsappMessage({
+      endpoint: '/whatsapp-webhook/send-contact',
+      body: {
+        phone: selectedChat.phone,
+        contactName,
+        contactPhone: contactPhoneInput,
+      },
+      optimisticMessage,
+      errorFallback: 'Não foi possível enviar o contato.',
+    });
+  };
+
+  const handleSendLocationPrompt = async () => {
+    if (!selectedChat || sendingMessage) {
+      return;
+    }
+
+    setShowAttachmentMenu(false);
+
+    const title = window.prompt('Título da localização')?.trim();
+    if (!title) {
+      return;
+    }
+
+    const address = window.prompt('Endereço completo')?.trim();
+    if (!address) {
+      return;
+    }
+
+    const latitude = window.prompt('Latitude (ex: -23.000000)')?.trim();
+    const longitude = window.prompt('Longitude (ex: -46.000000)')?.trim();
+
+    if (!latitude || !longitude) {
+      setErrorMessage('Informe latitude e longitude válidas.');
+      return;
+    }
+
+    const optimisticMessage = createOptimisticMessage({
+      text: `📍 ${title}`,
+      raw_payload: {
+        location: {
+          title,
+          address,
+          latitude,
+          longitude,
+        },
+      },
+    });
+
+    await sendWhatsappMessage({
+      endpoint: '/whatsapp-webhook/send-location',
+      body: {
+        phone: selectedChat.phone,
+        title,
+        address,
+        latitude,
+        longitude,
+      },
+      optimisticMessage,
+      errorFallback: 'Não foi possível enviar a localização.',
+    });
   };
 
   const renderMessageContent = useCallback((message: OptimisticMessage) => {
@@ -462,6 +848,115 @@ export default function WhatsappPage() {
           {caption ? (
             <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
           ) : null}
+        </div>,
+      );
+    }
+
+    const locationPayload = payload?.location;
+    if (locationPayload && typeof locationPayload === 'object') {
+      const title = toNonEmptyString((locationPayload as { title?: unknown })?.title) ?? 'Localização';
+      const address = toNonEmptyString((locationPayload as { address?: unknown })?.address);
+      const latitude = toNonEmptyString((locationPayload as { latitude?: unknown })?.latitude);
+      const longitude = toNonEmptyString((locationPayload as { longitude?: unknown })?.longitude);
+      const mapsUrl = (() => {
+        if (latitude && longitude) {
+          return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(latitude)},${encodeURIComponent(longitude)}`;
+        }
+
+        if (address) {
+          return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        }
+
+        return null;
+      })();
+
+      attachments.push(
+        <div key="location" className={attachmentCardBaseClass}>
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
+            <MapPin className="h-4 w-4" />
+            <span>{title}</span>
+          </div>
+          {address ? <p className="text-sm text-slate-700">{address}</p> : null}
+          {mapsUrl ? (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-emerald-600 underline"
+            >
+              Ver no mapa
+            </a>
+          ) : null}
+        </div>,
+      );
+    }
+
+    const contactEntries: Array<{
+      name: string | null;
+      phones: string[];
+      businessDescription: string | null;
+    }> = [];
+
+    const singleContact = payload?.contact;
+    if (singleContact && typeof singleContact === 'object') {
+      const name =
+        toNonEmptyString((singleContact as { name?: unknown })?.name) ?? 'Contato';
+      const phonesRaw = (singleContact as { phones?: unknown })?.phones;
+      const phones = Array.isArray(phonesRaw)
+        ? (phonesRaw as unknown[]).map(phone => (typeof phone === 'string' ? phone : '')).filter(Boolean)
+        : [];
+      const businessDescription = toNonEmptyString(
+        (singleContact as { businessDescription?: unknown })?.businessDescription,
+      );
+
+      contactEntries.push({ name, phones, businessDescription });
+    }
+
+    const contactsList = payload?.contacts;
+    if (Array.isArray(contactsList)) {
+      contactsList.forEach((entry, index) => {
+        if (!entry || typeof entry !== 'object') {
+          return;
+        }
+
+        const name =
+          toNonEmptyString((entry as { name?: unknown })?.name) ?? `Contato ${index + 1}`;
+        const phonesRaw = (entry as { phones?: unknown })?.phones;
+        const phones = Array.isArray(phonesRaw)
+          ? (phonesRaw as unknown[]).map(phone => (typeof phone === 'string' ? phone : '')).filter(Boolean)
+          : [];
+        const businessDescription = toNonEmptyString(
+          (entry as { businessDescription?: unknown })?.businessDescription,
+        );
+
+        contactEntries.push({ name, phones, businessDescription });
+      });
+    }
+
+    if (contactEntries.length > 0) {
+      attachments.push(
+        <div key="contacts" className={attachmentCardBaseClass}>
+          {contactEntries.map((contact, index) => (
+            <div
+              key={`${contact.name ?? 'Contato'}-${index}`}
+              className="flex flex-col gap-1 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
+                <UserPlus className="h-4 w-4" />
+                <span>{contact.name ?? 'Contato'}</span>
+              </div>
+              {contact.businessDescription ? (
+                <p className="text-xs text-slate-500">{contact.businessDescription}</p>
+              ) : null}
+              {contact.phones.length > 0 ? (
+                <ul className="text-sm text-slate-700">
+                  {contact.phones.map(phone => (
+                    <li key={`${phone}-${index}`}>{phone}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ))}
         </div>,
       );
     }
@@ -624,7 +1119,91 @@ export default function WhatsappPage() {
               onSubmit={handleSubmit}
               className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
-              <div className="flex w-full items-center gap-3 border border-slate-200 bg-slate-50/60 px-3 py-2 rounded">
+              <div
+                ref={attachmentMenuRef}
+                className="relative flex w-full items-center gap-3 rounded border border-slate-200 bg-slate-50/60 px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={toggleAttachmentMenu}
+                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Abrir opções de anexos"
+                  aria-haspopup="menu"
+                  aria-expanded={showAttachmentMenu}
+                  disabled={sendingMessage}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </button>
+
+                {showAttachmentMenu ? (
+                  <div
+                    className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+                    role="menu"
+                  >
+                    <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Enviar
+                    </div>
+                    <div className="pb-2">
+                      <button
+                        type="button"
+                        onClick={openDocumentPicker}
+                        role="menuitem"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                      >
+                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                          <FileText className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block font-medium">Documentos</span>
+                          <span className="block text-xs text-slate-500">PDF, planilhas e outros formatos</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openMediaPicker}
+                        role="menuitem"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                      >
+                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                          <ImageIcon className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block font-medium">Fotos e vídeos</span>
+                          <span className="block text-xs text-slate-500">Compartilhe mídias em segundos</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendContactPrompt}
+                        role="menuitem"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                      >
+                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                          <UserPlus className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block font-medium">Contato</span>
+                          <span className="block text-xs text-slate-500">Envie dados de um contato rapidamente</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendLocationPrompt}
+                        role="menuitem"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                      >
+                        <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block font-medium">Localização</span>
+                          <span className="block text-xs text-slate-500">Compartilhe um endereço com poucos cliques</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
                 <textarea
                   className="flex-1 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
                   maxLength={1000}
@@ -636,12 +1215,27 @@ export default function WhatsappPage() {
                 />
                 <button
                   type="submit"
-                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 rounded"
+                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={sendingMessage}
                   aria-label="Enviar mensagem"
                 >
                   <Send className="h-4 w-4" />
                 </button>
+
+                <input
+                  ref={documentInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleDocumentChange}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.json,.csv,.xml"
+                />
+                <input
+                  ref={mediaInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleMediaChange}
+                  accept="image/*,video/*"
+                />
               </div>
             </form>
           </>

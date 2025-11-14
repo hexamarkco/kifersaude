@@ -393,8 +393,8 @@ export default function WhatsappPage() {
     const isFromMe = message.from_me;
 
     const attachmentCardBaseClass = `flex flex-col gap-2 rounded-lg ${
-      isFromMe ? 'bg-white text-slate-800' : 'bg-slate-100 text-slate-800'
-    } p-3 shadow-sm`;
+      isFromMe ? 'bg-white text-slate-800' : 'bg-transparent text-slate-800'
+    } p-3`;
 
     const attachments: JSX.Element[] = [];
 

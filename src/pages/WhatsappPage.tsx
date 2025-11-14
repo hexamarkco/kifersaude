@@ -2173,36 +2173,6 @@ export default function WhatsappPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-none items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handlePinStatusChange(selectedChat, !selectedChatIsPinned)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                    aria-label={selectedChatPinButtonLabel}
-                    title={selectedChatPinButtonLabel}
-                    disabled={selectedChatActionLoading}
-                  >
-                    {selectedChatIsPinned ? (
-                      <PinOff className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Pin className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleArchiveStatusChange(selectedChat, !selectedChatIsArchived)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                    aria-label={selectedChatArchiveButtonLabel}
-                    title={selectedChatArchiveButtonLabel}
-                    disabled={selectedChatActionLoading}
-                  >
-                    {selectedChatIsArchived ? (
-                      <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Archive className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </button>
-                </div>
               </div>
             </header>
 

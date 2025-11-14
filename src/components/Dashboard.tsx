@@ -127,18 +127,30 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   }, [isObserver, leads]);
 
   const contractsVisibleToUser = useMemo(() => {
-    if (!isObserver || !visibleLeadIdsForObserver) {
+    if (!isObserver) {
+      return contracts;
+    }
+
+    const visibleLeadIds = visibleLeadIdsForObserver;
+
+    if (!visibleLeadIds) {
       return contracts;
     }
 
     return contracts.filter((contract) => {
-      if (!contract.lead_id) {
+      const leadId = contract.lead_id;
+
+      if (!leadId) {
         return true;
       }
 
-      return visibleLeadIdsForObserver.has(contract.lead_id);
+      if (hiddenLeadIdsForObserver.has(leadId)) {
+        return false;
+      }
+
+      return visibleLeadIds.has(leadId);
     });
-  }, [contracts, isObserver, visibleLeadIdsForObserver]);
+  }, [contracts, hiddenLeadIdsForObserver, isObserver, visibleLeadIdsForObserver]);
 
   const visibleContractIds = useMemo(() => new Set(contractsVisibleToUser.map((contract) => contract.id)), [
     contractsVisibleToUser,

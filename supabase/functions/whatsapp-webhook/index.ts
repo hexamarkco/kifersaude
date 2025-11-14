@@ -120,6 +120,51 @@ type PendingSendEntry = {
   receivedAt: number;
 };
 
+type ZapiChatMetadata = {
+  phone?: string;
+  unread?: string | number;
+  lastMessageTime?: string | number;
+  isMuted?: string | number | boolean;
+  isMarkedSpam?: string | boolean;
+  profileThumbnail?: string | null;
+  isGroupAnnouncement?: string | boolean;
+  isGroup?: string | boolean;
+  about?: string;
+  notes?: {
+    id?: string;
+    content?: string;
+    createdAt?: string | number;
+    lastUpdateAt?: string | number;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+};
+
+type ChatMetadataNote = {
+  id: string | null;
+  content: string | null;
+  createdAt: number | null;
+  createdAtIso: string | null;
+  lastUpdateAt: number | null;
+  lastUpdateAtIso: string | null;
+};
+
+type ChatMetadataSummary = {
+  phone: string | null;
+  unread: number | null;
+  lastMessageTime: string | number | null;
+  lastMessageTimestamp: number | null;
+  lastMessageAt: string | null;
+  isMuted: boolean | null;
+  isMarkedSpam: boolean | null;
+  profileThumbnail: string | null;
+  isGroupAnnouncement: boolean | null;
+  isGroup: boolean | null;
+  about: string | null;
+  notes: ChatMetadataNote | null;
+  raw: Record<string, unknown> | null;
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -242,6 +287,111 @@ const parseMoment = (value: number | string | undefined): Date | null => {
   }
 
   return new Date(numericValue);
+};
+
+const parseBooleanish = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+
+    if (normalized === '1' || normalized === 'true') {
+      return true;
+    }
+
+    if (normalized === '0' || normalized === 'false') {
+      return false;
+    }
+  }
+
+  return null;
+};
+
+const parseInteger = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    return Math.trunc(parsed);
+  }
+
+  return null;
+};
+
+const normalizeZapiTimestamp = (value: unknown): number | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+
+    return value < 1_000_000_000_000 ? Math.round(value * 1000) : Math.round(value);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) {
+      return normalizeZapiTimestamp(numeric);
+    }
+
+    const date = new Date(trimmed);
+    return Number.isNaN(date.getTime()) ? null : date.getTime();
+  }
+
+  return null;
+};
+
+const normalizeMetadataNote = (value: unknown): ChatMetadataNote | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const createdAt = normalizeZapiTimestamp(record.createdAt);
+  const lastUpdateAt = normalizeZapiTimestamp(record.lastUpdateAt);
+
+  return {
+    id: toNonEmptyString(record.id),
+    content: toNonEmptyString(record.content),
+    createdAt,
+    createdAtIso: toIsoStringOrNull(createdAt),
+    lastUpdateAt,
+    lastUpdateAtIso: toIsoStringOrNull(lastUpdateAt),
+  };
 };
 
 const resolveMessageText = (payload: ZapiWebhookPayload): string => {
@@ -1627,6 +1777,159 @@ const handleHealthcheck = async (req: Request) => {
   });
 };
 
+const handleFetchChatMetadata = async (req: Request, chatId: string) => {
+  if (req.method !== 'GET') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  const normalizedChatId = chatId.trim();
+  if (!normalizedChatId) {
+    return respondJson(400, { success: false, error: 'Parâmetro chatId é obrigatório' });
+  }
+
+  try {
+    const { data: chatRecord, error: fetchError } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('id', normalizedChatId)
+      .maybeSingle<WhatsappChat>();
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    if (!chatRecord) {
+      return respondJson(404, { success: false, error: 'Chat não encontrado' });
+    }
+
+    const phoneForApi = normalizePhoneIdentifier(chatRecord.phone);
+
+    if (!phoneForApi) {
+      return respondJson(400, {
+        success: false,
+        error: 'Telefone do chat inválido para buscar metadata',
+      });
+    }
+
+    const credentials = getZapiCredentials();
+
+    if (!credentials) {
+      return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
+    }
+
+    let metadataResponse: Response;
+
+    try {
+      metadataResponse = await fetch(
+        `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/chats/${encodeURIComponent(phoneForApi)}`,
+        {
+          method: 'GET',
+          headers: { 'Client-Token': credentials.clientToken },
+        },
+      );
+    } catch (error) {
+      console.error('Erro ao buscar metadata do chat na Z-API:', error);
+      return respondJson(500, { success: false, error: 'Erro ao buscar metadata do chat na Z-API' });
+    }
+
+    let responseBody: unknown = null;
+    try {
+      responseBody = await metadataResponse.json();
+    } catch (_error) {
+      responseBody = null;
+    }
+
+    if (!metadataResponse.ok) {
+      console.error('Falha ao buscar metadata do chat na Z-API:', metadataResponse.status, responseBody);
+      return respondJson(metadataResponse.status, {
+        success: false,
+        error: 'Falha ao buscar metadata do chat na Z-API',
+        details:
+          responseBody && typeof responseBody === 'object'
+            ? (responseBody as Record<string, unknown>)
+            : undefined,
+      });
+    }
+
+    const metadataRecord =
+      responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)
+        ? (responseBody as ZapiChatMetadata)
+        : null;
+
+    const hasProfileThumbnailField =
+      metadataRecord ? Object.prototype.hasOwnProperty.call(metadataRecord, 'profileThumbnail') : false;
+    const rawProfileThumbnail = hasProfileThumbnailField ? metadataRecord?.profileThumbnail ?? null : undefined;
+    const profileThumbnail = toNonEmptyString(rawProfileThumbnail ?? null);
+    const isGroupFromMetadata = parseBooleanish(metadataRecord?.isGroup);
+    const lastMessageTimestamp = normalizeZapiTimestamp(metadataRecord?.lastMessageTime);
+
+    const resolvedSenderPhoto =
+      profileThumbnail ?? (hasProfileThumbnailField ? null : chatRecord.sender_photo ?? null);
+
+    const resolvedIsGroup =
+      isGroupFromMetadata !== null
+        ? isGroupFromMetadata
+        : typeof chatRecord.is_group === 'boolean'
+        ? chatRecord.is_group
+        : phoneForApi.endsWith('-group')
+        ? true
+        : undefined;
+
+    const resolvedLastMessageAt = lastMessageTimestamp ?? chatRecord.last_message_at;
+    const resolvedLastMessagePreview = chatRecord.last_message_preview;
+
+    const metadataSummary: ChatMetadataSummary | null = metadataRecord
+      ? {
+          phone: toNonEmptyString(metadataRecord.phone) ?? chatRecord.phone ?? phoneForApi,
+          unread: parseInteger(metadataRecord.unread),
+          lastMessageTime:
+            typeof metadataRecord.lastMessageTime === 'string' || typeof metadataRecord.lastMessageTime === 'number'
+              ? metadataRecord.lastMessageTime
+              : null,
+          lastMessageTimestamp,
+          lastMessageAt: lastMessageTimestamp !== null ? toIsoStringOrNull(lastMessageTimestamp) : null,
+          isMuted: parseBooleanish(metadataRecord.isMuted),
+          isMarkedSpam: parseBooleanish(metadataRecord.isMarkedSpam),
+          profileThumbnail: resolvedSenderPhoto,
+          isGroupAnnouncement: parseBooleanish(metadataRecord.isGroupAnnouncement),
+          isGroup:
+            isGroupFromMetadata !== null
+              ? isGroupFromMetadata
+              : resolvedIsGroup === true
+              ? true
+              : resolvedIsGroup === false
+              ? false
+              : null,
+          about: toNonEmptyString(metadataRecord.about),
+          notes: normalizeMetadataNote(metadataRecord.notes ?? null),
+          raw: metadataRecord as Record<string, unknown>,
+        }
+      : null;
+
+    const updatedChat = await upsertChatRecord({
+      phone: chatRecord.phone,
+      chatName: chatRecord.chat_name,
+      isGroup: resolvedIsGroup,
+      senderPhoto: resolvedSenderPhoto,
+      lastMessageAt: resolvedLastMessageAt,
+      lastMessagePreview: resolvedLastMessagePreview,
+    });
+
+    return respondJson(200, {
+      success: true,
+      metadata: metadataSummary,
+      chat: updatedChat,
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar metadata do chat:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao atualizar metadata do chat' });
+  }
+};
+
 const handleListChats = async (req: Request) => {
   if (req.method !== 'GET') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -1725,6 +2028,7 @@ serve(async (req) => {
   const { pathname } = new URL(req.url);
   const subPath = resolveSubPath(pathname);
 
+  const chatMetadataMatch = subPath.match(/^\/chats\/([^/]+)\/metadata$/);
   const chatMessagesMatch = subPath.match(/^\/chats\/([^/]+)\/messages$/);
 
   if (subPath === '/chats') {

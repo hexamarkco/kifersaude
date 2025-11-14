@@ -16,7 +16,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
+import type { WhatsappChat, WhatsappChatMetadata, WhatsappMessage } from '../types/whatsapp';
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -38,6 +38,8 @@ const formatDateTime = (value: string | null) => {
 };
 
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
+
+const CHAT_METADATA_REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos
 
 type ChatPreviewInfo = {
   icon: LucideIcon | null;
@@ -171,6 +173,13 @@ type SendMessageResponse =
       success: false;
       error?: string;
     };
+
+type ChatMetadataResponse = {
+  success: boolean;
+  metadata?: WhatsappChatMetadata | null;
+  chat?: WhatsappChat | null;
+  error?: string;
+};
 
 type WhatsappMessageRawPayload = {
   image?: {

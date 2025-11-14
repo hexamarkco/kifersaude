@@ -484,9 +484,9 @@ export default function WhatsappPage() {
               onSubmit={handleSubmit}
               className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
-              <div className="relative">
+              <div className="flex flex-col items-center gap-3">
                 <textarea
-                  className="w-full resize-none rounded-full border border-slate-200 bg-slate-50/60 px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full resize-none rounded-full border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-left placeholder:text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   maxLength={1000}
                   rows={2}
                   value={messageInput}
@@ -496,7 +496,7 @@ export default function WhatsappPage() {
                 />
                 <button
                   type="submit"
-                  className="absolute bottom-2.5 right-2.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
                   disabled={sendingMessage}
                   aria-label="Enviar mensagem"
                 >

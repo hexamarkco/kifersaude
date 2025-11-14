@@ -85,6 +85,25 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     [restrictedOriginNamesForObservers],
   );
 
+  const isContractVisibleToObserver = useCallback(
+    (contract: Contract | null | undefined) => {
+      if (!isObserver) {
+        return true;
+      }
+
+      if (!contract) {
+        return false;
+      }
+
+      if (!contract.lead_id) {
+        return true;
+      }
+
+      return !hiddenLeadIdsForObserver.has(contract.lead_id);
+    },
+    [hiddenLeadIdsForObserver, isObserver],
+  );
+
   const visibleLeadIdsForObserver = useMemo(() => {
     if (!isObserver) {
       return null;

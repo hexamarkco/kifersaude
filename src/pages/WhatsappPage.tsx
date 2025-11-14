@@ -496,7 +496,7 @@ export default function WhatsappPage() {
                 />
                 <button
                   type="submit"
-                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+                  className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 rounded"
                   disabled={sendingMessage}
                   aria-label="Enviar mensagem"
                 >

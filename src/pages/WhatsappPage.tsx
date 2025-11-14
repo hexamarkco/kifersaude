@@ -36,6 +36,39 @@ type SendMessageResponse =
       error?: string;
     };
 
+type WhatsappMessageRawPayload = {
+  image?: {
+    imageUrl?: string | null;
+    caption?: string | null;
+  } | null;
+  audio?: {
+    audioUrl?: string | null;
+    seconds?: number | null;
+  } | null;
+  video?: {
+    videoUrl?: string | null;
+    caption?: string | null;
+  } | null;
+  document?: {
+    documentUrl?: string | null;
+    fileName?: string | null;
+    title?: string | null;
+    caption?: string | null;
+  } | null;
+  [key: string]: unknown;
+};
+
+const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
+
+const toNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const getWhatsappFunctionUrl = (path: string) => {
   const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.trim();
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
@@ -351,6 +384,120 @@ export default function WhatsappPage() {
     }
   };
 
+  const renderMessageContent = useCallback((message: OptimisticMessage) => {
+    const payload =
+      message.raw_payload && typeof message.raw_payload === 'object'
+        ? (message.raw_payload as WhatsappMessageRawPayload)
+        : null;
+    const isFromMe = message.from_me;
+
+    const attachmentCardBaseClass = `flex flex-col gap-2 rounded-lg ${
+      isFromMe ? 'bg-white text-slate-800' : 'bg-slate-100 text-slate-800'
+    } p-3 shadow-sm`;
+
+    const attachments: JSX.Element[] = [];
+
+    const imageUrl = payload ? toNonEmptyString(payload?.image?.imageUrl) : null;
+    if (imageUrl) {
+      const caption = toNonEmptyString(payload?.image?.caption);
+      attachments.push(
+        <div key="image" className={`${attachmentCardBaseClass} overflow-hidden`}>
+          <img
+            src={imageUrl}
+            alt={caption ?? 'Imagem recebida'}
+            className="max-h-80 w-full rounded-md object-contain bg-slate-200/40"
+          />
+          {caption ? (
+            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
+          ) : null}
+        </div>,
+      );
+    }
+
+    const audioUrl = payload ? toNonEmptyString(payload?.audio?.audioUrl) : null;
+    if (audioUrl) {
+      const seconds = payload?.audio?.seconds;
+      const secondsText =
+        typeof seconds === 'number' && Number.isFinite(seconds)
+          ? `Duração: ${Math.round(seconds)}s`
+          : null;
+      attachments.push(
+        <div key="audio" className={attachmentCardBaseClass}>
+          <audio controls preload="metadata" src={audioUrl} className="w-full" />
+          {secondsText ? (
+            <span className="text-xs text-slate-500">{secondsText}</span>
+          ) : null}
+        </div>,
+      );
+    }
+
+    const videoUrl = payload ? toNonEmptyString(payload?.video?.videoUrl) : null;
+    if (videoUrl) {
+      const caption = toNonEmptyString(payload?.video?.caption);
+      attachments.push(
+        <div key="video" className={`${attachmentCardBaseClass} overflow-hidden`}>
+          <video
+            controls
+            preload="metadata"
+            src={videoUrl}
+            className="max-h-80 w-full rounded-md bg-black"
+          />
+          {caption ? (
+            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
+          ) : null}
+        </div>,
+      );
+    }
+
+    const documentUrl = payload ? toNonEmptyString(payload?.document?.documentUrl) : null;
+    if (documentUrl) {
+      const fileName =
+        toNonEmptyString(payload?.document?.fileName) ??
+        toNonEmptyString(payload?.document?.title) ??
+        'Documento';
+      const caption = toNonEmptyString(payload?.document?.caption);
+      attachments.push(
+        <div key="document" className={attachmentCardBaseClass}>
+          <a
+            href={documentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 underline"
+          >
+            📄 {fileName}
+          </a>
+          {caption ? (
+            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
+          ) : null}
+        </div>,
+      );
+    }
+
+    const fallbackText = message.text?.trim() ?? '';
+    const shouldRenderFallbackText =
+      fallbackText &&
+      fallbackText !== UNSUPPORTED_MESSAGE_PLACEHOLDER &&
+      attachments.length === 0;
+
+    if (shouldRenderFallbackText) {
+      attachments.push(
+        <p key="text" className="whitespace-pre-wrap break-words text-sm">
+          {fallbackText}
+        </p>,
+      );
+    }
+
+    if (attachments.length > 0) {
+      return <div className="flex flex-col gap-2">{attachments}</div>;
+    }
+
+    return (
+      <p className="whitespace-pre-wrap break-words text-sm">
+        {fallbackText || UNSUPPORTED_MESSAGE_PLACEHOLDER}
+      </p>
+    );
+  }, []);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside
@@ -464,11 +611,11 @@ export default function WhatsappPage() {
                   return (
                     <div key={message.id} className={`flex flex-col ${alignment}`}>
                       <div
-                        className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-sm ${
+                        className={`max-w-[75%] px-4 py-3 rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
                         } ${bubbleClasses}`}
                       >
-                        <p className="whitespace-pre-wrap break-words text-sm">{message.text || ''}</p>
+                        {renderMessageContent(message)}
                       </div>
                       <span className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
                         {formatDateTime(message.moment)}{' '}

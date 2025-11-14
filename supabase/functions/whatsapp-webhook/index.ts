@@ -708,6 +708,33 @@ const normalizeDigitsOnly = (value: string | null | undefined): string | null =>
   return digits.length > 0 ? digits : null;
 };
 
+const buildPhoneVariants = (value: string): string[] => {
+  const normalized = normalizeDigitsOnly(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const variants = new Set<string>();
+  variants.add(normalized);
+
+  if (normalized.startsWith('55') && normalized.length > 2) {
+    variants.add(normalized.slice(2));
+  } else if (!normalized.startsWith('55') && normalized.length >= 10) {
+    variants.add(`55${normalized}`);
+  }
+
+  return Array.from(variants);
+};
+
+const buildIlikePattern = (digits: string): string | null => {
+  const normalized = normalizeDigitsOnly(digits);
+  if (!normalized) {
+    return null;
+  }
+
+  return `*${normalized.split('').join('*')}*`;
+};
+
 const formatPhoneForDisplay = (digits: string | null): string | null => {
   if (!digits) {
     return null;
@@ -818,23 +845,59 @@ const fetchLeadNamesByPhones = async (
     return leadsMap;
   }
 
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('leads')
-      .select('telefone, nome_completo')
-      .in('telefone', phones)
-      .returns<LeadMinimal[]>();
-
-    if (error) {
-      throw error;
+  const variantSet = new Set<string>();
+  for (const phone of phones) {
+    for (const variant of buildPhoneVariants(phone)) {
+      variantSet.add(variant);
     }
+  }
 
-    for (const lead of data ?? []) {
-      const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
-      const name = typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : '';
+  const variants = Array.from(variantSet);
+  if (variants.length === 0) {
+    return leadsMap;
+  }
 
-      if (normalizedPhone && name) {
-        leadsMap.set(normalizedPhone, name);
+  const conditions: string[] = [];
+
+  for (const variant of variants) {
+    conditions.push(`telefone.eq.${variant}`);
+    const likePattern = buildIlikePattern(variant);
+    if (likePattern) {
+      conditions.push(`telefone.ilike.${likePattern}`);
+    }
+  }
+
+  const conditionChunks: string[][] = [];
+  const CHUNK_SIZE = 20;
+  for (let index = 0; index < conditions.length; index += CHUNK_SIZE) {
+    conditionChunks.push(conditions.slice(index, index + CHUNK_SIZE));
+  }
+
+  try {
+    for (const chunk of conditionChunks) {
+      if (chunk.length === 0) {
+        continue;
+      }
+
+      const query = supabaseAdmin
+        .from('leads')
+        .select('telefone, nome_completo')
+        .or(chunk.join(','))
+        .returns<LeadMinimal[]>();
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      for (const lead of data ?? []) {
+        const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
+        const name = typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : '';
+
+        if (normalizedPhone && name && !leadsMap.has(normalizedPhone)) {
+          leadsMap.set(normalizedPhone, name);
+        }
       }
     }
   } catch (error) {

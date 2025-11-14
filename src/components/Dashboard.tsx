@@ -75,6 +75,20 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     [leadOrigins],
   );
 
+  const areSetsEqual = useCallback((a: Set<string>, b: Set<string>) => {
+    if (a.size !== b.size) {
+      return false;
+    }
+
+    for (const value of a) {
+      if (!b.has(value)) {
+        return false;
+      }
+    }
+
+    return true;
+  }, []);
+
   const isOriginVisibleToObserver = useCallback(
     (originName: string | null | undefined) => {
       if (!originName) {
@@ -186,10 +200,12 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             .map((lead) => lead.id),
         );
 
-        setHiddenLeadIdsForObserver(hiddenLeadIds);
+        setHiddenLeadIdsForObserver((currentHidden) =>
+          areSetsEqual(currentHidden, hiddenLeadIds) ? currentHidden : hiddenLeadIds,
+        );
         setLeads(allLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
       } else {
-        setHiddenLeadIdsForObserver(new Set());
+        setHiddenLeadIdsForObserver((currentHidden) => (currentHidden.size === 0 ? currentHidden : new Set()));
         setLeads(allLeads);
       }
 
@@ -263,34 +279,36 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
           setHiddenLeadIdsForObserver((currentHidden) => {
             if (!isObserver) {
-              return new Set();
+              return currentHidden.size === 0 ? currentHidden : new Set();
             }
 
             const updatedHidden = new Set(currentHidden);
+            let hasChanged = false;
 
             switch (eventType) {
               case 'INSERT':
               case 'UPDATE':
                 if (!newLead) {
-                  return updatedHidden;
+                  return currentHidden;
                 }
 
                 if (isOriginVisibleToObserver(newLead.origem)) {
-                  updatedHidden.delete(newLead.id);
-                } else {
+                  hasChanged = updatedHidden.delete(newLead.id) || hasChanged;
+                } else if (!updatedHidden.has(newLead.id)) {
                   updatedHidden.add(newLead.id);
+                  hasChanged = true;
                 }
                 break;
               case 'DELETE':
-                if (oldLead) {
-                  updatedHidden.delete(oldLead.id);
+                if (oldLead && updatedHidden.delete(oldLead.id)) {
+                  hasChanged = true;
                 }
                 break;
               default:
-                return updatedHidden;
+                return currentHidden;
             }
 
-            return updatedHidden;
+            return hasChanged ? updatedHidden : currentHidden;
           });
         }
       )

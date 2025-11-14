@@ -533,7 +533,13 @@ export const configService = {
         .order('nome', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((origem) => ({
+        ...origem,
+        visivel_para_observadores:
+          typeof origem.visivel_para_observadores === 'boolean'
+            ? origem.visivel_para_observadores
+            : true,
+      }));
     } catch (error) {
       console.error('Error loading origens:', error);
       return [];
@@ -542,13 +548,31 @@ export const configService = {
 
   async createLeadOrigem(origem: Omit<LeadOrigem, 'id' | 'created_at'>): Promise<{ data: LeadOrigem | null; error: any }> {
     try {
+      const payload = {
+        ...origem,
+        visivel_para_observadores:
+          origem.visivel_para_observadores === undefined
+            ? true
+            : origem.visivel_para_observadores,
+      };
       const { data, error } = await supabase
         .from('lead_origens')
-        .insert([origem])
+        .insert([payload])
         .select()
         .single();
 
-      return { data, error };
+      return {
+        data: data
+          ? {
+              ...data,
+              visivel_para_observadores:
+                typeof data.visivel_para_observadores === 'boolean'
+                  ? data.visivel_para_observadores
+                  : true,
+            }
+          : null,
+        error,
+      };
     } catch (error) {
       console.error('Error creating origem:', error);
       return { data: null, error };

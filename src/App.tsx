@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase, Lead, Reminder } from './lib/supabase';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -9,8 +9,12 @@ import NotificationToast from './components/NotificationToast';
 import LeadNotificationToast from './components/LeadNotificationToast';
 import { notificationService } from './lib/notificationService';
 import { audioService } from './lib/audioService';
+import { useAuth } from './contexts/AuthContext';
+import { useConfig } from './contexts/ConfigContext';
 
 function App() {
+  const { isObserver } = useAuth();
+  const { leadOrigins } = useConfig();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
@@ -18,6 +22,35 @@ function App() {
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+
+  const restrictedOriginNamesForObservers = useMemo(
+    () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
+    [leadOrigins],
+  );
+
+  const isOriginVisibleToObserver = useCallback(
+    (originName: string | null | undefined) => {
+      if (!originName) {
+        return true;
+      }
+      return !restrictedOriginNamesForObservers.includes(originName);
+    },
+    [restrictedOriginNamesForObservers],
+  );
+
+  const loadUnreadReminders = useCallback(async () => {
+    try {
+      const { count, error } = await supabase
+        .from('reminders')
+        .select('*', { count: 'exact', head: true })
+        .eq('lido', false);
+
+      if (error) throw error;
+      setUnreadReminders(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar lembretes:', error);
+    }
+  }, []);
 
   useEffect(() => {
     loadUnreadReminders();
@@ -32,33 +65,28 @@ function App() {
       loadUnreadReminders();
     });
 
+    return () => {
+      clearInterval(interval);
+      notificationService.stop();
+      unsubscribe();
+    };
+  }, [loadUnreadReminders]);
+
+  useEffect(() => {
     const unsubscribeLeads = notificationService.subscribeToLeads((lead) => {
+      if (isObserver && !isOriginVisibleToObserver(lead.origem)) {
+        return;
+      }
+
       setActiveLeadNotifications((prev) => [...prev, lead]);
       setNewLeadsCount((prev) => prev + 1);
       audioService.playNotificationSound();
     });
 
     return () => {
-      clearInterval(interval);
-      notificationService.stop();
-      unsubscribe();
       unsubscribeLeads();
     };
-  }, []);
-
-  const loadUnreadReminders = async () => {
-    try {
-      const { count, error } = await supabase
-        .from('reminders')
-        .select('*', { count: 'exact', head: true })
-        .eq('lido', false);
-
-      if (error) throw error;
-      setUnreadReminders(count || 0);
-    } catch (error) {
-      console.error('Erro ao carregar lembretes:', error);
-    }
-  };
+  }, [isObserver, isOriginVisibleToObserver]);
 
   const handleConvertLead = (lead: Lead) => {
     setLeadToConvert(lead);

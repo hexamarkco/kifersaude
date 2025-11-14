@@ -235,6 +235,7 @@ export type LeadOrigem = {
   id: string;
   nome: string;
   ativo: boolean;
+  visivel_para_observadores: boolean;
   created_at: string;
 };
 

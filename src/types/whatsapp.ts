@@ -1,3 +1,30 @@
+export type WhatsappChatLeadSummary = {
+  id: string;
+  nome_completo: string | null;
+  telefone: string | null;
+  status: string | null;
+  responsavel: string | null;
+  ultimo_contato?: string | null;
+  proximo_retorno?: string | null;
+};
+
+export type WhatsappChatContractSummary = {
+  id: string;
+  codigo_contrato: string | null;
+  status: string | null;
+  modalidade: string | null;
+  operadora: string | null;
+  produto_plano: string | null;
+  mensalidade_total: number | null;
+  comissao_prevista: number | null;
+};
+
+export type WhatsappChatFinancialSummary = {
+  total_mensalidade?: number | null;
+  total_comissao?: number | null;
+  total_bonus?: number | null;
+};
+
 export type WhatsappChat = {
   id: string;
   phone: string;
@@ -9,6 +36,9 @@ export type WhatsappChat = {
   is_archived: boolean;
   is_pinned: boolean;
   display_name?: string | null;
+  crm_lead?: WhatsappChatLeadSummary | null;
+  crm_contracts?: WhatsappChatContractSummary[];
+  crm_financial_summary?: WhatsappChatFinancialSummary | null;
 };
 
 export type WhatsappMessage = {

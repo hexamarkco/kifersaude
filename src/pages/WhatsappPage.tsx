@@ -385,83 +385,133 @@ export default function WhatsappPage() {
     }
   };
 
-  const renderMessageContent = useCallback((message: OptimisticMessage) => {
+  type MessageAttachmentInfo = {
+    imageUrl: string | null;
+    imageCaption: string | null;
+    audioUrl: string | null;
+    audioSeconds: number | null;
+    videoUrl: string | null;
+    videoCaption: string | null;
+    documentUrl: string | null;
+    documentFileName: string;
+    documentCaption: string | null;
+    hasMediaWithoutPadding: boolean;
+  };
+
+  const getMessageAttachmentInfo = (message: OptimisticMessage): MessageAttachmentInfo => {
     const payload =
       message.raw_payload && typeof message.raw_payload === 'object'
         ? (message.raw_payload as WhatsappMessageRawPayload)
         : null;
-    const isFromMe = message.from_me;
 
-    const attachmentCardBaseClass = `flex flex-col gap-2 rounded-lg ${
-      isFromMe ? 'bg-white text-slate-800' : 'bg-transparent text-slate-800'
-    } p-3`;
+    const imageUrl = payload ? toNonEmptyString(payload?.image?.imageUrl) : null;
+    const videoUrl = payload ? toNonEmptyString(payload?.video?.videoUrl) : null;
+    const documentUrl = payload ? toNonEmptyString(payload?.document?.documentUrl) : null;
+    const audioUrl = payload ? toNonEmptyString(payload?.audio?.audioUrl) : null;
+
+    return {
+      imageUrl,
+      imageCaption: payload ? toNonEmptyString(payload?.image?.caption) : null,
+      audioUrl,
+      audioSeconds: payload?.audio?.seconds ?? null,
+      videoUrl,
+      videoCaption: payload ? toNonEmptyString(payload?.video?.caption) : null,
+      documentUrl,
+      documentFileName:
+        toNonEmptyString(payload?.document?.fileName) ??
+        toNonEmptyString(payload?.document?.title) ??
+        'Documento',
+      documentCaption: payload ? toNonEmptyString(payload?.document?.caption) : null,
+      hasMediaWithoutPadding: Boolean(imageUrl || videoUrl),
+    };
+  };
+
+  const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
+    const isFromMe = message.from_me;
 
     const attachments: JSX.Element[] = [];
 
-    const imageUrl = payload ? toNonEmptyString(payload?.image?.imageUrl) : null;
-    if (imageUrl) {
-      const caption = toNonEmptyString(payload?.image?.caption);
+    if (attachmentInfo.imageUrl) {
       attachments.push(
-        <div key="image" className={`${attachmentCardBaseClass} overflow-hidden`}>
+        <div key="image" className="flex flex-col">
           <img
-            src={imageUrl}
-            alt={caption ?? 'Imagem recebida'}
-            className="max-h-80 w-full rounded-md object-contain bg-slate-200/40"
+            src={attachmentInfo.imageUrl}
+            alt={attachmentInfo.imageCaption ?? 'Imagem recebida'}
+            className="block max-h-80 w-full bg-slate-200/40 object-contain"
           />
-          {caption ? (
-            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
+          {attachmentInfo.imageCaption ? (
+            <div className={`px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
+              <p className="whitespace-pre-wrap break-words">{attachmentInfo.imageCaption}</p>
+            </div>
           ) : null}
         </div>,
       );
     }
 
-    const audioUrl = payload ? toNonEmptyString(payload?.audio?.audioUrl) : null;
-    if (audioUrl) {
+    if (attachmentInfo.videoUrl) {
       attachments.push(
-        <div key="audio" className={attachmentCardBaseClass}>
-          <AudioMessageBubble src={audioUrl} seconds={payload?.audio?.seconds ?? null} />
-        </div>,
-      );
-    }
-
-    const videoUrl = payload ? toNonEmptyString(payload?.video?.videoUrl) : null;
-    if (videoUrl) {
-      const caption = toNonEmptyString(payload?.video?.caption);
-      attachments.push(
-        <div key="video" className={`${attachmentCardBaseClass} overflow-hidden`}>
+        <div key="video" className="flex flex-col">
           <video
             controls
             preload="metadata"
-            src={videoUrl}
-            className="max-h-80 w-full rounded-md bg-black"
+            src={attachmentInfo.videoUrl}
+            className="block max-h-80 w-full bg-black"
           />
-          {caption ? (
-            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
+          {attachmentInfo.videoCaption ? (
+            <div className={`px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
+              <p className="whitespace-pre-wrap break-words">{attachmentInfo.videoCaption}</p>
+            </div>
           ) : null}
         </div>,
       );
     }
 
-    const documentUrl = payload ? toNonEmptyString(payload?.document?.documentUrl) : null;
-    if (documentUrl) {
-      const fileName =
-        toNonEmptyString(payload?.document?.fileName) ??
-        toNonEmptyString(payload?.document?.title) ??
-        'Documento';
-      const caption = toNonEmptyString(payload?.document?.caption);
+    if (attachmentInfo.audioUrl) {
       attachments.push(
-        <div key="document" className={attachmentCardBaseClass}>
-          <a
-            href={documentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 underline"
-          >
-            📄 {fileName}
-          </a>
-          {caption ? (
-            <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{caption}</p>
-          ) : null}
+        <div key="audio" className="flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800">
+          <AudioMessageBubble src={attachmentInfo.audioUrl} seconds={attachmentInfo.audioSeconds} />
+        </div>,
+      );
+    }
+
+    if (attachmentInfo.documentUrl) {
+      attachments.push(
+        <div key="document" className="flex flex-col gap-3 rounded-lg bg-white p-3 text-slate-800">
+          <div className="overflow-hidden rounded-md border border-slate-200">
+            <iframe
+              src={attachmentInfo.documentUrl}
+              title={`Pré-visualização do documento ${attachmentInfo.documentFileName}`}
+              className="h-64 w-full border-0"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-medium text-slate-800">{attachmentInfo.documentFileName}</p>
+              {attachmentInfo.documentCaption ? (
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">
+                  {attachmentInfo.documentCaption}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={attachmentInfo.documentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-md border border-emerald-500 px-3 py-2 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-50"
+              >
+                Abrir
+              </a>
+              <a
+                href={attachmentInfo.documentUrl}
+                download
+                className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+              >
+                Baixar
+              </a>
+            </div>
+          </div>
         </div>,
       );
     }
@@ -474,13 +524,17 @@ export default function WhatsappPage() {
 
     if (shouldRenderFallbackText) {
       attachments.push(
-        <p key="text" className="whitespace-pre-wrap break-words text-sm">
+        <p key="text" className={`whitespace-pre-wrap break-words text-sm ${isFromMe ? 'text-white' : ''}`}>
           {fallbackText}
         </p>,
       );
     }
 
-    if (attachments.length > 0) {
+    if (attachments.length === 1) {
+      return attachments[0];
+    }
+
+    if (attachments.length > 1) {
       return <div className="flex flex-col gap-2">{attachments}</div>;
     }
 
@@ -489,7 +543,7 @@ export default function WhatsappPage() {
         {fallbackText || UNSUPPORTED_MESSAGE_PLACEHOLDER}
       </p>
     );
-  }, []);
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
@@ -596,7 +650,13 @@ export default function WhatsappPage() {
               ) : (
                 messages.map(message => {
                   const isFromMe = message.from_me;
+                  const attachmentInfo = getMessageAttachmentInfo(message);
                   const alignment = isFromMe ? 'items-end text-right' : 'items-start text-left';
+                  const hasMediaWithoutPadding = attachmentInfo.hasMediaWithoutPadding;
+                  const hasOnlyMediaWithoutPadding =
+                    hasMediaWithoutPadding && !attachmentInfo.audioUrl && !attachmentInfo.documentUrl;
+                  const bubblePaddingClasses = hasMediaWithoutPadding ? 'p-0' : 'px-4 py-3';
+                  const bubbleOverflowClass = hasOnlyMediaWithoutPadding ? 'overflow-hidden' : '';
                   const bubbleClasses = isFromMe
                     ? 'bg-emerald-500 text-white'
                     : 'bg-white border border-slate-200 text-slate-800';
@@ -604,11 +664,11 @@ export default function WhatsappPage() {
                   return (
                     <div key={message.id} className={`flex flex-col ${alignment}`}>
                       <div
-                        className={`max-w-[75%] px-4 py-3 rounded-2xl shadow-sm ${
+                        className={`max-w-[75%] rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
-                        } ${bubbleClasses}`}
+                        } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses}`}
                       >
-                        {renderMessageContent(message)}
+                        {renderMessageContent(message, attachmentInfo)}
                       </div>
                       <span className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
                         {formatDateTime(message.moment)}{' '}

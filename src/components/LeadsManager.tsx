@@ -42,6 +42,10 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
   const activeLeadOrigins = useMemo(() => leadOrigins.filter(origin => origin.ativo), [leadOrigins]);
+  const visibleLeadOrigins = useMemo(
+    () => activeLeadOrigins.filter((origin) => !(isObserver && origin.nome === 'Ully')),
+    [activeLeadOrigins, isObserver]
+  );
   const tipoContratacaoOptions = useMemo(
     () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
     [options.lead_tipo_contratacao]
@@ -55,8 +59,8 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     [responsavelOptions]
   );
   const origemFilterOptions = useMemo(
-    () => activeLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome })),
-    [activeLeadOrigins]
+    () => visibleLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome })),
+    [visibleLeadOrigins]
   );
   const tipoContratacaoFilterOptions = useMemo(
     () => tipoContratacaoOptions.map((option) => ({ value: option.value, label: option.label })),
@@ -169,10 +173,10 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
 
   useEffect(() => {
     setFilterOrigem((current) => {
-      const valid = current.filter((value) => activeLeadOrigins.some((origin) => origin.nome === value));
+      const valid = current.filter((value) => visibleLeadOrigins.some((origin) => origin.nome === value));
       return valid.length === current.length ? current : valid;
     });
-  }, [activeLeadOrigins]);
+  }, [visibleLeadOrigins]);
 
   useEffect(() => {
     setFilterTipoContratacao((current) => {

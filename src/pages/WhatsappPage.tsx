@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
+import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
@@ -416,17 +417,9 @@ export default function WhatsappPage() {
 
     const audioUrl = payload ? toNonEmptyString(payload?.audio?.audioUrl) : null;
     if (audioUrl) {
-      const seconds = payload?.audio?.seconds;
-      const secondsText =
-        typeof seconds === 'number' && Number.isFinite(seconds)
-          ? `Duração: ${Math.round(seconds)}s`
-          : null;
       attachments.push(
         <div key="audio" className={attachmentCardBaseClass}>
-          <audio controls preload="metadata" src={audioUrl} className="w-full" />
-          {secondsText ? (
-            <span className="text-xs text-slate-500">{secondsText}</span>
-          ) : null}
+          <AudioMessageBubble src={audioUrl} seconds={payload?.audio?.seconds ?? null} />
         </div>,
       );
     }

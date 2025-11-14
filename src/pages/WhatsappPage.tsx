@@ -859,6 +859,23 @@ export default function WhatsappPage() {
     [leadStatuses],
   );
 
+  const selectedChat = useMemo(
+    () => chats.find(chat => chat.id === selectedChatId) ?? null,
+    [chats, selectedChatId],
+  );
+
+  const selectedChatLead = selectedChat?.crm_lead ?? null;
+  const selectedChatContracts = selectedChat?.crm_contracts ?? [];
+  const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
+
+  const selectedChatDisplayName = useMemo(
+    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
+    [selectedChat],
+  );
+
+  const selectedChatIsArchived = selectedChat?.is_archived ?? false;
+  const selectedChatIsPinned = selectedChat?.is_pinned ?? false;
+
   const stopWaveformAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -1160,22 +1177,6 @@ export default function WhatsappPage() {
     };
   }, [resetAudioResources, resetAudioUiState]);
 
-  const selectedChat = useMemo(
-    () => chats.find(chat => chat.id === selectedChatId) ?? null,
-    [chats, selectedChatId],
-  );
-
-  const selectedChatLead = selectedChat?.crm_lead ?? null;
-  const selectedChatContracts = selectedChat?.crm_contracts ?? [];
-  const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
-
-  const selectedChatDisplayName = useMemo(
-    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
-    [selectedChat],
-  );
-
-  const selectedChatIsArchived = selectedChat?.is_archived ?? false;
-  const selectedChatIsPinned = selectedChat?.is_pinned ?? false;
   const getChatSortTimestamp = useCallback((chat: WhatsappChat) => {
     if (!chat.last_message_at) {
       return 0;

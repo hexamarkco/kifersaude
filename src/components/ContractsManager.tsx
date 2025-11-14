@@ -144,6 +144,15 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
     return holder.nome_completo;
   };
 
+  const getBonusValue = (contract: Contract) => {
+    if (!contract.bonus_por_vida_valor) return null;
+
+    const vidas = contract.vidas || 1;
+    return contract.bonus_por_vida_aplicado
+      ? contract.bonus_por_vida_valor * vidas
+      : contract.bonus_por_vida_valor;
+  };
+
   const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -252,87 +261,92 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-      <div className="grid grid-cols-1 gap-4 p-4">
-        {paginatedContracts.map((contract) => (
-          <div
-            key={contract.id}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-all"
-          >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
-              <div className="flex-1 space-y-3">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-slate-900">{contract.codigo_contrato}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-                    {contract.status}
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                    {contract.modalidade}
-                  </span>
-                  {contract.comissao_multiplicador && contract.comissao_multiplicador !== 2.8 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{contract.comissao_multiplicador}x</span>
-                    </span>
-                  )}
-                </div>
-                <div className="mb-3">
-                  <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
-                  <div>
-                    <span className="font-medium">Operadora:</span> {contract.operadora}
-                  </div>
-                  <div>
-                    <span className="font-medium">Plano:</span> {contract.produto_plano}
-                  </div>
-                  {contract.mensalidade_total && (
-                    <div>
-                      <span className="font-medium">Mensalidade:</span> R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                  )}
-                  {contract.comissao_prevista && (
-                    <div>
-                      <span className="font-medium">Comissão:</span> R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                  )}
-                  {contract.previsao_pagamento_bonificacao && (
-                    <div>
-                      <span className="font-medium">Pag. Bonificação:</span>{' '}
-                      {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
-                    </div>
-                    )}
-                </div>
-              </div>
-              <div className="text-sm text-slate-500 lg:text-right">
-                <div>
-                  Responsável: <span className="font-medium text-slate-700">{contract.responsavel}</span>
-                </div>
-                <div className="mt-1">Criado: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
-              <button
-                onClick={() => setSelectedContract(contract)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+        <div className="grid grid-cols-1 gap-4 p-4">
+          {paginatedContracts.map((contract) => {
+            const bonusValue = getBonusValue(contract);
+
+            return (
+              <div
+                key={contract.id}
+                className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-all"
               >
-                <Eye className="w-4 h-4" />
-                <span>Ver Detalhes</span>
-              </button>
-              {!isObserver && (
-                <button
-                  onClick={() => {
-                    setEditingContract(contract);
-                    setShowForm(true);
-                  }}
-                  className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                >
-                  Editar
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-slate-900">{contract.codigo_contrato}</h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+                        {contract.status}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                        {contract.modalidade}
+                      </span>
+                      {contract.comissao_multiplicador && contract.comissao_multiplicador !== 2.8 && (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center space-x-1">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>{contract.comissao_multiplicador}x</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="mb-3">
+                      <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
+                      <div>
+                        <span className="font-medium">Operadora:</span> {contract.operadora}
+                      </div>
+                      <div>
+                        <span className="font-medium">Plano:</span> {contract.produto_plano}
+                      </div>
+                      {contract.mensalidade_total && (
+                        <div>
+                          <span className="font-medium">Mensalidade:</span> R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      )}
+                      {contract.comissao_prevista && (
+                        <div>
+                          <span className="font-medium">Comissão:</span> R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      )}
+                      {bonusValue !== null && (
+                        <div>
+                          <span className="font-medium">Bonificação:</span> R$ {bonusValue.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-500 lg:text-right">
+                    <div>
+                      Responsável: <span className="font-medium text-slate-700">{contract.responsavel}</span>
+                    </div>
+                    <div className="mt-1">Criado: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => setSelectedContract(contract)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Ver Detalhes</span>
+                  </button>
+                  {!isObserver && (
+                    <button
+                      onClick={() => {
+                        setEditingContract(contract);
+                        setShowForm(true);
+                      }}
+                      className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
       {filteredContracts.length === 0 && (
         <div className="text-center py-12">

@@ -96,10 +96,17 @@ export default function StatusDropdown({
   return (
     <div className="relative inline-block" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => !disabled && !isUpdating && setIsOpen(!isOpen)}
         disabled={disabled || isUpdating}
         style={buttonStyles}
-        className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 cursor-pointer ${(disabled || isUpdating) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-busy={isUpdating}
+        title={isUpdating ? 'Atualizando status do lead' : 'Alterar status do lead'}
+        className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
+          disabled || isUpdating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md'
+        }`}
       >
         <span>{isUpdating ? 'Atualizando...' : displayStatus}</span>
         {!disabled && !isUpdating && (
@@ -111,6 +118,7 @@ export default function StatusDropdown({
         <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]">
           {statusOptions.map((status) => (
             <button
+              type="button"
               key={status.id}
               onClick={() => handleStatusClick(status.nome)}
               className={`

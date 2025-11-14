@@ -2130,7 +2130,7 @@ export default function WhatsappPage() {
           <>
             <header className="flex-shrink-0 border-b border-slate-200 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-1 items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <button
                     type="button"
                     onClick={handleBackToChats}

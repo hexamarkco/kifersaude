@@ -103,6 +103,12 @@ type SendContactBody = {
   delayMessage?: number;
 };
 
+type WhatsappContactSummary = {
+  phone: string;
+  name: string | null;
+  isBusiness: boolean;
+};
+
 type PendingReceivedEntry = {
   payload: ZapiWebhookPayload;
   receivedAt: number;
@@ -1443,6 +1449,172 @@ const handleSendContact = async (req: Request) => {
   }
 };
 
+const handleListContacts = async (req: Request) => {
+  if (req.method !== 'GET') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const credentials = getZapiCredentials();
+
+  if (!credentials) {
+    return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
+  }
+
+  const { instanceId, token, clientToken } = credentials;
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/contacts`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Client-Token': clientToken },
+    });
+
+    let responseBody: unknown = null;
+    try {
+      responseBody = await response.json();
+    } catch (_error) {
+      responseBody = null;
+    }
+
+    if (!response.ok) {
+      const errorDetails =
+        responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)
+          ? (responseBody as Record<string, unknown>)
+          : null;
+      throw new ZapiRequestError(response.status, 'Falha ao carregar contatos da Z-API', errorDetails);
+    }
+
+    const rawContacts = (() => {
+      if (Array.isArray(responseBody)) {
+        return responseBody as Array<Record<string, unknown>>;
+      }
+
+      if (
+        responseBody &&
+        typeof responseBody === 'object' &&
+        Array.isArray((responseBody as { contacts?: unknown }).contacts)
+      ) {
+        return (responseBody as { contacts: Array<Record<string, unknown>> }).contacts;
+      }
+
+      return [] as Array<Record<string, unknown>>;
+    })();
+
+    const normalizedContacts: WhatsappContactSummary[] = [];
+
+    for (const entry of rawContacts) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const rawPhone =
+        (entry as { phone?: unknown }).phone ??
+        (entry as { jid?: unknown }).jid ??
+        (entry as { id?: unknown }).id ??
+        null;
+      const phone = normalizePhoneIdentifier(rawPhone);
+
+      if (!phone) {
+        continue;
+      }
+
+      const name =
+        toNonEmptyString((entry as { name?: unknown }).name) ??
+        toNonEmptyString((entry as { shortName?: unknown }).shortName) ??
+        toNonEmptyString((entry as { businessName?: unknown }).businessName) ??
+        null;
+
+      const isBusiness = (() => {
+        const rawIsBusiness = (entry as { isBusiness?: unknown }).isBusiness;
+        if (typeof rawIsBusiness === 'boolean') {
+          return rawIsBusiness;
+        }
+
+        const typeText = toNonEmptyString((entry as { type?: unknown }).type);
+        if (!typeText) {
+          return false;
+        }
+
+        const normalizedType = typeText.toLowerCase();
+        return normalizedType.includes('business') || normalizedType.includes('empresa');
+      })();
+
+      normalizedContacts.push({ phone, name, isBusiness });
+    }
+
+    normalizedContacts.sort((first, second) => {
+      const firstName = first.name ?? '';
+      const secondName = second.name ?? '';
+
+      if (firstName && secondName) {
+        return firstName.localeCompare(secondName, 'pt-BR');
+      }
+
+      if (firstName) {
+        return -1;
+      }
+
+      if (secondName) {
+        return 1;
+      }
+
+      return first.phone.localeCompare(second.phone, 'pt-BR');
+    });
+
+    return respondJson(200, { contacts: normalizedContacts });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao listar contatos do WhatsApp:', error);
+    return respondJson(500, {
+      success: false,
+      error: 'Não foi possível carregar os contatos do WhatsApp',
+    });
+  }
+};
+
+const handleEnsureChat = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = await ensureJsonBody<{ phone?: string; chatName?: string | null }>(req);
+  const phone = normalizePhoneIdentifier(body?.phone ?? null);
+
+  if (!phone) {
+    return respondJson(400, {
+      success: false,
+      error: 'Informe um telefone válido para criar a conversa.',
+    });
+  }
+
+  const chatName = toNonEmptyString(body?.chatName);
+
+  try {
+    const chat = await upsertChatRecord({
+      phone,
+      chatName: chatName ?? null,
+      isGroup: phone.endsWith('-group'),
+      lastMessageAt: null,
+      lastMessagePreview: null,
+    });
+
+    return respondJson(200, { success: true, chat });
+  } catch (error) {
+    console.error('Erro ao garantir chat do WhatsApp:', error);
+    return respondJson(500, {
+      success: false,
+      error: 'Não foi possível criar ou atualizar a conversa.',
+    });
+  }
+};
+
 const handleHealthcheck = async (req: Request) => {
   if (req.method !== 'GET') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -1559,6 +1731,10 @@ serve(async (req) => {
     return handleListChats(req);
   }
 
+  if (subPath === '/contacts') {
+    return handleListContacts(req);
+  }
+
   if (chatMessagesMatch) {
     const chatId = decodeURIComponent(chatMessagesMatch[1]);
     return handleListChatMessages(req, chatId);
@@ -1581,6 +1757,8 @@ serve(async (req) => {
       return handleSendLocation(req);
     case '/send-contact':
       return handleSendContact(req);
+    case '/ensure-chat':
+      return handleEnsureChat(req);
     case '/health':
       return handleHealthcheck(req);
     case '/':

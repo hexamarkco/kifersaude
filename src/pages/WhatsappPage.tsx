@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useSta
 import {
   FileText,
   Image as ImageIcon,
+  MessageCirclePlus,
   MapPin,
   Mic,
   Paperclip,
@@ -46,6 +47,19 @@ const removeDiacritics = (value: string): string =>
   value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+
+const normalizePhoneForComparison = (value: string | null | undefined): string => {
+  if (!value) {
+    return '';
+  }
+
+  if (value.endsWith('-group')) {
+    return value;
+  }
+
+  const withoutSuffix = value.includes('@') ? value.slice(0, value.indexOf('@')) : value;
+  return withoutSuffix.replace(/\D+/g, '');
+};
 
 const LEADING_PREVIEW_EMOJI_MAP: Array<{ icon: LucideIcon; emojis: string[] }> = [
   { icon: ImageIcon, emojis: ['🖼️'] },
@@ -196,6 +210,20 @@ type PendingDocumentAttachment = {
   dataUrl: string;
   fileName: string | null;
   extension: string;
+};
+
+type WhatsappContactListEntry = {
+  phone: string;
+  name: string | null;
+  isBusiness: boolean;
+};
+
+type LeadSummary = {
+  id: string;
+  nome_completo: string;
+  telefone: string | null;
+  status: string | null;
+  responsavel: string | null;
 };
 
 type PendingAttachment = PendingMediaAttachment | PendingDocumentAttachment;
@@ -389,6 +417,21 @@ export default function WhatsappPage() {
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [newChatTab, setNewChatTab] = useState<'contacts' | 'leads' | 'manual'>('contacts');
+  const [contacts, setContacts] = useState<WhatsappContactListEntry[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
+  const [contactSearchTerm, setContactSearchTerm] = useState('');
+  const [leads, setLeads] = useState<LeadSummary[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadsLoaded, setLeadsLoaded] = useState(false);
+  const [leadsError, setLeadsError] = useState<string | null>(null);
+  const [leadSearchTerm, setLeadSearchTerm] = useState('');
+  const [manualPhoneInput, setManualPhoneInput] = useState('');
+  const [startingConversation, setStartingConversation] = useState(false);
+  const [newChatError, setNewChatError] = useState<string | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
@@ -413,6 +456,127 @@ export default function WhatsappPage() {
       );
     });
   }, [chatSearchTerm, chats]);
+
+  const loadContacts = useCallback(async () => {
+    setContactsLoading(true);
+    setContactsError(null);
+
+    try {
+      const data = await fetchJson<{ contacts: WhatsappContactListEntry[] }>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/contacts'),
+      );
+
+      setContacts(Array.isArray(data.contacts) ? data.contacts : []);
+    } catch (error) {
+      console.error('Erro ao carregar contatos salvos:', error);
+      setContacts([]);
+      setContactsError('Não foi possível carregar os contatos salvos.');
+    } finally {
+      setContactsLoading(false);
+      setContactsLoaded(true);
+    }
+  }, []);
+
+  const loadLeads = useCallback(async () => {
+    setLeadsLoading(true);
+    setLeadsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, nome_completo, telefone, status, responsavel')
+        .order('nome_completo', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setLeads((data as LeadSummary[] | null) ?? []);
+    } catch (error) {
+      console.error('Erro ao carregar leads do CRM:', error);
+      setLeads([]);
+      setLeadsError('Não foi possível carregar os leads do CRM.');
+    } finally {
+      setLeadsLoading(false);
+      setLeadsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showNewChatModal) {
+      setNewChatError(null);
+      setContactSearchTerm('');
+      setLeadSearchTerm('');
+      setManualPhoneInput('');
+      setNewChatTab('contacts');
+      return;
+    }
+
+    if (!contactsLoaded && !contactsLoading) {
+      void loadContacts();
+    }
+
+    if (!leadsLoaded && !leadsLoading) {
+      void loadLeads();
+    }
+  }, [
+    showNewChatModal,
+    contactsLoaded,
+    contactsLoading,
+    leadsLoaded,
+    leadsLoading,
+    loadContacts,
+    loadLeads,
+  ]);
+
+  const filteredContactsList = useMemo(() => {
+    if (!contactSearchTerm.trim()) {
+      return contacts;
+    }
+
+    const normalizedTerm = removeDiacritics(contactSearchTerm.trim().toLowerCase());
+    const digitsTerm = contactSearchTerm.replace(/\D+/g, '');
+
+    return contacts.filter(contact => {
+      const nameText = contact.name ? removeDiacritics(contact.name.toLowerCase()) : '';
+      const rawPhone = contact.phone.toLowerCase();
+      const normalizedPhone = normalizePhoneForComparison(contact.phone);
+
+      return (
+        (nameText && nameText.includes(normalizedTerm)) ||
+        rawPhone.includes(contactSearchTerm.trim().toLowerCase()) ||
+        (digitsTerm ? normalizedPhone.includes(digitsTerm) : false)
+      );
+    });
+  }, [contacts, contactSearchTerm]);
+
+  const filteredLeads = useMemo(() => {
+    if (!leadSearchTerm.trim()) {
+      return leads;
+    }
+
+    const normalizedTerm = removeDiacritics(leadSearchTerm.trim().toLowerCase());
+    const digitsTerm = leadSearchTerm.replace(/\D+/g, '');
+    const rawTermLower = leadSearchTerm.trim().toLowerCase();
+
+    return leads.filter(lead => {
+      const nameText = lead.nome_completo ? removeDiacritics(lead.nome_completo.toLowerCase()) : '';
+      const statusText = lead.status ? removeDiacritics(lead.status.toLowerCase()) : '';
+      const responsavelText = lead.responsavel
+        ? removeDiacritics(lead.responsavel.toLowerCase())
+        : '';
+      const phone = lead.telefone ?? '';
+      const normalizedPhone = normalizePhoneForComparison(phone);
+
+      return (
+        (nameText && nameText.includes(normalizedTerm)) ||
+        (statusText && statusText.includes(normalizedTerm)) ||
+        (responsavelText && responsavelText.includes(normalizedTerm)) ||
+        phone.toLowerCase().includes(rawTermLower) ||
+        (digitsTerm ? normalizedPhone.includes(digitsTerm) : false)
+      );
+    });
+  }, [leads, leadSearchTerm]);
 
   const loadChats = useCallback(async () => {
     setChatsLoading(true);
@@ -440,6 +604,26 @@ export default function WhatsappPage() {
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
+
+  const ensureChat = useCallback(
+    async (phone: string, chatName: string | null = null): Promise<WhatsappChat> => {
+      const response = await fetchJson<{ success: boolean; chat: WhatsappChat }>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/ensure-chat'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, chatName }),
+        },
+      );
+
+      if (!response.success || !response.chat) {
+        throw new Error('Resposta inválida do servidor ao criar conversa.');
+      }
+
+      return response.chat;
+    },
+    [],
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -576,18 +760,89 @@ export default function WhatsappPage() {
     loadMessages();
   }, [selectedChatId]);
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = useCallback((chatId: string) => {
     setSelectedChatId(chatId);
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setShowChatListMobile(false);
     }
-  };
+  }, []);
 
-  const handleBackToChats = () => {
+  const handleBackToChats = useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setShowChatListMobile(true);
     }
-  };
+  }, []);
+
+  const handleStartConversation = useCallback(
+    async (phoneInput: string, chatName?: string | null) => {
+      const normalizedPhone = normalizePhoneForComparison(phoneInput);
+      if (!normalizedPhone) {
+        setNewChatError('Informe um telefone válido para iniciar a conversa.');
+        return;
+      }
+
+      setStartingConversation(true);
+      setNewChatError(null);
+
+      try {
+        const existingChat = chats.find(
+          chat => normalizePhoneForComparison(chat.phone) === normalizedPhone,
+        );
+
+        let targetChat = existingChat ?? null;
+
+        if (!targetChat) {
+          const ensuredChat = await ensureChat(normalizedPhone, chatName ?? null);
+          targetChat = ensuredChat;
+          setChats(previous => {
+            const others = previous.filter(chat => chat.id !== ensuredChat.id);
+            return [ensuredChat, ...others];
+          });
+        } else if (chatName && chatName.trim() && chatName !== targetChat.chat_name) {
+          try {
+            const ensuredChat = await ensureChat(normalizedPhone, chatName);
+            targetChat = ensuredChat;
+            setChats(previous => {
+              const others = previous.filter(chat => chat.id !== ensuredChat.id);
+              return [ensuredChat, ...others];
+            });
+          } catch (updateError) {
+            console.error('Não foi possível atualizar o nome do chat:', updateError);
+          }
+        }
+
+        if (targetChat) {
+          handleSelectChat(targetChat.id);
+          setShowNewChatModal(false);
+        }
+      } catch (error) {
+        console.error('Erro ao iniciar conversa:', error);
+        setNewChatError('Não foi possível iniciar a conversa. Tente novamente.');
+      } finally {
+        setStartingConversation(false);
+      }
+    },
+    [chats, ensureChat, handleSelectChat],
+  );
+
+  const handleManualChatSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      if (startingConversation) {
+        return;
+      }
+
+      const normalizedManualPhone = manualPhoneInput.replace(/\D+/g, '').trim();
+      if (normalizedManualPhone.length < 8) {
+        setNewChatError('Informe um telefone com DDD e pelo menos 8 dígitos.');
+        return;
+      }
+
+      await handleStartConversation(normalizedManualPhone);
+    },
+    [handleStartConversation, manualPhoneInput, startingConversation],
+  );
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -1390,7 +1645,18 @@ export default function WhatsappPage() {
         className={`${showChatListMobile ? 'flex' : 'hidden'} md:flex w-full flex-1 flex-col border-b border-slate-200 md:w-80 md:flex-none md:border-b-0 md:border-r min-h-0`}
       >
         <div className="flex-shrink-0 border-b border-slate-200 p-4">
-          <h2 className="text-lg font-semibold text-slate-800">Conversas</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-slate-800">Conversas</h2>
+            <button
+              type="button"
+              onClick={() => setShowNewChatModal(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={sendingMessage}
+            >
+              <MessageCirclePlus className="h-4 w-4" />
+              <span>Nova conversa</span>
+            </button>
+          </div>
           {errorMessage && (
             <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
           )}
@@ -1727,6 +1993,223 @@ export default function WhatsappPage() {
           </div>
         )}
       </section>
+      {showNewChatModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Iniciar conversa</h3>
+                <p className="text-sm text-slate-500">Escolha o destino da nova conversa.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewChatModal(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Fechar modal de nova conversa"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex border-b border-slate-200 bg-slate-50 px-5">
+              {([
+                { id: 'contacts', label: 'Contatos salvos' },
+                { id: 'leads', label: 'Leads do CRM' },
+                { id: 'manual', label: 'Número manual' },
+              ] as const).map(tab => {
+                const isActive = newChatTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setNewChatTab(tab.id)}
+                    className={`relative flex-1 px-4 py-3 text-sm font-medium transition focus:outline-none ${
+                      isActive
+                        ? 'text-emerald-600'
+                        : 'text-slate-500 hover:text-emerald-500'
+                    }`}
+                  >
+                    {tab.label}
+                    {isActive ? (
+                      <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-emerald-500" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="max-h-[30rem] overflow-y-auto px-5 py-5">
+              {startingConversation ? (
+                <p className="mb-3 text-sm font-medium text-emerald-600">
+                  Preparando conversa...
+                </p>
+              ) : null}
+              {newChatError ? (
+                <p className="mb-3 text-sm text-red-600">{newChatError}</p>
+              ) : null}
+
+              {newChatTab === 'contacts' ? (
+                <div className="space-y-4">
+                  {contactsError ? (
+                    <p className="text-sm text-red-600">{contactsError}</p>
+                  ) : null}
+                  <div>
+                    <label className="sr-only" htmlFor="new-chat-contact-search">
+                      Pesquisar contatos salvos
+                    </label>
+                    <input
+                      id="new-chat-contact-search"
+                      type="search"
+                      value={contactSearchTerm}
+                      onChange={event => setContactSearchTerm(event.target.value)}
+                      placeholder="Pesquisar por nome ou telefone"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      autoComplete="off"
+                    />
+                  </div>
+                  {contactsLoading && contacts.length === 0 ? (
+                    <p className="text-sm text-slate-500">Carregando contatos salvos...</p>
+                  ) : contacts.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nenhum contato salvo encontrado.</p>
+                  ) : filteredContactsList.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      Nenhum contato corresponde à sua pesquisa.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredContactsList.map(contact => {
+                        const displayName = contact.name ?? contact.phone;
+                        const initials = displayName.trim().charAt(0).toUpperCase();
+                        return (
+                          <button
+                            key={contact.phone}
+                            type="button"
+                            disabled={startingConversation}
+                            onClick={() => {
+                              void handleStartConversation(contact.phone, contact.name);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
+                              {initials}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
+                              <p className="truncate text-xs text-slate-500">
+                                {contact.phone}
+                                {contact.isBusiness ? ' • Conta comercial' : ''}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : newChatTab === 'leads' ? (
+                <div className="space-y-4">
+                  {leadsError ? (
+                    <p className="text-sm text-red-600">{leadsError}</p>
+                  ) : null}
+                  <div>
+                    <label className="sr-only" htmlFor="new-chat-lead-search">
+                      Pesquisar leads do CRM
+                    </label>
+                    <input
+                      id="new-chat-lead-search"
+                      type="search"
+                      value={leadSearchTerm}
+                      onChange={event => setLeadSearchTerm(event.target.value)}
+                      placeholder="Pesquisar por nome, status ou telefone"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      autoComplete="off"
+                    />
+                  </div>
+                  {leadsLoading && leads.length === 0 ? (
+                    <p className="text-sm text-slate-500">Carregando leads do CRM...</p>
+                  ) : leads.length === 0 ? (
+                    <p className="text-sm text-slate-500">Nenhum lead disponível para iniciar conversa.</p>
+                  ) : filteredLeads.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      Nenhum lead corresponde à sua pesquisa.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredLeads.map(lead => {
+                        const hasPhone = Boolean(lead.telefone);
+                        const leadName = lead.nome_completo?.trim() || 'Lead sem nome';
+                        const leadInitial = leadName.charAt(0).toUpperCase();
+                        return (
+                          <button
+                            key={lead.id}
+                            type="button"
+                            disabled={!hasPhone || startingConversation}
+                            onClick={() => {
+                              if (!lead.telefone) {
+                                return;
+                              }
+                              void handleStartConversation(lead.telefone, leadName);
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 ${
+                              hasPhone
+                                ? 'hover:border-emerald-500 hover:shadow-md'
+                                : 'cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                              {leadInitial}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-slate-800">
+                                {leadName}
+                              </p>
+                              <p className="truncate text-xs text-slate-500">
+                                {lead.telefone ? lead.telefone : 'Sem telefone cadastrado'}
+                              </p>
+                              <p className="truncate text-xs text-slate-400">
+                                {lead.status ? `Status: ${lead.status}` : 'Status não informado'}
+                                {lead.responsavel ? ` • Resp.: ${lead.responsavel}` : ''}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <form className="space-y-4" onSubmit={handleManualChatSubmit}>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700" htmlFor="new-chat-manual-phone">
+                      Número de telefone
+                    </label>
+                    <input
+                      id="new-chat-manual-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      value={manualPhoneInput}
+                      onChange={event => setManualPhoneInput(event.target.value.replace(/\D+/g, ''))}
+                      placeholder="Ex.: 11999999999"
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                      Informe apenas números com DDD. Caso seja número internacional, inclua o código do país.
+                    </p>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={startingConversation || manualPhoneInput.trim().length < 8}
+                  >
+                    Iniciar conversa
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -15,6 +15,7 @@ type WhatsappChat = {
   last_message_preview: string | null;
   is_group: boolean;
   sender_photo: string | null;
+  display_name?: string | null;
 };
 
 type WhatsappMessage = {
@@ -26,6 +27,19 @@ type WhatsappMessage = {
   text: string | null;
   moment: string | null;
   raw_payload: Record<string, any> | null;
+};
+
+type ZapiContact = {
+  phone?: string;
+  name?: string;
+  short?: string;
+  vname?: string;
+  notify?: string;
+};
+
+type LeadMinimal = {
+  telefone: string | null;
+  nome_completo: string | null;
 };
 
 type ZapiWebhookPayload = {
@@ -527,6 +541,198 @@ const resolvePhoneFromPayload = (payload: ZapiWebhookPayload): string | null => 
   }
 
   return null;
+};
+
+const normalizeDigitsOnly = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const digits = value.replace(/\D+/g, '');
+  return digits.length > 0 ? digits : null;
+};
+
+const formatPhoneForDisplay = (digits: string | null): string | null => {
+  if (!digits) {
+    return null;
+  }
+
+  if (digits.startsWith('55')) {
+    const areaCode = digits.slice(2, 4);
+    const localPart = digits.slice(4);
+
+    if (areaCode.length === 2 && localPart.length >= 4) {
+      const prefixLength = localPart.length === 9
+        ? 5
+        : localPart.length === 8
+          ? 4
+          : Math.max(1, localPart.length - 4);
+      const prefix = localPart.slice(0, prefixLength);
+      const suffix = localPart.slice(prefix.length);
+
+      if (suffix) {
+        return `+55 ${areaCode} ${prefix}-${suffix}`;
+      }
+
+      return `+55 ${areaCode} ${prefix}`;
+    }
+  }
+
+  if (digits.length > 4) {
+    const prefix = digits.slice(0, digits.length - 4);
+    const suffix = digits.slice(-4);
+    return `+${prefix}-${suffix}`;
+  }
+
+  return `+${digits}`;
+};
+
+const MAX_CONTACT_PAGES = 10;
+const CONTACTS_PAGE_SIZE = 500;
+
+const fetchZapiContacts = async (): Promise<ZapiContact[]> => {
+  const credentials = getZapiCredentials();
+
+  if (!credentials) {
+    return [];
+  }
+
+  const { instanceId, token, clientToken } = credentials;
+  const contacts: ZapiContact[] = [];
+
+  for (let page = 1; page <= MAX_CONTACT_PAGES; page += 1) {
+    const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/contacts?page=${page}&pageSize=${CONTACTS_PAGE_SIZE}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Client-Token': clientToken },
+      });
+
+      if (!response.ok) {
+        console.error('Falha ao carregar contatos da Z-API:', response.status, response.statusText);
+        break;
+      }
+
+      const pageData = (await response.json()) as unknown;
+
+      if (!Array.isArray(pageData) || pageData.length === 0) {
+        break;
+      }
+
+      contacts.push(...(pageData as ZapiContact[]));
+
+      if (pageData.length < CONTACTS_PAGE_SIZE) {
+        break;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar contatos da Z-API:', error);
+      break;
+    }
+  }
+
+  return contacts;
+};
+
+const buildContactsMap = async (): Promise<Map<string, ZapiContact>> => {
+  const contacts = await fetchZapiContacts();
+  const map = new Map<string, ZapiContact>();
+
+  for (const contact of contacts) {
+    const normalized = normalizePhoneIdentifier(contact.phone ?? null);
+
+    if (!normalized || normalized.endsWith('-group')) {
+      continue;
+    }
+
+    if (!map.has(normalized)) {
+      map.set(normalized, contact);
+    }
+  }
+
+  return map;
+};
+
+const fetchLeadNamesByPhones = async (
+  phones: string[],
+): Promise<Map<string, string>> => {
+  const leadsMap = new Map<string, string>();
+
+  if (phones.length === 0) {
+    return leadsMap;
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('leads')
+      .select('telefone, nome_completo')
+      .in('telefone', phones)
+      .returns<LeadMinimal[]>();
+
+    if (error) {
+      throw error;
+    }
+
+    for (const lead of data ?? []) {
+      const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
+      const name = typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : '';
+
+      if (normalizedPhone && name) {
+        leadsMap.set(normalizedPhone, name);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar leads para nomes de chats:', error);
+  }
+
+  return leadsMap;
+};
+
+const resolveContactDisplayName = (contact: ZapiContact | undefined): string | null => {
+  if (!contact) {
+    return null;
+  }
+
+  const candidates = [contact.short, contact.name, contact.vname, contact.notify];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      const trimmed = candidate.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveChatDisplayName = (
+  chat: WhatsappChat,
+  contactMap: Map<string, ZapiContact>,
+  leadsMap: Map<string, string>,
+): string | null => {
+  if (chat.is_group) {
+    return chat.chat_name ?? null;
+  }
+
+  const normalizedPhone = normalizePhoneIdentifier(chat.phone);
+
+  if (!normalizedPhone || normalizedPhone.endsWith('-group')) {
+    return chat.chat_name ?? chat.phone ?? null;
+  }
+
+  const contactName = resolveContactDisplayName(contactMap.get(normalizedPhone));
+  if (contactName) {
+    return contactName;
+  }
+
+  const leadName = leadsMap.get(normalizedPhone);
+  if (leadName) {
+    return leadName;
+  }
+
+  return formatPhoneForDisplay(normalizedPhone) ?? chat.chat_name ?? chat.phone ?? null;
 };
 
 const persistReceivedMessage = async (
@@ -1268,7 +1474,29 @@ const handleListChats = async (req: Request) => {
       throw error;
     }
 
-    return respondJson(200, { chats: data ?? [] });
+    const chats = (data ?? []) as WhatsappChat[];
+    const contactMap = await buildContactsMap();
+    const phonesToLookup = new Set<string>();
+
+    for (const chat of chats) {
+      if (chat.is_group) {
+        continue;
+      }
+
+      const normalizedPhone = normalizePhoneIdentifier(chat.phone);
+      if (normalizedPhone && !normalizedPhone.endsWith('-group')) {
+        phonesToLookup.add(normalizedPhone);
+      }
+    }
+
+    const leadsMap = await fetchLeadNamesByPhones(Array.from(phonesToLookup));
+
+    const enrichedChats = chats.map(chat => ({
+      ...chat,
+      display_name: resolveChatDisplayName(chat, contactMap, leadsMap),
+    }));
+
+    return respondJson(200, { chats: enrichedChats });
   } catch (error) {
     console.error('Erro ao listar chats do WhatsApp:', error);
     return respondJson(500, { success: false, error: 'Falha ao carregar chats' });

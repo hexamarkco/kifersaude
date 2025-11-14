@@ -91,12 +91,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const responsePhone = typeof responseBody?.phone === 'string' ? responseBody.phone : phone;
     const chatName = typeof responseBody?.chatName === 'string' ? responseBody.chatName : undefined;
     const senderPhoto = typeof responseBody?.senderPhoto === 'string' ? responseBody.senderPhoto : undefined;
+    const isGroupChat = responsePhone.endsWith('-group');
+    const resolvedSenderPhoto = isGroupChat ? undefined : senderPhoto;
 
     const chat = await upsertChatRecord({
       phone: responsePhone,
       chatName,
-      senderPhoto,
-      isGroup: responsePhone.endsWith('-group'),
+      senderPhoto: resolvedSenderPhoto,
+      isGroup: isGroupChat,
       lastMessageAt: now,
       lastMessagePreview: message,
     });

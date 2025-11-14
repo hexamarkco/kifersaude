@@ -72,6 +72,14 @@ type WhatsappMessageRawPayload = {
     phones?: string[] | null;
     businessDescription?: string | null;
   }> | null;
+  senderName?: string | null;
+  pushName?: string | null;
+  participant?: string | null;
+  author?: string | null;
+  phone?: string | null;
+  key?: {
+    participant?: string | null;
+  } | null;
   [key: string]: unknown;
 };
 
@@ -978,6 +986,51 @@ export default function WhatsappPage() {
     };
   };
 
+  const getMessageSenderDisplayName = (message: OptimisticMessage): string | null => {
+    if (message.from_me) {
+      return 'Você';
+    }
+
+    const payload =
+      message.raw_payload && typeof message.raw_payload === 'object'
+        ? (message.raw_payload as WhatsappMessageRawPayload)
+        : null;
+
+    if (!payload) {
+      return null;
+    }
+
+    const directName =
+      toNonEmptyString(payload.senderName) ??
+      toNonEmptyString(payload.pushName) ??
+      toNonEmptyString(payload.participant) ??
+      toNonEmptyString(payload.author);
+
+    if (directName) {
+      return directName;
+    }
+
+    const keyParticipant = (() => {
+      const key = payload.key;
+      if (!key || typeof key !== 'object') {
+        return null;
+      }
+
+      return toNonEmptyString((key as { participant?: unknown })?.participant);
+    })();
+
+    if (keyParticipant) {
+      return keyParticipant;
+    }
+
+    const phone = toNonEmptyString(payload.phone);
+    if (phone) {
+      return phone;
+    }
+
+    return null;
+  };
+
   const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
 
@@ -1333,8 +1386,18 @@ export default function WhatsappPage() {
                     ? 'bg-emerald-500 text-white'
                     : 'bg-white border border-slate-200 text-slate-800';
 
+                  const shouldShowSenderName = selectedChat.is_group;
+                  const senderDisplayName = shouldShowSenderName
+                    ? getMessageSenderDisplayName(message)
+                    : null;
+
                   return (
                     <div key={message.id} className={`flex flex-col ${alignment}`}>
+                      {shouldShowSenderName ? (
+                        <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                          {senderDisplayName ?? 'Participante'}
+                        </span>
+                      ) : null}
                       <div
                         className={`max-w-[75%] rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'

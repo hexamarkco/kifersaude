@@ -799,82 +799,73 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         </div>
       )}
 
-      {isObserver ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div
+        className={
+          isObserver
+            ? 'grid grid-cols-1 gap-6'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+        }
+      >
+        <AnimatedStatCard
+          label="Leads Ativos"
+          value={leadsAtivos}
+          icon={Users}
+          gradient="from-blue-500 to-blue-600"
+          iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
+          subtitle="Em negociação"
+          onClick={() => onNavigateToTab?.('leads')}
+        />
+        {!isObserver && (
           <AnimatedStatCard
-            label="Leads Ativos"
-            value={leadsAtivos}
-            icon={Users}
-            gradient="from-blue-500 to-blue-600"
-            iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
-            subtitle="Em negociação"
-            onClick={() => onNavigateToTab?.('leads')}
+            label="Contratos Ativos"
+            value={contratosAtivos.length}
+            icon={FileText}
+            gradient="from-teal-500 to-cyan-600"
+            iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
+            subtitle="Vigentes"
+            onClick={() => onNavigateToTab?.('contracts')}
           />
+        )}
+        {!isObserver && (
           <AnimatedStatCard
-            label="Taxa de Conversão"
-            value={conversionRate}
-            icon={Target}
-            gradient="from-violet-500 to-purple-600"
-            iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
-            suffix="%"
-            subtitle="Lead → Contrato"
+            label="Comissão Prevista"
+            value={comissaoTotal}
+            icon={DollarSign}
+            gradient="from-emerald-500 to-green-600"
+            iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
+            prefix="R$"
+            subtitle="Mensal"
+            onClick={() => onNavigateToTab?.('financeiro-comissoes')}
           />
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatedStatCard
-              label="Leads Ativos"
-              value={leadsAtivos}
-              icon={Users}
-              gradient="from-blue-500 to-blue-600"
-              iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
-              subtitle="Em negociação"
-              onClick={() => onNavigateToTab?.('leads')}
-            />
-            <AnimatedStatCard
-              label="Contratos Ativos"
-              value={contratosAtivos.length}
-              icon={FileText}
-              gradient="from-teal-500 to-cyan-600"
-              iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
-              subtitle="Vigentes"
-              onClick={() => onNavigateToTab?.('contracts')}
-            />
-            <AnimatedStatCard
-              label="Comissão Prevista"
-              value={comissaoTotal}
-              icon={DollarSign}
-              gradient="from-emerald-500 to-green-600"
-              iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
-              prefix="R$"
-              subtitle="Mensal"
-              onClick={() => onNavigateToTab?.('financeiro-comissoes')}
-            />
-          </div>
+        )}
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnimatedStatCard
-              label="Taxa de Conversão"
-              value={conversionRate}
-              icon={Target}
-              gradient="from-violet-500 to-purple-600"
-              iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
-              suffix="%"
-              subtitle="Lead → Contrato"
-            />
-            <AnimatedStatCard
-              label="Ticket Médio"
-              value={ticketMedio}
-              icon={Activity}
-              gradient="from-orange-500 to-red-600"
-              iconBg="bg-gradient-to-br from-orange-500 to-red-600"
-              prefix="R$"
-              subtitle="Por contrato"
-            />
-          </div>
-        </>
-      )}
+      <div
+        className={
+          isObserver ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 gap-6'
+        }
+      >
+        <AnimatedStatCard
+          label="Taxa de Conversão"
+          value={conversionRate}
+          icon={Target}
+          gradient="from-violet-500 to-purple-600"
+          iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
+          suffix="%"
+          subtitle="Lead → Contrato"
+        />
+        {!isObserver && (
+          <AnimatedStatCard
+            label="Ticket Médio"
+            value={ticketMedio}
+            icon={Activity}
+            gradient="from-orange-500 to-red-600"
+            iconBg="bg-gradient-to-br from-orange-500 to-red-600"
+            prefix="R$"
+            subtitle="Por contrato"
+          />
+        )}
+      </div>
 
       <LeadFunnel leads={filteredLeads} />
 

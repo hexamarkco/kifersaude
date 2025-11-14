@@ -482,9 +482,9 @@ export default function WhatsappPage() {
 
             <form
               onSubmit={handleSubmit}
-              className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4 rounded"
+              className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
-              <div className="flex w-full items-center gap-3 border border-slate-200 bg-slate-50/60 px-3 py-2">
+              <div className="flex w-full items-center gap-3 border border-slate-200 bg-slate-50/60 px-3 py-2 rounded">
                 <textarea
                   className="flex-1 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
                   maxLength={1000}

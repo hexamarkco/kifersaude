@@ -76,6 +76,12 @@ export default function ChatLeadDetailsDrawer({
     setFinancial(financialSummary ?? null);
   }, [contractsSummary, financialSummary, isOpen, leadSummary]);
 
+  const CONTRACT_SELECT_FIELDS =
+    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao';
+
+  const BASE_CONTRACT_FIELDS =
+    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao';
+
   const fetchLeadDetails = useCallback(async () => {
     if (!leadId) {
       return;
@@ -93,9 +99,7 @@ export default function ChatLeadDetailsDrawer({
           .maybeSingle(),
         supabase
           .from('contracts')
-          .select(
-            'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao',
-          )
+          .select(CONTRACT_SELECT_FIELDS)
           .eq('lead_id', leadId)
           .order('created_at', { ascending: false }),
       ]);
@@ -104,14 +108,41 @@ export default function ChatLeadDetailsDrawer({
         throw leadResponse.error;
       }
 
+      let contractsData: ContractSummary[] = [];
+
       if (contractsResponse.error) {
-        throw contractsResponse.error;
+        if (contractsResponse.error.code === '42703') {
+          const fallbackResponse = await supabase
+            .from('contracts')
+            .select(BASE_CONTRACT_FIELDS)
+            .eq('lead_id', leadId)
+            .order('created_at', { ascending: false });
+
+          if (fallbackResponse.error) {
+            throw fallbackResponse.error;
+          }
+
+          const fallbackData =
+            (fallbackResponse.data as Omit<ContractSummary, 'previsao_pagamento_bonificacao'>[]) ?? [];
+
+          contractsData = fallbackData.map(contract => ({
+            ...contract,
+            previsao_pagamento_bonificacao: null,
+          }));
+        } else {
+          throw contractsResponse.error;
+        }
+      } else {
+        contractsData = ((contractsResponse.data as ContractSummary[]) ?? []).map(contract => ({
+          ...contract,
+          previsao_pagamento_bonificacao: contract.previsao_pagamento_bonificacao ?? null,
+        }));
       }
 
       setLead(leadResponse.data ?? null);
-      setContracts((contractsResponse.data as ContractSummary[]) ?? []);
+      setContracts(contractsData);
 
-      const totals = (contractsResponse.data as ContractSummary[] | null)?.reduce(
+      const totals = contractsData.reduce(
         (acc, contract) => {
           const mensalidade = contract.mensalidade_total ?? 0;
           const comissao = contract.comissao_prevista ?? 0;

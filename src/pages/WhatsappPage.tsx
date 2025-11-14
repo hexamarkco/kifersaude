@@ -231,6 +231,25 @@ const toNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const getChatDisplayName = (chat: WhatsappChat): string => {
+  const normalizedDisplayName = toNonEmptyString(chat.display_name);
+  if (normalizedDisplayName) {
+    return normalizedDisplayName;
+  }
+
+  const normalizedChatName = toNonEmptyString(chat.chat_name);
+  if (normalizedChatName) {
+    return normalizedChatName;
+  }
+
+  const normalizedPhone = toNonEmptyString(chat.phone);
+  if (normalizedPhone) {
+    return normalizedPhone;
+  }
+
+  return chat.phone;
+};
+
 const getWhatsappFunctionUrl = (path: string) => {
   const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.trim();
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();

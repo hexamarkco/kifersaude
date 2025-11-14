@@ -799,7 +799,13 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        className={
+          isObserver
+            ? 'grid grid-cols-1 gap-6'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+        }
+      >
         <AnimatedStatCard
           label="Leads Ativos"
           value={leadsAtivos}
@@ -834,7 +840,11 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div
+        className={
+          isObserver ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 gap-6'
+        }
+      >
         <AnimatedStatCard
           label="Taxa de Conversão"
           value={conversionRate}

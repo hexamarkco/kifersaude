@@ -817,6 +817,11 @@ export default function WhatsappPage() {
 
     const attachments: JSX.Element[] = [];
 
+    const payload =
+      message.raw_payload && typeof message.raw_payload === 'object'
+        ? (message.raw_payload as WhatsappMessageRawPayload)
+        : null;
+
     if (attachmentInfo.imageUrl) {
       attachments.push(
         <div key="image" className="flex flex-col">

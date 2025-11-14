@@ -799,7 +799,13 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        className={
+          isObserver
+            ? 'grid grid-cols-1 gap-6'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+        }
+      >
         <AnimatedStatCard
           label="Leads Ativos"
           value={leadsAtivos}
@@ -809,28 +815,36 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           subtitle="Em negociação"
           onClick={() => onNavigateToTab?.('leads')}
         />
-        <AnimatedStatCard
-          label="Contratos Ativos"
-          value={contratosAtivos.length}
-          icon={FileText}
-          gradient="from-teal-500 to-cyan-600"
-          iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
-          subtitle="Vigentes"
-          onClick={!isObserver ? () => onNavigateToTab?.('contracts') : undefined}
-        />
-        <AnimatedStatCard
-          label="Comissão Prevista"
-          value={comissaoTotal}
-          icon={DollarSign}
-          gradient="from-emerald-500 to-green-600"
-          iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
-          prefix="R$"
-          subtitle="Mensal"
-          onClick={!isObserver ? () => onNavigateToTab?.('financeiro-comissoes') : undefined}
-        />
+        {!isObserver && (
+          <AnimatedStatCard
+            label="Contratos Ativos"
+            value={contratosAtivos.length}
+            icon={FileText}
+            gradient="from-teal-500 to-cyan-600"
+            iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
+            subtitle="Vigentes"
+            onClick={() => onNavigateToTab?.('contracts')}
+          />
+        )}
+        {!isObserver && (
+          <AnimatedStatCard
+            label="Comissão Prevista"
+            value={comissaoTotal}
+            icon={DollarSign}
+            gradient="from-emerald-500 to-green-600"
+            iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
+            prefix="R$"
+            subtitle="Mensal"
+            onClick={() => onNavigateToTab?.('financeiro-comissoes')}
+          />
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div
+        className={
+          isObserver ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 gap-6'
+        }
+      >
         <AnimatedStatCard
           label="Taxa de Conversão"
           value={conversionRate}
@@ -840,15 +854,17 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           suffix="%"
           subtitle="Lead → Contrato"
         />
-        <AnimatedStatCard
-          label="Ticket Médio"
-          value={ticketMedio}
-          icon={Activity}
-          gradient="from-orange-500 to-red-600"
-          iconBg="bg-gradient-to-br from-orange-500 to-red-600"
-          prefix="R$"
-          subtitle="Por contrato"
-        />
+        {!isObserver && (
+          <AnimatedStatCard
+            label="Ticket Médio"
+            value={ticketMedio}
+            icon={Activity}
+            gradient="from-orange-500 to-red-600"
+            iconBg="bg-gradient-to-br from-orange-500 to-red-600"
+            prefix="R$"
+            subtitle="Por contrato"
+          />
+        )}
       </div>
 
       <LeadFunnel leads={filteredLeads} />
@@ -881,15 +897,16 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Renovações Próximas</h3>
-            <Calendar className="w-5 h-5 text-orange-500" />
-          </div>
-          {upcomingRenewals.length > 0 ? (
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {upcomingRenewals.map((contract) => {
+      {!isObserver && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Renovações Próximas</h3>
+              <Calendar className="w-5 h-5 text-orange-500" />
+            </div>
+            {upcomingRenewals.length > 0 ? (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {upcomingRenewals.map((contract) => {
                 let dataRenovacao: Date;
 
                 if (contract.data_renovacao) {
@@ -1002,6 +1019,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           )}
         </div>
       </div>
+      )}
 
       <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl shadow-lg p-8 text-white">
         <div className="flex items-center justify-between">

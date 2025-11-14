@@ -7,6 +7,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
+type ChatLeadSummary = {
+  id: string;
+  nome_completo: string | null;
+  telefone: string | null;
+  status: string | null;
+  responsavel: string | null;
+  ultimo_contato: string | null;
+  proximo_retorno: string | null;
+};
+
 type WhatsappChat = {
   id: string;
   phone: string;
@@ -18,6 +28,7 @@ type WhatsappChat = {
   is_archived: boolean;
   is_pinned: boolean;
   display_name?: string | null;
+  crm_lead?: ChatLeadSummary | null;
 };
 
 type WhatsappMessage = {
@@ -39,9 +50,15 @@ type ZapiContact = {
   notify?: string;
 };
 
-type LeadMinimal = {
+type LeadSummaryRecord = {
+  id: string;
   telefone: string | null;
   nome_completo: string | null;
+  status: string | null;
+  responsavel: string | null;
+  ultimo_contato: string | null;
+  proximo_retorno: string | null;
+  updated_at: string | null;
 };
 
 type ZapiWebhookPayload = {
@@ -748,6 +765,24 @@ const buildPhoneVariants = (value: string): string[] => {
   return Array.from(variants);
 };
 
+const findLeadSummaryForPhone = (
+  normalizedPhone: string | null,
+  leadsMap: Map<string, ChatLeadSummary>,
+): ChatLeadSummary | null => {
+  if (!normalizedPhone || normalizedPhone.endsWith('-group')) {
+    return null;
+  }
+
+  for (const variant of buildPhoneVariants(normalizedPhone)) {
+    const summary = leadsMap.get(variant);
+    if (summary) {
+      return summary;
+    }
+  }
+
+  return null;
+};
+
 const buildIlikePattern = (digits: string): string | null => {
   const normalized = normalizeDigitsOnly(digits);
   if (!normalized) {
@@ -858,10 +893,10 @@ const buildContactsMap = async (): Promise<Map<string, ZapiContact>> => {
   return map;
 };
 
-const fetchLeadNamesByPhones = async (
+const fetchLeadSummariesByPhones = async (
   phones: string[],
-): Promise<Map<string, string>> => {
-  const leadsMap = new Map<string, string>();
+): Promise<Map<string, ChatLeadSummary>> => {
+  const leadsMap = new Map<string, ChatLeadSummary>();
 
   if (phones.length === 0) {
     return leadsMap;
@@ -903,9 +938,11 @@ const fetchLeadNamesByPhones = async (
 
       const query = supabaseAdmin
         .from('leads')
-        .select('telefone, nome_completo')
+        .select(
+          'id, telefone, nome_completo, status, responsavel, ultimo_contato, proximo_retorno, updated_at',
+        )
         .or(chunk.join(','))
-        .returns<LeadMinimal[]>();
+        .returns<LeadSummaryRecord[]>();
 
       const { data, error } = await query;
 
@@ -915,15 +952,41 @@ const fetchLeadNamesByPhones = async (
 
       for (const lead of data ?? []) {
         const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
-        const name = typeof lead.nome_completo === 'string' ? lead.nome_completo.trim() : '';
+        const summary: ChatLeadSummary = {
+          id: lead.id,
+          nome_completo:
+            typeof lead.nome_completo === 'string' && lead.nome_completo.trim().length > 0
+              ? lead.nome_completo.trim()
+              : null,
+          telefone:
+            typeof lead.telefone === 'string' && lead.telefone.trim().length > 0
+              ? lead.telefone.trim()
+              : null,
+          status:
+            typeof lead.status === 'string' && lead.status.trim().length > 0
+              ? lead.status.trim()
+              : null,
+          responsavel:
+            typeof lead.responsavel === 'string' && lead.responsavel.trim().length > 0
+              ? lead.responsavel.trim()
+              : null,
+          ultimo_contato:
+            typeof lead.ultimo_contato === 'string' && lead.ultimo_contato.trim().length > 0
+              ? lead.ultimo_contato
+              : null,
+          proximo_retorno:
+            typeof lead.proximo_retorno === 'string' && lead.proximo_retorno.trim().length > 0
+              ? lead.proximo_retorno
+              : null,
+        };
 
-        if (!normalizedPhone || !name) {
+        if (!normalizedPhone) {
           continue;
         }
 
         for (const variant of buildPhoneVariants(normalizedPhone)) {
           if (!leadsMap.has(variant)) {
-            leadsMap.set(variant, name);
+            leadsMap.set(variant, summary);
           }
         }
       }
@@ -957,7 +1020,7 @@ const resolveContactDisplayName = (contact: ZapiContact | undefined): string | n
 const resolveChatDisplayName = (
   chat: WhatsappChat,
   contactMap: Map<string, ZapiContact>,
-  leadsMap: Map<string, string>,
+  leadsMap: Map<string, ChatLeadSummary>,
 ): string | null => {
   if (chat.is_group) {
     return chat.chat_name ?? null;
@@ -974,11 +1037,9 @@ const resolveChatDisplayName = (
     return contactName;
   }
 
-  for (const variant of buildPhoneVariants(normalizedPhone)) {
-    const leadName = leadsMap.get(variant);
-    if (leadName) {
-      return leadName;
-    }
+  const leadSummary = findLeadSummaryForPhone(normalizedPhone, leadsMap);
+  if (leadSummary?.nome_completo) {
+    return leadSummary.nome_completo;
   }
 
   return formatPhoneForDisplay(normalizedPhone) ?? chat.chat_name ?? chat.phone ?? null;
@@ -2062,12 +2123,18 @@ const handleListChats = async (req: Request) => {
       }
     }
 
-    const leadsMap = await fetchLeadNamesByPhones(Array.from(phonesToLookup));
+    const leadsMap = await fetchLeadSummariesByPhones(Array.from(phonesToLookup));
 
-    const enrichedChats = chats.map(chat => ({
-      ...chat,
-      display_name: resolveChatDisplayName(chat, contactMap, leadsMap),
-    }));
+    const enrichedChats = chats.map(chat => {
+      const normalizedPhone = normalizePhoneIdentifier(chat.phone);
+      const leadSummary = chat.is_group ? null : findLeadSummaryForPhone(normalizedPhone, leadsMap);
+
+      return {
+        ...chat,
+        display_name: resolveChatDisplayName(chat, contactMap, leadsMap),
+        crm_lead: leadSummary ? { ...leadSummary } : null,
+      };
+    });
 
     return respondJson(200, { chats: enrichedChats });
   } catch (error) {

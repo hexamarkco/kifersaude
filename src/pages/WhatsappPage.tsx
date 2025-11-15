@@ -1,6 +1,8 @@
 import {
   ChangeEvent,
   FormEvent,
+  Fragment,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -32,14 +34,10 @@ import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { supabase } from '../lib/supabase';
-import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
-import type {
-  WhatsappChat,
-  WhatsappMessage,
-  WhatsappScheduledMessage,
-  WhatsappScheduledMessageStatus,
-} from '../types/whatsapp';
+import type { QuickReply } from '../lib/supabase';
+import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
@@ -960,6 +958,10 @@ export default function WhatsappPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+  const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
+  const [selectedQuickReplyId, setSelectedQuickReplyId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [scheduledMessages, setScheduledMessages] = useState<WhatsappScheduledMessage[]>([]);
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
@@ -974,6 +976,7 @@ export default function WhatsappPage() {
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
+  const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const previousChatIdRef = useRef<string | null>(null);
   const selectedChatIdRef = useRef<string | null>(null);
@@ -1089,6 +1092,142 @@ export default function WhatsappPage() {
 
     mediaRecorderRef.current = null;
   }, [stopDurationTimer, stopWaveformAnimation]);
+
+  const sortQuickReplies = useCallback((list: QuickReply[]) => {
+    return [...list].sort((first, second) => {
+      const firstLabel = (first.title?.trim() || first.text).toLocaleLowerCase('pt-BR');
+      const secondLabel = (second.title?.trim() || second.text).toLocaleLowerCase('pt-BR');
+      return firstLabel.localeCompare(secondLabel, 'pt-BR');
+    });
+  }, []);
+
+  const loadQuickReplies = useCallback(async () => {
+    setQuickRepliesLoading(true);
+    setQuickRepliesError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_quick_replies')
+        .select('id, title, text, created_at, updated_at')
+        .order('title', { ascending: true })
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setQuickReplies(sortQuickReplies((data ?? []) as QuickReply[]));
+    } catch (loadError) {
+      console.error('Falha ao carregar respostas rápidas:', loadError);
+      setQuickReplies([]);
+      setQuickRepliesError('Não foi possível carregar as respostas rápidas.');
+    } finally {
+      setQuickRepliesLoading(false);
+    }
+  }, [sortQuickReplies]);
+
+  useEffect(() => {
+    void loadQuickReplies();
+  }, [loadQuickReplies]);
+
+  useEffect(() => {
+    if (selectedQuickReplyId && !quickReplies.some(reply => reply.id === selectedQuickReplyId)) {
+      setSelectedQuickReplyId(null);
+    }
+  }, [quickReplies, selectedQuickReplyId]);
+
+  const handleCreateQuickReply = useCallback(
+    async ({ title, text }: { title: string; text: string }) => {
+      const trimmedTitle = title.trim();
+      const payload = {
+        title: trimmedTitle === '' ? null : trimmedTitle,
+        text: text.trim(),
+      };
+
+      try {
+        setQuickRepliesError(null);
+        const { data, error } = await supabase
+          .from('whatsapp_quick_replies')
+          .insert(payload)
+          .select('id, title, text, created_at, updated_at')
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const inserted = data as QuickReply;
+          setQuickReplies(previous => sortQuickReplies([...previous, inserted]));
+        }
+      } catch (createError) {
+        console.error('Falha ao criar resposta rápida:', createError);
+        setQuickRepliesError('Não foi possível salvar a resposta rápida.');
+        throw createError;
+      }
+    },
+    [sortQuickReplies],
+  );
+
+  const handleUpdateQuickReply = useCallback(
+    async (id: string, { title, text }: { title: string; text: string }) => {
+      const trimmedTitle = title.trim();
+      const payload = {
+        title: trimmedTitle === '' ? null : trimmedTitle,
+        text: text.trim(),
+      };
+
+      try {
+        setQuickRepliesError(null);
+        const { data, error } = await supabase
+          .from('whatsapp_quick_replies')
+          .update(payload)
+          .eq('id', id)
+          .select('id, title, text, created_at, updated_at')
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const updated = data as QuickReply;
+          setQuickReplies(previous =>
+            sortQuickReplies(previous.map(reply => (reply.id === id ? updated : reply))),
+          );
+
+          if (selectedQuickReplyId === id) {
+            setMessageInput(updated.text);
+          }
+        }
+      } catch (updateError) {
+        console.error('Falha ao atualizar resposta rápida:', updateError);
+        setQuickRepliesError('Não foi possível atualizar a resposta rápida.');
+        throw updateError;
+      }
+    },
+    [selectedQuickReplyId, sortQuickReplies],
+  );
+
+  const handleQuickReplySelect = useCallback((reply: QuickReply) => {
+    setSelectedQuickReplyId(reply.id);
+    setMessageInput(reply.text);
+  }, []);
+
+  const handleMessageInputChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => {
+      const { value } = event.target;
+      setMessageInput(value);
+
+      if (selectedQuickReplyId) {
+        const selectedReply = quickReplies.find(reply => reply.id === selectedQuickReplyId);
+        if (!selectedReply || selectedReply.text !== value) {
+          setSelectedQuickReplyId(null);
+        }
+      }
+    },
+    [quickReplies, selectedQuickReplyId],
+  );
 
   const resetAudioUiState = useCallback(() => {
     setIsRecordingAudio(false);
@@ -1494,6 +1633,10 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     setShowLeadDetails(false);
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    setMessageSearchTerm('');
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -2966,33 +3109,168 @@ export default function WhatsappPage() {
         continue;
       }
 
-      const scheduleMessage: TimelineMessage = {
-        id: `schedule-${schedule.id}`,
-        chat_id: schedule.chat_id,
-        message_id: `schedule-${schedule.id}`,
-        from_me: true,
-        status: SCHEDULE_STATUS_LABELS[schedule.status] ?? schedule.status,
-        text: schedule.message,
-        moment: schedule.scheduled_send_at,
-        raw_payload: null,
-        isOptimistic: false,
-        scheduleMetadata: {
-          scheduledMessageId: schedule.id,
-          scheduledSendAt: schedule.scheduled_send_at,
-          status: schedule.status,
-          lastError: schedule.last_error ?? null,
-        },
-      };
+  const trimmedMessageSearchTerm = messageSearchTerm.trim();
+  const normalizedMessageSearchTerm = trimmedMessageSearchTerm.toLowerCase();
 
-      baseMessages.push(scheduleMessage);
+  const filteredRenderableMessages = useMemo(() => {
+    if (!normalizedMessageSearchTerm) {
+      return renderableMessages;
     }
 
-    const sortedMessages = sortMessagesByMoment(baseMessages);
+    const collectSegments = (message: OptimisticMessage): string[] => {
+      const segments: string[] = [];
+      const fallbackText = message.text?.trim();
+      if (fallbackText) {
+        segments.push(fallbackText);
+      }
 
-    return { renderableMessages: sortedMessages, reactionSummaries: summaries };
-  }, [messages, scheduledMessages]);
+      const attachmentInfo = getMessageAttachmentInfo(message);
 
-  const renderMessageContent = (message: TimelineMessage, attachmentInfo: MessageAttachmentInfo) => {
+      const attachmentSegments = [
+        attachmentInfo.imageCaption,
+        attachmentInfo.videoCaption,
+        attachmentInfo.documentCaption,
+        attachmentInfo.documentFileName,
+      ];
+
+      attachmentSegments.forEach(segment => {
+        if (segment && segment.trim()) {
+          segments.push(segment);
+        }
+      });
+
+      const payload =
+        message.raw_payload && typeof message.raw_payload === 'object'
+          ? (message.raw_payload as WhatsappMessageRawPayload)
+          : null;
+
+      if (payload) {
+        const locationPayload = payload.location;
+        if (locationPayload && typeof locationPayload === 'object') {
+          const title = toNonEmptyString((locationPayload as { title?: unknown }).title);
+          const address = toNonEmptyString((locationPayload as { address?: unknown }).address);
+
+          if (title) {
+            segments.push(title);
+          }
+
+          if (address) {
+            segments.push(address);
+          }
+        }
+
+        const pushContactSegments = (value: unknown) => {
+          if (!value || typeof value !== 'object') {
+            return;
+          }
+
+          const entry = value as {
+            name?: unknown;
+            businessDescription?: unknown;
+            phones?: unknown;
+          };
+
+          const name = toNonEmptyString(entry.name);
+          if (name) {
+            segments.push(name);
+          }
+
+          const businessDescription = toNonEmptyString(entry.businessDescription);
+          if (businessDescription) {
+            segments.push(businessDescription);
+          }
+
+          const phonesRaw = entry.phones;
+          if (Array.isArray(phonesRaw)) {
+            phonesRaw.forEach(phoneValue => {
+              if (typeof phoneValue === 'string' && phoneValue.trim()) {
+                segments.push(phoneValue);
+              }
+            });
+          }
+        };
+
+        if (payload.contact) {
+          pushContactSegments(payload.contact);
+        }
+
+        if (Array.isArray(payload.contacts)) {
+          payload.contacts.forEach(pushContactSegments);
+        }
+      }
+
+      return segments;
+    };
+
+    return renderableMessages.filter(message => {
+      const segments = collectSegments(message);
+      return segments.some(segment => segment.toLowerCase().includes(normalizedMessageSearchTerm));
+    });
+  }, [normalizedMessageSearchTerm, renderableMessages]);
+
+  const renderHighlightedText = useCallback(
+    (text: string) => {
+      if (!trimmedMessageSearchTerm) {
+        return text;
+      }
+
+      const normalizedText = text.toLowerCase();
+      const term = normalizedMessageSearchTerm;
+      if (!term) {
+        return text;
+      }
+
+      const nodes: ReactNode[] = [];
+      let searchStart = 0;
+
+      while (true) {
+        const matchIndex = normalizedText.indexOf(term, searchStart);
+        if (matchIndex === -1) {
+          break;
+        }
+
+        if (matchIndex > searchStart) {
+          nodes.push(
+            <Fragment key={`text-${searchStart}`}>
+              {text.slice(searchStart, matchIndex)}
+            </Fragment>,
+          );
+        }
+
+        const matchText = text.slice(matchIndex, matchIndex + term.length);
+        nodes.push(
+          <mark
+            key={`highlight-${matchIndex}`}
+            className="rounded bg-yellow-200 px-0.5 text-inherit"
+          >
+            {matchText}
+          </mark>,
+        );
+
+        searchStart = matchIndex + term.length;
+      }
+
+      if (nodes.length === 0) {
+        return text;
+      }
+
+      if (searchStart < text.length) {
+        nodes.push(
+          <Fragment key={`text-${searchStart}`}>{text.slice(searchStart)}</Fragment>,
+        );
+      }
+
+      return nodes;
+    },
+    [normalizedMessageSearchTerm, trimmedMessageSearchTerm],
+  );
+
+  const hasMessageSearch = normalizedMessageSearchTerm.length > 0;
+  const visibleMessages = filteredRenderableMessages;
+  const hasMessages = renderableMessages.length > 0;
+  const hasVisibleMessages = visibleMessages.length > 0;
+
+  const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
 
     const attachments: JSX.Element[] = [];
@@ -3012,7 +3290,9 @@ export default function WhatsappPage() {
           />
           {attachmentInfo.imageCaption ? (
             <div className={`self-stretch px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
-              <p className="whitespace-pre-wrap break-words">{attachmentInfo.imageCaption}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {renderHighlightedText(attachmentInfo.imageCaption)}
+              </p>
             </div>
           ) : null}
         </div>,
@@ -3030,7 +3310,9 @@ export default function WhatsappPage() {
           />
           {attachmentInfo.videoCaption ? (
             <div className={`px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
-              <p className="whitespace-pre-wrap break-words">{attachmentInfo.videoCaption}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {renderHighlightedText(attachmentInfo.videoCaption)}
+              </p>
             </div>
           ) : null}
         </div>,
@@ -3058,10 +3340,12 @@ export default function WhatsappPage() {
           </div>
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-sm font-medium text-slate-800">{attachmentInfo.documentFileName}</p>
+              <p className="text-sm font-medium text-slate-800">
+                {renderHighlightedText(attachmentInfo.documentFileName)}
+              </p>
               {attachmentInfo.documentCaption ? (
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">
-                  {attachmentInfo.documentCaption}
+                  {renderHighlightedText(attachmentInfo.documentCaption)}
                 </p>
               ) : null}
             </div>
@@ -3109,9 +3393,11 @@ export default function WhatsappPage() {
         <div key="location" className={attachmentCardBaseClass}>
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
             <MapPin className="h-4 w-4" />
-            <span>{title}</span>
+            <span>{renderHighlightedText(title)}</span>
           </div>
-          {address ? <p className="text-sm text-slate-700">{address}</p> : null}
+          {address ? (
+            <p className="text-sm text-slate-700">{renderHighlightedText(address)}</p>
+          ) : null}
           {mapsUrl ? (
             <a
               href={mapsUrl}
@@ -3178,15 +3464,17 @@ export default function WhatsappPage() {
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
                 <UserPlus className="h-4 w-4" />
-                <span>{contact.name ?? 'Contato'}</span>
+                <span>{renderHighlightedText(contact.name ?? 'Contato')}</span>
               </div>
               {contact.businessDescription ? (
-                <p className="text-xs text-slate-500">{contact.businessDescription}</p>
+                <p className="text-xs text-slate-500">
+                  {renderHighlightedText(contact.businessDescription)}
+                </p>
               ) : null}
               {contact.phones.length > 0 ? (
                 <ul className="text-sm text-slate-700">
                   {contact.phones.map(phone => (
-                    <li key={`${phone}-${index}`}>{phone}</li>
+                    <li key={`${phone}-${index}`}>{renderHighlightedText(phone)}</li>
                   ))}
                 </ul>
               ) : null}
@@ -3205,7 +3493,7 @@ export default function WhatsappPage() {
     if (shouldRenderFallbackText) {
       attachments.push(
         <p key="text" className={`whitespace-pre-wrap break-words text-sm ${isFromMe ? 'text-white' : ''}`}>
-          {fallbackText}
+          {renderHighlightedText(fallbackText)}
         </p>,
       );
     }
@@ -3220,7 +3508,9 @@ export default function WhatsappPage() {
 
     return (
       <p className="whitespace-pre-wrap break-words text-sm">
-        {fallbackText || UNSUPPORTED_MESSAGE_PLACEHOLDER}
+        {fallbackText
+          ? renderHighlightedText(fallbackText)
+          : UNSUPPORTED_MESSAGE_PLACEHOLDER}
       </p>
     );
   };
@@ -3533,16 +3823,50 @@ export default function WhatsappPage() {
               </div>
             </header>
 
+            <div className="border-b border-slate-200 px-4 py-3">
+              <label className="sr-only" htmlFor="whatsapp-message-search">
+                Pesquisar mensagens
+              </label>
+              <div className="relative">
+                <input
+                  id="whatsapp-message-search"
+                  type="search"
+                  value={messageSearchTerm}
+                  onChange={event => setMessageSearchTerm(event.target.value)}
+                  placeholder="Pesquisar mensagens"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-10 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  autoComplete="off"
+                />
+                {messageSearchTerm ? (
+                  <button
+                    type="button"
+                    onClick={() => setMessageSearchTerm('')}
+                    className="absolute inset-y-1 right-1 inline-flex items-center justify-center rounded-md px-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    aria-label="Limpar busca de mensagens"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
             <div
               ref={messagesContainerRef}
+              data-testid="whatsapp-messages"
               className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4"
             >
-              {messagesLoading && renderableMessages.length === 0 ? (
+              {messagesLoading && !hasMessages ? (
                 <p className="text-sm text-slate-500">Carregando mensagens...</p>
-              ) : renderableMessages.length === 0 ? (
+              ) : !hasMessages ? (
                 <p className="text-sm text-slate-500">Nenhuma mensagem neste chat.</p>
+              ) : !hasVisibleMessages ? (
+                <p className="text-sm text-slate-500">
+                  {hasMessageSearch
+                    ? 'Nenhuma mensagem encontrada para a busca.'
+                    : 'Nenhuma mensagem neste chat.'}
+                </p>
               ) : (
-                renderableMessages.map(message => {
+                visibleMessages.map(message => {
                   const isFromMe = message.from_me;
                   const scheduleMetadata = message.scheduleMetadata ?? null;
                   const scheduleId = scheduleMetadata?.scheduledMessageId ?? null;
@@ -3629,7 +3953,11 @@ export default function WhatsappPage() {
                   ) : null;
 
                   return (
-                    <div key={message.id} className={`flex flex-col ${alignment}`}>
+                    <div
+                      key={message.id}
+                      data-testid="whatsapp-message"
+                      className={`flex flex-col ${alignment}`}
+                    >
                       {shouldShowSenderName ? (
                         <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
                           {senderDisplayName ?? 'Participante'}
@@ -3979,6 +4307,16 @@ export default function WhatsappPage() {
                     <Paperclip className="h-5 w-5" />
                   </button>
 
+                  <QuickRepliesMenu
+                    quickReplies={quickReplies}
+                    selectedReplyId={selectedQuickReplyId}
+                    onSelect={handleQuickReplySelect}
+                    onCreate={handleCreateQuickReply}
+                    onUpdate={handleUpdateQuickReply}
+                    isLoading={quickRepliesLoading}
+                    error={quickRepliesError}
+                  />
+
                   {showAttachmentMenu ? (
                     <div
                       className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
@@ -4053,7 +4391,7 @@ export default function WhatsappPage() {
                     maxLength={1000}
                     rows={1}
                     value={messageInput}
-                    onChange={event => setMessageInput(event.target.value)}
+                    onChange={handleMessageInputChange}
                     placeholder={messagePlaceholder}
                     disabled={sendingMessage || schedulingMessage}
                   />

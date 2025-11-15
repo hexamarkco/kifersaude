@@ -1,51 +1,16 @@
-import { build } from 'esbuild';
-import Module from 'node:module';
-import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, delimiter } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const tempDir = mkdtempSync(join(tmpdir(), 'kifersaude-tests-'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const vitestBin = join(__dirname, '..', 'node_modules', 'vitest', 'vitest.mjs');
 
-try {
-  symlinkSync(join(process.cwd(), 'node_modules'), join(tempDir, 'node_modules'), 'dir');
-} catch {
-  // Ignore if symlink cannot be created
-}
+const cliArgs = process.argv.slice(2);
+const child = spawn(process.execPath, [vitestBin, 'run', ...cliArgs], {
+  stdio: 'inherit',
+});
 
-const existingNodePath = process.env.NODE_PATH ? process.env.NODE_PATH.split(delimiter) : [];
-const projectNodeModules = join(process.cwd(), 'node_modules');
-if (!existingNodePath.includes(projectNodeModules)) {
-  existingNodePath.push(projectNodeModules);
-}
-process.env.NODE_PATH = existingNodePath.join(delimiter);
-Module._initPaths();
-
-try {
-  const tests = [
-    {
-      entry: 'src/server/__tests__/whatsappScheduler.test.ts',
-      outfile: 'whatsappScheduler.test.js',
-    },
-  ];
-
-  for (const { entry, outfile } of tests) {
-    const compiledFile = join(tempDir, outfile);
-
-    await build({
-      entryPoints: [entry],
-      outfile: compiledFile,
-      bundle: true,
-      platform: 'node',
-      format: 'esm',
-      sourcemap: 'inline',
-      logLevel: 'silent',
-      external: ['@supabase/supabase-js'],
-    });
-
-    const moduleUrl = pathToFileURL(compiledFile);
-    await import(moduleUrl.href);
-  }
-} finally {
-  rmSync(tempDir, { recursive: true, force: true });
-}
+child.on('exit', code => {
+  process.exit(code ?? 1);
+});

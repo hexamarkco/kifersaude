@@ -2979,7 +2979,7 @@ export default function WhatsappPage() {
               className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-2 py-2 text-md font-bold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sendingMessage}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 text-md font-bold" />
             </button>
           </div>
           {errorMessage && (

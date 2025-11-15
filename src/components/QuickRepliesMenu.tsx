@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Loader2, MessageCirclePlus, Pencil } from 'lucide-react';
+import { Loader2, MessageCirclePlus, Pencil } from 'lucide-react';
 import type { QuickReply } from '../lib/supabase';
 
 type QuickReplyDraft = {
@@ -164,15 +164,14 @@ export default function QuickRepliesMenu({
     <div className="relative">
       <button
         type="button"
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+        className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
         onClick={toggleMenu}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
+        aria-label="Abrir respostas rápidas"
         data-testid="quick-replies-toggle"
       >
-        <MessageCirclePlus className="h-4 w-4" />
-        Respostas rápidas
-        <ChevronDown className={`h-4 w-4 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+        <MessageCirclePlus className="h-5 w-5" />
       </button>
 
       {menuOpen ? (

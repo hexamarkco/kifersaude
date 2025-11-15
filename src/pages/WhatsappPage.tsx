@@ -13,7 +13,6 @@ import {
   ArchiveRestore,
   FileText,
   Image as ImageIcon,
-  MessageCirclePlus,
   Plus,
   MapPin,
   Mic,
@@ -34,7 +33,13 @@ import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
+import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
+import type {
+  WhatsappChat,
+  WhatsappMessage,
+  WhatsappScheduledMessage,
+  WhatsappScheduledMessageStatus,
+} from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
@@ -220,6 +225,37 @@ const getChatPreviewInfo = (preview: string | null): ChatPreviewInfo => {
 };
 
 type OptimisticMessage = WhatsappMessage & { isOptimistic?: boolean };
+
+type TimelineMessage = OptimisticMessage & {
+  scheduleMetadata?: {
+    scheduledMessageId: string;
+    scheduledSendAt: string;
+    status: WhatsappScheduledMessageStatus;
+    lastError?: string | null;
+  };
+};
+
+const SCHEDULE_STATUS_LABELS: Record<WhatsappScheduledMessageStatus, string> = {
+  pending: 'Agendado',
+  processing: 'Processando agendamento',
+  sent: 'Enviado',
+  failed: 'Falha no agendamento',
+  cancelled: 'Agendamento cancelado',
+};
+
+const shouldDisplayScheduledMessage = (status: WhatsappScheduledMessageStatus) => {
+  return status !== 'sent';
+};
+
+const sortSchedulesByMoment = (entries: WhatsappScheduledMessage[]) => {
+  return [...entries].sort((a, b) => {
+    const aTime = new Date(a.scheduled_send_at).getTime();
+    const bTime = new Date(b.scheduled_send_at).getTime();
+    const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+    const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+    return safeATime - safeBTime;
+  });
+};
 
 type SendMessageResponse =
   | {
@@ -794,7 +830,7 @@ const ensureAudioBlobPreferredFormat = async (
         return;
       }
 
-      const handleError = (event: MediaRecorderErrorEvent) => {
+      const handleError = (event: Event & { error?: DOMException | null }) => {
         if (recorder.state !== 'inactive') {
           try {
             recorder.stop();
@@ -850,7 +886,7 @@ const formatSecondsLabel = (value: number): string => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const sortMessagesByMoment = (messageList: OptimisticMessage[]) => {
+const sortMessagesByMoment = <T extends { moment: string | null }>(messageList: T[]) => {
   return [...messageList].sort((first, second) => {
     const firstMoment = first.moment ? new Date(first.moment).getTime() : 0;
     const secondMoment = second.moment ? new Date(second.moment).getTime() : 0;
@@ -925,10 +961,15 @@ export default function WhatsappPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [scheduledMessages, setScheduledMessages] = useState<WhatsappScheduledMessage[]>([]);
+  const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
+  const [scheduledSendAt, setScheduledSendAt] = useState('');
+  const [scheduleValidationError, setScheduleValidationError] = useState<string | null>(null);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [waveformValues, setWaveformValues] = useState<number[]>([]);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [schedulingMessage, setSchedulingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
@@ -968,6 +1009,7 @@ export default function WhatsappPage() {
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
+  const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Record<string, boolean>>({});
 
   const { leadStatuses } = useConfig();
   const activeLeadStatuses = useMemo(
@@ -1156,7 +1198,7 @@ export default function WhatsappPage() {
   );
 
   const handleStartAudioRecording = useCallback(async () => {
-    if (sendingMessage || isRecordingAudio) {
+    if (sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
@@ -1946,6 +1988,88 @@ export default function WhatsappPage() {
     loadMessages();
   }, [selectedChatId]);
 
+  useEffect(() => {
+    if (!selectedChatId) {
+      setScheduledMessages([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadSchedules = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('whatsapp_scheduled_messages')
+          .select('*')
+          .eq('chat_id', selectedChatId)
+          .order('scheduled_send_at', { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const normalized = ((data ?? []) as WhatsappScheduledMessage[]).filter(schedule =>
+          shouldDisplayScheduledMessage(schedule.status),
+        );
+
+        setScheduledMessages(sortSchedulesByMoment(normalized));
+      } catch (scheduleError) {
+        console.error('Erro ao carregar agendamentos do WhatsApp:', scheduleError);
+      }
+    };
+
+    loadSchedules();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`whatsapp-scheduled-${selectedChatId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_scheduled_messages',
+          filter: `chat_id=eq.${selectedChatId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<WhatsappScheduledMessage>) => {
+          const newRecord = (payload.new ?? null) as WhatsappScheduledMessage | null;
+          const oldRecord = (payload.old ?? null) as WhatsappScheduledMessage | null;
+
+          setScheduledMessages(previous => {
+            let next = previous;
+
+            if (oldRecord) {
+              next = next.filter(entry => entry.id !== oldRecord.id);
+            }
+
+            if (newRecord && shouldDisplayScheduledMessage(newRecord.status)) {
+              next = [...next.filter(entry => entry.id !== newRecord.id), newRecord];
+            }
+
+            return sortSchedulesByMoment(next);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedChatId]);
+
   const handleSelectChat = useCallback((chatId: string) => {
     setSelectedChatId(chatId);
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -2040,6 +2164,13 @@ export default function WhatsappPage() {
     setShowAttachmentMenu(false);
     setPendingAttachment(null);
     setReactionDetailsMessageId(null);
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    setIsScheduleEnabled(false);
+    setScheduledSendAt('');
+    setScheduleValidationError(null);
+    setCancellingScheduleIds({});
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -2328,11 +2459,18 @@ export default function WhatsappPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedChat || sendingMessage || isRecordingAudio) {
+    if (!selectedChat || sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
+    const shouldScheduleMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
+
     if (pendingAttachment) {
+      if (shouldScheduleMessage) {
+        setErrorMessage('Não é possível agendar mensagens com anexos.');
+        return;
+      }
+
       const result = await sendPendingAttachment(pendingAttachment, messageInput);
       if (result.wasSent) {
         setPendingAttachment(null);
@@ -2347,12 +2485,78 @@ export default function WhatsappPage() {
 
     const trimmedMessage = messageInput.trim();
     if (trimmedMessage.length === 0) {
+      if (shouldScheduleMessage) {
+        setScheduleValidationError('Informe uma mensagem para agendar.');
+      }
       return;
     }
 
+    if (shouldScheduleMessage) {
+      setScheduleValidationError(null);
+
+      const normalizedIso = convertLocalToUTC(scheduledSendAt);
+      const scheduledDate = normalizedIso ? new Date(normalizedIso) : null;
+
+      if (!normalizedIso || !scheduledDate || Number.isNaN(scheduledDate.getTime())) {
+        setScheduleValidationError('Informe uma data e hora válidas.');
+        return;
+      }
+
+      const now = Date.now();
+      if (scheduledDate.getTime() <= now + 60 * 1000) {
+        setScheduleValidationError('Escolha um horário pelo menos 1 minuto no futuro.');
+        return;
+      }
+
+      setSchedulingMessage(true);
+      setErrorMessage(null);
+
+      try {
+        const { data, error } = await supabase
+          .from('whatsapp_scheduled_messages')
+          .insert({
+            chat_id: selectedChat.id,
+            phone: selectedChat.phone,
+            message: trimmedMessage,
+            scheduled_send_at: normalizedIso,
+            status: 'pending',
+          })
+          .select('*')
+          .single<WhatsappScheduledMessage>();
+
+        if (error) {
+          throw error;
+        }
+
+        const inserted = data as WhatsappScheduledMessage | null;
+
+        if (inserted && shouldDisplayScheduledMessage(inserted.status)) {
+          setScheduledMessages(previous =>
+            sortSchedulesByMoment([
+              ...previous.filter(entry => entry.id !== inserted.id),
+              inserted,
+            ]),
+          );
+        }
+
+        setMessageInput('');
+        setScheduledSendAt('');
+        setIsScheduleEnabled(false);
+      } catch (scheduleError) {
+        console.error('Erro ao agendar mensagem do WhatsApp:', scheduleError);
+        setErrorMessage('Não foi possível agendar a mensagem.');
+      } finally {
+        setSchedulingMessage(false);
+      }
+
+      return;
+    }
+
+    setScheduleValidationError(null);
     const optimisticMessage = createOptimisticMessage({ text: trimmedMessage });
     setMessageInput('');
 
+    setErrorMessage(null);
     const wasSent = await sendWhatsappMessage({
       endpoint: '/whatsapp-webhook/send-message',
       body: { phone: selectedChat.phone, message: trimmedMessage },
@@ -2365,8 +2569,43 @@ export default function WhatsappPage() {
     }
   };
 
+  const handleCancelScheduledMessage = useCallback(async (scheduleId: string) => {
+    if (!scheduleId) {
+      return;
+    }
+
+    setCancellingScheduleIds(previous => ({ ...previous, [scheduleId]: true }));
+    setErrorMessage(null);
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { error } = await supabase
+        .from('whatsapp_scheduled_messages')
+        .update({
+          status: 'cancelled',
+          cancelled_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', scheduleId)
+        .in('status', ['pending', 'processing']);
+
+      if (error) {
+        throw error;
+      }
+    } catch (cancelError) {
+      console.error('Erro ao cancelar agendamento do WhatsApp:', cancelError);
+      setErrorMessage('Não foi possível cancelar o agendamento.');
+    } finally {
+      setCancellingScheduleIds(previous => {
+        const next = { ...previous };
+        delete next[scheduleId];
+        return next;
+      });
+    }
+  }, []);
+
   const toggleAttachmentMenu = () => {
-    if (sendingMessage || isRecordingAudio) {
+    if (sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
@@ -2374,7 +2613,7 @@ export default function WhatsappPage() {
   };
 
   const openDocumentPicker = () => {
-    if (sendingMessage || isRecordingAudio) {
+    if (sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
@@ -2395,7 +2634,7 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || sendingMessage || isRecordingAudio) {
+    if (!file || sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
@@ -2432,7 +2671,7 @@ export default function WhatsappPage() {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
 
-    if (!file || sendingMessage || isRecordingAudio) {
+    if (!file || sendingMessage || schedulingMessage || isRecordingAudio) {
       return;
     }
 
@@ -2475,7 +2714,7 @@ export default function WhatsappPage() {
   };
 
   const handleSendContactPrompt = async () => {
-    if (!selectedChat || sendingMessage) {
+    if (!selectedChat || sendingMessage || schedulingMessage) {
       return;
     }
 
@@ -2524,7 +2763,7 @@ export default function WhatsappPage() {
   };
 
   const handleSendLocationPrompt = async () => {
-    if (!selectedChat || sendingMessage) {
+    if (!selectedChat || sendingMessage || schedulingMessage) {
       return;
     }
 
@@ -2587,7 +2826,7 @@ export default function WhatsappPage() {
     hasMediaWithoutPadding: boolean;
   };
 
-  const getMessageAttachmentInfo = (message: OptimisticMessage): MessageAttachmentInfo => {
+  const getMessageAttachmentInfo = (message: TimelineMessage): MessageAttachmentInfo => {
     const payload =
       message.raw_payload && typeof message.raw_payload === 'object'
         ? (message.raw_payload as WhatsappMessageRawPayload)
@@ -2616,10 +2855,11 @@ export default function WhatsappPage() {
   };
 
   const { renderableMessages, reactionSummaries } = useMemo(() => {
-    const baseMessages: OptimisticMessage[] = [];
+    const baseMessages: TimelineMessage[] = [];
     const reactionAccumulator = new Map<string, Map<string, MessageReactionParticipant[]>>();
 
     for (const message of messages) {
+      const timelineMessage: TimelineMessage = { ...message };
       const payload =
         message.raw_payload && typeof message.raw_payload === 'object'
           ? (message.raw_payload as WhatsappMessageRawPayload)
@@ -2659,10 +2899,14 @@ export default function WhatsappPage() {
           const reactionTime = parseDateValue(reactionPayload?.time ?? null);
           const displayName = getMessageSenderDisplayName(message);
 
+          const reactionPhone = reactionPayload
+            ? toNonEmptyString(reactionPayload.reactionBy)
+            : null;
+
           const participantInfo: MessageReactionParticipant = {
             participantId,
             displayName: displayName ?? (message.from_me ? 'Você' : null),
-            phone: toNonEmptyString(reactionPayload.reactionBy) ?? toNonEmptyString(payload?.phone),
+            phone: reactionPhone ?? toNonEmptyString(payload?.phone),
             isFromMe: message.from_me,
             reactedAt: reactionTime,
           };
@@ -2676,7 +2920,7 @@ export default function WhatsappPage() {
         continue;
       }
 
-      baseMessages.push(message);
+      baseMessages.push(timelineMessage);
     }
 
     const summaries: Record<string, MessageReactionSummary> = {};
@@ -2717,10 +2961,38 @@ export default function WhatsappPage() {
       }
     });
 
-    return { renderableMessages: baseMessages, reactionSummaries: summaries };
-  }, [messages]);
+    for (const schedule of scheduledMessages) {
+      if (!shouldDisplayScheduledMessage(schedule.status)) {
+        continue;
+      }
 
-  const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
+      const scheduleMessage: TimelineMessage = {
+        id: `schedule-${schedule.id}`,
+        chat_id: schedule.chat_id,
+        message_id: `schedule-${schedule.id}`,
+        from_me: true,
+        status: SCHEDULE_STATUS_LABELS[schedule.status] ?? schedule.status,
+        text: schedule.message,
+        moment: schedule.scheduled_send_at,
+        raw_payload: null,
+        isOptimistic: false,
+        scheduleMetadata: {
+          scheduledMessageId: schedule.id,
+          scheduledSendAt: schedule.scheduled_send_at,
+          status: schedule.status,
+          lastError: schedule.last_error ?? null,
+        },
+      };
+
+      baseMessages.push(scheduleMessage);
+    }
+
+    const sortedMessages = sortMessagesByMoment(baseMessages);
+
+    return { renderableMessages: sortedMessages, reactionSummaries: summaries };
+  }, [messages, scheduledMessages]);
+
+  const renderMessageContent = (message: TimelineMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
 
     const attachments: JSX.Element[] = [];
@@ -2954,13 +3226,16 @@ export default function WhatsappPage() {
   };
 
   const trimmedMessageInput = messageInput.trim();
-  const shouldShowAudioAction = !pendingAttachment && trimmedMessageInput.length === 0;
+  const shouldScheduleCurrentMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
+  const shouldShowAudioAction =
+    !pendingAttachment && trimmedMessageInput.length === 0 && !shouldScheduleCurrentMessage;
   const isSendDisabled =
     sendingMessage ||
+    schedulingMessage ||
     isRecordingAudio ||
     (!pendingAttachment && trimmedMessageInput.length === 0);
   const isActionButtonDisabled = shouldShowAudioAction
-    ? sendingMessage || isRecordingAudio
+    ? sendingMessage || schedulingMessage || isRecordingAudio
     : isSendDisabled;
   const messagePlaceholder = pendingAttachment
     ? pendingAttachment.kind === 'audio'
@@ -3269,6 +3544,20 @@ export default function WhatsappPage() {
               ) : (
                 renderableMessages.map(message => {
                   const isFromMe = message.from_me;
+                  const scheduleMetadata = message.scheduleMetadata ?? null;
+                  const scheduleId = scheduleMetadata?.scheduledMessageId ?? null;
+                  const scheduleStatusLabel = scheduleMetadata
+                    ? SCHEDULE_STATUS_LABELS[scheduleMetadata.status] ?? scheduleMetadata.status
+                    : null;
+                  const scheduleTimestamp = scheduleMetadata
+                    ? formatDateTime(scheduleMetadata.scheduledSendAt)
+                    : null;
+                  const canCancelSchedule = scheduleMetadata
+                    ? ['pending', 'processing'].includes(scheduleMetadata.status)
+                    : false;
+                  const isCancellingSchedule = scheduleId
+                    ? Boolean(cancellingScheduleIds[scheduleId])
+                    : false;
                   const attachmentInfo = getMessageAttachmentInfo(message);
                   const alignment = isFromMe ? 'items-end text-right' : 'items-start text-left';
                   const hasMediaWithoutPadding = attachmentInfo.hasMediaWithoutPadding;
@@ -3276,7 +3565,11 @@ export default function WhatsappPage() {
                     hasMediaWithoutPadding && !attachmentInfo.audioUrl && !attachmentInfo.documentUrl;
                   const bubblePaddingClasses = hasMediaWithoutPadding ? 'p-0' : 'px-4 py-3';
                   const bubbleOverflowClass = hasOnlyMediaWithoutPadding ? 'overflow-hidden' : '';
-                  const bubbleClasses = isFromMe
+                  const bubbleClasses = scheduleMetadata
+                    ? isFromMe
+                      ? 'bg-emerald-600/10 border border-emerald-200 text-emerald-900'
+                      : 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                    : isFromMe
                     ? 'bg-emerald-500 text-white'
                     : 'bg-white border border-slate-200 text-slate-800';
 
@@ -3457,10 +3750,48 @@ export default function WhatsappPage() {
                           </div>
                         ) : null}
                       </div>
-                      <span className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
-                        {formatDateTime(message.moment)}{' '}
-                        {message.isOptimistic ? '(enviando...)' : message.status || ''}
-                      </span>
+                      <div
+                        className={`mt-1 flex flex-col gap-1 text-[10px] uppercase tracking-wide text-slate-400 ${
+                          isFromMe ? 'items-end text-right' : 'items-start text-left'
+                        }`}
+                      >
+                        {scheduleMetadata ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {scheduleStatusLabel ? <span>{scheduleStatusLabel}</span> : null}
+                            {scheduleTimestamp ? (
+                              <span className="normal-case text-[11px] text-slate-500">
+                                {scheduleTimestamp}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{formatDateTime(message.moment)}</span>
+                            <span>{message.isOptimistic ? '(enviando...)' : message.status || ''}</span>
+                          </div>
+                        )}
+                        {scheduleMetadata?.lastError ? (
+                          <div className="text-[11px] font-medium normal-case text-rose-500">
+                            {scheduleMetadata.lastError}
+                          </div>
+                        ) : null}
+                      </div>
+                      {scheduleMetadata && canCancelSchedule && scheduleId ? (
+                        <div
+                          className={`mt-2 flex flex-wrap gap-2 ${
+                            isFromMe ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleCancelScheduledMessage(scheduleId)}
+                            disabled={isCancellingSchedule}
+                            className="inline-flex items-center gap-2 rounded-full border border-emerald-400 px-3 py-1 text-[11px] font-semibold text-emerald-600 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isCancellingSchedule ? 'Cancelando...' : 'Cancelar agendamento'}
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })
@@ -3581,6 +3912,60 @@ export default function WhatsappPage() {
                   </div>
                 ) : null}
 
+                <div className="rounded-lg border border-slate-200 bg-white/80 p-3 text-xs text-slate-600">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      checked={isScheduleEnabled}
+                      onChange={event => {
+                        const enabled = event.target.checked;
+                        setIsScheduleEnabled(enabled);
+                        if (!enabled) {
+                          setScheduledSendAt('');
+                          setScheduleValidationError(null);
+                        } else if (!scheduledSendAt) {
+                          const defaultDate = new Date(Date.now() + 5 * 60 * 1000);
+                          setScheduledSendAt(formatDateTimeForInput(defaultDate.toISOString()));
+                        }
+                      }}
+                    />
+                    <span>Agendar envio</span>
+                  </label>
+                  {isScheduleEnabled ? (
+                    <div className="mt-2 space-y-1">
+                      <label
+                        className="text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                        htmlFor="scheduled-send-at-input"
+                      >
+                        Data e hora
+                      </label>
+                      <input
+                        id="scheduled-send-at-input"
+                        type="datetime-local"
+                        value={scheduledSendAt}
+                        min={formatDateTimeForInput(new Date(Date.now() + 60 * 1000).toISOString())}
+                        onChange={event => {
+                          setScheduledSendAt(event.target.value);
+                          setScheduleValidationError(null);
+                        }}
+                        className="w-full rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                      {scheduleValidationError ? (
+                        <p className="text-xs text-red-600">{scheduleValidationError}</p>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          A mensagem será enviada automaticamente no horário selecionado.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Ative para definir uma data e horário de envio.
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -3670,7 +4055,7 @@ export default function WhatsappPage() {
                     value={messageInput}
                     onChange={event => setMessageInput(event.target.value)}
                     placeholder={messagePlaceholder}
-                    disabled={sendingMessage}
+                    disabled={sendingMessage || schedulingMessage}
                   />
                   <button
                     type={shouldShowAudioAction ? 'button' : 'submit'}

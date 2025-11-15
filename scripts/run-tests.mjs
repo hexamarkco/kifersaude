@@ -1,13 +1,33 @@
 import { build } from 'esbuild';
-import { mkdtempSync, rmSync } from 'node:fs';
+import Module from 'node:module';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, delimiter } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const tempDir = mkdtempSync(join(tmpdir(), 'kifersaude-tests-'));
 
 try {
-  const tests = [];
+  symlinkSync(join(process.cwd(), 'node_modules'), join(tempDir, 'node_modules'), 'dir');
+} catch {
+  // Ignore if symlink cannot be created
+}
+
+const existingNodePath = process.env.NODE_PATH ? process.env.NODE_PATH.split(delimiter) : [];
+const projectNodeModules = join(process.cwd(), 'node_modules');
+if (!existingNodePath.includes(projectNodeModules)) {
+  existingNodePath.push(projectNodeModules);
+}
+process.env.NODE_PATH = existingNodePath.join(delimiter);
+Module._initPaths();
+
+try {
+  const tests = [
+    {
+      entry: 'src/server/__tests__/whatsappScheduler.test.ts',
+      outfile: 'whatsappScheduler.test.js',
+    },
+  ];
 
   for (const { entry, outfile } of tests) {
     const compiledFile = join(tempDir, outfile);
@@ -20,7 +40,7 @@ try {
       format: 'esm',
       sourcemap: 'inline',
       logLevel: 'silent',
-      external: ['npm:@supabase/supabase-js@2.57.4'],
+      external: ['@supabase/supabase-js'],
     });
 
     const moduleUrl = pathToFileURL(compiledFile);

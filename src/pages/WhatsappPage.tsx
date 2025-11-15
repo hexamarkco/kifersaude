@@ -13,7 +13,6 @@ import {
   ArchiveRestore,
   FileText,
   Image as ImageIcon,
-  MessageCirclePlus,
   Plus,
   MapPin,
   Mic,
@@ -33,7 +32,9 @@ import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { supabase } from '../lib/supabase';
+import type { QuickReply } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
@@ -924,6 +925,10 @@ export default function WhatsappPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+  const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
+  const [selectedQuickReplyId, setSelectedQuickReplyId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -1047,6 +1052,142 @@ export default function WhatsappPage() {
 
     mediaRecorderRef.current = null;
   }, [stopDurationTimer, stopWaveformAnimation]);
+
+  const sortQuickReplies = useCallback((list: QuickReply[]) => {
+    return [...list].sort((first, second) => {
+      const firstLabel = (first.title?.trim() || first.text).toLocaleLowerCase('pt-BR');
+      const secondLabel = (second.title?.trim() || second.text).toLocaleLowerCase('pt-BR');
+      return firstLabel.localeCompare(secondLabel, 'pt-BR');
+    });
+  }, []);
+
+  const loadQuickReplies = useCallback(async () => {
+    setQuickRepliesLoading(true);
+    setQuickRepliesError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_quick_replies')
+        .select('id, title, text, created_at, updated_at')
+        .order('title', { ascending: true })
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setQuickReplies(sortQuickReplies((data ?? []) as QuickReply[]));
+    } catch (loadError) {
+      console.error('Falha ao carregar respostas rápidas:', loadError);
+      setQuickReplies([]);
+      setQuickRepliesError('Não foi possível carregar as respostas rápidas.');
+    } finally {
+      setQuickRepliesLoading(false);
+    }
+  }, [sortQuickReplies]);
+
+  useEffect(() => {
+    void loadQuickReplies();
+  }, [loadQuickReplies]);
+
+  useEffect(() => {
+    if (selectedQuickReplyId && !quickReplies.some(reply => reply.id === selectedQuickReplyId)) {
+      setSelectedQuickReplyId(null);
+    }
+  }, [quickReplies, selectedQuickReplyId]);
+
+  const handleCreateQuickReply = useCallback(
+    async ({ title, text }: { title: string; text: string }) => {
+      const trimmedTitle = title.trim();
+      const payload = {
+        title: trimmedTitle === '' ? null : trimmedTitle,
+        text: text.trim(),
+      };
+
+      try {
+        setQuickRepliesError(null);
+        const { data, error } = await supabase
+          .from('whatsapp_quick_replies')
+          .insert(payload)
+          .select('id, title, text, created_at, updated_at')
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const inserted = data as QuickReply;
+          setQuickReplies(previous => sortQuickReplies([...previous, inserted]));
+        }
+      } catch (createError) {
+        console.error('Falha ao criar resposta rápida:', createError);
+        setQuickRepliesError('Não foi possível salvar a resposta rápida.');
+        throw createError;
+      }
+    },
+    [sortQuickReplies],
+  );
+
+  const handleUpdateQuickReply = useCallback(
+    async (id: string, { title, text }: { title: string; text: string }) => {
+      const trimmedTitle = title.trim();
+      const payload = {
+        title: trimmedTitle === '' ? null : trimmedTitle,
+        text: text.trim(),
+      };
+
+      try {
+        setQuickRepliesError(null);
+        const { data, error } = await supabase
+          .from('whatsapp_quick_replies')
+          .update(payload)
+          .eq('id', id)
+          .select('id, title, text, created_at, updated_at')
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const updated = data as QuickReply;
+          setQuickReplies(previous =>
+            sortQuickReplies(previous.map(reply => (reply.id === id ? updated : reply))),
+          );
+
+          if (selectedQuickReplyId === id) {
+            setMessageInput(updated.text);
+          }
+        }
+      } catch (updateError) {
+        console.error('Falha ao atualizar resposta rápida:', updateError);
+        setQuickRepliesError('Não foi possível atualizar a resposta rápida.');
+        throw updateError;
+      }
+    },
+    [selectedQuickReplyId, sortQuickReplies],
+  );
+
+  const handleQuickReplySelect = useCallback((reply: QuickReply) => {
+    setSelectedQuickReplyId(reply.id);
+    setMessageInput(reply.text);
+  }, []);
+
+  const handleMessageInputChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => {
+      const { value } = event.target;
+      setMessageInput(value);
+
+      if (selectedQuickReplyId) {
+        const selectedReply = quickReplies.find(reply => reply.id === selectedQuickReplyId);
+        if (!selectedReply || selectedReply.text !== value) {
+          setSelectedQuickReplyId(null);
+        }
+      }
+    },
+    [quickReplies, selectedQuickReplyId],
+  );
 
   const resetAudioUiState = useCallback(() => {
     setIsRecordingAudio(false);
@@ -3594,6 +3735,16 @@ export default function WhatsappPage() {
                     <Paperclip className="h-5 w-5" />
                   </button>
 
+                  <QuickRepliesMenu
+                    quickReplies={quickReplies}
+                    selectedReplyId={selectedQuickReplyId}
+                    onSelect={handleQuickReplySelect}
+                    onCreate={handleCreateQuickReply}
+                    onUpdate={handleUpdateQuickReply}
+                    isLoading={quickRepliesLoading}
+                    error={quickRepliesError}
+                  />
+
                   {showAttachmentMenu ? (
                     <div
                       className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
@@ -3668,7 +3819,7 @@ export default function WhatsappPage() {
                     maxLength={1000}
                     rows={1}
                     value={messageInput}
-                    onChange={event => setMessageInput(event.target.value)}
+                    onChange={handleMessageInputChange}
                     placeholder={messagePlaceholder}
                     disabled={sendingMessage}
                   />

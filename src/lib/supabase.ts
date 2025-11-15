@@ -50,6 +50,14 @@ export type Lead = {
   updated_at: string;
 };
 
+export type QuickReply = {
+  id: string;
+  title: string | null;
+  text: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type Contract = {
   id: string;
   codigo_contrato: string;

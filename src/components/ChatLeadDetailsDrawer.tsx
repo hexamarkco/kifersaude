@@ -68,9 +68,9 @@ export default function ChatLeadDetailsDrawer({
         produto_plano: contract.produto_plano ?? null,
         mensalidade_total: contract.mensalidade_total ?? null,
         comissao_prevista: contract.comissao_prevista ?? null,
-        responsavel: null,
-        previsao_recebimento_comissao: null,
-        previsao_pagamento_bonificacao: null,
+        responsavel: contract.responsavel ?? null,
+        previsao_recebimento_comissao: contract.previsao_recebimento_comissao ?? null,
+        previsao_pagamento_bonificacao: contract.previsao_pagamento_bonificacao ?? null,
       })) ?? [],
     );
     setFinancial(financialSummary ?? null);

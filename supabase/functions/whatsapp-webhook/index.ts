@@ -17,6 +17,26 @@ type ChatLeadSummary = {
   proximo_retorno: string | null;
 };
 
+type ChatContractSummary = {
+  id: string;
+  codigo_contrato: string | null;
+  status: string | null;
+  modalidade: string | null;
+  operadora: string | null;
+  produto_plano: string | null;
+  mensalidade_total: number | null;
+  comissao_prevista: number | null;
+  responsavel: string | null;
+  previsao_recebimento_comissao: string | null;
+  previsao_pagamento_bonificacao: string | null;
+};
+
+type ChatFinancialSummary = {
+  total_mensalidade: number | null;
+  total_comissao: number | null;
+  total_bonus: number | null;
+};
+
 type WhatsappChat = {
   id: string;
   phone: string;
@@ -29,6 +49,8 @@ type WhatsappChat = {
   is_pinned: boolean;
   display_name?: string | null;
   crm_lead?: ChatLeadSummary | null;
+  crm_contracts?: ChatContractSummary[];
+  crm_financial_summary?: ChatFinancialSummary | null;
 };
 
 type WhatsappMessage = {
@@ -59,6 +81,24 @@ type LeadSummaryRecord = {
   ultimo_contato: string | null;
   proximo_retorno: string | null;
   updated_at: string | null;
+};
+
+type ContractSummaryRecord = {
+  id: string | null;
+  lead_id: string | null;
+  codigo_contrato: string | null;
+  status: string | null;
+  modalidade: string | null;
+  operadora: string | null;
+  produto_plano: string | null;
+  mensalidade_total: number | string | null;
+  comissao_prevista: number | string | null;
+  responsavel: string | null;
+  previsao_recebimento_comissao: string | null;
+  previsao_pagamento_bonificacao: string | null;
+  bonus_por_vida_valor: number | string | null;
+  bonus_por_vida_aplicado: boolean | number | string | null;
+  vidas: number | string | null;
 };
 
 type ZapiWebhookPayload = {
@@ -318,6 +358,33 @@ const toNonEmptyString = (value: unknown): string | null => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const toNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    if (!value.trim()) {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const toIntegerOrNull = (value: unknown): number | null => {
+  const parsed = toNumberOrNull(value);
+  if (parsed === null) {
+    return null;
+  }
+
+  const truncated = Math.trunc(parsed);
+  return Number.isFinite(truncated) ? truncated : null;
 };
 
 const parseMoment = (value: number | string | undefined): Date | null => {
@@ -1004,6 +1071,98 @@ const fetchLeadSummariesByPhones = async (
   }
 
   return leadsMap;
+};
+
+const fetchContractSummariesByLeadIds = async (
+  leadIds: string[],
+): Promise<{
+  contractsByLeadId: Map<string, ChatContractSummary[]>;
+  financialSummaryByLeadId: Map<string, ChatFinancialSummary>;
+}> => {
+  const contractsByLeadId = new Map<string, ChatContractSummary[]>();
+  const financialSummaryByLeadId = new Map<string, ChatFinancialSummary>();
+
+  if (!supabaseAdmin || leadIds.length === 0) {
+    return { contractsByLeadId, financialSummaryByLeadId };
+  }
+
+  const uniqueLeadIds = Array.from(new Set(leadIds.filter(Boolean)));
+  if (uniqueLeadIds.length === 0) {
+    return { contractsByLeadId, financialSummaryByLeadId };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('contracts')
+    .select(
+      'id, lead_id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao, bonus_por_vida_valor, bonus_por_vida_aplicado, vidas',
+    )
+    .in('lead_id', uniqueLeadIds)
+    .order('created_at', { ascending: false })
+    .returns<ContractSummaryRecord[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  for (const record of data ?? []) {
+    const leadId = toNonEmptyString(record.lead_id);
+    const contractId = toNonEmptyString(record.id);
+
+    if (!leadId || !contractId) {
+      continue;
+    }
+
+    const mensalidade = toNumberOrNull(record.mensalidade_total);
+    const comissao = toNumberOrNull(record.comissao_prevista);
+    const bonusValor = toNumberOrNull(record.bonus_por_vida_valor);
+    const vidas = toIntegerOrNull(record.vidas) ?? 0;
+    const bonusAplicado = parseBooleanish(record.bonus_por_vida_aplicado) ?? false;
+
+    let bonusTotal: number | null = null;
+    if (bonusValor !== null) {
+      bonusTotal = bonusAplicado ? bonusValor * (vidas > 0 ? vidas : 1) : bonusValor;
+    }
+
+    const summary: ChatContractSummary = {
+      id: contractId,
+      codigo_contrato: toNonEmptyString(record.codigo_contrato),
+      status: toNonEmptyString(record.status),
+      modalidade: toNonEmptyString(record.modalidade),
+      operadora: toNonEmptyString(record.operadora),
+      produto_plano: toNonEmptyString(record.produto_plano),
+      mensalidade_total: mensalidade,
+      comissao_prevista: comissao,
+      responsavel: toNonEmptyString(record.responsavel),
+      previsao_recebimento_comissao: toIsoStringOrNull(record.previsao_recebimento_comissao),
+      previsao_pagamento_bonificacao: toIsoStringOrNull(record.previsao_pagamento_bonificacao),
+    };
+
+    const existingContracts = contractsByLeadId.get(leadId) ?? [];
+    existingContracts.push(summary);
+    contractsByLeadId.set(leadId, existingContracts);
+
+    const currentTotals = financialSummaryByLeadId.get(leadId) ?? {
+      total_mensalidade: 0,
+      total_comissao: 0,
+      total_bonus: 0,
+    };
+
+    if (mensalidade !== null) {
+      currentTotals.total_mensalidade += mensalidade;
+    }
+
+    if (comissao !== null) {
+      currentTotals.total_comissao += comissao;
+    }
+
+    if (bonusTotal !== null) {
+      currentTotals.total_bonus += bonusTotal;
+    }
+
+    financialSummaryByLeadId.set(leadId, currentTotals);
+  }
+
+  return { contractsByLeadId, financialSummaryByLeadId };
 };
 
 const resolveContactDisplayName = (contact: ZapiContact | undefined): string | null => {
@@ -2195,15 +2354,20 @@ const handleListChats = async (req: Request) => {
     }
 
     const leadsMap = await fetchLeadSummariesByPhones(Array.from(phonesToLookup));
+    const leadIds = Array.from(new Set(Array.from(leadsMap.values()).map(lead => lead.id)));
+    const { contractsByLeadId, financialSummaryByLeadId } = await fetchContractSummariesByLeadIds(leadIds);
 
     const enrichedChats = chats.map(chat => {
       const normalizedPhone = normalizePhoneIdentifier(chat.phone);
       const leadSummary = chat.is_group ? null : findLeadSummaryForPhone(normalizedPhone, leadsMap);
+      const leadId = leadSummary?.id ?? null;
 
       return {
         ...chat,
         display_name: resolveChatDisplayName(chat, contactMap, leadsMap),
         crm_lead: leadSummary ? { ...leadSummary } : null,
+        crm_contracts: leadId ? contractsByLeadId.get(leadId) ?? [] : [],
+        crm_financial_summary: leadId ? financialSummaryByLeadId.get(leadId) ?? null : null,
       };
     });
 

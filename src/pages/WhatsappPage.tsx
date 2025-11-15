@@ -750,96 +750,97 @@ const getAudioContextConstructor = (): AudioContextConstructor | null => {
 const ensureAudioBlobPreferredFormat = async (
   blob: Blob,
 ): Promise<{ blob: Blob; mimeType: string }> => {
-  const preferredMimeTypes = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/mpeg'];
-  const normalizedType = blob.type.toLowerCase();
-
-  if (preferredMimeTypes.some(type => normalizedType.startsWith(type))) {
-    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
-  }
+  const targetMimeType = 'audio/mpeg';
+  const unsupportedMessage =
+    'A conversão de áudio para MP3 não é suportada neste navegador.';
 
   if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
-    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+    throw new Error(unsupportedMessage);
+  }
+
+  if (!(MediaRecorder as typeof MediaRecorder).isTypeSupported(targetMimeType)) {
+    throw new Error(unsupportedMessage);
   }
 
   const AudioContextCtor = getAudioContextConstructor();
 
   if (!AudioContextCtor) {
-    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+    throw new Error(unsupportedMessage);
   }
 
-  for (const targetMimeType of preferredMimeTypes) {
-    if (!(MediaRecorder as typeof MediaRecorder).isTypeSupported(targetMimeType)) {
-      continue;
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContextCtor();
+
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume().catch(() => undefined);
     }
 
-    try {
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContextCtor();
+    const destination = audioContext.createMediaStreamDestination();
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(destination);
+
+    const recordedChunks: Blob[] = [];
+
+    const convertedBlob = await new Promise<Blob>((resolve, reject) => {
+      let recorder: MediaRecorder;
 
       try {
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        if (audioContext.state === 'suspended') {
-          await audioContext.resume().catch(() => undefined);
-        }
-
-        const destination = audioContext.createMediaStreamDestination();
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(destination);
-
-        const recordedChunks: Blob[] = [];
-
-        const convertedBlob = await new Promise<Blob>((resolve, reject) => {
-          const recorder = new MediaRecorder(destination.stream, { mimeType: targetMimeType });
-
-          recorder.addEventListener('dataavailable', event => {
-            if (event.data && event.data.size > 0) {
-              recordedChunks.push(event.data);
-            }
-          });
-
-          recorder.addEventListener('error', event => {
-            if (recorder.state !== 'inactive') {
-              try {
-                recorder.stop();
-              } catch {
-                // Ignore additional stop errors.
-              }
-            }
-            reject(event.error ?? new Error('Erro ao converter áudio.'));
-          });
-
-          recorder.addEventListener('stop', () => {
-            resolve(new Blob(recordedChunks, { type: targetMimeType }));
-          });
-
-          recorder.start();
-          source.start();
-
-          source.addEventListener('ended', () => {
-            if (recorder.state !== 'inactive') {
-              try {
-                recorder.stop();
-              } catch {
-                // Ignore stop errors; conversion will fail gracefully.
-              }
-            }
-          });
-        });
-
-        audioContext.close().catch(() => undefined);
-
-        return { blob: convertedBlob, mimeType: targetMimeType };
-      } catch (conversionError) {
-        audioContext.close().catch(() => undefined);
-        console.warn('Falha ao converter áudio para formato preferido:', conversionError);
+        recorder = new MediaRecorder(destination.stream, { mimeType: targetMimeType });
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(String(error)));
+        return;
       }
-    } catch (error) {
-      console.warn('Não foi possível preparar áudio para conversão:', error);
-    }
-  }
 
-  return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+      const handleError = (event: MediaRecorderErrorEvent) => {
+        if (recorder.state !== 'inactive') {
+          try {
+            recorder.stop();
+          } catch {
+            // Ignore additional stop errors.
+          }
+        }
+        reject(event.error ?? new Error('Erro ao converter áudio.'));
+      };
+
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data && event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      });
+
+      recorder.addEventListener('error', handleError);
+
+      recorder.addEventListener('stop', () => {
+        if (recordedChunks.length === 0) {
+          reject(new Error('Nenhum áudio foi gerado durante a conversão.'));
+          return;
+        }
+        resolve(new Blob(recordedChunks, { type: targetMimeType }));
+      });
+
+      recorder.start();
+      source.start();
+
+      source.addEventListener('ended', () => {
+        if (recorder.state !== 'inactive') {
+          try {
+            recorder.stop();
+          } catch {
+            // Ignore stop errors; conversion will fail gracefully.
+          }
+        }
+      });
+    });
+
+    return { blob: convertedBlob, mimeType: targetMimeType };
+  } catch (_error) {
+    throw new Error('Não foi possível converter o áudio gravado para MP3.');
+  } finally {
+    audioContext.close().catch(() => undefined);
+  }
 };
 
 const formatSecondsLabel = (value: number): string => {
@@ -1082,13 +1083,18 @@ export default function WhatsappPage() {
               return;
             }
 
-            const mimeType =
-              recorder.mimeType || getPreferredAudioMimeType() || 'audio/webm';
-            const audioBlob = new Blob(recordedChunks, { type: mimeType });
+            const audioBlob = new Blob(recordedChunks, {
+              type: recorder.mimeType || getPreferredAudioMimeType() || 'audio/webm',
+            });
 
             try {
               const preferredAudio = await ensureAudioBlobPreferredFormat(audioBlob);
-              const normalizedMimeType = preferredAudio.mimeType.split(';')[0] ?? preferredAudio.mimeType;
+              const normalizedMimeType = 'audio/mpeg';
+
+              if (!preferredAudio.mimeType.toLowerCase().startsWith(normalizedMimeType)) {
+                throw new Error('O áudio gravado não pôde ser convertido para MP3.');
+              }
+
               const normalizedBlob =
                 preferredAudio.blob.type === normalizedMimeType
                   ? preferredAudio.blob
@@ -1105,15 +1111,19 @@ export default function WhatsappPage() {
                     ? approximateDuration
                     : null;
 
-                setPendingAttachment({
-                  kind: 'audio',
-                  dataUrl,
-                  durationSeconds: resolvedDuration,
-                  mimeType: normalizedMimeType,
-                });
+              setPendingAttachment({
+                kind: 'audio',
+                dataUrl,
+                durationSeconds: resolvedDuration,
+                mimeType: normalizedMimeType,
+              });
             } catch (error) {
               console.error('Erro ao preparar áudio gravado para envio:', error);
-              setErrorMessage('Não foi possível preparar o áudio gravado para envio.');
+              setErrorMessage(
+                error instanceof Error
+                  ? error.message
+                  : 'Não foi possível converter o áudio gravado para MP3.',
+              );
             }
           }
 
@@ -1166,7 +1176,7 @@ export default function WhatsappPage() {
     }
 
     if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
-      setErrorMessage('A gravação de áudio não é suportada neste navegador.');
+      setErrorMessage('A gravação de áudio com conversão para MP3 não é suportada neste navegador.');
       return;
     }
 

@@ -173,6 +173,50 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
   { icon: UserPlus, prefixes: ['contato recebido', 'contato enviado'] },
 ];
 
+const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);
+const MESSAGE_SKELETON_INDICES = Array.from({ length: 5 }, (_, index) => index);
+
+const ChatListSkeleton = () => (
+  <div className="animate-pulse" role="status">
+    <span className="sr-only">Carregando conversas</span>
+    <div className="divide-y divide-slate-100" aria-hidden="true">
+      {CHAT_SKELETON_INDICES.map(index => (
+        <div key={`chat-skeleton-${index}`} className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-slate-200" />
+            <div className="flex-1">
+              <div className="h-4 w-2/3 rounded-full bg-slate-200" />
+              <div className="mt-2 h-3 w-3/4 rounded-full bg-slate-100" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const MessageSkeletonList = () => (
+  <div className="space-y-3" role="status">
+    <span className="sr-only">Carregando mensagens</span>
+    {MESSAGE_SKELETON_INDICES.map(index => {
+      const isFromMe = index % 2 === 1;
+      const alignment = isFromMe ? 'justify-end' : 'justify-start';
+      const bubbleColor = isFromMe ? 'bg-emerald-100' : 'bg-white';
+      const bubbleCorner = isFromMe ? 'rounded-br-none' : 'rounded-bl-none';
+      return (
+        <div key={`message-skeleton-${index}`} className={`flex ${alignment}`} aria-hidden="true">
+          <div
+            className={`max-w-[75%] rounded-2xl ${bubbleCorner} ${bubbleColor} p-4 shadow-sm ring-1 ring-white/40`}
+          >
+            <div className="h-3 w-5/6 rounded-full bg-slate-200" />
+            <div className="mt-2 h-3 w-2/3 rounded-full bg-slate-100" />
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
 const stripLeadingPreviewEmoji = (
   value: string,
 ): { icon: LucideIcon | null; text: string } => {
@@ -3754,7 +3798,9 @@ export default function WhatsappPage() {
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
           {chatsLoading && visibleChatsBase.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Carregando conversas...</p>
+            <div className="p-4">
+              <ChatListSkeleton />
+            </div>
           ) : visibleChatsBase.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">{emptyChatsMessage}</p>
           ) : filteredChats.length === 0 ? (
@@ -4041,7 +4087,7 @@ export default function WhatsappPage() {
               className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4"
             >
               {messagesLoading && !hasMessages ? (
-                <p className="text-sm text-slate-500">Carregando mensagens...</p>
+                <MessageSkeletonList />
               ) : !hasMessages ? (
                 <p className="text-sm text-slate-500">Nenhuma mensagem neste chat.</p>
               ) : !hasVisibleMessages ? (

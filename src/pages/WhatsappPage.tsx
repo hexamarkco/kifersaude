@@ -2182,16 +2182,9 @@ export default function WhatsappPage() {
       const body: Record<string, unknown> = {
         phone: selectedChat.phone,
         audio: attachment.dataUrl,
-        ptt: true,
+        viewOnce: false,
+        waveform: true,
       };
-
-      if (attachment.durationSeconds !== null && Number.isFinite(attachment.durationSeconds)) {
-        body.seconds = Number(attachment.durationSeconds.toFixed(2));
-      }
-
-      if (attachment.mimeType) {
-        body.mimeType = attachment.mimeType;
-      }
 
       const audioWasSent = await sendWhatsappMessage({
         endpoint: '/whatsapp-webhook/send-audio',

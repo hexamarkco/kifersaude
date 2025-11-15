@@ -35,6 +35,9 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
+const WAVEFORM_BAR_COUNT = 32;
+const WAVEFORM_SENSITIVITY = 1.8;
+
 const formatDateTime = (value: string | null) => {
   if (!value) {
     return '';
@@ -712,9 +715,11 @@ const getPreferredAudioMimeType = (): string | null => {
   }
 
   const candidates = [
+    'audio/mpeg',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
     'audio/webm;codecs=opus',
     'audio/webm',
-    'audio/ogg;codecs=opus',
     'audio/mp4',
   ];
 
@@ -725,6 +730,115 @@ const getPreferredAudioMimeType = (): string | null => {
   }
 
   return null;
+};
+
+type AudioContextConstructor = typeof AudioContext;
+
+const getAudioContextConstructor = (): AudioContextConstructor | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const ctor =
+    window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: AudioContextConstructor }).webkitAudioContext;
+
+  return ctor ?? null;
+};
+
+const ensureAudioBlobPreferredFormat = async (
+  blob: Blob,
+): Promise<{ blob: Blob; mimeType: string }> => {
+  const preferredMimeTypes = ['audio/mpeg', 'audio/ogg;codecs=opus', 'audio/ogg'];
+  const normalizedType = blob.type.toLowerCase();
+
+  if (preferredMimeTypes.some(type => normalizedType.startsWith(type))) {
+    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+  }
+
+  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+  }
+
+  const AudioContextCtor = getAudioContextConstructor();
+
+  if (!AudioContextCtor) {
+    return { blob, mimeType: blob.type || preferredMimeTypes[0] };
+  }
+
+  for (const targetMimeType of preferredMimeTypes) {
+    if (!(MediaRecorder as typeof MediaRecorder).isTypeSupported(targetMimeType)) {
+      continue;
+    }
+
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioContext = new AudioContextCtor();
+
+      try {
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume().catch(() => undefined);
+        }
+
+        const destination = audioContext.createMediaStreamDestination();
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(destination);
+
+        const recordedChunks: Blob[] = [];
+
+        const convertedBlob = await new Promise<Blob>((resolve, reject) => {
+          const recorder = new MediaRecorder(destination.stream, { mimeType: targetMimeType });
+
+          recorder.addEventListener('dataavailable', event => {
+            if (event.data && event.data.size > 0) {
+              recordedChunks.push(event.data);
+            }
+          });
+
+          recorder.addEventListener('error', event => {
+            if (recorder.state !== 'inactive') {
+              try {
+                recorder.stop();
+              } catch {
+                // Ignore additional stop errors.
+              }
+            }
+            reject(event.error ?? new Error('Erro ao converter áudio.'));
+          });
+
+          recorder.addEventListener('stop', () => {
+            resolve(new Blob(recordedChunks, { type: targetMimeType }));
+          });
+
+          recorder.start();
+          source.start();
+
+          source.addEventListener('ended', () => {
+            if (recorder.state !== 'inactive') {
+              try {
+                recorder.stop();
+              } catch {
+                // Ignore stop errors; conversion will fail gracefully.
+              }
+            }
+          });
+        });
+
+        audioContext.close().catch(() => undefined);
+
+        return { blob: convertedBlob, mimeType: targetMimeType };
+      } catch (conversionError) {
+        audioContext.close().catch(() => undefined);
+        console.warn('Falha ao converter áudio para formato preferido:', conversionError);
+      }
+    } catch (error) {
+      console.warn('Não foi possível preparar áudio para conversão:', error);
+    }
+  }
+
+  return { blob, mimeType: blob.type || preferredMimeTypes[0] };
 };
 
 const formatSecondsLabel = (value: number): string => {
@@ -972,9 +1086,15 @@ export default function WhatsappPage() {
             const audioBlob = new Blob(recordedChunks, { type: mimeType });
 
             try {
+              const preferredAudio = await ensureAudioBlobPreferredFormat(audioBlob);
+              const normalizedMimeType = preferredAudio.mimeType.split(';')[0] ?? preferredAudio.mimeType;
+              const normalizedBlob =
+                preferredAudio.blob.type === normalizedMimeType
+                  ? preferredAudio.blob
+                  : new Blob([preferredAudio.blob], { type: normalizedMimeType });
               const [dataUrl, detectedDuration] = await Promise.all([
-                readBlobAsDataUrl(audioBlob),
-                getAudioDurationFromBlob(audioBlob),
+                readBlobAsDataUrl(normalizedBlob),
+                getAudioDurationFromBlob(normalizedBlob),
               ]);
 
               const resolvedDuration =
@@ -984,12 +1104,12 @@ export default function WhatsappPage() {
                     ? approximateDuration
                     : null;
 
-              setPendingAttachment({
-                kind: 'audio',
-                dataUrl,
-                durationSeconds: resolvedDuration,
-                mimeType,
-              });
+                setPendingAttachment({
+                  kind: 'audio',
+                  dataUrl,
+                  durationSeconds: resolvedDuration,
+                  mimeType: normalizedMimeType,
+                });
             } catch (error) {
               console.error('Erro ao preparar áudio gravado para envio:', error);
               setErrorMessage('Não foi possível preparar o áudio gravado para envio.');
@@ -1086,7 +1206,7 @@ export default function WhatsappPage() {
           sourceNode.connect(analyserNode);
 
           const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
-          const barCount = 32;
+          const barCount = WAVEFORM_BAR_COUNT;
 
           setWaveformValues(new Array(barCount).fill(0));
 
@@ -1109,7 +1229,9 @@ export default function WhatsappPage() {
                 sum += Math.abs(dataArray[sampleIndex] - 128);
               }
               const average = sum / chunkSize;
-              values.push(Math.min(average / 128, 1));
+              const normalized = Math.min(average / 128, 1);
+              const amplified = Math.min(normalized * WAVEFORM_SENSITIVITY, 1);
+              values.push(amplified);
             }
 
             setWaveformValues(values);
@@ -2059,16 +2181,9 @@ export default function WhatsappPage() {
       const body: Record<string, unknown> = {
         phone: selectedChat.phone,
         audio: attachment.dataUrl,
-        ptt: true,
+        viewOnce: false,
+        waveform: true,
       };
-
-      if (attachment.durationSeconds !== null && Number.isFinite(attachment.durationSeconds)) {
-        body.seconds = Number(attachment.durationSeconds.toFixed(2));
-      }
-
-      if (attachment.mimeType) {
-        body.mimeType = attachment.mimeType;
-      }
 
       const audioWasSent = await sendWhatsappMessage({
         endpoint: '/whatsapp-webhook/send-audio',

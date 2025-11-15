@@ -17,6 +17,9 @@ export type WhatsappChatContractSummary = {
   produto_plano: string | null;
   mensalidade_total: number | null;
   comissao_prevista: number | null;
+  responsavel: string | null;
+  previsao_recebimento_comissao: string | null;
+  previsao_pagamento_bonificacao: string | null;
 };
 
 export type WhatsappChatFinancialSummary = {

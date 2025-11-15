@@ -66,6 +66,7 @@ export default function Layout({
   const crmChildren = [
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
+    { id: 'financeiro-agenda', label: 'Tarefas', icon: Calendar },
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
@@ -77,7 +78,6 @@ export default function Layout({
 
   const financeiroChildren = [
     { id: 'financeiro-comissoes', label: 'Comissões', icon: DollarSign },
-    { id: 'financeiro-agenda', label: 'Agenda', icon: Calendar },
   ].filter(child => canView(child.id));
 
   const baseTabs: TabConfig[] = [];

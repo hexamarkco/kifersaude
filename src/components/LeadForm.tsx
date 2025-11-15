@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { X, Search } from 'lucide-react';
-import { formatDateTimeForInput, convertLocalToUTC } from '../lib/dateUtils';
+import { formatDateForInput, formatDateTimeForInput, convertLocalToUTC } from '../lib/dateUtils';
 import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     nome_completo: lead?.nome_completo || '',
     telefone: lead?.telefone || '',
     email: lead?.email || '',
+    data_criacao: formatDateForInput(lead?.data_criacao || new Date().toISOString()),
     cep: '',
     endereco: '',
     cidade: lead?.cidade || '',
@@ -125,10 +126,21 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     setSaving(true);
 
     try {
+      const creationDateIso = formData.data_criacao
+        ? convertLocalToUTC(`${formData.data_criacao}T00:00`)
+        : '';
+      const nowIso = new Date().toISOString();
+      const effectiveCreationDateIso =
+        creationDateIso
+          || (formData.data_criacao
+            ? new Date(`${formData.data_criacao}T00:00:00-03:00`).toISOString()
+            : nowIso);
+
       const dataToSave = {
         ...formData,
+        data_criacao: effectiveCreationDateIso,
         proximo_retorno: formData.proximo_retorno ? convertLocalToUTC(formData.proximo_retorno) : null,
-        ultimo_contato: new Date().toISOString(),
+        ultimo_contato: formData.data_criacao ? effectiveCreationDateIso : nowIso,
       };
 
       let savedLeadId = lead?.id;
@@ -466,6 +478,18 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                   placeholder="Informe o responsável"
                 />
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Data de criação
+              </label>
+              <input
+                type="date"
+                value={formData.data_criacao}
+                onChange={(e) => setFormData({ ...formData, data_criacao: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              />
             </div>
 
             <div>

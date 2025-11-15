@@ -1,40 +1,16 @@
-import { build } from 'esbuild';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const tempDir = mkdtempSync(join(process.cwd(), '.tmp-tests-'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const vitestBin = join(__dirname, '..', 'node_modules', 'vitest', 'vitest.mjs');
 
-try {
-  const tests = [
-    {
-      entry: 'src/components/__tests__/ChatMetricsBadges.test.tsx',
-      outfile: 'chat-metrics-badges.test.cjs',
-    },
-    {
-      entry: 'src/pages/__tests__/WhatsappQuickReplies.test.tsx',
-      outfile: 'whatsapp-quick-replies.test.cjs',
-    },
-  ];
+const cliArgs = process.argv.slice(2);
+const child = spawn(process.execPath, [vitestBin, 'run', ...cliArgs], {
+  stdio: 'inherit',
+});
 
-  for (const { entry, outfile } of tests) {
-    const compiledFile = join(tempDir, outfile);
-
-    await build({
-      entryPoints: [entry],
-      outfile: compiledFile,
-      bundle: true,
-      platform: 'node',
-      format: 'cjs',
-      sourcemap: 'inline',
-      logLevel: 'silent',
-      external: ['npm:@supabase/supabase-js@2.57.4', 'jsdom'],
-      jsx: 'automatic',
-    });
-
-    const moduleUrl = pathToFileURL(compiledFile);
-    await import(moduleUrl.href);
-  }
-} finally {
-  rmSync(tempDir, { recursive: true, force: true });
-}
+child.on('exit', code => {
+  process.exit(code ?? 1);
+});

@@ -1092,77 +1092,82 @@ const fetchContractSummariesByLeadIds = async (
     return { contractsByLeadId, financialSummaryByLeadId };
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('contracts')
-    .select(
-      'id, lead_id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, comissao_recebimento_adiantado, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao, bonus_por_vida_valor, bonus_por_vida_aplicado, vidas',
-    )
-    .in('lead_id', uniqueLeadIds)
-    .order('created_at', { ascending: false })
-    .returns<ContractSummaryRecord[]>();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('contracts')
+      .select(
+        'id, lead_id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, comissao_recebimento_adiantado, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao, bonus_por_vida_valor, bonus_por_vida_aplicado, vidas',
+      )
+      .in('lead_id', uniqueLeadIds)
+      .order('created_at', { ascending: false })
+      .returns<ContractSummaryRecord[]>();
 
-  if (error) {
-    throw error;
-  }
-
-  for (const record of data ?? []) {
-    const leadId = toNonEmptyString(record.lead_id);
-    const contractId = toNonEmptyString(record.id);
-
-    if (!leadId || !contractId) {
-      continue;
+    if (error) {
+      throw error;
     }
 
-    const mensalidade = toNumberOrNull(record.mensalidade_total);
-    const comissao = toNumberOrNull(record.comissao_prevista);
-    const comissaoAdiantada = parseBooleanish(record.comissao_recebimento_adiantado);
-    const bonusValor = toNumberOrNull(record.bonus_por_vida_valor);
-    const vidas = toIntegerOrNull(record.vidas) ?? 0;
-    const bonusAplicado = parseBooleanish(record.bonus_por_vida_aplicado) ?? false;
+    for (const record of data ?? []) {
+      const leadId = toNonEmptyString(record.lead_id);
+      const contractId = toNonEmptyString(record.id);
 
-    let bonusTotal: number | null = null;
-    if (bonusValor !== null) {
-      bonusTotal = bonusAplicado ? bonusValor * (vidas > 0 ? vidas : 1) : bonusValor;
+      if (!leadId || !contractId) {
+        continue;
+      }
+
+      const mensalidade = toNumberOrNull(record.mensalidade_total);
+      const comissao = toNumberOrNull(record.comissao_prevista);
+      const comissaoAdiantada = parseBooleanish(record.comissao_recebimento_adiantado);
+      const bonusValor = toNumberOrNull(record.bonus_por_vida_valor);
+      const vidas = toIntegerOrNull(record.vidas) ?? 0;
+      const bonusAplicado = parseBooleanish(record.bonus_por_vida_aplicado) ?? false;
+
+      let bonusTotal: number | null = null;
+      if (bonusValor !== null) {
+        bonusTotal = bonusAplicado ? bonusValor * (vidas > 0 ? vidas : 1) : bonusValor;
+      }
+
+      const summary: ChatContractSummary = {
+        id: contractId,
+        codigo_contrato: toNonEmptyString(record.codigo_contrato),
+        status: toNonEmptyString(record.status),
+        modalidade: toNonEmptyString(record.modalidade),
+        operadora: toNonEmptyString(record.operadora),
+        produto_plano: toNonEmptyString(record.produto_plano),
+        mensalidade_total: mensalidade,
+        comissao_prevista: comissao,
+        comissao_recebimento_adiantado: comissaoAdiantada,
+        responsavel: toNonEmptyString(record.responsavel),
+        previsao_recebimento_comissao: toIsoStringOrNull(record.previsao_recebimento_comissao),
+        previsao_pagamento_bonificacao: toIsoStringOrNull(record.previsao_pagamento_bonificacao),
+      };
+
+      const existingContracts = contractsByLeadId.get(leadId) ?? [];
+      existingContracts.push(summary);
+      contractsByLeadId.set(leadId, existingContracts);
+
+      const currentTotals = financialSummaryByLeadId.get(leadId) ?? {
+        total_mensalidade: 0,
+        total_comissao: 0,
+        total_bonus: 0,
+      };
+
+      if (mensalidade !== null) {
+        currentTotals.total_mensalidade += mensalidade;
+      }
+
+      if (comissao !== null) {
+        currentTotals.total_comissao += comissao;
+      }
+
+      if (bonusTotal !== null) {
+        currentTotals.total_bonus += bonusTotal;
+      }
+
+      financialSummaryByLeadId.set(leadId, currentTotals);
     }
-
-    const summary: ChatContractSummary = {
-      id: contractId,
-      codigo_contrato: toNonEmptyString(record.codigo_contrato),
-      status: toNonEmptyString(record.status),
-      modalidade: toNonEmptyString(record.modalidade),
-      operadora: toNonEmptyString(record.operadora),
-      produto_plano: toNonEmptyString(record.produto_plano),
-      mensalidade_total: mensalidade,
-      comissao_prevista: comissao,
-      comissao_recebimento_adiantado: comissaoAdiantada,
-      responsavel: toNonEmptyString(record.responsavel),
-      previsao_recebimento_comissao: toIsoStringOrNull(record.previsao_recebimento_comissao),
-      previsao_pagamento_bonificacao: toIsoStringOrNull(record.previsao_pagamento_bonificacao),
-    };
-
-    const existingContracts = contractsByLeadId.get(leadId) ?? [];
-    existingContracts.push(summary);
-    contractsByLeadId.set(leadId, existingContracts);
-
-    const currentTotals = financialSummaryByLeadId.get(leadId) ?? {
-      total_mensalidade: 0,
-      total_comissao: 0,
-      total_bonus: 0,
-    };
-
-    if (mensalidade !== null) {
-      currentTotals.total_mensalidade += mensalidade;
-    }
-
-    if (comissao !== null) {
-      currentTotals.total_comissao += comissao;
-    }
-
-    if (bonusTotal !== null) {
-      currentTotals.total_bonus += bonusTotal;
-    }
-
-    financialSummaryByLeadId.set(leadId, currentTotals);
+  } catch (error) {
+    console.error('Erro ao buscar contratos para nomes de chats:', error);
+    return { contractsByLeadId, financialSummaryByLeadId };
   }
 
   return { contractsByLeadId, financialSummaryByLeadId };

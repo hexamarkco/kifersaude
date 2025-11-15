@@ -13,6 +13,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Archive,
   ArchiveRestore,
+  Clock,
   FileText,
   Image as ImageIcon,
   Plus,
@@ -26,6 +27,7 @@ import {
   UserPlus,
   Video as VideoIcon,
   X,
+  XCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
@@ -35,6 +37,7 @@ import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
+import { formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
@@ -2773,6 +2776,37 @@ export default function WhatsappPage() {
     mediaInputRef.current?.click();
   };
 
+  const enableSchedule = () => {
+    if (sendingMessage || schedulingMessage || isRecordingAudio) {
+      return;
+    }
+
+    setIsScheduleEnabled(true);
+    setScheduleValidationError(null);
+    setScheduledSendAt(previousValue => {
+      const trimmed = previousValue.trim();
+
+      if (trimmed) {
+        const parsed = new Date(trimmed);
+        if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+          return trimmed;
+        }
+      }
+
+      const defaultDate = new Date(Date.now() + 5 * 60 * 1000);
+      return formatDateTimeForInput(defaultDate.toISOString());
+    });
+
+    setShowAttachmentMenu(false);
+  };
+
+  const disableSchedule = () => {
+    setIsScheduleEnabled(false);
+    setScheduledSendAt('');
+    setScheduleValidationError(null);
+    setShowAttachmentMenu(false);
+  };
+
   const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     event.target.value = '';
@@ -4280,28 +4314,26 @@ export default function WhatsappPage() {
                   </div>
                 ) : null}
 
-                <div className="rounded-lg border border-slate-200 bg-white/80 p-3 text-xs text-slate-600">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      checked={isScheduleEnabled}
-                      onChange={event => {
-                        const enabled = event.target.checked;
-                        setIsScheduleEnabled(enabled);
-                        if (!enabled) {
-                          setScheduledSendAt('');
-                          setScheduleValidationError(null);
-                        } else if (!scheduledSendAt) {
-                          const defaultDate = new Date(Date.now() + 5 * 60 * 1000);
-                          setScheduledSendAt(formatDateTimeForInput(defaultDate.toISOString()));
-                        }
-                      }}
-                    />
-                    <span>Agendar envio</span>
-                  </label>
-                  {isScheduleEnabled ? (
-                    <div className="mt-2 space-y-1">
+                {isScheduleEnabled ? (
+                  <div className="rounded-lg border border-emerald-200 bg-white/80 p-3 text-xs text-slate-600 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                          Agendamento de mensagem
+                        </span>
+                        <p className="mt-1 text-sm text-slate-600">
+                          A mensagem será enviada automaticamente no horário selecionado.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={disableSchedule}
+                        className="inline-flex items-center justify-center rounded-full border border-emerald-200 px-3 py-1 text-[11px] font-semibold text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                    <div className="mt-3 space-y-1">
                       <label
                         className="text-[11px] font-semibold uppercase tracking-wide text-slate-500"
                         htmlFor="scheduled-send-at-input"
@@ -4321,18 +4353,10 @@ export default function WhatsappPage() {
                       />
                       {scheduleValidationError ? (
                         <p className="text-xs text-red-600">{scheduleValidationError}</p>
-                      ) : (
-                        <p className="text-xs text-slate-500">
-                          A mensagem será enviada automaticamente no horário selecionado.
-                        </p>
-                      )}
+                      ) : null}
                     </div>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Ative para definir uma data e horário de envio.
-                    </p>
-                  )}
-                </div>
+                  </div>
+                ) : null}
 
                 <div className="flex items-center gap-3">
                   <button
@@ -4422,6 +4446,47 @@ export default function WhatsappPage() {
                             <span className="block text-xs text-slate-500">Compartilhe um endereço com poucos cliques</span>
                           </span>
                         </button>
+                      </div>
+                      <div className="border-t border-slate-100 px-3 pt-3 pb-2">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Ações
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <button
+                            type="button"
+                            onClick={enableSchedule}
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                              <Clock className="h-4 w-4" />
+                            </span>
+                            <span>
+                              <span className="block font-medium">
+                                {isScheduleEnabled ? 'Editar agendamento' : 'Agendar mensagem'}
+                              </span>
+                              <span className="block text-xs text-slate-500">
+                                Defina um horário para enviar automaticamente
+                              </span>
+                            </span>
+                          </button>
+                          {isScheduleEnabled ? (
+                            <button
+                              type="button"
+                              onClick={disableSchedule}
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                            >
+                              <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                                <XCircle className="h-4 w-4" />
+                              </span>
+                              <span>
+                                <span className="block font-medium">Remover agendamento</span>
+                                <span className="block text-xs text-slate-500">Voltar para envio imediato</span>
+                              </span>
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   ) : null}

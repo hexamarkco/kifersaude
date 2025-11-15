@@ -46,16 +46,55 @@ function getCanonicalOrigem(origem?: string): (typeof origensValidas)[number] | 
 interface LeadData {
   nome_completo: string;
   telefone: string;
-  email?: string;
-  cidade?: string;
-  regiao?: string;
+  email?: string | null;
+  cidade?: string | null;
+  regiao?: string | null;
   origem: string;
   tipo_contratacao: string;
-  operadora_atual?: string;
+  operadora_atual?: string | null;
   status?: string;
   responsavel: string;
-  proximo_retorno?: string;
-  observacoes?: string;
+  proximo_retorno?: string | null;
+  observacoes?: string | null;
+  data_criacao: string;
+  ultimo_contato: string;
+  arquivado: boolean;
+}
+
+function parseDateInputToISOString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let normalized = trimmed;
+  const hasTime = trimmed.includes('T');
+  const timezoneRegex = /(Z|[+-]\d{2}:?\d{2})$/i;
+
+  if (!hasTime) {
+    normalized = `${trimmed}T00:00:00`;
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+    normalized = `${trimmed}:00`;
+  }
+
+  if (!timezoneRegex.test(normalized)) {
+    // Assume horário de Brasília quando o fuso não é informado
+    normalized = `${normalized}-03:00`;
+  } else if (/^.*[+-]\d{4}$/i.test(normalized)) {
+    // Garante que o offset tenha o formato +-HH:MM
+    normalized = `${normalized.slice(0, -2)}:${normalized.slice(-2)}`;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
 }
 
 function validateLeadData(data: any): { valid: boolean; errors: string[] } {
@@ -115,6 +154,15 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     errors.push(`Campo "status" deve ser um dos valores: ${statusValidos.join(', ')}`);
   }
 
+  if (data.data_criacao !== undefined) {
+    const parsedDate = parseDateInputToISOString(data.data_criacao);
+    if (!parsedDate) {
+      errors.push('Campo "data_criacao" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+    } else {
+      data.data_criacao = parsedDate;
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -170,6 +218,28 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const hasCustomCreationDate =
+        typeof body.data_criacao === 'string' && body.data_criacao.trim() !== '';
+      const now = new Date();
+      const creationDate = hasCustomCreationDate ? new Date(body.data_criacao) : now;
+
+      if (Number.isNaN(creationDate.getTime())) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Dados inválidos',
+            details: ['Campo "data_criacao" deve ser uma data válida'],
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      const creationDateIso = creationDate.toISOString();
+      const ultimoContatoIso = hasCustomCreationDate ? creationDateIso : now.toISOString();
+
       const leadData: LeadData = {
         nome_completo: body.nome_completo.trim(),
         telefone: normalizeTelefone(body.telefone),
@@ -183,8 +253,8 @@ Deno.serve(async (req: Request) => {
         responsavel: body.responsavel,
         proximo_retorno: body.proximo_retorno || null,
         observacoes: body.observacoes?.trim() || null,
-        data_criacao: new Date().toISOString(),
-        ultimo_contato: new Date().toISOString(),
+        data_criacao: creationDateIso,
+        ultimo_contato: ultimoContatoIso,
         arquivado: false,
       };
 

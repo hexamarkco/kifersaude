@@ -183,9 +183,12 @@ Content-Type: application/json</pre>
   "tipo_contratacao": "Pessoa Física",
   "status": "Novo",
   "responsavel": "Luiza",
-  "observacoes": "Interessada em plano familiar"
+  "observacoes": "Interessada em plano familiar",
+  "data_criacao": "2024-01-15"
 }</pre>
                     </div>
+
+                    <p class="text-slate-600 mb-4 text-sm">O campo <code>data_criacao</code> é opcional e aceita valores no formato ISO 8601 ou <code>YYYY-MM-DD</code>. Quando não informado, a data atual é utilizada automaticamente.</p>
 
                     <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
                     <div class="code-block mb-4">
@@ -193,7 +196,7 @@ Content-Type: application/json</pre>
   -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
   -H "apikey: SEU_SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"nome_completo":"Maria Santos","telefone":"11988888888"}'</pre>
+  -d '{"nome_completo":"Maria Santos","telefone":"11988888888","data_criacao":"2024-01-15"}'</pre>
                     </div>
 
                     <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso (201):</h4>

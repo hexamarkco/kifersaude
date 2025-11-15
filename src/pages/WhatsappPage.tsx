@@ -14,6 +14,7 @@ import {
   FileText,
   Image as ImageIcon,
   MessageCirclePlus,
+  Plus,
   MapPin,
   Mic,
   Pin,
@@ -35,7 +36,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
-const WAVEFORM_BAR_COUNT = 32;
+const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
 
 const formatDateTime = (value: string | null) => {
@@ -715,9 +716,9 @@ const getPreferredAudioMimeType = (): string | null => {
   }
 
   const candidates = [
-    'audio/mpeg',
     'audio/ogg;codecs=opus',
     'audio/ogg',
+    'audio/mpeg',
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/mp4',
@@ -749,7 +750,7 @@ const getAudioContextConstructor = (): AudioContextConstructor | null => {
 const ensureAudioBlobPreferredFormat = async (
   blob: Blob,
 ): Promise<{ blob: Blob; mimeType: string }> => {
-  const preferredMimeTypes = ['audio/mpeg', 'audio/ogg;codecs=opus', 'audio/ogg'];
+  const preferredMimeTypes = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/mpeg'];
   const normalizedType = blob.type.toLowerCase();
 
   if (preferredMimeTypes.some(type => normalizedType.startsWith(type))) {
@@ -2968,11 +2969,10 @@ export default function WhatsappPage() {
             <button
               type="button"
               onClick={() => setShowNewChatModal(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-2 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sendingMessage}
             >
-              <MessageCirclePlus className="h-4 w-4" />
-              <span>Nova conversa</span>
+              <Plus className="h-4 w-4" />
             </button>
           </div>
           {errorMessage && (

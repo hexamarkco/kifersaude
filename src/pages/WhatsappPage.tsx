@@ -3797,9 +3797,6 @@ export default function WhatsappPage() {
                           <p className="truncate font-semibold text-slate-800">
                             {selectedChatDisplayName}
                           </p>
-                          <p className="truncate text-sm text-slate-500">
-                            {selectedChat.is_group ? 'Grupo' : `Contato • ${selectedChat.phone}`}
-                          </p>
                           {(selectedChatIsPinned || selectedChatIsArchived) && (
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
                               {selectedChatIsPinned ? (

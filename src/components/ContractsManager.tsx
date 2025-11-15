@@ -305,6 +305,15 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                       {contract.comissao_prevista && (
                         <div>
                           <span className="font-medium">Comissão:</span> R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {contract.comissao_recebimento_adiantado === false ? (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                              Parcelada
+                            </span>
+                          ) : contract.comissao_recebimento_adiantado ? (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                              Adiantada
+                            </span>
+                          ) : null}
                         </div>
                       )}
                       {bonusValue !== null && (

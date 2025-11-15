@@ -18,6 +18,7 @@ type ContractSummary = {
   produto_plano: string | null;
   mensalidade_total: number | null;
   comissao_prevista: number | null;
+  comissao_recebimento_adiantado: boolean | null;
   responsavel: string | null;
   previsao_recebimento_comissao: string | null;
   previsao_pagamento_bonificacao: string | null;
@@ -68,6 +69,7 @@ export default function ChatLeadDetailsDrawer({
         produto_plano: contract.produto_plano ?? null,
         mensalidade_total: contract.mensalidade_total ?? null,
         comissao_prevista: contract.comissao_prevista ?? null,
+        comissao_recebimento_adiantado: contract.comissao_recebimento_adiantado ?? null,
         responsavel: contract.responsavel ?? null,
         previsao_recebimento_comissao: contract.previsao_recebimento_comissao ?? null,
         previsao_pagamento_bonificacao: contract.previsao_pagamento_bonificacao ?? null,
@@ -77,10 +79,10 @@ export default function ChatLeadDetailsDrawer({
   }, [contractsSummary, financialSummary, isOpen, leadSummary]);
 
   const CONTRACT_SELECT_FIELDS =
-    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao';
+    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, comissao_recebimento_adiantado, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao';
 
   const BASE_CONTRACT_FIELDS =
-    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao';
+    'id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, comissao_recebimento_adiantado, responsavel, previsao_recebimento_comissao';
 
   const fetchLeadDetails = useCallback(async () => {
     if (!leadId) {
@@ -128,6 +130,7 @@ export default function ChatLeadDetailsDrawer({
           contractsData = fallbackData.map(contract => ({
             ...contract,
             previsao_pagamento_bonificacao: null,
+            comissao_recebimento_adiantado: contract.comissao_recebimento_adiantado ?? null,
           }));
         } else {
           throw contractsResponse.error;
@@ -136,6 +139,7 @@ export default function ChatLeadDetailsDrawer({
         contractsData = ((contractsResponse.data as ContractSummary[]) ?? []).map(contract => ({
           ...contract,
           previsao_pagamento_bonificacao: contract.previsao_pagamento_bonificacao ?? null,
+          comissao_recebimento_adiantado: contract.comissao_recebimento_adiantado ?? null,
         }));
       }
 
@@ -383,6 +387,22 @@ export default function ChatLeadDetailsDrawer({
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <Info className="h-4 w-4 text-slate-400" />
                           Comissão prevista: R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      ) : null}
+                      {contract.comissao_recebimento_adiantado != null ? (
+                        <div
+                          className={`flex items-center gap-2 text-xs ${
+                            contract.comissao_recebimento_adiantado ? 'text-emerald-600' : 'text-amber-600'
+                          }`}
+                        >
+                          <Info
+                            className={`h-4 w-4 ${
+                              contract.comissao_recebimento_adiantado ? 'text-emerald-500' : 'text-amber-500'
+                            }`}
+                          />
+                          {contract.comissao_recebimento_adiantado
+                            ? 'Recebimento adiantado (pagamento único)'
+                            : 'Recebimento parcelado (limite de 100% ao mês)'}
                         </div>
                       ) : null}
                       {contract.previsao_recebimento_comissao ? (

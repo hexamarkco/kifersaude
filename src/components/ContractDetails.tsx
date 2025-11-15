@@ -206,6 +206,19 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                     R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                {contract.comissao_recebimento_adiantado === false ? (
+                  <div className="mt-2 flex items-center space-x-2 text-xs text-amber-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>
+                      Comissão parcelada pela operadora (máximo de 100% da mensalidade por parcela).
+                    </span>
+                  </div>
+                ) : contract.comissao_recebimento_adiantado ? (
+                  <div className="mt-2 flex items-center space-x-2 text-xs text-emerald-600">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Recebimento adiantado previsto (pagamento único).</span>
+                  </div>
+                ) : null}
               </div>
             )}
 

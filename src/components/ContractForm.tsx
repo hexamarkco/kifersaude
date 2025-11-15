@@ -32,6 +32,8 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     mensalidade_total: contract?.mensalidade_total?.toString() || '',
     comissao_prevista: contract?.comissao_prevista?.toString() || '',
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
+    comissao_recebimento_adiantado:
+      contract?.comissao_recebimento_adiantado ?? true,
     previsao_recebimento_comissao: contract?.previsao_recebimento_comissao || '',
     previsao_pagamento_bonificacao: contract?.previsao_pagamento_bonificacao || '',
     vidas: contract?.vidas?.toString() || '1',
@@ -242,6 +244,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         mensalidade_total: formData.mensalidade_total ? parseFloat(formData.mensalidade_total) : null,
         comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
+        comissao_recebimento_adiantado: formData.comissao_recebimento_adiantado,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
         previsao_pagamento_bonificacao: formData.previsao_pagamento_bonificacao || null,
         vidas: formData.vidas ? parseInt(formData.vidas) : 1,
@@ -709,6 +712,34 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   onChange={(e) => setFormData({ ...formData, previsao_recebimento_comissao: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <span className="block text-sm font-medium text-slate-700 mb-2">
+                  Forma de recebimento da comissão
+                </span>
+                <label className="flex items-start space-x-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.comissao_recebimento_adiantado}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        comissao_recebimento_adiantado: e.target.checked,
+                      })
+                    }
+                    className="mt-1 w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Receber comissão adiantada (pagamento único)
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque quando a
+                      operadora pagar a comissão parcelada mês a mês (limitando-se a 100% da mensalidade por parcela).
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 

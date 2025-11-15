@@ -93,6 +93,7 @@ type ContractSummaryRecord = {
   produto_plano: string | null;
   mensalidade_total: number | string | null;
   comissao_prevista: number | string | null;
+  comissao_recebimento_adiantado: boolean | number | string | null;
   responsavel: string | null;
   previsao_recebimento_comissao: string | null;
   previsao_pagamento_bonificacao: string | null;
@@ -1094,7 +1095,7 @@ const fetchContractSummariesByLeadIds = async (
   const { data, error } = await supabaseAdmin
     .from('contracts')
     .select(
-      'id, lead_id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao, bonus_por_vida_valor, bonus_por_vida_aplicado, vidas',
+      'id, lead_id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, comissao_prevista, comissao_recebimento_adiantado, responsavel, previsao_recebimento_comissao, previsao_pagamento_bonificacao, bonus_por_vida_valor, bonus_por_vida_aplicado, vidas',
     )
     .in('lead_id', uniqueLeadIds)
     .order('created_at', { ascending: false })
@@ -1114,6 +1115,7 @@ const fetchContractSummariesByLeadIds = async (
 
     const mensalidade = toNumberOrNull(record.mensalidade_total);
     const comissao = toNumberOrNull(record.comissao_prevista);
+    const comissaoAdiantada = parseBooleanish(record.comissao_recebimento_adiantado);
     const bonusValor = toNumberOrNull(record.bonus_por_vida_valor);
     const vidas = toIntegerOrNull(record.vidas) ?? 0;
     const bonusAplicado = parseBooleanish(record.bonus_por_vida_aplicado) ?? false;
@@ -1132,6 +1134,7 @@ const fetchContractSummariesByLeadIds = async (
       produto_plano: toNonEmptyString(record.produto_plano),
       mensalidade_total: mensalidade,
       comissao_prevista: comissao,
+      comissao_recebimento_adiantado: comissaoAdiantada,
       responsavel: toNonEmptyString(record.responsavel),
       previsao_recebimento_comissao: toIsoStringOrNull(record.previsao_recebimento_comissao),
       previsao_pagamento_bonificacao: toIsoStringOrNull(record.previsao_pagamento_bonificacao),

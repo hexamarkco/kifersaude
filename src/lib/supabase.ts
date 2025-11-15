@@ -74,6 +74,7 @@ export type Contract = {
   mensalidade_total?: number;
   comissao_prevista?: number;
   comissao_multiplicador?: number;
+  comissao_recebimento_adiantado?: boolean;
   previsao_recebimento_comissao?: string;
   previsao_pagamento_bonificacao?: string;
   vidas?: number;

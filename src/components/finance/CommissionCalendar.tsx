@@ -16,6 +16,8 @@ type CommissionEvent = {
   type: 'comissao' | 'bonificacao';
   value: number;
   contract: Contract;
+  installmentIndex?: number;
+  installmentCount?: number;
 };
 
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
@@ -34,6 +36,8 @@ const isSameDay = (date: Date, other: Date) =>
 
 const formatCurrency = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
 export default function CommissionCalendar() {
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -76,13 +80,57 @@ export default function CommissionCalendar() {
     contracts.forEach((contract) => {
       const commissionDate = toDate(contract.previsao_recebimento_comissao);
       if (commissionDate && contract.comissao_prevista) {
-        mappedEvents.push({
-          id: `${contract.id}-comissao`,
-          date: getDateKey(commissionDate),
-          type: 'comissao',
-          value: contract.comissao_prevista,
-          contract,
-        });
+        const totalCommission = contract.comissao_prevista;
+        const isUpfront = contract.comissao_recebimento_adiantado ?? true;
+
+        if (!isUpfront && contract.mensalidade_total && contract.mensalidade_total > 0) {
+          const monthlyCap = contract.mensalidade_total;
+          const installments: { value: number; date: Date }[] = [];
+          let remaining = roundCurrency(totalCommission);
+          let installmentIndex = 0;
+          const MAX_INSTALLMENTS = 60;
+
+          while (remaining > 0.009 && installmentIndex < MAX_INSTALLMENTS) {
+            const value = roundCurrency(Math.min(monthlyCap, remaining));
+            const installmentDate = new Date(commissionDate);
+            installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
+
+            installments.push({ value, date: installmentDate });
+
+            remaining = roundCurrency(remaining - value);
+            installmentIndex += 1;
+          }
+
+          if (installments.length === 0) {
+            mappedEvents.push({
+              id: `${contract.id}-comissao`,
+              date: getDateKey(commissionDate),
+              type: 'comissao',
+              value: totalCommission,
+              contract,
+            });
+          } else {
+            installments.forEach((installment, index) => {
+              mappedEvents.push({
+                id: `${contract.id}-comissao-${index + 1}`,
+                date: getDateKey(installment.date),
+                type: 'comissao',
+                value: installment.value,
+                contract,
+                installmentIndex: index + 1,
+                installmentCount: installments.length,
+              });
+            });
+          }
+        } else {
+          mappedEvents.push({
+            id: `${contract.id}-comissao`,
+            date: getDateKey(commissionDate),
+            type: 'comissao',
+            value: totalCommission,
+            contract,
+          });
+        }
       }
 
       const bonusDate = toDate(contract.previsao_pagamento_bonificacao);
@@ -349,6 +397,11 @@ export default function CommissionCalendar() {
                       <p className="text-xs text-slate-600 mt-1">
                         Contrato {event.contract.codigo_contrato} • {event.contract.operadora}
                       </p>
+                      {event.type === 'comissao' && event.installmentCount && event.installmentIndex && (
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Parcela {event.installmentIndex} de {event.installmentCount}
+                        </p>
+                      )}
                     </div>
                     <span
                       className={`text-sm font-semibold ${

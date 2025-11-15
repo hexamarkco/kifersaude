@@ -139,7 +139,8 @@ export const processScheduledMessages = async (
     .select('*')
     .eq('status', 'pending')
     .lte('scheduled_send_at', reference.toISOString())
-    .order('scheduled_send_at', { ascending: true });
+    .order('scheduled_send_at', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) {
     throw error;
@@ -156,11 +157,25 @@ export const processScheduledMessages = async (
 
   for (const record of records) {
     try {
-      await updateSchedule(record.id, {
-        status: 'processing',
-        updated_at: new Date().toISOString(),
-        last_error: null,
-      });
+      const { data: updated, error: processingUpdateError } = await supabaseAdmin
+        .from(SCHEDULE_TABLE)
+        .update({
+          status: 'processing',
+          updated_at: new Date().toISOString(),
+          last_error: null,
+        })
+        .eq('id', record.id)
+        .eq('status', 'pending')
+        .select('id');
+
+      if (processingUpdateError) {
+        throw processingUpdateError;
+      }
+
+      if (!updated || updated.length === 0) {
+        // O registro foi atualizado por outro worker antes deste ciclo.
+        continue;
+      }
 
       const response = await fetcher(getWhatsappFunctionUrl('/whatsapp-webhook/send-message'), {
         method: 'POST',

@@ -240,6 +240,7 @@ type TimelineMessage = OptimisticMessage & {
     scheduledSendAt: string;
     status: WhatsappScheduledMessageStatus;
     lastError?: string | null;
+    createdAt?: string | null;
   };
 };
 
@@ -261,7 +262,21 @@ const sortSchedulesByMoment = (entries: WhatsappScheduledMessage[]) => {
     const bTime = new Date(b.scheduled_send_at).getTime();
     const safeATime = Number.isNaN(aTime) ? 0 : aTime;
     const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
-    return safeATime - safeBTime;
+
+    if (safeATime !== safeBTime) {
+      return safeATime - safeBTime;
+    }
+
+    const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0;
+    const safeACreated = Number.isNaN(aCreated) ? 0 : aCreated;
+    const safeBCreated = Number.isNaN(bCreated) ? 0 : bCreated;
+
+    if (safeACreated !== safeBCreated) {
+      return safeACreated - safeBCreated;
+    }
+
+    return a.id.localeCompare(b.id);
   });
 };
 
@@ -3181,6 +3196,7 @@ export default function WhatsappPage() {
             scheduledSendAt: schedule.scheduled_send_at,
             status: schedule.status,
             lastError: schedule.last_error ?? null,
+            createdAt: schedule.created_at ?? null,
           },
         };
 
@@ -3198,7 +3214,33 @@ export default function WhatsappPage() {
           return Number.isNaN(timestamp) ? 0 : timestamp;
         };
 
-        return getMomentValue(first) - getMomentValue(second);
+        const firstMoment = getMomentValue(first);
+        const secondMoment = getMomentValue(second);
+
+        if (firstMoment !== secondMoment) {
+          return firstMoment - secondMoment;
+        }
+
+        const getScheduleCreationValue = (entry: TimelineMessage) => {
+          const createdAtValue = entry.scheduleMetadata?.createdAt ?? null;
+          if (!createdAtValue) {
+            return 0;
+          }
+
+          const timestamp = new Date(createdAtValue).getTime();
+          return Number.isNaN(timestamp) ? 0 : timestamp;
+        };
+
+        const firstCreation = getScheduleCreationValue(first);
+        const secondCreation = getScheduleCreationValue(second);
+
+        if (firstCreation !== secondCreation) {
+          return firstCreation - secondCreation;
+        }
+
+        const firstId = first.scheduleMetadata?.scheduledMessageId ?? first.id;
+        const secondId = second.scheduleMetadata?.scheduledMessageId ?? second.id;
+        return firstId.localeCompare(secondId);
       });
 
       return {

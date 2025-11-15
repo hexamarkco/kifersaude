@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { act, useState } from 'react';
+import { useState } from 'react';
+import { act } from 'react-dom/test-utils';
 import { render } from '../../testing-library/react';
 import QuickRepliesMenu from '../../components/QuickRepliesMenu';
 import type { QuickReply } from '../../lib/supabase';

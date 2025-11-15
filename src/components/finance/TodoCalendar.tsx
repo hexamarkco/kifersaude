@@ -273,7 +273,7 @@ export default function TodoCalendar() {
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
             <CalendarCheck className="w-6 h-6 text-sky-600" />
-            <span>Agenda diária de tarefas</span>
+            <span>Tarefas</span>
           </h2>
           <p className="text-sm text-slate-600 mt-1">
             Organize suas atividades por dia, marque como concluídas e arraste os cards entre colunas.

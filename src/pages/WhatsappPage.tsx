@@ -3104,12 +3104,52 @@ export default function WhatsappPage() {
       }
     });
 
-    for (const schedule of scheduledMessages) {
-      if (!shouldDisplayScheduledMessage(schedule.status)) {
-        continue;
+      for (const schedule of scheduledMessages) {
+        if (!shouldDisplayScheduledMessage(schedule.status)) {
+          continue;
+        }
+
+        const timelineMessage: TimelineMessage = {
+          id: schedule.id,
+          chat_id: schedule.chat_id,
+          message_id: null,
+          from_me: true,
+          status: schedule.status,
+          text: schedule.message,
+          moment: schedule.scheduled_send_at,
+          raw_payload: null,
+          scheduleMetadata: {
+            scheduledMessageId: schedule.id,
+            scheduledSendAt: schedule.scheduled_send_at,
+            status: schedule.status,
+            lastError: schedule.last_error ?? null,
+          },
+        };
+
+        baseMessages.push(timelineMessage);
       }
 
-  const trimmedMessageSearchTerm = messageSearchTerm.trim();
+      const sortedMessages = [...baseMessages].sort((first, second) => {
+        const getMomentValue = (entry: TimelineMessage) => {
+          const momentValue = entry.moment ?? entry.scheduleMetadata?.scheduledSendAt ?? null;
+          if (!momentValue) {
+            return 0;
+          }
+
+          const timestamp = new Date(momentValue).getTime();
+          return Number.isNaN(timestamp) ? 0 : timestamp;
+        };
+
+        return getMomentValue(first) - getMomentValue(second);
+      });
+
+      return {
+        renderableMessages: sortedMessages,
+        reactionSummaries: summaries,
+      };
+    }, [messages, scheduledMessages]);
+
+    const trimmedMessageSearchTerm = messageSearchTerm.trim();
   const normalizedMessageSearchTerm = trimmedMessageSearchTerm.toLowerCase();
 
   const filteredRenderableMessages = useMemo(() => {

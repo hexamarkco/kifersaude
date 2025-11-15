@@ -1,31 +1,16 @@
-import { build } from 'esbuild';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const tempDir = mkdtempSync(join(tmpdir(), 'kifersaude-tests-'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const vitestBin = join(__dirname, '..', 'node_modules', 'vitest', 'vitest.mjs');
 
-try {
-  const tests = [];
+const cliArgs = process.argv.slice(2);
+const child = spawn(process.execPath, [vitestBin, 'run', ...cliArgs], {
+  stdio: 'inherit',
+});
 
-  for (const { entry, outfile } of tests) {
-    const compiledFile = join(tempDir, outfile);
-
-    await build({
-      entryPoints: [entry],
-      outfile: compiledFile,
-      bundle: true,
-      platform: 'node',
-      format: 'esm',
-      sourcemap: 'inline',
-      logLevel: 'silent',
-      external: ['npm:@supabase/supabase-js@2.57.4'],
-    });
-
-    const moduleUrl = pathToFileURL(compiledFile);
-    await import(moduleUrl.href);
-  }
-} finally {
-  rmSync(tempDir, { recursive: true, force: true });
-}
+child.on('exit', code => {
+  process.exit(code ?? 1);
+});

@@ -55,6 +55,27 @@ export type WhatsappMessage = {
   raw_payload: Record<string, any> | null;
 };
 
+export type WhatsappScheduledMessageStatus =
+  | 'pending'
+  | 'processing'
+  | 'sent'
+  | 'failed'
+  | 'cancelled';
+
+export type WhatsappScheduledMessage = {
+  id: string;
+  chat_id: string;
+  phone: string;
+  message: string;
+  scheduled_send_at: string;
+  status: WhatsappScheduledMessageStatus;
+  created_at: string | null;
+  updated_at: string | null;
+  sent_at: string | null;
+  cancelled_at?: string | null;
+  last_error?: string | null;
+};
+
 export type WhatsappChatMetadataNote = {
   id: string | null;
   content: string | null;

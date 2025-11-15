@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   carencia text, -- padrão, reduzida, portabilidade, zero
   mensalidade_total numeric(10,2),
   comissao_prevista numeric(10,2),
+  comissao_recebimento_adiantado boolean DEFAULT true,
   previsao_recebimento_comissao date,
   responsavel text NOT NULL, -- Luiza, Nick
   observacoes_internas text,

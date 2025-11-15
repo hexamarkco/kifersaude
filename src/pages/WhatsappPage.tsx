@@ -22,7 +22,9 @@ import {
   Pin,
   PinOff,
   Paperclip,
+  Search,
   Send,
+  MoreVertical,
   User,
   UserPlus,
   Video as VideoIcon,
@@ -37,10 +39,15 @@ import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
-import { formatDateTimeForInput } from '../lib/dateUtils';
+import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
-import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
+import type {
+  WhatsappChat,
+  WhatsappMessage,
+  WhatsappScheduledMessage,
+  WhatsappScheduledMessageStatus,
+} from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
@@ -980,9 +987,13 @@ export default function WhatsappPage() {
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const [messageSearchTerm, setMessageSearchTerm] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const previousChatIdRef = useRef<string | null>(null);
   const selectedChatIdRef = useRef<string | null>(null);
+  const messageSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const messageElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
@@ -1640,7 +1651,23 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     setMessageSearchTerm('');
+    setShowMessageSearch(false);
+    setShowChatActionsMenu(false);
+    messageElementsRef.current = {};
   }, [selectedChatId]);
+
+  useEffect(() => {
+    if (!showMessageSearch) {
+      return;
+    }
+
+    const focusTarget = messageSearchInputRef.current;
+    if (focusTarget) {
+      focusTarget.focus();
+      focusTarget.select();
+    }
+  }, [showMessageSearch]);
+
 
   useEffect(() => {
     if (!selectedChatLead) {
@@ -1773,10 +1800,6 @@ export default function WhatsappPage() {
           is_archived: shouldArchive,
         });
         mergeUpdatedChat(chat.id, updated);
-
-        if (!shouldArchive && showArchivedChats) {
-          setShowArchivedChats(false);
-        }
       } catch (error) {
         console.error('Erro ao atualizar arquivamento do chat:', error);
         setErrorMessage('Não foi possível atualizar o status da conversa.');
@@ -1790,8 +1813,6 @@ export default function WhatsappPage() {
     [
       mergeUpdatedChat,
       setErrorMessage,
-      setShowArchivedChats,
-      showArchivedChats,
       updateChatFlags,
     ],
   );
@@ -2755,6 +2776,7 @@ export default function WhatsappPage() {
       return;
     }
 
+    setShowChatActionsMenu(false);
     setShowAttachmentMenu(previous => !previous);
   };
 
@@ -2798,6 +2820,7 @@ export default function WhatsappPage() {
     });
 
     setShowAttachmentMenu(false);
+    setShowChatActionsMenu(false);
   };
 
   const disableSchedule = () => {
@@ -2805,6 +2828,7 @@ export default function WhatsappPage() {
     setScheduledSendAt('');
     setScheduleValidationError(null);
     setShowAttachmentMenu(false);
+    setShowChatActionsMenu(false);
   };
 
   const handleDocumentChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -3186,9 +3210,9 @@ export default function WhatsappPage() {
     const trimmedMessageSearchTerm = messageSearchTerm.trim();
   const normalizedMessageSearchTerm = trimmedMessageSearchTerm.toLowerCase();
 
-  const filteredRenderableMessages = useMemo(() => {
+  const messageSearchMatches = useMemo(() => {
     if (!normalizedMessageSearchTerm) {
-      return renderableMessages;
+      return [] as string[];
     }
 
     const collectSegments = (message: OptimisticMessage): string[] => {
@@ -3276,11 +3300,22 @@ export default function WhatsappPage() {
       return segments;
     };
 
-    return renderableMessages.filter(message => {
+    const matches: string[] = [];
+
+    renderableMessages.forEach(message => {
       const segments = collectSegments(message);
-      return segments.some(segment => segment.toLowerCase().includes(normalizedMessageSearchTerm));
+      if (segments.some(segment => segment.toLowerCase().includes(normalizedMessageSearchTerm))) {
+        matches.push(message.id);
+      }
     });
-  }, [normalizedMessageSearchTerm, renderableMessages]);
+
+    return matches;
+  }, [getMessageAttachmentInfo, normalizedMessageSearchTerm, renderableMessages]);
+
+  const messageSearchMatchesSet = useMemo(
+    () => new Set(messageSearchMatches),
+    [messageSearchMatches],
+  );
 
   const renderHighlightedText = useCallback(
     (text: string) => {
@@ -3340,9 +3375,27 @@ export default function WhatsappPage() {
   );
 
   const hasMessageSearch = normalizedMessageSearchTerm.length > 0;
-  const visibleMessages = filteredRenderableMessages;
+  const visibleMessages = renderableMessages;
   const hasMessages = renderableMessages.length > 0;
   const hasVisibleMessages = visibleMessages.length > 0;
+  const hasMessageSearchMatches = messageSearchMatches.length > 0;
+  const primaryMessageSearchMatchId = messageSearchMatches[0] ?? null;
+
+  useEffect(() => {
+    if (!showMessageSearch || !normalizedMessageSearchTerm) {
+      return;
+    }
+
+    const firstMatchId = messageSearchMatches[0];
+    if (!firstMatchId) {
+      return;
+    }
+
+    const target = messageElementsRef.current[firstMatchId];
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [messageSearchMatches, normalizedMessageSearchTerm, showMessageSearch]);
 
   const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
@@ -3894,32 +3947,51 @@ export default function WhatsappPage() {
               </div>
             </header>
 
-            <div className="border-b border-slate-200 px-4 py-3">
-              <label className="sr-only" htmlFor="whatsapp-message-search">
-                Pesquisar mensagens
-              </label>
-              <div className="relative">
-                <input
-                  id="whatsapp-message-search"
-                  type="search"
-                  value={messageSearchTerm}
-                  onChange={event => setMessageSearchTerm(event.target.value)}
-                  placeholder="Pesquisar mensagens"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-10 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  autoComplete="off"
-                />
-                {messageSearchTerm ? (
+            {showMessageSearch ? (
+              <div className="border-b border-slate-200 px-4 py-3">
+                <label className="sr-only" htmlFor="whatsapp-message-search">
+                  Pesquisar mensagens
+                </label>
+                <div className="relative">
+                  <input
+                    ref={messageSearchInputRef}
+                    id="whatsapp-message-search"
+                    type="search"
+                    value={messageSearchTerm}
+                    onChange={event => setMessageSearchTerm(event.target.value)}
+                    placeholder="Pesquisar mensagens"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-20 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    autoComplete="off"
+                  />
+                  {messageSearchTerm ? (
+                    <button
+                      type="button"
+                      onClick={() => setMessageSearchTerm('')}
+                      className="absolute inset-y-1 right-10 inline-flex items-center justify-center rounded-md px-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      aria-label="Limpar busca de mensagens"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => setMessageSearchTerm('')}
+                    onClick={() => {
+                      setShowMessageSearch(false);
+                      setMessageSearchTerm('');
+                    }}
                     className="absolute inset-y-1 right-1 inline-flex items-center justify-center rounded-md px-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    aria-label="Limpar busca de mensagens"
+                    aria-label="Fechar busca de mensagens"
                   >
-                    <X className="h-4 w-4" aria-hidden="true" />
+                    <XCircle className="h-4 w-4" aria-hidden="true" />
                   </button>
+                </div>
+                {hasMessageSearch && !hasMessageSearchMatches ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Nenhuma mensagem encontrada para a busca.
+                  </p>
                 ) : null}
               </div>
-            </div>
+            ) : null}
 
             <div
               ref={messagesContainerRef}
@@ -3983,6 +4055,8 @@ export default function WhatsappPage() {
                   const isReactionDetailsOpen = Boolean(
                     summaryInteractive && reactionDetailsMessageId === messageIdKey,
                   );
+                  const isSearchMatch = messageSearchMatchesSet.has(message.id);
+                  const isPrimarySearchMatch = primaryMessageSearchMatchId === message.id;
                   const summaryWrapperClassName = hasOnlyMediaWithoutPadding
                     ? `relative absolute ${isFromMe ? 'right-2' : 'left-2'} bottom-2`
                     : `relative mt-2 flex w-full flex-wrap ${
@@ -4026,6 +4100,13 @@ export default function WhatsappPage() {
                   return (
                     <div
                       key={message.id}
+                      ref={element => {
+                        if (element) {
+                          messageElementsRef.current[message.id] = element;
+                        } else {
+                          delete messageElementsRef.current[message.id];
+                        }
+                      }}
                       data-testid="whatsapp-message"
                       className={`flex flex-col ${alignment}`}
                     >
@@ -4037,7 +4118,13 @@ export default function WhatsappPage() {
                       <div
                         className={`relative inline-flex max-w-[75%] flex-col rounded-2xl shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
-                        } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses}`}
+                        } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses} ${
+                          isPrimarySearchMatch
+                            ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50'
+                            : isSearchMatch
+                            ? 'ring-1 ring-emerald-200 ring-offset-2 ring-offset-slate-50'
+                            : ''
+                        }`}
                       >
                         {renderMessageContent(message, attachmentInfo)}
                         {hasReactions && reactionSummary ? (
@@ -4378,6 +4465,92 @@ export default function WhatsappPage() {
                     error={quickRepliesError}
                   />
 
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (sendingMessage || schedulingMessage || isRecordingAudio) {
+                          return;
+                        }
+                        setShowChatActionsMenu(previous => !previous);
+                        setShowAttachmentMenu(false);
+                      }}
+                      className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-haspopup="menu"
+                      aria-expanded={showChatActionsMenu}
+                      aria-label="Abrir menu de ações do chat"
+                      disabled={sendingMessage || schedulingMessage || isRecordingAudio}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+
+                    {showChatActionsMenu ? (
+                      <div
+                        className="absolute bottom-full right-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+                        role="menu"
+                      >
+                        <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Ações
+                        </div>
+                        <div className="pb-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowMessageSearch(true);
+                              setShowChatActionsMenu(false);
+                            }}
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                              <Search className="h-4 w-4" />
+                            </span>
+                            <span>
+                              <span className="block font-medium">Pesquisar no chat</span>
+                              <span className="block text-xs text-slate-500">Encontre mensagens rapidamente</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={enableSchedule}
+                            role="menuitem"
+                            className="mt-1 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                            disabled={sendingMessage || schedulingMessage || isRecordingAudio}
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                              <Clock className="h-4 w-4" />
+                            </span>
+                            <span>
+                              <span className="block font-medium">
+                                {isScheduleEnabled ? 'Editar agendamento' : 'Agendar mensagem'}
+                              </span>
+                              <span className="block text-xs text-slate-500">
+                                Defina um horário para enviar automaticamente
+                              </span>
+                            </span>
+                          </button>
+                          {isScheduleEnabled ? (
+                            <button
+                              type="button"
+                              onClick={disableSchedule}
+                              role="menuitem"
+                              className="mt-1 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                              disabled={sendingMessage || schedulingMessage || isRecordingAudio}
+                            >
+                              <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                                <XCircle className="h-4 w-4" />
+                              </span>
+                              <span>
+                                <span className="block font-medium">Remover agendamento</span>
+                                <span className="block text-xs text-slate-500">Voltar para envio imediato</span>
+                              </span>
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
                   {showAttachmentMenu ? (
                     <div
                       className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
@@ -4443,47 +4616,6 @@ export default function WhatsappPage() {
                             <span className="block text-xs text-slate-500">Compartilhe um endereço com poucos cliques</span>
                           </span>
                         </button>
-                      </div>
-                      <div className="border-t border-slate-100 px-3 pt-3 pb-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Ações
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          <button
-                            type="button"
-                            onClick={enableSchedule}
-                            role="menuitem"
-                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
-                          >
-                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                              <Clock className="h-4 w-4" />
-                            </span>
-                            <span>
-                              <span className="block font-medium">
-                                {isScheduleEnabled ? 'Editar agendamento' : 'Agendar mensagem'}
-                              </span>
-                              <span className="block text-xs text-slate-500">
-                                Defina um horário para enviar automaticamente
-                              </span>
-                            </span>
-                          </button>
-                          {isScheduleEnabled ? (
-                            <button
-                              type="button"
-                              onClick={disableSchedule}
-                              role="menuitem"
-                              className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
-                            >
-                              <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                                <XCircle className="h-4 w-4" />
-                              </span>
-                              <span>
-                                <span className="block font-medium">Remover agendamento</span>
-                                <span className="block text-xs text-slate-500">Voltar para envio imediato</span>
-                              </span>
-                            </button>
-                          ) : null}
-                        </div>
                       </div>
                     </div>
                   ) : null}

@@ -1,8 +1,13 @@
-import type { SendWhatsappMessageResponse } from '../types/whatsapp';
+import type {
+  SendWhatsappMessageResponse,
+  WhatsappChatSlaAlert,
+  WhatsappChatSlaStatus,
+} from '../types/whatsapp';
 
 type RuntimeEnv = {
   functionsUrl?: string;
   supabaseUrl?: string;
+  anonKey?: string;
   serviceRoleKey?: string;
 };
 
@@ -12,6 +17,7 @@ const getServerEnv = (): RuntimeEnv => {
   return {
     functionsUrl: env.SUPABASE_FUNCTIONS_URL,
     supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   };
 };
@@ -26,6 +32,7 @@ const getBrowserEnv = (): RuntimeEnv => {
   return {
     functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL,
     supabaseUrl: metaEnv?.VITE_SUPABASE_URL,
+    anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY,
   };
 };
 
@@ -68,12 +75,41 @@ const getServiceRoleKey = (): string => {
   return env.serviceRoleKey;
 };
 
+const getSupabaseAnonKey = (): string => {
+  const env = resolveRuntimeEnv();
+  const key = env.anonKey?.trim();
+
+  if (!key) {
+    throw new Error('Chave anônima do Supabase não configurada.');
+  }
+
+  return key;
+};
+
 const buildFunctionUrl = (pathOrUrl: string): string => {
   if (/^https?:\/\//i.test(pathOrUrl)) {
     return pathOrUrl;
   }
 
   return getWhatsappFunctionUrl(pathOrUrl);
+};
+
+const getSupabaseRestUrl = (path: string): string => {
+  const env = resolveRuntimeEnv();
+  const supabaseUrl = env.supabaseUrl?.trim();
+
+  if (!supabaseUrl) {
+    throw new Error('SUPABASE_URL não configurada.');
+  }
+
+  const normalizedPath = path.replace(/^\/+/, '');
+  return `${trimTrailingSlash(supabaseUrl)}/${normalizedPath}`;
+};
+
+type WhatsappSupabaseRequestOptions = {
+  fetchImpl?: typeof fetch;
+  useServiceKey?: boolean;
+  headers?: Record<string, string>;
 };
 
 export const callWhatsappFunction = async <T>(
@@ -124,6 +160,42 @@ export const fetchWhatsappJson = async <T>(pathOrUrl: string, init?: RequestInit
   return (await response.json()) as T;
 };
 
+export const fetchSupabaseRestJson = async <T>(
+  pathOrUrl: string,
+  init?: RequestInit,
+  options: WhatsappSupabaseRequestOptions = {},
+) => {
+  const fetcher = options.fetchImpl ?? fetch;
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+    ...(options.headers ?? {}),
+  };
+
+  if (!headers.apikey) {
+    headers.apikey = options.useServiceKey ? getServiceRoleKey() : getSupabaseAnonKey();
+  }
+
+  if (!headers.Authorization) {
+    headers.Authorization = `Bearer ${headers.apikey}`;
+  }
+
+  const response = await fetcher(getSupabaseRestUrl(pathOrUrl), {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(details || 'Falha na requisição para o Supabase');
+  }
+
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  return (await response.json()) as T;
+};
+
 type SendMessagePayload = {
   phone: string;
   message: string;
@@ -160,4 +232,36 @@ export const sendWhatsappMedia = async <T = SendWhatsappMessageResponse>(
     },
     options,
   );
+};
+
+type ListSlaAlertsParams = {
+  status?: WhatsappChatSlaStatus[];
+  chatId?: string;
+  limit?: number;
+};
+
+export const listWhatsappChatSlaAlerts = async (
+  params: ListSlaAlertsParams = {},
+  options: WhatsappSupabaseRequestOptions = {},
+): Promise<WhatsappChatSlaAlert[]> => {
+  const searchParams = new URLSearchParams();
+  const limit = Number.isFinite(params.limit ?? null) ? Number(params.limit) : 100;
+  searchParams.set('order', 'created_at.desc');
+  searchParams.set('limit', String(limit));
+
+  if (params.chatId) {
+    searchParams.set('chat_id', `eq.${params.chatId}`);
+  }
+
+  if (params.status && params.status.length > 0) {
+    const normalizedStatuses = params.status.filter(Boolean).join(',');
+    if (normalizedStatuses) {
+      searchParams.set('sla_status', `in.(${normalizedStatuses})`);
+    }
+  }
+
+  const queryString = searchParams.toString();
+  const path = `/rest/v1/whatsapp_chat_sla_alerts${queryString ? `?${queryString}` : ''}`;
+
+  return fetchSupabaseRestJson<WhatsappChatSlaAlert[]>(path, undefined, options);
 };

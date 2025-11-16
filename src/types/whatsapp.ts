@@ -119,6 +119,17 @@ export type WhatsappChatSlaMetrics = {
   longest_waiting_response_ms?: number | null;
 };
 
+export type WhatsappChatSlaAlert = {
+  id: string;
+  chat_id: string;
+  sla_status: WhatsappChatSlaStatus;
+  pending_inbound_count: number;
+  waiting_since: string | null;
+  waiting_minutes: number | null;
+  alert_message: string | null;
+  created_at: string;
+};
+
 export type WhatsappChatMetadataNote = {
   id: string | null;
   content: string | null;

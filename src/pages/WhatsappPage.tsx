@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Eye,
   FileText,
   Image as ImageIcon,
   MessageSquareText,
@@ -34,6 +35,9 @@ import {
   Send,
   Settings,
   MoreVertical,
+  Radio,
+  Bell,
+  Check,
   User,
   UserPlus,
   Video as VideoIcon,
@@ -54,7 +58,11 @@ import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
-import { fetchWhatsappJson, getWhatsappFunctionUrl } from '../lib/whatsappApi';
+import {
+  fetchWhatsappJson,
+  getWhatsappFunctionUrl,
+  listWhatsappChatSlaAlerts,
+} from '../lib/whatsappApi';
 import type {
   WhatsappChat,
   WhatsappChatInsight,
@@ -65,6 +73,8 @@ import type {
   WhatsappScheduledMessagePriority,
   WhatsappScheduledMessageStatus,
   WhatsappScheduledMessagesPeriodSummary,
+  WhatsappChatSlaAlert,
+  WhatsappChatSlaStatus,
 } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
@@ -218,10 +228,11 @@ type ChatPreviewInfo = {
   text: string;
 };
 
-type WhatsappSectionId = 'painel' | 'configs';
+type WhatsappSectionId = 'painel' | 'sla-alerts' | 'configs';
 
 const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [
   { id: 'painel', label: 'Chats', icon: MessageSquareText },
+  { id: 'sla-alerts', label: 'Alertas de SLA', icon: AlertTriangle },
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 
@@ -1266,6 +1277,14 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [slaAlerts, setSlaAlerts] = useState<WhatsappChatSlaAlert[]>([]);
+  const [slaAlertsLoading, setSlaAlertsLoading] = useState(false);
+  const [slaAlertsError, setSlaAlertsError] = useState<string | null>(null);
+  const [slaAlertStatusFilter, setSlaAlertStatusFilter] = useState<WhatsappChatSlaStatus | 'all'>('all');
+  const [slaAlertChatFilter, setSlaAlertChatFilter] = useState<string>('all');
+  const [unseenSlaAlertIds, setUnseenSlaAlertIds] = useState<string[]>([]);
+  const [seenSlaAlertIds, setSeenSlaAlertIds] = useState<string[]>([]);
+  const [slaAlertToast, setSlaAlertToast] = useState<WhatsappChatSlaAlert | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
@@ -1291,6 +1310,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const [showMessageSearch, setShowMessageSearch] = useState(false);
   const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
+  const activeSectionRef = useRef<WhatsappSectionId>('painel');
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const previousChatIdRef = useRef<string | null>(null);
   const selectedChatIdRef = useRef<string | null>(null);
@@ -2467,6 +2487,49 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     return { ...badge, className };
   }, [getChatSlaBadge, selectedChat]);
 
+  const chatNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    chats.forEach(chat => {
+      map.set(chat.id, getChatDisplayName(chat));
+    });
+    return map;
+  }, [chats]);
+
+  const markSlaAlertAsSeen = useCallback((alertId: string) => {
+    setUnseenSlaAlertIds(previous => previous.filter(id => id !== alertId));
+    setSeenSlaAlertIds(previous => (previous.includes(alertId) ? previous : [...previous, alertId]));
+    setSlaAlertToast(current => (current?.id === alertId ? null : current));
+  }, []);
+
+  const loadSlaAlerts = useCallback(
+    async (params?: { chatId?: string; status?: WhatsappChatSlaStatus[] }) => {
+      setSlaAlertsLoading(true);
+      setSlaAlertsError(null);
+      try {
+        const alerts = await listWhatsappChatSlaAlerts({
+          limit: 150,
+          chatId: params?.chatId,
+          status: params?.status,
+        });
+        setSlaAlerts(alerts);
+      } catch (error) {
+        console.error('Erro ao carregar alertas de SLA:', error);
+        setSlaAlertsError('Não foi possível carregar os alertas de SLA.');
+      } finally {
+        setSlaAlertsLoading(false);
+      }
+    },
+    [],
+  );
+
+  const filteredSlaAlerts = useMemo(() => {
+    return slaAlerts.filter(alert => {
+      const matchStatus = slaAlertStatusFilter === 'all' || alert.sla_status === slaAlertStatusFilter;
+      const matchChat = slaAlertChatFilter === 'all' || alert.chat_id === slaAlertChatFilter;
+      return matchStatus && matchChat;
+    });
+  }, [slaAlertChatFilter, slaAlertStatusFilter, slaAlerts]);
+
   const insightSentimentDisplay = useMemo(() => {
     if (!chatInsight?.sentiment) {
       return null;
@@ -2604,6 +2667,20 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   }, [loadChats]);
 
   useEffect(() => {
+    const statusFilter = slaAlertStatusFilter === 'all' ? undefined : [slaAlertStatusFilter];
+    const chatFilter = slaAlertChatFilter === 'all' ? undefined : slaAlertChatFilter;
+
+    void loadSlaAlerts({
+      status: statusFilter,
+      chatId: chatFilter,
+    });
+  }, [loadSlaAlerts, slaAlertChatFilter, slaAlertStatusFilter]);
+
+  useEffect(() => {
+    activeSectionRef.current = activeSection;
+  }, [activeSection]);
+
+  useEffect(() => {
     const channel = supabase
       .channel('whatsapp-chats-listener')
       .on<RealtimePostgresChangesPayload<WhatsappChat>>(
@@ -2657,6 +2734,50 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('whatsapp-sla-alerts')
+      .on<RealtimePostgresChangesPayload<WhatsappChatSlaAlert>>(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'whatsapp_chat_sla_alerts' },
+        payload => {
+          const alert = (payload.new as WhatsappChatSlaAlert | null) ?? null;
+          if (!alert) {
+            return;
+          }
+
+          setSlaAlerts(previous => {
+            const withoutExisting = previous.filter(entry => entry.id !== alert.id);
+            return [alert, ...withoutExisting];
+          });
+
+          if (activeSectionRef.current !== 'sla-alerts') {
+            setUnseenSlaAlertIds(previous => (previous.includes(alert.id) ? previous : [...previous, alert.id]));
+            setSlaAlertToast(alert);
+          } else {
+            markSlaAlertAsSeen(alert.id);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [markSlaAlertAsSeen]);
+
+  useEffect(() => {
+    if (activeSection === 'sla-alerts') {
+      setUnseenSlaAlertIds([]);
+      setSlaAlertToast(null);
+      setSeenSlaAlertIds(previous => {
+        const merged = new Set(previous);
+        slaAlerts.forEach(alert => merged.add(alert.id));
+        return Array.from(merged);
+      });
+    }
+  }, [activeSection, slaAlerts]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -4952,9 +5073,32 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     setActiveSection('configs');
   };
 
+  const openSlaAlertsPanel = () => {
+    setActiveSection('sla-alerts');
+  };
+
   const returnToWhatsappChats = () => {
     setActiveSection('painel');
   };
+
+  const handleOpenSlaAlertChat = useCallback(
+    (alert: WhatsappChatSlaAlert) => {
+      setSelectedChatId(alert.chat_id);
+      setShowChatListMobile(false);
+      setActiveSection('painel');
+      markSlaAlertAsSeen(alert.id);
+    },
+    [markSlaAlertAsSeen],
+  );
+
+  const handleMarkAlertAsSeen = useCallback(
+    (alertId: string) => {
+      markSlaAlertAsSeen(alertId);
+    },
+    [markSlaAlertAsSeen],
+  );
+
+  const unseenSlaAlertCount = unseenSlaAlertIds.length;
 
   const trimmedMessageInput = messageInput.trim();
   const shouldScheduleCurrentMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
@@ -4977,6 +5121,184 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const shouldHideMobileBottomMenu =
     activeSection === 'painel' && Boolean(selectedChat) && !showChatListMobile;
 
+  const statusFilterButtons: { id: WhatsappChatSlaStatus | 'all'; label: string }[] = [
+    { id: 'all', label: 'Todos' },
+    { id: 'warning', label: 'Alerta' },
+    { id: 'critical', label: 'Crítico' },
+  ];
+
+  const slaAlertsPanel = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="space-y-0.5">
+          <p className="text-lg font-semibold text-slate-800">Alertas de SLA</p>
+          <p className="text-sm text-slate-500">Acompanhe conversas com risco de estourar o SLA.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadSlaAlerts({
+              chatId: slaAlertChatFilter === 'all' ? undefined : slaAlertChatFilter,
+              status: slaAlertStatusFilter === 'all' ? undefined : [slaAlertStatusFilter],
+            })}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          >
+            <ArrowUp className="h-4 w-4" />
+            Atualizar
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {statusFilterButtons.map(filter => {
+            const isActive = slaAlertStatusFilter === filter.id;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setSlaAlertStatusFilter(filter.id)}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
+                  isActive
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700'
+                }`}
+                aria-pressed={isActive}
+              >
+                <Radio className={`h-4 w-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold text-slate-600" htmlFor="sla-alert-chat-filter">
+            Chat
+          </label>
+          <select
+            id="sla-alert-chat-filter"
+            value={slaAlertChatFilter}
+            onChange={event => setSlaAlertChatFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          >
+            <option value="all">Todos os chats</option>
+            {chats.map(chat => {
+              const name = chatNameById.get(chat.id) ?? chat.display_name ?? chat.chat_name ?? chat.phone;
+              return (
+                <option key={chat.id} value={chat.id}>
+                  {name}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        {slaAlertsError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{slaAlertsError}</p>
+        ) : slaAlertsLoading ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map(index => (
+              <div key={index} className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-32 rounded bg-slate-200" />
+                  <div className="h-6 w-20 rounded bg-slate-200" />
+                </div>
+                <div className="mt-3 h-3 w-3/4 rounded bg-slate-200" />
+                <div className="mt-2 h-3 w-2/3 rounded bg-slate-100" />
+              </div>
+            ))}
+          </div>
+        ) : filteredSlaAlerts.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum alerta encontrado para os filtros selecionados.</p>
+        ) : (
+          <div className="space-y-3">
+            {filteredSlaAlerts.map(alert => {
+              const chatName = chatNameById.get(alert.chat_id) ?? 'Chat desconhecido';
+              const isUnseen = unseenSlaAlertIds.includes(alert.id);
+              const wasSeen = seenSlaAlertIds.includes(alert.id);
+              const badgeClass = SLA_STATUS_BADGE_CLASSES[alert.sla_status] ?? SLA_STATUS_BADGE_CLASSES.warning;
+              return (
+                <div
+                  key={alert.id}
+                  className={`rounded-xl border p-4 shadow-sm transition ${
+                    isUnseen
+                      ? 'border-rose-200 bg-rose-50/60 ring-1 ring-rose-100'
+                      : 'border-slate-200 bg-white hover:border-emerald-200'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                        <AlertTriangle className="h-4 w-4" />
+                        {alert.sla_status === 'critical' ? 'Crítico' : alert.sla_status === 'warning' ? 'Alerta' : 'SLA ok'}
+                      </span>
+                      {isUnseen ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                          Novo
+                        </span>
+                      ) : null}
+                      {wasSeen && !isUnseen ? (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Visto
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs font-medium text-slate-500">{formatDateTime(alert.created_at)}</p>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm font-semibold text-slate-800">{chatName}</p>
+                    <p className="text-sm text-slate-600">{alert.alert_message ?? 'Alerta de SLA disparado para o chat selecionado.'}</p>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <Clock className="h-4 w-4 text-slate-500" />
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-slate-500">Aguardando</span>
+                        <span className="font-semibold text-slate-800">{formatWaitingLabel(alert.waiting_minutes ?? null, 'há instantes')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <MessageSquareText className="h-4 w-4 text-slate-500" />
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-slate-500">Pendentes</span>
+                        <span className="font-semibold text-slate-800">{alert.pending_inbound_count} mensagem(ns)</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <Clock className="h-4 w-4 text-slate-500" />
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-slate-500">Desde</span>
+                        <span className="font-semibold text-slate-800">{formatShortTime(alert.waiting_since)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSlaAlertChat(alert)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    >
+                      <MessageSquareText className="h-4 w-4" />
+                      Abrir chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAlertAsSeen(alert.id)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Marcar como visto
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const conversationWorkspace = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside
@@ -4995,6 +5317,20 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                 title="Nova conversa"
               >
                 <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={openSlaAlertsPanel}
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Abrir alertas de SLA"
+                title="Alertas de SLA"
+              >
+                <Bell className="h-5 w-5" />
+                {unseenSlaAlertCount > 0 ? (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex min-h-[1.15rem] min-w-[1.15rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-bold leading-none text-white shadow-sm">
+                    {Math.min(unseenSlaAlertCount, 99)}
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -6336,35 +6672,37 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         }`}
       >
         <div className="flex-1 min-h-0">
-          {activeSection === 'painel' ? (
-            conversationWorkspace
-          ) : (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center gap-3 border-b border-slate-200 p-4">
-                <button
-                  type="button"
-                  onClick={returnToWhatsappChats}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                  aria-label="Voltar para as conversas do WhatsApp"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                  Voltar
-                </button>
-                <div>
-                  <p className="text-lg font-semibold text-slate-800">Configurações do WhatsApp</p>
-                  <p className="text-sm text-slate-500">Gerencie preferências e integrações</p>
+          {activeSection === 'painel'
+            ? conversationWorkspace
+            : activeSection === 'sla-alerts'
+              ? slaAlertsPanel
+              : (
+                <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center gap-3 border-b border-slate-200 p-4">
+                    <button
+                      type="button"
+                      onClick={returnToWhatsappChats}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      aria-label="Voltar para as conversas do WhatsApp"
+                    >
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                      Voltar
+                    </button>
+                    <div>
+                      <p className="text-lg font-semibold text-slate-800">Configurações do WhatsApp</p>
+                      <p className="text-sm text-slate-500">Gerencie preferências e integrações</p>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    <WhatsappSettingsPanel />
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <WhatsappSettingsPanel />
-              </div>
-            </div>
-          )}
+              )}
         </div>
       </div>
       {shouldHideMobileBottomMenu ? null : (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-          <nav className="grid grid-cols-2 divide-x divide-slate-200" aria-label="Menu inferior do WhatsApp">
+          <nav className="grid grid-cols-3 divide-x divide-slate-200" aria-label="Menu inferior do WhatsApp">
             {WHATSAPP_SECTIONS.map(section => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -6379,13 +6717,64 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                   aria-pressed={isActive}
                 >
                   <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-                  {section.label}
+                  <span className="relative">
+                    {section.label}
+                    {section.id === 'sla-alerts' && unseenSlaAlertCount > 0 ? (
+                      <span className="absolute -right-3 -top-2 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
+                        {Math.min(unseenSlaAlertCount, 99)}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               );
             })}
           </nav>
         </div>
       )}
+      {slaAlertToast && activeSection !== 'sla-alerts' ? (
+        <div className="fixed bottom-24 right-4 z-50 max-w-sm rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 rounded-full bg-rose-50 p-2 text-rose-600">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-800">Novo alerta de SLA</p>
+              <p className="mt-1 text-sm text-slate-600">
+                {slaAlertToast.alert_message ?? 'Uma conversa precisa de atenção imediata.'}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('sla-alerts');
+                    markSlaAlertAsSeen(slaAlertToast.id);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                >
+                  <MessageSquareText className="h-4 w-4" />
+                  Ver painel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAlertAsSeen(slaAlertToast.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                >
+                  <Check className="h-4 w-4" />
+                  Marcar como visto
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleMarkAlertAsSeen(slaAlertToast.id)}
+              className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              aria-label="Fechar alerta"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : null}
       {audioEditor && pendingAttachment?.kind === 'audio' && typeof document !== 'undefined'
         ? createPortal(
             <AudioEditorModal

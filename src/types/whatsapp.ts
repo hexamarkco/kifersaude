@@ -67,6 +67,8 @@ export type WhatsappChatInsight = {
   created_at: string;
 };
 
+export type WhatsappChatInsightStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export type WhatsappScheduledMessageStatus =
   | 'pending'
   | 'processing'

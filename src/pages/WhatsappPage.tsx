@@ -1024,21 +1024,25 @@ const ensureAudioBlobPreferredFormat = async (
   blob: Blob,
 ): Promise<{ blob: Blob; mimeType: string }> => {
   const targetMimeType = 'audio/mpeg';
-  const unsupportedMessage =
-    'A conversão de áudio para MP3 não é suportada neste navegador.';
+  const fallbackMimeType =
+    blob.type?.trim() ||
+    (typeof MediaRecorder !== 'undefined' ? getPreferredAudioMimeType() : null) ||
+    'audio/webm';
+
+  const fallbackResult = { blob, mimeType: fallbackMimeType };
 
   if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
-    throw new Error(unsupportedMessage);
+    return fallbackResult;
   }
 
   if (!(MediaRecorder as typeof MediaRecorder).isTypeSupported(targetMimeType)) {
-    throw new Error(unsupportedMessage);
+    return fallbackResult;
   }
 
   const AudioContextCtor = getAudioContextConstructor();
 
   if (!AudioContextCtor) {
-    throw new Error(unsupportedMessage);
+    return fallbackResult;
   }
 
   const arrayBuffer = await blob.arrayBuffer();
@@ -1109,8 +1113,9 @@ const ensureAudioBlobPreferredFormat = async (
     });
 
     return { blob: convertedBlob, mimeType: targetMimeType };
-  } catch (_error) {
-    throw new Error('Não foi possível converter o áudio gravado para MP3.');
+  } catch (error) {
+    console.warn('Falha ao converter áudio para MP3, usando formato original.', error);
+    return fallbackResult;
   } finally {
     audioContext.close().catch(() => undefined);
   }
@@ -1827,11 +1832,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
             try {
               const preferredAudio = await ensureAudioBlobPreferredFormat(audioBlob);
-              const normalizedMimeType = 'audio/mpeg';
-
-              if (!preferredAudio.mimeType.toLowerCase().startsWith(normalizedMimeType)) {
-                throw new Error('O áudio gravado não pôde ser convertido para MP3.');
-              }
+              const normalizedMimeType = preferredAudio.mimeType || 'audio/mpeg';
 
               const normalizedBlob =
                 preferredAudio.blob.type === normalizedMimeType
@@ -1860,7 +1861,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
               setErrorMessage(
                 error instanceof Error
                   ? error.message
-                  : 'Não foi possível converter o áudio gravado para MP3.',
+                  : 'Não foi possível preparar o áudio gravado para envio.',
               );
             }
           }
@@ -1914,7 +1915,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     }
 
     if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
-      setErrorMessage('A gravação de áudio com conversão para MP3 não é suportada neste navegador.');
+      setErrorMessage('A gravação de áudio não é suportada neste navegador.');
       return;
     }
 

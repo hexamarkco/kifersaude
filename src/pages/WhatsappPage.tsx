@@ -200,6 +200,13 @@ const formatWaitingLabel = (minutes: number | null, fallback: string) => {
   return `há ${days}d`;
 };
 
+const truncateQuickReplyPreview = (text: string, limit = 80) => {
+  if (text.length <= limit) {
+    return text;
+  }
+  return `${text.slice(0, limit - 3)}...`;
+};
+
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
 
 type ChatPreviewInfo = {
@@ -1247,6 +1254,7 @@ export default function WhatsappPage() {
   const previousChatIdRef = useRef<string | null>(null);
   const selectedChatIdRef = useRef<string | null>(null);
   const messageSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const messageElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [quickRepliesMenuOpen, setQuickRepliesMenuOpen] = useState(false);
@@ -1295,6 +1303,51 @@ export default function WhatsappPage() {
   const [scheduleSummaryLoading, setScheduleSummaryLoading] = useState(false);
   const [schedulePanelError, setSchedulePanelError] = useState<string | null>(null);
   const upcomingSchedulesRef = useRef<WhatsappScheduledMessage[]>([]);
+  const [slashCommandState, setSlashCommandState] = useState<
+    { query: string; start: number; end: number } | null
+  >(null);
+  const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
+
+  const normalizeQuickReplySearchText = useCallback((value: string) => {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }, []);
+
+  const slashCommandSuggestions = useMemo(() => {
+    if (!slashCommandState) {
+      return [] as QuickReply[];
+    }
+
+    const normalizedQuery = normalizeQuickReplySearchText(slashCommandState.query);
+    const baseList =
+      normalizedQuery === ''
+        ? quickReplies
+        : quickReplies.filter(reply => {
+            const labelSource = reply.title?.trim() || reply.text;
+            const normalizedLabel = normalizeQuickReplySearchText(labelSource);
+            return normalizedLabel.startsWith(normalizedQuery);
+          });
+
+    return baseList.slice(0, 5);
+  }, [normalizeQuickReplySearchText, quickReplies, slashCommandState]);
+
+  useEffect(() => {
+    if (!slashCommandState) {
+      setSlashSuggestionIndex(0);
+      return;
+    }
+
+    if (slashCommandSuggestions.length === 0) {
+      setSlashSuggestionIndex(0);
+      return;
+    }
+
+    if (slashSuggestionIndex >= slashCommandSuggestions.length) {
+      setSlashSuggestionIndex(0);
+    }
+  }, [slashCommandState, slashCommandSuggestions, slashSuggestionIndex]);
 
   const { leadStatuses } = useConfig();
   const activeLeadStatuses = useMemo(
@@ -1545,6 +1598,83 @@ export default function WhatsappPage() {
     setMessageInput(reply.text);
   }, []);
 
+  const applySlashQuickReply = useCallback(
+    (reply: QuickReply) => {
+      if (!slashCommandState) {
+        return;
+      }
+
+      setMessageInput(previous => {
+        const before = previous.slice(0, slashCommandState.start);
+        const after = previous.slice(slashCommandState.end);
+        const inserted = reply.text;
+        const nextValue = `${before}${inserted}${after}`;
+        const caretPosition = before.length + inserted.length;
+
+        const focusTextarea = () => {
+          const textarea = messageInputRef.current;
+          if (textarea) {
+            textarea.focus();
+            textarea.setSelectionRange(caretPosition, caretPosition);
+          }
+        };
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(focusTextarea);
+        } else {
+          focusTextarea();
+        }
+
+        return nextValue;
+      });
+
+      setSlashCommandState(null);
+      setSlashSuggestionIndex(0);
+      setSelectedQuickReplyId(null);
+    },
+    [messageInputRef, slashCommandState],
+  );
+
+  const handleMessageInputKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+      if (!slashCommandState) {
+        return;
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (slashCommandSuggestions.length === 0) {
+          return;
+        }
+
+        event.preventDefault();
+        const count = slashCommandSuggestions.length;
+        setSlashSuggestionIndex(previous => {
+          if (event.key === 'ArrowDown') {
+            return (previous + 1) % count;
+          }
+          return (previous - 1 + count) % count;
+        });
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        const selectedSuggestion = slashCommandSuggestions[slashSuggestionIndex];
+        if (selectedSuggestion) {
+          event.preventDefault();
+          applySlashQuickReply(selectedSuggestion);
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSlashCommandState(null);
+        setSlashSuggestionIndex(0);
+      }
+    },
+    [applySlashQuickReply, slashCommandState, slashCommandSuggestions, slashSuggestionIndex],
+  );
+
   const handleMessageInputChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = event.target;
@@ -1556,8 +1686,32 @@ export default function WhatsappPage() {
           setSelectedQuickReplyId(null);
         }
       }
+
+      const caretIndex = event.target.selectionStart ?? value.length;
+      const textUntilCaret = value.slice(0, caretIndex);
+      const slashMatch = textUntilCaret.match(/(?:^|\s)\/([^\s/]*)$/);
+
+      if (slashMatch) {
+        const queryBeforeCaret = slashMatch[1] ?? '';
+        const slashStartIndex = caretIndex - queryBeforeCaret.length - 1;
+        const remainingText = value.slice(caretIndex);
+        const trailingMatch = remainingText.match(/^([^\s/]*)/);
+        const trailingText = trailingMatch?.[1] ?? '';
+        const completeQuery = `${queryBeforeCaret}${trailingText}`;
+        const endIndex = caretIndex + trailingText.length;
+
+        setSlashCommandState({
+          query: completeQuery,
+          start: slashStartIndex,
+          end: endIndex,
+        });
+        setSlashSuggestionIndex(0);
+      } else if (slashCommandState) {
+        setSlashCommandState(null);
+        setSlashSuggestionIndex(0);
+      }
     },
-    [quickReplies, selectedQuickReplyId],
+    [quickReplies, selectedQuickReplyId, slashCommandState],
   );
 
   const resetAudioUiState = useCallback(() => {
@@ -5395,15 +5549,59 @@ export default function WhatsappPage() {
                     </div>
                   ) : null}
 
-                  <textarea
-                    className="flex-1 resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-                    maxLength={1000}
-                    rows={1}
-                    value={messageInput}
-                    onChange={handleMessageInputChange}
-                    placeholder={messagePlaceholder}
-                    disabled={sendingMessage || schedulingMessage}
-                  />
+                  <div className="relative flex-1">
+                    {slashCommandState ? (
+                      <div className="absolute bottom-full left-0 z-10 mb-2 w-72 max-w-full rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
+                        <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <span>Respostas rápidas</span>
+                          <span className="text-slate-400">/{slashCommandState.query || 'todas'}</span>
+                        </div>
+                        {slashCommandSuggestions.length > 0 ? (
+                          <ul className="space-y-1" role="listbox">
+                            {slashCommandSuggestions.map((reply, index) => {
+                              const isActive = index === slashSuggestionIndex;
+                              const label = reply.title?.trim() || reply.text;
+                              return (
+                                <li key={reply.id}>
+                                  <button
+                                    type="button"
+                                    className={`w-full rounded-lg px-2 py-2 text-left text-sm transition focus:outline-none ${
+                                      isActive
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : 'text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                    onMouseDown={event => event.preventDefault()}
+                                    onClick={() => applySlashQuickReply(reply)}
+                                  >
+                                    <span className="block truncate font-medium">{label}</span>
+                                    {reply.title ? (
+                                      <span className="mt-0.5 block text-xs text-slate-500">
+                                        {truncateQuickReplyPreview(reply.text)}
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="px-2 py-1 text-xs text-slate-500">Nenhuma resposta rápida encontrada.</p>
+                        )}
+                        <p className="mt-1 text-[11px] text-slate-400">Pressione Enter para inserir • Esc para fechar</p>
+                      </div>
+                    ) : null}
+                    <textarea
+                      ref={messageInputRef}
+                      className="h-full w-full resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                      maxLength={1000}
+                      rows={1}
+                      value={messageInput}
+                      onChange={handleMessageInputChange}
+                      onKeyDown={handleMessageInputKeyDown}
+                      placeholder={messagePlaceholder}
+                      disabled={sendingMessage || schedulingMessage}
+                    />
+                  </div>
                   <button
                     type={shouldShowAudioAction ? 'button' : 'submit'}
                     className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"

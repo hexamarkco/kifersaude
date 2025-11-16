@@ -184,6 +184,10 @@ type SendContactBody = {
   delayMessage?: number;
 };
 
+type TranscribeAudioBody = {
+  audioUrl?: string;
+};
+
 type WhatsappContactSummary = {
   phone: string;
   name: string | null;
@@ -611,6 +615,14 @@ const MIME_EXTENSION_MAP: Record<string, string> = {
   'video/mp4': 'mp4',
   'video/quicktime': 'mov',
   'video/x-msvideo': 'avi',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'mp4',
+  'audio/ogg': 'ogg',
+  'audio/ogg;codecs=opus': 'ogg',
+  'audio/webm': 'webm',
+  'audio/webm;codecs=opus': 'webm',
+  'audio/aac': 'aac',
+  'audio/wav': 'wav',
 };
 
 const extractExtensionFromFileName = (fileName: string | null): string | null => {
@@ -652,6 +664,118 @@ const sanitizeExtension = (extension: string | null): string | null => {
   }
 
   return trimmed.replace(/[^a-z0-9]/g, '');
+};
+
+const normalizeMimeType = (value: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const [mime] = value.split(';', 1);
+  const trimmed = mime?.trim().toLowerCase();
+  return trimmed || null;
+};
+
+const generateAudioFileName = (extension: string | null): string => {
+  const sanitizedExtension = sanitizeExtension(extension) ?? 'bin';
+  const uniqueId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Date.now().toString(36);
+
+  return `audio-${uniqueId}.${sanitizedExtension}`;
+};
+
+const createFileFromDataUrl = (dataUrl: string): File => {
+  const [header, base64Content] = dataUrl.split(',', 2);
+  if (!header || !base64Content || !header.toLowerCase().includes(';base64')) {
+    throw new Error('Formato de áudio inválido para transcrição');
+  }
+
+  const mimeMatch = header.match(/^data:([^;,]+)(?:;.*)?$/i);
+  const mime = normalizeMimeType(mimeMatch?.[1]?.toLowerCase() ?? null) ?? 'application/octet-stream';
+  const binary = atob(base64Content);
+  const buffer = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    buffer[index] = binary.charCodeAt(index);
+  }
+
+  const extension = MIME_EXTENSION_MAP[mime] ?? 'bin';
+  return new File([buffer], generateAudioFileName(extension), { type: mime });
+};
+
+const downloadAudioFile = async (audioUrl: string): Promise<File> => {
+  if (audioUrl.startsWith('data:')) {
+    return createFileFromDataUrl(audioUrl);
+  }
+
+  const response = await fetch(audioUrl);
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Falha ao baixar áudio (${response.status}): ${details || 'erro desconhecido'}`,
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const mimeHeader = response.headers.get('content-type');
+  const mime = normalizeMimeType(mimeHeader) ?? 'audio/mpeg';
+  const extension = MIME_EXTENSION_MAP[mime] ?? 'mp3';
+  return new File([arrayBuffer], generateAudioFileName(extension), { type: mime });
+};
+
+const getGptTranscriptionConfig = () => {
+  const apiKey = Deno.env.get('GPT_API_KEY');
+  const baseUrlRaw = Deno.env.get('GPT_API_URL')?.trim();
+  const model = Deno.env.get('GPT_TRANSCRIPTION_MODEL')?.trim() || 'gpt-4o-mini-transcribe';
+
+  if (!apiKey) {
+    throw new Error('GPT_API_KEY não configurada');
+  }
+
+  const baseUrl = baseUrlRaw ? baseUrlRaw.replace(/\/+$/, '') : 'https://api.openai.com/v1';
+
+  return { apiKey, baseUrl, model };
+};
+
+const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
+  if (!audioUrl) {
+    throw new Error('URL do áudio não informada para transcrição');
+  }
+
+  const { apiKey, baseUrl, model } = getGptTranscriptionConfig();
+  const audioFile = await downloadAudioFile(audioUrl);
+
+  const formData = new FormData();
+  formData.append('model', model);
+  formData.append('file', audioFile, audioFile.name);
+  formData.append('response_format', 'json');
+
+  const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
+  });
+
+  const rawBody = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao transcrever áudio (${response.status}): ${rawBody || 'erro desconhecido'}`,
+    );
+  }
+
+  let result: { text?: string | null } | null = null;
+  try {
+    result = rawBody ? (JSON.parse(rawBody) as { text?: string | null }) : null;
+  } catch (_error) {
+    result = rawBody ? { text: rawBody } : null;
+  }
+
+  const transcription = result?.text?.trim();
+  if (!transcription) {
+    throw new Error('A API GPT retornou uma transcrição vazia.');
+  }
+
+  return transcription;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -1906,6 +2030,28 @@ const handleSendAudio = async (req: Request) => {
   }
 };
 
+const handleTranscribeAudio = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<TranscribeAudioBody>(req)) ?? {};
+  const audioUrl = toNonEmptyString(body.audioUrl);
+
+  if (!audioUrl) {
+    return respondJson(400, { success: false, error: 'Campo audioUrl é obrigatório' });
+  }
+
+  try {
+    const transcription = await transcribeAudioFromUrl(audioUrl);
+    return respondJson(200, { success: true, transcription });
+  } catch (error) {
+    console.error('Erro ao transcrever áudio com GPT:', error);
+    const message = error instanceof Error ? error.message : 'Erro ao transcrever áudio';
+    return respondJson(500, { success: false, error: message });
+  }
+};
+
 const handleSendLocation = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -2682,6 +2828,8 @@ serve(async (req) => {
       return handleSendImage(req);
     case '/send-audio':
       return handleSendAudio(req);
+    case '/transcribe-audio':
+      return handleTranscribeAudio(req);
     case '/send-video':
       return handleSendVideo(req);
     case '/send-location':

@@ -284,6 +284,95 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
     })
   : null;
 
+type IntegrationSettingsRow = {
+  slug: string;
+  settings: Record<string, unknown> | null;
+  updated_at: string | null;
+};
+
+type GptIntegrationSettings = {
+  apiKey: string | null;
+  apiUrl: string | null;
+  model: string | null;
+};
+
+const GPT_TRANSCRIPTION_INTEGRATION_SLUG = 'gpt_transcription';
+const GPT_CONFIG_CACHE_TTL_MS = 60 * 1000;
+
+let cachedGptIntegration: { value: GptIntegrationSettings | null; fetchedAt: number } = {
+  value: null,
+  fetchedAt: 0,
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeGptIntegrationSettings = (settings: Record<string, unknown> | null): GptIntegrationSettings => {
+  const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+  const record = settings && isRecord(settings) ? settings : null;
+  const apiKey = toTrimmedString(record?.apiKey);
+  const apiUrl = toTrimmedString(record?.apiUrl);
+  const model = toTrimmedString(record?.model);
+
+  return {
+    apiKey: apiKey || null,
+    apiUrl: apiUrl || null,
+    model: model || null,
+  };
+};
+
+const fetchIntegrationSettingsRow = async (slug: string): Promise<IntegrationSettingsRow | null> => {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase client não configurado');
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('integration_settings')
+    .select('slug, settings, updated_at')
+    .eq('slug', slug)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+    if (['PGRST302', 'PGRST301', '42P01'].includes(normalizedCode)) {
+      throw new Error(
+        'Tabela integration_settings não encontrada. Execute as migrações e configure Configurações > Integrações.',
+      );
+    }
+
+    throw new Error(error.message || 'Erro ao carregar configurações da integração GPT.');
+  }
+
+  return data as IntegrationSettingsRow | null;
+};
+
+const getGptTranscriptionConfig = async (): Promise<{ apiKey: string; baseUrl: string; model: string }> => {
+  const now = Date.now();
+  const shouldRefresh = !cachedGptIntegration.value || now - cachedGptIntegration.fetchedAt > GPT_CONFIG_CACHE_TTL_MS;
+
+  if (shouldRefresh) {
+    const integration = await fetchIntegrationSettingsRow(GPT_TRANSCRIPTION_INTEGRATION_SLUG);
+    cachedGptIntegration = {
+      value: normalizeGptIntegrationSettings(integration?.settings ?? null),
+      fetchedAt: now,
+    };
+  }
+
+  const config = cachedGptIntegration.value;
+
+  if (!config?.apiKey) {
+    throw new Error(
+      'Configure a chave da integração GPT em Configurações > Integrações antes de transcrever áudios.',
+    );
+  }
+
+  const baseUrl = config.apiUrl || 'https://api.openai.com/v1';
+  const model = config.model || 'gpt-4o-mini-transcribe';
+
+  return { apiKey: config.apiKey, baseUrl, model };
+};
+
 const pendingReceivedFromMeMessages = new Map<string, PendingReceivedEntry>();
 const pendingSendPayloads = new Map<string, PendingSendEntry>();
 
@@ -723,26 +812,12 @@ const downloadAudioFile = async (audioUrl: string): Promise<File> => {
   return new File([arrayBuffer], generateAudioFileName(extension), { type: mime });
 };
 
-const getGptTranscriptionConfig = () => {
-  const apiKey = Deno.env.get('GPT_API_KEY');
-  const baseUrlRaw = Deno.env.get('GPT_API_URL')?.trim();
-  const model = Deno.env.get('GPT_TRANSCRIPTION_MODEL')?.trim() || 'gpt-4o-mini-transcribe';
-
-  if (!apiKey) {
-    throw new Error('GPT_API_KEY não configurada');
-  }
-
-  const baseUrl = baseUrlRaw ? baseUrlRaw.replace(/\/+$/, '') : 'https://api.openai.com/v1';
-
-  return { apiKey, baseUrl, model };
-};
-
 const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
   if (!audioUrl) {
     throw new Error('URL do áudio não informada para transcrição');
   }
 
-  const { apiKey, baseUrl, model } = getGptTranscriptionConfig();
+  const { apiKey, baseUrl, model } = await getGptTranscriptionConfig();
   const audioFile = await downloadAudioFile(audioUrl);
 
   const formData = new FormData();

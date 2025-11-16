@@ -9,6 +9,7 @@ import {
   LeadOrigem,
   ConfigOption,
   ProfilePermission,
+  IntegrationSetting,
 } from './supabase';
 
 export type ConfigCategory =
@@ -309,6 +310,11 @@ const toPostgrestError = (error: unknown): PostgrestError => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeIntegrationSetting = (row: IntegrationSetting): IntegrationSetting => {
+  const settings = isRecord(row.settings) ? (row.settings as Record<string, any>) : {};
+  return { ...row, settings };
+};
 
 export const configService = {
   async getSystemSettings(): Promise<SystemSettings | null> {
@@ -882,6 +888,73 @@ export const configService = {
 
       console.error('Error deleting profile permission:', error);
       return { error: toPostgrestError(error) };
+    }
+  },
+
+  async getIntegrationSetting(slug: string): Promise<IntegrationSetting | null> {
+    try {
+      const { data, error } = await supabase
+        .from('integration_settings')
+        .select('*')
+        .eq('slug', slug)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        if (isTableMissingError(error, 'integration_settings')) {
+          console.warn('integration_settings table not found. Run the latest migrations.');
+          return null;
+        }
+
+        throw error;
+      }
+
+      return data ? normalizeIntegrationSetting(data as IntegrationSetting) : null;
+    } catch (error) {
+      if (isTableMissingError(error, 'integration_settings')) {
+        console.warn('integration_settings table not found. Run the latest migrations.');
+        return null;
+      }
+
+      console.error('Error loading integration setting:', error);
+      return null;
+    }
+  },
+
+  async updateIntegrationSetting(
+    id: string,
+    updates: Partial<Pick<IntegrationSetting, 'name' | 'description' | 'settings'>>,
+  ): Promise<{ data: IntegrationSetting | null; error: any }> {
+    try {
+      const payload: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+      const { data, error } = await supabase
+        .from('integration_settings')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: toPostgrestError(error) };
+      }
+
+      return { data: data ? normalizeIntegrationSetting(data as IntegrationSetting) : null, error: null };
+    } catch (error) {
+      if (isTableMissingError(error, 'integration_settings')) {
+        return {
+          data: null,
+          error: {
+            message: 'Tabela integration_settings não encontrada.',
+            details: 'Execute as migrações mais recentes para habilitar integrações.',
+            hint: '',
+            code: 'PGRST404',
+            name: 'PostgrestError',
+          },
+        };
+      }
+
+      console.error('Error updating integration setting:', error);
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 };

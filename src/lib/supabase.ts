@@ -203,6 +203,16 @@ export type SystemSettings = {
   updated_at: string;
 };
 
+export type IntegrationSetting = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  settings: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Operadora = {
   id: string;
   nome: string;

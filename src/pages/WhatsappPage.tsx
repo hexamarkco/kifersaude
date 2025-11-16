@@ -119,6 +119,18 @@ type ChatPreviewInfo = {
   text: string;
 };
 
+type AudioTranscriptionState = {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  text: string | null;
+  error: string | null;
+};
+
+type TranscribeAudioResponse = {
+  success: boolean;
+  transcription?: string | null;
+  error?: string | null;
+};
+
 const getAvatarColorStyles = (
   seed: string,
 ): {
@@ -1105,6 +1117,9 @@ export default function WhatsappPage() {
   const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
   const [chatInsightStatus, setChatInsightStatus] = useState<InsightStatus>('idle');
   const [chatInsightError, setChatInsightError] = useState<string | null>(null);
+  const [audioTranscriptions, setAudioTranscriptions] = useState<
+    Record<string, AudioTranscriptionState>
+  >({});
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
   const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Record<string, boolean>>({});
 
@@ -2561,6 +2576,7 @@ export default function WhatsappPage() {
     setShowAttachmentMenu(false);
     setPendingAttachment(null);
     setReactionDetailsMessageId(null);
+    setAudioTranscriptions({});
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -2692,6 +2708,70 @@ export default function WhatsappPage() {
     },
     [setChats],
   );
+
+  const requestAudioTranscription = useCallback(async (messageId: string, audioUrl: string) => {
+    if (!messageId || !audioUrl) {
+      return;
+    }
+
+    let shouldSkip = false;
+    setAudioTranscriptions(previous => {
+      const current = previous[messageId];
+      if (current?.status === 'loading') {
+        shouldSkip = true;
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [messageId]: {
+          status: 'loading',
+          text: current?.text ?? null,
+          error: null,
+        },
+      };
+    });
+
+    if (shouldSkip) {
+      return;
+    }
+
+    try {
+      const response = await fetchJson<TranscribeAudioResponse>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/transcribe-audio'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audioUrl }),
+        },
+      );
+
+      const transcription = response.transcription?.trim();
+      if (!response.success || !transcription) {
+        throw new Error(response.error || 'Não foi possível transcrever o áudio.');
+      }
+
+      setAudioTranscriptions(previous => ({
+        ...previous,
+        [messageId]: {
+          status: 'success',
+          text: transcription,
+          error: null,
+        },
+      }));
+    } catch (error) {
+      const fallbackMessage =
+        error instanceof Error ? error.message : 'Não foi possível transcrever o áudio.';
+      setAudioTranscriptions(previous => ({
+        ...previous,
+        [messageId]: {
+          status: 'error',
+          text: null,
+          error: fallbackMessage,
+        },
+      }));
+    }
+  }, []);
 
   const sendPendingAttachment = async (
     attachment: PendingAttachment,
@@ -3665,6 +3745,7 @@ export default function WhatsappPage() {
 
   const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
+    const messageTranscriptionKey = message.id ?? message.message_id ?? null;
 
     const attachments: JSX.Element[] = [];
     const payload =
@@ -3713,9 +3794,62 @@ export default function WhatsappPage() {
     }
 
     if (attachmentInfo.audioUrl) {
+      const audioUrl = attachmentInfo.audioUrl;
+      const resolvedTranscriptionKey = messageTranscriptionKey ?? audioUrl ?? null;
+      const transcriptionState = resolvedTranscriptionKey
+        ? audioTranscriptions[resolvedTranscriptionKey] ?? null
+        : null;
+      const transcriptionStatus = transcriptionState?.status ?? 'idle';
+      const canTranscribeAudio = Boolean(!isFromMe && resolvedTranscriptionKey);
+      const handleTranscriptionClick = () => {
+        if (!resolvedTranscriptionKey) {
+          return;
+        }
+
+        void requestAudioTranscription(resolvedTranscriptionKey, audioUrl);
+      };
+
+      const transcriptionButtonLabel = (() => {
+        if (transcriptionStatus === 'loading') {
+          return 'Transcrevendo...';
+        }
+
+        if (transcriptionStatus === 'success') {
+          return 'Atualizar transcrição';
+        }
+
+        return 'Transcrever áudio';
+      })();
+
       attachments.push(
         <div key="audio" className="flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800">
-          <AudioMessageBubble src={attachmentInfo.audioUrl} seconds={attachmentInfo.audioSeconds} />
+          <AudioMessageBubble src={audioUrl} seconds={attachmentInfo.audioSeconds} />
+          {canTranscribeAudio ? (
+            <div className="flex flex-col gap-2 text-xs text-slate-600">
+              {transcriptionState?.text && transcriptionState.status === 'success' ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700">
+                  <p className="mb-1 text-[13px] font-semibold text-slate-800">Transcrição</p>
+                  <p className="whitespace-pre-wrap break-words text-sm text-slate-700">
+                    {renderHighlightedText(transcriptionState.text)}
+                  </p>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleTranscriptionClick}
+                disabled={transcriptionStatus === 'loading'}
+                className="inline-flex items-center justify-center rounded-md border border-emerald-500 px-3 py-1.5 text-[13px] font-semibold text-emerald-600 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {transcriptionButtonLabel}
+              </button>
+              {transcriptionStatus === 'loading' ? (
+                <p className="text-[13px] text-slate-500">Transcrevendo áudio...</p>
+              ) : null}
+              {transcriptionStatus === 'error' && transcriptionState?.error ? (
+                <p className="text-[13px] text-rose-600">{transcriptionState.error}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>,
       );
     }

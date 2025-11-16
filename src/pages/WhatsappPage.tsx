@@ -5695,7 +5695,11 @@ export default function WhatsappPage() {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col gap-4 pb-24 md:pb-0">
+      <div
+        className={`flex h-full min-h-0 flex-col gap-4 ${
+          shouldShowMobileBottomMenu ? 'pb-24' : 'pb-4'
+        } md:pb-0`}
+      >
         <nav
           className="hidden items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm md:flex"
           aria-label="Sessões do WhatsApp"

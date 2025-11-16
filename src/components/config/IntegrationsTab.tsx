@@ -4,7 +4,7 @@ import { Eye, EyeOff, Info, KeyRound, Loader2, Plug, Save, ShieldCheck } from 'l
 import { configService } from '../../lib/configService';
 import type { IntegrationSetting } from '../../lib/supabase';
 
-const GPT_TRANSCRIPTION_SLUG = 'gpt_transcription';
+const GPT_INTEGRATION_SLUG = 'gpt_transcription';
 const DEFAULT_MODEL = 'gpt-4o-mini-transcribe';
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -45,7 +45,7 @@ export default function IntegrationsTab() {
     setLoading(true);
     setMessage(null);
 
-    const data = await configService.getIntegrationSetting(GPT_TRANSCRIPTION_SLUG);
+    const data = await configService.getIntegrationSetting(GPT_INTEGRATION_SLUG);
     setIntegration(data);
     setFormState(normalizeGptSettings(data));
 
@@ -97,7 +97,8 @@ export default function IntegrationsTab() {
         <div>
           <p className="text-orange-800 font-medium mb-1">Nenhuma integração encontrada.</p>
           <p className="text-orange-700 text-sm">
-            Execute as migrações mais recentes e cadastre as credenciais da integração GPT para usar a transcrição de áudios.
+            Execute as migrações mais recentes e cadastre as credenciais da integração GPT para usar recursos como transcrição de
+            áudios e reescrita de mensagens.
           </p>
         </div>
       </div>
@@ -129,9 +130,10 @@ export default function IntegrationsTab() {
             <Plug className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">GPT - Transcrição de Áudio</h3>
+            <h3 className="text-lg font-semibold text-slate-900">GPT - Assistente Inteligente</h3>
             <p className="text-sm text-slate-500">
-              Essas credenciais serão usadas para transcrever áudios recebidos na aba de WhatsApp.
+              Essas credenciais serão usadas nos recursos que dependem do GPT, como transcrever áudios recebidos e reescrever
+              mensagens antes do envio na aba de WhatsApp.
             </p>
           </div>
         </div>
@@ -177,7 +179,7 @@ export default function IntegrationsTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo de Transcrição</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo do GPT</label>
             <input
               type="text"
               value={formState.model}
@@ -186,7 +188,8 @@ export default function IntegrationsTab() {
               placeholder={DEFAULT_MODEL}
             />
             <p className="text-xs text-slate-500 mt-2">
-              Informe o identificador do modelo disponível na sua conta (ex: gpt-4o-mini-transcribe).
+              Informe o identificador do modelo disponível na sua conta (ex: gpt-4o-mini-transcribe). Ele será reutilizado em todos os
+              recursos habilitados do GPT.
             </p>
           </div>
         </div>

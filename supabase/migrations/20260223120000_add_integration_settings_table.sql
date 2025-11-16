@@ -2,9 +2,10 @@
   # Integration settings table
 
   ## Description
-  Stores configuration secrets for external integrations (e.g., GPT audio
-  transcription) so administrators can manage them from the Configurações >
-  Integrações tab instead of environment variables.
+  Stores configuration secrets for external integrations (e.g., GPT
+  experiences such as transcrição de áudios ou reescrita de mensagens) so
+  administrators can manage them from the Configurações > Integrações tab
+  instead of environment variables.
 */
 
 CREATE TABLE IF NOT EXISTS integration_settings (
@@ -58,8 +59,8 @@ CREATE POLICY IF NOT EXISTS "Only admins can manage integration settings"
 INSERT INTO integration_settings (slug, name, description, settings)
 VALUES (
   'gpt_transcription',
-  'Transcrição de Áudio (GPT)',
-  'Configurações usadas para transcrever áudios recebidos no WhatsApp com o GPT.',
+  'Integração Geral do GPT',
+  'Configurações usadas para recursos do GPT, como transcrever áudios e reescrever mensagens no WhatsApp.',
   jsonb_build_object(
     'apiKey', '',
     'apiUrl', 'https://api.openai.com/v1',

@@ -8,8 +8,8 @@ import {
   Settings,
   MessageCircle,
   MessageSquareText,
-  MessageSquare,
   ChevronDown,
+  ChevronUp,
   Menu,
   X,
   Briefcase,
@@ -56,6 +56,7 @@ export default function Layout({
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
   const [expandedMobileParent, setExpandedMobileParent] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
@@ -72,7 +73,6 @@ export default function Layout({
 
   const comunicacaoChildren = [
     { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquareText },
-    { id: 'whatsapp-campaigns', label: 'Campanhas WhatsApp', icon: MessageSquare },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },
@@ -223,6 +223,12 @@ export default function Layout({
     setExpandedMobileParent(null);
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!isWhatsappActive) {
+      setIsMenuCollapsed(false);
+    }
+  }, [isWhatsappActive]);
+
   const toggleMobileParent = (parentId: string) => {
     setExpandedMobileParent(current => (current === parentId ? null : parentId));
   };
@@ -270,13 +276,27 @@ export default function Layout({
     );
   };
 
+  const shouldHideHeader = isWhatsappActive && isMenuCollapsed;
+
   return (
     <div
       className={`flex min-h-screen flex-col bg-slate-50 ${
         isWhatsappActive ? 'h-screen overflow-hidden' : ''
       }`}
     >
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+      {isWhatsappActive && isMenuCollapsed ? (
+        <button
+          type="button"
+          onClick={() => setIsMenuCollapsed(false)}
+          className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg ring-1 ring-slate-200"
+        >
+          <ChevronDown className="h-4 w-4" />
+          Expandir menu
+        </button>
+      ) : null}
+
+      {!shouldHideHeader && (
+        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
@@ -284,6 +304,16 @@ export default function Layout({
                 <span className="text-lg font-bold text-white">K</span>
               </div>
               <span className="sr-only">Kifer Saúde - Sistema de Gestão</span>
+              {isWhatsappActive ? (
+                <button
+                  type="button"
+                  onClick={() => setIsMenuCollapsed(true)}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Recolher menu
+                </button>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -463,7 +493,8 @@ export default function Layout({
             </div>
           )}
         </div>
-      </header>
+        </header>
+      )}
       <main className={`flex-1 ${isWhatsappActive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <div
           className={`mx-auto w-full ${

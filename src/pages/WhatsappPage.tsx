@@ -1333,6 +1333,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
   const [chatInsightStatus, setChatInsightStatus] = useState<WhatsappChatInsightStatus>('idle');
   const [chatInsightError, setChatInsightError] = useState<string | null>(null);
+  const [generatingInsight, setGeneratingInsight] = useState(false);
   const [audioTranscriptions, setAudioTranscriptions] = useState<
     Record<string, AudioTranscriptionState>
   >({});
@@ -1536,6 +1537,45 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     void loadInsightForChat(selectedChatId);
   }, [loadInsightForChat, selectedChatId]);
+
+  const handleGenerateInsight = useCallback(async () => {
+    if (!selectedChatId || generatingInsight) {
+      return;
+    }
+
+    setGeneratingInsight(true);
+    setChatInsightStatus('loading');
+    setChatInsightError(null);
+
+    try {
+      const response = await fetch('/api/whatsapp/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: selectedChatId }),
+      });
+
+      let payload: { error?: string } | null = null;
+      try {
+        payload = await response.json();
+      } catch (parseError) {
+        console.warn('Falha ao interpretar resposta ao gerar insight:', parseError);
+      }
+
+      if (!response.ok) {
+        const message = payload?.error ?? 'Erro ao gerar insight.';
+        throw new Error(message);
+      }
+
+      await loadInsightForChat(selectedChatId);
+    } catch (error) {
+      setChatInsightStatus('error');
+      setChatInsightError(
+        error instanceof Error ? error.message : 'Erro ao gerar insight.',
+      );
+    } finally {
+      setGeneratingInsight(false);
+    }
+  }, [generatingInsight, loadInsightForChat, selectedChatId]);
 
   const stopWaveformAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -2663,6 +2703,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       setChatInsight(null);
       setChatInsightStatus('idle');
       setChatInsightError(null);
+      setGeneratingInsight(false);
       return;
     }
 
@@ -6076,6 +6117,8 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                 insightError={chatInsightError}
                 insightSentiment={insightSentimentDisplay}
                 onRetryInsight={handleRetryLoadInsight}
+                onGenerateInsight={handleGenerateInsight}
+                generatingInsight={generatingInsight}
                 slaBadge={selectedChatSlaBadge}
                 slaMetrics={selectedChat?.sla_metrics ?? null}
                 agendaSummaryRows={agendaSummaryDisplayRows}

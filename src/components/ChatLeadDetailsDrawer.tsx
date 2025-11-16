@@ -95,6 +95,8 @@ type ChatLeadDetailsDrawerProps = {
   insightError?: string | null;
   insightSentiment?: InsightSentimentDisplay | null;
   onRetryInsight?: () => void;
+  onGenerateInsight?: () => void;
+  generatingInsight?: boolean;
   slaBadge?: SlaBadgeDisplay | null;
   slaMetrics?: WhatsappChatSlaMetrics | null;
   agendaSummaryRows?: AgendaSummaryRowDisplay[];
@@ -124,6 +126,8 @@ export default function ChatLeadDetailsDrawer({
   insightError,
   insightSentiment,
   onRetryInsight,
+  onGenerateInsight,
+  generatingInsight,
   slaBadge,
   slaMetrics,
   agendaSummaryRows = [],
@@ -732,6 +736,9 @@ export default function ChatLeadDetailsDrawer({
       content = <p className="text-sm text-slate-500">Ainda não há insights processados para esta conversa.</p>;
     }
 
+    const isLoading = insightStatus === 'loading';
+    const shouldShowGenerateButton = !insight?.summary && Boolean(onGenerateInsight);
+
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -743,20 +750,36 @@ export default function ChatLeadDetailsDrawer({
               </p>
             ) : null}
           </div>
-          {onRetryInsight ? (
-            <button
-              type="button"
-              onClick={onRetryInsight}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-              disabled={insightStatus === 'loading'}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${insightStatus === 'loading' ? 'animate-spin text-emerald-600' : 'text-slate-500'}`}
-                aria-hidden="true"
-              />
-              Atualizar
-            </button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {shouldShowGenerateButton ? (
+              <button
+                type="button"
+                onClick={onGenerateInsight}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={generatingInsight || isLoading}
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${generatingInsight ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                {generatingInsight ? 'Gerando...' : 'Gerar insight'}
+              </button>
+            ) : null}
+            {onRetryInsight ? (
+              <button
+                type="button"
+                onClick={onRetryInsight}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isLoading}
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`}
+                  aria-hidden="true"
+                />
+                Atualizar
+              </button>
+            ) : null}
+          </div>
         </div>
         {insightSentiment ? (
           <span

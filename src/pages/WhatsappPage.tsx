@@ -1054,6 +1054,7 @@ export default function WhatsappPage() {
   const messageSearchInputRef = useRef<HTMLInputElement | null>(null);
   const messageElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [quickRepliesMenuOpen, setQuickRepliesMenuOpen] = useState(false);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
@@ -2836,7 +2837,16 @@ export default function WhatsappPage() {
     }
 
     setShowChatActionsMenu(false);
+    setQuickRepliesMenuOpen(false);
     setShowAttachmentMenu(previous => !previous);
+  };
+
+  const handleQuickRepliesMenuOpenChange = (nextOpen: boolean) => {
+    setQuickRepliesMenuOpen(nextOpen);
+    if (nextOpen) {
+      setShowAttachmentMenu(false);
+      setShowChatActionsMenu(false);
+    }
   };
 
   const openDocumentPicker = () => {
@@ -4551,6 +4561,8 @@ export default function WhatsappPage() {
                     onUpdate={handleUpdateQuickReply}
                     isLoading={quickRepliesLoading}
                     error={quickRepliesError}
+                    isOpen={quickRepliesMenuOpen}
+                    onOpenChange={handleQuickRepliesMenuOpenChange}
                   />
 
                   <div className="relative">
@@ -4562,6 +4574,7 @@ export default function WhatsappPage() {
                         }
                         setShowChatActionsMenu(previous => !previous);
                         setShowAttachmentMenu(false);
+                        setQuickRepliesMenuOpen(false);
                       }}
                       className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                       aria-haspopup="menu"

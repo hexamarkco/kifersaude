@@ -294,12 +294,14 @@ type IntegrationSettingsRow = {
 
 type GptIntegrationSettings = {
   apiKey: string | null;
-  apiUrl: string | null;
-  model: string | null;
+  textModel: string | null;
 };
 
 const GPT_TRANSCRIPTION_INTEGRATION_SLUG = 'gpt_transcription';
 const GPT_CONFIG_CACHE_TTL_MS = 60 * 1000;
+const OPENAI_API_BASE_URL = 'https://api.openai.com/v1';
+const OPENAI_AUDIO_TRANSCRIPTION_MODEL = 'whisper-1';
+const DEFAULT_OPENAI_TEXT_MODEL = 'gpt-4o-mini';
 
 let cachedGptIntegration: { value: GptIntegrationSettings | null; fetchedAt: number } = {
   value: null,
@@ -313,13 +315,11 @@ const normalizeGptIntegrationSettings = (settings: Record<string, unknown> | nul
   const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
   const record = settings && isRecord(settings) ? settings : null;
   const apiKey = toTrimmedString(record?.apiKey);
-  const apiUrl = toTrimmedString(record?.apiUrl);
-  const model = toTrimmedString(record?.model);
+  const textModel = toTrimmedString(record?.textModel) || toTrimmedString(record?.model);
 
   return {
     apiKey: apiKey || null,
-    apiUrl: apiUrl || null,
-    model: model || null,
+    textModel: textModel || null,
   };
 };
 
@@ -349,7 +349,7 @@ const fetchIntegrationSettingsRow = async (slug: string): Promise<IntegrationSet
   return data as IntegrationSettingsRow | null;
 };
 
-const getGptTranscriptionConfig = async (): Promise<{ apiKey: string; baseUrl: string; model: string }> => {
+const getGptIntegrationConfig = async (): Promise<{ apiKey: string; textModel: string }> => {
   const now = Date.now();
   const shouldRefresh = !cachedGptIntegration.value || now - cachedGptIntegration.fetchedAt > GPT_CONFIG_CACHE_TTL_MS;
 
@@ -369,10 +369,9 @@ const getGptTranscriptionConfig = async (): Promise<{ apiKey: string; baseUrl: s
     );
   }
 
-  const baseUrl = config.apiUrl || 'https://api.openai.com/v1';
-  const model = config.model || 'gpt-4o-mini-transcribe';
+  const textModel = config.textModel || DEFAULT_OPENAI_TEXT_MODEL;
 
-  return { apiKey: config.apiKey, baseUrl, model };
+  return { apiKey: config.apiKey, textModel };
 };
 
 const pendingReceivedFromMeMessages = new Map<string, PendingReceivedEntry>();
@@ -841,15 +840,15 @@ const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
     throw new Error('URL do áudio não informada para transcrição');
   }
 
-  const { apiKey, baseUrl, model } = await getGptTranscriptionConfig();
+  const { apiKey } = await getGptIntegrationConfig();
   const audioFile = await downloadAudioFile(audioUrl);
 
   const formData = new FormData();
-  formData.append('model', model);
+  formData.append('model', OPENAI_AUDIO_TRANSCRIPTION_MODEL);
   formData.append('file', audioFile, audioFile.name);
   formData.append('response_format', 'json');
 
-  const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+  const response = await fetch(`${OPENAI_API_BASE_URL}/audio/transcriptions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
     body: formData,

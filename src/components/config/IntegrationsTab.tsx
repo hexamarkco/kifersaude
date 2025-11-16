@@ -5,27 +5,31 @@ import { configService } from '../../lib/configService';
 import type { IntegrationSetting } from '../../lib/supabase';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
-const DEFAULT_MODEL = 'gpt-4o-mini-transcribe';
-const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
+
+const TEXT_MODEL_OPTIONS = [
+  { value: 'gpt-4o-mini', label: 'GPT-4o mini • rápido e econômico' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 mini • equilíbrio entre custo e qualidade' },
+  { value: 'gpt-4o', label: 'GPT-4o • máximo contexto e qualidade' },
+];
+
+const DEFAULT_TEXT_MODEL = TEXT_MODEL_OPTIONS[0].value;
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
 type GptFormState = {
   apiKey: string;
-  apiUrl: string;
-  model: string;
+  textModel: string;
 };
 
 const normalizeGptSettings = (integration: IntegrationSetting | null): GptFormState => {
   const settings = integration?.settings ?? {};
+  const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+  const normalizedTextModel =
+    toTrimmedString(settings.textModel) || toTrimmedString(settings.model) || DEFAULT_TEXT_MODEL;
+
   return {
     apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
-    apiUrl: typeof settings.apiUrl === 'string' && settings.apiUrl.trim().length > 0
-      ? settings.apiUrl
-      : DEFAULT_BASE_URL,
-    model: typeof settings.model === 'string' && settings.model.trim().length > 0
-      ? settings.model
-      : DEFAULT_MODEL,
+    textModel: normalizedTextModel,
   };
 };
 
@@ -63,8 +67,7 @@ export default function IntegrationsTab() {
 
     const sanitizedSettings = {
       apiKey: formState.apiKey.trim(),
-      apiUrl: formState.apiUrl.trim() || DEFAULT_BASE_URL,
-      model: formState.model.trim() || DEFAULT_MODEL,
+      textModel: formState.textModel.trim() || DEFAULT_TEXT_MODEL,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(integration.id, {
@@ -132,9 +135,17 @@ export default function IntegrationsTab() {
           <div>
             <h3 className="text-lg font-semibold text-slate-900">GPT - Assistente Inteligente</h3>
             <p className="text-sm text-slate-500">
-              Essas credenciais serão usadas nos recursos que dependem do GPT, como transcrever áudios recebidos e reescrever
-              mensagens antes do envio na aba de WhatsApp.
+              Essas credenciais são usadas para transcrever áudios recebidos e aplicar recursos de texto/reescrita antes do
+              envio na aba de WhatsApp.
             </p>
+            <div className="mt-3 text-xs text-slate-500 space-y-1">
+              <p className="font-semibold text-slate-600">Como utilizamos o GPT:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Áudios usam o modelo Whisper no endpoint /v1/audio/transcriptions.</li>
+                <li>Recursos de texto usam o modelo selecionado abaixo.</li>
+                <li>Reescritas enviadas pelo WhatsApp usam o endpoint /v1/responses.</li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -165,31 +176,21 @@ export default function IntegrationsTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Endpoint da API</label>
-            <input
-              type="text"
-              value={formState.apiUrl}
-              onChange={event => setFormState(prev => ({ ...prev, apiUrl: event.target.value }))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder={DEFAULT_BASE_URL}
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              Utilize este campo caso use um proxy próprio ou outro provedor compatível com o formato OpenAI.
-            </p>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Modelo do GPT</label>
-            <input
-              type="text"
-              value={formState.model}
-              onChange={event => setFormState(prev => ({ ...prev, model: event.target.value }))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder={DEFAULT_MODEL}
-            />
+            <select
+              value={formState.textModel}
+              onChange={event => setFormState(prev => ({ ...prev, textModel: event.target.value }))}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+            >
+              {TEXT_MODEL_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-slate-500 mt-2">
-              Informe o identificador do modelo disponível na sua conta (ex: gpt-4o-mini-transcribe). Ele será reutilizado em todos os
-              recursos habilitados do GPT.
+              Escolha o modelo disponível na sua conta para respostas e reescritas de texto. Os áudios continuarão usando o Whisper
+              automaticamente.
             </p>
           </div>
         </div>

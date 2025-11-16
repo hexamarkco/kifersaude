@@ -21,9 +21,7 @@ const getBrowserEnv = (): RuntimeEnv => {
     return {};
   }
 
-  const metaEnv = (import.meta as ImportMeta | undefined)?.env as
-    | Record<string, string | undefined>
-    | undefined;
+  const metaEnv = import.meta.env as Record<string, string | undefined>;
 
   return {
     functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL,

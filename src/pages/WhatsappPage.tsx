@@ -923,6 +923,26 @@ const extractExtensionFromMime = (mime: string | null | undefined): string | nul
   return MIME_EXTENSION_MAP[normalized] ?? null;
 };
 
+const buildDocumentPreviewUrl = (documentUrl: string | null | undefined): string | null => {
+  if (!documentUrl) {
+    return null;
+  }
+
+  const normalizedUrl = documentUrl.trim();
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  const lowerCaseUrl = normalizedUrl.toLowerCase();
+  if (lowerCaseUrl.endsWith('.pdf')) {
+    const separator = normalizedUrl.includes('#') ? '&' : '#';
+    return `${normalizedUrl}${separator}page=1&view=FitH&toolbar=0`;
+  }
+
+  const encodedUrl = encodeURIComponent(normalizedUrl);
+  return `https://docs.google.com/gview?embedded=1&url=${encodedUrl}`;
+};
+
 const readFileAsDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -4561,11 +4581,13 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     }
 
     if (attachmentInfo.documentUrl) {
+      const documentPreviewUrl = buildDocumentPreviewUrl(attachmentInfo.documentUrl);
+
       attachments.push(
         <div key="document" className="flex flex-col gap-3 rounded-lg bg-white p-3 text-slate-800">
           <div className="overflow-hidden rounded-md border border-slate-200">
             <iframe
-              src={attachmentInfo.documentUrl}
+              src={documentPreviewUrl ?? attachmentInfo.documentUrl}
               title={`Pré-visualização do documento ${attachmentInfo.documentFileName}`}
               className="h-64 w-full border-0"
               loading="lazy"

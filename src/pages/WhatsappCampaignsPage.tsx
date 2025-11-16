@@ -421,8 +421,8 @@ export default function WhatsappCampaignsPage() {
       <Helmet>
         <title>Campanhas WhatsApp</title>
       </Helmet>
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="w-full max-w-xs border-r border-slate-200 bg-white">
+      <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+        <aside className="w-full border-b border-slate-200 bg-white lg:max-w-xs lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-800">Campanhas</h2>
             <button
@@ -433,7 +433,7 @@ export default function WhatsappCampaignsPage() {
               <Plus className="h-4 w-4" /> Novo
             </button>
           </div>
-          <div className="max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="max-h-[50vh] overflow-y-auto lg:max-h-[calc(100vh-4rem)]">
             {campaignLoading ? (
               <p className="px-4 py-3 text-sm text-slate-500">Carregando...</p>
             ) : campaigns.length === 0 ? (
@@ -466,8 +466,8 @@ export default function WhatsappCampaignsPage() {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
             {errorMessage ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {errorMessage}

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { sendWhatsappMessage } from '../lib/whatsappApi';
 import type {
   WhatsappScheduledMessage,
   WhatsappScheduledMessageStatus,
@@ -52,45 +53,6 @@ export const scheduleWhatsappMessage = async (
   }
 
   return data;
-};
-
-const getEnvRecord = () => {
-  return (typeof process !== 'undefined' ? process.env : {}) as Record<string, string | undefined>;
-};
-
-const getFunctionsBaseUrl = () => {
-  const env = getEnvRecord();
-  const functionsUrl = env?.SUPABASE_FUNCTIONS_URL?.trim();
-  const supabaseUrl = env?.SUPABASE_URL?.trim();
-
-  if (!functionsUrl && !supabaseUrl) {
-    throw new Error(
-      'SUPABASE_FUNCTIONS_URL ou SUPABASE_URL devem estar configuradas para processar agendamentos.',
-    );
-  }
-
-  if (functionsUrl) {
-    return functionsUrl.replace(/\/+$/, '');
-  }
-
-  return `${supabaseUrl!.replace(/\/+$/, '')}/functions/v1`;
-};
-
-const getWhatsappFunctionUrl = (path: string) => {
-  const base = getFunctionsBaseUrl();
-  const normalizedPath = path.replace(/^\/+/, '');
-  return `${base}/${normalizedPath}`;
-};
-
-const getServiceRoleKey = () => {
-  const env = getEnvRecord();
-  const serviceRoleKey = env?.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY deve estar configurada.');
-  }
-
-  return serviceRoleKey;
 };
 
 type ProcessOptions = {
@@ -153,7 +115,6 @@ export const processScheduledMessages = async (
   }
 
   const results: ProcessResult[] = [];
-  const serviceRoleKey = getServiceRoleKey();
 
   for (const record of records) {
     try {
@@ -177,19 +138,10 @@ export const processScheduledMessages = async (
         continue;
       }
 
-      const response = await fetcher(getWhatsappFunctionUrl('/whatsapp-webhook/send-message'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceRoleKey}`,
-        },
-        body: JSON.stringify({ phone: record.phone, message: record.message }),
-      });
-
-      if (!response.ok) {
-        const details = await response.text();
-        throw new Error(details || 'Falha ao enviar mensagem agendada');
-      }
+      await sendWhatsappMessage(
+        { phone: record.phone, message: record.message },
+        { fetchImpl: fetcher, useServiceKey: true },
+      );
 
       await updateSchedule(record.id, {
         status: 'sent',

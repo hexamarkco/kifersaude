@@ -5,6 +5,7 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
+import WhatsappCampaignDrawer from './WhatsappCampaignDrawer';
 
 type LeadDetailsProps = {
   lead: Lead;
@@ -22,6 +23,7 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
     descricao: '',
     responsavel: 'Luiza',
   });
+  const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -111,6 +113,15 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
                 <span className="font-medium text-slate-700">Responsável:</span>
                 <span className="ml-2 text-slate-900">{lead.responsavel}</span>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCampaignDrawer(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50"
+              >
+                Campanhas WhatsApp
+              </button>
             </div>
           </div>
 
@@ -233,6 +244,15 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
         </div>
       </div>
 
+      <WhatsappCampaignDrawer
+        isOpen={showCampaignDrawer}
+        onClose={() => setShowCampaignDrawer(false)}
+        context={{
+          leadId: lead.id,
+          phone: lead.telefone ?? null,
+          displayName: lead.nome_completo,
+        }}
+      />
     </div>
   );
 }

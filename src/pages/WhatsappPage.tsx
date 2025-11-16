@@ -39,12 +39,14 @@ import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
+import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
+import { fetchWhatsappJson, getWhatsappFunctionUrl } from '../lib/whatsappApi';
 import type {
   WhatsappChat,
   WhatsappChatInsight,
@@ -823,38 +825,7 @@ const getChatDisplayName = (chat: WhatsappChat): string => {
   return chat.phone;
 };
 
-const getWhatsappFunctionUrl = (path: string) => {
-  const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.trim();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-
-  if (!functionsUrl && !supabaseUrl) {
-    throw new Error(
-      'Variáveis VITE_SUPABASE_FUNCTIONS_URL ou VITE_SUPABASE_URL não configuradas.',
-    );
-  }
-
-  const normalizedBase = (() => {
-    if (functionsUrl) {
-      return functionsUrl.replace(/\/+$/, '');
-    }
-
-    // supabaseUrl is guaranteed to exist here because of the guard above
-    const trimmedSupabase = supabaseUrl!.replace(/\/+$/, '');
-    return `${trimmedSupabase}/functions/v1`;
-  })();
-
-  const normalizedPath = path.replace(/^\/+/, '');
-  return `${normalizedBase}/${normalizedPath}`;
-};
-
-const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T> => {
-  const response = await fetch(input, init);
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Falha na requisição');
-  }
-  return response.json() as Promise<T>;
-};
+const fetchJson: typeof fetchWhatsappJson = fetchWhatsappJson;
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -1238,6 +1209,7 @@ export default function WhatsappPage() {
   const [startingConversation, setStartingConversation] = useState(false);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [showLeadDetails, setShowLeadDetails] = useState(false);
+  const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
   const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
@@ -2905,7 +2877,7 @@ export default function WhatsappPage() {
       setErrorMessage(null);
 
       try {
-        const response = await fetchJson<SendMessageResponse>(
+        const response = await fetchJson<SendWhatsappMessageResponse>(
           getWhatsappFunctionUrl(endpoint),
           {
             method: 'POST',
@@ -5662,6 +5634,20 @@ export default function WhatsappPage() {
           </div>
         </div>
       ) : null}
+      <WhatsappCampaignDrawer
+        isOpen={showCampaignDrawer && Boolean(selectedChat)}
+        onClose={() => setShowCampaignDrawer(false)}
+        context={
+          selectedChat
+            ? {
+                chatId: selectedChat.id,
+                leadId: selectedChatLead?.id ?? null,
+                phone: selectedChat.phone,
+                displayName: selectedChatDisplayName,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

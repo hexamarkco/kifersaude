@@ -8,6 +8,7 @@ import {
   Settings,
   MessageCircle,
   MessageSquareText,
+  MessageSquare,
   ChevronDown,
   Menu,
   X,
@@ -49,7 +50,7 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0
 }: LayoutProps) {
-  const { signOut, isObserver, role } = useAuth();
+  const { signOut, role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export default function Layout({
 
   const comunicacaoChildren = [
     { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquareText },
+    { id: 'whatsapp-campaigns', label: 'Campanhas WhatsApp', icon: MessageSquare },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },

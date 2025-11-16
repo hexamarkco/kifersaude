@@ -178,6 +178,7 @@ beforeEach(() => {
 
   import.meta.env.VITE_SUPABASE_FUNCTIONS_URL = 'https://example.com/functions/v1';
   import.meta.env.VITE_SUPABASE_URL = 'https://example.com';
+  import.meta.env.VITE_SUPABASE_ANON_KEY = 'anon-key';
 
   fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();

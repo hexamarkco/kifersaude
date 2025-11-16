@@ -2545,6 +2545,61 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   }, [loadChats]);
 
   useEffect(() => {
+    const channel = supabase
+      .channel('whatsapp-chats-listener')
+      .on<RealtimePostgresChangesPayload<WhatsappChat>>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_chats' },
+        payload => {
+          if (payload.eventType === 'DELETE') {
+            const removedChat = (payload.old as WhatsappChat | null) ?? null;
+            if (!removedChat) {
+              return;
+            }
+
+            setChats(previous => previous.filter(chat => chat.id !== removedChat.id));
+            if (selectedChatIdRef.current === removedChat.id) {
+              setSelectedChatId(null);
+            }
+            return;
+          }
+
+          const incomingChat = (payload.new as WhatsappChat | null) ?? null;
+          if (!incomingChat) {
+            return;
+          }
+
+          setChats(previous => {
+            const existingIndex = previous.findIndex(chat => chat.id === incomingChat.id);
+            if (existingIndex === -1) {
+              return [...previous, incomingChat];
+            }
+
+            const existingChat = previous[existingIndex];
+            const mergedChat: WhatsappChat = {
+              ...existingChat,
+              ...incomingChat,
+              display_name: incomingChat.display_name ?? existingChat.display_name ?? null,
+              crm_lead: existingChat.crm_lead,
+              crm_contracts: existingChat.crm_contracts,
+              crm_financial_summary: existingChat.crm_financial_summary,
+              sla_metrics: existingChat.sla_metrics,
+            };
+
+            const next = [...previous];
+            next[existingIndex] = mergedChat;
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!selectedChatId) {
       setChatInsight(null);
       setChatInsightStatus('idle');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CheckCircle2, Clock, RefreshCw, Settings, Shield, UserPlus2 } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, RefreshCw, Settings, Shield, UserPlus2 } from 'lucide-react';
+import WhatsappCampaignsPage from '../pages/WhatsappCampaignsPage';
 
 const automationOptions = [
   {
@@ -56,7 +57,25 @@ const routingStrategies = [
   { id: 'priority', label: 'Prioridade por fila' },
 ];
 
+const settingsTabs = [
+  {
+    id: 'preferences',
+    label: 'Preferências',
+    description: 'Regras, notificações e automação',
+    icon: Settings,
+  },
+  {
+    id: 'campaigns',
+    label: 'Campanhas',
+    description: 'Fluxos e métricas de disparos',
+    icon: FileText,
+  },
+] as const;
+
+type SettingsTabId = (typeof settingsTabs)[number]['id'];
+
 export default function WhatsappSettingsPanel() {
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('preferences');
   const [toggles, setToggles] = useState<ToggleState>(initialToggles);
   const [routingStrategy, setRoutingStrategy] = useState('round_robin');
   const [businessHours, setBusinessHours] = useState({ start: '08:00', end: '18:00' });
@@ -76,7 +95,7 @@ export default function WhatsappSettingsPanel() {
     setFeedback('Preferências atualizadas. Elas serão aplicadas para toda a equipe.');
   };
 
-  return (
+  const renderPreferences = () => (
     <div className="flex h-full flex-col gap-6 p-4 md:p-6">
       <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -247,6 +266,48 @@ export default function WhatsappSettingsPanel() {
           </button>
         </div>
       </section>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-slate-200 bg-white/90 px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap gap-2">
+          {settingsTabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-1 min-w-[180px] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                  isActive
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-inner'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <div>
+                  <p className="text-sm font-semibold">{tab.label}</p>
+                  <p className="text-[11px] text-slate-500">{tab.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'preferences' ? (
+          renderPreferences()
+        ) : (
+          <div className="h-full p-3 sm:p-4">
+            <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <WhatsappCampaignsPage />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

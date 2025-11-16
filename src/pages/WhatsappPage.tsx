@@ -42,7 +42,6 @@ import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
-import WhatsappCampaignsPage from './WhatsappCampaignsPage';
 import WhatsappSettingsPanel from '../components/WhatsappSettingsPanel';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -206,11 +205,10 @@ type ChatPreviewInfo = {
   text: string;
 };
 
-type WhatsappSectionId = 'painel' | 'campanhas' | 'configs';
+type WhatsappSectionId = 'painel' | 'configs';
 
 const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [
   { id: 'painel', label: 'Painel', icon: MessageSquareText },
-  { id: 'campanhas', label: 'Campanhas', icon: FileText },
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 
@@ -5876,10 +5874,6 @@ export default function WhatsappPage() {
         <div className="flex-1 min-h-0">
           {activeSection === 'painel' ? (
             conversationWorkspace
-          ) : activeSection === 'campanhas' ? (
-            <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <WhatsappCampaignsPage />
-            </div>
           ) : (
             <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
               <WhatsappSettingsPanel />

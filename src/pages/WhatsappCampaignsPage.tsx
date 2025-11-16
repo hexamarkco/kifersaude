@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { supabase, type Lead } from '../lib/supabase';
 import type {
+  WhatsappCampaignMetricsSummary,
   WhatsappCampaignStep,
   WhatsappCampaignStepConfig,
   WhatsappCampaignStepType,
@@ -64,8 +65,17 @@ const initialFilter: AudienceFilter = {
   responsavel: '',
 };
 
-const summarizeTargets = (targets: WhatsappCampaignTarget[] | undefined) => {
-  const summary: Record<string, number> = {
+const TARGET_STATUS_LABELS: Record<keyof WhatsappCampaignMetricsSummary, string> = {
+  pending: 'Pendentes',
+  in_progress: 'Em andamento',
+  waiting: 'Aguardando condição',
+  paused: 'Pausadas',
+  completed: 'Concluídas',
+  failed: 'Falhas',
+};
+
+const summarizeTargets = (targets: WhatsappCampaignTarget[] | undefined): WhatsappCampaignMetricsSummary => {
+  const summary: WhatsappCampaignMetricsSummary = {
     pending: 0,
     in_progress: 0,
     waiting: 0,
@@ -850,10 +860,12 @@ export default function WhatsappCampaignsPage() {
                 <section className="rounded-2xl bg-white p-5 shadow-sm">
                   <h3 className="text-sm font-semibold text-slate-800">Métricas</h3>
                   <div className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-                    {Object.entries(metricsSummary).map(([status, value]) => (
+                    {Object.entries(TARGET_STATUS_LABELS).map(([status, label]) => (
                       <div key={status} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-                        <p className="text-xs uppercase text-slate-500">{status.replace('_', ' ')}</p>
-                        <p className="text-lg font-semibold text-slate-800">{value}</p>
+                        <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+                        <p className="text-lg font-semibold text-slate-800">
+                          {metricsSummary[status as keyof typeof TARGET_STATUS_LABELS]}
+                        </p>
                       </div>
                     ))}
                   </div>

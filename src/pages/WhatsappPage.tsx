@@ -61,6 +61,17 @@ import type {
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
 
+const REQUIRED_WHATSAPP_ENV_VARS = [
+  'VITE_SUPABASE_URL',
+  'VITE_SUPABASE_FUNCTIONS_URL',
+  'VITE_SUPABASE_ANON_KEY',
+] as const;
+
+const getMissingWhatsappEnvVars = () => {
+  const env = import.meta.env as Record<string, string | undefined>;
+  return REQUIRED_WHATSAPP_ENV_VARS.filter(key => !env?.[key]);
+};
+
 const formatDateTime = (value: string | null) => {
   if (!value) {
     return '';
@@ -1157,6 +1168,40 @@ const dedupeMessagesByMessageId = (messages: OptimisticMessage[]) => {
 };
 
 export default function WhatsappPage() {
+  const missingEnvVars = getMissingWhatsappEnvVars();
+
+  if (missingEnvVars.length > 0) {
+    return (
+      <div className="flex items-center justify-center px-6 py-12">
+        <div className="max-w-2xl rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-yellow-900">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-1 h-6 w-6 text-yellow-600" />
+            <div>
+              <h1 className="text-lg font-semibold">Configuração necessária</h1>
+              <p className="mt-2 text-sm">
+                Para usar a aba de WhatsApp é preciso configurar as seguintes variáveis de ambiente no
+                <code className="mx-1 rounded bg-yellow-100 px-1 py-0.5 text-xs">.env.local</code> (consulte o
+                README):
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+                {missingEnvVars.map(variable => (
+                  <li key={variable}>
+                    <code className="rounded bg-yellow-100 px-1 py-0.5 text-xs">{variable}</code>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-sm">
+                Copie <code className="rounded bg-yellow-100 px-1 py-0.5 text-xs">.env.example</code> para
+                <code className="mx-1 rounded bg-yellow-100 px-1 py-0.5 text-xs">.env.local</code>, preencha os
+                valores do seu projeto Supabase e reinicie o servidor de desenvolvimento.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [chats, setChats] = useState<WhatsappChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [showArchivedChats, setShowArchivedChats] = useState(false);

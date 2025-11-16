@@ -700,6 +700,43 @@ const resolveNotificationText = (payload: ZapiWebhookPayload): string | null => 
     return `${participantText} ${actionText}${roleText ? ` para ${roleText}` : ''} no canal`;
   }
 
+  if (notification.startsWith('GROUP_PARTICIPANT_')) {
+    switch (notification) {
+      case 'GROUP_PARTICIPANT_INVITE':
+        return participantsText
+          ? `Convite enviado para participar do grupo: ${participantsText}`
+          : 'Convite enviado para participar do grupo';
+      case 'GROUP_PARTICIPANT_ADD':
+        return participantsText
+          ? `Novo participante adicionado ao grupo: ${participantsText}`
+          : 'Novo participante adicionado ao grupo';
+      case 'GROUP_PARTICIPANT_LINK_JOIN':
+        return participantsText
+          ? `Entrada no grupo via link de convite: ${participantsText}`
+          : 'Entrada no grupo via link de convite';
+      case 'GROUP_PARTICIPANT_LEAVE':
+        return participantsText
+          ? `Participante saiu do grupo: ${participantsText}`
+          : 'Participante saiu do grupo';
+      case 'GROUP_PARTICIPANT_REMOVE':
+        return participantsText
+          ? `Participante removido do grupo: ${participantsText}`
+          : 'Participante removido do grupo';
+      case 'GROUP_PARTICIPANT_PROMOTE':
+        return participantsText
+          ? `Participante promovido a admin do grupo: ${participantsText}`
+          : 'Participante promovido a admin do grupo';
+      case 'GROUP_PARTICIPANT_DEMOTE':
+        return participantsText
+          ? `Participante rebaixado para membro do grupo: ${participantsText}`
+          : 'Participante rebaixado para membro do grupo';
+      default:
+        return participantsText
+          ? `Atualização de participantes do grupo: ${participantsText}`
+          : 'Atualização de participantes do grupo';
+    }
+  }
+
   return `Notificação: ${notification}`;
 };
 

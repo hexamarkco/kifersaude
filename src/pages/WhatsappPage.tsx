@@ -19,6 +19,7 @@ import {
   Clock,
   FileText,
   Image as ImageIcon,
+  MessageSquareText,
   Plus,
   MapPin,
   Mic,
@@ -27,6 +28,7 @@ import {
   Paperclip,
   Search,
   Send,
+  Settings,
   MoreVertical,
   User,
   UserPlus,
@@ -40,6 +42,8 @@ import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
+import WhatsappCampaignsPage from './WhatsappCampaignsPage';
+import WhatsappSettingsPanel from '../components/WhatsappSettingsPanel';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
@@ -201,6 +205,14 @@ type ChatPreviewInfo = {
   icon: LucideIcon | null;
   text: string;
 };
+
+type WhatsappSectionId = 'painel' | 'campanhas' | 'configs';
+
+const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [
+  { id: 'painel', label: 'Painel', icon: MessageSquareText },
+  { id: 'campanhas', label: 'Campanhas', icon: FileText },
+  { id: 'configs', label: 'Configurações', icon: Settings },
+];
 
 type AudioTranscriptionState = {
   status: 'idle' | 'loading' | 'success' | 'error';
@@ -1227,6 +1239,7 @@ export default function WhatsappPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
+  const [activeSection, setActiveSection] = useState<WhatsappSectionId>('painel');
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const [showMessageSearch, setShowMessageSearch] = useState(false);
@@ -4414,7 +4427,7 @@ export default function WhatsappPage() {
       : 'Adicione uma legenda (opcional)'
     : 'Digite sua mensagem';
 
-  return (
+  const conversationWorkspace = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside
         className={`${showChatListMobile ? 'flex' : 'hidden'} md:flex w-full flex-1 flex-col border-b border-slate-200 md:w-80 md:flex-none md:border-b-0 md:border-r min-h-0`}
@@ -5828,5 +5841,72 @@ export default function WhatsappPage() {
         }
       />
     </div>
+  );
+
+  return (
+    <>
+      <div className="flex h-full min-h-0 flex-col gap-4 pb-24 md:pb-0">
+        <nav
+          className="hidden items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm md:flex"
+          aria-label="Sessões do WhatsApp"
+        >
+          {WHATSAPP_SECTIONS.map(section => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActiveSection(section.id)}
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive
+                    ? 'bg-emerald-50 text-emerald-700 shadow-inner'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+                aria-pressed={isActive}
+              >
+                <Icon className="h-4 w-4" />
+                {section.label}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="flex-1 min-h-0">
+          {activeSection === 'painel' ? (
+            conversationWorkspace
+          ) : activeSection === 'campanhas' ? (
+            <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <WhatsappCampaignsPage />
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <WhatsappSettingsPanel />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <nav className="grid grid-cols-3" aria-label="Menu inferior do WhatsApp">
+          {WHATSAPP_SECTIONS.map(section => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                key={`mobile-${section.id}`}
+                type="button"
+                onClick={() => setActiveSection(section.id)}
+                className={`flex flex-col items-center gap-1 py-2 text-xs font-semibold transition ${
+                  isActive ? 'text-emerald-600' : 'text-slate-500'
+                }`}
+                aria-pressed={isActive}
+              >
+                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                {section.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </>
   );
 }

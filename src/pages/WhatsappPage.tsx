@@ -208,7 +208,7 @@ type ChatPreviewInfo = {
 type WhatsappSectionId = 'painel' | 'configs';
 
 const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [
-  { id: 'painel', label: 'Painel', icon: MessageSquareText },
+  { id: 'painel', label: 'Chats', icon: MessageSquareText },
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 

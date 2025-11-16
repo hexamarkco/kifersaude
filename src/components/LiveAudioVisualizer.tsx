@@ -39,10 +39,10 @@ const padValues = (values: number[], barCount: number): number[] => {
 
 export function LiveAudioVisualizer({
   values,
-  barCount = 128,
+  barCount = 32,
   className = '',
 }: LiveAudioVisualizerProps) {
-  const safeBarCount = Math.max(12, barCount);
+  const safeBarCount = Math.max(4, barCount);
   const resolvedValues = padValues(values.length > 0 ? values : new Array(safeBarCount).fill(0), safeBarCount);
 
   return (

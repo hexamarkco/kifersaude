@@ -1575,8 +1575,13 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       });
 
       let payload: { error?: string } | null = null;
+
       try {
-        payload = await response.json();
+        const responseText = await response.text();
+
+        if (responseText) {
+          payload = JSON.parse(responseText);
+        }
       } catch (parseError) {
         console.warn('Falha ao interpretar resposta ao gerar insight:', parseError);
       }

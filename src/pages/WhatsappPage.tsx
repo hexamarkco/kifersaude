@@ -15,6 +15,7 @@ import {
   Archive,
   ArchiveRestore,
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Clock,
   FileText,
@@ -4414,6 +4415,14 @@ export default function WhatsappPage() {
     );
   };
 
+  const openWhatsappSettings = () => {
+    setActiveSection('configs');
+  };
+
+  const returnToWhatsappChats = () => {
+    setActiveSection('painel');
+  };
+
   const trimmedMessageInput = messageInput.trim();
   const shouldScheduleCurrentMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
   const shouldShowAudioAction =
@@ -4440,14 +4449,27 @@ export default function WhatsappPage() {
         <div className="flex-shrink-0 border-b border-slate-200 p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-slate-800">Conversas</h2>
-            <button
-              type="button"
-              onClick={() => setShowNewChatModal(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-2 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={sendingMessage}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowNewChatModal(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-2 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={sendingMessage}
+                aria-label="Nova conversa"
+                title="Nova conversa"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={openWhatsappSettings}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Abrir configurações do WhatsApp"
+                title="Configurações do WhatsApp"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+            </div>
           </div>
           {errorMessage && (
             <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
@@ -5691,74 +5713,60 @@ export default function WhatsappPage() {
     </div>
   );
 
-  const shouldShowMobileBottomMenu = activeSection !== 'painel' || showChatListMobile;
-
   return (
     <>
       <div
-        className={`flex h-full min-h-0 flex-col gap-4 ${
-          shouldShowMobileBottomMenu ? 'pb-24' : 'pb-4'
-        } md:pb-0`}
+        className="flex h-full min-h-0 flex-col gap-4 pb-24 md:pb-0"
       >
-        <nav
-          className="hidden items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm md:flex"
-          aria-label="Sessões do WhatsApp"
-        >
+        <div className="flex-1 min-h-0">
+          {activeSection === 'painel' ? (
+            conversationWorkspace
+          ) : (
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center gap-3 border-b border-slate-200 p-4">
+                <button
+                  type="button"
+                  onClick={returnToWhatsappChats}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                  aria-label="Voltar para as conversas do WhatsApp"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  Voltar
+                </button>
+                <div>
+                  <p className="text-lg font-semibold text-slate-800">Configurações do WhatsApp</p>
+                  <p className="text-sm text-slate-500">Gerencie preferências e integrações</p>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <WhatsappSettingsPanel />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <nav className="grid grid-cols-2 divide-x divide-slate-200" aria-label="Menu inferior do WhatsApp">
           {WHATSAPP_SECTIONS.map(section => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;
             return (
               <button
-                key={section.id}
+                key={`mobile-${section.id}`}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isActive
-                    ? 'bg-emerald-50 text-emerald-700 shadow-inner'
-                    : 'text-slate-600 hover:bg-slate-100'
+                className={`flex w-full flex-col items-center gap-1 py-2 text-xs font-semibold transition ${
+                  isActive ? 'text-emerald-600' : 'text-slate-500'
                 }`}
                 aria-pressed={isActive}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                 {section.label}
               </button>
             );
           })}
         </nav>
-        <div className="flex-1 min-h-0">
-          {activeSection === 'painel' ? (
-            conversationWorkspace
-          ) : (
-            <div className="h-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <WhatsappSettingsPanel />
-            </div>
-          )}
-        </div>
       </div>
-      {shouldShowMobileBottomMenu ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-          <nav className="grid grid-cols-3" aria-label="Menu inferior do WhatsApp">
-            {WHATSAPP_SECTIONS.map(section => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-              return (
-                <button
-                  key={`mobile-${section.id}`}
-                  type="button"
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex flex-col items-center gap-1 py-2 text-xs font-semibold transition ${
-                    isActive ? 'text-emerald-600' : 'text-slate-500'
-                  }`}
-                  aria-pressed={isActive}
-                >
-                  <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-                  {section.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      ) : null}
     </>
   );
 }

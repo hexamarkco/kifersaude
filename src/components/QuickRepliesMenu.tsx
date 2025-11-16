@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, MessageCirclePlus, Pencil } from 'lucide-react';
 import type { QuickReply } from '../lib/supabase';
 
@@ -16,6 +16,8 @@ type QuickRepliesMenuProps = {
   onDelete?: (id: string) => Promise<void>;
   isLoading?: boolean;
   error?: string | null;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const normalizeDraft = (draft: QuickReplyDraft): QuickReplyDraft => ({
@@ -48,14 +50,19 @@ export default function QuickRepliesMenu({
   onDelete,
   isLoading = false,
   error = null,
+  isOpen: controlledIsOpen,
+  onOpenChange,
 }: QuickRepliesMenuProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [internalMenuOpen, setInternalMenuOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<QuickReplyDraft>(DEFAULT_DRAFT);
   const [newDraft, setNewDraft] = useState<QuickReplyDraft>(DEFAULT_DRAFT);
   const [actionError, setActionError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const isControlled = typeof controlledIsOpen === 'boolean';
+  const menuOpen = isControlled ? (controlledIsOpen as boolean) : internalMenuOpen;
 
   const hasReplies = quickReplies.length > 0;
 
@@ -65,12 +72,33 @@ export default function QuickRepliesMenu({
     setSavingId(null);
   };
 
-  const toggleMenu = () => {
-    setMenuOpen(previous => !previous);
+  const setMenuOpenState = (nextState: boolean) => {
+    if (!isControlled) {
+      setInternalMenuOpen(nextState);
+    }
+    onOpenChange?.(nextState);
+  };
+
+  const closeMenu = () => {
+    if (!menuOpen) {
+      return;
+    }
+
+    setMenuOpenState(false);
     setActionError(null);
     if (editingId) {
       resetEditingState();
     }
+  };
+
+  const toggleMenu = () => {
+    if (menuOpen) {
+      closeMenu();
+      return;
+    }
+
+    setMenuOpenState(true);
+    setActionError(null);
   };
 
   const startEditing = (reply: QuickReply) => {
@@ -84,8 +112,7 @@ export default function QuickRepliesMenu({
 
   const handleSelect = (reply: QuickReply) => {
     onSelect(reply);
-    setMenuOpen(false);
-    setActionError(null);
+    closeMenu();
   };
 
   const handleDraftChange = (key: keyof QuickReplyDraft, value: string, target: 'draft' | 'new') => {
@@ -139,6 +166,17 @@ export default function QuickRepliesMenu({
       setCreating(false);
     }
   };
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setActionError(null);
+      if (editingId) {
+        setEditingId(null);
+        setDraft(DEFAULT_DRAFT);
+        setSavingId(null);
+      }
+    }
+  }, [menuOpen, editingId]);
 
   const handleDelete = async (id: string) => {
     if (!onDelete) {

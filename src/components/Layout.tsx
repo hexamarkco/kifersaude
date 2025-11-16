@@ -1,4 +1,12 @@
-import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Users,
@@ -66,6 +74,7 @@ export default function Layout({
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
   const currentRole = role;
   const isWhatsappActive = activeTab === 'whatsapp';
+  const [whatsappViewportHeight, setWhatsappViewportHeight] = useState<number | null>(null);
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
 
@@ -309,11 +318,52 @@ export default function Layout({
     collapsedMenuDragStartY.current = null;
   }, []);
 
+  useEffect(() => {
+    if (!isWhatsappActive) {
+      setWhatsappViewportHeight(null);
+      return;
+    }
+
+    const updateViewportHeight = () => {
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+
+      setWhatsappViewportHeight(previous => {
+        if (previous !== null && Math.abs(previous - height) < 0.5) {
+          return previous;
+        }
+        return height;
+      });
+    };
+
+    updateViewportHeight();
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', updateViewportHeight);
+    viewport?.addEventListener('scroll', updateViewportHeight);
+    window.addEventListener('resize', updateViewportHeight);
+
+    return () => {
+      viewport?.removeEventListener('resize', updateViewportHeight);
+      viewport?.removeEventListener('scroll', updateViewportHeight);
+      window.removeEventListener('resize', updateViewportHeight);
+    };
+  }, [isWhatsappActive]);
+
+  const whatsappViewportStyles: CSSProperties | undefined =
+    isWhatsappActive && whatsappViewportHeight
+      ? {
+          minHeight: whatsappViewportHeight,
+          height: whatsappViewportHeight,
+        }
+      : undefined;
+
   return (
     <div
       className={`flex min-h-screen flex-col bg-slate-50 ${
-        isWhatsappActive ? 'h-screen overflow-hidden' : ''
+        isWhatsappActive ? 'overflow-hidden' : ''
       }`}
+      style={whatsappViewportStyles}
     >
       {isWhatsappActive && isMenuCollapsed ? (
         <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center">

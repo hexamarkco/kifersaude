@@ -355,6 +355,23 @@ const formatWithCurrency = (value: number | string | null | undefined, currency:
   return currencyString ? `${valueString} ${currencyString}` : valueString;
 };
 
+const resolveCallNotificationText = (payload: ZapiPayload): string | null => {
+  const notification = toNonEmptyString(payload?.notification);
+
+  if (!notification) {
+    return null;
+  }
+
+  switch (notification) {
+    case 'CALL_VOICE':
+      return 'Chamada recebida';
+    case 'CALL_MISSED_VOICE':
+      return 'Chamada perdida';
+    default:
+      return null;
+  }
+};
+
 const resolveMessageText = (payload: ZapiPayload): string => {
   const resolvers: Array<() => string | null> = [
     () => toNonEmptyString(payload?.text?.message),
@@ -564,6 +581,7 @@ const resolveMessageText = (payload: ZapiPayload): string => {
       return profileName ? `Nome do WhatsApp atualizado: ${profileName}` : null;
     },
     () => (payload.updatedPhoto ? 'Foto do WhatsApp atualizada' : null),
+    () => resolveCallNotificationText(payload),
     () => {
       const notification = toNonEmptyString(payload.notification);
       return notification ? `Notificação: ${notification}` : null;

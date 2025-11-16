@@ -130,6 +130,7 @@ type ZapiWebhookPayload = {
   hydratedTemplate?: { message?: string } | null;
   notification?: string | null;
   notificationParameters?: unknown;
+  requestMethod?: string | null;
   isGroup?: boolean;
   [key: string]: unknown;
 };
@@ -468,6 +469,24 @@ const toNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const toNonEmptyStringLike = (value: unknown): string | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+
+  return toNonEmptyString(value);
+};
+
+const toNonEmptyStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => toNonEmptyStringLike(entry))
+    .filter((entry): entry is string => Boolean(entry));
+};
+
 const toNumberOrNull = (value: unknown): number | null => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null;
@@ -631,6 +650,59 @@ const resolveCallNotificationText = (payload: ZapiWebhookPayload): string | null
   }
 };
 
+const resolveMembershipRequestMethodText = (method: string | null): string | null => {
+  if (!method) {
+    return null;
+  }
+
+  switch (method) {
+    case 'invite_link':
+      return 'via link de convite';
+    case 'non_admin_add':
+      return 'adicionado por participante';
+    default:
+      return method;
+  }
+};
+
+const resolveNotificationText = (payload: ZapiWebhookPayload): string | null => {
+  const notification = toNonEmptyString(payload?.notification);
+
+  if (!notification) {
+    return null;
+  }
+
+  const parameters = toNonEmptyStringArray(payload?.notificationParameters);
+  const participantsText = parameters.length ? parameters.join(', ') : null;
+
+  if (notification === 'MEMBERSHIP_APPROVAL_REQUEST') {
+    const requestMethod = resolveMembershipRequestMethodText(toNonEmptyString(payload.requestMethod));
+    const details = [requestMethod, participantsText ? `participante(s): ${participantsText}` : null]
+      .filter(Boolean)
+      .join(' - ');
+    return details
+      ? `Solicitação de aprovação para novo membro - ${details}`
+      : 'Solicitação de aprovação para novo membro';
+  }
+
+  if (notification === 'REVOKED_MEMBERSHIP_REQUESTS') {
+    return participantsText
+      ? `Solicitação de participação revogada: ${participantsText}`
+      : 'Solicitações de participação revogadas';
+  }
+
+  if (notification === 'NEWSLETTER_ADMIN_PROMOTE' || notification === 'NEWSLETTER_ADMIN_DEMOTE') {
+    const [targetParticipant, role] = parameters;
+    const participantText = targetParticipant ?? 'Participante do canal';
+    const roleText = role ?? (notification === 'NEWSLETTER_ADMIN_PROMOTE' ? 'ADMIN' : 'SUBSCRIBER');
+    const actionText = notification === 'NEWSLETTER_ADMIN_PROMOTE' ? 'promovido' : 'rebaixado';
+
+    return `${participantText} ${actionText}${roleText ? ` para ${roleText}` : ''} no canal`;
+  }
+
+  return `Notificação: ${notification}`;
+};
+
 const resolveMessageText = (payload: ZapiWebhookPayload): string => {
   const textMessage = toNonEmptyString(payload?.text?.message);
   if (textMessage) {
@@ -645,6 +717,11 @@ const resolveMessageText = (payload: ZapiWebhookPayload): string => {
   const callNotificationText = resolveCallNotificationText(payload);
   if (callNotificationText) {
     return callNotificationText;
+  }
+
+  const notificationText = resolveNotificationText(payload);
+  if (notificationText) {
+    return notificationText;
   }
 
   const rawPayload = (payload ?? null) as Record<string, unknown> | null;

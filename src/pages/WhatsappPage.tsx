@@ -9,7 +9,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent, TouchEvent as ReactTouchEvent } from 'react';
+import { createPortal } from 'react-dom';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -41,6 +42,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
+import { AudioEditorModal } from '../components/AudioEditorModal';
 import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
@@ -629,6 +631,12 @@ type PendingAudioAttachment = {
   mimeType: string;
 };
 
+type AudioEditorState = {
+  dataUrl: string;
+  durationSeconds: number | null;
+  mimeType: string;
+};
+
 type WhatsappContactListEntry = {
   phone: string;
   name: string | null;
@@ -915,6 +923,26 @@ const extractExtensionFromMime = (mime: string | null | undefined): string | nul
 
   const normalized = mime.toLowerCase();
   return MIME_EXTENSION_MAP[normalized] ?? null;
+};
+
+const buildDocumentPreviewUrl = (documentUrl: string | null | undefined): string | null => {
+  if (!documentUrl) {
+    return null;
+  }
+
+  const normalizedUrl = documentUrl.trim();
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  const lowerCaseUrl = normalizedUrl.toLowerCase();
+  if (lowerCaseUrl.endsWith('.pdf')) {
+    const separator = normalizedUrl.includes('#') ? '&' : '#';
+    return `${normalizedUrl}${separator}page=1&view=FitH&toolbar=0`;
+  }
+
+  const encodedUrl = encodeURIComponent(normalizedUrl);
+  return `https://docs.google.com/gview?embedded=1&url=${encodedUrl}`;
 };
 
 const readFileAsDataUrl = (file: File): Promise<string> => {
@@ -1244,6 +1272,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
   const [selectedQuickReplyId, setSelectedQuickReplyId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [audioEditor, setAudioEditor] = useState<AudioEditorState | null>(null);
   const [scheduledMessages, setScheduledMessages] = useState<WhatsappScheduledMessage[]>([]);
   const [upcomingSchedules, setUpcomingSchedules] = useState<WhatsappScheduledMessage[]>([]);
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
@@ -1376,6 +1405,12 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     return baseList.slice(0, 5);
   }, [normalizeQuickReplySearchText, quickReplies, slashCommandState]);
+
+  useEffect(() => {
+    if (!pendingAttachment || pendingAttachment.kind !== 'audio') {
+      setAudioEditor(null);
+    }
+  }, [pendingAttachment, setAudioEditor]);
 
   useEffect(() => {
     if (!slashCommandState) {
@@ -2045,6 +2080,26 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     void stopAudioRecording({ shouldSave: true });
   }, [isRecordingAudio, stopAudioRecording]);
+
+  const handleAudioEditorSave = useCallback(
+    (edited: { dataUrl: string; durationSeconds: number; mimeType: string }) => {
+      setPendingAttachment(current => {
+        if (!current || current.kind !== 'audio') {
+          return current;
+        }
+
+        return {
+          ...current,
+          dataUrl: edited.dataUrl,
+          durationSeconds: edited.durationSeconds,
+          mimeType: edited.mimeType,
+        };
+      });
+
+      setAudioEditor(null);
+    },
+    [setPendingAttachment, setAudioEditor],
+  );
 
   useEffect(() => {
     return () => {
@@ -4704,11 +4759,13 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     }
 
     if (attachmentInfo.documentUrl) {
+      const documentPreviewUrl = buildDocumentPreviewUrl(attachmentInfo.documentUrl);
+
       attachments.push(
         <div key="document" className="flex flex-col gap-3 rounded-lg bg-white p-3 text-slate-800">
           <div className="overflow-hidden rounded-md border border-slate-200">
             <iframe
-              src={attachmentInfo.documentUrl}
+              src={documentPreviewUrl ?? attachmentInfo.documentUrl}
               title={`Pré-visualização do documento ${attachmentInfo.documentFileName}`}
               className="h-64 w-full border-0"
               loading="lazy"
@@ -5632,9 +5689,24 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                           src={pendingAttachment.dataUrl}
                           seconds={pendingAttachment.durationSeconds}
                         />
-                        <p className="text-xs text-slate-500">
-                          Clique em enviar para mandar o áudio. Se adicionar uma mensagem, ela será enviada em seguida.
-                        </p>
+                        <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                          <p>
+                            Clique em enviar para mandar o áudio. Se adicionar uma mensagem, ela será enviada em seguida.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAudioEditor({
+                                dataUrl: pendingAttachment.dataUrl,
+                                durationSeconds: pendingAttachment.durationSeconds,
+                                mimeType: pendingAttachment.mimeType,
+                              })
+                            }
+                            className="inline-flex items-center justify-center rounded-full border border-emerald-200 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                          >
+                            Editar áudio
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -6314,85 +6386,18 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
           </nav>
         </div>
       )}
-      {activeImage ? (
-        <div
-          className="fixed inset-0 z-[70] flex flex-col bg-slate-950/95 text-white backdrop-blur"
-          role="dialog"
-          aria-label="Visualização da imagem"
-          onClick={closeImageViewer}
-        >
-          <div
-            className="flex h-full w-full flex-col"
-            onClick={event => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 text-sm">
-              <div>
-                <p className="font-semibold">{activeImage.senderName ?? 'Imagem'}</p>
-                {activeImage.timestamp ? (
-                  <p className="text-xs text-white/70">{formatDateTime(activeImage.timestamp)}</p>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-3 text-xs font-semibold text-white/80">
-                <span>
-                  Foto {activeImagePosition} de {imageAttachments.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={closeImageViewer}
-                  className="inline-flex items-center rounded-full border border-white/30 px-3 py-1 text-white transition hover:border-white/80 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/60"
-                  aria-label="Fechar visualização da imagem"
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <div
-              className="relative flex flex-1 items-center justify-center px-4 pb-6"
-              onTouchStart={handleViewerTouchStart}
-              onTouchMove={handleViewerTouchMove}
-              onTouchEnd={handleViewerTouchEnd}
-            >
-              <img
-                src={activeImage.url}
-                alt={activeImage.caption ?? 'Imagem recebida'}
-                className="max-h-full max-w-full select-none object-contain"
-                draggable={false}
-              />
-              <button
-                type="button"
-                onClick={event => {
-                  event.stopPropagation();
-                  goToPreviousImage();
-                }}
-                disabled={!hasPreviousImage}
-                className="absolute left-4 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Ver imagem anterior"
-              >
-                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={event => {
-                  event.stopPropagation();
-                  goToNextImage();
-                }}
-                disabled={!hasNextImage}
-                className="absolute right-4 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Ver próxima imagem"
-              >
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            {activeImage.caption ? (
-              <div className="px-6 pb-8 text-center text-sm text-white/90">
-                <p className="whitespace-pre-wrap break-words">
-                  {renderHighlightedText(activeImage.caption)}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      {audioEditor && pendingAttachment?.kind === 'audio' && typeof document !== 'undefined'
+        ? createPortal(
+            <AudioEditorModal
+              dataUrl={audioEditor.dataUrl}
+              durationSeconds={audioEditor.durationSeconds}
+              mimeType={audioEditor.mimeType}
+              onSave={handleAudioEditorSave}
+              onCancel={() => setAudioEditor(null)}
+            />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

@@ -63,8 +63,7 @@ VALUES (
   'Configurações usadas para recursos do GPT, como transcrever áudios e reescrever mensagens no WhatsApp.',
   jsonb_build_object(
     'apiKey', '',
-    'apiUrl', 'https://api.openai.com/v1',
-    'model', 'gpt-4o-mini-transcribe'
+    'textModel', 'gpt-4o-mini'
   )
 )
 ON CONFLICT (slug) DO NOTHING;

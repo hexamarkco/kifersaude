@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
-const targetFile = path.join(projectRoot, 'node_modules', 'react-side-effect', 'lib', 'index.js');
+const targetFiles = [
+  path.join(projectRoot, 'node_modules', 'react-side-effect', 'lib', 'index.js'),
+  path.join(projectRoot, 'node_modules', 'react-side-effect', 'lib', 'index.es.js'),
+];
 
 const replacement = `_proto.componentDidMount = function componentDidMount() {
         mountedInstances.push(this);
@@ -44,4 +47,4 @@ function patchFile(filePath) {
   console.log('patch-react-side-effect: patched successfully.');
 }
 
-patchFile(targetFile);
+targetFiles.forEach((filePath) => patchFile(filePath));

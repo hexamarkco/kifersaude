@@ -47,7 +47,8 @@ import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
 import type {
   WhatsappChat,
-  WhatsappChatSlaMetrics,
+  WhatsappChatInsight,
+  WhatsappChatInsightSentiment,
   WhatsappMessage,
   WhatsappScheduledMessage,
   WhatsappScheduledMessagePriority,
@@ -246,6 +247,21 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
 
 const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);
 const MESSAGE_SKELETON_INDICES = Array.from({ length: 5 }, (_, index) => index);
+
+type InsightStatus = 'idle' | 'loading' | 'success' | 'error';
+type LoadInsightOptions = { cancelled?: () => boolean };
+
+const SENTIMENT_BADGE_STYLES: Record<WhatsappChatInsightSentiment, string> = {
+  positive: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  neutral: 'border-slate-200 bg-slate-100 text-slate-600',
+  negative: 'border-rose-200 bg-rose-50 text-rose-700',
+};
+
+const SENTIMENT_BADGE_LABELS: Record<WhatsappChatInsightSentiment, string> = {
+  positive: 'Positivo',
+  neutral: 'Neutro',
+  negative: 'Negativo',
+};
 
 const ChatListSkeleton = () => (
   <div className="animate-pulse" role="status">
@@ -1224,6 +1240,9 @@ export default function WhatsappPage() {
   const [showLeadDetails, setShowLeadDetails] = useState(false);
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
+  const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
+  const [chatInsightStatus, setChatInsightStatus] = useState<InsightStatus>('idle');
+  const [chatInsightError, setChatInsightError] = useState<string | null>(null);
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
   const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Record<string, boolean>>({});
   const [reorderingScheduleIds, setReorderingScheduleIds] = useState<Record<string, boolean>>({});
@@ -1255,6 +1274,55 @@ export default function WhatsappPage() {
 
   const selectedChatIsArchived = selectedChat?.is_archived ?? false;
   const selectedChatIsPinned = selectedChat?.is_pinned ?? false;
+
+  const fetchLatestInsight = useCallback(async (chatId: string) => {
+    const { data, error } = await supabase
+      .from('whatsapp_chat_insights')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<WhatsappChatInsight>();
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? null;
+  }, []);
+
+  const loadInsightForChat = useCallback(
+    async (chatId: string, options?: LoadInsightOptions) => {
+      setChatInsightStatus('loading');
+      setChatInsightError(null);
+
+      try {
+        const insight = await fetchLatestInsight(chatId);
+        if (options?.cancelled?.()) {
+          return;
+        }
+        setChatInsight(insight);
+        setChatInsightStatus('success');
+      } catch (error) {
+        if (options?.cancelled?.()) {
+          return;
+        }
+        setChatInsightStatus('error');
+        setChatInsightError(
+          error instanceof Error ? error.message : 'Erro ao carregar insight.',
+        );
+      }
+    },
+    [fetchLatestInsight],
+  );
+
+  const handleRetryLoadInsight = useCallback(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    void loadInsightForChat(selectedChatId);
+  }, [loadInsightForChat, selectedChatId]);
 
   const stopWaveformAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -2145,9 +2213,21 @@ export default function WhatsappPage() {
   }, [loadChats]);
 
   useEffect(() => {
-    loadUpcomingSchedules();
-    loadScheduleSummary();
-  }, [loadUpcomingSchedules, loadScheduleSummary]);
+    if (!selectedChatId) {
+      setChatInsight(null);
+      setChatInsightStatus('idle');
+      setChatInsightError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setChatInsight(null);
+    void loadInsightForChat(selectedChatId, { cancelled: () => cancelled });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadInsightForChat, selectedChatId]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -2325,6 +2405,60 @@ export default function WhatsappPage() {
     [handleChatHeaderClick],
   );
 
+  const renderChatInsightPanel = () => {
+    const sentimentKey: WhatsappChatInsightSentiment = chatInsight?.sentiment ?? 'neutral';
+    const sentimentBadgeClass = SENTIMENT_BADGE_STYLES[sentimentKey];
+    const sentimentLabel = SENTIMENT_BADGE_LABELS[sentimentKey];
+
+    let content: ReactNode;
+    if (chatInsightStatus === 'loading') {
+      content = (
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+          Gerando resumo e sentimento...
+        </div>
+      );
+    } else if (chatInsightStatus === 'error') {
+      content = (
+        <div className="space-y-1 text-xs">
+          <p className="text-rose-600">
+            Não foi possível carregar o insight.
+            {chatInsightError ? ` ${chatInsightError}` : ''}
+          </p>
+          <button
+            type="button"
+            onClick={handleRetryLoadInsight}
+            className="font-semibold text-emerald-600 underline-offset-2 transition hover:text-emerald-700 hover:underline focus:outline-none focus-visible:underline"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    } else if (chatInsight?.summary) {
+      content = <p className="text-xs text-slate-600">{chatInsight.summary}</p>;
+    } else {
+      content = (
+        <p className="text-xs text-slate-500">
+          Ainda não há resumo disponível para esta conversa.
+        </p>
+      );
+    }
+
+    return (
+      <div className="min-w-[220px] rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-700">
+          <span>Insights recentes</span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${sentimentBadgeClass}`}
+          >
+            {sentimentLabel}
+          </span>
+        </div>
+        <div className="mt-2 space-y-2">{content}</div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!attachmentMenuRef.current) {
@@ -2421,6 +2555,36 @@ export default function WhatsappPage() {
           if (!chatExists) {
             void loadChats();
           }
+        },
+      )
+      .on<RealtimePostgresChangesPayload<WhatsappChatInsight>>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_chat_insights' },
+        payload => {
+          const currentChatId = selectedChatIdRef.current;
+          if (!currentChatId) {
+            return;
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const removedInsight = (payload.old as WhatsappChatInsight | null) ?? null;
+            if (removedInsight?.chat_id === currentChatId) {
+              setChatInsight(null);
+              setChatInsightStatus('idle');
+            }
+            return;
+          }
+
+          const incomingInsight = payload.new
+            ? ((payload.new as unknown) as WhatsappChatInsight)
+            : null;
+          if (!incomingInsight || incomingInsight.chat_id !== currentChatId) {
+            return;
+          }
+
+          setChatInsight(incomingInsight);
+          setChatInsightStatus('success');
+          setChatInsightError(null);
         },
       )
       .subscribe();
@@ -4372,28 +4536,33 @@ export default function WhatsappPage() {
                     </div>
 
                     {selectedChatLead ? (
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
-                          Lead do CRM
-                        </span>
-                        {selectedChatLead.responsavel ? (
-                          <span>Resp.: {selectedChatLead.responsavel}</span>
-                        ) : null}
-                        {selectedChatLead.ultimo_contato ? (
-                          <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
-                        ) : null}
-                        {selectedChatLead.proximo_retorno ? (
-                          <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => setShowLeadDetails(true)}
-                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                        >
-                          Ver histórico
-                        </button>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                            Lead do CRM
+                          </span>
+                          {selectedChatLead.responsavel ? (
+                            <span>Resp.: {selectedChatLead.responsavel}</span>
+                          ) : null}
+                          {selectedChatLead.ultimo_contato ? (
+                            <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
+                          ) : null}
+                          {selectedChatLead.proximo_retorno ? (
+                            <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setShowLeadDetails(true)}
+                            className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                          >
+                            Ver histórico
+                          </button>
+                        </div>
+                        {renderChatInsightPanel()}
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="mt-2">{renderChatInsightPanel()}</div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -11,8 +11,11 @@ import {
 } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
+  AlertTriangle,
   Archive,
   ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
   Clock,
   FileText,
   Image as ImageIcon,
@@ -46,10 +49,13 @@ import type { QuickReply } from '../lib/supabase';
 import { fetchWhatsappJson, getWhatsappFunctionUrl } from '../lib/whatsappApi';
 import type {
   WhatsappChat,
+  WhatsappChatInsight,
+  WhatsappChatInsightSentiment,
   WhatsappMessage,
   WhatsappScheduledMessage,
+  WhatsappScheduledMessagePriority,
   WhatsappScheduledMessageStatus,
-  SendWhatsappMessageResponse,
+  WhatsappScheduledMessagesPeriodSummary,
 } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
@@ -111,6 +117,71 @@ const formatChatListTimestamp = (value: string | null) => {
     month: '2-digit',
     year: 'numeric',
   });
+};
+
+const formatShortTime = (value: string | null) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatPeriodRangeLabel = (start: string | null, end: string | null) => {
+  if (!start || !end) {
+    return '';
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return '';
+  }
+
+  const sameDay =
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate();
+
+  const dateLabel = startDate.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+
+  const startTime = startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const endTime = endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  return sameDay ? `${dateLabel} • ${startTime} - ${endTime}` : `${startTime} - ${endTime}`;
+};
+
+const formatWaitingLabel = (minutes: number | null, fallback: string) => {
+  if (minutes === null || minutes < 0) {
+    return fallback;
+  }
+
+  if (minutes === 0) {
+    return 'há instantes';
+  }
+
+  if (minutes < 60) {
+    return `há ${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `há ${hours}h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `há ${days}d`;
 };
 
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
@@ -178,6 +249,21 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
 
 const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);
 const MESSAGE_SKELETON_INDICES = Array.from({ length: 5 }, (_, index) => index);
+
+type InsightStatus = 'idle' | 'loading' | 'success' | 'error';
+type LoadInsightOptions = { cancelled?: () => boolean };
+
+const SENTIMENT_BADGE_STYLES: Record<WhatsappChatInsightSentiment, string> = {
+  positive: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  neutral: 'border-slate-200 bg-slate-100 text-slate-600',
+  negative: 'border-rose-200 bg-rose-50 text-rose-700',
+};
+
+const SENTIMENT_BADGE_LABELS: Record<WhatsappChatInsightSentiment, string> = {
+  positive: 'Positivo',
+  neutral: 'Neutro',
+  negative: 'Negativo',
+};
 
 const ChatListSkeleton = () => (
   <div className="animate-pulse" role="status">
@@ -326,6 +412,84 @@ const sortSchedulesByMoment = (entries: WhatsappScheduledMessage[]) => {
     return a.id.localeCompare(b.id);
   });
 };
+
+const sortSchedulesByUrgency = (entries: WhatsappScheduledMessage[]) => {
+  return [...entries].sort((a, b) => {
+    const priorityA = PRIORITY_LEVEL_ORDER[a.priority_level ?? 'normal'] ?? 2;
+    const priorityB = PRIORITY_LEVEL_ORDER[b.priority_level ?? 'normal'] ?? 2;
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    const orderA = Number.isFinite(a.priority_order ?? null)
+      ? (a.priority_order ?? 0)
+      : 0;
+    const orderB = Number.isFinite(b.priority_order ?? null)
+      ? (b.priority_order ?? 0)
+      : 0;
+
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    const dateA = new Date(a.scheduled_send_at).getTime();
+    const dateB = new Date(b.scheduled_send_at).getTime();
+
+    if (!Number.isNaN(dateA) && !Number.isNaN(dateB) && dateA !== dateB) {
+      return dateA - dateB;
+    }
+
+    return a.id.localeCompare(b.id);
+  });
+};
+
+const SLA_STATUS_BADGE_CLASSES: Record<string, string> = {
+  healthy: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  warning: 'bg-amber-50 text-amber-700 border border-amber-100',
+  critical: 'bg-rose-50 text-rose-600 border border-rose-100',
+};
+
+const PRIORITY_LEVEL_LABELS: Record<WhatsappScheduledMessagePriority, string> = {
+  urgent: 'Urgente',
+  high: 'Alta',
+  normal: 'Normal',
+  low: 'Baixa',
+};
+
+const PRIORITY_LEVEL_ORDER: Record<WhatsappScheduledMessagePriority, number> = {
+  urgent: 0,
+  high: 1,
+  normal: 2,
+  low: 3,
+};
+
+const SCHEDULE_STATUS_BADGE_CLASSES: Record<WhatsappScheduledMessageStatus, string> = {
+  pending: 'bg-amber-50 text-amber-700 border border-amber-100',
+  processing: 'bg-blue-50 text-blue-700 border border-blue-100',
+  sent: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  failed: 'bg-rose-50 text-rose-600 border border-rose-100',
+  cancelled: 'bg-slate-100 text-slate-500 border border-slate-200',
+};
+
+const getPriorityLabel = (priority: WhatsappScheduledMessagePriority | undefined | null) => {
+  if (!priority) {
+    return PRIORITY_LEVEL_LABELS.normal;
+  }
+
+  return PRIORITY_LEVEL_LABELS[priority] ?? PRIORITY_LEVEL_LABELS.normal;
+};
+
+type SendMessageResponse =
+  | {
+      success: true;
+      message: WhatsappMessage;
+      chat: WhatsappChat;
+    }
+  | {
+      success: false;
+      error?: string;
+    };
 
 type UpdateChatFlagsPayload = {
   is_archived?: boolean;
@@ -994,6 +1158,7 @@ export default function WhatsappPage() {
   const [selectedQuickReplyId, setSelectedQuickReplyId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [scheduledMessages, setScheduledMessages] = useState<WhatsappScheduledMessage[]>([]);
+  const [upcomingSchedules, setUpcomingSchedules] = useState<WhatsappScheduledMessage[]>([]);
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
   const [scheduledSendAt, setScheduledSendAt] = useState('');
   const [scheduleValidationError, setScheduleValidationError] = useState<string | null>(null);
@@ -1047,8 +1212,17 @@ export default function WhatsappPage() {
   const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
+  const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
+  const [chatInsightStatus, setChatInsightStatus] = useState<InsightStatus>('idle');
+  const [chatInsightError, setChatInsightError] = useState<string | null>(null);
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
   const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Record<string, boolean>>({});
+  const [reorderingScheduleIds, setReorderingScheduleIds] = useState<Record<string, boolean>>({});
+  const [upcomingSchedulesLoading, setUpcomingSchedulesLoading] = useState(false);
+  const [scheduleSummary, setScheduleSummary] = useState<WhatsappScheduledMessagesPeriodSummary[]>([]);
+  const [scheduleSummaryLoading, setScheduleSummaryLoading] = useState(false);
+  const [schedulePanelError, setSchedulePanelError] = useState<string | null>(null);
+  const upcomingSchedulesRef = useRef<WhatsappScheduledMessage[]>([]);
 
   const { leadStatuses } = useConfig();
   const activeLeadStatuses = useMemo(
@@ -1072,6 +1246,55 @@ export default function WhatsappPage() {
 
   const selectedChatIsArchived = selectedChat?.is_archived ?? false;
   const selectedChatIsPinned = selectedChat?.is_pinned ?? false;
+
+  const fetchLatestInsight = useCallback(async (chatId: string) => {
+    const { data, error } = await supabase
+      .from('whatsapp_chat_insights')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<WhatsappChatInsight>();
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? null;
+  }, []);
+
+  const loadInsightForChat = useCallback(
+    async (chatId: string, options?: LoadInsightOptions) => {
+      setChatInsightStatus('loading');
+      setChatInsightError(null);
+
+      try {
+        const insight = await fetchLatestInsight(chatId);
+        if (options?.cancelled?.()) {
+          return;
+        }
+        setChatInsight(insight);
+        setChatInsightStatus('success');
+      } catch (error) {
+        if (options?.cancelled?.()) {
+          return;
+        }
+        setChatInsightStatus('error');
+        setChatInsightError(
+          error instanceof Error ? error.message : 'Erro ao carregar insight.',
+        );
+      }
+    },
+    [fetchLatestInsight],
+  );
+
+  const handleRetryLoadInsight = useCallback(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    void loadInsightForChat(selectedChatId);
+  }, [loadInsightForChat, selectedChatId]);
 
   const stopWaveformAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -1640,6 +1863,63 @@ export default function WhatsappPage() {
     }
   }, []);
 
+  const loadUpcomingSchedules = useCallback(async () => {
+    setUpcomingSchedulesLoading(true);
+    setSchedulePanelError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_scheduled_messages')
+        .select('*')
+        .in('status', ['pending', 'processing'])
+        .order('scheduled_send_at', { ascending: true })
+        .limit(50);
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = ((data ?? []) as WhatsappScheduledMessage[]).map(entry => ({
+        ...entry,
+        priority_level: entry.priority_level ?? 'normal',
+        priority_order: Number.isFinite(entry.priority_order ?? null)
+          ? entry.priority_order ?? 0
+          : 0,
+      }));
+
+      setUpcomingSchedules(sortSchedulesByUrgency(normalized));
+    } catch (error) {
+      console.error('Erro ao carregar próximos agendamentos do WhatsApp:', error);
+      setSchedulePanelError('Não foi possível carregar os próximos agendamentos.');
+    } finally {
+      setUpcomingSchedulesLoading(false);
+    }
+  }, []);
+
+  const loadScheduleSummary = useCallback(async () => {
+    setScheduleSummaryLoading(true);
+    setSchedulePanelError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_scheduled_messages_period_summary')
+        .select('*')
+        .order('period_start', { ascending: true })
+        .limit(24);
+
+      if (error) {
+        throw error;
+      }
+
+      setScheduleSummary((data ?? []) as WhatsappScheduledMessagesPeriodSummary[]);
+    } catch (error) {
+      console.error('Erro ao carregar o resumo de agendamentos do WhatsApp:', error);
+      setSchedulePanelError('Não foi possível carregar o resumo dos agendamentos.');
+    } finally {
+      setScheduleSummaryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!showNewChatModal) {
       setNewChatError(null);
@@ -1745,6 +2025,40 @@ export default function WhatsappPage() {
       );
     });
   }, [leads, leadSearchTerm]);
+
+  const scheduleSummaryRows = useMemo(() => scheduleSummary.slice(0, 8), [scheduleSummary]);
+
+  const getChatSlaBadge = useCallback((chat: WhatsappChat) => {
+    const metrics: WhatsappChatSlaMetrics | null = chat.sla_metrics ?? null;
+    if (!metrics) {
+      return null;
+    }
+
+    const pendingCount = metrics.pending_inbound_count ?? 0;
+    const status: WhatsappChatSlaMetrics['sla_status'] = metrics.sla_status ?? 'healthy';
+
+    if (pendingCount > 0) {
+      const waitingLabel = formatWaitingLabel(metrics.waiting_minutes ?? null, 'há alguns minutos');
+      const label = pendingCount > 1
+        ? `${pendingCount} aguardando ${waitingLabel}`
+        : `Aguardando ${waitingLabel}`;
+
+      return { status, text: label };
+    }
+
+    const lastInbound = metrics.last_inbound_at ?? metrics.last_message_at;
+    const lastInboundDate = lastInbound ? new Date(lastInbound) : null;
+    const minutesSinceLastInbound =
+      lastInboundDate && !Number.isNaN(lastInboundDate.getTime())
+        ? Math.max(0, Math.floor((Date.now() - lastInboundDate.getTime()) / 60000))
+        : null;
+
+    const healthyText = minutesSinceLastInbound !== null
+      ? `Último contato ${formatWaitingLabel(minutesSinceLastInbound, 'há instantes')}`
+      : 'SLA em dia';
+
+    return { status: 'healthy' as const, text: healthyText };
+  }, []);
 
   const loadChats = useCallback(async () => {
     setChatsLoading(true);
@@ -1871,6 +2185,23 @@ export default function WhatsappPage() {
   }, [loadChats]);
 
   useEffect(() => {
+    if (!selectedChatId) {
+      setChatInsight(null);
+      setChatInsightStatus('idle');
+      setChatInsightError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setChatInsight(null);
+    void loadInsightForChat(selectedChatId, { cancelled: () => cancelled });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadInsightForChat, selectedChatId]);
+
+  useEffect(() => {
     const container = messagesContainerRef.current;
     const previousChatId = previousChatIdRef.current;
     const chatChanged = selectedChatId !== previousChatId;
@@ -1902,6 +2233,10 @@ export default function WhatsappPage() {
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
+
+  useEffect(() => {
+    upcomingSchedulesRef.current = upcomingSchedules;
+  }, [upcomingSchedules]);
 
   const ensureChat = useCallback(
     async (phone: string, chatName: string | null = null): Promise<WhatsappChat> => {
@@ -2042,6 +2377,60 @@ export default function WhatsappPage() {
     [handleChatHeaderClick],
   );
 
+  const renderChatInsightPanel = () => {
+    const sentimentKey: WhatsappChatInsightSentiment = chatInsight?.sentiment ?? 'neutral';
+    const sentimentBadgeClass = SENTIMENT_BADGE_STYLES[sentimentKey];
+    const sentimentLabel = SENTIMENT_BADGE_LABELS[sentimentKey];
+
+    let content: ReactNode;
+    if (chatInsightStatus === 'loading') {
+      content = (
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+          Gerando resumo e sentimento...
+        </div>
+      );
+    } else if (chatInsightStatus === 'error') {
+      content = (
+        <div className="space-y-1 text-xs">
+          <p className="text-rose-600">
+            Não foi possível carregar o insight.
+            {chatInsightError ? ` ${chatInsightError}` : ''}
+          </p>
+          <button
+            type="button"
+            onClick={handleRetryLoadInsight}
+            className="font-semibold text-emerald-600 underline-offset-2 transition hover:text-emerald-700 hover:underline focus:outline-none focus-visible:underline"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    } else if (chatInsight?.summary) {
+      content = <p className="text-xs text-slate-600">{chatInsight.summary}</p>;
+    } else {
+      content = (
+        <p className="text-xs text-slate-500">
+          Ainda não há resumo disponível para esta conversa.
+        </p>
+      );
+    }
+
+    return (
+      <div className="min-w-[220px] rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-700">
+          <span>Insights recentes</span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${sentimentBadgeClass}`}
+          >
+            {sentimentLabel}
+          </span>
+        </div>
+        <div className="mt-2 space-y-2">{content}</div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!attachmentMenuRef.current) {
@@ -2140,6 +2529,36 @@ export default function WhatsappPage() {
           }
         },
       )
+      .on<RealtimePostgresChangesPayload<WhatsappChatInsight>>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whatsapp_chat_insights' },
+        payload => {
+          const currentChatId = selectedChatIdRef.current;
+          if (!currentChatId) {
+            return;
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const removedInsight = (payload.old as WhatsappChatInsight | null) ?? null;
+            if (removedInsight?.chat_id === currentChatId) {
+              setChatInsight(null);
+              setChatInsightStatus('idle');
+            }
+            return;
+          }
+
+          const incomingInsight = payload.new
+            ? ((payload.new as unknown) as WhatsappChatInsight)
+            : null;
+          if (!incomingInsight || incomingInsight.chat_id !== currentChatId) {
+            return;
+          }
+
+          setChatInsight(incomingInsight);
+          setChatInsightStatus('success');
+          setChatInsightError(null);
+        },
+      )
       .subscribe();
 
     return () => {
@@ -2217,6 +2636,28 @@ export default function WhatsappPage() {
       isMounted = false;
     };
   }, [selectedChatId]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('whatsapp-schedules-dashboard')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_scheduled_messages',
+        },
+        () => {
+          void loadUpcomingSchedules();
+          void loadScheduleSummary();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadScheduleSummary, loadUpcomingSchedules]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -2781,6 +3222,8 @@ export default function WhatsappPage() {
       if (error) {
         throw error;
       }
+
+      setUpcomingSchedules(previous => previous.filter(entry => entry.id !== scheduleId));
     } catch (cancelError) {
       console.error('Erro ao cancelar agendamento do WhatsApp:', cancelError);
       setErrorMessage('Não foi possível cancelar o agendamento.');
@@ -2792,6 +3235,80 @@ export default function WhatsappPage() {
       });
     }
   }, []);
+
+  const handleReorderUpcomingSchedule = useCallback(
+    async (scheduleId: string, direction: 'up' | 'down') => {
+      if (!scheduleId) {
+        return;
+      }
+
+      setReorderingScheduleIds(previous => ({ ...previous, [scheduleId]: true }));
+      setSchedulePanelError(null);
+
+      const currentList = upcomingSchedulesRef.current;
+      const currentIndex = currentList.findIndex(schedule => schedule.id === scheduleId);
+
+      if (currentIndex === -1) {
+        setReorderingScheduleIds(previous => {
+          const next = { ...previous };
+          delete next[scheduleId];
+          return next;
+        });
+        return;
+      }
+
+      const targetIndex =
+        direction === 'up'
+          ? Math.max(0, currentIndex - 1)
+          : Math.min(currentList.length - 1, currentIndex + 1);
+
+      if (targetIndex === currentIndex) {
+        setReorderingScheduleIds(previous => {
+          const next = { ...previous };
+          delete next[scheduleId];
+          return next;
+        });
+        return;
+      }
+
+      const reordered = [...currentList];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      const normalized = reordered.map((entry, index) => ({
+        ...entry,
+        priority_order: index,
+      }));
+
+      setUpcomingSchedules(normalized);
+
+      try {
+        const payload = normalized.map(entry => ({
+          id: entry.id,
+          priority_order: entry.priority_order ?? 0,
+        }));
+
+        const { error } = await supabase
+          .from('whatsapp_scheduled_messages')
+          .upsert(payload);
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        console.error('Erro ao reordenar agendamentos do WhatsApp:', error);
+        setSchedulePanelError('Não foi possível reordenar os agendamentos.');
+        await loadUpcomingSchedules();
+      } finally {
+        setReorderingScheduleIds(previous => {
+          const next = { ...previous };
+          delete next[scheduleId];
+          return next;
+        });
+      }
+    },
+    [loadUpcomingSchedules],
+  );
 
   const toggleAttachmentMenu = () => {
     if (sendingMessage || schedulingMessage || isRecordingAudio) {
@@ -3795,6 +4312,7 @@ export default function WhatsappPage() {
               const archiveLabel = isArchived
                 ? 'Desarquivar conversa'
                 : 'Arquivar conversa';
+              const slaBadge = getChatSlaBadge(chat);
 
               return (
                 <button
@@ -3842,6 +4360,16 @@ export default function WhatsappPage() {
                         ) : null}
                         <span className="block min-w-0 truncate">{previewText}</span>
                       </div>
+                      {slaBadge ? (
+                        <span
+                          className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            SLA_STATUS_BADGE_CLASSES[slaBadge.status] ??
+                            'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}
+                        >
+                          {slaBadge.text}
+                        </span>
+                      ) : null}
                       {showArchivedChats ? (
                         <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500">
                           <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
@@ -3980,20 +4508,20 @@ export default function WhatsappPage() {
                     </div>
 
                     {selectedChatLead ? (
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
-                          Lead do CRM
-                        </span>
-                        {selectedChatLead.responsavel ? (
-                          <span>Resp.: {selectedChatLead.responsavel}</span>
-                        ) : null}
-                        {selectedChatLead.ultimo_contato ? (
-                          <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
-                        ) : null}
-                        {selectedChatLead.proximo_retorno ? (
-                          <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
-                        ) : null}
-                        <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                            Lead do CRM
+                          </span>
+                          {selectedChatLead.responsavel ? (
+                            <span>Resp.: {selectedChatLead.responsavel}</span>
+                          ) : null}
+                          {selectedChatLead.ultimo_contato ? (
+                            <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
+                          ) : null}
+                          {selectedChatLead.proximo_retorno ? (
+                            <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => setShowLeadDetails(true)}
@@ -4001,18 +4529,12 @@ export default function WhatsappPage() {
                           >
                             Ver histórico
                           </button>
-                          {selectedChat?.phone ? (
-                            <button
-                              type="button"
-                              onClick={() => setShowCampaignDrawer(true)}
-                              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            >
-                              Campanhas
-                            </button>
-                          ) : null}
                         </div>
+                        {renderChatInsightPanel()}
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="mt-2">{renderChatInsightPanel()}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -4764,6 +5286,137 @@ export default function WhatsappPage() {
           </div>
         )}
       </section>
+      <aside className="hidden xl:flex w-full max-w-sm flex-col border-t border-slate-200 bg-slate-50/70 md:border-t-0 md:border-l">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Monitoramento</p>
+            <h3 className="text-base font-semibold text-slate-800">Agenda & SLA</h3>
+          </div>
+          <Clock className="h-5 w-5 text-emerald-500" aria-hidden="true" />
+        </div>
+        <div className="flex-1 min-h-0 space-y-4 overflow-y-auto p-4">
+          <section className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-800">Resumo por período</h4>
+              {scheduleSummaryLoading ? (
+                <span className="text-xs text-slate-500">Carregando…</span>
+              ) : null}
+            </div>
+            {scheduleSummaryRows.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-500">Nenhum agendamento agrupado.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {scheduleSummaryRows.map(row => (
+                  <li
+                    key={`${row.period_start}-${row.priority_level}-${row.status}`}
+                    className="rounded-lg border border-slate-100 bg-slate-50/80 p-2"
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                      <span>{formatPeriodRangeLabel(row.period_start, row.period_end)}</span>
+                      <span>{row.next_scheduled_at ? formatShortTime(row.next_scheduled_at) : '--:--'}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+                      <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                        {getPriorityLabel(row.priority_level)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 ${
+                          SCHEDULE_STATUS_BADGE_CLASSES[row.status]
+                        }`}
+                      >
+                        {SCHEDULE_STATUS_LABELS[row.status]}
+                      </span>
+                      <span className="text-slate-500">{row.message_count} itens</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-800">Próximos agendamentos</h4>
+              {upcomingSchedulesLoading ? (
+                <span className="text-xs text-slate-500">Atualizando…</span>
+              ) : null}
+            </div>
+            {schedulePanelError ? (
+              <p className="mt-2 text-xs text-rose-500">{schedulePanelError}</p>
+            ) : null}
+            {upcomingSchedules.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-500">Nenhum agendamento pendente.</p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {upcomingSchedules.map((schedule, index) => {
+                  const disableUp = index === 0;
+                  const disableDown = index === upcomingSchedules.length - 1;
+                  const isCancelling = Boolean(cancellingScheduleIds[schedule.id]);
+                  const isReordering = Boolean(reorderingScheduleIds[schedule.id]);
+                  const priorityLabel = getPriorityLabel(schedule.priority_level ?? 'normal');
+                  const scheduleTime = formatDateTime(schedule.scheduled_send_at);
+
+                  return (
+                    <li key={schedule.id} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
+                      <p className="text-sm font-medium text-slate-800 line-clamp-2">{schedule.message}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                          {scheduleTime || 'Horário indefinido'}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 ${
+                            SCHEDULE_STATUS_BADGE_CLASSES[schedule.status]
+                          }`}
+                        >
+                          {SCHEDULE_STATUS_LABELS[schedule.status]}
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                          {priorityLabel}
+                        </span>
+                      </div>
+                      {schedule.last_error && schedule.status === 'failed' ? (
+                        <p className="mt-2 flex items-center gap-1 text-[11px] text-rose-600">
+                          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span className="line-clamp-2">{schedule.last_error}</span>
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <div className="inline-flex rounded-full border border-slate-200 bg-slate-50">
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-l-full px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                            onClick={() => handleReorderUpcomingSchedule(schedule.id, 'up')}
+                            disabled={disableUp || isReordering}
+                            aria-label="Mover agendamento para cima"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-r-full px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                            onClick={() => handleReorderUpcomingSchedule(schedule.id, 'down')}
+                            disabled={disableDown || isReordering}
+                            aria-label="Mover agendamento para baixo"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelScheduledMessage(schedule.id)}
+                          className="inline-flex flex-1 items-center justify-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={isCancelling}
+                        >
+                          {isCancelling ? 'Cancelando…' : 'Cancelar'}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
+      </aside>
       {showNewChatModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
           <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">

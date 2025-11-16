@@ -43,6 +43,7 @@ export type WhatsappChat = {
   crm_lead?: WhatsappChatLeadSummary | null;
   crm_contracts?: WhatsappChatContractSummary[];
   crm_financial_summary?: WhatsappChatFinancialSummary | null;
+  sla_metrics?: WhatsappChatSlaMetrics | null;
 };
 
 export type WhatsappMessage = {
@@ -56,16 +57,15 @@ export type WhatsappMessage = {
   raw_payload: Record<string, any> | null;
 };
 
-export type SendWhatsappMessageResponse =
-  | {
-      success: true;
-      message: WhatsappMessage;
-      chat: WhatsappChat;
-    }
-  | {
-      success: false;
-      error?: string;
-    };
+export type WhatsappChatInsightSentiment = 'positive' | 'neutral' | 'negative';
+
+export type WhatsappChatInsight = {
+  id: string;
+  chat_id: string;
+  summary: string | null;
+  sentiment: WhatsappChatInsightSentiment | null;
+  created_at: string;
+};
 
 export type WhatsappScheduledMessageStatus =
   | 'pending'
@@ -73,6 +73,8 @@ export type WhatsappScheduledMessageStatus =
   | 'sent'
   | 'failed'
   | 'cancelled';
+
+export type WhatsappScheduledMessagePriority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type WhatsappScheduledMessage = {
   id: string;
@@ -86,6 +88,33 @@ export type WhatsappScheduledMessage = {
   sent_at: string | null;
   cancelled_at?: string | null;
   last_error?: string | null;
+  priority_level?: WhatsappScheduledMessagePriority;
+  priority_order?: number | null;
+};
+
+export type WhatsappScheduledMessagesPeriodSummary = {
+  period_start: string;
+  period_end: string;
+  priority_level: WhatsappScheduledMessagePriority;
+  status: WhatsappScheduledMessageStatus;
+  message_count: number;
+  next_scheduled_at: string | null;
+};
+
+export type WhatsappChatSlaStatus = 'healthy' | 'warning' | 'critical';
+
+export type WhatsappChatSlaMetrics = {
+  chat_id: string;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  last_message_at: string | null;
+  last_response_ms: number | null;
+  pending_inbound_count: number;
+  waiting_since: string | null;
+  waiting_minutes: number | null;
+  sla_status: WhatsappChatSlaStatus;
+  sla_breach_started_at?: string | null;
+  longest_waiting_response_ms?: number | null;
 };
 
 export type WhatsappChatMetadataNote = {

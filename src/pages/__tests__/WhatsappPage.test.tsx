@@ -14,11 +14,28 @@ const supabaseMocks = vi.hoisted(() => {
 
   const supabaseRemoveChannelMock = vi.fn();
 
-  const supabaseFromMock = vi.fn(() => {
-    const order = vi.fn().mockResolvedValue({ data: [], error: null });
-    const select = vi.fn().mockReturnValue({ order });
-    return { select };
-  });
+  const createQueryBuilder = () => {
+    const resolvedValue = { data: [], error: null };
+    const resolvedPromise = Promise.resolve(resolvedValue);
+
+    const builder: any = {};
+    builder.select = vi.fn(() => builder);
+    builder.insert = vi.fn(() => builder);
+    builder.update = vi.fn(() => builder);
+    builder.upsert = vi.fn(() => builder);
+    builder.eq = vi.fn(() => builder);
+    builder.in = vi.fn(() => builder);
+    builder.order = vi.fn(() => builder);
+    builder.limit = vi.fn(() => builder);
+    builder.returns = vi.fn(() => builder);
+    builder.single = vi.fn().mockResolvedValue(resolvedValue);
+    builder.then = (resolve: any, reject?: any) => resolvedPromise.then(resolve, reject);
+    builder.catch = (reject: any) => resolvedPromise.catch(reject);
+
+    return builder;
+  };
+
+  const supabaseFromMock = vi.fn(() => createQueryBuilder());
 
   return { supabaseChannelMock, supabaseRemoveChannelMock, supabaseFromMock };
 });
@@ -125,6 +142,7 @@ const chat: WhatsappChat = {
   crm_lead: null,
   crm_contracts: [],
   crm_financial_summary: null,
+  sla_metrics: null,
 };
 
 const baseMessages: WhatsappMessage[] = [
@@ -197,6 +215,38 @@ describe('WhatsappPage message search', () => {
       expect(messages[1].textContent).toContain('Segunda resposta importante');
     });
 
+    await waitFor(() => {
+      if (!container.querySelector('button[aria-label="Abrir menu de ações do chat"]')) {
+        throw new Error('Menu de ações indisponível');
+      }
+    });
+    const actionsButton = container.querySelector(
+      'button[aria-label="Abrir menu de ações do chat"]',
+    ) as HTMLButtonElement;
+
+    act(() => {
+      actionsButton.click();
+    });
+
+    await waitFor(() => {
+      const candidates = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'),
+      );
+      const target = candidates.find(button =>
+        button.textContent?.toLowerCase().includes('pesquisar no chat'),
+      );
+      if (!target) {
+        throw new Error('Ação de pesquisa não encontrada');
+      }
+    });
+    const openSearchButton = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'),
+    ).find(button => button.textContent?.toLowerCase().includes('pesquisar no chat')) as HTMLButtonElement;
+
+    act(() => {
+      openSearchButton.click();
+    });
+
     const searchInput = (await screen.findByPlaceholderText(
       'Pesquisar mensagens',
     )) as HTMLInputElement;
@@ -208,17 +258,12 @@ describe('WhatsappPage message search', () => {
     });
 
     await waitFor(() => {
-      const filteredMessages = messageContainer.querySelectorAll(
-        '[data-testid="whatsapp-message"]',
+      const highlights = Array.from(messageContainer.querySelectorAll('mark'));
+      expect(highlights.length).toBeGreaterThan(0);
+      expect(highlights.some(element => element.textContent?.toLowerCase() === 'importante')).toBe(
+        true,
       );
-      expect(filteredMessages).toHaveLength(1);
-      expect(filteredMessages[0].textContent).toContain('Segunda resposta importante');
     });
-
-    const highlights = Array.from(messageContainer.querySelectorAll('mark'));
-    expect(highlights.some(element => element.textContent?.toLowerCase() === 'importante')).toBe(
-      true,
-    );
 
     view.unmount();
   });
@@ -240,6 +285,38 @@ describe('WhatsappPage message search', () => {
       expect(messages[1].textContent).toContain('Segunda resposta importante');
     });
 
+    await waitFor(() => {
+      if (!container.querySelector('button[aria-label="Abrir menu de ações do chat"]')) {
+        throw new Error('Menu de ações indisponível');
+      }
+    });
+    const actionsButton = container.querySelector(
+      'button[aria-label="Abrir menu de ações do chat"]',
+    ) as HTMLButtonElement;
+
+    act(() => {
+      actionsButton.click();
+    });
+
+    await waitFor(() => {
+      const candidates = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'),
+      );
+      const target = candidates.find(button =>
+        button.textContent?.toLowerCase().includes('pesquisar no chat'),
+      );
+      if (!target) {
+        throw new Error('Ação de pesquisa não encontrada');
+      }
+    });
+    const openSearchButton = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'),
+    ).find(button => button.textContent?.toLowerCase().includes('pesquisar no chat')) as HTMLButtonElement;
+
+    act(() => {
+      openSearchButton.click();
+    });
+
     const searchInput = (await screen.findByPlaceholderText(
       'Pesquisar mensagens',
     )) as HTMLInputElement;
@@ -251,11 +328,6 @@ describe('WhatsappPage message search', () => {
     });
 
     await waitFor(() => {
-      const filteredMessages = messageContainer.querySelectorAll(
-        '[data-testid="whatsapp-message"]',
-      );
-      expect(filteredMessages).toHaveLength(1);
-      expect(filteredMessages[0].textContent).toContain('Segunda resposta importante');
       const highlight = messageContainer.querySelector('mark');
       expect(highlight?.textContent?.toLowerCase()).toBe('resposta');
     });

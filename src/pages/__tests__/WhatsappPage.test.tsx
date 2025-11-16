@@ -200,7 +200,7 @@ afterAll(() => {
 
 describe('WhatsappPage message search', () => {
   it('filters messages based on the search term and highlights matches', async () => {
-    const view = render(<WhatsappPage />);
+    const view = render(<WhatsappPage onUnreadCountChange={() => {}} />);
     const { container } = view;
 
     await waitFor(() => {
@@ -270,7 +270,7 @@ describe('WhatsappPage message search', () => {
   });
 
   it('restores the full message list after clearing the search', async () => {
-    const view = render(<WhatsappPage />);
+    const view = render(<WhatsappPage onUnreadCountChange={() => {}} />);
     const { container } = view;
 
     await waitFor(() => {

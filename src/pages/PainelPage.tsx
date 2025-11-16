@@ -24,6 +24,7 @@ export default function PainelPage() {
   const { leadOrigins, loading: configLoading } = useConfig();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
+  const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
@@ -150,7 +151,7 @@ export default function PainelPage() {
       case 'financeiro-agenda':
         return <FinanceiroAgendaTab />;
       case 'whatsapp':
-        return <WhatsappPage />;
+        return <WhatsappPage onUnreadCountChange={setWhatsappUnreadCount} />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
       case 'email':
@@ -183,6 +184,7 @@ export default function PainelPage() {
         unreadReminders={unreadReminders}
         hasActiveNotification={hasActiveNotification}
         newLeadsCount={newLeadsCount}
+        whatsappUnreadCount={whatsappUnreadCount}
       >
         {renderContent()}
       </Layout>

@@ -49,7 +49,8 @@ CREATE TRIGGER trg_whatsapp_chat_sla_metrics_updated_at
 
 ALTER TABLE public.whatsapp_chat_sla_metrics ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Authenticated users can read WhatsApp SLA metrics"
+DROP POLICY IF EXISTS "Authenticated users can read WhatsApp SLA metrics" ON public.whatsapp_chat_sla_metrics;
+CREATE POLICY "Authenticated users can read WhatsApp SLA metrics"
   ON public.whatsapp_chat_sla_metrics
   FOR SELECT
   TO authenticated
@@ -72,7 +73,8 @@ CREATE INDEX IF NOT EXISTS whatsapp_chat_sla_alerts_chat_idx
 
 ALTER TABLE public.whatsapp_chat_sla_alerts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Authenticated users can read WhatsApp SLA alerts"
+DROP POLICY IF EXISTS "Authenticated users can read WhatsApp SLA alerts" ON public.whatsapp_chat_sla_alerts;
+CREATE POLICY "Authenticated users can read WhatsApp SLA alerts"
   ON public.whatsapp_chat_sla_alerts
   FOR SELECT
   TO authenticated

@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Users,
   FileText,
@@ -59,6 +60,7 @@ export default function Layout({
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const collapsedMenuDragStartY = useRef<number | null>(null);
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
   const currentRole = role;
   const isWhatsappActive = activeTab === 'whatsapp';
@@ -278,6 +280,27 @@ export default function Layout({
 
   const shouldHideHeader = isWhatsappActive && isMenuCollapsed;
 
+  const handleCollapsedMenuPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    collapsedMenuDragStartY.current = event.clientY;
+  }, []);
+
+  const handleCollapsedMenuPointerEnd = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (collapsedMenuDragStartY.current === null) {
+      return;
+    }
+
+    const dragDistance = event.clientY - collapsedMenuDragStartY.current;
+    collapsedMenuDragStartY.current = null;
+
+    if (dragDistance > 30) {
+      setIsMenuCollapsed(false);
+    }
+  }, []);
+
+  const handleCollapsedMenuPointerCancel = useCallback(() => {
+    collapsedMenuDragStartY.current = null;
+  }, []);
+
   return (
     <div
       className={`flex min-h-screen flex-col bg-slate-50 ${
@@ -285,14 +308,20 @@ export default function Layout({
       }`}
     >
       {isWhatsappActive && isMenuCollapsed ? (
-        <button
-          type="button"
-          onClick={() => setIsMenuCollapsed(false)}
-          className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg ring-1 ring-slate-200"
-        >
-          <ChevronDown className="h-4 w-4" />
-          Expandir menu
-        </button>
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setIsMenuCollapsed(false)}
+            onPointerDown={handleCollapsedMenuPointerDown}
+            onPointerUp={handleCollapsedMenuPointerEnd}
+            onPointerLeave={handleCollapsedMenuPointerCancel}
+            onPointerCancel={handleCollapsedMenuPointerCancel}
+            className="pointer-events-auto inline-flex h-7 w-14 items-center justify-center rounded-b-2xl bg-white/95 text-slate-600 shadow-lg ring-1 ring-slate-200"
+            aria-label="Expandir menu principal"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
       ) : null}
 
       {!shouldHideHeader && (

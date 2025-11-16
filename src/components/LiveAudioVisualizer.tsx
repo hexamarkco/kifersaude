@@ -42,7 +42,7 @@ export function LiveAudioVisualizer({
   barCount = 128,
   className = '',
 }: LiveAudioVisualizerProps) {
-  const safeBarCount = Math.max(4, barCount);
+  const safeBarCount = Math.max(12, barCount);
   const resolvedValues = padValues(values.length > 0 ? values : new Array(safeBarCount).fill(0), safeBarCount);
 
   return (

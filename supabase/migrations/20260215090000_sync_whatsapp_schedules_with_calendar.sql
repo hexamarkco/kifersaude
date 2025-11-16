@@ -67,7 +67,7 @@ BEGIN
   END IF;
 
   SELECT
-    COALESCE(chat.display_name, chat.chat_name, chat.phone, 'Contato sem nome') AS label,
+    COALESCE(chat.chat_name, chat.phone, 'Contato sem nome') AS label,
     chat.phone
   INTO chat_identifier, chat_phone
   FROM public.whatsapp_chats AS chat

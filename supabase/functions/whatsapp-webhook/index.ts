@@ -363,7 +363,7 @@ const getGptTranscriptionConfig = async (): Promise<{ apiKey: string; baseUrl: s
 
   if (!config?.apiKey) {
     throw new Error(
-      'Configure a chave da integração GPT em Configurações > Integrações antes de transcrever áudios.',
+      'Configure a chave da integração GPT em Configurações > Integrações antes de usar recursos como transcrição de áudios e reescrita de mensagens.',
     );
   }
 

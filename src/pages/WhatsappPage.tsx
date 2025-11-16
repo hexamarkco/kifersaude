@@ -54,6 +54,7 @@ import type {
   WhatsappChat,
   WhatsappChatInsight,
   WhatsappChatInsightSentiment,
+  WhatsappChatInsightStatus,
   WhatsappMessage,
   WhatsappScheduledMessage,
   WhatsappScheduledMessagePriority,
@@ -283,7 +284,6 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
 const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);
 const MESSAGE_SKELETON_INDICES = Array.from({ length: 5 }, (_, index) => index);
 
-type InsightStatus = 'idle' | 'loading' | 'success' | 'error';
 type LoadInsightOptions = { cancelled?: () => boolean };
 
 const SENTIMENT_BADGE_STYLES: Record<WhatsappChatInsightSentiment, string> = {
@@ -1281,7 +1281,7 @@ export default function WhatsappPage() {
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
   const [chatInsight, setChatInsight] = useState<WhatsappChatInsight | null>(null);
-  const [chatInsightStatus, setChatInsightStatus] = useState<InsightStatus>('idle');
+  const [chatInsightStatus, setChatInsightStatus] = useState<WhatsappChatInsightStatus>('idle');
   const [chatInsightError, setChatInsightError] = useState<string | null>(null);
   const [audioTranscriptions, setAudioTranscriptions] = useState<
     Record<string, AudioTranscriptionState>
@@ -2098,6 +2098,41 @@ export default function WhatsappPage() {
   }, [leads, leadSearchTerm]);
 
   const scheduleSummaryRows = useMemo(() => scheduleSummary.slice(0, 8), [scheduleSummary]);
+  const agendaSummaryDisplayRows = useMemo(
+    () =>
+      scheduleSummaryRows.map(row => ({
+        id: `${row.period_start}-${row.priority_level}-${row.status}`,
+        periodLabel: formatPeriodRangeLabel(row.period_start, row.period_end),
+        nextTimeLabel: row.next_scheduled_at ? formatShortTime(row.next_scheduled_at) : '--:--',
+        priorityLabel: getPriorityLabel(row.priority_level),
+        statusLabel: SCHEDULE_STATUS_LABELS[row.status],
+        statusClass: SCHEDULE_STATUS_BADGE_CLASSES[row.status],
+        itemCount: row.message_count,
+      })),
+    [scheduleSummaryRows],
+  );
+
+  const agendaUpcomingDisplay = useMemo(
+    () =>
+      upcomingSchedules.map((schedule, index) => ({
+        id: schedule.id,
+        message: schedule.message,
+        scheduleTimeLabel: formatDateTime(schedule.scheduled_send_at) || 'Horário indefinido',
+        statusLabel: SCHEDULE_STATUS_LABELS[schedule.status],
+        statusClass: SCHEDULE_STATUS_BADGE_CLASSES[schedule.status],
+        priorityLabel: getPriorityLabel(schedule.priority_level ?? 'normal'),
+        lastError: schedule.last_error ?? null,
+        disableUp: index === 0,
+        disableDown: index === upcomingSchedules.length - 1,
+        isCancelling: Boolean(cancellingScheduleIds[schedule.id]),
+        isReordering: Boolean(reorderingScheduleIds[schedule.id]),
+      })),
+    [
+      upcomingSchedules,
+      cancellingScheduleIds,
+      reorderingScheduleIds,
+    ],
+  );
 
   const getChatSlaBadge = useCallback((chat: WhatsappChat) => {
     const metrics: WhatsappChatSlaMetrics | null = chat.sla_metrics ?? null;
@@ -2130,6 +2165,32 @@ export default function WhatsappPage() {
 
     return { status: 'healthy' as const, text: healthyText };
   }, []);
+
+  const selectedChatSlaBadge = useMemo(() => {
+    if (!selectedChat) {
+      return null;
+    }
+
+    const badge = getChatSlaBadge(selectedChat);
+    if (!badge) {
+      return null;
+    }
+
+    const className = SLA_STATUS_BADGE_CLASSES[badge.status] ?? SLA_STATUS_BADGE_CLASSES.healthy;
+    return { ...badge, className };
+  }, [getChatSlaBadge, selectedChat]);
+
+  const insightSentimentDisplay = useMemo(() => {
+    if (!chatInsight?.sentiment) {
+      return null;
+    }
+
+    const key = chatInsight.sentiment as WhatsappChatInsightSentiment;
+    return {
+      label: SENTIMENT_BADGE_LABELS[key],
+      className: SENTIMENT_BADGE_STYLES[key],
+    };
+  }, [chatInsight?.sentiment]);
 
   const loadChats = useCallback(async () => {
     setChatsLoading(true);
@@ -2447,60 +2508,6 @@ export default function WhatsappPage() {
     },
     [handleChatHeaderClick],
   );
-
-  const renderChatInsightPanel = () => {
-    const sentimentKey: WhatsappChatInsightSentiment = chatInsight?.sentiment ?? 'neutral';
-    const sentimentBadgeClass = SENTIMENT_BADGE_STYLES[sentimentKey];
-    const sentimentLabel = SENTIMENT_BADGE_LABELS[sentimentKey];
-
-    let content: ReactNode;
-    if (chatInsightStatus === 'loading') {
-      content = (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
-          Gerando resumo e sentimento...
-        </div>
-      );
-    } else if (chatInsightStatus === 'error') {
-      content = (
-        <div className="space-y-1 text-xs">
-          <p className="text-rose-600">
-            Não foi possível carregar o insight.
-            {chatInsightError ? ` ${chatInsightError}` : ''}
-          </p>
-          <button
-            type="button"
-            onClick={handleRetryLoadInsight}
-            className="font-semibold text-emerald-600 underline-offset-2 transition hover:text-emerald-700 hover:underline focus:outline-none focus-visible:underline"
-          >
-            Tentar novamente
-          </button>
-        </div>
-      );
-    } else if (chatInsight?.summary) {
-      content = <p className="text-xs text-slate-600">{chatInsight.summary}</p>;
-    } else {
-      content = (
-        <p className="text-xs text-slate-500">
-          Ainda não há resumo disponível para esta conversa.
-        </p>
-      );
-    }
-
-    return (
-      <div className="min-w-[220px] rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-700">
-          <span>Insights recentes</span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${sentimentBadgeClass}`}
-          >
-            {sentimentLabel}
-          </span>
-        </div>
-        <div className="mt-2 space-y-2">{content}</div>
-      </div>
-    );
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -4614,118 +4621,75 @@ export default function WhatsappPage() {
         {selectedChat ? (
           <>
             <header className="flex-shrink-0 border-b border-slate-200 p-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-start gap-3">
-                  <button
-                    type="button"
-                    onClick={handleBackToChats}
-                    className="md:hidden inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
-                    aria-label="Voltar para lista de conversas"
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleBackToChats}
+                  className="md:hidden inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
+                  aria-label="Voltar para lista de conversas"
+                >
+                  ←
+                </button>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div
+                    className={`flex min-w-0 flex-1 items-center gap-3 ${
+                      selectedChatLead
+                        ? 'cursor-pointer rounded-lg px-2 py-1 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
+                        : ''
+                    }`}
+                    onClick={selectedChatLead ? handleChatHeaderClick : undefined}
+                    onKeyDown={selectedChatLead ? handleChatHeaderKeyDown : undefined}
+                    role={selectedChatLead ? 'button' : undefined}
+                    tabIndex={selectedChatLead ? 0 : undefined}
+                    aria-label={selectedChatLead ? 'Ver histórico do lead e informações do CRM' : undefined}
+                    title={selectedChatLead ? 'Clique para visualizar o histórico do lead' : undefined}
                   >
-                    ←
-                  </button>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div
-                        className={`flex min-w-0 flex-1 items-center gap-3 ${
-                          selectedChatLead
-                            ? 'cursor-pointer rounded-lg px-2 py-1 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
-                            : ''
-                        }`}
-                        onClick={selectedChatLead ? handleChatHeaderClick : undefined}
-                        onKeyDown={selectedChatLead ? handleChatHeaderKeyDown : undefined}
-                        role={selectedChatLead ? 'button' : undefined}
-                        tabIndex={selectedChatLead ? 0 : undefined}
-                        aria-label={
-                          selectedChatLead
-                            ? 'Ver histórico do lead e informações do CRM'
-                            : undefined
-                        }
-                        title={
-                          selectedChatLead
-                            ? 'Clique para visualizar o histórico do lead'
-                            : undefined
-                        }
-                      >
-                        {selectedChat.sender_photo ? (
-                          <img
-                            src={selectedChat.sender_photo}
-                            alt={selectedChatDisplayName || selectedChat.phone}
-                            className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
-                            {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-slate-800">
-                            {selectedChatDisplayName}
-                          </p>
-                          {(selectedChatIsPinned || selectedChatIsArchived) && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-                              {selectedChatIsPinned ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <Pin className="h-3.5 w-3.5" aria-hidden="true" /> Fixado
-                                </span>
-                              ) : null}
-                              {selectedChatIsArchived ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
-                                </span>
-                              ) : null}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {selectedChatLead ? (
-                        <div className="flex items-center gap-2">
-                          {activeLeadStatuses.length > 0 ? (
-                            <StatusDropdown
-                              currentStatus={selectedChatLead.status ?? 'Sem status'}
-                              leadId={selectedChatLead.id}
-                              onStatusChange={handleChatLeadStatusChange}
-                              disabled={updatingLeadStatus}
-                              statusOptions={activeLeadStatuses}
-                            />
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                              Status: {selectedChatLead.status ?? 'Não informado'}
-                            </span>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {selectedChatLead ? (
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
-                            Lead do CRM
-                          </span>
-                          {selectedChatLead.responsavel ? (
-                            <span>Resp.: {selectedChatLead.responsavel}</span>
-                          ) : null}
-                          {selectedChatLead.ultimo_contato ? (
-                            <span>Último contato: {formatDateTime(selectedChatLead.ultimo_contato)}</span>
-                          ) : null}
-                          {selectedChatLead.proximo_retorno ? (
-                            <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setShowLeadDetails(true)}
-                            className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                          >
-                            Ver histórico
-                          </button>
-                        </div>
-                        {renderChatInsightPanel()}
-                      </div>
+                    {selectedChat.sender_photo ? (
+                      <img
+                        src={selectedChat.sender_photo}
+                        alt={selectedChatDisplayName || selectedChat.phone}
+                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                      />
                     ) : (
-                      <div className="mt-2">{renderChatInsightPanel()}</div>
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-semibold text-emerald-600">
+                        {(selectedChatDisplayName || selectedChat.phone).charAt(0).toUpperCase()}
+                      </div>
                     )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-800">{selectedChatDisplayName}</p>
+                      {(selectedChatIsPinned || selectedChatIsArchived) && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+                          {selectedChatIsPinned ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Pin className="h-3.5 w-3.5" aria-hidden="true" /> Fixado
+                            </span>
+                          ) : null}
+                          {selectedChatIsArchived ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Arquivado
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {selectedChatLead ? (
+                    <div className="hidden items-center gap-2 md:flex">
+                      {activeLeadStatuses.length > 0 ? (
+                        <StatusDropdown
+                          currentStatus={selectedChatLead.status ?? 'Sem status'}
+                          leadId={selectedChatLead.id}
+                          onStatusChange={handleChatLeadStatusChange}
+                          disabled={updatingLeadStatus}
+                          statusOptions={activeLeadStatuses}
+                        />
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                          Status: {selectedChatLead.status ?? 'Não informado'}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </header>
@@ -5467,6 +5431,23 @@ export default function WhatsappPage() {
                 leadSummary={selectedChatLead}
                 contractsSummary={selectedChatContracts}
                 financialSummary={selectedChatFinancialSummary}
+                statusOptions={activeLeadStatuses}
+                onStatusChange={handleChatLeadStatusChange}
+                updatingStatus={updatingLeadStatus}
+                insight={chatInsight}
+                insightStatus={chatInsightStatus}
+                insightError={chatInsightError}
+                insightSentiment={insightSentimentDisplay}
+                onRetryInsight={handleRetryLoadInsight}
+                slaBadge={selectedChatSlaBadge}
+                slaMetrics={selectedChat?.sla_metrics ?? null}
+                agendaSummaryRows={agendaSummaryDisplayRows}
+                agendaSummaryLoading={scheduleSummaryLoading}
+                agendaUpcoming={agendaUpcomingDisplay}
+                agendaUpcomingLoading={upcomingSchedulesLoading}
+                agendaError={schedulePanelError}
+                onCancelSchedule={handleCancelScheduledMessage}
+                onReorderSchedule={handleReorderUpcomingSchedule}
               />
             ) : null}
           </>
@@ -5476,137 +5457,6 @@ export default function WhatsappPage() {
           </div>
         )}
       </section>
-      <aside className="hidden xl:flex w-full max-w-sm flex-col border-t border-slate-200 bg-slate-50/70 md:border-t-0 md:border-l">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Monitoramento</p>
-            <h3 className="text-base font-semibold text-slate-800">Agenda & SLA</h3>
-          </div>
-          <Clock className="h-5 w-5 text-emerald-500" aria-hidden="true" />
-        </div>
-        <div className="flex-1 min-h-0 space-y-4 overflow-y-auto p-4">
-          <section className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">Resumo por período</h4>
-              {scheduleSummaryLoading ? (
-                <span className="text-xs text-slate-500">Carregando…</span>
-              ) : null}
-            </div>
-            {scheduleSummaryRows.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Nenhum agendamento agrupado.</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {scheduleSummaryRows.map(row => (
-                  <li
-                    key={`${row.period_start}-${row.priority_level}-${row.status}`}
-                    className="rounded-lg border border-slate-100 bg-slate-50/80 p-2"
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
-                      <span>{formatPeriodRangeLabel(row.period_start, row.period_end)}</span>
-                      <span>{row.next_scheduled_at ? formatShortTime(row.next_scheduled_at) : '--:--'}</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
-                      <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5">
-                        {getPriorityLabel(row.priority_level)}
-                      </span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 ${
-                          SCHEDULE_STATUS_BADGE_CLASSES[row.status]
-                        }`}
-                      >
-                        {SCHEDULE_STATUS_LABELS[row.status]}
-                      </span>
-                      <span className="text-slate-500">{row.message_count} itens</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-800">Próximos agendamentos</h4>
-              {upcomingSchedulesLoading ? (
-                <span className="text-xs text-slate-500">Atualizando…</span>
-              ) : null}
-            </div>
-            {schedulePanelError ? (
-              <p className="mt-2 text-xs text-rose-500">{schedulePanelError}</p>
-            ) : null}
-            {upcomingSchedules.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Nenhum agendamento pendente.</p>
-            ) : (
-              <ul className="mt-3 space-y-3">
-                {upcomingSchedules.map((schedule, index) => {
-                  const disableUp = index === 0;
-                  const disableDown = index === upcomingSchedules.length - 1;
-                  const isCancelling = Boolean(cancellingScheduleIds[schedule.id]);
-                  const isReordering = Boolean(reorderingScheduleIds[schedule.id]);
-                  const priorityLabel = getPriorityLabel(schedule.priority_level ?? 'normal');
-                  const scheduleTime = formatDateTime(schedule.scheduled_send_at);
-
-                  return (
-                    <li key={schedule.id} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
-                      <p className="text-sm font-medium text-slate-800 line-clamp-2">{schedule.message}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                          {scheduleTime || 'Horário indefinido'}
-                        </span>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 ${
-                            SCHEDULE_STATUS_BADGE_CLASSES[schedule.status]
-                          }`}
-                        >
-                          {SCHEDULE_STATUS_LABELS[schedule.status]}
-                        </span>
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                          {priorityLabel}
-                        </span>
-                      </div>
-                      {schedule.last_error && schedule.status === 'failed' ? (
-                        <p className="mt-2 flex items-center gap-1 text-[11px] text-rose-600">
-                          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                          <span className="line-clamp-2">{schedule.last_error}</span>
-                        </p>
-                      ) : null}
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <div className="inline-flex rounded-full border border-slate-200 bg-slate-50">
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-l-full px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
-                            onClick={() => handleReorderUpcomingSchedule(schedule.id, 'up')}
-                            disabled={disableUp || isReordering}
-                            aria-label="Mover agendamento para cima"
-                          >
-                            <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-r-full px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
-                            onClick={() => handleReorderUpcomingSchedule(schedule.id, 'down')}
-                            disabled={disableDown || isReordering}
-                            aria-label="Mover agendamento para baixo"
-                          >
-                            <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCancelScheduledMessage(schedule.id)}
-                          className="inline-flex flex-1 items-center justify-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isCancelling}
-                        >
-                          {isCancelling ? 'Cancelando…' : 'Cancelar'}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        </div>
-      </aside>
       {showNewChatModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
           <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">

@@ -1472,7 +1472,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
       chats.forEach(chat => {
         if (next[chat.id] === undefined) {
-          next[chat.id] = 0;
+          next[chat.id] = chat.sla_metrics?.pending_inbound_count ?? 0;
           changed = true;
         }
       });

@@ -5843,6 +5843,8 @@ export default function WhatsappPage() {
     </div>
   );
 
+  const shouldShowMobileBottomMenu = activeSection !== 'painel' || showChatListMobile;
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-4 pb-24 md:pb-0">
@@ -5885,28 +5887,30 @@ export default function WhatsappPage() {
           )}
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-        <nav className="grid grid-cols-3" aria-label="Menu inferior do WhatsApp">
-          {WHATSAPP_SECTIONS.map(section => {
-            const Icon = section.icon;
-            const isActive = activeSection === section.id;
-            return (
-              <button
-                key={`mobile-${section.id}`}
-                type="button"
-                onClick={() => setActiveSection(section.id)}
-                className={`flex flex-col items-center gap-1 py-2 text-xs font-semibold transition ${
-                  isActive ? 'text-emerald-600' : 'text-slate-500'
-                }`}
-                aria-pressed={isActive}
-              >
-                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-                {section.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+      {shouldShowMobileBottomMenu ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+          <nav className="grid grid-cols-3" aria-label="Menu inferior do WhatsApp">
+            {WHATSAPP_SECTIONS.map(section => {
+              const Icon = section.icon;
+              const isActive = activeSection === section.id;
+              return (
+                <button
+                  key={`mobile-${section.id}`}
+                  type="button"
+                  onClick={() => setActiveSection(section.id)}
+                  className={`flex flex-col items-center gap-1 py-2 text-xs font-semibold transition ${
+                    isActive ? 'text-emerald-600' : 'text-slate-500'
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  {section.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      ) : null}
     </>
   );
 }

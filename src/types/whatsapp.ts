@@ -56,6 +56,17 @@ export type WhatsappMessage = {
   raw_payload: Record<string, any> | null;
 };
 
+export type SendWhatsappMessageResponse =
+  | {
+      success: true;
+      message: WhatsappMessage;
+      chat: WhatsappChat;
+    }
+  | {
+      success: false;
+      error?: string;
+    };
+
 export type WhatsappScheduledMessageStatus =
   | 'pending'
   | 'processing'

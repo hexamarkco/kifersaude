@@ -36,17 +36,20 @@ import { AudioMessageBubble } from '../components/AudioMessageBubble';
 import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
+import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
+import { fetchWhatsappJson, getWhatsappFunctionUrl } from '../lib/whatsappApi';
 import type {
   WhatsappChat,
   WhatsappMessage,
   WhatsappScheduledMessage,
   WhatsappScheduledMessageStatus,
+  SendWhatsappMessageResponse,
 } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
@@ -323,17 +326,6 @@ const sortSchedulesByMoment = (entries: WhatsappScheduledMessage[]) => {
     return a.id.localeCompare(b.id);
   });
 };
-
-type SendMessageResponse =
-  | {
-      success: true;
-      message: WhatsappMessage;
-      chat: WhatsappChat;
-    }
-  | {
-      success: false;
-      error?: string;
-    };
 
 type UpdateChatFlagsPayload = {
   is_archived?: boolean;
@@ -669,38 +661,7 @@ const getChatDisplayName = (chat: WhatsappChat): string => {
   return chat.phone;
 };
 
-const getWhatsappFunctionUrl = (path: string) => {
-  const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.trim();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-
-  if (!functionsUrl && !supabaseUrl) {
-    throw new Error(
-      'Variáveis VITE_SUPABASE_FUNCTIONS_URL ou VITE_SUPABASE_URL não configuradas.',
-    );
-  }
-
-  const normalizedBase = (() => {
-    if (functionsUrl) {
-      return functionsUrl.replace(/\/+$/, '');
-    }
-
-    // supabaseUrl is guaranteed to exist here because of the guard above
-    const trimmedSupabase = supabaseUrl!.replace(/\/+$/, '');
-    return `${trimmedSupabase}/functions/v1`;
-  })();
-
-  const normalizedPath = path.replace(/^\/+/, '');
-  return `${normalizedBase}/${normalizedPath}`;
-};
-
-const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T> => {
-  const response = await fetch(input, init);
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Falha na requisição');
-  }
-  return response.json() as Promise<T>;
-};
+const fetchJson: typeof fetchWhatsappJson = fetchWhatsappJson;
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -1083,6 +1044,7 @@ export default function WhatsappPage() {
   const [startingConversation, setStartingConversation] = useState(false);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [showLeadDetails, setShowLeadDetails] = useState(false);
+  const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
   const [updatingLeadStatus, setUpdatingLeadStatus] = useState(false);
   const [reactionDetailsMessageId, setReactionDetailsMessageId] = useState<string | null>(null);
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
@@ -2474,7 +2436,7 @@ export default function WhatsappPage() {
       setErrorMessage(null);
 
       try {
-        const response = await fetchJson<SendMessageResponse>(
+        const response = await fetchJson<SendWhatsappMessageResponse>(
           getWhatsappFunctionUrl(endpoint),
           {
             method: 'POST',
@@ -4031,13 +3993,24 @@ export default function WhatsappPage() {
                         {selectedChatLead.proximo_retorno ? (
                           <span>Próximo retorno: {formatDateTime(selectedChatLead.proximo_retorno)}</span>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() => setShowLeadDetails(true)}
-                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                        >
-                          Ver histórico
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowLeadDetails(true)}
+                            className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                          >
+                            Ver histórico
+                          </button>
+                          {selectedChat?.phone ? (
+                            <button
+                              type="button"
+                              onClick={() => setShowCampaignDrawer(true)}
+                              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-3 py-1 font-medium text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            >
+                              Campanhas
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -5008,6 +4981,20 @@ export default function WhatsappPage() {
           </div>
         </div>
       ) : null}
+      <WhatsappCampaignDrawer
+        isOpen={showCampaignDrawer && Boolean(selectedChat)}
+        onClose={() => setShowCampaignDrawer(false)}
+        context={
+          selectedChat
+            ? {
+                chatId: selectedChat.id,
+                leadId: selectedChatLead?.id ?? null,
+                phone: selectedChat.phone,
+                displayName: selectedChatDisplayName,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

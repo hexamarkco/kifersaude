@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   AlertTriangle,
@@ -39,6 +40,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AudioMessageBubble } from '../components/AudioMessageBubble';
+import { AudioEditorModal } from '../components/AudioEditorModal';
 import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
@@ -622,6 +624,12 @@ type PendingDocumentAttachment = {
 
 type PendingAudioAttachment = {
   kind: 'audio';
+  dataUrl: string;
+  durationSeconds: number | null;
+  mimeType: string;
+};
+
+type AudioEditorState = {
   dataUrl: string;
   durationSeconds: number | null;
   mimeType: string;
@@ -1242,6 +1250,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
   const [selectedQuickReplyId, setSelectedQuickReplyId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [audioEditor, setAudioEditor] = useState<AudioEditorState | null>(null);
   const [scheduledMessages, setScheduledMessages] = useState<WhatsappScheduledMessage[]>([]);
   const [upcomingSchedules, setUpcomingSchedules] = useState<WhatsappScheduledMessage[]>([]);
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
@@ -1372,6 +1381,12 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     return baseList.slice(0, 5);
   }, [normalizeQuickReplySearchText, quickReplies, slashCommandState]);
+
+  useEffect(() => {
+    if (!pendingAttachment || pendingAttachment.kind !== 'audio') {
+      setAudioEditor(null);
+    }
+  }, [pendingAttachment, setAudioEditor]);
 
   useEffect(() => {
     if (!slashCommandState) {
@@ -2041,6 +2056,26 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     void stopAudioRecording({ shouldSave: true });
   }, [isRecordingAudio, stopAudioRecording]);
+
+  const handleAudioEditorSave = useCallback(
+    (edited: { dataUrl: string; durationSeconds: number; mimeType: string }) => {
+      setPendingAttachment(current => {
+        if (!current || current.kind !== 'audio') {
+          return current;
+        }
+
+        return {
+          ...current,
+          dataUrl: edited.dataUrl,
+          durationSeconds: edited.durationSeconds,
+          mimeType: edited.mimeType,
+        };
+      });
+
+      setAudioEditor(null);
+    },
+    [setPendingAttachment, setAudioEditor],
+  );
 
   useEffect(() => {
     return () => {
@@ -5454,9 +5489,24 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                           src={pendingAttachment.dataUrl}
                           seconds={pendingAttachment.durationSeconds}
                         />
-                        <p className="text-xs text-slate-500">
-                          Clique em enviar para mandar o áudio. Se adicionar uma mensagem, ela será enviada em seguida.
-                        </p>
+                        <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                          <p>
+                            Clique em enviar para mandar o áudio. Se adicionar uma mensagem, ela será enviada em seguida.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAudioEditor({
+                                dataUrl: pendingAttachment.dataUrl,
+                                durationSeconds: pendingAttachment.durationSeconds,
+                                mimeType: pendingAttachment.mimeType,
+                              })
+                            }
+                            className="inline-flex items-center justify-center rounded-full border border-emerald-200 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                          >
+                            Editar áudio
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -6136,6 +6186,18 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
           </nav>
         </div>
       )}
+      {audioEditor && pendingAttachment?.kind === 'audio' && typeof document !== 'undefined'
+        ? createPortal(
+            <AudioEditorModal
+              dataUrl={audioEditor.dataUrl}
+              durationSeconds={audioEditor.durationSeconds}
+              mimeType={audioEditor.mimeType}
+              onSave={handleAudioEditorSave}
+              onCancel={() => setAudioEditor(null)}
+            />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, TouchEvent as ReactTouchEvent } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -17,6 +17,8 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   FileText,
   Image as ImageIcon,
@@ -1305,6 +1307,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [audioTranscriptions, setAudioTranscriptions] = useState<
     Record<string, AudioTranscriptionState>
   >({});
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const reactionDetailsPopoverRef = useRef<HTMLDivElement | null>(null);
   const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Record<string, boolean>>({});
   const [reorderingScheduleIds, setReorderingScheduleIds] = useState<Record<string, boolean>>({});
@@ -1317,6 +1320,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     { query: string; start: number; end: number } | null
   >(null);
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
+  const imageViewerTouchStartRef = useRef<number | null>(null);
 
   const incrementUnread = useCallback((chatId: string | null) => {
     if (!chatId) {
@@ -4397,6 +4401,165 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const hasVisibleMessages = visibleMessages.length > 0;
   const hasMessageSearchMatches = messageSearchMatches.length > 0;
   const primaryMessageSearchMatchId = messageSearchMatches[0] ?? null;
+  const chatFallbackName = selectedChatDisplayName ?? selectedChat?.phone ?? 'Contato';
+
+  type ImageAttachmentItem = {
+    messageId: string;
+    url: string;
+    caption: string | null;
+    timestamp: string | null;
+    senderName: string | null;
+  };
+
+  const imageAttachments = useMemo(() => {
+    return visibleMessages.reduce<ImageAttachmentItem[]>((list, message) => {
+      const attachmentInfo = getMessageAttachmentInfo(message);
+      if (!attachmentInfo.imageUrl) {
+        return list;
+      }
+
+      list.push({
+        messageId: message.id,
+        url: attachmentInfo.imageUrl,
+        caption: attachmentInfo.imageCaption,
+        timestamp: message.moment ?? null,
+        senderName:
+          getMessageSenderDisplayName(message) ?? (message.from_me ? 'Você' : chatFallbackName),
+      });
+
+      return list;
+    }, []);
+  }, [chatFallbackName, getMessageAttachmentInfo, visibleMessages]);
+
+  useEffect(() => {
+    if (activeImageIndex === null) {
+      return;
+    }
+
+    if (imageAttachments.length === 0) {
+      setActiveImageIndex(null);
+      return;
+    }
+
+    if (activeImageIndex > imageAttachments.length - 1) {
+      setActiveImageIndex(imageAttachments.length - 1);
+    }
+  }, [activeImageIndex, imageAttachments.length]);
+
+  useEffect(() => {
+    setActiveImageIndex(null);
+  }, [selectedChatId]);
+
+  const closeImageViewer = useCallback(() => {
+    setActiveImageIndex(null);
+  }, []);
+
+  const goToPreviousImage = useCallback(() => {
+    setActiveImageIndex(current => {
+      if (current === null || current <= 0) {
+        return current;
+      }
+
+      return current - 1;
+    });
+  }, []);
+
+  const goToNextImage = useCallback(() => {
+    setActiveImageIndex(current => {
+      if (current === null || current >= imageAttachments.length - 1) {
+        return current;
+      }
+
+      return current + 1;
+    });
+  }, [imageAttachments.length]);
+
+  useEffect(() => {
+    if (activeImageIndex === null) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeImageViewer();
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        goToPreviousImage();
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        goToNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeImageIndex, closeImageViewer, goToNextImage, goToPreviousImage]);
+
+  const handleImagePreviewOpen = useCallback(
+    (messageId: string | null) => {
+      if (!messageId) {
+        return;
+      }
+
+      const targetIndex = imageAttachments.findIndex(item => item.messageId === messageId);
+      if (targetIndex === -1) {
+        return;
+      }
+
+      setActiveImageIndex(targetIndex);
+    },
+    [imageAttachments],
+  );
+
+  const activeImage = activeImageIndex !== null ? imageAttachments[activeImageIndex] ?? null : null;
+  const hasPreviousImage = activeImageIndex !== null && activeImageIndex > 0;
+  const hasNextImage =
+    activeImageIndex !== null && activeImageIndex < imageAttachments.length - 1;
+  const activeImagePosition = activeImageIndex !== null ? activeImageIndex + 1 : 0;
+
+  const handleViewerTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 1) {
+      imageViewerTouchStartRef.current = event.touches[0]?.clientX ?? null;
+    }
+  }, []);
+
+  const handleViewerTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 1) {
+      event.preventDefault();
+    }
+  }, []);
+
+  const handleViewerTouchEnd = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (imageViewerTouchStartRef.current === null) {
+        return;
+      }
+
+      const endX = event.changedTouches[0]?.clientX ?? imageViewerTouchStartRef.current;
+      const deltaX = endX - imageViewerTouchStartRef.current;
+      imageViewerTouchStartRef.current = null;
+
+      if (Math.abs(deltaX) < 40) {
+        return;
+      }
+
+      if (deltaX > 0) {
+        goToPreviousImage();
+      } else {
+        goToNextImage();
+      }
+    },
+    [goToNextImage, goToPreviousImage],
+  );
 
   useEffect(() => {
     if (!showMessageSearch || !normalizedMessageSearchTerm) {
@@ -4426,13 +4589,28 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     const attachmentCardBaseClass = 'flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800';
 
     if (attachmentInfo.imageUrl) {
+      const resolvedMessageId = message.id ?? message.message_id;
       attachments.push(
         <div key="image" className="flex flex-col">
-          <img
-            src={attachmentInfo.imageUrl}
-            alt={attachmentInfo.imageCaption ?? 'Imagem recebida'}
-            className="block h-auto max-h-80 w-auto max-w-full object-contain"
-          />
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => handleImagePreviewOpen(resolvedMessageId ?? null)}
+            onKeyDown={event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleImagePreviewOpen(resolvedMessageId ?? null);
+              }
+            }}
+            className="group relative block overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            aria-label="Abrir imagem em tela cheia"
+          >
+            <img
+              src={attachmentInfo.imageUrl}
+              alt={attachmentInfo.imageCaption ?? 'Imagem recebida'}
+              className="block h-auto max-h-80 w-full max-w-full cursor-zoom-in object-contain"
+            />
+          </div>
           {attachmentInfo.imageCaption ? (
             <div className={`self-stretch px-4 pb-4 pt-3 text-sm ${isFromMe ? 'text-white/90' : 'text-slate-700'}`}>
               <p className="whitespace-pre-wrap break-words">
@@ -6136,6 +6314,85 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
           </nav>
         </div>
       )}
+      {activeImage ? (
+        <div
+          className="fixed inset-0 z-[70] flex flex-col bg-slate-950/95 text-white backdrop-blur"
+          role="dialog"
+          aria-label="Visualização da imagem"
+          onClick={closeImageViewer}
+        >
+          <div
+            className="flex h-full w-full flex-col"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 text-sm">
+              <div>
+                <p className="font-semibold">{activeImage.senderName ?? 'Imagem'}</p>
+                {activeImage.timestamp ? (
+                  <p className="text-xs text-white/70">{formatDateTime(activeImage.timestamp)}</p>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-3 text-xs font-semibold text-white/80">
+                <span>
+                  Foto {activeImagePosition} de {imageAttachments.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={closeImageViewer}
+                  className="inline-flex items-center rounded-full border border-white/30 px-3 py-1 text-white transition hover:border-white/80 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/60"
+                  aria-label="Fechar visualização da imagem"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <div
+              className="relative flex flex-1 items-center justify-center px-4 pb-6"
+              onTouchStart={handleViewerTouchStart}
+              onTouchMove={handleViewerTouchMove}
+              onTouchEnd={handleViewerTouchEnd}
+            >
+              <img
+                src={activeImage.url}
+                alt={activeImage.caption ?? 'Imagem recebida'}
+                className="max-h-full max-w-full select-none object-contain"
+                draggable={false}
+              />
+              <button
+                type="button"
+                onClick={event => {
+                  event.stopPropagation();
+                  goToPreviousImage();
+                }}
+                disabled={!hasPreviousImage}
+                className="absolute left-4 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Ver imagem anterior"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={event => {
+                  event.stopPropagation();
+                  goToNextImage();
+                }}
+                disabled={!hasNextImage}
+                className="absolute right-4 rounded-full bg-black/50 p-3 text-white transition hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Ver próxima imagem"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            {activeImage.caption ? (
+              <div className="px-6 pb-8 text-center text-sm text-white/90">
+                <p className="whitespace-pre-wrap break-words">
+                  {renderHighlightedText(activeImage.caption)}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

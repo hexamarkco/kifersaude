@@ -221,6 +221,10 @@ const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIco
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 
+type WhatsappPageProps = {
+  onUnreadCountChange?: (count: number) => void;
+};
+
 type AudioTranscriptionState = {
   status: 'idle' | 'loading' | 'success' | 'error';
   text: string | null;
@@ -1185,7 +1189,7 @@ const dedupeMessagesByMessageId = (messages: OptimisticMessage[]) => {
   }, []);
 };
 
-export default function WhatsappPage() {
+export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps = {}) {
   const missingEnvVars = getMissingWhatsappEnvVars();
 
   if (missingEnvVars.length > 0) {
@@ -1226,6 +1230,7 @@ export default function WhatsappPage() {
   const [messages, setMessages] = useState<OptimisticMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [messageInput, setMessageInput] = useState('');
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
@@ -1308,6 +1313,36 @@ export default function WhatsappPage() {
   >(null);
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
 
+  const incrementUnread = useCallback((chatId: string | null) => {
+    if (!chatId) {
+      return;
+    }
+
+    setUnreadCounts(previous => ({
+      ...previous,
+      [chatId]: (previous[chatId] ?? 0) + 1,
+    }));
+  }, []);
+
+  const markChatAsRead = useCallback((chatId: string | null) => {
+    if (!chatId) {
+      return;
+    }
+
+    setUnreadCounts(previous => {
+      const currentValue = previous[chatId] ?? 0;
+      if (currentValue === 0) {
+        if (Object.prototype.hasOwnProperty.call(previous, chatId)) {
+          return previous;
+        }
+
+        return { ...previous, [chatId]: 0 };
+      }
+
+      return { ...previous, [chatId]: 0 };
+    });
+  }, []);
+
   const normalizeQuickReplySearchText = useCallback((value: string) => {
     return value
       .normalize('NFD')
@@ -1359,6 +1394,43 @@ export default function WhatsappPage() {
     () => chats.find(chat => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+
+  const totalUnreadCount = useMemo(
+    () => Object.values(unreadCounts).reduce((sum, count) => sum + (count ?? 0), 0),
+    [unreadCounts],
+  );
+
+  useEffect(() => {
+    setUnreadCounts(previous => {
+      let changed = false;
+      const next = { ...previous };
+
+      chats.forEach(chat => {
+        if (next[chat.id] === undefined) {
+          next[chat.id] = 0;
+          changed = true;
+        }
+      });
+
+      return changed ? next : previous;
+    });
+  }, [chats]);
+
+  useEffect(() => {
+    if (!onUnreadCountChange) {
+      return;
+    }
+
+    onUnreadCountChange(totalUnreadCount);
+  }, [onUnreadCountChange, totalUnreadCount]);
+
+  useEffect(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    markChatAsRead(selectedChatId);
+  }, [markChatAsRead, selectedChatId]);
 
   const selectedChatLead = selectedChat?.crm_lead ?? null;
   const selectedChatContracts = selectedChat?.crm_contracts ?? [];
@@ -2760,6 +2832,14 @@ export default function WhatsappPage() {
           if (!chatExists) {
             void loadChats();
           }
+
+          if (
+            payload.eventType === 'INSERT' &&
+            !normalizedMessage.from_me &&
+            normalizedMessage.chat_id !== selectedChatIdRef.current
+          ) {
+            incrementUnread(normalizedMessage.chat_id);
+          }
         },
       )
       .on<RealtimePostgresChangesPayload<WhatsappChatInsight>>(
@@ -2797,7 +2877,7 @@ export default function WhatsappPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadChats]);
+  }, [incrementUnread, loadChats]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -2933,12 +3013,16 @@ export default function WhatsappPage() {
     };
   }, [selectedChatId]);
 
-  const handleSelectChat = useCallback((chatId: string) => {
-    setSelectedChatId(chatId);
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setShowChatListMobile(false);
-    }
-  }, []);
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      setSelectedChatId(chatId);
+      markChatAsRead(chatId);
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setShowChatListMobile(false);
+      }
+    },
+    [markChatAsRead],
+  );
 
   const handleBackToChats = useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -3105,6 +3189,10 @@ export default function WhatsappPage() {
       errorFallback?: string;
     }) => {
       const optimisticId = optimisticMessage.id;
+      const currentChatId = selectedChatIdRef.current;
+      if (currentChatId) {
+        markChatAsRead(currentChatId);
+      }
 
       setMessages(previous => sortMessagesByMoment([...previous, optimisticMessage]));
       setSendingMessage(true);
@@ -3157,7 +3245,7 @@ export default function WhatsappPage() {
         setSendingMessage(false);
       }
     },
-    [setChats],
+    [markChatAsRead, setChats],
   );
 
   const requestAudioTranscription = useCallback(async (messageId: string, audioUrl: string) => {
@@ -4689,6 +4777,9 @@ export default function WhatsappPage() {
                 ? 'Desarquivar conversa'
                 : 'Arquivar conversa';
               const slaBadge = getChatSlaBadge(chat);
+              const unreadCount = unreadCounts[chat.id] ?? 0;
+              const hasUnreadMessages = unreadCount > 0;
+              const formattedTimestamp = formatChatListTimestamp(chat.last_message_at);
 
               return (
                 <button
@@ -4723,18 +4814,35 @@ export default function WhatsappPage() {
                           ) : null}
                           <span className="truncate">{displayName}</span>
                         </span>
-                        <span className="whitespace-nowrap text-xs text-slate-500">
-                          {formatChatListTimestamp(chat.last_message_at)}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="whitespace-nowrap text-xs text-slate-500">
+                            {formattedTimestamp}
+                          </span>
+                          {hasUnreadMessages ? (
+                            <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-xs font-semibold text-white">
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-slate-500">
+                      <div
+                        className={`mt-1 flex min-w-0 items-center gap-2 text-sm ${
+                          hasUnreadMessages ? 'text-slate-800' : 'text-slate-500'
+                        }`}
+                      >
                         {shouldShowPreviewIcon ? (
                           <PreviewIcon
                             aria-hidden="true"
                             className="h-4 w-4 flex-shrink-0 text-slate-400"
                           />
                         ) : null}
-                        <span className="block min-w-0 truncate">{previewText}</span>
+                        <span
+                          className={`block min-w-0 truncate ${
+                            hasUnreadMessages ? 'font-semibold' : ''
+                          }`}
+                        >
+                          {previewText}
+                        </span>
                       </div>
                       {slaBadge ? (
                         <span

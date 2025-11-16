@@ -41,6 +41,7 @@ type LayoutProps = {
   unreadReminders: number;
   hasActiveNotification?: boolean;
   newLeadsCount?: number;
+  whatsappUnreadCount?: number;
 };
 
 export default function Layout({
@@ -49,7 +50,8 @@ export default function Layout({
   onTabChange,
   unreadReminders,
   hasActiveNotification,
-  newLeadsCount = 0
+  newLeadsCount = 0,
+  whatsappUnreadCount = 0,
 }: LayoutProps) {
   const { signOut, role } = useAuth();
   const { getRoleModulePermission } = useConfig();
@@ -74,7 +76,13 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
-    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquareText },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      icon: MessageSquareText,
+      badge: whatsappUnreadCount,
+      badgeColor: 'bg-emerald-500',
+    },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },

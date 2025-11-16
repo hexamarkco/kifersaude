@@ -39,7 +39,7 @@ const padValues = (values: number[], barCount: number): number[] => {
 
 export function LiveAudioVisualizer({
   values,
-  barCount = 64,
+  barCount = 128,
   className = '',
 }: LiveAudioVisualizerProps) {
   const safeBarCount = Math.max(4, barCount);

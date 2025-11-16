@@ -51,6 +51,19 @@ type WhatsappChat = {
   crm_lead?: ChatLeadSummary | null;
   crm_contracts?: ChatContractSummary[];
   crm_financial_summary?: ChatFinancialSummary | null;
+  sla_metrics?: ChatSlaMetrics | null;
+};
+
+type ChatSlaMetrics = {
+  chat_id: string;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  last_message_at: string | null;
+  last_response_ms: number | null;
+  pending_inbound_count: number;
+  waiting_since: string | null;
+  waiting_minutes: number | null;
+  sla_status: 'healthy' | 'warning' | 'critical';
 };
 
 type WhatsappMessage = {
@@ -1171,6 +1184,35 @@ const fetchContractSummariesByLeadIds = async (
   }
 
   return { contractsByLeadId, financialSummaryByLeadId };
+};
+
+const fetchChatSlaMetrics = async (): Promise<Map<string, ChatSlaMetrics>> => {
+  if (!supabaseAdmin) {
+    return new Map();
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chat_sla_metrics')
+      .select(
+        'chat_id, last_inbound_at, last_outbound_at, last_message_at, last_response_ms, pending_inbound_count, waiting_since, waiting_minutes, sla_status',
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    const metricsMap = new Map<string, ChatSlaMetrics>();
+    for (const record of data ?? []) {
+      const normalized = record as ChatSlaMetrics;
+      metricsMap.set(normalized.chat_id, normalized);
+    }
+
+    return metricsMap;
+  } catch (error) {
+    console.error('Erro ao carregar métricas de SLA dos chats do WhatsApp:', error);
+    return new Map();
+  }
 };
 
 const resolveContactDisplayName = (contact: ZapiContact | undefined): string | null => {
@@ -2364,6 +2406,7 @@ const handleListChats = async (req: Request) => {
     const leadsMap = await fetchLeadSummariesByPhones(Array.from(phonesToLookup));
     const leadIds = Array.from(new Set(Array.from(leadsMap.values()).map(lead => lead.id)));
     const { contractsByLeadId, financialSummaryByLeadId } = await fetchContractSummariesByLeadIds(leadIds);
+    const slaMetricsMap = await fetchChatSlaMetrics();
 
     const enrichedChats = chats.map(chat => {
       const normalizedPhone = normalizePhoneIdentifier(chat.phone);
@@ -2376,6 +2419,7 @@ const handleListChats = async (req: Request) => {
         crm_lead: leadSummary ? { ...leadSummary } : null,
         crm_contracts: leadId ? contractsByLeadId.get(leadId) ?? [] : [],
         crm_financial_summary: leadId ? financialSummaryByLeadId.get(leadId) ?? null : null,
+        sla_metrics: slaMetricsMap.get(chat.id) ?? null,
       };
     });
 

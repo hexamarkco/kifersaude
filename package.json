@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "patch-react-side-effect": "node scripts/patch-react-side-effect.js",
+    "postinstall": "npm run patch-react-side-effect"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

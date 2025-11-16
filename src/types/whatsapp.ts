@@ -56,6 +56,16 @@ export type WhatsappMessage = {
   raw_payload: Record<string, any> | null;
 };
 
+export type WhatsappChatInsightSentiment = 'positive' | 'neutral' | 'negative';
+
+export type WhatsappChatInsight = {
+  id: string;
+  chat_id: string;
+  summary: string | null;
+  sentiment: WhatsappChatInsightSentiment | null;
+  created_at: string;
+};
+
 export type WhatsappScheduledMessageStatus =
   | 'pending'
   | 'processing'

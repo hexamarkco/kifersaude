@@ -138,6 +138,28 @@ export function getDateKey(
   }).format(targetDate);
 }
 
+export function formatDateTime(
+  date: string | Date | null | undefined
+): string {
+  if (!date) {
+    return '';
+  }
+
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  if (Number.isNaN(targetDate.getTime())) {
+    return '';
+  }
+
+  return targetDate.toLocaleString('pt-BR', {
+    timeZone: SAO_PAULO_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 export function formatDateTimeBR(date: string): string {
   const d = new Date(date);
   return d.toLocaleDateString('pt-BR', {

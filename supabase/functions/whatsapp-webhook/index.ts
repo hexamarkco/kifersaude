@@ -128,6 +128,8 @@ type ZapiWebhookPayload = {
   messageId?: string;
   text?: { message?: string } | null;
   hydratedTemplate?: { message?: string } | null;
+  notification?: string | null;
+  notificationParameters?: unknown;
   isGroup?: boolean;
   [key: string]: unknown;
 };
@@ -613,6 +615,23 @@ const normalizeMetadataNote = (value: unknown): ChatMetadataNote | null => {
   };
 };
 
+const resolveCallNotificationText = (payload: ZapiWebhookPayload): string | null => {
+  const notification = toNonEmptyString(payload?.notification);
+
+  if (!notification) {
+    return null;
+  }
+
+  switch (notification) {
+    case 'CALL_VOICE':
+      return 'Chamada recebida';
+    case 'CALL_MISSED_VOICE':
+      return 'Chamada perdida';
+    default:
+      return null;
+  }
+};
+
 const resolveMessageText = (payload: ZapiWebhookPayload): string => {
   const textMessage = toNonEmptyString(payload?.text?.message);
   if (textMessage) {
@@ -622,6 +641,11 @@ const resolveMessageText = (payload: ZapiWebhookPayload): string => {
   const hydratedTemplateMessage = toNonEmptyString(payload?.hydratedTemplate?.message);
   if (hydratedTemplateMessage) {
     return hydratedTemplateMessage;
+  }
+
+  const callNotificationText = resolveCallNotificationText(payload);
+  if (callNotificationText) {
+    return callNotificationText;
   }
 
   const rawPayload = (payload ?? null) as Record<string, unknown> | null;

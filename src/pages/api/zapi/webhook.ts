@@ -289,6 +289,7 @@ type ZapiPayload = {
   eventResponse?: EventResponsePayload | null;
   notification?: NewsletterNotificationPayload | null;
   notificationParameters?: unknown;
+  requestMethod?: string | null;
   isGroup?: boolean;
   waitingMessage?: boolean;
   profileName?: string | null;
@@ -340,6 +341,24 @@ const toNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const toNonEmptyStringLike = (value: unknown): string | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+
+  return toNonEmptyString(value);
+};
+
+const toNonEmptyStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => toNonEmptyStringLike(entry))
+    .filter((entry): entry is string => Boolean(entry));
+};
+
 const formatWithCurrency = (value: number | string | null | undefined, currency: string | null | undefined): string | null => {
   if (value === null || value === undefined) {
     return null;
@@ -370,6 +389,59 @@ const resolveCallNotificationText = (payload: ZapiPayload): string | null => {
     default:
       return null;
   }
+};
+
+const resolveMembershipRequestMethodText = (method: string | null): string | null => {
+  if (!method) {
+    return null;
+  }
+
+  switch (method) {
+    case 'invite_link':
+      return 'via link de convite';
+    case 'non_admin_add':
+      return 'adicionado por participante';
+    default:
+      return method;
+  }
+};
+
+const resolveNotificationText = (payload: ZapiPayload): string | null => {
+  const notification = toNonEmptyString(payload?.notification);
+
+  if (!notification) {
+    return null;
+  }
+
+  const parameters = toNonEmptyStringArray(payload?.notificationParameters);
+  const participantsText = parameters.length ? parameters.join(', ') : null;
+
+  if (notification === 'MEMBERSHIP_APPROVAL_REQUEST') {
+    const requestMethod = resolveMembershipRequestMethodText(toNonEmptyString(payload.requestMethod));
+    const details = [requestMethod, participantsText ? `participante(s): ${participantsText}` : null]
+      .filter(Boolean)
+      .join(' - ');
+    return details
+      ? `Solicitação de aprovação para novo membro - ${details}`
+      : 'Solicitação de aprovação para novo membro';
+  }
+
+  if (notification === 'REVOKED_MEMBERSHIP_REQUESTS') {
+    return participantsText
+      ? `Solicitação de participação revogada: ${participantsText}`
+      : 'Solicitações de participação revogadas';
+  }
+
+  if (notification === 'NEWSLETTER_ADMIN_PROMOTE' || notification === 'NEWSLETTER_ADMIN_DEMOTE') {
+    const [targetParticipant, role] = parameters;
+    const participantText = targetParticipant ?? 'Participante do canal';
+    const roleText = role ?? (notification === 'NEWSLETTER_ADMIN_PROMOTE' ? 'ADMIN' : 'SUBSCRIBER');
+    const actionText = notification === 'NEWSLETTER_ADMIN_PROMOTE' ? 'promovido' : 'rebaixado';
+
+    return `${participantText} ${actionText}${roleText ? ` para ${roleText}` : ''} no canal`;
+  }
+
+  return `Notificação: ${notification}`;
 };
 
 const resolveMessageText = (payload: ZapiPayload): string => {
@@ -582,10 +654,7 @@ const resolveMessageText = (payload: ZapiPayload): string => {
     },
     () => (payload.updatedPhoto ? 'Foto do WhatsApp atualizada' : null),
     () => resolveCallNotificationText(payload),
-    () => {
-      const notification = toNonEmptyString(payload.notification);
-      return notification ? `Notificação: ${notification}` : null;
-    },
+    () => resolveNotificationText(payload),
   ];
 
   for (const resolver of resolvers) {

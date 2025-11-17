@@ -26,6 +26,7 @@ import {
   FileText,
   Image as ImageIcon,
   MessageSquareText,
+  MessageCirclePlus,
   Plus,
   MapPin,
   Mic,
@@ -6345,6 +6346,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     error={quickRepliesError}
                     isOpen={quickRepliesMenuOpen}
                     onOpenChange={handleQuickRepliesMenuOpenChange}
+                    renderTrigger={() => null}
                   />
 
                   <div className="relative">
@@ -6376,6 +6378,24 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                           Ações
                         </div>
                         <div className="pb-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleQuickRepliesMenuOpenChange(!quickRepliesMenuOpen);
+                              setShowChatActionsMenu(false);
+                              setShowAttachmentMenu(false);
+                            }}
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                              <MessageCirclePlus className="h-4 w-4" />
+                            </span>
+                            <span>
+                              <span className="block font-medium">Respostas rápidas</span>
+                              <span className="block text-xs text-slate-500">Use mensagens salvas nos atendimentos</span>
+                            </span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => {

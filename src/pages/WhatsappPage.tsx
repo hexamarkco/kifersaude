@@ -100,6 +100,9 @@ const REQUIRED_WHATSAPP_ENV_VARS = [
   'VITE_SUPABASE_ANON_KEY',
 ] as const;
 
+const CUSTOM_WALLPAPER_ID = 'custom-upload';
+const CUSTOM_WALLPAPER_STORAGE_KEY = 'whatsappCustomWallpaper';
+
 const CHAT_WALLPAPERS: WhatsappWallpaperOption[] = [
   {
     id: 'emerald-grid',
@@ -132,8 +135,27 @@ const CHAT_WALLPAPERS: WhatsappWallpaperOption[] = [
 
 const DEFAULT_CHAT_WALLPAPER_ID = CHAT_WALLPAPERS[0].id;
 
-const getChatWallpaperById = (wallpaperId: string): WhatsappWallpaperOption => {
-  return CHAT_WALLPAPERS.find(wallpaper => wallpaper.id === wallpaperId) ?? CHAT_WALLPAPERS[0];
+const createCustomWallpaperOption = (imageDataUrl: string): WhatsappWallpaperOption => {
+  return {
+    id: CUSTOM_WALLPAPER_ID,
+    label: 'Papel de parede personalizado',
+    backgroundColor: '#0b141a',
+    backgroundImage: `url(${imageDataUrl})`,
+    backgroundSize: 'cover',
+    backgroundRepeat: 'no-repeat',
+  };
+};
+
+const getChatWallpaperById = (
+  wallpaperId: string,
+  wallpaperOptions: WhatsappWallpaperOption[],
+  customWallpaper: WhatsappWallpaperOption | null,
+): WhatsappWallpaperOption => {
+  if (wallpaperId === CUSTOM_WALLPAPER_ID && customWallpaper) {
+    return customWallpaper;
+  }
+
+  return wallpaperOptions.find(wallpaper => wallpaper.id === wallpaperId) ?? customWallpaper ?? wallpaperOptions[0];
 };
 
 const getMissingWhatsappEnvVars = () => {
@@ -1772,6 +1794,7 @@ export default function WhatsappPage({
   >(null);
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
   const imageViewerTouchStartRef = useRef<number | null>(null);
+  const [customWallpaper, setCustomWallpaper] = useState<WhatsappWallpaperOption | null>(null);
   const [selectedWallpaperId, setSelectedWallpaperId] = useState(DEFAULT_CHAT_WALLPAPER_ID);
   const [messageActionsMenuId, setMessageActionsMenuId] = useState<string | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<Record<string, boolean>>({});
@@ -1785,7 +1808,27 @@ export default function WhatsappPage({
       return;
     }
 
+    const storedCustomWallpaper = window.localStorage.getItem(CUSTOM_WALLPAPER_STORAGE_KEY);
+    let storedCustomOption: WhatsappWallpaperOption | null = null;
+
+    if (storedCustomWallpaper) {
+      try {
+        const parsed = JSON.parse(storedCustomWallpaper) as { imageDataUrl?: string } | null;
+        if (parsed?.imageDataUrl) {
+          storedCustomOption = createCustomWallpaperOption(parsed.imageDataUrl);
+          setCustomWallpaper(storedCustomOption);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar papel de parede personalizado', error);
+      }
+    }
+
     const storedWallpaperId = window.localStorage.getItem('whatsappChatWallpaper');
+    if (storedWallpaperId === CUSTOM_WALLPAPER_ID && storedCustomOption) {
+      setSelectedWallpaperId(CUSTOM_WALLPAPER_ID);
+      return;
+    }
+
     if (storedWallpaperId && CHAT_WALLPAPERS.some(option => option.id === storedWallpaperId)) {
       setSelectedWallpaperId(storedWallpaperId);
     }
@@ -1799,7 +1842,13 @@ export default function WhatsappPage({
     window.localStorage.setItem('whatsappChatWallpaper', selectedWallpaperId);
   }, [selectedWallpaperId]);
 
-  const selectedWallpaper = useMemo(() => getChatWallpaperById(selectedWallpaperId), [selectedWallpaperId]);
+  const availableWallpaperOptions = useMemo(() => {
+    return customWallpaper ? [...CHAT_WALLPAPERS, customWallpaper] : CHAT_WALLPAPERS;
+  }, [customWallpaper]);
+
+  const selectedWallpaper = useMemo(() => {
+    return getChatWallpaperById(selectedWallpaperId, availableWallpaperOptions, customWallpaper);
+  }, [availableWallpaperOptions, customWallpaper, selectedWallpaperId]);
 
   const adjustMessageInputHeight = useCallback(() => {
     const textarea = messageInputRef.current;
@@ -1821,9 +1870,37 @@ export default function WhatsappPage({
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }, []);
 
-  const handleWallpaperChange = useCallback((wallpaperId: string) => {
-    const nextWallpaper = getChatWallpaperById(wallpaperId);
-    setSelectedWallpaperId(nextWallpaper.id);
+  const handleWallpaperChange = useCallback(
+    (wallpaperId: string) => {
+      const nextWallpaper = getChatWallpaperById(wallpaperId, availableWallpaperOptions, customWallpaper);
+      setSelectedWallpaperId(nextWallpaper.id);
+    },
+    [availableWallpaperOptions, customWallpaper],
+  );
+
+  const handleCustomWallpaperUpload = useCallback(
+    (imageDataUrl: string) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const nextWallpaper = createCustomWallpaperOption(imageDataUrl);
+      setCustomWallpaper(nextWallpaper);
+      setSelectedWallpaperId(CUSTOM_WALLPAPER_ID);
+      window.localStorage.setItem(CUSTOM_WALLPAPER_STORAGE_KEY, JSON.stringify({ imageDataUrl }));
+      window.localStorage.setItem('whatsappChatWallpaper', CUSTOM_WALLPAPER_ID);
+    },
+    [],
+  );
+
+  const handleRemoveCustomWallpaper = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem(CUSTOM_WALLPAPER_STORAGE_KEY);
+    setCustomWallpaper(null);
+    setSelectedWallpaperId(DEFAULT_CHAT_WALLPAPER_ID);
   }, []);
 
   const incrementUnread = useCallback((chatId: string | null) => {
@@ -7998,9 +8075,12 @@ export default function WhatsappPage({
                   </div>
                   <div className="flex-1 overflow-y-auto">
                     <WhatsappSettingsPanel
-                      wallpaperOptions={CHAT_WALLPAPERS}
+                      wallpaperOptions={availableWallpaperOptions}
                       selectedWallpaperId={selectedWallpaperId}
                       onWallpaperChange={handleWallpaperChange}
+                      onCustomWallpaperUpload={handleCustomWallpaperUpload}
+                      onCustomWallpaperRemove={handleRemoveCustomWallpaper}
+                      customWallpaper={customWallpaper}
                     />
                   </div>
                 </div>

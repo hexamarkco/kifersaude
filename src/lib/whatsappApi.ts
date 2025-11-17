@@ -13,7 +13,18 @@ type RuntimeEnv = {
 
 const getServerEnv = (): RuntimeEnv => {
   const globalProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
-  const env = globalProcess?.env ?? {};
+  const denoEnv = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } }).Deno?.env;
+  const env = {
+    ...(denoEnv
+      ? {
+          SUPABASE_FUNCTIONS_URL: denoEnv.get('SUPABASE_FUNCTIONS_URL'),
+          SUPABASE_URL: denoEnv.get('SUPABASE_URL'),
+          SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY'),
+          SUPABASE_SERVICE_ROLE_KEY: denoEnv.get('SUPABASE_SERVICE_ROLE_KEY'),
+        }
+      : {}),
+    ...(globalProcess?.env ?? {}),
+  } satisfies Record<string, string | undefined>;
   return {
     functionsUrl: env.SUPABASE_FUNCTIONS_URL,
     supabaseUrl: env.SUPABASE_URL,

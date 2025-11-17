@@ -3,6 +3,7 @@ import type {
   WhatsappChatSlaAlert,
   WhatsappChatSlaStatus,
 } from '../types/whatsapp';
+import { createClient } from '@supabase/supabase-js';
 
 type RuntimeEnv = {
   functionsUrl?: string;

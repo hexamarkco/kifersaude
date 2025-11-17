@@ -858,8 +858,21 @@ const MIME_EXTENSION_MAP: Record<string, string> = {
   'audio/webm': 'webm',
   'audio/webm;codecs=opus': 'webm',
   'audio/aac': 'aac',
+  'audio/amr': 'amr',
   'audio/wav': 'wav',
 };
+
+const TEMP_AUDIO_BUCKET = 'whatsapp-temp-audio';
+const TEMP_AUDIO_URL_TTL_SECONDS = 60 * 60 * 24; // 24 horas
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  'audio/aac',
+  'audio/mp4',
+  'audio/amr',
+  'audio/mpeg',
+  'audio/ogg',
+]);
+const SUPPORTED_AUDIO_FORMATS_MESSAGE =
+  'Use um dos formatos aceitos: audio/aac, audio/mp4, audio/amr, audio/mpeg ou audio/ogg (opus). Para ogg/opus, apenas áudios de canal único são aceitos pelo WhatsApp.';
 
 const extractExtensionFromFileName = (fileName: string | null): string | null => {
   if (!fileName) {
@@ -957,6 +970,55 @@ const downloadAudioFile = async (audioUrl: string): Promise<File> => {
   const mime = normalizeMimeType(mimeHeader) ?? 'audio/mpeg';
   const extension = MIME_EXTENSION_MAP[mime] ?? 'mp3';
   return new File([arrayBuffer], generateAudioFileName(extension), { type: mime });
+};
+
+const uploadAudioToTemporaryStorage = async (
+  audioFile: File,
+  mimeType: string | null,
+): Promise<{ signedUrl: string; mimeType: string }> => {
+  if (!supabaseAdmin) {
+    throw new Error('Cliente do Supabase não configurado para upload de áudio.');
+  }
+
+  const normalizedMimeType = normalizeMimeType(mimeType) ?? normalizeMimeType(audioFile.type);
+  if (!normalizedMimeType || !ALLOWED_AUDIO_MIME_TYPES.has(normalizedMimeType)) {
+    throw new Error(SUPPORTED_AUDIO_FORMATS_MESSAGE);
+  }
+
+  const extensionFromName = extractExtensionFromFileName(audioFile.name);
+  const extensionFromMime = MIME_EXTENSION_MAP[normalizedMimeType];
+  const sanitizedExtension = sanitizeExtension(extensionFromName ?? extensionFromMime) ?? 'bin';
+  const storageFileName = generateAudioFileName(sanitizedExtension);
+  const now = new Date();
+  const datePath = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+  const storagePath = `${datePath}/${storageFileName}`;
+
+  const fileBuffer = await audioFile.arrayBuffer();
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(TEMP_AUDIO_BUCKET)
+    .upload(storagePath, new Uint8Array(fileBuffer), {
+      cacheControl: '86400',
+      upsert: false,
+      contentType: normalizedMimeType,
+    });
+
+  if (uploadError) {
+    throw new Error(`Falha ao enviar o áudio para armazenamento temporário: ${uploadError.message}`);
+  }
+
+  const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
+    .from(TEMP_AUDIO_BUCKET)
+    .createSignedUrl(storagePath, TEMP_AUDIO_URL_TTL_SECONDS, {
+      download: storageFileName,
+    });
+
+  if (signedUrlError || !signedUrlData?.signedUrl) {
+    throw new Error(
+      `Erro ao gerar link temporário para o áudio: ${signedUrlError?.message || 'resposta inválida'}`,
+    );
+  }
+
+  return { signedUrl: signedUrlData.signedUrl, mimeType: normalizedMimeType };
 };
 
 const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
@@ -2405,27 +2467,41 @@ const handleSendAudio = async (req: Request) => {
       ? Number(body.duration.toFixed(2))
       : null;
   const seconds = parsedSeconds ?? parsedDuration;
-  const mimeType = toNonEmptyString(body.mimeType);
   const ptt = typeof body.ptt === 'boolean' ? body.ptt : true;
 
-  const requestBody: Record<string, unknown> = { phone, audio, ptt };
+  const providedMimeType = toNonEmptyString(body.mimeType);
+
+  let audioUrl = audio;
+  let normalizedMimeType: string | null = null;
+
+  try {
+    const audioFile = await downloadAudioFile(audio);
+    const uploadResult = await uploadAudioToTemporaryStorage(audioFile, providedMimeType);
+    audioUrl = uploadResult.signedUrl;
+    normalizedMimeType = uploadResult.mimeType;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Erro ao preparar o áudio para envio.';
+    return respondJson(400, { success: false, error: message });
+  }
+
+  const requestBody: Record<string, unknown> = { phone, audio: audioUrl, ptt };
 
   if (seconds !== null) {
     requestBody.seconds = seconds;
     requestBody.duration = seconds;
   }
 
-  if (mimeType) {
-    requestBody.mimeType = mimeType;
+  if (normalizedMimeType) {
+    requestBody.mimeType = normalizedMimeType;
   }
 
   try {
     const rawPayloadOverride: Record<string, unknown> = {
       audio: {
-        audioUrl: audio,
+        audioUrl,
         seconds,
         duration: seconds,
-        mimeType: mimeType ?? null,
+        mimeType: normalizedMimeType ?? null,
         ptt,
       },
     };

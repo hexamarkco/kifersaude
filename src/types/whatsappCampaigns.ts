@@ -19,6 +19,7 @@ export type WhatsappCampaignStepConfig = {
     payload: string;
     caption?: string;
     fileName?: string;
+    mimeType?: string;
   };
   wait?: {
     strategy: 'duration' | 'reply';

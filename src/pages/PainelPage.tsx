@@ -109,9 +109,7 @@ export default function PainelPage() {
     const tabParam = searchParams.get('tab');
     const requestedTab = tabParam && validTabIds.has(tabParam) ? tabParam : 'dashboard';
 
-    if (requestedTab !== activeTab) {
-      setActiveTab(requestedTab);
-    }
+    setActiveTab(previous => (previous !== requestedTab ? requestedTab : previous));
 
     const phoneParam = searchParams.get('whatsappPhone');
 
@@ -127,13 +125,11 @@ export default function PainelPage() {
         message: messageParam === null ? undefined : messageParam,
       });
 
-      if (requestedTab !== 'whatsapp') {
-        setActiveTab('whatsapp');
-      }
-    } else if (whatsappLaunchParams) {
-      setWhatsappLaunchParams(null);
+      setActiveTab('whatsapp');
+    } else {
+      setWhatsappLaunchParams(previous => (previous ? null : previous));
     }
-  }, [activeTab, searchParams, validTabIds, whatsappLaunchParams]);
+  }, [searchParams, validTabIds]);
 
   const loadUnreadReminders = useCallback(async () => {
     try {

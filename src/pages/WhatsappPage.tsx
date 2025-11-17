@@ -6727,8 +6727,7 @@ export default function WhatsappPage({
                       ? reactionSummaries[messageIdKey]
                       : null;
                   const hasReactions = Boolean(reactionSummary);
-                  const isGroupChat = selectedChat.is_group;
-                  const summaryInteractive = Boolean(isGroupChat && messageIdKey);
+                  const summaryInteractive = Boolean(messageIdKey);
                   const isReactionDetailsOpen = Boolean(
                     summaryInteractive && reactionDetailsMessageId === messageIdKey,
                   );

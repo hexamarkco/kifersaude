@@ -4176,11 +4176,24 @@ export default function WhatsappPage({
         });
 
         setChats(previous => {
-          const updatedChat: WhatsappChat = {
+          const existingChat = previous.find(chat => chat.id === response.chat.id);
+          const mergedChat: WhatsappChat = {
+            ...(existingChat ?? response.chat),
             ...response.chat,
+            crm_lead: existingChat?.crm_lead ?? response.chat.crm_lead ?? null,
+            crm_contracts:
+              existingChat?.crm_contracts ?? response.chat.crm_contracts ?? [],
+            crm_financial_summary:
+              existingChat?.crm_financial_summary ??
+              response.chat.crm_financial_summary ??
+              null,
+          };
+
+          const updatedChat: WhatsappChat = {
+            ...mergedChat,
             last_message_preview:
-              response.message.text ?? response.chat.last_message_preview ?? null,
-            last_message_at: response.message.moment ?? response.chat.last_message_at ?? null,
+              response.message.text ?? mergedChat.last_message_preview ?? null,
+            last_message_at: response.message.moment ?? mergedChat.last_message_at ?? null,
           };
 
           const otherChats = previous.filter(chat => chat.id !== updatedChat.id);

@@ -7,6 +7,7 @@ import LandingPage from './pages/LandingPage';
 import BlogPage from './pages/BlogPage';
 import PainelPage from './pages/PainelPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<LandingPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route
             path="/painel"
             element={

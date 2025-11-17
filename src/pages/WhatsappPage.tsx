@@ -6100,7 +6100,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
             >
               <div
                 ref={attachmentMenuRef}
-                className="relative flex w-full flex-col gap-3 rounded border border-slate-200 bg-slate-50/60 px-3 py-3"
+                className="relative flex w-full flex-col gap-3 rounded-full border border-slate-200 bg-slate-50/60 px-3 py-3"
               >
                 {isRecordingAudio ? (
                   <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">

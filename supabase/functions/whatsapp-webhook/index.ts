@@ -196,6 +196,11 @@ type RewriteMessageBody = {
   text?: string;
 };
 
+type RewriteSuggestion = {
+  tone: string;
+  text: string;
+};
+
 type WhatsappContactSummary = {
   phone: string;
   name: string | null;
@@ -998,10 +1003,93 @@ const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
 const createRewritePrompt = (text: string) => {
   const sanitized = text.trim();
   return [
-    'Reescreva a mensagem abaixo em português, mantendo o mesmo significado e um tom profissional e cordial.',
-    'Evite emojis e deixe o texto direto e claro.',
+    'Reescreva a mensagem abaixo em português com variações de tom.',
+    'Gere ao menos três versões diferentes, incluindo tons como "Sério", "Descontraído" e "Profissional cordial".',
+    'Responda apenas em JSON no formato {"variations":[{"tone":"Sério","text":"..."}]} sem texto adicional.',
     `Mensagem original: "${sanitized}"`,
   ].join('\n');
+};
+
+const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] => {
+  const suggestions: RewriteSuggestion[] = [];
+
+  const normalizeList = (entries: unknown): RewriteSuggestion[] => {
+    if (!entries || typeof entries !== 'object') {
+      return [];
+    }
+
+    const variations = Array.isArray(entries)
+      ? entries
+      : Array.isArray((entries as { variations?: unknown }).variations)
+        ? (entries as { variations: unknown }).variations
+        : null;
+
+    if (!variations) {
+      return [];
+    }
+
+    const normalized: RewriteSuggestion[] = [];
+
+    for (const entry of variations) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const tone =
+        toNonEmptyString((entry as { tone?: unknown }).tone) ??
+        toNonEmptyString((entry as { estilo?: unknown }).estilo) ??
+        'Sugestão';
+
+      const text =
+        toNonEmptyString((entry as { text?: unknown }).text) ??
+        toNonEmptyString((entry as { mensagem?: unknown }).mensagem);
+
+      if (text) {
+        normalized.push({ tone, text });
+      }
+    }
+
+    return normalized;
+  };
+
+  const trimmed = rawText.trim();
+
+  try {
+    const parsedJson = JSON.parse(trimmed) as unknown;
+    suggestions.push(...normalizeList(parsedJson));
+  } catch (_error) {
+    // Ignore JSON parsing errors and try other strategies below.
+  }
+
+  if (suggestions.length === 0) {
+    const lines = trimmed
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    for (const line of lines) {
+      const match = /^[-*•]?\s*(?<tone>[^:]{1,40}):\s*(?<text>.+)$/iu.exec(line);
+      const tone = match?.groups?.tone ?? 'Sugestão';
+      const text = match?.groups?.text ?? line;
+
+      if (text) {
+        suggestions.push({ tone: tone.trim(), text: text.trim() });
+      }
+    }
+  }
+
+  if (suggestions.length === 0 && trimmed) {
+    suggestions.push({ tone: 'Sugestão', text: trimmed });
+  }
+
+  const uniqueSuggestions = suggestions.filter(
+    (suggestion, index, list) =>
+      list.findIndex(
+        (entry) => entry.tone.toLowerCase() === suggestion.tone.toLowerCase() && entry.text === suggestion.text,
+      ) === index,
+  );
+
+  return uniqueSuggestions;
 };
 
 const extractOpenAiResponseText = (payload: unknown): string | null => {
@@ -1052,7 +1140,7 @@ const extractOpenAiResponseText = (payload: unknown): string | null => {
   return null;
 };
 
-const rewriteMessageWithGpt = async (text: string): Promise<string> => {
+const rewriteMessageWithGpt = async (text: string): Promise<RewriteSuggestion[]> => {
   const { apiKey, textModel } = await getGptIntegrationConfig();
 
   const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
@@ -1098,7 +1186,12 @@ const rewriteMessageWithGpt = async (text: string): Promise<string> => {
     throw new Error('A API GPT não retornou texto reescrito.');
   }
 
-  return rewritten;
+  const suggestions = extractRewriteSuggestionsFromRaw(rewritten);
+  if (suggestions.length === 0) {
+    throw new Error('A API GPT não retornou variações de reescrita.');
+  }
+
+  return suggestions;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -2395,8 +2488,8 @@ const handleRewriteMessage = async (req: Request) => {
   }
 
   try {
-    const rewrittenText = await rewriteMessageWithGpt(text);
-    return respondJson(200, { success: true, rewrittenText });
+    const rewrittenVersions = await rewriteMessageWithGpt(text);
+    return respondJson(200, { success: true, rewrittenVersions });
   } catch (error) {
     console.error('Erro ao reescrever mensagem com GPT:', error);
     const message = error instanceof Error ? error.message : 'Erro ao reescrever a mensagem';

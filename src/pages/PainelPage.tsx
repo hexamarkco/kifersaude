@@ -138,7 +138,7 @@ export default function PainelPage() {
     setActiveLeadNotifications([]);
   };
 
-  const renderContent = () => {
+  const renderNonWhatsappContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard onNavigateToTab={handleTabChange} />;
@@ -150,8 +150,6 @@ export default function PainelPage() {
         return <FinanceiroComissoesTab />;
       case 'financeiro-agenda':
         return <FinanceiroAgendaTab />;
-      case 'whatsapp':
-        return <WhatsappPage onUnreadCountChange={setWhatsappUnreadCount} />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
       case 'email':
@@ -186,7 +184,10 @@ export default function PainelPage() {
         newLeadsCount={newLeadsCount}
         whatsappUnreadCount={whatsappUnreadCount}
       >
-        {renderContent()}
+        {activeTab === 'whatsapp' ? null : renderNonWhatsappContent()}
+        <div className={activeTab === 'whatsapp' ? 'block' : 'hidden'}>
+          <WhatsappPage onUnreadCountChange={setWhatsappUnreadCount} />
+        </div>
       </Layout>
 
       {activeNotifications.map((reminder, index) => (

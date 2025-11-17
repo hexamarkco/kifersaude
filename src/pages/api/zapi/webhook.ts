@@ -372,7 +372,12 @@ const normalizeStatusValue = (value: unknown): string | null => {
 
 const resolveStatusWebhookIds = (payload: ZapiPayload): string[] => {
   const ids = Array.isArray(payload.ids) ? payload.ids : [];
-  const combined = [...ids, payload.id].filter((entry) => entry !== null && entry !== undefined);
+  const combined = [
+    ...ids,
+    payload.id,
+    payload.messageId,
+    (payload as { message_id?: string | number | null | undefined }).message_id,
+  ].filter((entry) => entry !== null && entry !== undefined);
   const uniqueIds = new Set<string>();
 
   for (const entry of combined) {

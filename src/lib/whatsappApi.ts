@@ -13,18 +13,33 @@ type RuntimeEnv = {
 };
 
 const getServerEnv = (): RuntimeEnv => {
-  // Ambiente de Funções do Supabase: usa Deno.env (secrets)
+  const globalProcess = (globalThis as {
+    process?: { env?: Record<string, string | undefined> };
+  }).process;
 
-  const functionsUrl = Deno.env.get('SUPABASE_FUNCTIONS_URL')?.trim();
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim();
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')?.trim();
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
+  const denoEnv = (globalThis as {
+    Deno?: { env?: { get: (key: string) => string | undefined } };
+  }).Deno?.env;
+
+  // Lê primeiro do process.env (Node), depois sobrescreve com Deno.env (secrets)
+  const env: Record<string, string | undefined> = {
+    ...(globalProcess?.env ?? {}),
+    ...(denoEnv
+      ? {
+          SUPABASE_FUNCTIONS_URL: denoEnv.get('SUPABASE_FUNCTIONS_URL') ?? globalProcess?.env?.SUPABASE_FUNCTIONS_URL,
+          SUPABASE_URL: denoEnv.get('SUPABASE_URL') ?? globalProcess?.env?.SUPABASE_URL,
+          SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY') ?? globalProcess?.env?.SUPABASE_ANON_KEY,
+          SUPABASE_SERVICE_ROLE_KEY:
+            denoEnv.get('SUPABASE_SERVICE_ROLE_KEY') ?? globalProcess?.env?.SUPABASE_SERVICE_ROLE_KEY,
+        }
+      : {}),
+  };
 
   return {
-    functionsUrl,
-    supabaseUrl,
-    anonKey,
-    serviceRoleKey,
+    functionsUrl: env.SUPABASE_FUNCTIONS_URL,
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   };
 };
 

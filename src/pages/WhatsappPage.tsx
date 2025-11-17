@@ -284,6 +284,9 @@ const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIco
 
 type WhatsappPageProps = {
   onUnreadCountChange?: (count: number) => void;
+  initialChatPhone?: string | null;
+  initialChatName?: string | null;
+  initialMessage?: string | null;
 };
 
 type AudioTranscriptionState = {
@@ -1492,7 +1495,12 @@ const dedupeMessagesByMessageId = (messages: OptimisticMessage[]) => {
   }, []);
 };
 
-export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps = {}) {
+export default function WhatsappPage({
+  onUnreadCountChange,
+  initialChatPhone,
+  initialChatName,
+  initialMessage,
+}: WhatsappPageProps = {}) {
   const missingEnvVars = getMissingWhatsappEnvVars();
 
   if (missingEnvVars.length > 0) {
@@ -1578,6 +1586,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const selectedChatIdRef = useRef<string | null>(null);
   const messageSearchInputRef = useRef<HTMLInputElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const initialChatRequestRef = useRef<string | null>(null);
   const messageElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [quickRepliesMenuOpen, setQuickRepliesMenuOpen] = useState(false);
@@ -3818,6 +3827,37 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     },
     [handleStartConversation, manualPhoneInput, startingConversation],
   );
+
+  useEffect(() => {
+    if (!initialChatPhone) {
+      initialChatRequestRef.current = null;
+      return;
+    }
+
+    const normalizedPhone = initialChatPhone.replace(/\D+/g, '');
+    if (!normalizedPhone) {
+      return;
+    }
+
+    const requestKey = [normalizedPhone, initialChatName ?? '', initialMessage ?? ''].join('|');
+
+    if (initialChatRequestRef.current === requestKey) {
+      return;
+    }
+
+    initialChatRequestRef.current = requestKey;
+
+    void handleStartConversation(normalizedPhone, initialChatName ?? null);
+  }, [handleStartConversation, initialChatName, initialChatPhone, initialMessage]);
+
+  useEffect(() => {
+    if (initialMessage === undefined || initialMessage === null) {
+      return;
+    }
+
+    setMessageInput(initialMessage);
+    adjustMessageInputHeight();
+  }, [adjustMessageInputHeight, initialMessage]);
 
   useEffect(() => {
     if (!selectedChatId) {

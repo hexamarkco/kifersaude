@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
+import { useSearchParams } from 'react-router-dom';
 import { supabase, Lead, Reminder } from '../lib/supabase';
 import Layout from '../components/Layout';
 import Dashboard from '../components/Dashboard';
@@ -18,10 +19,12 @@ import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab
 import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
+import type { WhatsappLaunchParams } from '../types/whatsapp';
 
 export default function PainelPage() {
   const { isObserver } = useAuth();
   const { leadOrigins, loading: configLoading } = useConfig();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
   const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0);
@@ -30,6 +33,62 @@ export default function PainelPage() {
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [whatsappLaunchParams, setWhatsappLaunchParams] = useState<WhatsappLaunchParams | null>(null);
+
+  const validTabIds = useMemo(
+    () =>
+      new Set([
+        'dashboard',
+        'leads',
+        'contracts',
+        'financeiro-comissoes',
+        'financeiro-agenda',
+        'whatsapp',
+        'reminders',
+        'email',
+        'blog',
+        'config',
+      ]),
+    [],
+  );
+
+  const updateSearchParamsForTab = useCallback(
+    (tabId: string, nextWhatsappParams?: WhatsappLaunchParams | null) => {
+      const nextParams = new URLSearchParams(searchParams);
+
+      nextParams.set('tab', tabId);
+
+      if (tabId === 'whatsapp' && nextWhatsappParams?.phone) {
+        nextParams.set('whatsappPhone', nextWhatsappParams.phone);
+
+        if (nextWhatsappParams.chatName) {
+          nextParams.set('whatsappName', nextWhatsappParams.chatName);
+        } else {
+          nextParams.delete('whatsappName');
+        }
+
+        if (nextWhatsappParams.leadId) {
+          nextParams.set('whatsappLeadId', nextWhatsappParams.leadId);
+        } else {
+          nextParams.delete('whatsappLeadId');
+        }
+
+        if (nextWhatsappParams.message !== undefined && nextWhatsappParams.message !== null) {
+          nextParams.set('whatsappMessage', nextWhatsappParams.message);
+        } else {
+          nextParams.delete('whatsappMessage');
+        }
+      } else {
+        nextParams.delete('whatsappPhone');
+        nextParams.delete('whatsappName');
+        nextParams.delete('whatsappLeadId');
+        nextParams.delete('whatsappMessage');
+      }
+
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
@@ -45,6 +104,36 @@ export default function PainelPage() {
     },
     [restrictedOriginNamesForObservers],
   );
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const requestedTab = tabParam && validTabIds.has(tabParam) ? tabParam : 'dashboard';
+
+    if (requestedTab !== activeTab) {
+      setActiveTab(requestedTab);
+    }
+
+    const phoneParam = searchParams.get('whatsappPhone');
+
+    if (phoneParam) {
+      const messageParam = searchParams.get('whatsappMessage');
+      const chatNameParam = searchParams.get('whatsappName');
+      const leadIdParam = searchParams.get('whatsappLeadId');
+
+      setWhatsappLaunchParams({
+        phone: phoneParam,
+        chatName: chatNameParam,
+        leadId: leadIdParam,
+        message: messageParam === null ? undefined : messageParam,
+      });
+
+      if (requestedTab !== 'whatsapp') {
+        setActiveTab('whatsapp');
+      }
+    } else if (whatsappLaunchParams) {
+      setWhatsappLaunchParams(null);
+    }
+  }, [activeTab, searchParams, validTabIds, whatsappLaunchParams]);
 
   const loadUnreadReminders = useCallback(async () => {
     try {
@@ -102,7 +191,7 @@ export default function PainelPage() {
 
   const handleConvertLead = (lead: Lead) => {
     setLeadToConvert(lead);
-    setActiveTab('contracts');
+    handleTabChange('contracts');
   };
 
   const handleCloseNotification = (index: number) => {
@@ -113,12 +202,17 @@ export default function PainelPage() {
   };
 
   const handleViewReminders = () => {
-    setActiveTab('reminders');
-    setHasActiveNotification(false);
+    handleTabChange('reminders');
   };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    updateSearchParamsForTab(tab, tab === 'whatsapp' ? whatsappLaunchParams : null);
+
+    if (tab !== 'whatsapp') {
+      setWhatsappLaunchParams(null);
+    }
+
     if (tab === 'reminders') {
       setHasActiveNotification(false);
       setActiveNotifications([]);
@@ -133,9 +227,14 @@ export default function PainelPage() {
   };
 
   const handleViewLead = () => {
-    setActiveTab('leads');
-    setNewLeadsCount(0);
+    handleTabChange('leads');
     setActiveLeadNotifications([]);
+  };
+
+  const handleOpenWhatsapp = (params: WhatsappLaunchParams) => {
+    setWhatsappLaunchParams(params);
+    setActiveTab('whatsapp');
+    updateSearchParamsForTab('whatsapp', params);
   };
 
   const renderContent = () => {
@@ -143,7 +242,7 @@ export default function PainelPage() {
       case 'dashboard':
         return <Dashboard onNavigateToTab={handleTabChange} />;
       case 'leads':
-        return <LeadsManager onConvertToContract={handleConvertLead} />;
+        return <LeadsManager onConvertToContract={handleConvertLead} onOpenWhatsapp={handleOpenWhatsapp} />;
       case 'contracts':
         return <ContractsManager leadToConvert={leadToConvert} onConvertComplete={() => setLeadToConvert(null)} />;
       case 'financeiro-comissoes':
@@ -151,9 +250,16 @@ export default function PainelPage() {
       case 'financeiro-agenda':
         return <FinanceiroAgendaTab />;
       case 'whatsapp':
-        return <WhatsappPage onUnreadCountChange={setWhatsappUnreadCount} />;
+        return (
+          <WhatsappPage
+            onUnreadCountChange={setWhatsappUnreadCount}
+            initialChatPhone={whatsappLaunchParams?.phone}
+            initialChatName={whatsappLaunchParams?.chatName}
+            initialMessage={whatsappLaunchParams?.message ?? undefined}
+          />
+        );
       case 'reminders':
-        return <RemindersManagerEnhanced />;
+        return <RemindersManagerEnhanced onOpenWhatsapp={handleOpenWhatsapp} />;
       case 'email':
         return <EmailManager />;
       case 'blog':

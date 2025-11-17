@@ -3985,6 +3985,43 @@ export default function WhatsappPage({
           throw new Error(response.error || 'Resposta inválida do servidor');
         }
 
+        if (!response.message) {
+          setMessages(previous =>
+            previous.map(message =>
+              message.id === optimisticId
+                ? {
+                    ...message,
+                    status: 'sent',
+                    isOptimistic: false,
+                  }
+                : message,
+            ),
+          );
+
+          setChats(previous => {
+            const chatFromResponse = response.chat;
+            const selectedChatId = currentChatId ?? chatFromResponse?.id ?? null;
+
+            const referenceChat =
+              chatFromResponse ?? previous.find(chat => chat.id === selectedChatId) ?? null;
+
+            if (!referenceChat) {
+              return previous;
+            }
+
+            const updatedChat: WhatsappChat = {
+              ...referenceChat,
+              last_message_preview: optimisticMessage.text ?? referenceChat.last_message_preview ?? null,
+              last_message_at: optimisticMessage.moment ?? referenceChat.last_message_at ?? null,
+            };
+
+            const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
+            return [updatedChat, ...otherChats];
+          });
+
+          return true;
+        }
+
         const serverMessage: OptimisticMessage = {
           ...response.message,
           isOptimistic: false,

@@ -29,6 +29,7 @@ import {
   MessageCirclePlus,
   Plus,
   MapPin,
+  Megaphone,
   Mic,
   Sparkles,
   Pin,
@@ -626,6 +627,70 @@ const resolveMessageStatusDisplay = (message: OptimisticMessage): MessageStatusD
     label: rawStatus,
     className: 'text-slate-500',
   };
+};
+
+const toLowerString = (value: unknown): string => {
+  return typeof value === 'string' ? value.toLowerCase() : '';
+};
+
+type TransmissionInfo = {
+  isTransmission: boolean;
+  targetPhone: string | null;
+};
+
+const resolveTransmissionInfo = (
+  message: WhatsappMessage | OptimisticMessage,
+  chatList?: WhatsappChat[],
+): TransmissionInfo => {
+  const payload = message.raw_payload;
+  if (!payload || typeof payload !== 'object') {
+    return { isTransmission: false, targetPhone: null };
+  }
+
+  const rawPayload = payload as Record<string, unknown>;
+  const candidatePhoneValues: Array<unknown> = [
+    rawPayload.phone,
+    rawPayload.targetPhone,
+    rawPayload.destination,
+    rawPayload.to,
+    rawPayload.contactPhone,
+    rawPayload.recipientPhone,
+    rawPayload.recipient,
+    rawPayload.participant,
+    rawPayload.clientPhone,
+    rawPayload._originalPhone,
+    rawPayload.chatName,
+  ];
+
+  const normalizedPhoneCandidates = candidatePhoneValues
+    .map(candidate => (typeof candidate === 'string' ? candidate : null))
+    .map(value => normalizePhoneForComparison(value))
+    .filter(Boolean);
+
+  const targetPhone = normalizedPhoneCandidates[0] ?? null;
+
+  const markers = [
+    toLowerString(rawPayload.type),
+    toLowerString(rawPayload.notification),
+    toLowerString(rawPayload.requestMethod),
+  ];
+
+  const isTransmission =
+    markers.some(marker => marker.includes('transmiss')) ||
+    Boolean(rawPayload.transmissionId) ||
+    Boolean(rawPayload.broadcastId) ||
+    Boolean(rawPayload.transmission);
+
+  if (targetPhone && !isTransmission && chatList?.length) {
+    const hasMatchingChat = chatList.some(
+      chat => normalizePhoneForComparison(chat.phone) === targetPhone,
+    );
+    if (hasMatchingChat) {
+      return { isTransmission: true, targetPhone };
+    }
+  }
+
+  return { isTransmission, targetPhone };
 };
 
 type TimelineMessage = OptimisticMessage & {
@@ -1596,6 +1661,7 @@ export default function WhatsappPage({
   }
 
   const [chats, setChats] = useState<WhatsappChat[]>([]);
+  const chatsRef = useRef<WhatsappChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [showArchivedChats, setShowArchivedChats] = useState(false);
   const [messages, setMessages] = useState<OptimisticMessage[]>([]);
@@ -1704,6 +1770,10 @@ export default function WhatsappPage({
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
   const imageViewerTouchStartRef = useRef<number | null>(null);
   const [selectedWallpaperId, setSelectedWallpaperId] = useState(DEFAULT_CHAT_WALLPAPER_ID);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -3661,20 +3731,32 @@ export default function WhatsappPage({
             isOptimistic: false,
           };
 
+          const transmissionInfo = resolveTransmissionInfo(normalizedMessage, chatsRef.current);
+          const targetChat = transmissionInfo.targetPhone
+            ? chatsRef.current.find(
+                chat => normalizePhoneForComparison(chat.phone) === transmissionInfo.targetPhone,
+              )
+            : null;
+          const resolvedChatId = targetChat?.id ?? normalizedMessage.chat_id;
+          const resolvedMessage =
+            resolvedChatId === normalizedMessage.chat_id
+              ? normalizedMessage
+              : { ...normalizedMessage, chat_id: resolvedChatId };
+
           setMessages(previousMessages => {
             const currentChatId = selectedChatIdRef.current;
-            if (currentChatId !== normalizedMessage.chat_id) {
+            if (currentChatId !== resolvedMessage.chat_id) {
               return previousMessages;
             }
 
-            const mergedMessages = mergeMessageIntoList(previousMessages, normalizedMessage);
+            const mergedMessages = mergeMessageIntoList(previousMessages, resolvedMessage);
             return sortMessagesByMoment(mergedMessages);
           });
 
           let chatExists = true;
           setChats(previousChats => {
             const existingIndex = previousChats.findIndex(
-              chat => chat.id === normalizedMessage.chat_id,
+              chat => chat.id === resolvedChatId,
             );
 
             if (existingIndex === -1) {
@@ -3686,12 +3768,12 @@ export default function WhatsappPage({
             const updatedChat: WhatsappChat = {
               ...existingChat,
               last_message_preview:
-                normalizedMessage.text ?? existingChat.last_message_preview ?? null,
+                resolvedMessage.text ?? existingChat.last_message_preview ?? null,
               last_message_at:
-                normalizedMessage.moment ?? existingChat.last_message_at ?? null,
+                resolvedMessage.moment ?? existingChat.last_message_at ?? null,
             };
 
-            const otherChats = previousChats.filter(chat => chat.id !== normalizedMessage.chat_id);
+            const otherChats = previousChats.filter(chat => chat.id !== resolvedChatId);
             return [updatedChat, ...otherChats];
           });
 
@@ -3701,10 +3783,10 @@ export default function WhatsappPage({
 
           if (
             payload.eventType === 'INSERT' &&
-            !normalizedMessage.from_me &&
-            normalizedMessage.chat_id !== selectedChatIdRef.current
+            !resolvedMessage.from_me &&
+            resolvedMessage.chat_id !== selectedChatIdRef.current
           ) {
-            incrementUnread(normalizedMessage.chat_id);
+            incrementUnread(resolvedMessage.chat_id);
           }
         },
       )
@@ -6569,6 +6651,7 @@ export default function WhatsappPage({
                         .filter(Boolean)
                         .join(' ')
                     : null;
+                  const transmissionInfo = resolveTransmissionInfo(message);
 
                   const shouldShowSenderName = selectedChat.is_group;
                   const senderDisplayName = shouldShowSenderName
@@ -6803,6 +6886,12 @@ export default function WhatsappPage({
                         ) : (
                           <div className="flex flex-wrap items-center gap-2">
                             <span>{formatShortTime(message.moment)}</span>
+                            {transmissionInfo.isTransmission ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-amber-100">
+                                <Megaphone className="h-3 w-3" />
+                                <span>Transmissão</span>
+                              </span>
+                            ) : null}
                             {statusDisplay && statusClassName ? (
                               <span className={statusClassName}>
                                 {statusDisplay.icon ? (

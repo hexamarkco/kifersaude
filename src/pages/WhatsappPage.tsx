@@ -6281,26 +6281,6 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     onOpenChange={handleQuickRepliesMenuOpenChange}
                   />
 
-                  <button
-                    type="button"
-                    onClick={handleRewriteMessage}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={
-                      sendingMessage ||
-                      schedulingMessage ||
-                      isRecordingAudio ||
-                      rewritingMessage ||
-                      trimmedMessageInput.length === 0
-                    }
-                  >
-                    {rewritingMessage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    <span>Reescrever</span>
-                  </button>
-
                   <div className="relative">
                     <button
                       type="button"
@@ -6345,6 +6325,34 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                             <span>
                               <span className="block font-medium">Pesquisar no chat</span>
                               <span className="block text-xs text-slate-500">Encontre mensagens rapidamente</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowChatActionsMenu(false);
+                              handleRewriteMessage();
+                            }}
+                            role="menuitem"
+                            className="mt-1 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                            disabled={
+                              sendingMessage ||
+                              schedulingMessage ||
+                              isRecordingAudio ||
+                              rewritingMessage ||
+                              trimmedMessageInput.length === 0
+                            }
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                              {rewritingMessage ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4" />
+                              )}
+                            </span>
+                            <span>
+                              <span className="block font-medium">Reescrever mensagem</span>
+                              <span className="block text-xs text-slate-500">Use IA para melhorar o texto atual</span>
                             </span>
                           </button>
                           <button

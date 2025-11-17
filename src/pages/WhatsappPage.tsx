@@ -1255,22 +1255,34 @@ const getAudioDurationFromBlob = (blob: Blob): Promise<number | null> => {
   });
 };
 
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  'audio/aac',
+  'audio/mp4',
+  'audio/amr',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/ogg;codecs=opus',
+]);
+
 const getPreferredAudioMimeType = (): string | null => {
   if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
     return null;
   }
 
   const candidates = [
+    'audio/mpeg',
     'audio/ogg;codecs=opus',
     'audio/ogg',
-    'audio/mpeg',
-    'audio/webm;codecs=opus',
-    'audio/webm',
     'audio/mp4',
+    'audio/aac',
+    'audio/amr',
   ];
 
   for (const candidate of candidates) {
-    if ((MediaRecorder as typeof MediaRecorder).isTypeSupported(candidate)) {
+    if (
+      ALLOWED_AUDIO_MIME_TYPES.has(candidate) &&
+      (MediaRecorder as typeof MediaRecorder).isTypeSupported(candidate)
+    ) {
       return candidate;
     }
   }
@@ -1295,15 +1307,29 @@ const getAudioContextConstructor = (): AudioContextConstructor | null => {
 const ensureAudioBlobPreferredFormat = async (
   blob: Blob,
 ): Promise<{ blob: Blob; mimeType: string }> => {
-  const targetMimeType = 'audio/mpeg';
+  const normalizeMimeType = (value: string | null | undefined): string | null => {
+    if (!value) {
+      return null;
+    }
+    const [mime] = value.split(';', 1);
+    const trimmed = mime?.trim().toLowerCase();
+    return trimmed && ALLOWED_AUDIO_MIME_TYPES.has(trimmed) ? trimmed : null;
+  };
+
+  const targetMimeType = getPreferredAudioMimeType();
+  const normalizedBlobMime = normalizeMimeType(blob.type) ?? null;
+
   const fallbackMimeType =
-    blob.type?.trim() ||
-    (typeof MediaRecorder !== 'undefined' ? getPreferredAudioMimeType() : null) ||
-    'audio/webm';
+    normalizedBlobMime ||
+    normalizeMimeType(targetMimeType) ||
+    'audio/mpeg';
 
-  const fallbackResult = { blob, mimeType: fallbackMimeType };
+  const fallbackResult = {
+    blob: blob.type === fallbackMimeType ? blob : new Blob([blob], { type: fallbackMimeType }),
+    mimeType: fallbackMimeType,
+  };
 
-  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined' || !targetMimeType) {
     return fallbackResult;
   }
 

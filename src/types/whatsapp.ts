@@ -29,6 +29,13 @@ export type WhatsappChatFinancialSummary = {
   total_bonus?: number | null;
 };
 
+export type WhatsappLaunchParams = {
+  phone: string;
+  message?: string | null;
+  chatName?: string | null;
+  leadId?: string | null;
+};
+
 export type WhatsappChat = {
   id: string;
   phone: string;

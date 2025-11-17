@@ -5809,9 +5809,20 @@ export default function WhatsappPage({
   const slaAlertsPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-        <div className="space-y-0.5">
-          <p className="text-lg font-semibold text-slate-800">Alertas de SLA</p>
-          <p className="text-sm text-slate-500">Acompanhe conversas com risco de estourar o SLA.</p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={returnToWhatsappChats}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            aria-label="Voltar para as conversas do WhatsApp"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Voltar
+          </button>
+          <div className="space-y-0.5">
+            <p className="text-lg font-semibold text-slate-800">Alertas de SLA</p>
+            <p className="text-sm text-slate-500">Acompanhe conversas com risco de estourar o SLA.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -1112,6 +1112,17 @@ const createRewritePrompt = (text: string) => {
 const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] => {
   const suggestions: RewriteSuggestion[] = [];
 
+  const stripMarkdownCodeFence = (text: string): string => {
+    const trimmed = text.trim();
+    const fencedMatch = /^```[a-zA-Z]*\s*([\s\S]*?)\s*```$/m.exec(trimmed);
+
+    if (fencedMatch?.[1]) {
+      return fencedMatch[1].trim();
+    }
+
+    return trimmed;
+  };
+
   const normalizeList = (entries: unknown): RewriteSuggestion[] => {
     const extractVariations = (candidate: unknown): unknown[] | null => {
       if (!candidate || typeof candidate !== 'object') {
@@ -1180,7 +1191,7 @@ const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] 
     return normalized;
   };
 
-  const trimmed = rawText.trim();
+  const trimmed = stripMarkdownCodeFence(rawText);
 
   try {
     const parsedJson = JSON.parse(trimmed) as unknown;

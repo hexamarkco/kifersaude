@@ -12,24 +12,21 @@ type RuntimeEnv = {
 };
 
 const getServerEnv = (): RuntimeEnv => {
-  const globalProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
-  const denoEnv = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } }).Deno?.env;
-  const env = {
-    ...(denoEnv
-      ? {
-          SUPABASE_FUNCTIONS_URL: denoEnv.get('SUPABASE_FUNCTIONS_URL'),
-          SUPABASE_URL: denoEnv.get('SUPABASE_URL'),
-          SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY'),
-          SUPABASE_SERVICE_ROLE_KEY: denoEnv.get('SUPABASE_SERVICE_ROLE_KEY'),
-        }
-      : {}),
-    ...(globalProcess?.env ?? {}),
-  } satisfies Record<string, string | undefined>;
+  // Ambiente de Funções do Supabase: usa Deno.env (secrets)
+  if (typeof Deno === 'undefined' || !('env' in Deno)) {
+    throw new Error('Deno.env não está disponível. Este helper deve ser usado em Edge Functions do Supabase.');
+  }
+
+  const functionsUrl = Deno.env.get('SUPABASE_FUNCTIONS_URL')?.trim();
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim();
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')?.trim();
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
+
   return {
-    functionsUrl: env.SUPABASE_FUNCTIONS_URL,
-    supabaseUrl: env.SUPABASE_URL,
-    anonKey: env.SUPABASE_ANON_KEY,
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    functionsUrl,
+    supabaseUrl,
+    anonKey,
+    serviceRoleKey,
   };
 };
 
@@ -41,9 +38,9 @@ const getBrowserEnv = (): RuntimeEnv => {
   const metaEnv = import.meta.env as Record<string, string | undefined>;
 
   return {
-    functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL,
-    supabaseUrl: metaEnv?.VITE_SUPABASE_URL,
-    anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY,
+    functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL?.trim(),
+    supabaseUrl: metaEnv?.VITE_SUPABASE_URL?.trim(),
+    anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY?.trim(),
   };
 };
 

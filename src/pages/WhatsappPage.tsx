@@ -3606,13 +3606,19 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     const captionOrNull = normalizedCaption.length > 0 ? normalizedCaption : null;
 
     if (attachment.kind === 'audio') {
+      const durationSeconds =
+        typeof attachment.durationSeconds === 'number' &&
+        Number.isFinite(attachment.durationSeconds) &&
+        attachment.durationSeconds >= 0
+          ? Number(attachment.durationSeconds.toFixed(2))
+          : null;
       const previewText = captionOrNull ?? '🎤 Áudio enviado';
       const optimisticMessage = createOptimisticMessage({
         text: previewText,
         raw_payload: {
           audio: {
             audioUrl: attachment.dataUrl,
-            seconds: attachment.durationSeconds ?? null,
+            seconds: durationSeconds,
             ptt: true,
           },
         },
@@ -3624,6 +3630,11 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         viewOnce: false,
         waveform: true,
       };
+
+      if (durationSeconds !== null) {
+        body.seconds = durationSeconds;
+        body.duration = durationSeconds;
+      }
 
       const audioWasSent = await sendWhatsappMessage({
         endpoint: '/whatsapp-webhook/send-audio',
@@ -4258,7 +4269,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       imageUrl,
       imageCaption: payload ? toNonEmptyString(payload?.image?.caption) : null,
       audioUrl,
-      audioSeconds: payload?.audio?.seconds ?? null,
+      audioSeconds: payload?.audio?.seconds ?? payload?.audio?.duration ?? null,
       videoUrl,
       videoCaption: payload ? toNonEmptyString(payload?.video?.caption) : null,
       documentUrl,

@@ -4111,6 +4111,8 @@ export default function WhatsappPage({
         },
       );
 
+      console.log('Resposta da API de reescrita de mensagem:', response);
+
       const suggestions = (response.rewrittenVersions ?? []).filter(
         suggestion => Boolean(suggestion?.text?.trim()),
       );

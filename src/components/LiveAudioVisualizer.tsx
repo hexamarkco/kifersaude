@@ -39,7 +39,7 @@ const padValues = (values: number[], barCount: number): number[] => {
 
 export function LiveAudioVisualizer({
   values,
-  barCount = 32,
+  barCount = 256,
   className = '',
 }: LiveAudioVisualizerProps) {
   const safeBarCount = Math.max(4, barCount);
@@ -47,7 +47,7 @@ export function LiveAudioVisualizer({
 
   return (
     <div
-      className={`flex h-20 items-end gap-1 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 ${className}`}
+      className={`flex h-20 items-end gap-px rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 ${className}`}
       aria-hidden="true"
     >
       {resolvedValues.map((rawValue, index) => {
@@ -57,7 +57,7 @@ export function LiveAudioVisualizer({
         return (
           <span
             key={`audio-bar-${index}`}
-            className="inline-flex w-1 flex-1 rounded-full bg-emerald-400 transition-[height,opacity] duration-150 ease-out"
+            className="inline-flex w-px flex-none rounded-full bg-emerald-400 transition-[height,opacity] duration-150 ease-out"
             style={{ height: `${height}px`, opacity }}
           />
         );

@@ -1,6 +1,17 @@
 import { useState } from 'react';
-import { CheckCircle2, Clock, FileText, Paintbrush, RefreshCw, Settings, Shield, UserPlus2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  FileText,
+  Loader2,
+  Paintbrush,
+  RefreshCw,
+  Settings,
+  Shield,
+  UserPlus2,
+} from 'lucide-react';
 import WhatsappCampaignsPage from '../pages/WhatsappCampaignsPage';
+import { callWhatsappFunction } from '../lib/whatsappApi';
 
 export type WhatsappWallpaperOption = {
   id: string;
@@ -101,6 +112,8 @@ export default function WhatsappSettingsPanel({
   const [slaMinutes, setSlaMinutes] = useState(15);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [photoSyncStatus, setPhotoSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [photoSyncFeedback, setPhotoSyncFeedback] = useState<string | null>(null);
 
   const handleToggle = (id: keyof ToggleState) => {
     setToggles(previous => ({ ...previous, [id]: !previous[id] }));
@@ -112,6 +125,24 @@ export default function WhatsappSettingsPanel({
     await new Promise(resolve => setTimeout(resolve, 600));
     setSaving(false);
     setFeedback('Preferências atualizadas. Elas serão aplicadas para toda a equipe.');
+  };
+
+  const handleTriggerPhotoSync = async () => {
+    setPhotoSyncStatus('running');
+    setPhotoSyncFeedback(null);
+
+    try {
+      await callWhatsappFunction('whatsapp-chat-photo-sync', { method: 'POST' }, { useServiceKey: true });
+      setPhotoSyncStatus('success');
+      setPhotoSyncFeedback('Sincronização forçada enviada. As fotos serão atualizadas em poucos instantes.');
+    } catch (error) {
+      setPhotoSyncStatus('error');
+      setPhotoSyncFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao disparar a sincronização de fotos. Tente novamente em instantes.',
+      );
+    }
   };
 
   const renderPreferences = () => (
@@ -308,6 +339,37 @@ export default function WhatsappSettingsPanel({
               />
             </label>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+            <RefreshCw className="h-4 w-4 text-emerald-500" /> Fotos de perfil
+          </div>
+          <p className="mt-3 text-sm text-slate-600">
+            Atualize as fotos de perfil dos contatos manualmente. Use esta opção se alguma conversa estiver sem foto ou com
+            imagem desatualizada.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleTriggerPhotoSync}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={photoSyncStatus === 'running'}
+            >
+              {photoSyncStatus === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {photoSyncStatus === 'running' ? 'Disparando...' : 'Forçar sincronização agora'}
+            </button>
+            <p className="text-xs text-slate-500">Execução utiliza a função segura do Supabase com credencial de serviço.</p>
+          </div>
+          {photoSyncFeedback ? (
+            <p
+              className={`mt-3 text-sm ${
+                photoSyncStatus === 'error' ? 'text-rose-600' : 'text-emerald-600'
+              }`}
+            >
+              {photoSyncFeedback}
+            </p>
+          ) : null}
         </div>
       </section>
 

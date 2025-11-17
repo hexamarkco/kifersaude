@@ -3110,18 +3110,23 @@ export default function WhatsappPage({
       const data = await fetchJson<{ chats: WhatsappChat[] }>(
         getWhatsappFunctionUrl('/whatsapp-webhook/chats'),
       );
+
       setChats(data.chats);
-      if (!selectedChatId && data.chats.length > 0) {
+      setSelectedChatId(previousSelected => {
+        if (previousSelected || data.chats.length === 0) {
+          return previousSelected;
+        }
+
         const firstActiveChat = data.chats.find(chat => !chat.is_archived) ?? data.chats[0];
-        setSelectedChatId(firstActiveChat.id);
-      }
+        return firstActiveChat.id;
+      });
     } catch (error: any) {
       console.error('Erro ao carregar chats:', error);
       setErrorMessage('Não foi possível carregar as conversas.');
     } finally {
       setChatsLoading(false);
     }
-  }, [selectedChatId]);
+  }, []);
 
   const updateChatFlags = useCallback(
     async (chatId: string, payload: UpdateChatFlagsPayload): Promise<WhatsappChat> => {

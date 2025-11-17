@@ -3,7 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
@@ -196,6 +196,12 @@ type TranscribeAudioBody = {
 
 type RewriteMessageBody = {
   text?: string;
+};
+
+type DeleteMessageBody = {
+  messageId?: string;
+  phone?: string;
+  owner?: boolean;
 };
 
 type RewriteSuggestion = {
@@ -1471,6 +1477,25 @@ const normalizePhoneIdentifier = (value: unknown): string | null => {
   return null;
 };
 
+const normalizeBoolean = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'sim'].includes(normalized)) {
+      return true;
+    }
+
+    if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return null;
+};
+
 const resolvePhoneFromPayload = (payload: ZapiWebhookPayload): string | null => {
   const candidates = [payload.phone, payload.chatLid, payload.chatName];
 
@@ -2200,6 +2225,28 @@ const updateExistingWhatsappMessagesStatus = async (status: string, messageIds: 
   return { updated, missingIds };
 };
 
+const deleteWhatsappMessagesByMessageId = async (messageId: string): Promise<number> => {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase client não configurado');
+  }
+
+  const trimmedId = messageId.trim();
+  if (!trimmedId) {
+    return 0;
+  }
+
+  const { error, count } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .delete({ count: 'exact' })
+    .eq('message_id', trimmedId);
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+};
+
 const handleOnMessageStatus = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -2410,6 +2457,81 @@ const handleSendMessage = async (req: Request) => {
 
     console.error('Erro ao enviar mensagem pela Z-API:', error);
     return respondJson(500, { success: false, error: 'Erro interno ao enviar mensagem' });
+  }
+};
+
+const handleDeleteMessage = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<DeleteMessageBody>(req)) ?? {};
+  const messageId = typeof body.messageId === 'string' ? body.messageId.trim() : '';
+  const phone = normalizePhoneIdentifier(body.phone);
+  const owner = normalizeBoolean(body.owner);
+
+  if (!messageId) {
+    return respondJson(400, { success: false, error: 'Campo messageId é obrigatório' });
+  }
+
+  if (!phone) {
+    return respondJson(400, { success: false, error: 'Campo phone é obrigatório' });
+  }
+
+  if (owner === null) {
+    return respondJson(400, { success: false, error: 'Campo owner é obrigatório' });
+  }
+
+  const credentials = getZapiCredentials();
+
+  if (!credentials) {
+    return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
+  }
+
+  const { instanceId, token, clientToken } = credentials;
+  const searchParams = new URLSearchParams({
+    messageId,
+    phone,
+    owner: owner ? 'true' : 'false',
+  });
+
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/messages?${searchParams.toString()}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Client-Token': clientToken },
+    });
+
+    const rawBody = await response.text().catch(() => '');
+    let responseBody: unknown = null;
+    try {
+      responseBody = rawBody ? JSON.parse(rawBody) : null;
+    } catch (_error) {
+      responseBody = rawBody || null;
+    }
+
+    if (!response.ok) {
+      throw new ZapiRequestError(response.status, 'Falha ao apagar mensagem na Z-API', responseBody);
+    }
+
+    const removed = await deleteWhatsappMessagesByMessageId(messageId);
+
+    return respondJson(200, {
+      success: true,
+      removedLocalMessages: removed,
+    });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details,
+      });
+    }
+
+    console.error('Erro ao apagar mensagem pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro ao apagar mensagem' });
   }
 };
 
@@ -3501,6 +3623,8 @@ serve(async (req) => {
       return handleOnMessageSend(req);
     case '/send-message':
       return handleSendMessage(req);
+    case '/delete-message':
+      return handleDeleteMessage(req);
     case '/send-document':
       return handleSendDocument(req);
     case '/send-image':

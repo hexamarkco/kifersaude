@@ -201,12 +201,39 @@ type SendMessagePayload = {
   message: string;
 };
 
+export type DeleteWhatsappMessagePayload = {
+  phone: string;
+  messageId: string;
+  owner: boolean;
+};
+
+export type DeleteWhatsappMessageResponse = {
+  success: boolean;
+  removedLocalMessages?: number;
+  error?: string | null;
+  details?: unknown;
+};
+
 export const sendWhatsappMessage = async (
   payload: SendMessagePayload,
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<SendWhatsappMessageResponse> => {
   return callWhatsappFunction<SendWhatsappMessageResponse>(
     '/whatsapp-webhook/send-message',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
+};
+
+export const deleteWhatsappMessage = async (
+  payload: DeleteWhatsappMessagePayload,
+  options: WhatsappFunctionRequestOptions = {},
+): Promise<DeleteWhatsappMessageResponse> => {
+  return callWhatsappFunction<DeleteWhatsappMessageResponse>(
+    '/whatsapp-webhook/delete-message',
     {
       method: 'POST',
       body: JSON.stringify(payload),

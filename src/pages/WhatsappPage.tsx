@@ -1547,6 +1547,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
+  const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
@@ -2251,6 +2252,11 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     [applySlashQuickReply, slashCommandState, slashCommandSuggestions, slashSuggestionIndex],
   );
 
+  const clearRewriteSuggestions = useCallback(() => {
+    setRewriteSuggestions([]);
+    setShowRewriteModal(false);
+  }, []);
+
   const handleMessageInputChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = event.target;
@@ -2262,7 +2268,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       }
 
       if (rewriteSuggestions.length > 0) {
-        setRewriteSuggestions([]);
+        clearRewriteSuggestions();
       }
 
       if (selectedQuickReplyId) {
@@ -2296,7 +2302,15 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         setSlashSuggestionIndex(0);
       }
     },
-    [quickReplies, rewriteError, rewriteSuggestions.length, selectedQuickReplyId, slashCommandState],
+    [
+      adjustMessageInputHeight,
+      clearRewriteSuggestions,
+      quickReplies,
+      rewriteError,
+      rewriteSuggestions.length,
+      selectedQuickReplyId,
+      slashCommandState,
+    ],
   );
 
   const applyRewriteSuggestion = useCallback(
@@ -4030,7 +4044,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     setRewritingMessage(true);
     setRewriteError(null);
-    setRewriteSuggestions([]);
+    clearRewriteSuggestions();
 
     try {
       const response = await fetchJson<RewriteMessageResponse>(
@@ -4050,8 +4064,8 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         throw new Error(response.error || 'Não foi possível reescrever a mensagem.');
       }
 
-      applyRewriteSuggestion(suggestions[0]);
       setRewriteSuggestions(suggestions);
+      setShowRewriteModal(true);
     } catch (error) {
       const fallbackMessage =
         error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem.';
@@ -4060,14 +4074,22 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       setRewritingMessage(false);
     }
   }, [
+    clearRewriteSuggestions,
     fetchJson,
     messageInput,
-    applyRewriteSuggestion,
     rewritingMessage,
     setRewriteError,
     setSlashCommandState,
     setSlashSuggestionIndex,
   ]);
+
+  const handleApplyRewriteSuggestion = useCallback(
+    (suggestion: RewriteSuggestion) => {
+      applyRewriteSuggestion(suggestion);
+      setShowRewriteModal(false);
+    },
+    [applyRewriteSuggestion],
+  );
 
   const sendPendingAttachment = async (
     attachment: PendingAttachment,
@@ -7040,34 +7062,36 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                 </div>
 
                 {rewriteSuggestions.length > 0 ? (
-                  <div className="mt-3 space-y-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                        Sugestões de reescrita
-                      </p>
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
-                        onClick={() => setRewriteSuggestions([])}
-                      >
-                        Limpar
-                      </button>
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {rewriteSuggestions.map((suggestion, index) => (
+                  <div className="mt-3 space-y-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                          Sugestões de reescrita
+                        </p>
+                        <p className="text-xs text-emerald-800">
+                          {rewriteSuggestions.length} opções prontas para selecionar.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <button
-                          key={`${suggestion.tone}-${index}`}
                           type="button"
-                          className="flex h-full flex-col items-start rounded-md bg-white/70 p-2 text-left text-sm text-slate-700 transition hover:bg-white hover:shadow-sm"
-                          onClick={() => applyRewriteSuggestion(suggestion)}
+                          className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-[1px] hover:shadow"
+                          onClick={() => setShowRewriteModal(true)}
                         >
-                          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                            {suggestion.tone}
-                          </span>
-                          <span className="mt-1 line-clamp-3 text-sm text-slate-700">{suggestion.text}</span>
+                          Escolher sugestão
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
+                          onClick={clearRewriteSuggestions}
+                        >
+                          Limpar
+                        </button>
+                      </div>
                     </div>
+                    <p className="text-xs text-emerald-700">
+                      Clique em “Escolher sugestão” para ver as versões completas e aplicar a que preferir.
+                    </p>
                   </div>
                 ) : null}
 
@@ -7128,6 +7152,72 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
           </div>
         )}
       </section>
+      {showRewriteModal && rewriteSuggestions.length > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-6">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Escolha uma reescrita</h3>
+                <p className="text-sm text-slate-500">
+                  Selecione a versão que deseja aplicar na sua mensagem.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRewriteModal(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Fechar modal de reescrita"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto divide-y divide-slate-200">
+              {rewriteSuggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion.tone}-${index}`}
+                  type="button"
+                  onClick={() => handleApplyRewriteSuggestion(suggestion)}
+                  className="flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                >
+                  <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                      {suggestion.tone}
+                    </p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{suggestion.text}</p>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Usar</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3">
+              <p className="text-xs text-slate-600">
+                Toque em uma sugestão para preencher o campo de mensagem automaticamente.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
+                  onClick={clearRewriteSuggestions}
+                >
+                  Limpar sugestões
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                  onClick={() => setShowRewriteModal(false)}
+                >
+                  Voltar para a conversa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showNewChatModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
           <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">

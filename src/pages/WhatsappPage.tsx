@@ -6400,7 +6400,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                         </span>
                       ) : null}
                       <div
-                        className={`relative inline-flex max-w-[75%] flex-col rounded-2xl shadow-sm ${
+                        className={`relative inline-flex max-w-[75%] flex-col rounded-2xl text-left shadow-sm ${
                           isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
                         } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses} ${
                           isPrimarySearchMatch

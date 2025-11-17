@@ -254,9 +254,14 @@ type TranscribeAudioResponse = {
   error?: string | null;
 };
 
+type RewriteSuggestion = {
+  tone: string;
+  text: string;
+};
+
 type RewriteMessageResponse = {
   success: boolean;
-  rewrittenText?: string | null;
+  rewrittenVersions?: RewriteSuggestion[];
   error?: string | null;
 };
 
@@ -1296,6 +1301,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [messageInput, setMessageInput] = useState('');
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
@@ -1875,6 +1881,10 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         setRewriteError(null);
       }
 
+      if (rewriteSuggestions.length > 0) {
+        setRewriteSuggestions([]);
+      }
+
       if (selectedQuickReplyId) {
         const selectedReply = quickReplies.find(reply => reply.id === selectedQuickReplyId);
         if (!selectedReply || selectedReply.text !== value) {
@@ -1906,7 +1916,21 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         setSlashSuggestionIndex(0);
       }
     },
-    [quickReplies, rewriteError, selectedQuickReplyId, slashCommandState],
+    [quickReplies, rewriteError, rewriteSuggestions.length, selectedQuickReplyId, slashCommandState],
+  );
+
+  const applyRewriteSuggestion = useCallback(
+    (suggestion: RewriteSuggestion) => {
+      setMessageInput(suggestion.text);
+      setRewriteError(null);
+      setSlashCommandState(null);
+      setSlashSuggestionIndex(0);
+
+      requestAnimationFrame(() => {
+        messageInputRef.current?.focus();
+      });
+    },
+    [],
   );
 
   const resetAudioUiState = useCallback(() => {
@@ -3622,6 +3646,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
     setRewritingMessage(true);
     setRewriteError(null);
+    setRewriteSuggestions([]);
 
     try {
       const response = await fetchJson<RewriteMessageResponse>(
@@ -3633,14 +3658,16 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         },
       );
 
-      const rewritten = response.rewrittenText?.trim();
-      if (!response.success || !rewritten) {
+      const suggestions = (response.rewrittenVersions ?? []).filter(
+        suggestion => Boolean(suggestion?.text?.trim()),
+      );
+
+      if (!response.success || suggestions.length === 0) {
         throw new Error(response.error || 'Não foi possível reescrever a mensagem.');
       }
 
-      setMessageInput(rewritten);
-      setSlashCommandState(null);
-      setSlashSuggestionIndex(0);
+      applyRewriteSuggestion(suggestions[0]);
+      setRewriteSuggestions(suggestions);
     } catch (error) {
       const fallbackMessage =
         error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem.';
@@ -3651,6 +3678,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   }, [
     fetchJson,
     messageInput,
+    applyRewriteSuggestion,
     rewritingMessage,
     setRewriteError,
     setSlashCommandState,
@@ -6547,6 +6575,38 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     )}
                   </button>
                 </div>
+
+                {rewriteSuggestions.length > 0 ? (
+                  <div className="mt-3 space-y-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                        Sugestões de reescrita
+                      </p>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
+                        onClick={() => setRewriteSuggestions([])}
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {rewriteSuggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion.tone}-${index}`}
+                          type="button"
+                          className="flex h-full flex-col items-start rounded-md bg-white/70 p-2 text-left text-sm text-slate-700 transition hover:bg-white hover:shadow-sm"
+                          onClick={() => applyRewriteSuggestion(suggestion)}
+                        >
+                          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                            {suggestion.tone}
+                          </span>
+                          <span className="mt-1 line-clamp-3 text-sm text-slate-700">{suggestion.text}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {rewriteError ? (
                   <p className="px-1 text-xs text-rose-600">{rewriteError}</p>

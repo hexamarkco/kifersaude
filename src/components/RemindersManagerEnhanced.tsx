@@ -20,8 +20,13 @@ import {
 import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
+import type { WhatsappLaunchParams } from '../types/whatsapp';
 
-export default function RemindersManagerEnhanced() {
+type RemindersManagerEnhancedProps = {
+  onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
+};
+
+export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersManagerEnhancedProps = {}) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [filter, setFilter] = useState<'todos' | 'nao-lidos' | 'lidos'>('nao-lidos');
   const [loading, setLoading] = useState(true);
@@ -491,15 +496,37 @@ export default function RemindersManagerEnhanced() {
     return <Icon className="w-5 h-5" />;
   };
 
-  const getWhatsAppLink = (phone?: string) => {
-    if (!phone) return undefined;
+  const buildWhatsappLaunchParams = (reminder: Reminder, lead?: Lead): WhatsappLaunchParams | null => {
+    if (!lead?.telefone) return null;
 
-    const digits = phone.replace(/\D/g, '');
-    if (!digits) return undefined;
+    const digits = lead.telefone.replace(/\D/g, '');
+    if (!digits) return null;
 
     const phoneWithCountry = digits.startsWith('55') ? digits : `55${digits}`;
 
-    return `https://api.whatsapp.com/send?phone=${phoneWithCountry}`;
+    return {
+      phone: phoneWithCountry,
+      chatName: lead.nome_completo,
+      leadId: lead.id,
+      message: reminder.descricao ?? null,
+    };
+  };
+
+  const handleWhatsappClick = (params: WhatsappLaunchParams) => {
+    if (onOpenWhatsapp) {
+      onOpenWhatsapp(params);
+      return;
+    }
+
+    const urlParams = new URLSearchParams({ phone: params.phone });
+
+    if (params.message) {
+      urlParams.set('text', params.message);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.open(`https://api.whatsapp.com/send?${urlParams.toString()}`, '_blank');
+    }
   };
 
   const renderReminderCard = (reminder: Reminder) => {
@@ -507,7 +534,7 @@ export default function RemindersManagerEnhanced() {
     const urgency = getUrgencyLevel(reminder);
     const isSelected = selectedReminders.has(reminder.id);
     const leadInfo = reminder.lead_id ? leadsMap.get(reminder.lead_id) : undefined;
-    const whatsappLink = leadInfo?.telefone ? getWhatsAppLink(leadInfo.telefone) : undefined;
+    const whatsappParams = buildWhatsappLaunchParams(reminder, leadInfo);
 
     return (
       <div
@@ -602,16 +629,15 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
-            {whatsappLink && (
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
+            {whatsappParams && (
+              <button
+                type="button"
+                onClick={() => handleWhatsappClick(whatsappParams)}
                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                 title="Conversar via WhatsApp"
               >
                 <MessageCircle className="w-5 h-5" />
-              </a>
+              </button>
             )}
             {!reminder.lido && (
               <div className="relative">

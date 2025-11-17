@@ -13,12 +13,14 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
+import type { WhatsappLaunchParams } from '../types/whatsapp';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
+  onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
 };
 
-export default function LeadsManager({ onConvertToContract }: LeadsManagerProps) {
+export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -402,19 +404,36 @@ export default function LeadsManager({ onConvertToContract }: LeadsManagerProps)
     return firstName;
   };
 
-  const buildWhatsAppUrl = (lead: Lead) => {
+  const buildWhatsappMessage = (lead: Lead) =>
+    `Olá *${getLeadFirstName(lead.nome_completo)}*, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`;
+
+  const buildWhatsappLaunchParams = (lead: Lead): WhatsappLaunchParams | null => {
+    if (!lead.telefone) return null;
+
     const phoneDigits = lead.telefone.replace(/\D/g, '');
-    if (!phoneDigits) return '';
+    if (!phoneDigits) return null;
+
     const phoneWithCountry = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-    const message = `Olá *${getLeadFirstName(lead.nome_completo)}*, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`;
-    return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`;
+
+    return {
+      phone: phoneWithCountry,
+      message: buildWhatsappMessage(lead),
+      chatName: lead.nome_completo,
+      leadId: lead.id,
+    };
   };
 
   const handleWhatsAppContact = (lead: Lead) => {
-    if (!lead.telefone) return;
-    const url = buildWhatsAppUrl(lead);
-    if (!url) return;
+    const launchParams = buildWhatsappLaunchParams(lead);
+    if (!launchParams) return;
+
+    if (onOpenWhatsapp) {
+      onOpenWhatsapp(launchParams);
+      return;
+    }
+
     if (typeof window !== 'undefined') {
+      const url = `https://wa.me/${launchParams.phone}?text=${encodeURIComponent(launchParams.message ?? '')}`;
       window.open(url, '_blank');
     }
   };

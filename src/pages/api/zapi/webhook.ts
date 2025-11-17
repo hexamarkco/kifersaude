@@ -1,5 +1,9 @@
 import type { ApiRequest, ApiResponse } from '../types';
-import { upsertChatRecord, insertWhatsappMessage } from '../../../server/whatsappStorage';
+import {
+  upsertChatRecord,
+  insertWhatsappMessage,
+  updateWhatsappMessageStatuses,
+} from '../../../server/whatsappStorage';
 import { resolveOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
@@ -252,6 +256,8 @@ type NewsletterNotificationPayload =
 type ZapiPayload = {
   type?: string;
   phone?: string;
+  ids?: (string | number | null | undefined)[] | null;
+  id?: string | number | null;
   fromMe?: boolean;
   momment?: number | string | null;
   status?: string | null;
@@ -357,6 +363,30 @@ const toNonEmptyStringArray = (value: unknown): string[] => {
   return value
     .map((entry) => toNonEmptyStringLike(entry))
     .filter((entry): entry is string => Boolean(entry));
+};
+
+const normalizeStatusValue = (value: unknown): string | null => {
+  const status = toNonEmptyString(value);
+  return status ? status.toUpperCase() : null;
+};
+
+const resolveStatusWebhookIds = (payload: ZapiPayload): string[] => {
+  const ids = Array.isArray(payload.ids) ? payload.ids : [];
+  const combined = [...ids, payload.id].filter((entry) => entry !== null && entry !== undefined);
+  const uniqueIds = new Set<string>();
+
+  for (const entry of combined) {
+    if (typeof entry === 'string') {
+      const normalized = entry.trim();
+      if (normalized) {
+        uniqueIds.add(normalized);
+      }
+    } else if (typeof entry === 'number' && Number.isFinite(entry)) {
+      uniqueIds.add(entry.toString());
+    }
+  }
+
+  return Array.from(uniqueIds);
 };
 
 const formatWithCurrency = (value: number | string | null | undefined, currency: string | null | undefined): string | null => {
@@ -704,6 +734,32 @@ const resolveMessageText = (payload: ZapiPayload): string => {
   return UNSUPPORTED_MESSAGE_PLACEHOLDER;
 };
 
+const handleMessageStatusCallback = async (
+  payload: ZapiPayload,
+  res: ApiResponse,
+  options?: { statusIds?: string[]; normalizedStatus?: string | null },
+) => {
+  const messageIds = options?.statusIds ?? resolveStatusWebhookIds(payload);
+  const normalizedStatus = options?.normalizedStatus ?? normalizeStatusValue(payload.status);
+  const isStatusPayload = payload.type === 'MessageStatusCallback' || messageIds.length > 0;
+
+  if (!isStatusPayload) {
+    return res.status(200).json({ success: true, ignored: true });
+  }
+
+  if (!normalizedStatus || messageIds.length === 0) {
+    return res.status(400).json({ error: 'Campos status e ids são obrigatórios' });
+  }
+
+  try {
+    const { updated, missingIds } = await updateWhatsappMessageStatuses(messageIds, normalizedStatus);
+    return res.status(200).json({ success: true, status: normalizedStatus, updated, missingIds });
+  } catch (error: any) {
+    console.error('Erro ao atualizar status de mensagens da Z-API:', error);
+    return res.status(500).json({ error: 'Falha ao processar status da mensagem' });
+  }
+};
+
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
@@ -712,6 +768,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const payload = ensureJson(req.body);
 
   console.info('Z-API received webhook payload:', payload);
+
+  const statusIds = resolveStatusWebhookIds(payload);
+  const normalizedStatus = normalizeStatusValue(payload.status);
+
+  if (payload.type === 'MessageStatusCallback' || statusIds.length > 0) {
+    return handleMessageStatusCallback(payload, res, {
+      statusIds,
+      normalizedStatus,
+    });
+  }
 
   if (payload.type !== 'ReceivedCallback') {
     return res.status(200).json({ success: true, ignored: true });

@@ -351,6 +351,30 @@ const normalizePhoneForComparison = (value: string | null | undefined): string =
   return withoutSuffix.replace(/\D+/g, '');
 };
 
+const CONTACTS_PAGE_SIZE = 50;
+
+const sortContactsList = (list: WhatsappContactListEntry[]): WhatsappContactListEntry[] => {
+  const normalizeName = (name: string | null) => removeDiacritics(name?.toLowerCase().trim() ?? '');
+
+  return [...list].sort((first, second) => {
+    const firstName = normalizeName(first.name);
+    const secondName = normalizeName(second.name);
+
+    if (firstName && secondName) {
+      const comparison = firstName.localeCompare(secondName, 'pt-BR');
+      if (comparison !== 0) {
+        return comparison;
+      }
+    } else if (firstName) {
+      return -1;
+    } else if (secondName) {
+      return 1;
+    }
+
+    return first.phone.localeCompare(second.phone, 'pt-BR');
+  });
+};
+
 const LEADING_PREVIEW_EMOJI_MAP: Array<{ icon: LucideIcon; emojis: string[] }> = [
   { icon: ImageIcon, emojis: ['🖼️'] },
   { icon: VideoIcon, emojis: ['🎬'] },
@@ -1609,6 +1633,7 @@ export default function WhatsappPage({
   const [contactsLoaded, setContactsLoaded] = useState(false);
   const [contactsError, setContactsError] = useState<string | null>(null);
   const [contactSearchTerm, setContactSearchTerm] = useState('');
+  const [contactsPage, setContactsPage] = useState(1);
   const [leads, setLeads] = useState<LeadSummary[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadsLoaded, setLeadsLoaded] = useState(false);
@@ -2710,7 +2735,8 @@ export default function WhatsappPage({
         getWhatsappFunctionUrl('/whatsapp-webhook/contacts'),
       );
 
-      setContacts(Array.isArray(data.contacts) ? data.contacts : []);
+      const parsedContacts = Array.isArray(data.contacts) ? data.contacts : [];
+      setContacts(sortContactsList(parsedContacts));
     } catch (error) {
       console.error('Erro ao carregar contatos salvos:', error);
       setContacts([]);
@@ -2860,15 +2886,19 @@ export default function WhatsappPage({
     }
   }, [selectedChatLead]);
 
+  const sortedContacts = useMemo(() => sortContactsList(contacts), [contacts]);
+
   const filteredContactsList = useMemo(() => {
+    const baseList = sortedContacts;
+
     if (!contactSearchTerm.trim()) {
-      return contacts;
+      return baseList;
     }
 
     const normalizedTerm = removeDiacritics(contactSearchTerm.trim().toLowerCase());
     const digitsTerm = contactSearchTerm.replace(/\D+/g, '');
 
-    return contacts.filter(contact => {
+    return baseList.filter(contact => {
       const nameText = contact.name ? removeDiacritics(contact.name.toLowerCase()) : '';
       const rawPhone = contact.phone.toLowerCase();
       const normalizedPhone = normalizePhoneForComparison(contact.phone);
@@ -2879,7 +2909,33 @@ export default function WhatsappPage({
         (digitsTerm ? normalizedPhone.includes(digitsTerm) : false)
       );
     });
-  }, [contacts, contactSearchTerm]);
+  }, [sortedContacts, contactSearchTerm]);
+
+  const totalContactPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredContactsList.length / CONTACTS_PAGE_SIZE)),
+    [filteredContactsList.length],
+  );
+
+  const currentContactPage = useMemo(
+    () => Math.min(contactsPage, totalContactPages),
+    [contactsPage, totalContactPages],
+  );
+
+  const paginatedContacts = useMemo(() => {
+    const startIndex = (currentContactPage - 1) * CONTACTS_PAGE_SIZE;
+    return filteredContactsList.slice(startIndex, startIndex + CONTACTS_PAGE_SIZE);
+  }, [filteredContactsList, currentContactPage]);
+
+  useEffect(() => {
+    setContactsPage(1);
+  }, [contactSearchTerm, contacts.length]);
+
+  useEffect(() => {
+    setContactsPage(previousPage => Math.min(previousPage, totalContactPages));
+  }, [totalContactPages]);
+
+  const contactPageStartIndex = (currentContactPage - 1) * CONTACTS_PAGE_SIZE;
+  const contactPageEndIndex = contactPageStartIndex + paginatedContacts.length;
 
   const filteredLeads = useMemo(() => {
     if (!leadSearchTerm.trim()) {
@@ -7356,33 +7412,63 @@ export default function WhatsappPage({
                       Nenhum contato corresponde à sua pesquisa.
                     </p>
                   ) : (
-                    <div className="space-y-2">
-                      {filteredContactsList.map(contact => {
-                        const displayName = contact.name ?? contact.phone;
-                        const initials = displayName.trim().charAt(0).toUpperCase();
-                        return (
-                          <button
-                            key={contact.phone}
-                            type="button"
-                            disabled={startingConversation}
-                            onClick={() => {
-                              void handleStartConversation(contact.phone, contact.name);
-                            }}
-                            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
-                              {initials}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
-                              <p className="truncate text-xs text-slate-500">
-                                {contact.phone}
-                                {contact.isBusiness ? ' • Conta comercial' : ''}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        {paginatedContacts.map(contact => {
+                          const displayName = contact.name ?? contact.phone;
+                          const initials = displayName.trim().charAt(0).toUpperCase();
+                          return (
+                            <button
+                              key={contact.phone}
+                              type="button"
+                              disabled={startingConversation}
+                              onClick={() => {
+                                void handleStartConversation(contact.phone, contact.name);
+                              }}
+                              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
+                                {initials}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
+                                <p className="truncate text-xs text-slate-500">
+                                  {contact.phone}
+                                  {contact.isBusiness ? ' • Conta comercial' : ''}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {filteredContactsList.length > CONTACTS_PAGE_SIZE ? (
+                        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                          <p>
+                            Mostrando {contactPageStartIndex + 1}–{contactPageEndIndex} de {filteredContactsList.length} contatos
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setContactsPage(currentContactPage - 1)}
+                              disabled={currentContactPage === 1}
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 font-medium text-slate-700 transition hover:border-emerald-500 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Anterior
+                            </button>
+                            <span className="text-xs text-slate-500">
+                              Página {currentContactPage} de {totalContactPages}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setContactsPage(currentContactPage + 1)}
+                              disabled={currentContactPage === totalContactPages}
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 font-medium text-slate-700 transition hover:border-emerald-500 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Próxima
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>

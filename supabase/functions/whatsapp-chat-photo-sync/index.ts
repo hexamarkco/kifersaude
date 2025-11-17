@@ -41,13 +41,15 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const CHAT_PHOTO_BUCKET = 'whatsapp-chat-photos';
 const DEFAULT_PHOTO_CONTENT_TYPE = 'image/jpeg';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.');
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL não configurada.');
 }
 
-const supabaseAdmin = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
-  : null;
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada.');
+}
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 
 const normalizePhone = (value: string | null | undefined): string | null => {
   if (!value) {
@@ -121,10 +123,6 @@ const downloadAndStoreProfilePhoto = async (
   photoUrl: string,
   phone: string,
 ): Promise<string> => {
-  if (!supabaseAdmin) {
-    throw new Error('Supabase client não configurado para armazenar fotos de perfil');
-  }
-
   const response = await fetch(photoUrl);
 
   if (!response.ok) {
@@ -161,10 +159,6 @@ const downloadAndStoreProfilePhoto = async (
 };
 
 const syncChatPhotos = async (): Promise<SyncSummary> => {
-  if (!supabaseAdmin) {
-    throw new Error('Supabase client não configurado');
-  }
-
   const credentials = getZapiCredentials();
   if (!credentials) {
     throw new Error('Credenciais da Z-API não configuradas');

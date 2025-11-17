@@ -2482,9 +2482,7 @@ const handleDeleteMessage = async (req: Request) => {
     return respondJson(400, { success: false, error: 'Campo owner é obrigatório' });
   }
 
-  const credentials = getZapiCredentials();
-
-  if (!credentials) {
+  if (!getZapiCredentials()) {
     return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
   }
 
@@ -2992,59 +2990,11 @@ const handleListContacts = async (req: Request) => {
     return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
   }
 
-  const { instanceId, token, clientToken } = credentials;
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/contacts`;
-
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Client-Token': clientToken },
-    });
-
-    let responseBody: unknown = null;
-    try {
-      responseBody = await response.json();
-    } catch (_error) {
-      responseBody = null;
-    }
-
-    if (!response.ok) {
-      const errorDetails =
-        responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)
-          ? (responseBody as Record<string, unknown>)
-          : null;
-      throw new ZapiRequestError(response.status, 'Falha ao carregar contatos da Z-API', errorDetails);
-    }
-
-    const rawContacts = (() => {
-      if (Array.isArray(responseBody)) {
-        return responseBody as Array<Record<string, unknown>>;
-      }
-
-      if (
-        responseBody &&
-        typeof responseBody === 'object' &&
-        Array.isArray((responseBody as { contacts?: unknown }).contacts)
-      ) {
-        return (responseBody as { contacts: Array<Record<string, unknown>> }).contacts;
-      }
-
-      return [] as Array<Record<string, unknown>>;
-    })();
-
+    const contactsMap = await buildContactsMap();
     const normalizedContacts: WhatsappContactSummary[] = [];
 
-    for (const entry of rawContacts) {
-      if (!entry || typeof entry !== 'object') {
-        continue;
-      }
-
-      const rawPhone =
-        (entry as { phone?: unknown }).phone ??
-        (entry as { jid?: unknown }).jid ??
-        (entry as { id?: unknown }).id ??
-        null;
-      const phone = normalizePhoneIdentifier(rawPhone);
+    for (const [phone, entry] of contactsMap.entries()) {
 
       if (!phone) {
         continue;

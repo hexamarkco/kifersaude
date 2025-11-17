@@ -3253,7 +3253,28 @@ export default function WhatsappPage({
         getWhatsappFunctionUrl('/whatsapp-webhook/chats'),
       );
 
-      setChats(data.chats);
+      setChats(previousChats => {
+        const incomingIds = new Set(data.chats.map(chat => chat.id));
+
+        const mergedIncoming = data.chats.map(chat => {
+          const existing = previousChats.find(previousChat => previousChat.id === chat.id);
+
+          return {
+            ...existing,
+            ...chat,
+            display_name: chat.display_name ?? existing?.display_name ?? null,
+            crm_lead: chat.crm_lead ?? existing?.crm_lead ?? null,
+            crm_contracts: chat.crm_contracts ?? existing?.crm_contracts ?? [],
+            crm_financial_summary:
+              chat.crm_financial_summary ?? existing?.crm_financial_summary ?? null,
+            sla_metrics: chat.sla_metrics ?? existing?.sla_metrics ?? null,
+          } as WhatsappChat;
+        });
+
+        const missingChats = previousChats.filter(chat => !incomingIds.has(chat.id));
+
+        return [...mergedIncoming, ...missingChats];
+      });
       setSelectedChatId(previousSelected => {
         if (previousSelected || data.chats.length === 0) {
           return previousSelected;

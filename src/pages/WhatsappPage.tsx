@@ -169,6 +169,42 @@ const formatShortTime = (value: string | null) => {
   });
 };
 
+const formatMessageDayLabel = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const oneDayInMs = 24 * 60 * 60 * 1000;
+  const diffInDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / oneDayInMs);
+
+  if (diffInDays === 0) {
+    return 'Hoje';
+  }
+
+  if (diffInDays === 1) {
+    return 'Ontem';
+  }
+
+  if (diffInDays === 2) {
+    return 'Anteontem';
+  }
+
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
 const formatPeriodRangeLabel = (start: string | null, end: string | null) => {
   if (!start || !end) {
     return '';
@@ -5874,7 +5910,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     : 'Nenhuma mensagem neste chat.'}
                 </p>
               ) : (
-                visibleMessages.map(message => {
+                visibleMessages.map((message, index) => {
                   const isFromMe = message.from_me;
                   const scheduleMetadata = message.scheduleMetadata ?? null;
                   const scheduleId = scheduleMetadata?.scheduledMessageId ?? null;
@@ -5962,19 +5998,39 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     </>
                   ) : null;
 
+                  const previousMessage = index > 0 ? visibleMessages[index - 1] : null;
+                  const messageDayLabel = formatMessageDayLabel(
+                    message.moment ?? message.scheduleMetadata?.scheduledSendAt ?? null,
+                  );
+                  const previousDayLabel = previousMessage
+                    ? formatMessageDayLabel(
+                        previousMessage.moment ?? previousMessage.scheduleMetadata?.scheduledSendAt ?? null,
+                      )
+                    : null;
+                  const shouldShowDaySeparator = Boolean(
+                    messageDayLabel && messageDayLabel !== previousDayLabel,
+                  );
+
                   return (
-                    <div
-                      key={message.id}
-                      ref={element => {
-                        if (element) {
-                          messageElementsRef.current[message.id] = element;
-                        } else {
-                          delete messageElementsRef.current[message.id];
-                        }
-                      }}
-                      data-testid="whatsapp-message"
-                      className={`flex flex-col ${alignment}`}
-                    >
+                    <Fragment key={message.id}>
+                      {shouldShowDaySeparator ? (
+                        <div className="flex items-center justify-center py-1">
+                          <span className="rounded-full bg-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                            {messageDayLabel}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div
+                        ref={element => {
+                          if (element) {
+                            messageElementsRef.current[message.id] = element;
+                          } else {
+                            delete messageElementsRef.current[message.id];
+                          }
+                        }}
+                        data-testid="whatsapp-message"
+                        className={`flex flex-col ${alignment}`}
+                      >
                       {shouldShowSenderName ? (
                         <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
                           {senderDisplayName ?? 'Participante'}
@@ -6117,7 +6173,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                           </div>
                         ) : (
                           <div className="flex flex-wrap items-center gap-2">
-                            <span>{formatDateTime(message.moment)}</span>
+                            <span>{formatShortTime(message.moment)}</span>
                             <span>{message.isOptimistic ? '(enviando...)' : message.status || ''}</span>
                           </div>
                         )}
@@ -6144,6 +6200,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                         </div>
                       ) : null}
                     </div>
+                    </Fragment>
                   );
                 })
               )}

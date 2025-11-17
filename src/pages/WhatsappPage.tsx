@@ -6753,6 +6753,8 @@ export default function WhatsappPage({
                     .filter(Boolean)
                     .join(' ');
                   const messageActionMenuOpen = messageActionsMenuId === message.id;
+                  const isDeletingMessage = Boolean(deletingMessageIds[message.id]);
+                  const canDeleteMessage = Boolean(message.message_id);
                   const summaryChipClassName =
                     hasOnlyMediaWithoutPadding || isFromMe
                       ? 'inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] text-white'

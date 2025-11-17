@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Loader2,
   Eye,
   FileText,
   Image as ImageIcon,
@@ -28,6 +29,7 @@ import {
   Plus,
   MapPin,
   Mic,
+  Sparkles,
   Pin,
   PinOff,
   Paperclip,
@@ -249,6 +251,12 @@ type AudioTranscriptionState = {
 type TranscribeAudioResponse = {
   success: boolean;
   transcription?: string | null;
+  error?: string | null;
+};
+
+type RewriteMessageResponse = {
+  success: boolean;
+  rewrittenText?: string | null;
   error?: string | null;
 };
 
@@ -1286,6 +1294,8 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [seenSlaAlertIds, setSeenSlaAlertIds] = useState<string[]>([]);
   const [slaAlertToast, setSlaAlertToast] = useState<WhatsappChatSlaAlert | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [rewritingMessage, setRewritingMessage] = useState(false);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
   const [quickRepliesError, setQuickRepliesError] = useState<string | null>(null);
@@ -1861,6 +1871,10 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       const { value } = event.target;
       setMessageInput(value);
 
+      if (rewriteError) {
+        setRewriteError(null);
+      }
+
       if (selectedQuickReplyId) {
         const selectedReply = quickReplies.find(reply => reply.id === selectedQuickReplyId);
         if (!selectedReply || selectedReply.text !== value) {
@@ -1892,7 +1906,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         setSlashSuggestionIndex(0);
       }
     },
-    [quickReplies, selectedQuickReplyId, slashCommandState],
+    [quickReplies, rewriteError, selectedQuickReplyId, slashCommandState],
   );
 
   const resetAudioUiState = useCallback(() => {
@@ -3593,6 +3607,55 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       }));
     }
   }, []);
+
+  const handleRewriteMessage = useCallback(async () => {
+    const text = messageInput.trim();
+
+    if (!text) {
+      setRewriteError('Digite uma mensagem para reescrever.');
+      return;
+    }
+
+    if (rewritingMessage) {
+      return;
+    }
+
+    setRewritingMessage(true);
+    setRewriteError(null);
+
+    try {
+      const response = await fetchJson<RewriteMessageResponse>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/rewrite-message'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        },
+      );
+
+      const rewritten = response.rewrittenText?.trim();
+      if (!response.success || !rewritten) {
+        throw new Error(response.error || 'Não foi possível reescrever a mensagem.');
+      }
+
+      setMessageInput(rewritten);
+      setSlashCommandState(null);
+      setSlashSuggestionIndex(0);
+    } catch (error) {
+      const fallbackMessage =
+        error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem.';
+      setRewriteError(fallbackMessage);
+    } finally {
+      setRewritingMessage(false);
+    }
+  }, [
+    fetchJson,
+    messageInput,
+    rewritingMessage,
+    setRewriteError,
+    setSlashCommandState,
+    setSlashSuggestionIndex,
+  ]);
 
   const sendPendingAttachment = async (
     attachment: PendingAttachment,
@@ -6218,6 +6281,26 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     onOpenChange={handleQuickRepliesMenuOpenChange}
                   />
 
+                  <button
+                    type="button"
+                    onClick={handleRewriteMessage}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={
+                      sendingMessage ||
+                      schedulingMessage ||
+                      isRecordingAudio ||
+                      rewritingMessage ||
+                      trimmedMessageInput.length === 0
+                    }
+                  >
+                    {rewritingMessage ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span>Reescrever</span>
+                  </button>
+
                   <div className="relative">
                     <button
                       type="button"
@@ -6453,6 +6536,10 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     )}
                   </button>
                 </div>
+
+                {rewriteError ? (
+                  <p className="px-1 text-xs text-rose-600">{rewriteError}</p>
+                ) : null}
 
                 <input
                   ref={documentInputRef}

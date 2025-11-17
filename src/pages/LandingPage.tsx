@@ -1013,124 +1013,162 @@ export default function LandingPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8">
-              <p className="text-slate-600 mb-6 text-center">
-                Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp
+            <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-slate-50">
+              <div className="flex flex-wrap justify-center gap-3 text-sm font-semibold">
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-white text-orange-600 border border-orange-200">
+                  <MessageCircle className="w-4 h-4 mr-2" /> Atendimento humanizado
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-white text-slate-700 border border-slate-200">
+                  ⏱️ Retorno em até 10 minutos
+                </span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-white text-slate-700 border border-slate-200">
+                  ✅ Consultoria gratuita
+                </span>
+              </div>
+
+              <p className="text-slate-600 text-center max-w-2xl mx-auto">
+                Preencha os dados e receba uma análise personalizada com as melhores opções para você ou sua empresa.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Nome Completo *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder="Seu nome"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Telefone (WhatsApp) *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Cidade *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder="Sua cidade"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Idade das vidas *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addBeneficiaryAge}
-                      className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-1" /> Adicionar vida
-                    </button>
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5 lg:h-full">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                      <Heart className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Atendimento dedicado</p>
+                      <p className="text-sm text-slate-500">Converse direto com nossa especialista pelo WhatsApp.</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
-                    {beneficiaryAges.map((age, index) => (
-                      <div key={index} className="flex items-center space-x-3">
-                        <input
-                          type="number"
-                          min="0"
-                          required={index === 0}
-                          inputMode="numeric"
-                          pattern="\d*"
-                          value={age}
-                          onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                          placeholder={`Idade da vida ${index + 1}`}
-                        />
-                        {beneficiaryAges.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeBeneficiaryAge(index)}
-                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            aria-label="Remover vida"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Envio seguro</p>
+                      <p className="text-sm text-slate-500">Suas informações são usadas apenas para sua cotação.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                    <p className="text-sm font-semibold text-orange-700">Dica rápida</p>
+                    <p className="text-sm text-orange-700/80 mt-1">
+                      Informe as idades com atenção. Isso ajuda a sugerir os planos com melhor custo-benefício.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Nome Completo *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.nome}
+                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder="Seu nome"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Telefone (WhatsApp) *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.telefone}
+                        onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Cidade *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.cidade}
+                        onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder="Sua cidade"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-slate-700">Idade das vidas *</label>
+                        <button
+                          type="button"
+                          onClick={addBeneficiaryAge}
+                          className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                          <Plus className="w-4 h-4 mr-1" /> Adicionar vida
+                        </button>
                       </div>
-                    ))}
+
+                      <div className="space-y-3">
+                        {beneficiaryAges.map((age, index) => (
+                          <div key={index} className="flex items-center space-x-3">
+                            <input
+                              type="number"
+                              min="0"
+                              required={index === 0}
+                              inputMode="numeric"
+                              pattern="\d*"
+                              value={age}
+                              onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
+                              className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              placeholder={`Idade da vida ${index + 1}`}
+                            />
+                            {beneficiaryAges.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeBeneficiaryAge(index)}
+                                className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                aria-label="Remover vida"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo de Contratação *</label>
+                    <select
+                      value={formData.tipoContratacao}
+                      onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    >
+                      <option value="PF">Pessoa Física</option>
+                      <option value="MEI">MEI</option>
+                      <option value="CNPJ">CNPJ</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">Selecione o perfil para personalizarmos a oferta ideal.</p>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <button
+                      type="submit"
+                      className="w-full md:w-auto md:flex-1 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.01]"
+                    >
+                      Enviar cotação via WhatsApp
+                      <MessageCircle className="inline-block ml-2 w-5 h-5" />
+                    </button>
+                    <div className="flex items-center text-sm text-slate-500 gap-2 justify-center md:justify-end">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Resposta em até 10 minutos
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Tipo de Contratação *
-                </label>
-                <select
-                  value={formData.tipoContratacao}
-                  onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                >
-                  <option value="PF">Pessoa Física</option>
-                  <option value="MEI">MEI</option>
-                  <option value="CNPJ">CNPJ</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-              >
-                Enviar cotação via WhatsApp
-                <MessageCircle className="inline-block ml-2 w-5 h-5" />
-              </button>
-
-              <p className="text-center text-sm text-slate-500 mt-4">
-                Resposta em até 10 minutos
-              </p>
             </form>
           </div>
         </div>

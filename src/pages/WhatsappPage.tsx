@@ -78,12 +78,16 @@ import type {
   WhatsappScheduledMessagesPeriodSummary,
   WhatsappChatSlaAlert,
   WhatsappChatSlaStatus,
+  WhatsappChatPresenceEvent,
+  WhatsappPresenceStatus,
 } from '../types/whatsapp';
 
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
 const MAX_MESSAGE_INPUT_ROWS = 5;
 const DEFAULT_MESSAGE_INPUT_LINE_HEIGHT = 24;
+const TYPING_STATUS_TTL_MS = 20_000;
+const PRESENCE_STATUS_TTL_MS = 5 * 60 * 1000;
 
 const REQUIRED_WHATSAPP_ENV_VARS = [
   'VITE_SUPABASE_URL',
@@ -554,6 +558,99 @@ const sortSchedulesByUrgency = (entries: WhatsappScheduledMessage[]) => {
 
     return a.id.localeCompare(b.id);
   });
+};
+
+type ChatPresenceState = {
+  phone: string;
+  chatId: string;
+  status: string | null;
+  presence: WhatsappPresenceStatus;
+  isTyping: boolean;
+  activity?: 'recording' | 'typing';
+  lastSeenIso: string | null;
+  updatedAt: number;
+};
+
+const normalizePresenceValue = (value: unknown): WhatsappPresenceStatus | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'online' || normalized === 'offline' || normalized === 'unknown') {
+    return normalized as WhatsappPresenceStatus;
+  }
+
+  return null;
+};
+
+const mapStatusToPresence = (status: string | null): WhatsappPresenceStatus => {
+  if (!status) {
+    return 'unknown';
+  }
+
+  const normalized = status.trim().toUpperCase();
+  if (['AVAILABLE', 'ONLINE', 'CONNECTED', 'ACTIVE', 'COMPOSING', 'RECORDING', 'PAUSED'].includes(normalized)) {
+    return 'online';
+  }
+
+  if (['UNAVAILABLE', 'OFFLINE', 'INACTIVE', 'DISCONNECTED'].includes(normalized)) {
+    return 'offline';
+  }
+
+  return 'unknown';
+};
+
+const normalizePresenceEventPayload = (
+  payload: any,
+): { key: string; state: ChatPresenceState } | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const typedPayload = payload as WhatsappChatPresenceEvent & { kind?: string; lastSeen?: number };
+  const phone = typeof typedPayload.phone === 'string' ? typedPayload.phone.trim() : '';
+  const chatId = typeof typedPayload.chatId === 'string' ? typedPayload.chatId.trim() : '';
+  const key = chatId || phone;
+
+  if (!key) {
+    return null;
+  }
+
+  const status = typeof typedPayload.status === 'string' ? typedPayload.status.toUpperCase() : null;
+  const presence =
+    normalizePresenceValue(typedPayload.presence) ?? normalizePresenceValue(typedPayload.status) ?? mapStatusToPresence(status);
+  const rawTimestamp =
+    typeof typedPayload.timestamp === 'number'
+      ? typedPayload.timestamp
+      : typeof (typedPayload as any).timestamp === 'number'
+        ? (typedPayload as any).timestamp
+        : Date.now();
+  const kind = typeof typedPayload.kind === 'string' ? typedPayload.kind : null;
+  const isTypingPayload =
+    typeof typedPayload.isTyping === 'boolean'
+      ? typedPayload.isTyping
+      : ['COMPOSING', 'RECORDING'].includes(status ?? '');
+  const isTyping = kind === 'typing-stop' ? false : isTypingPayload;
+  const activity = isTyping ? (typedPayload.activity === 'recording' ? 'recording' : 'typing') : undefined;
+  const lastSeenValue =
+    typedPayload.lastSeenIso ??
+    (typeof typedPayload.lastSeen === 'number' ? new Date(typedPayload.lastSeen).toISOString() : null);
+  const lastSeenIso = typeof lastSeenValue === 'string' ? lastSeenValue : null;
+
+  return {
+    key,
+    state: {
+      phone: phone || chatId,
+      chatId: chatId || phone,
+      status,
+      presence,
+      isTyping,
+      activity,
+      lastSeenIso,
+      updatedAt: rawTimestamp,
+    },
+  };
 };
 
 const SLA_STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -1337,6 +1434,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [unseenSlaAlertIds, setUnseenSlaAlertIds] = useState<string[]>([]);
   const [seenSlaAlertIds, setSeenSlaAlertIds] = useState<string[]>([]);
   const [slaAlertToast, setSlaAlertToast] = useState<WhatsappChatSlaAlert | null>(null);
+  const [chatPresenceMap, setChatPresenceMap] = useState<Record<string, ChatPresenceState>>({});
   const [messageInput, setMessageInput] = useState('');
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
@@ -1535,6 +1633,65 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     [chats, selectedChatId],
   );
 
+  const selectedChatPresence = useMemo<(ChatPresenceState & { isFresh: boolean }) | null>(() => {
+    if (!selectedChat) {
+      return null;
+    }
+
+    const keysToCheck = [selectedChat.id, selectedChat.phone].filter(Boolean) as string[];
+    const now = Date.now();
+
+    for (const key of keysToCheck) {
+      const presence = chatPresenceMap[key];
+
+      if (!presence) {
+        continue;
+      }
+
+      const isTypingFresh = presence.isTyping && now - presence.updatedAt <= TYPING_STATUS_TTL_MS;
+      const isPresenceFresh = now - presence.updatedAt <= PRESENCE_STATUS_TTL_MS;
+
+      if (!isTypingFresh && !isPresenceFresh) {
+        continue;
+      }
+
+      return {
+        ...presence,
+        isTyping: isTypingFresh,
+        isFresh: isTypingFresh || isPresenceFresh,
+      };
+    }
+
+    return null;
+  }, [chatPresenceMap, selectedChat]);
+
+  const selectedChatPresenceLabel = useMemo(() => {
+    if (!selectedChatPresence) {
+      return null;
+    }
+
+    if (selectedChatPresence.isTyping) {
+      return selectedChatPresence.activity === 'recording' ? 'Gravando áudio…' : 'Digitando…';
+    }
+
+    if (!selectedChatPresence.isFresh) {
+      return null;
+    }
+
+    if (selectedChatPresence.presence === 'online') {
+      return 'Online agora';
+    }
+
+    if (selectedChatPresence.presence === 'offline') {
+      if (selectedChatPresence.lastSeenIso) {
+        return `Visto por último às ${formatShortTime(selectedChatPresence.lastSeenIso)}`;
+      }
+      return 'Offline';
+    }
+
+    return null;
+  }, [selectedChatPresence]);
+
   const totalUnreadCount = useMemo(
     () => Object.values(unreadCounts).reduce((sum, count) => sum + (count ?? 0), 0),
     [unreadCounts],
@@ -1555,6 +1712,61 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
       return changed ? next : previous;
     });
   }, [chats]);
+
+  useEffect(() => {
+    const handlePresenceBroadcast = (event: { payload?: unknown }) => {
+      const normalized = normalizePresenceEventPayload((event as any)?.payload ?? event);
+
+      if (!normalized) {
+        return;
+      }
+
+      setChatPresenceMap(previous => ({ ...previous, [normalized.key]: normalized.state }));
+    };
+
+    const channel = supabase
+      .channel('zapi-typing-presence-ui', { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'presence:update' }, handlePresenceBroadcast)
+      .on('broadcast', { event: 'typing:start' }, handlePresenceBroadcast)
+      .on('broadcast', { event: 'typing:stop' }, handlePresenceBroadcast)
+      .on('broadcast', { event: 'zapi:typing-presence' }, handlePresenceBroadcast)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setChatPresenceMap(previous => {
+        const now = Date.now();
+        let changed = false;
+        const next: Record<string, ChatPresenceState> = {};
+
+        Object.entries(previous).forEach(([key, value]) => {
+          const isTypingFresh = value.isTyping && now - value.updatedAt <= TYPING_STATUS_TTL_MS;
+          const isPresenceFresh = now - value.updatedAt <= PRESENCE_STATUS_TTL_MS;
+
+          if (!isTypingFresh && !isPresenceFresh) {
+            changed = true;
+            return;
+          }
+
+          next[key] = { ...value, isTyping: isTypingFresh };
+          if (isTypingFresh !== value.isTyping) {
+            changed = true;
+          }
+        });
+
+        return changed ? next : previous;
+      });
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!onUnreadCountChange) {
@@ -5828,6 +6040,18 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                           ) : null}
                         </div>
                       )}
+                      {selectedChatPresenceLabel ? (
+                        <p
+                          className={`mt-1 truncate text-xs font-medium ${
+                            selectedChatPresence?.presence === 'offline'
+                              ? 'text-slate-500'
+                              : 'text-emerald-600'
+                          }`}
+                          aria-live="polite"
+                        >
+                          {selectedChatPresenceLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   {selectedChatLead ? (

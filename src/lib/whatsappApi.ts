@@ -3,7 +3,7 @@ import type {
   WhatsappChatSlaAlert,
   WhatsappChatSlaStatus,
 } from '../types/whatsapp';
-a
+
 type RuntimeEnv = {
   functionsUrl?: string;
   supabaseUrl?: string;

@@ -41,6 +41,7 @@ import {
   Radio,
   Bell,
   Check,
+  CheckCheck,
   User,
   UserPlus,
   Video as VideoIcon,
@@ -482,6 +483,87 @@ const getChatPreviewInfo = (preview: string | null): ChatPreviewInfo => {
 };
 
 type OptimisticMessage = WhatsappMessage & { isOptimistic?: boolean };
+
+type MessageStatusDisplay = {
+  label: string;
+  icon?: LucideIcon;
+  className?: string;
+};
+
+const MESSAGE_STATUS_DISPLAY: Record<string, MessageStatusDisplay> = {
+  SENDING: {
+    label: 'Enviando',
+    icon: Clock,
+    className: 'text-slate-500',
+  },
+  PENDING: {
+    label: 'Enviando',
+    icon: Clock,
+    className: 'text-slate-500',
+  },
+  SENT: {
+    label: 'Enviado',
+    icon: Check,
+    className: 'text-slate-500',
+  },
+  RECEIVED: {
+    label: 'Recebido',
+    icon: CheckCheck,
+    className: 'text-slate-500',
+  },
+  DELIVERED: {
+    label: 'Recebido',
+    icon: CheckCheck,
+    className: 'text-slate-500',
+  },
+  READ: {
+    label: 'Lido',
+    icon: CheckCheck,
+    className: 'text-sky-500',
+  },
+  PLAYED: {
+    label: 'Ouvido',
+    icon: CheckCheck,
+    className: 'text-sky-500',
+  },
+  FAILED: {
+    label: 'Falha no envio',
+    icon: XCircle,
+    className: 'text-rose-500',
+  },
+  ERROR: {
+    label: 'Erro no envio',
+    icon: XCircle,
+    className: 'text-rose-500',
+  },
+};
+
+const resolveMessageStatusDisplay = (message: OptimisticMessage): MessageStatusDisplay | null => {
+  if (!message.from_me) {
+    return null;
+  }
+
+  if (message.isOptimistic) {
+    return MESSAGE_STATUS_DISPLAY.SENDING;
+  }
+
+  const rawStatus = message.status?.trim();
+  if (!rawStatus) {
+    return null;
+  }
+
+  const normalizedStatus = rawStatus.toUpperCase();
+  const mappedStatus = MESSAGE_STATUS_DISPLAY[normalizedStatus];
+
+  if (mappedStatus) {
+    return mappedStatus;
+  }
+
+  return {
+    label: rawStatus,
+    className: 'text-slate-500',
+  };
+};
 
 type TimelineMessage = OptimisticMessage & {
   scheduleMetadata?: {
@@ -6167,6 +6249,12 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     : isFromMe
                     ? 'bg-emerald-500 text-white'
                     : 'bg-white border border-slate-200 text-slate-800';
+                  const statusDisplay = resolveMessageStatusDisplay(message);
+                  const statusClassName = statusDisplay
+                    ? ['inline-flex items-center gap-1', statusDisplay.className ?? '']
+                        .filter(Boolean)
+                        .join(' ')
+                    : null;
 
                   const shouldShowSenderName = selectedChat.is_group;
                   const senderDisplayName = shouldShowSenderName
@@ -6401,7 +6489,14 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                         ) : (
                           <div className="flex flex-wrap items-center gap-2">
                             <span>{formatShortTime(message.moment)}</span>
-                            <span>{message.isOptimistic ? '(enviando...)' : message.status || ''}</span>
+                            {statusDisplay && statusClassName ? (
+                              <span className={statusClassName}>
+                                {statusDisplay.icon ? (
+                                  <statusDisplay.icon className="h-3.5 w-3.5" />
+                                ) : null}
+                                <span>{statusDisplay.label}</span>
+                              </span>
+                            ) : null}
                           </div>
                         )}
                         {scheduleMetadata?.lastError ? (

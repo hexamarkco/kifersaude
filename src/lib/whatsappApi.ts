@@ -14,9 +14,6 @@ type RuntimeEnv = {
 
 const getServerEnv = (): RuntimeEnv => {
   // Ambiente de Funções do Supabase: usa Deno.env (secrets)
-  if (typeof Deno === 'undefined' || !('env' in Deno)) {
-    throw new Error('Deno.env não está disponível. Este helper deve ser usado em Edge Functions do Supabase.');
-  }
 
   const functionsUrl = Deno.env.get('SUPABASE_FUNCTIONS_URL')?.trim();
   const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim();

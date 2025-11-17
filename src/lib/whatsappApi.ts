@@ -243,11 +243,16 @@ export const deleteWhatsappMessage = async (
   payload: DeleteWhatsappMessagePayload,
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<DeleteWhatsappMessageResponse> => {
+  const searchParams = new URLSearchParams({
+    messageId: payload.messageId,
+    phone: payload.phone,
+    owner: payload.owner ? 'true' : 'false',
+  });
+
   return callWhatsappFunction<DeleteWhatsappMessageResponse>(
-    '/whatsapp-webhook/delete-message',
+    `/whatsapp-webhook/delete-message?${searchParams.toString()}`,
     {
-      method: 'POST',
-      body: JSON.stringify(payload),
+      method: 'DELETE',
     },
     options,
   );

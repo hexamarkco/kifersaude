@@ -1,6 +1,15 @@
 import { useState } from 'react';
-import { CheckCircle2, Clock, FileText, RefreshCw, Settings, Shield, UserPlus2 } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, Paintbrush, RefreshCw, Settings, Shield, UserPlus2 } from 'lucide-react';
 import WhatsappCampaignsPage from '../pages/WhatsappCampaignsPage';
+
+export type WhatsappWallpaperOption = {
+  id: string;
+  label: string;
+  backgroundImage?: string;
+  backgroundSize?: string;
+  backgroundRepeat?: string;
+  backgroundColor: string;
+};
 
 const automationOptions = [
   {
@@ -74,7 +83,17 @@ const settingsTabs = [
 
 type SettingsTabId = (typeof settingsTabs)[number]['id'];
 
-export default function WhatsappSettingsPanel() {
+type WhatsappSettingsPanelProps = {
+  wallpaperOptions: WhatsappWallpaperOption[];
+  selectedWallpaperId: string;
+  onWallpaperChange: (wallpaperId: string) => void;
+};
+
+export default function WhatsappSettingsPanel({
+  wallpaperOptions,
+  selectedWallpaperId,
+  onWallpaperChange,
+}: WhatsappSettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>('preferences');
   const [toggles, setToggles] = useState<ToggleState>(initialToggles);
   const [routingStrategy, setRoutingStrategy] = useState('round_robin');
@@ -180,6 +199,51 @@ export default function WhatsappSettingsPanel() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <Paintbrush className="h-4 w-4 text-emerald-500" /> Papel de parede do chat
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Defina um fundo único para todas as conversas. A alteração é aplicada a todos os chats.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {wallpaperOptions.map(option => {
+            const isSelected = option.id === selectedWallpaperId;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onWallpaperChange(option.id)}
+                className={`flex flex-col gap-2 rounded-xl border px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow ${
+                  isSelected
+                    ? 'border-emerald-300 bg-emerald-50/70 shadow-inner'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+                aria-pressed={isSelected}
+              >
+                <div
+                  className="h-16 rounded-xl border border-white/70 shadow-inner"
+                  style={{
+                    backgroundColor: option.backgroundColor,
+                    backgroundImage: option.backgroundImage,
+                    backgroundSize: option.backgroundSize,
+                    backgroundRepeat: option.backgroundRepeat ?? 'repeat',
+                  }}
+                />
+                <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
+                  <span>{option.label}</span>
+                  {isSelected ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                      Ativo
+                    </span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
 

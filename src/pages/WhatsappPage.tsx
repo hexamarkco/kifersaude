@@ -55,7 +55,7 @@ import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
 import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
-import WhatsappSettingsPanel from '../components/WhatsappSettingsPanel';
+import WhatsappSettingsPanel, { WhatsappWallpaperOption } from '../components/WhatsappSettingsPanel';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
@@ -95,6 +95,42 @@ const REQUIRED_WHATSAPP_ENV_VARS = [
   'VITE_SUPABASE_FUNCTIONS_URL',
   'VITE_SUPABASE_ANON_KEY',
 ] as const;
+
+const CHAT_WALLPAPERS: WhatsappWallpaperOption[] = [
+  {
+    id: 'emerald-grid',
+    label: 'Trama orgânica',
+    backgroundColor: '#f8fafc',
+    backgroundImage:
+      'radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.16) 0, rgba(16, 185, 129, 0.16) 10px, transparent 16px), radial-gradient(circle at 70% 0%, rgba(59, 130, 246, 0.12) 0, rgba(59, 130, 246, 0.12) 12px, transparent 18px)',
+    backgroundSize: '280px 280px, 320px 320px',
+    backgroundRepeat: 'repeat',
+  },
+  {
+    id: 'soft-waves',
+    label: 'Ondas suaves',
+    backgroundColor: '#f1f5f9',
+    backgroundImage:
+      'radial-gradient(circle at 25% 40%, rgba(79, 70, 229, 0.12) 0, rgba(79, 70, 229, 0.12) 14px, transparent 22px), radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.18) 0, rgba(16, 185, 129, 0.18) 18px, transparent 26px), linear-gradient(135deg, rgba(15, 23, 42, 0.04) 25%, transparent 25%, transparent 50%, rgba(15, 23, 42, 0.04) 50%, rgba(15, 23, 42, 0.04) 75%, transparent 75%, transparent)',
+    backgroundSize: '260px 260px, 260px 260px, 26px 26px',
+    backgroundRepeat: 'repeat',
+  },
+  {
+    id: 'minimal-dots',
+    label: 'Pontilhado minimalista',
+    backgroundColor: '#f8fafc',
+    backgroundImage:
+      'radial-gradient(circle, rgba(148, 163, 184, 0.25) 1px, transparent 2px), radial-gradient(circle, rgba(16, 185, 129, 0.14) 1px, transparent 2px)',
+    backgroundSize: '22px 22px, 32px 32px',
+    backgroundRepeat: 'repeat',
+  },
+] as const;
+
+const DEFAULT_CHAT_WALLPAPER_ID = CHAT_WALLPAPERS[0].id;
+
+const getChatWallpaperById = (wallpaperId: string): WhatsappWallpaperOption => {
+  return CHAT_WALLPAPERS.find(wallpaper => wallpaper.id === wallpaperId) ?? CHAT_WALLPAPERS[0];
+};
 
 const getMissingWhatsappEnvVars = () => {
   const env = import.meta.env as Record<string, string | undefined>;
@@ -1667,6 +1703,28 @@ export default function WhatsappPage({
   >(null);
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
   const imageViewerTouchStartRef = useRef<number | null>(null);
+  const [selectedWallpaperId, setSelectedWallpaperId] = useState(DEFAULT_CHAT_WALLPAPER_ID);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storedWallpaperId = window.localStorage.getItem('whatsappChatWallpaper');
+    if (storedWallpaperId && CHAT_WALLPAPERS.some(option => option.id === storedWallpaperId)) {
+      setSelectedWallpaperId(storedWallpaperId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem('whatsappChatWallpaper', selectedWallpaperId);
+  }, [selectedWallpaperId]);
+
+  const selectedWallpaper = useMemo(() => getChatWallpaperById(selectedWallpaperId), [selectedWallpaperId]);
 
   const adjustMessageInputHeight = useCallback(() => {
     const textarea = messageInputRef.current;
@@ -1686,6 +1744,11 @@ export default function WhatsappPage({
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, []);
+
+  const handleWallpaperChange = useCallback((wallpaperId: string) => {
+    const nextWallpaper = getChatWallpaperById(wallpaperId);
+    setSelectedWallpaperId(nextWallpaper.id);
   }, []);
 
   const incrementUnread = useCallback((chatId: string | null) => {
@@ -6436,7 +6499,13 @@ export default function WhatsappPage({
             <div
               ref={messagesContainerRef}
               data-testid="whatsapp-messages"
-              className="flex-1 min-h-0 space-y-3 overflow-y-auto bg-slate-50 p-4"
+              className="flex-1 min-h-0 space-y-3 overflow-y-auto p-4"
+              style={{
+                backgroundColor: selectedWallpaper.backgroundColor,
+                backgroundImage: selectedWallpaper.backgroundImage,
+                backgroundSize: selectedWallpaper.backgroundSize,
+                backgroundRepeat: selectedWallpaper.backgroundRepeat ?? 'repeat',
+              }}
             >
               {messagesLoading && !hasMessages ? (
                 <MessageSkeletonList />
@@ -7694,7 +7763,11 @@ export default function WhatsappPage({
                     </div>
                   </div>
                   <div className="flex-1 overflow-y-auto">
-                    <WhatsappSettingsPanel />
+                    <WhatsappSettingsPanel
+                      wallpaperOptions={CHAT_WALLPAPERS}
+                      selectedWallpaperId={selectedWallpaperId}
+                      onWallpaperChange={handleWallpaperChange}
+                    />
                   </div>
                 </div>
               )}

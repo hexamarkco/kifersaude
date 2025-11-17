@@ -37,6 +37,9 @@ type EditableStep = {
 type AudienceFilter = {
   status: string;
   responsavel: string;
+  startDate: string;
+  endDate: string;
+  excludeToday: boolean;
 };
 
 const cloneConfig = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -64,6 +67,9 @@ const defaultStepConfig: Record<WhatsappCampaignStepType, WhatsappCampaignStepCo
 const initialFilter: AudienceFilter = {
   status: '',
   responsavel: '',
+  startDate: '',
+  endDate: '',
+  excludeToday: false,
 };
 
 const TARGET_STATUS_LABELS: Record<keyof WhatsappCampaignMetricsSummary, string> = {
@@ -345,6 +351,27 @@ export default function WhatsappCampaignsPage() {
       }
       if (audienceFilter.responsavel) {
         query = query.eq('responsavel', audienceFilter.responsavel);
+      }
+      if (audienceFilter.excludeToday) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        query = query.lt('created_at', today.toISOString());
+      } else {
+        if (audienceFilter.startDate) {
+          const startDate = new Date(audienceFilter.startDate);
+          if (!Number.isNaN(startDate.getTime())) {
+            startDate.setHours(0, 0, 0, 0);
+            query = query.gte('created_at', startDate.toISOString());
+          }
+        }
+        if (audienceFilter.endDate) {
+          const endDate = new Date(audienceFilter.endDate);
+          if (!Number.isNaN(endDate.getTime())) {
+            endDate.setHours(0, 0, 0, 0);
+            endDate.setDate(endDate.getDate() + 1);
+            query = query.lt('created_at', endDate.toISOString());
+          }
+        }
       }
 
       const { data, error } = await query;
@@ -822,6 +849,56 @@ export default function WhatsappCampaignsPage() {
                           </option>
                         ))}
                       </select>
+                    </label>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:col-span-2">
+                      <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                        Criados a partir de
+                        <input
+                          type="date"
+                          value={audienceFilter.startDate}
+                          onChange={event =>
+                            setAudienceFilter(previous => ({
+                              ...previous,
+                              excludeToday: false,
+                              startDate: event.target.value,
+                            }))
+                          }
+                          disabled={audienceFilter.excludeToday}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                        Criados até
+                        <input
+                          type="date"
+                          value={audienceFilter.endDate}
+                          onChange={event =>
+                            setAudienceFilter(previous => ({
+                              ...previous,
+                              excludeToday: false,
+                              endDate: event.target.value,
+                            }))
+                          }
+                          disabled={audienceFilter.excludeToday}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
+                        />
+                      </label>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={audienceFilter.excludeToday}
+                        onChange={event =>
+                          setAudienceFilter(previous => ({
+                            ...previous,
+                            excludeToday: event.target.checked,
+                            startDate: event.target.checked ? '' : previous.startDate,
+                            endDate: event.target.checked ? '' : previous.endDate,
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Excluir leads criados hoje
                     </label>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">

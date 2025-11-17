@@ -245,6 +245,7 @@ export const listWhatsappChatSlaAlerts = async (
   options: WhatsappSupabaseRequestOptions = {},
 ): Promise<WhatsappChatSlaAlert[]> => {
   const searchParams = new URLSearchParams();
+  searchParams.set('select', '*');
   const limit = Number.isFinite(params.limit ?? null) ? Number(params.limit) : 100;
   searchParams.set('order', 'created_at.desc');
   searchParams.set('limit', String(limit));

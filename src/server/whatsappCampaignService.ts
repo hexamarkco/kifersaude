@@ -255,6 +255,7 @@ export class WhatsappCampaignService {
       payload.caption = attachmentConfig.caption ?? undefined;
     } else if (attachmentConfig.attachmentType === 'audio') {
       payload.audio = attachmentConfig.payload;
+      payload.mimeType = attachmentConfig.mimeType ?? undefined;
     }
 
     await sendWhatsappMedia({ endpoint, body: payload }, { fetchImpl, useServiceKey: true });

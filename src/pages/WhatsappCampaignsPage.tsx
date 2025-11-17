@@ -49,6 +49,7 @@ const defaultStepConfig: Record<WhatsappCampaignStepType, WhatsappCampaignStepCo
       payload: '',
       caption: '',
       fileName: '',
+      mimeType: '',
     },
   },
   wait_condition: {

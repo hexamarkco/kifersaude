@@ -3711,6 +3711,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
             audioUrl: attachment.dataUrl,
             seconds: durationSeconds,
             ptt: true,
+            mimeType: attachment.mimeType,
           },
         },
       });
@@ -3720,6 +3721,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
         audio: attachment.dataUrl,
         viewOnce: false,
         waveform: true,
+        mimeType: attachment.mimeType,
       };
 
       if (durationSeconds !== null) {

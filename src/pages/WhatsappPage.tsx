@@ -3678,33 +3678,49 @@ export default function WhatsappPage({
   }, [incrementUnread, loadChats]);
 
   useEffect(() => {
+    setMessages([]);
+    setErrorMessage(null);
+
     if (!selectedChatId) {
-      setMessages([]);
+      setMessagesLoading(false);
       return;
     }
 
+    let cancelled = false;
+    setMessagesLoading(true);
+
     const loadMessages = async () => {
-      setMessagesLoading(true);
-      setErrorMessage(null);
       try {
         const data = await fetchJson<{ messages: WhatsappMessage[] }>(
           getWhatsappFunctionUrl(
             `/whatsapp-webhook/chats/${encodeURIComponent(selectedChatId)}/messages`,
           ),
         );
+        if (cancelled) {
+          return;
+        }
+
         const normalizedMessages = dedupeMessagesByMessageId(
           data.messages.map(message => ({ ...message, isOptimistic: false })),
         );
         setMessages(sortMessagesByMoment(normalizedMessages));
       } catch (error: any) {
-        console.error('Erro ao carregar mensagens:', error);
-        setErrorMessage('Não foi possível carregar as mensagens.');
+        if (!cancelled) {
+          console.error('Erro ao carregar mensagens:', error);
+          setErrorMessage('Não foi possível carregar as mensagens.');
+        }
       } finally {
-        setMessagesLoading(false);
+        if (!cancelled) {
+          setMessagesLoading(false);
+        }
       }
     };
 
     loadMessages();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedChatId]);
 
   useEffect(() => {

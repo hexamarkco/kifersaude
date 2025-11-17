@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
+import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
@@ -22,9 +22,9 @@ export default function LandingPage() {
     nome: '',
     telefone: '',
     cidade: '',
-    idade: '',
     tipoContratacao: 'PF'
   });
+  const [beneficiaryAges, setBeneficiaryAges] = useState<string[]>(['']);
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -46,6 +46,18 @@ export default function LandingPage() {
   useEffect(() => {
     loadBlogPosts();
   }, []);
+
+  const addBeneficiaryAge = () => {
+    setBeneficiaryAges((prev) => [...prev, '']);
+  };
+
+  const updateBeneficiaryAge = (index: number, value: string) => {
+    setBeneficiaryAges((prev) => prev.map((age, i) => (i === index ? value : age)));
+  };
+
+  const removeBeneficiaryAge = (index: number) => {
+    setBeneficiaryAges((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
 
   const loadBlogPosts = async () => {
     setLoadingPosts(true);
@@ -106,6 +118,15 @@ export default function LandingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalizedAges = beneficiaryAges.map((age) => age.trim()).filter(Boolean);
+
+    if (normalizedAges.length === 0) {
+      alert('Informe ao menos uma idade para prosseguir.');
+      return;
+    }
+
+    const agesText = normalizedAges.join(', ');
+
     try {
       const leadData = {
         nome_completo: formData.nome,
@@ -115,7 +136,7 @@ export default function LandingPage() {
         tipo_contratacao: formData.tipoContratacao === 'PF' ? 'Pessoa Física' : formData.tipoContratacao,
         status: 'Novo',
         responsavel: 'Luiza',
-        observacoes: `Idade dos beneficiários: ${formData.idade}`,
+        observacoes: `Idade dos beneficiários: ${agesText}`,
         data_criacao: new Date().toISOString(),
         ultimo_contato: new Date().toISOString(),
         arquivado: false
@@ -131,11 +152,12 @@ export default function LandingPage() {
         return;
       }
 
-      const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdade: ${formData.idade}\nTipo: ${formData.tipoContratacao}`;
+      const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdades: ${agesText}\nTipo: ${formData.tipoContratacao}`;
       const encodedMessage = encodeURIComponent(message);
       window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
 
-      setFormData({ nome: '', telefone: '', cidade: '', idade: '', tipoContratacao: 'PF' });
+      setFormData({ nome: '', telefone: '', cidade: '', tipoContratacao: 'PF' });
+      setBeneficiaryAges(['']);
       setShowModal(false);
 
       alert('✅ Cotação enviada com sucesso! Em breve entraremos em contato.');
@@ -809,17 +831,46 @@ export default function LandingPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Idade dos Beneficiários *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.idade}
-                  onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  placeholder="Ex: 35, 32, 8"
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Idade das vidas *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addBeneficiaryAge}
+                    className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Adicionar vida
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {beneficiaryAges.map((age, index) => (
+                    <div key={index} className="flex items-center space-x-3">
+                      <input
+                        type="number"
+                        min="0"
+                        required={index === 0}
+                        inputMode="numeric"
+                        pattern="\d*"
+                        value={age}
+                        onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder={`Idade da vida ${index + 1}`}
+                      />
+                      {beneficiaryAges.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeBeneficiaryAge(index)}
+                          className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          aria-label="Remover vida"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1011,17 +1062,46 @@ export default function LandingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Idade dos Beneficiários *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.idade}
-                    onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder="Ex: 35, 32, 8"
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-slate-700">
+                      Idade das vidas *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addBeneficiaryAge}
+                      className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Adicionar vida
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {beneficiaryAges.map((age, index) => (
+                      <div key={index} className="flex items-center space-x-3">
+                        <input
+                          type="number"
+                          min="0"
+                          required={index === 0}
+                          inputMode="numeric"
+                          pattern="\d*"
+                          value={age}
+                          onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                          placeholder={`Idade da vida ${index + 1}`}
+                        />
+                        {beneficiaryAges.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeBeneficiaryAge(index)}
+                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                            aria-label="Remover vida"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

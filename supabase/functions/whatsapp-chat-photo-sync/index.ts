@@ -14,6 +14,11 @@ type ZapiCredentials = {
   clientToken: string;
 };
 
+type ZapiChatMetadata = {
+  phone?: string | null;
+  profileThumbnail?: string | null;
+};
+
 type SyncSummary = {
   totalChats: number;
   eligibleChats: number;
@@ -33,6 +38,8 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const CHAT_PHOTO_BUCKET = 'whatsapp-chat-photos';
+const DEFAULT_PHOTO_CONTENT_TYPE = 'image/jpeg';
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.');
@@ -73,37 +80,23 @@ const getZapiCredentials = (): ZapiCredentials | null => {
   return { instanceId, token, clientToken };
 };
 
-const extractProfileLink = (payload: unknown): string | null => {
-  if (!payload) {
+const toNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
     return null;
   }
 
-  if (Array.isArray(payload)) {
-    for (const entry of payload) {
-      const link = extractProfileLink(entry);
-      if (link) {
-        return link;
-      }
-    }
-    return null;
-  }
-
-  const record = typeof payload === 'object' && payload !== null ? payload as Record<string, unknown> : null;
-  if (!record) {
-    return null;
-  }
-
-  const link = record.link;
-  return typeof link === 'string' && link.trim() ? link.trim() : null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
-const fetchProfilePictureLink = async (phone: string, credentials: ZapiCredentials): Promise<string | null> => {
-  const url = `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/profile-picture?phone=${encodeURIComponent(phone)}`;
+const fetchChatMetadata = async (phone: string, credentials: ZapiCredentials): Promise<ZapiChatMetadata | null> => {
+  const url = `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/chats/${encodeURIComponent(phone)}`;
 
   let responseBody: unknown = null;
 
   try {
     const response = await fetch(url, { method: 'GET', headers: { 'Client-Token': credentials.clientToken } });
+
     try {
       responseBody = await response.json();
     } catch (_error) {
@@ -113,15 +106,58 @@ const fetchProfilePictureLink = async (phone: string, credentials: ZapiCredentia
     if (!response.ok) {
       const errorDetails = responseBody && typeof responseBody === 'object' ? responseBody : null;
       throw new Error(
-        `Falha ao buscar foto (${response.status}): ${errorDetails ? JSON.stringify(errorDetails) : response.statusText}`,
+        `Falha ao buscar metadata (${response.status}): ${errorDetails ? JSON.stringify(errorDetails) : response.statusText}`,
       );
     }
 
-    return extractProfileLink(responseBody);
+    return responseBody && typeof responseBody === 'object' ? responseBody as ZapiChatMetadata : null;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Erro ao buscar foto do contato ${phone}: ${message}`);
+    throw new Error(`Erro ao buscar metadata do contato ${phone}: ${message}`);
   }
+};
+
+const downloadAndStoreProfilePhoto = async (
+  photoUrl: string,
+  phone: string,
+): Promise<string> => {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase client não configurado para armazenar fotos de perfil');
+  }
+
+  const response = await fetch(photoUrl);
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Falha ao baixar foto de perfil (${response.status}): ${details || 'erro desconhecido'}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const contentTypeHeader = response.headers.get('content-type');
+  const contentType = contentTypeHeader?.trim() || DEFAULT_PHOTO_CONTENT_TYPE;
+  const normalizedPhone = phone.replace(/\D+/g, '') || 'unknown';
+  const timestamp = Date.now();
+  const storagePath = `profiles/${normalizedPhone}-${timestamp}.jpg`;
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(CHAT_PHOTO_BUCKET)
+    .upload(storagePath, new Uint8Array(arrayBuffer), {
+      cacheControl: '3600',
+      upsert: true,
+      contentType,
+    });
+
+  if (uploadError) {
+    throw new Error(`Falha ao armazenar foto de perfil: ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabaseAdmin.storage.from(CHAT_PHOTO_BUCKET).getPublicUrl(storagePath);
+
+  if (!publicUrlData?.publicUrl) {
+    throw new Error('Não foi possível gerar a URL pública da foto de perfil');
+  }
+
+  return publicUrlData.publicUrl;
 };
 
 const syncChatPhotos = async (): Promise<SyncSummary> => {
@@ -164,21 +200,24 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
     eligibleChats += 1;
 
     try {
-      const photoLink = await fetchProfilePictureLink(normalizedPhone, credentials);
+      const metadata = await fetchChatMetadata(normalizedPhone, credentials);
+      const photoLink = toNonEmptyString(metadata?.profileThumbnail ?? null);
 
       if (!photoLink) {
         missingPhoto += 1;
         continue;
       }
 
-      if (photoLink === (chat.sender_photo ?? '')) {
+      const storedPhotoUrl = await downloadAndStoreProfilePhoto(photoLink, normalizedPhone);
+
+      if (storedPhotoUrl === (chat.sender_photo ?? '')) {
         unchanged += 1;
         continue;
       }
 
       const { error: updateError } = await supabaseAdmin
         .from('whatsapp_chats')
-        .update({ sender_photo: photoLink })
+        .update({ sender_photo: storedPhotoUrl })
         .eq('id', chat.id);
 
       if (updateError) {

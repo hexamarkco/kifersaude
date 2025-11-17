@@ -6975,8 +6975,7 @@ export default function WhatsappPage({
                               </div>
                             ) : null}
                           </div>
-                        ) : null}
-                      </div>
+                        </div>
                       <div
                         className={`mt-1 flex flex-col gap-1 text-[10px] uppercase tracking-wide text-slate-400 ${
                           isFromMe ? 'items-end text-right' : 'items-start text-left'
@@ -7005,27 +7004,17 @@ export default function WhatsappPage({
                                 {statusDisplay.icon ? (
                                   <statusDisplay.icon className="h-3.5 w-3.5" />
                                 ) : null}
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span>{formatShortTime(message.moment)}</span>
-                                {statusDisplay && statusClassName ? (
-                                  <span className={statusClassName}>
-                                    {statusDisplay.icon ? (
-                                      <statusDisplay.icon className="h-3.5 w-3.5" />
-                                    ) : null}
-                                    <span>{statusDisplay.label}</span>
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
-                            {scheduleMetadata?.lastError ? (
-                              <div className="text-[11px] font-medium normal-case text-rose-500">
-                                {scheduleMetadata.lastError}
-                              </div>
+                                <span>{statusDisplay.label}</span>
+                              </span>
                             ) : null}
                           </div>
-                        </div>
+                        )}
+                        {scheduleMetadata?.lastError ? (
+                          <div className="text-[11px] font-medium normal-case text-rose-500">
+                            {scheduleMetadata.lastError}
+                          </div>
+                        ) : null}
+                      </div>
                       {scheduleMetadata && canCancelSchedule && scheduleId ? (
                         <div
                           className={`mt-2 flex flex-wrap gap-2 ${

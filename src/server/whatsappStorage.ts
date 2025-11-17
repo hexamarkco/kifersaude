@@ -167,3 +167,72 @@ export const insertWhatsappMessage = async (input: MessageInsertInput): Promise<
 
   return insertedMessage;
 };
+
+export const updateWhatsappMessageStatuses = async (
+  messageIds: string[],
+  status: string,
+): Promise<{ updated: number; missingIds: string[] }> => {
+  const targetStatus = status?.trim();
+  const normalizedIds = (messageIds ?? []).map((id) => id?.toString().trim()).filter(Boolean) as string[];
+
+  if (!targetStatus) {
+    throw new Error('status is required to update WhatsApp messages');
+  }
+
+  if (normalizedIds.length === 0) {
+    throw new Error('messageIds are required to update WhatsApp messages');
+  }
+
+  const { data: messages, error: fetchError } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .select('id, message_id, from_me')
+    .in('message_id', normalizedIds)
+    .returns<Pick<WhatsappMessage, 'id' | 'message_id' | 'from_me'>[]>();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const foundIds = new Set<string>();
+  const updatesByStatus = new Map<string, string[]>();
+
+  for (const message of messages ?? []) {
+    if (message.message_id) {
+      foundIds.add(message.message_id);
+    }
+
+    const normalizedStatus = normalizeMessageStatus(targetStatus, message.from_me);
+
+    if (!normalizedStatus) {
+      continue;
+    }
+
+    const rows = updatesByStatus.get(normalizedStatus) ?? [];
+    rows.push(message.id);
+    updatesByStatus.set(normalizedStatus, rows);
+  }
+
+  let updated = 0;
+
+  for (const [nextStatus, rowIds] of updatesByStatus.entries()) {
+    if (rowIds.length === 0) {
+      continue;
+    }
+
+    const { data, error: updateError } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .update({ status: nextStatus })
+      .in('id', rowIds)
+      .select('id');
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    updated += data?.length ?? 0;
+  }
+
+  const missingIds = normalizedIds.filter((id) => !foundIds.has(id));
+
+  return { updated, missingIds };
+};

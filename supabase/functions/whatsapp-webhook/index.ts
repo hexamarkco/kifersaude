@@ -118,6 +118,8 @@ type ContractSummaryRecord = {
 type ZapiWebhookPayload = {
   type?: string;
   phone?: string;
+  ids?: (string | number | null | undefined)[] | null;
+  id?: string | number | null;
   chatLid?: string;
   fromMe?: boolean;
   momment?: number | string;
@@ -495,6 +497,30 @@ const toNonEmptyStringArray = (value: unknown): string[] => {
   return value
     .map((entry) => toNonEmptyStringLike(entry))
     .filter((entry): entry is string => Boolean(entry));
+};
+
+const normalizeStatusValue = (value: unknown): string | null => {
+  const status = toNonEmptyString(value);
+  return status ? status.toUpperCase() : null;
+};
+
+const resolveStatusWebhookIds = (payload: ZapiWebhookPayload): string[] => {
+  const ids = Array.isArray(payload.ids) ? payload.ids : [];
+  const combined = [...ids, payload.id].filter((entry) => entry !== null && entry !== undefined);
+  const uniqueIds = new Set<string>();
+
+  for (const entry of combined) {
+    if (typeof entry === 'string') {
+      const normalized = entry.trim();
+      if (normalized) {
+        uniqueIds.add(normalized);
+      }
+    } else if (typeof entry === 'number' && Number.isFinite(entry)) {
+      uniqueIds.add(entry.toString());
+    }
+  }
+
+  return Array.from(uniqueIds);
 };
 
 const toNumberOrNull = (value: unknown): number | null => {
@@ -2080,6 +2106,107 @@ const insertWhatsappMessage = async (input: {
   return insertedMessage;
 };
 
+const updateExistingWhatsappMessagesStatus = async (status: string, messageIds: string[]) => {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase client não configurado');
+  }
+
+  const normalizedIds = (messageIds ?? []).map((id) => id?.toString().trim()).filter(Boolean) as string[];
+
+  if (normalizedIds.length === 0) {
+    return { updated: 0, missingIds: [] as string[] };
+  }
+
+  const { data: messages, error: fetchError } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .select('id, message_id, from_me')
+    .in('message_id', normalizedIds)
+    .returns<Pick<WhatsappMessage, 'id' | 'message_id' | 'from_me'>[]>();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const foundIds = new Set<string>();
+  const updatesByStatus = new Map<string, string[]>();
+
+  for (const message of messages ?? []) {
+    if (message.message_id) {
+      foundIds.add(message.message_id);
+    }
+
+    const normalizedStatus = normalizeMessageStatus(status, message.from_me);
+
+    if (!normalizedStatus) {
+      continue;
+    }
+
+    const rows = updatesByStatus.get(normalizedStatus) ?? [];
+    rows.push(message.id);
+    updatesByStatus.set(normalizedStatus, rows);
+  }
+
+  let updated = 0;
+
+  for (const [nextStatus, rowIds] of updatesByStatus.entries()) {
+    if (rowIds.length === 0) {
+      continue;
+    }
+
+    const { data, error: updateError } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .update({ status: nextStatus })
+      .in('id', rowIds)
+      .select('id');
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    updated += data?.length ?? 0;
+  }
+
+  const missingIds = normalizedIds.filter((id) => !foundIds.has(id));
+
+  return { updated, missingIds };
+};
+
+const handleOnMessageStatus = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  cleanupPendingEntries();
+
+  const payload = (await ensureJsonBody<ZapiWebhookPayload>(req)) ?? {};
+
+  try {
+    logWebhookPayload('whatsapp-webhook on-message-status payload:', payload);
+  } catch (_error) {
+    console.error('Não foi possível registrar o payload do webhook de status.');
+  }
+
+  const status = normalizeStatusValue(payload.status);
+  const messageIds = resolveStatusWebhookIds(payload);
+  const isStatusPayload = payload.type === 'MessageStatusCallback' || messageIds.length > 0;
+
+  if (!isStatusPayload) {
+    return respondJson(200, { success: true, ignored: true });
+  }
+
+  if (!status || messageIds.length === 0) {
+    return respondJson(400, { success: false, error: 'Campos status e ids são obrigatórios' });
+  }
+
+  try {
+    const { updated, missingIds } = await updateExistingWhatsappMessagesStatus(status, messageIds);
+    return respondJson(200, { success: true, status, updated, missingIds });
+  } catch (error) {
+    console.error('Erro ao processar webhook da Z-API:', error);
+    return respondJson(500, { success: false, error: 'Falha ao processar webhook' });
+  }
+};
+
 const handleOnMessageReceived = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -3337,6 +3464,8 @@ serve(async (req) => {
   }
 
   switch (subPath) {
+    case '/on-message-status':
+      return handleOnMessageStatus(req);
     case '/on-message-received':
       return handleOnMessageReceived(req);
     case '/on-message-send':

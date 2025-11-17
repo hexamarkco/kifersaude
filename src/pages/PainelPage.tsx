@@ -54,45 +54,40 @@ export default function PainelPage() {
 
   const updateSearchParamsForTab = useCallback(
     (tabId: string, nextWhatsappParams?: WhatsappLaunchParams | null) => {
-      setSearchParams(
-        currentParams => {
-          const nextParams = new URLSearchParams(currentParams);
+      const nextParams = new URLSearchParams(searchParams);
 
-          nextParams.set('tab', tabId);
+      nextParams.set('tab', tabId);
 
-          if (tabId === 'whatsapp' && nextWhatsappParams?.phone) {
-            nextParams.set('whatsappPhone', nextWhatsappParams.phone);
+      if (tabId === 'whatsapp' && nextWhatsappParams?.phone) {
+        nextParams.set('whatsappPhone', nextWhatsappParams.phone);
 
-            if (nextWhatsappParams.chatName) {
-              nextParams.set('whatsappName', nextWhatsappParams.chatName);
-            } else {
-              nextParams.delete('whatsappName');
-            }
+        if (nextWhatsappParams.chatName) {
+          nextParams.set('whatsappName', nextWhatsappParams.chatName);
+        } else {
+          nextParams.delete('whatsappName');
+        }
 
-            if (nextWhatsappParams.leadId) {
-              nextParams.set('whatsappLeadId', nextWhatsappParams.leadId);
-            } else {
-              nextParams.delete('whatsappLeadId');
-            }
+        if (nextWhatsappParams.leadId) {
+          nextParams.set('whatsappLeadId', nextWhatsappParams.leadId);
+        } else {
+          nextParams.delete('whatsappLeadId');
+        }
 
-            if (nextWhatsappParams.message !== undefined && nextWhatsappParams.message !== null) {
-              nextParams.set('whatsappMessage', nextWhatsappParams.message);
-            } else {
-              nextParams.delete('whatsappMessage');
-            }
-          } else {
-            nextParams.delete('whatsappPhone');
-            nextParams.delete('whatsappName');
-            nextParams.delete('whatsappLeadId');
-            nextParams.delete('whatsappMessage');
-          }
+        if (nextWhatsappParams.message !== undefined && nextWhatsappParams.message !== null) {
+          nextParams.set('whatsappMessage', nextWhatsappParams.message);
+        } else {
+          nextParams.delete('whatsappMessage');
+        }
+      } else {
+        nextParams.delete('whatsappPhone');
+        nextParams.delete('whatsappName');
+        nextParams.delete('whatsappLeadId');
+        nextParams.delete('whatsappMessage');
+      }
 
-          return nextParams;
-        },
-        { replace: true },
-      );
+      setSearchParams(nextParams, { replace: true });
     },
-    [setSearchParams],
+    [searchParams, setSearchParams],
   );
 
   const restrictedOriginNamesForObservers = useMemo(
@@ -139,34 +134,6 @@ export default function PainelPage() {
       setWhatsappLaunchParams(null);
     }
   }, [activeTab, searchParams, validTabIds, whatsappLaunchParams]);
-
-  useEffect(() => {
-    if (activeTab === 'whatsapp') {
-      return;
-    }
-
-    setWhatsappLaunchParams(null);
-    setSearchParams(
-      currentParams => {
-        if (
-          !currentParams.get('whatsappPhone') &&
-          !currentParams.get('whatsappName') &&
-          !currentParams.get('whatsappLeadId') &&
-          !currentParams.get('whatsappMessage')
-        ) {
-          return currentParams;
-        }
-
-        const nextParams = new URLSearchParams(currentParams);
-        nextParams.delete('whatsappPhone');
-        nextParams.delete('whatsappName');
-        nextParams.delete('whatsappLeadId');
-        nextParams.delete('whatsappMessage');
-        return nextParams;
-      },
-      { replace: true },
-    );
-  }, [activeTab, setSearchParams]);
 
   const loadUnreadReminders = useCallback(async () => {
     try {

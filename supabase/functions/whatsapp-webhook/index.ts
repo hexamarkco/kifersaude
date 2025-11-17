@@ -191,6 +191,10 @@ type TranscribeAudioBody = {
   audioUrl?: string;
 };
 
+type RewriteMessageBody = {
+  text?: string;
+};
+
 type WhatsappContactSummary = {
   phone: string;
   name: string | null;
@@ -988,6 +992,112 @@ const transcribeAudioFromUrl = async (audioUrl: string): Promise<string> => {
   }
 
   return transcription;
+};
+
+const createRewritePrompt = (text: string) => {
+  const sanitized = text.trim();
+  return [
+    'Reescreva a mensagem abaixo em português, mantendo o mesmo significado e um tom profissional e cordial.',
+    'Evite emojis e deixe o texto direto e claro.',
+    `Mensagem original: "${sanitized}"`,
+  ].join('\n');
+};
+
+const extractOpenAiResponseText = (payload: unknown): string | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const topLevelText = (payload as { output_text?: unknown }).output_text;
+  if (typeof topLevelText === 'string' && topLevelText.trim()) {
+    return topLevelText.trim();
+  }
+
+  const outputList = (payload as { output?: unknown }).output;
+  if (Array.isArray(outputList)) {
+    for (const entry of outputList) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const entryText = (entry as { output_text?: unknown }).output_text;
+      if (typeof entryText === 'string' && entryText.trim()) {
+        return entryText.trim();
+      }
+
+      const content = (entry as { content?: unknown }).content;
+      if (!Array.isArray(content)) {
+        continue;
+      }
+
+      for (const contentEntry of content) {
+        if (!contentEntry || typeof contentEntry !== 'object') {
+          continue;
+        }
+
+        const contentText = (contentEntry as { text?: unknown }).text;
+        if (typeof contentText === 'string' && contentText.trim()) {
+          return contentText.trim();
+        }
+
+        const contentOutputText = (contentEntry as { output_text?: unknown }).output_text;
+        if (typeof contentOutputText === 'string' && contentOutputText.trim()) {
+          return contentOutputText.trim();
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const rewriteMessageWithGpt = async (text: string): Promise<string> => {
+  const { apiKey, textModel } = await getGptIntegrationConfig();
+
+  const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: textModel || DEFAULT_OPENAI_TEXT_MODEL,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: createRewritePrompt(text),
+            },
+          ],
+        },
+      ],
+      max_output_tokens: 300,
+    }),
+  });
+
+  const rawBody = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao reescrever mensagem (${response.status}): ${rawBody || 'erro desconhecido'}`,
+    );
+  }
+
+  let parsedBody: unknown = null;
+  try {
+    parsedBody = rawBody ? JSON.parse(rawBody) : null;
+  } catch (_error) {
+    parsedBody = rawBody ? { output_text: rawBody } : null;
+  }
+
+  const rewritten = extractOpenAiResponseText(parsedBody);
+  if (!rewritten) {
+    throw new Error('A API GPT não retornou texto reescrito.');
+  }
+
+  return rewritten;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -2264,6 +2374,28 @@ const handleTranscribeAudio = async (req: Request) => {
   }
 };
 
+const handleRewriteMessage = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<RewriteMessageBody>(req)) ?? {};
+  const text = toNonEmptyString(body.text);
+
+  if (!text) {
+    return respondJson(400, { success: false, error: 'Campo text é obrigatório para reescrever.' });
+  }
+
+  try {
+    const rewrittenText = await rewriteMessageWithGpt(text);
+    return respondJson(200, { success: true, rewrittenText });
+  } catch (error) {
+    console.error('Erro ao reescrever mensagem com GPT:', error);
+    const message = error instanceof Error ? error.message : 'Erro ao reescrever a mensagem';
+    return respondJson(500, { success: false, error: message });
+  }
+};
+
 const handleSendLocation = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -3040,6 +3172,8 @@ serve(async (req) => {
       return handleSendImage(req);
     case '/send-audio':
       return handleSendAudio(req);
+    case '/rewrite-message':
+      return handleRewriteMessage(req);
     case '/transcribe-audio':
       return handleTranscribeAudio(req);
     case '/send-video':

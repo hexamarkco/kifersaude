@@ -3,8 +3,7 @@ import type {
   WhatsappChatSlaAlert,
   WhatsappChatSlaStatus,
 } from '../types/whatsapp';
-import { createClient } from '@supabase/supabase-js';
-
+a
 type RuntimeEnv = {
   functionsUrl?: string;
   supabaseUrl?: string;
@@ -13,33 +12,24 @@ type RuntimeEnv = {
 };
 
 const getServerEnv = (): RuntimeEnv => {
-  const globalProcess = (globalThis as {
-    process?: { env?: Record<string, string | undefined> };
-  }).process;
-
-  const denoEnv = (globalThis as {
-    Deno?: { env?: { get: (key: string) => string | undefined } };
-  }).Deno?.env;
-
-  // Lê primeiro do process.env (Node), depois sobrescreve com Deno.env (secrets)
-  const env: Record<string, string | undefined> = {
-    ...(globalProcess?.env ?? {}),
+  const globalProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  const denoEnv = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } }).Deno?.env;
+  const env = {
     ...(denoEnv
       ? {
-          SUPABASE_FUNCTIONS_URL: denoEnv.get('SUPABASE_FUNCTIONS_URL') ?? globalProcess?.env?.SUPABASE_FUNCTIONS_URL,
-          SUPABASE_URL: denoEnv.get('SUPABASE_URL') ?? globalProcess?.env?.SUPABASE_URL,
-          SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY') ?? globalProcess?.env?.SUPABASE_ANON_KEY,
-          SUPABASE_SERVICE_ROLE_KEY:
-            denoEnv.get('SUPABASE_SERVICE_ROLE_KEY') ?? globalProcess?.env?.SUPABASE_SERVICE_ROLE_KEY,
+          SUPABASE_FUNCTIONS_URL: denoEnv.get('SUPABASE_FUNCTIONS_URL'),
+          SUPABASE_URL: denoEnv.get('SUPABASE_URL'),
+          SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY'),
+          SUPABASE_SERVICE_ROLE_KEY: denoEnv.get('SUPABASE_SERVICE_ROLE_KEY'),
         }
       : {}),
-  };
-
+    ...(globalProcess?.env ?? {}),
+  } satisfies Record<string, string | undefined>;
   return {
-    functionsUrl: SUPABASE_FUNCTIONS_URL,
-    supabaseUrl: SUPABASE_URL,
-    anonKey: SUPABASE_ANON_KEY,
-    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+    functionsUrl: env.SUPABASE_FUNCTIONS_URL,
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   };
 };
 
@@ -51,9 +41,9 @@ const getBrowserEnv = (): RuntimeEnv => {
   const metaEnv = import.meta.env as Record<string, string | undefined>;
 
   return {
-    functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL?.trim(),
-    supabaseUrl: metaEnv?.VITE_SUPABASE_URL?.trim(),
-    anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY?.trim(),
+    functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL,
+    supabaseUrl: metaEnv?.VITE_SUPABASE_URL,
+    anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY,
   };
 };
 
@@ -89,7 +79,7 @@ type WhatsappFunctionRequestOptions = {
 
 const getServiceRoleKey = (): string => {
   const env = getServerEnv();
-  if (!serviceRoleKey) {
+  if (!env.serviceRoleKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada para uso backend.');
   }
 

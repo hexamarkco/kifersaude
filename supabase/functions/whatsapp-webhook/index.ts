@@ -167,6 +167,7 @@ type SendAudioBody = {
   phone?: string;
   audio?: string;
   seconds?: number;
+  duration?: number;
   mimeType?: string;
   ptt?: boolean;
 };
@@ -2302,10 +2303,15 @@ const handleSendAudio = async (req: Request) => {
     return respondJson(400, { success: false, error: 'Os campos phone e audio são obrigatórios' });
   }
 
-  const seconds =
+  const parsedSeconds =
     typeof body.seconds === 'number' && Number.isFinite(body.seconds) && body.seconds >= 0
       ? Number(body.seconds.toFixed(2))
       : null;
+  const parsedDuration =
+    typeof body.duration === 'number' && Number.isFinite(body.duration) && body.duration >= 0
+      ? Number(body.duration.toFixed(2))
+      : null;
+  const seconds = parsedSeconds ?? parsedDuration;
   const mimeType = toNonEmptyString(body.mimeType);
   const ptt = typeof body.ptt === 'boolean' ? body.ptt : true;
 
@@ -2313,6 +2319,7 @@ const handleSendAudio = async (req: Request) => {
 
   if (seconds !== null) {
     requestBody.seconds = seconds;
+    requestBody.duration = seconds;
   }
 
   if (mimeType) {
@@ -2324,6 +2331,7 @@ const handleSendAudio = async (req: Request) => {
       audio: {
         audioUrl: audio,
         seconds,
+        duration: seconds,
         mimeType: mimeType ?? null,
         ptt,
       },

@@ -550,7 +550,7 @@ const resolveMessageText = (payload: ZapiPayload): string => {
       return `Imagem recebida${caption ? ` - ${caption}` : ''}`;
     },
     () => {
-      const seconds = payload?.audio?.seconds;
+      const seconds = payload?.audio?.seconds ?? payload?.audio?.duration;
       const secondsText = typeof seconds === 'number' && Number.isFinite(seconds) ? ` (${seconds}s)` : '';
       return payload?.audio ? `Áudio recebido${secondsText}` : null;
     },

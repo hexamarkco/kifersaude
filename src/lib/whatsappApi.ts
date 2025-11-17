@@ -36,10 +36,10 @@ const getServerEnv = (): RuntimeEnv => {
   };
 
   return {
-    functionsUrl: env.SUPABASE_FUNCTIONS_URL,
+    functionsUrl: SUPABASE_FUNCTIONS_URL,
     supabaseUrl: env.SUPABASE_URL,
     anonKey: env.SUPABASE_ANON_KEY,
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
   };
 };
 

@@ -2223,11 +2223,26 @@ export default function WhatsappPage({
 
   const handleMessageInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+      const { key, ctrlKey } = event;
+
+      if (key === 'Enter' && !ctrlKey && !slashCommandState) {
+        event.preventDefault();
+        const form = event.currentTarget.form;
+        if (form) {
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        }
+        return;
+      }
+
       if (!slashCommandState) {
         return;
       }
 
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (key === 'ArrowDown' || key === 'ArrowUp') {
         if (slashCommandSuggestions.length === 0) {
           return;
         }
@@ -2235,7 +2250,7 @@ export default function WhatsappPage({
         event.preventDefault();
         const count = slashCommandSuggestions.length;
         setSlashSuggestionIndex(previous => {
-          if (event.key === 'ArrowDown') {
+          if (key === 'ArrowDown') {
             return (previous + 1) % count;
           }
           return (previous - 1 + count) % count;
@@ -2243,7 +2258,7 @@ export default function WhatsappPage({
         return;
       }
 
-      if (event.key === 'Enter') {
+      if (key === 'Enter' && !ctrlKey) {
         const selectedSuggestion = slashCommandSuggestions[slashSuggestionIndex];
         if (selectedSuggestion) {
           event.preventDefault();
@@ -2252,7 +2267,7 @@ export default function WhatsappPage({
         return;
       }
 
-      if (event.key === 'Escape') {
+      if (key === 'Escape') {
         event.preventDefault();
         setSlashCommandState(null);
         setSlashSuggestionIndex(0);

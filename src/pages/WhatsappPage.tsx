@@ -6924,8 +6924,10 @@ export default function WhatsappPage({
                             aria-haspopup="menu"
                             aria-expanded={messageActionMenuOpen}
                             aria-label="Abrir opções da mensagem"
-                            className={`absolute top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 shadow-sm transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
-                              isFromMe ? '-right-10' : '-left-10'
+                            className={`absolute -top-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm shadow-sm transition hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
+                              isFromMe
+                                ? 'right-2 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                                : 'left-2 bg-white/90 text-slate-500 ring-1 ring-slate-200'
                             } opacity-0 group-hover/message:opacity-100 focus:opacity-100`}
                           >
                             <ChevronDown className="h-4 w-4" />

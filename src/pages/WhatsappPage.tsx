@@ -81,6 +81,8 @@ import type {
 
 const WAVEFORM_BAR_COUNT = 64;
 const WAVEFORM_SENSITIVITY = 1.8;
+const MAX_MESSAGE_INPUT_ROWS = 5;
+const DEFAULT_MESSAGE_INPUT_LINE_HEIGHT = 24;
 
 const REQUIRED_WHATSAPP_ENV_VARS = [
   'VITE_SUPABASE_URL',
@@ -1388,6 +1390,26 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
   const [slashSuggestionIndex, setSlashSuggestionIndex] = useState(0);
   const imageViewerTouchStartRef = useRef<number | null>(null);
 
+  const adjustMessageInputHeight = useCallback(() => {
+    const textarea = messageInputRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    const computedLineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight || '');
+    const lineHeight = Number.isFinite(computedLineHeight)
+      ? computedLineHeight
+      : DEFAULT_MESSAGE_INPUT_LINE_HEIGHT;
+    const maxHeight = lineHeight * MAX_MESSAGE_INPUT_ROWS;
+
+    textarea.style.height = 'auto';
+    textarea.style.maxHeight = `${maxHeight}px`;
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, []);
+
   const incrementUnread = useCallback((chatId: string | null) => {
     if (!chatId) {
       return;
@@ -1876,6 +1898,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = event.target;
       setMessageInput(value);
+      adjustMessageInputHeight();
 
       if (rewriteError) {
         setRewriteError(null);
@@ -1932,6 +1955,10 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     },
     [],
   );
+
+  useEffect(() => {
+    adjustMessageInputHeight();
+  }, [adjustMessageInputHeight, messageInput]);
 
   const resetAudioUiState = useCallback(() => {
     setIsRecordingAudio(false);
@@ -6547,7 +6574,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                     ) : null}
                     <textarea
                       ref={messageInputRef}
-                      className="h-full w-full resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                      className="w-full resize-none border-0 bg-transparent px-0 py-1 text-sm leading-6 placeholder:text-slate-400 focus:outline-none focus:ring-0"
                       maxLength={1000}
                       rows={1}
                       value={messageInput}
@@ -6555,6 +6582,10 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                       onKeyDown={handleMessageInputKeyDown}
                       placeholder={messagePlaceholder}
                       disabled={sendingMessage || schedulingMessage}
+                      style={{
+                        maxHeight: `${DEFAULT_MESSAGE_INPUT_LINE_HEIGHT * MAX_MESSAGE_INPUT_ROWS}px`,
+                        overflowY: 'hidden',
+                      }}
                     />
                   </div>
                   <button

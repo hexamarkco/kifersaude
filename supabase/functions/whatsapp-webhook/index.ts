@@ -1102,15 +1102,44 @@ const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] 
   const suggestions: RewriteSuggestion[] = [];
 
   const normalizeList = (entries: unknown): RewriteSuggestion[] => {
+    const extractVariations = (candidate: unknown): unknown[] | null => {
+      if (!candidate || typeof candidate !== 'object') {
+        return null;
+      }
+
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+
+      const record = candidate as Record<string, unknown>;
+      for (const [key, value] of Object.entries(record)) {
+        const normalizedKey = key.toLowerCase();
+        if (normalizedKey === 'variations' || normalizedKey === 'versoes' || normalizedKey === 'versions') {
+          if (Array.isArray(value)) {
+            return value;
+          }
+        }
+      }
+
+      for (const value of Object.values(record)) {
+        if (Array.isArray(value)) {
+          return value;
+        }
+
+        const nested = extractVariations(value);
+        if (nested) {
+          return nested;
+        }
+      }
+
+      return null;
+    };
+
     if (!entries || typeof entries !== 'object') {
       return [];
     }
 
-    const variations = Array.isArray(entries)
-      ? entries
-      : Array.isArray((entries as { variations?: unknown }).variations)
-        ? (entries as { variations: unknown }).variations
-        : null;
+    const variations = extractVariations(entries);
 
     if (!variations) {
       return [];

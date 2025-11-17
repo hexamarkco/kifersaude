@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Loader2, MessageCirclePlus, Pencil } from 'lucide-react';
 import type { QuickReply } from '../lib/supabase';
 
@@ -18,6 +18,12 @@ type QuickRepliesMenuProps = {
   error?: string | null;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  renderTrigger?: (props: {
+    menuOpen: boolean;
+    toggleMenu: () => void;
+    openMenu: () => void;
+    closeMenu: () => void;
+  }) => ReactNode;
 };
 
 const normalizeDraft = (draft: QuickReplyDraft): QuickReplyDraft => ({
@@ -52,6 +58,7 @@ export default function QuickRepliesMenu({
   error = null,
   isOpen: controlledIsOpen,
   onOpenChange,
+  renderTrigger,
 }: QuickRepliesMenuProps) {
   const [internalMenuOpen, setInternalMenuOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -91,14 +98,22 @@ export default function QuickRepliesMenu({
     }
   };
 
+  const openMenu = () => {
+    if (menuOpen) {
+      return;
+    }
+
+    setMenuOpenState(true);
+    setActionError(null);
+  };
+
   const toggleMenu = () => {
     if (menuOpen) {
       closeMenu();
       return;
     }
 
-    setMenuOpenState(true);
-    setActionError(null);
+    openMenu();
   };
 
   const startEditing = (reply: QuickReply) => {
@@ -200,17 +215,26 @@ export default function QuickRepliesMenu({
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-        onClick={toggleMenu}
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        aria-label="Abrir respostas rápidas"
-        data-testid="quick-replies-toggle"
-      >
-        <MessageCirclePlus className="h-5 w-5" />
-      </button>
+      {renderTrigger ? (
+        renderTrigger({
+          menuOpen,
+          toggleMenu,
+          openMenu,
+          closeMenu,
+        })
+      ) : (
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          onClick={toggleMenu}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-label="Abrir respostas rápidas"
+          data-testid="quick-replies-toggle"
+        >
+          <MessageCirclePlus className="h-5 w-5" />
+        </button>
+      )}
 
       {menuOpen ? (
         <div

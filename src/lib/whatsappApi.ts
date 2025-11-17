@@ -89,7 +89,7 @@ type WhatsappFunctionRequestOptions = {
 
 const getServiceRoleKey = (): string => {
   const env = getServerEnv();
-  if (!env.serviceRoleKey) {
+  if (!serviceRoleKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada para uso backend.');
   }
 

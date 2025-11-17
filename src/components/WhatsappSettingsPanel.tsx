@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -98,12 +98,18 @@ type WhatsappSettingsPanelProps = {
   wallpaperOptions: WhatsappWallpaperOption[];
   selectedWallpaperId: string;
   onWallpaperChange: (wallpaperId: string) => void;
+  onCustomWallpaperUpload: (imageDataUrl: string) => void;
+  onCustomWallpaperRemove: () => void;
+  customWallpaper?: WhatsappWallpaperOption | null;
 };
 
 export default function WhatsappSettingsPanel({
   wallpaperOptions,
   selectedWallpaperId,
   onWallpaperChange,
+  onCustomWallpaperUpload,
+  onCustomWallpaperRemove,
+  customWallpaper,
 }: WhatsappSettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>('preferences');
   const [toggles, setToggles] = useState<ToggleState>(initialToggles);
@@ -114,6 +120,8 @@ export default function WhatsappSettingsPanel({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [photoSyncStatus, setPhotoSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [photoSyncFeedback, setPhotoSyncFeedback] = useState<string | null>(null);
+  const [customWallpaperError, setCustomWallpaperError] = useState<string | null>(null);
+  const [uploadingCustomWallpaper, setUploadingCustomWallpaper] = useState(false);
 
   const handleToggle = (id: keyof ToggleState) => {
     setToggles(previous => ({ ...previous, [id]: !previous[id] }));
@@ -240,6 +248,83 @@ export default function WhatsappSettingsPanel({
         <p className="mt-2 text-xs text-slate-500">
           Defina um fundo único para todas as conversas. A alteração é aplicada a todos os chats.
         </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="flex cursor-pointer flex-col justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/60">
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                if (!file) {
+                  return;
+                }
+
+                setCustomWallpaperError(null);
+
+                if (!file.type.startsWith('image/')) {
+                  setCustomWallpaperError('Envie um arquivo de imagem (JPG, PNG ou WEBP).');
+                  event.target.value = '';
+                  return;
+                }
+
+                setUploadingCustomWallpaper(true);
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const imageDataUrl = typeof reader.result === 'string' ? reader.result : '';
+
+                  if (!imageDataUrl) {
+                    setCustomWallpaperError('Não foi possível ler a imagem selecionada.');
+                  } else {
+                    onCustomWallpaperUpload(imageDataUrl);
+                  }
+
+                  setUploadingCustomWallpaper(false);
+                  event.target.value = '';
+                };
+                reader.onerror = () => {
+                  setUploadingCustomWallpaper(false);
+                  setCustomWallpaperError('Erro ao carregar a imagem. Tente novamente.');
+                  event.target.value = '';
+                };
+                reader.readAsDataURL(file);
+              }}
+              disabled={uploadingCustomWallpaper}
+            />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                {uploadingCustomWallpaper ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paintbrush className="h-5 w-5" />}
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-slate-900">Enviar papel de parede</p>
+                <p className="text-xs text-slate-500">
+                  {uploadingCustomWallpaper
+                    ? 'Processando imagem...'
+                    : 'JPG, PNG ou WEBP de até 5 MB.'}
+                </p>
+              </div>
+            </div>
+            {customWallpaper ? (
+              <p className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                Personalizado disponível
+              </p>
+            ) : null}
+          </label>
+
+          {customWallpaper ? (
+            <button
+              type="button"
+              onClick={onCustomWallpaperRemove}
+              className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-left text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-300"
+            >
+              <span className="text-sm font-semibold">Remover papel personalizado</span>
+              <span className="text-xs text-rose-600">Voltar para os papéis padrão e limpar o envio.</span>
+            </button>
+          ) : null}
+        </div>
+        {customWallpaperError ? (
+          <p className="mt-2 text-xs font-semibold text-rose-600">{customWallpaperError}</p>
+        ) : null}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {wallpaperOptions.map(option => {
             const isSelected = option.id === selectedWallpaperId;

@@ -3834,6 +3834,8 @@ export default function WhatsappPage({
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
+      setMessagesLoading(true);
+      setMessages([]);
       setSelectedChatId(chatId);
       markChatAsRead(chatId);
       if (typeof window !== 'undefined' && window.innerWidth < 768) {

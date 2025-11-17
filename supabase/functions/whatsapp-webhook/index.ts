@@ -2477,14 +2477,19 @@ const handleSendMessage = async (req: Request) => {
 };
 
 const handleDeleteMessage = async (req: Request) => {
-  if (req.method !== 'POST') {
+  if (!['POST', 'DELETE'].includes(req.method)) {
     return respondJson(405, { success: false, error: 'Método não permitido' });
   }
 
-  const body = (await ensureJsonBody<DeleteMessageBody>(req)) ?? {};
-  const messageId = typeof body.messageId === 'string' ? body.messageId.trim() : '';
-  const phone = normalizePhoneIdentifier(body.phone);
-  const owner = normalizeBoolean(body.owner);
+  const { searchParams } = new URL(req.url);
+  const body = req.method === 'DELETE' ? null : (await ensureJsonBody<DeleteMessageBody>(req));
+  const rawMessageId = body?.messageId ?? searchParams.get('messageId');
+  const rawPhone = body?.phone ?? searchParams.get('phone');
+  const rawOwner = body?.owner ?? searchParams.get('owner');
+
+  const messageId = typeof rawMessageId === 'string' ? rawMessageId.trim() : '';
+  const phone = normalizePhoneIdentifier(rawPhone);
+  const owner = normalizeBoolean(rawOwner);
 
   if (!messageId) {
     return respondJson(400, { success: false, error: 'Campo messageId é obrigatório' });

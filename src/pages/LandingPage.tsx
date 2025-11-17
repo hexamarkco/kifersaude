@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram, Plus } from 'lucide-react';
+import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
@@ -17,6 +17,14 @@ interface BlogPost {
   cover_image_url?: string;
 }
 
+const AGE_RANGES = ['00 - 18', '19 - 23', '24 - 28', '29 - 33', '34 - 38', '39 - 43', '44 - 48', '49 - 53', '54 - 58', '59+'];
+
+const createInitialAgeRangeCounts = () =>
+  AGE_RANGES.reduce((acc, range) => {
+    acc[range] = '';
+    return acc;
+  }, {} as Record<string, string>);
+
 export default function LandingPage() {
   const [formData, setFormData] = useState({
     nome: '',
@@ -24,7 +32,7 @@ export default function LandingPage() {
     cidade: '',
     tipoContratacao: 'PF'
   });
-  const [beneficiaryAges, setBeneficiaryAges] = useState<string[]>(['']);
+  const [ageRangeCounts, setAgeRangeCounts] = useState<Record<string, string>>(createInitialAgeRangeCounts());
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -47,16 +55,9 @@ export default function LandingPage() {
     loadBlogPosts();
   }, []);
 
-  const addBeneficiaryAge = () => {
-    setBeneficiaryAges((prev) => [...prev, '']);
-  };
-
-  const updateBeneficiaryAge = (index: number, value: string) => {
-    setBeneficiaryAges((prev) => prev.map((age, i) => (i === index ? value : age)));
-  };
-
-  const removeBeneficiaryAge = (index: number) => {
-    setBeneficiaryAges((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  const updateAgeRangeCount = (range: string, value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    setAgeRangeCounts((prev) => ({ ...prev, [range]: numericValue }));
   };
 
   const loadBlogPosts = async () => {
@@ -118,14 +119,16 @@ export default function LandingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const normalizedAges = beneficiaryAges.map((age) => age.trim()).filter(Boolean);
+    const formattedAgeRanges = Object.entries(ageRangeCounts)
+      .map(([range, quantity]) => ({ range, quantity: parseInt(quantity, 10) }))
+      .filter(({ quantity }) => !isNaN(quantity) && quantity > 0);
 
-    if (normalizedAges.length === 0) {
-      alert('Informe ao menos uma idade para prosseguir.');
+    if (formattedAgeRanges.length === 0) {
+      alert('Informe ao menos uma quantidade de vidas para prosseguir.');
       return;
     }
 
-    const agesText = normalizedAges.join(', ');
+    const agesText = formattedAgeRanges.map(({ range, quantity }) => `${range}: ${quantity}`).join(', ');
 
     try {
       const leadData = {
@@ -157,7 +160,7 @@ export default function LandingPage() {
       window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
 
       setFormData({ nome: '', telefone: '', cidade: '', tipoContratacao: 'PF' });
-      setBeneficiaryAges(['']);
+      setAgeRangeCounts(createInitialAgeRangeCounts());
       setShowModal(false);
 
       alert('✅ Cotação enviada com sucesso! Em breve entraremos em contato.');
@@ -831,62 +834,42 @@ export default function LandingPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Idade das vidas *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addBeneficiaryAge}
-                    className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Adicionar vida
-                  </button>
-                </div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Tipo de Contratação *
+                </label>
+                <select
+                  value={formData.tipoContratacao}
+                  onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                >
+                  <option value="PF">Pessoa Física</option>
+                  <option value="MEI">MEI</option>
+                  <option value="CNPJ">CNPJ</option>
+                </select>
+              </div>
 
-                <div className="space-y-3">
-                  {beneficiaryAges.map((age, index) => (
-                    <div key={index} className="flex items-center space-x-3">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-3">
+                  Idade das vidas *
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {AGE_RANGES.map((range) => (
+                    <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
+                      <p className="text-sm font-semibold text-slate-700">{range}</p>
                       <input
                         type="number"
                         min="0"
-                        required={index === 0}
                         inputMode="numeric"
                         pattern="\d*"
-                        value={age}
-                        onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                        placeholder={`Idade da vida ${index + 1}`}
+                        value={ageRangeCounts[range]}
+                        onChange={(e) => updateAgeRangeCount(range, e.target.value)}
+                        className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder="Quantidade"
                       />
-                      {beneficiaryAges.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeBeneficiaryAge(index)}
-                          className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                          aria-label="Remover vida"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Tipo de Contratação *
-              </label>
-              <select
-                value={formData.tipoContratacao}
-                onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-              >
-                <option value="PF">Pessoa Física</option>
-                <option value="MEI">MEI</option>
-                <option value="CNPJ">CNPJ</option>
-              </select>
             </div>
 
             <button
@@ -1062,62 +1045,42 @@ export default function LandingPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Idade das vidas *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addBeneficiaryAge}
-                      className="inline-flex items-center px-3 py-1 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-1" /> Adicionar vida
-                    </button>
-                  </div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Tipo de Contratação *
+                  </label>
+                  <select
+                    value={formData.tipoContratacao}
+                    onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  >
+                    <option value="PF">Pessoa Física</option>
+                    <option value="MEI">MEI</option>
+                    <option value="CNPJ">CNPJ</option>
+                  </select>
+                </div>
 
-                  <div className="space-y-3">
-                    {beneficiaryAges.map((age, index) => (
-                      <div key={index} className="flex items-center space-x-3">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Idade das vidas *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {AGE_RANGES.map((range) => (
+                      <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
+                        <p className="text-sm font-semibold text-slate-700">{range}</p>
                         <input
                           type="number"
                           min="0"
-                          required={index === 0}
                           inputMode="numeric"
                           pattern="\d*"
-                          value={age}
-                          onChange={(e) => updateBeneficiaryAge(index, e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                          placeholder={`Idade da vida ${index + 1}`}
+                          value={ageRangeCounts[range]}
+                          onChange={(e) => updateAgeRangeCount(range, e.target.value)}
+                          className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                          placeholder="Quantidade"
                         />
-                        {beneficiaryAges.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeBeneficiaryAge(index)}
-                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            aria-label="Remover vida"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Tipo de Contratação *
-                </label>
-                <select
-                  value={formData.tipoContratacao}
-                  onChange={(e) => setFormData({ ...formData, tipoContratacao: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                >
-                  <option value="PF">Pessoa Física</option>
-                  <option value="MEI">MEI</option>
-                  <option value="CNPJ">CNPJ</option>
-                </select>
               </div>
 
               <button

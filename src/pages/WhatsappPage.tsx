@@ -6194,7 +6194,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
 
                 {pendingAttachment ? (
                   <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-1">
                       <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                         Pré-visualização do anexo
                       </span>

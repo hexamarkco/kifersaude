@@ -46,6 +46,20 @@ export type WhatsappChat = {
   sla_metrics?: WhatsappChatSlaMetrics | null;
 };
 
+export type WhatsappPresenceStatus = 'online' | 'offline' | 'unknown';
+
+export type WhatsappChatPresenceEvent = {
+  type: string | null;
+  phone: string | null;
+  chatId: string | null;
+  status: string | null;
+  presence: WhatsappPresenceStatus | null;
+  isTyping?: boolean;
+  activity?: 'recording' | 'typing';
+  lastSeenIso?: string | null;
+  timestamp?: number | null;
+};
+
 export type WhatsappMessage = {
   id: string;
   chat_id: string;

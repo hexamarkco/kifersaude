@@ -4799,6 +4799,35 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
     }
   }, [messageSearchMatches, normalizedMessageSearchTerm, showMessageSearch]);
 
+  const handleDocumentDownload = useCallback(async (url: string | null, fileName: string | null) => {
+    if (!url) {
+      return;
+    }
+
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar documento: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = fileName ?? 'documento';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Erro ao baixar documento', error);
+      window.alert('Não foi possível baixar o documento. Tente novamente.');
+    }
+  }, []);
+
   const renderMessageContent = (message: OptimisticMessage, attachmentInfo: MessageAttachmentInfo) => {
     const isFromMe = message.from_me;
     const messageTranscriptionKey = message.id ?? message.message_id ?? null;
@@ -4958,13 +4987,13 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
               >
                 Abrir
               </a>
-              <a
-                href={attachmentInfo.documentUrl}
-                download
+              <button
+                type="button"
+                onClick={() => handleDocumentDownload(attachmentInfo.documentUrl, attachmentInfo.documentFileName)}
                 className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
               >
                 Baixar
-              </a>
+              </button>
             </div>
           </div>
         </div>,

@@ -83,7 +83,7 @@ import type {
   WhatsappPresenceStatus,
 } from '../types/whatsapp';
 
-const WAVEFORM_BAR_COUNT = 64;
+const WAVEFORM_BAR_COUNT = 256;
 const WAVEFORM_SENSITIVITY = 1.8;
 const MAX_MESSAGE_INPUT_ROWS = 5;
 const DEFAULT_MESSAGE_INPUT_LINE_HEIGHT = 24;
@@ -6550,7 +6550,7 @@ export default function WhatsappPage({ onUnreadCountChange }: WhatsappPageProps 
                         </span>
                       </div>
                     </div>
-                    <LiveAudioVisualizer values={waveformValues} />
+                    <LiveAudioVisualizer values={waveformValues} barCount={WAVEFORM_BAR_COUNT} />
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"

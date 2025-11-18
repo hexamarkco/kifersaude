@@ -1401,19 +1401,26 @@ const sendZapiAndPersist = async (input: {
   const credentials = getZapiCredentials();
 
   if (!credentials) {
-    throw new Error('Credenciais da Z-API não configuradas');
+    throw new ZapiRequestError(500, 'Credenciais da Z-API não configuradas');
   }
 
   const { instanceId, token, clientToken } = credentials;
   const url = `https://api.z-api.io/instances/${instanceId}/token/${token}${input.endpoint}`;
 
   let responseBody: Record<string, unknown> | null = null;
+  let response: Response;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Client-Token': clientToken },
-    body: JSON.stringify(input.body),
-  });
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Client-Token': clientToken },
+      body: JSON.stringify(input.body),
+    });
+  } catch (error) {
+    throw new ZapiRequestError(502, 'Falha ao contatar a Z-API', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   try {
     responseBody = (await response.json()) as Record<string, unknown>;

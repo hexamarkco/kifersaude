@@ -124,13 +124,13 @@ const getSupabaseAnonKey = (): string => {
   return key;
 };
 
-const getZapiCredentials = (): ZapiCredentials => {
+const getZapiCredentials = (): ZapiCredentials | null => {
   const env = resolveRuntimeEnv();
   const instanceId = env.zapiInstanceId?.trim();
   const token = env.zapiToken?.trim();
 
   if (!instanceId || !token) {
-    throw new Error('Credenciais da Z-API não configuradas.');
+    return null;
   }
 
   return {

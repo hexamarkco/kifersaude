@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
 
 type WhatsappChatRecord = {
   id: string;
@@ -53,6 +54,8 @@ const CHAT_PHOTO_BUCKET = 'whatsapp-chat-photos';
 const DEFAULT_PHOTO_CONTENT_TYPE = 'image/jpeg';
 const MAX_CONTACT_PAGES = 10;
 const CONTACTS_PAGE_SIZE = 500;
+const JPEG_QUALITY = 75;
+const MAX_DIMENSION = 512;
 
 if (!supabaseUrl) {
   throw new Error('SUPABASE_URL não configurada.');
@@ -186,6 +189,22 @@ const fetchChatMetadata = async (phone: string, credentials: ZapiCredentials): P
   }
 };
 
+const optimizeProfilePhoto = async (arrayBuffer: ArrayBuffer): Promise<Uint8Array | null> => {
+  try {
+    const image = await Image.decode(arrayBuffer);
+    const resizeRatio = Math.min(MAX_DIMENSION / image.width, MAX_DIMENSION / image.height, 1);
+
+    if (resizeRatio < 1) {
+      image.resize(Math.round(image.width * resizeRatio), Math.round(image.height * resizeRatio));
+    }
+
+    return image.encodeJPEG(JPEG_QUALITY);
+  } catch (error) {
+    console.warn('Falha ao otimizar foto de perfil, utilizando imagem original:', error);
+    return null;
+  }
+};
+
 const downloadAndStoreProfilePhoto = async (
   photoUrl: string,
   phone: string,
@@ -199,14 +218,16 @@ const downloadAndStoreProfilePhoto = async (
 
   const arrayBuffer = await response.arrayBuffer();
   const contentTypeHeader = response.headers.get('content-type');
-  const contentType = contentTypeHeader?.trim() || DEFAULT_PHOTO_CONTENT_TYPE;
+  const optimizedBuffer = await optimizeProfilePhoto(arrayBuffer);
+  const contentType = optimizedBuffer ? DEFAULT_PHOTO_CONTENT_TYPE : contentTypeHeader?.trim() || DEFAULT_PHOTO_CONTENT_TYPE;
+  const uploadBuffer = optimizedBuffer ?? new Uint8Array(arrayBuffer);
   const normalizedPhone = phone.replace(/\D+/g, '') || 'unknown';
   const timestamp = Date.now();
   const storagePath = `profiles/${normalizedPhone}-${timestamp}.jpg`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from(CHAT_PHOTO_BUCKET)
-    .upload(storagePath, new Uint8Array(arrayBuffer), {
+    .upload(storagePath, uploadBuffer, {
       cacheControl: '3600',
       upsert: true,
       contentType,

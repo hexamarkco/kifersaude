@@ -18,6 +18,12 @@
    - `VITE_SUPABASE_FUNCTIONS_URL`: use o endpoint das funções (`https://<project>.supabase.co/functions/v1` ou `http://127.0.0.1:54321/functions/v1`).
    - `VITE_SUPABASE_ANON_KEY`: chave anônima (`anon key`) do projeto.
 
+3. Configure a API do ChatGPT para gerar os insights das conversas do WhatsApp:
+
+   - `OPENAI_API_KEY`: chave de acesso à API.
+   - `OPENAI_MODEL` (opcional): modelo a ser usado para gerar o insight (padrão: `gpt-4o-mini`).
+   - `OPENAI_API_URL` (opcional): endpoint da API de chat completions (padrão: `https://api.openai.com/v1/chat/completions`).
+
 Sem esses valores a aba de WhatsApp não consegue montar as URLs das funções.
 
 ## Desenvolvimento

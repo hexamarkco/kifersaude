@@ -38,6 +38,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 const CHAT_PHOTO_BUCKET = 'whatsapp-chat-photos';
 const DEFAULT_PHOTO_CONTENT_TYPE = 'image/jpeg';
 
@@ -50,6 +51,17 @@ if (!supabaseServiceKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
+
+const extractApiKey = (req: Request): string | null => {
+  const bearer = req.headers.get('authorization');
+  const apiKey = req.headers.get('apikey') ?? req.headers.get('x-api-key');
+
+  if (bearer?.toLowerCase().startsWith('bearer ')) {
+    return bearer.slice('bearer '.length).trim();
+  }
+
+  return apiKey?.trim() ?? null;
+};
 
 const normalizePhone = (value: string | null | undefined): string | null => {
   if (!value) {
@@ -271,8 +283,11 @@ serve(async req => {
     });
   }
 
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${supabaseServiceKey}`) {
+  const providedKey = extractApiKey(req);
+  const isServiceKey = providedKey === supabaseServiceKey;
+  const isAnonKey = supabaseAnonKey ? providedKey === supabaseAnonKey : false;
+
+  if (!isServiceKey && !isAnonKey) {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { headers: corsHeaders, status: 401 });
   }
 

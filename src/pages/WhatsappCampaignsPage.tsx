@@ -81,6 +81,17 @@ const TARGET_STATUS_LABELS: Record<keyof WhatsappCampaignMetricsSummary, string>
   failed: 'Falhas',
 };
 
+const MESSAGE_VARIABLE_HINTS = [
+  '{{saudacao}}',
+  '{{nome}}',
+  '{{primeiro_nome}}',
+  '{{lead_status}}',
+  '{{lead_data_cadastro}}',
+  '{{contrato_codigo}}',
+  '{{contrato_status}}',
+  '{{contrato_mensalidade}}',
+];
+
 const summarizeTargets = (targets: WhatsappCampaignTarget[] | undefined): WhatsappCampaignMetricsSummary => {
   const summary: WhatsappCampaignMetricsSummary = {
     pending: 0,
@@ -639,21 +650,35 @@ export default function WhatsappCampaignsPage() {
                           </div>
                           <div className="mt-3 space-y-3 text-sm text-slate-600">
                             {step.step_type === 'message' ? (
-                              <textarea
-                                value={step.config?.message?.body ?? ''}
-                                onChange={event =>
-                                  updateStep(index, previous => ({
-                                    ...previous,
-                                    config: {
-                                      ...previous.config,
-                                      message: { body: event.target.value },
-                                    },
-                                  }))
-                                }
-                                rows={3}
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2"
-                                placeholder="Mensagem que será enviada ao lead"
-                              />
+                              <div className="space-y-2">
+                                <textarea
+                                  value={step.config?.message?.body ?? ''}
+                                  onChange={event =>
+                                    updateStep(index, previous => ({
+                                      ...previous,
+                                      config: {
+                                        ...previous.config,
+                                        message: { body: event.target.value },
+                                      },
+                                    }))
+                                  }
+                                  rows={3}
+                                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                                  placeholder="Mensagem que será enviada ao lead"
+                                />
+                                <p className="text-xs text-slate-500">
+                                  Use variáveis como{' '}
+                                  {MESSAGE_VARIABLE_HINTS.map((token, hintIndex) => (
+                                    <code
+                                      key={`${token}-${hintIndex}`}
+                                      className="mr-1 rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px] text-slate-700"
+                                    >
+                                      {token}
+                                    </code>
+                                  ))}
+                                  para personalizar com nome, saudação, datas e contratos.
+                                </p>
+                              </div>
                             ) : null}
 
                             {step.step_type === 'attachment' ? (

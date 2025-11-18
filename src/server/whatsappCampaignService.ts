@@ -14,6 +14,28 @@ type TargetRecord = WhatsappCampaignTarget & {
   campaign: Pick<WhatsappCampaign, 'id' | 'status' | 'name'>;
 };
 
+type LeadSummary = {
+  id: string;
+  nome_completo: string | null;
+  origem: string | null;
+  tipo_contratacao: string | null;
+  status: string | null;
+  responsavel: string | null;
+  data_criacao: string | null;
+  created_at: string | null;
+};
+
+type LeadContractSummary = {
+  id: string;
+  codigo_contrato: string | null;
+  status: string | null;
+  modalidade: string | null;
+  operadora: string | null;
+  produto_plano: string | null;
+  mensalidade_total: number | null;
+  created_at: string | null;
+};
+
 type ProcessOptions = {
   limit?: number;
   now?: Date;
@@ -37,6 +59,8 @@ const getIsoString = (value: Date) => value.toISOString();
 
 export class WhatsappCampaignService {
   private stepCache = new Map<string, WhatsappCampaignStep[]>();
+  private leadCache = new Map<string, LeadSummary | null>();
+  private leadContractCache = new Map<string, LeadContractSummary | null>();
 
   constructor(private readonly defaultFetch: typeof fetch = fetch) {}
 
@@ -262,6 +286,153 @@ export class WhatsappCampaignService {
     return this.advanceTarget(target, steps, now);
   }
 
+  private formatDate(value: string | null | undefined) {
+    if (!value) {
+      return '';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    return parsed.toLocaleDateString('pt-BR');
+  }
+
+  private formatCurrency(value: number | null | undefined) {
+    if (typeof value !== 'number') {
+      return '';
+    }
+
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  private resolveGreeting(now: Date) {
+    const hour = now.getHours();
+    if (hour < 12) {
+      return 'Bom dia';
+    }
+
+    if (hour < 18) {
+      return 'Boa tarde';
+    }
+
+    return 'Boa noite';
+  }
+
+  private async getLeadSummary(leadId: string | null): Promise<LeadSummary | null> {
+    if (!leadId) {
+      return null;
+    }
+
+    if (this.leadCache.has(leadId)) {
+      return this.leadCache.get(leadId) ?? null;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('leads')
+      .select(
+        'id, nome_completo, origem, tipo_contratacao, status, responsavel, data_criacao, created_at',
+      )
+      .eq('id', leadId)
+      .single();
+
+    if (error) {
+      this.leadCache.set(leadId, null);
+      return null;
+    }
+
+    const lead = (data ?? null) as LeadSummary | null;
+    this.leadCache.set(leadId, lead);
+    return lead;
+  }
+
+  private async getLeadContractSummary(leadId: string | null): Promise<LeadContractSummary | null> {
+    if (!leadId) {
+      return null;
+    }
+
+    if (this.leadContractCache.has(leadId)) {
+      return this.leadContractCache.get(leadId) ?? null;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('contracts')
+      .select('id, codigo_contrato, status, modalidade, operadora, produto_plano, mensalidade_total, created_at')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      this.leadContractCache.set(leadId, null);
+      return null;
+    }
+
+    const contract = ((data ?? []) as LeadContractSummary[])[0] ?? null;
+    this.leadContractCache.set(leadId, contract);
+    return contract;
+  }
+
+  private buildMessageVariables(
+    now: Date,
+    target: TargetRecord,
+    lead: LeadSummary | null,
+    contract: LeadContractSummary | null,
+  ) {
+    const leadName = lead?.nome_completo?.trim() || '';
+    const firstName = leadName.split(' ')[0] || '';
+
+    const replacements: Record<string, string> = {
+      saudacao: this.resolveGreeting(now),
+      greeting: this.resolveGreeting(now),
+      nome: leadName,
+      lead_nome: leadName,
+      primeiro_nome: firstName,
+      lead_primeiro_nome: firstName,
+      telefone: target.phone,
+      lead_status: lead?.status || '',
+      lead_origem: lead?.origem || '',
+      lead_tipo_contratacao: lead?.tipo_contratacao || '',
+      lead_responsavel: lead?.responsavel || '',
+      lead_data_cadastro: this.formatDate(lead?.data_criacao || lead?.created_at),
+      campanha_nome: target.campaign?.name || '',
+      data_envio: this.formatDate(now.toISOString()),
+      hora_envio: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      contrato_codigo: contract?.codigo_contrato || '',
+      contrato_status: contract?.status || '',
+      contrato_modalidade: contract?.modalidade || '',
+      contrato_operadora: contract?.operadora || '',
+      contrato_plano: contract?.produto_plano || '',
+      contrato_mensalidade: this.formatCurrency(contract?.mensalidade_total),
+      contrato_criado_em: this.formatDate(contract?.created_at),
+    };
+
+    Object.entries(target.metadata ?? {}).forEach(([key, value]) => {
+      if (value === null || typeof value === 'undefined') {
+        return;
+      }
+
+      if (['string', 'number', 'boolean'].includes(typeof value)) {
+        replacements[`meta_${key}`] = String(value);
+      }
+    });
+
+    return replacements;
+  }
+
+  private applyTemplate(message: string, replacements: Record<string, string>) {
+    return message.replace(/{{\s*([\w.]+)\s*}}/g, (_, rawKey) => {
+      const key = String(rawKey || '').toLowerCase();
+      return key in replacements ? replacements[key] : '';
+    });
+  }
+
+  private async applyMessageVariables(message: string, target: TargetRecord, now: Date): Promise<string> {
+    const lead = await this.getLeadSummary(target.lead_id);
+    const contract = await this.getLeadContractSummary(target.lead_id);
+    const replacements = this.buildMessageVariables(now, target, lead, contract);
+    return this.applyTemplate(message, replacements);
+  }
+
   private async handleMessageStep(
     target: TargetRecord,
     step: WhatsappCampaignStep,
@@ -274,8 +445,10 @@ export class WhatsappCampaignService {
       throw new Error('Mensagem não configurada.');
     }
 
+    const enrichedMessage = await this.applyMessageVariables(messageText, target, now);
+
     await sendWhatsappMessage(
-      { phone: target.phone, message: messageText },
+      { phone: target.phone, message: enrichedMessage },
       { fetchImpl, useServiceKey: true },
     );
 

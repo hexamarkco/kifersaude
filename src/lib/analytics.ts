@@ -41,22 +41,16 @@ export type OperadoraDistribution = {
   revenue: number;
 };
 
-export function calculateConversionRate(leads: Lead[], contracts: Contract[]): number {
-  const totalLeads = leads.filter(l => !l.arquivado).length;
-  if (totalLeads === 0) return 0;
+export function calculateConversionRate(leads: Lead[], _contracts: Contract[]): number {
+  const activeLeads = leads.filter(l => !l.arquivado);
+  if (activeLeads.length === 0) return 0;
 
-  const activeContracts = contracts.filter(
-    (contract): contract is Contract & { lead_id: string } =>
-      contract.status === 'Ativo' && typeof contract.lead_id === 'string' && contract.lead_id.length > 0,
-  );
+  const convertedStatuses = ['convertido', 'fechado'];
+  const convertedLeads = activeLeads.filter(lead =>
+    convertedStatuses.includes(lead.status?.toLowerCase() || '')
+  ).length;
 
-  if (activeContracts.length === 0) {
-    const closedLeads = leads.filter(l => !l.arquivado && l.status === 'Fechado').length;
-    return (closedLeads / totalLeads) * 100;
-  }
-
-  const leadsWithContracts = new Set(activeContracts.map(contract => contract.lead_id)).size;
-  return (leadsWithContracts / totalLeads) * 100;
+  return (convertedLeads / activeLeads.length) * 100;
 }
 
 export function calculateWinRate(leads: Lead[]): number {

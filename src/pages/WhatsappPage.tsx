@@ -100,6 +100,8 @@ const REQUIRED_WHATSAPP_ENV_VARS = [
   'VITE_SUPABASE_ANON_KEY',
 ] as const;
 
+const DELETED_MESSAGE_PLACEHOLDER = '🗑️ Mensagem apagada para todos';
+
 const CUSTOM_WALLPAPER_ID = 'custom-upload';
 const CUSTOM_WALLPAPER_STORAGE_KEY = 'whatsappCustomWallpaper';
 
@@ -4885,10 +4887,20 @@ export default function WhatsappPage({
           throw new Error(response.error ?? 'Erro ao deletar mensagem.');
         }
 
+        const { error: updateError } = await supabase
+          .from('whatsapp_messages')
+          .update({ text: DELETED_MESSAGE_PLACEHOLDER })
+          .eq('message_id', messageId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
         setMessages(previousMessages =>
-          previousMessages.filter(
-            currentMessage =>
-              currentMessage.message_id !== messageId && currentMessage.id !== message.id,
+          previousMessages.map(currentMessage =>
+            currentMessage.message_id === messageId || currentMessage.id === message.id
+              ? { ...currentMessage, text: DELETED_MESSAGE_PLACEHOLDER }
+              : currentMessage,
           ),
         );
       } catch (deleteError) {

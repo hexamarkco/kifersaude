@@ -15,9 +15,10 @@ export type AudioMessageBubbleProps = {
   src: string;
   seconds?: number | null;
   className?: string;
+  variant?: 'sent' | 'received';
 };
 
-export function AudioMessageBubble({ src, seconds, className }: AudioMessageBubbleProps) {
+export function AudioMessageBubble({ src, seconds, className, variant = 'received' }: AudioMessageBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressBarRef = useRef<HTMLInputElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -143,6 +144,35 @@ export function AudioMessageBubble({ src, seconds, className }: AudioMessageBubb
 
   const sliderMax = derivedDuration && derivedDuration > 0 ? derivedDuration : Math.max(currentTime, 1);
 
+  const palette = variant === 'sent'
+    ? {
+        text: 'text-emerald-950',
+        mutedText: 'text-emerald-900/80',
+        controlBg: 'bg-emerald-50/25',
+        controlBorder: 'border-emerald-100/80',
+        controlText: 'text-emerald-900',
+        hoverBg: 'hover:bg-emerald-50/50',
+        sliderTrack: 'bg-emerald-200/80',
+        sliderThumb: 'bg-emerald-800',
+      }
+    : {
+        text: 'text-slate-800',
+        mutedText: 'text-slate-600',
+        controlBg: 'bg-slate-100',
+        controlBorder: 'border-slate-200',
+        controlText: 'text-slate-700',
+        hoverBg: 'hover:bg-slate-200/70',
+        sliderTrack: 'bg-slate-300',
+        sliderThumb: 'bg-slate-500',
+      };
+
+  const controlButtonClassName =
+    `flex h-10 w-10 items-center justify-center rounded-full border ${palette.controlBorder} ${palette.controlBg} ${palette.controlText} ` +
+    'shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-400/50';
+
+  const seekButtonClassName =
+    `rounded-full px-3 py-1 text-xs font-semibold ${palette.controlText} ${palette.hoverBg} ${palette.controlBg}`;
+
   const seekBy = useCallback(
     (delta: number) => {
       const audio = audioRef.current;
@@ -169,19 +199,19 @@ export function AudioMessageBubble({ src, seconds, className }: AudioMessageBubb
 
   return (
     <div
-      className={`flex w-[320px] max-w-full flex-col gap-2 rounded-lg bg-transparent p-1 text-slate-800 ${className ?? ''}`}
+      className={`flex w-[320px] max-w-full flex-col gap-2 rounded-lg bg-transparent p-1 ${palette.text} ${className ?? ''}`}
     >
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white/80 text-slate-800 shadow-sm transition hover:bg-white"
+          className={`${controlButtonClassName} ${isPlaying ? 'bg-emerald-50/70' : ''}`}
         >
           {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
         <div className="flex flex-1 flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+          <div className={`flex items-center gap-2 text-xs font-medium ${palette.mutedText}`}>
             <span>{formattedCurrentTime}</span>
             {formattedDuration ? <span>•</span> : null}
             {formattedDuration ? <span>{formattedDuration}</span> : null}
@@ -194,23 +224,23 @@ export function AudioMessageBubble({ src, seconds, className }: AudioMessageBubb
             step={0.1}
             value={Math.min(currentTime, sliderMax)}
             onChange={handleProgressChange}
-            className="h-1 w-full cursor-pointer appearance-none rounded-full bg-slate-300 focus:outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+            className={`h-1 w-full cursor-pointer appearance-none rounded-full ${palette.sliderTrack} focus:outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:${palette.sliderThumb}`}
           />
         </div>
       </div>
-      <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-        <div className="flex items-center gap-2">
+      <div className={`flex items-center justify-between text-xs font-medium ${palette.mutedText}`}>
+        <div className="flex items-center gap-2 text-[11px]">
           <button
             type="button"
             onClick={() => seekBy(-5)}
-            className="rounded-full px-3 py-1 text-slate-700 transition hover:bg-slate-200/60"
+            className={seekButtonClassName}
           >
             -5s
           </button>
           <button
             type="button"
             onClick={() => seekBy(5)}
-            className="rounded-full px-3 py-1 text-slate-700 transition hover:bg-slate-200/60"
+            className={seekButtonClassName}
           >
             +5s
           </button>
@@ -218,7 +248,7 @@ export function AudioMessageBubble({ src, seconds, className }: AudioMessageBubb
         <button
           type="button"
           onClick={handlePlaybackRateChange}
-          className="rounded-full px-3 py-1 text-slate-700 transition hover:bg-slate-200/60"
+          className={seekButtonClassName}
         >
           {playbackRate.toString().replace('.', ',')}x
         </button>

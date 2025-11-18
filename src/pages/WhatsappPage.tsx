@@ -6075,7 +6075,7 @@ export default function WhatsappPage({
           <img
             src={attachmentInfo.stickerUrl}
             alt="Figurinha recebida"
-            className="h-32 w-32 rounded-lg bg-white/60 object-contain shadow"
+            className="h-32 w-32 object-contain"
             loading="lazy"
           />
         </div>,
@@ -6165,8 +6165,12 @@ export default function WhatsappPage({
       })();
 
       attachments.push(
-        <div key="audio" className="flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800">
-          <AudioMessageBubble src={audioUrl} seconds={attachmentInfo.audioSeconds} />
+        <div key="audio" className="flex flex-col gap-2">
+          <AudioMessageBubble
+            src={audioUrl}
+            seconds={attachmentInfo.audioSeconds}
+            variant={isFromMe ? 'sent' : 'received'}
+          />
           {canTranscribeAudio ? (
             <div className="flex flex-col gap-2 text-xs text-slate-600">
               {transcriptionState?.text && transcriptionState.status === 'success' ? (
@@ -7502,6 +7506,7 @@ export default function WhatsappPage({
                         <AudioMessageBubble
                           src={pendingAttachment.dataUrl}
                           seconds={pendingAttachment.durationSeconds}
+                          variant="sent"
                         />
                         <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                           <p>

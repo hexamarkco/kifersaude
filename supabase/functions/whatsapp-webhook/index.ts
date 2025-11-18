@@ -1433,10 +1433,13 @@ const sendZapiAndPersist = async (input: {
   }
 
   const now = new Date();
-  const zapiStatus =
-    typeof responseBody?.status === 'string' ? (responseBody.status as string) : 'SENT';
+  const zapiStatus = normalizeStatusValue(responseBody?.status) ?? 'SENT';
   const messageId =
-    typeof responseBody?.messageId === 'string' ? (responseBody.messageId as string) : null;
+    toNonEmptyStringLike(responseBody?.messageId) ??
+    toNonEmptyStringLike((responseBody as { id?: string | number | null | undefined })?.id) ??
+    toNonEmptyStringLike(
+      (responseBody as { message_id?: string | number | null | undefined })?.message_id,
+    );
   const responsePhone =
     typeof responseBody?.phone === 'string' && responseBody.phone
       ? (responseBody.phone as string)

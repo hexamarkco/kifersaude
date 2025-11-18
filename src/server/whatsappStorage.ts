@@ -5,7 +5,6 @@ export type ChatUpsertInput = {
   phone: string;
   chatName?: string | null;
   isGroup?: boolean;
-  senderPhoto?: string | null;
   lastMessageAt?: Date | string | null;
   lastMessagePreview?: string | null;
 };
@@ -38,7 +37,6 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     phone,
     chatName,
     isGroup,
-    senderPhoto,
     lastMessageAt,
     lastMessagePreview,
   } = input;
@@ -71,10 +69,6 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     updatePayload.chat_name = chatName;
   }
 
-  if (senderPhoto !== undefined) {
-    updatePayload.sender_photo = senderPhoto;
-  }
-
   if (existingChat) {
     const { error: updateError } = await supabaseAdmin
       .from('whatsapp_chats')
@@ -88,7 +82,6 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     return {
       ...existingChat,
       chat_name: updatePayload.chat_name ?? existingChat.chat_name,
-      sender_photo: updatePayload.sender_photo ?? existingChat.sender_photo,
       is_group: typeof updatePayload.is_group === 'boolean' ? updatePayload.is_group : existingChat.is_group,
       last_message_at: normalizedLastMessageAt,
       last_message_preview: updatePayload.last_message_preview ?? existingChat.last_message_preview,
@@ -103,7 +96,6 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,
       is_group: Boolean(isGroup),
-      sender_photo: senderPhoto ?? null,
       is_archived: false,
       is_pinned: false,
     })

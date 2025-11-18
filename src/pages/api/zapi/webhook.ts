@@ -818,15 +818,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const momentDate = parseMoment(payload.momment) ?? new Date();
   const isGroup = payload.isGroup === true || phone.endsWith('-group');
   const chatName = payload.chatName ?? payload.senderName ?? phone;
-  const senderPhoto = payload.senderPhoto ?? null;
-  const resolvedSenderPhoto = isGroup ? undefined : senderPhoto;
 
   try {
     const chat = await upsertChatRecord({
       phone,
       chatName,
       isGroup,
-      senderPhoto: resolvedSenderPhoto,
       lastMessageAt: momentDate,
       lastMessagePreview: messageText,
     });

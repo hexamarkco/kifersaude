@@ -197,6 +197,10 @@ type RewriteMessageBody = {
   text?: string;
 };
 
+type SpellcheckMessageBody = {
+  text?: string;
+};
+
 type DeleteMessageBody = {
   messageId?: string;
   phone?: string;
@@ -206,6 +210,11 @@ type DeleteMessageBody = {
 type RewriteSuggestion = {
   tone: string;
   text: string;
+};
+
+type SpellcheckSuggestion = {
+  correctedText: string;
+  explanation?: string | null;
 };
 
 type WhatsappContactSummary = {
@@ -1109,19 +1118,19 @@ const createRewritePrompt = (text: string) => {
   ].join('\n');
 };
 
+const stripMarkdownCodeFence = (text: string): string => {
+  const trimmed = text.trim();
+  const fencedMatch = /^```[a-zA-Z]*\s*([\s\S]*?)\s*```$/m.exec(trimmed);
+
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  return trimmed;
+};
+
 const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] => {
   const suggestions: RewriteSuggestion[] = [];
-
-  const stripMarkdownCodeFence = (text: string): string => {
-    const trimmed = text.trim();
-    const fencedMatch = /^```[a-zA-Z]*\s*([\s\S]*?)\s*```$/m.exec(trimmed);
-
-    if (fencedMatch?.[1]) {
-      return fencedMatch[1].trim();
-    }
-
-    return trimmed;
-  };
 
   const normalizeList = (entries: unknown): RewriteSuggestion[] => {
     const extractVariations = (candidate: unknown): unknown[] | null => {
@@ -1231,6 +1240,78 @@ const extractRewriteSuggestionsFromRaw = (rawText: string): RewriteSuggestion[] 
   return uniqueSuggestions;
 };
 
+const createSpellcheckPrompt = (text: string) => {
+  const sanitized = text.trim();
+  return [
+    'Revise a mensagem em português e corrija apenas erros ortográficos ou de digitação.',
+    'Mantenha o sentido, emojis e estilo do autor. Não traduza para outro idioma.',
+    'Responda apenas em JSON no formato {"correction":{"text":"mensagem corrigida","notes":"explicação breve"}} sem texto extra.',
+    `Mensagem original: "${sanitized}"`,
+  ].join('\n');
+};
+
+const extractSpellcheckSuggestionFromRaw = (rawText: string): SpellcheckSuggestion | null => {
+  const cleaned = stripMarkdownCodeFence(rawText);
+
+  const normalizeCandidate = (candidate: unknown): SpellcheckSuggestion | null => {
+    if (!candidate || typeof candidate !== 'object') {
+      return null;
+    }
+
+    const record = candidate as Record<string, unknown>;
+
+    const normalizedText =
+      toNonEmptyString(record.text) ??
+      toNonEmptyString((record as { mensagem?: unknown }).mensagem) ??
+      toNonEmptyString((record as { corrigido?: unknown }).corrigido) ??
+      toNonEmptyString((record as { corrigida?: unknown }).corrigida);
+
+    const nestedCorrection = record.correction ?? record.correcao ?? record.corrections ?? null;
+
+    const explanation =
+      toNonEmptyString(record.notes) ??
+      toNonEmptyString((record as { explanation?: unknown }).explanation) ??
+      toNonEmptyString((record as { motivo?: unknown }).motivo) ??
+      toNonEmptyString((record as { reason?: unknown }).reason) ??
+      null;
+
+    if (nestedCorrection && typeof nestedCorrection === 'object') {
+      const nested = normalizeCandidate(nestedCorrection);
+      if (nested) {
+        return {
+          correctedText: nested.correctedText,
+          explanation: nested.explanation ?? explanation,
+        };
+      }
+    }
+
+    if (normalizedText) {
+      return {
+        correctedText: normalizedText,
+        explanation,
+      };
+    }
+
+    return null;
+  };
+
+  try {
+    const parsed = JSON.parse(cleaned) as unknown;
+    const suggestionFromJson = normalizeCandidate(parsed);
+    if (suggestionFromJson) {
+      return suggestionFromJson;
+    }
+  } catch (_error) {
+    // Ignorar erros de JSON e tentar extrair texto bruto.
+  }
+
+  if (cleaned.trim()) {
+    return { correctedText: cleaned.trim(), explanation: null };
+  }
+
+  return null;
+};
+
 const extractOpenAiResponseText = (payload: unknown): string | null => {
   if (!payload || typeof payload !== 'object') {
     return null;
@@ -1331,6 +1412,57 @@ const rewriteMessageWithGpt = async (text: string): Promise<RewriteSuggestion[]>
   }
 
   return suggestions;
+};
+
+const spellcheckMessageWithGpt = async (text: string): Promise<SpellcheckSuggestion> => {
+  const { apiKey, textModel } = await getGptIntegrationConfig();
+
+  const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: textModel || DEFAULT_OPENAI_TEXT_MODEL,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: createSpellcheckPrompt(text),
+            },
+          ],
+        },
+      ],
+      max_output_tokens: 200,
+    }),
+  });
+
+  const rawBody = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao sugerir correções (${response.status}): ${rawBody || 'erro desconhecido'}`,
+    );
+  }
+
+  let parsedBody: unknown = null;
+  try {
+    parsedBody = rawBody ? JSON.parse(rawBody) : null;
+  } catch (_error) {
+    parsedBody = rawBody ? { output_text: rawBody } : null;
+  }
+
+  const suggestionText = extractOpenAiResponseText(parsedBody) ?? (rawBody || null);
+  const suggestion = suggestionText ? extractSpellcheckSuggestionFromRaw(suggestionText) : null;
+
+  if (!suggestion) {
+    throw new Error('A API GPT não retornou uma sugestão de correção.');
+  }
+
+  return suggestion;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -2937,6 +3069,28 @@ const handleRewriteMessage = async (req: Request) => {
   }
 };
 
+const handleSpellcheckMessage = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SpellcheckMessageBody>(req)) ?? {};
+  const text = toNonEmptyString(body.text);
+
+  if (!text) {
+    return respondJson(400, { success: false, error: 'Campo text é obrigatório para sugerir correções.' });
+  }
+
+  try {
+    const suggestion = await spellcheckMessageWithGpt(text);
+    return respondJson(200, { success: true, suggestion });
+  } catch (error) {
+    console.error('Erro ao sugerir correção com GPT:', error);
+    const message = error instanceof Error ? error.message : 'Erro ao sugerir correções para a mensagem';
+    return respondJson(500, { success: false, error: message });
+  }
+};
+
 const handleSendLocation = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -3679,6 +3833,8 @@ Deno.serve(async (req) => {
       return handleSendAudio(req);
     case '/rewrite-message':
       return handleRewriteMessage(req);
+    case '/spellcheck-message':
+      return handleSpellcheckMessage(req);
     case '/transcribe-audio':
       return handleTranscribeAudio(req);
     case '/send-video':

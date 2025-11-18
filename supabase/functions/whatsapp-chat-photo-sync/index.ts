@@ -8,6 +8,11 @@ type WhatsappChatRecord = {
   is_group: boolean;
 };
 
+type ContactPhotoRecord = {
+  phone: string;
+  photo_url: string | null;
+};
+
 type ZapiCredentials = {
   instanceId: string;
   token: string;
@@ -26,7 +31,12 @@ type SyncSummary = {
   unchanged: number;
   failed: number;
   missingPhoto: number;
-  errors: { chatId: string; phone: string; error: string }[];
+  contactEligible: number;
+  contactUpdated: number;
+  contactUnchanged: number;
+  contactFailed: number;
+  contactMissingPhoto: number;
+  errors: { chatId: string | null; phone: string; error: string }[];
 };
 
 const corsHeaders = {
@@ -41,6 +51,8 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 const CHAT_PHOTO_BUCKET = 'whatsapp-chat-photos';
 const DEFAULT_PHOTO_CONTENT_TYPE = 'image/jpeg';
+const MAX_CONTACT_PAGES = 10;
+const CONTACTS_PAGE_SIZE = 500;
 
 if (!supabaseUrl) {
   throw new Error('SUPABASE_URL não configurada.');
@@ -92,6 +104,49 @@ const getZapiCredentials = (): ZapiCredentials | null => {
   }
 
   return { instanceId, token, clientToken };
+};
+
+const fetchSavedContacts = async (credentials: ZapiCredentials): Promise<string[]> => {
+  const contacts: string[] = [];
+
+  for (let page = 1; page <= MAX_CONTACT_PAGES; page += 1) {
+    const url = `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/contacts?page=${page}&pageSize=${CONTACTS_PAGE_SIZE}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Client-Token': credentials.clientToken },
+      });
+
+      if (!response.ok) {
+        console.error('Falha ao carregar contatos da Z-API:', response.status, response.statusText);
+        break;
+      }
+
+      const pageData = (await response.json()) as unknown;
+
+      if (!Array.isArray(pageData) || pageData.length === 0) {
+        break;
+      }
+
+      for (const rawContact of pageData) {
+        const contact = rawContact as { phone?: string | null };
+        const normalized = normalizePhone(contact.phone);
+        if (normalized) {
+          contacts.push(normalized);
+        }
+      }
+
+      if (pageData.length < CONTACTS_PAGE_SIZE) {
+        break;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar contatos da Z-API:', error);
+      break;
+    }
+  }
+
+  return contacts;
 };
 
 const toNonEmptyString = (value: unknown): string | null => {
@@ -170,6 +225,47 @@ const downloadAndStoreProfilePhoto = async (
   return publicUrlData.publicUrl;
 };
 
+const fetchExistingContactPhotos = async (phones: string[]): Promise<Map<string, string>> => {
+  const photoMap = new Map<string, string>();
+
+  if (phones.length === 0) {
+    return photoMap;
+  }
+
+  const CHUNK_SIZE = 500;
+  for (let index = 0; index < phones.length; index += CHUNK_SIZE) {
+    const chunk = phones.slice(index, index + CHUNK_SIZE);
+
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_contact_photos')
+      .select('phone, photo_url')
+      .in('phone', chunk);
+
+    if (error) {
+      throw error;
+    }
+
+    for (const record of (data ?? []) as ContactPhotoRecord[]) {
+      if (record.phone && record.photo_url) {
+        photoMap.set(record.phone, record.photo_url);
+      }
+    }
+  }
+
+  return photoMap;
+};
+
+const upsertContactPhoto = async (phone: string, photoUrl: string) => {
+  const { error } = await supabaseAdmin
+    .from('whatsapp_contact_photos')
+    .upsert({ phone, photo_url: photoUrl, updated_at: new Date().toISOString() })
+    .eq('phone', phone);
+
+  if (error) {
+    throw error;
+  }
+};
+
 const syncChatPhotos = async (): Promise<SyncSummary> => {
   const credentials = getZapiCredentials();
   if (!credentials) {
@@ -185,13 +281,7 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
   }
 
   const chats = (data ?? []) as WhatsappChatRecord[];
-  const errors: { chatId: string; phone: string; error: string }[] = [];
-
-  let eligibleChats = 0;
-  let updated = 0;
-  let unchanged = 0;
-  let failed = 0;
-  let missingPhoto = 0;
+  const chatByPhone = new Map<string, WhatsappChatRecord>();
 
   for (const chat of chats) {
     if (chat.is_group) {
@@ -199,43 +289,86 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
     }
 
     const normalizedPhone = normalizePhone(chat.phone);
-    if (!normalizedPhone) {
-      continue;
+    if (normalizedPhone && !chatByPhone.has(normalizedPhone)) {
+      chatByPhone.set(normalizedPhone, chat);
     }
+  }
 
-    eligibleChats += 1;
+  const savedContactPhones = await fetchSavedContacts(credentials);
+  const contactOnlyPhones = savedContactPhones.filter(phone => !chatByPhone.has(phone));
+  const uniqueContactPhones = Array.from(new Set(contactOnlyPhones));
+  const photoCacheMap = await fetchExistingContactPhotos(uniqueContactPhones);
+
+  const phonesToSync = new Set<string>([...chatByPhone.keys(), ...savedContactPhones]);
+  const errors: { chatId: string | null; phone: string; error: string }[] = [];
+
+  let eligibleChats = chatByPhone.size;
+  let updated = 0;
+  let unchanged = 0;
+  let failed = 0;
+  let missingPhoto = 0;
+
+  let contactEligible = uniqueContactPhones.length;
+  let contactUpdated = 0;
+  let contactUnchanged = 0;
+  let contactFailed = 0;
+  let contactMissingPhoto = 0;
+
+  for (const phone of phonesToSync) {
+    const chat = chatByPhone.get(phone);
 
     try {
-      const metadata = await fetchChatMetadata(normalizedPhone, credentials);
+      const metadata = await fetchChatMetadata(phone, credentials);
       const photoLink = toNonEmptyString(metadata?.profileThumbnail ?? null);
 
       if (!photoLink) {
-        missingPhoto += 1;
+        if (chat) {
+          missingPhoto += 1;
+        } else {
+          contactMissingPhoto += 1;
+        }
         continue;
       }
 
-      const storedPhotoUrl = await downloadAndStoreProfilePhoto(photoLink, normalizedPhone);
+      const storedPhotoUrl = await downloadAndStoreProfilePhoto(photoLink, phone);
 
-      if (storedPhotoUrl === (chat.sender_photo ?? '')) {
-        unchanged += 1;
-        continue;
+      if (chat) {
+        if (storedPhotoUrl === (chat.sender_photo ?? '')) {
+          unchanged += 1;
+          continue;
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from('whatsapp_chats')
+          .update({ sender_photo: storedPhotoUrl })
+          .eq('id', chat.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        updated += 1;
+      } else {
+        const previousPhoto = photoCacheMap.get(phone) ?? null;
+
+        if (previousPhoto === storedPhotoUrl) {
+          contactUnchanged += 1;
+          continue;
+        }
+
+        await upsertContactPhoto(phone, storedPhotoUrl);
+        contactUpdated += 1;
       }
-
-      const { error: updateError } = await supabaseAdmin
-        .from('whatsapp_chats')
-        .update({ sender_photo: storedPhotoUrl })
-        .eq('id', chat.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      updated += 1;
     } catch (updateError) {
-      failed += 1;
+      if (chat) {
+        failed += 1;
+      } else {
+        contactFailed += 1;
+      }
+
       errors.push({
-        chatId: chat.id,
-        phone: normalizedPhone,
+        chatId: chat?.id ?? null,
+        phone,
         error: updateError instanceof Error ? updateError.message : String(updateError),
       });
     }
@@ -248,6 +381,11 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
     unchanged,
     failed,
     missingPhoto,
+    contactEligible,
+    contactUpdated,
+    contactUnchanged,
+    contactFailed,
+    contactMissingPhoto,
     errors,
   };
 };

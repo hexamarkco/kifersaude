@@ -1060,6 +1060,7 @@ type WhatsappContactListEntry = {
   phone: string;
   name: string | null;
   isBusiness: boolean;
+  photo?: string | null;
 };
 
 type LeadSummary = {
@@ -8317,9 +8318,18 @@ export default function WhatsappPage({
                               }}
                               className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
-                                {initials}
-                              </div>
+                              {contact.photo ? (
+                                <img
+                                  src={contact.photo}
+                                  alt={`Foto de perfil de ${displayName}`}
+                                  className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
+                                  {initials}
+                                </div>
+                              )}
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
                                 <p className="truncate text-xs text-slate-500">

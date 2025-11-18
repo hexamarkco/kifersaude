@@ -223,6 +223,21 @@ const formatChatListTimestamp = (value: string | null) => {
   });
 };
 
+const isSameTimestamp = (first: string | null, second: string | null): boolean => {
+  if (!first || !second) {
+    return false;
+  }
+
+  const firstTime = new Date(first).getTime();
+  const secondTime = new Date(second).getTime();
+
+  if (!Number.isNaN(firstTime) && !Number.isNaN(secondTime)) {
+    return firstTime === secondTime;
+  }
+
+  return first === second;
+};
+
 const formatShortTime = (value: string | null) => {
   if (!value) {
     return '';
@@ -4877,6 +4892,13 @@ export default function WhatsappPage({
         return;
       }
 
+      const chatToUpdate = chatsRef.current.find(chat => chat.id === message.chat_id);
+      const shouldUpdateLastPreview =
+        !!chatToUpdate &&
+        !!chatToUpdate.last_message_at &&
+        !!message.moment &&
+        isSameTimestamp(chatToUpdate.last_message_at, message.moment);
+
       setDeletingMessageIds(previous => ({ ...previous, [message.id]: true }));
       setErrorMessage(null);
 
@@ -4907,6 +4929,25 @@ export default function WhatsappPage({
               : currentMessage,
           ),
         );
+
+        if (shouldUpdateLastPreview && chatToUpdate) {
+          const { error: chatUpdateError } = await supabase
+            .from('whatsapp_chats')
+            .update({ last_message_preview: DELETED_MESSAGE_PLACEHOLDER })
+            .eq('id', chatToUpdate.id);
+
+          if (chatUpdateError) {
+            console.error('Erro ao atualizar o preview do chat após deletar mensagem:', chatUpdateError);
+          } else {
+            setChats(previousChats =>
+              previousChats.map(chat =>
+                chat.id === chatToUpdate.id
+                  ? { ...chat, last_message_preview: DELETED_MESSAGE_PLACEHOLDER }
+                  : chat,
+              ),
+            );
+          }
+        }
       } catch (deleteError) {
         console.error('Erro ao deletar mensagem do WhatsApp:', deleteError);
         setErrorMessage('Não foi possível deletar a mensagem.');

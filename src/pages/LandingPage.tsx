@@ -897,7 +897,7 @@ export default function LandingPage() {
                             value={ageRangeCounts[range]}
                             onChange={(e) => updateAgeRangeCount(range, e.target.value)}
                             className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            placeholder="Quantidade"
+                            placeholder="Qtd."
                           />
                         </div>
                       ))}

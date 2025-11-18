@@ -7288,9 +7288,7 @@ export default function WhatsappPage({
 
                               {messageActionMenuOpen ? (
                                 <div
-                                  className={`absolute top-full z-40 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ${
-                                    isFromMe ? 'right-0' : 'left-0'
-                                  }`}
+                                  className="absolute top-full right-0 z-40 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
                                   role="menu"
                                 >
                                   <button

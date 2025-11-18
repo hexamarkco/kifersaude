@@ -97,11 +97,20 @@ type ZapiCredentials = {
 
 const getServiceRoleKey = (): string => {
   const env = getServerEnv();
-  if (!env.serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada para uso backend.');
+  if (env.serviceRoleKey?.trim()) {
+    return env.serviceRoleKey.trim();
   }
 
-  return env.serviceRoleKey;
+  const fallbackAnonKey = resolveRuntimeEnv().anonKey?.trim();
+
+  if (fallbackAnonKey) {
+    console.warn(
+      'SUPABASE_SERVICE_ROLE_KEY não configurada para uso backend; usando chave anônima como fallback para chamadas client-side.',
+    );
+    return fallbackAnonKey;
+  }
+
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada para uso backend.');
 };
 
 const getSupabaseAnonKey = (): string => {

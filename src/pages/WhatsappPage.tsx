@@ -6219,6 +6219,13 @@ export default function WhatsappPage({
   const isActionButtonDisabled = shouldShowAudioAction
     ? sendingMessage || schedulingMessage || isRecordingAudio
     : isSendDisabled;
+  const isComposerExpanded =
+    isRecordingAudio ||
+    Boolean(pendingAttachment) ||
+    isScheduleEnabled ||
+    showAttachmentMenu ||
+    showChatActionsMenu ||
+    quickRepliesMenuOpen;
   const messagePlaceholder = pendingAttachment
     ? pendingAttachment.kind === 'audio'
       ? 'Adicione uma mensagem (opcional)'
@@ -7173,9 +7180,45 @@ export default function WhatsappPage({
               onSubmit={handleSubmit}
               className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
+              {rewriteSuggestions.length > 0 ? (
+                <div className="mb-3 space-y-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                        Sugestões de reescrita
+                      </p>
+                      <p className="text-xs text-emerald-800">
+                        {rewriteSuggestions.length} opções prontas para selecionar.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-[1px] hover:shadow"
+                        onClick={() => setShowRewriteModal(true)}
+                      >
+                        Escolher sugestão
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
+                        onClick={clearRewriteSuggestions}
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-emerald-700">
+                    Clique em “Escolher sugestão” para ver as versões completas e aplicar a que preferir.
+                  </p>
+                </div>
+              ) : null}
+
               <div
                 ref={attachmentMenuRef}
-                className="relative flex w-full flex-col gap-3 rounded-full border border-slate-200 bg-slate-50/60 px-3 py-3"
+                className={`relative flex w-full flex-col gap-3 border border-slate-200 bg-slate-50/60 px-3 py-3 transition-[border-radius] duration-200 ${
+                  isComposerExpanded ? 'rounded-2xl' : 'rounded-full'
+                }`}
               >
                 {isRecordingAudio ? (
                   <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
@@ -7653,40 +7696,6 @@ export default function WhatsappPage({
                     )}
                   </button>
                 </div>
-
-                {rewriteSuggestions.length > 0 ? (
-                  <div className="mt-3 space-y-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                          Sugestões de reescrita
-                        </p>
-                        <p className="text-xs text-emerald-800">
-                          {rewriteSuggestions.length} opções prontas para selecionar.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-[1px] hover:shadow"
-                          onClick={() => setShowRewriteModal(true)}
-                        >
-                          Escolher sugestão
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-emerald-700 underline underline-offset-4 transition hover:text-emerald-800"
-                          onClick={clearRewriteSuggestions}
-                        >
-                          Limpar
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-emerald-700">
-                      Clique em “Escolher sugestão” para ver as versões completas e aplicar a que preferir.
-                    </p>
-                  </div>
-                ) : null}
 
                 {rewriteError ? (
                   <p className="px-1 text-xs text-rose-600">{rewriteError}</p>

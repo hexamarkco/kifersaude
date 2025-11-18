@@ -560,6 +560,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     );
   });
 
+  const totalLeads = filteredLeads.length;
   const leadsAtivos = filteredLeads.filter(
     (l) => !l.arquivado && !['Fechado', 'Perdido'].includes(l.status)
   ).length;
@@ -808,11 +809,11 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       >
         <AnimatedStatCard
           label="Leads Ativos"
-          value={leadsAtivos}
+          value={`${leadsAtivos} / ${totalLeads}`}
           icon={Users}
           gradient="from-blue-500 to-blue-600"
           iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
-          subtitle="Em negociação"
+          subtitle="Em negociação / Total"
           onClick={() => onNavigateToTab?.('leads')}
         />
         {!isObserver && (
@@ -852,7 +853,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           gradient="from-violet-500 to-purple-600"
           iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
           suffix="%"
-          subtitle="Lead → Contrato"
+          subtitle="Leads com status Convertido"
         />
         {!isObserver && (
           <AnimatedStatCard

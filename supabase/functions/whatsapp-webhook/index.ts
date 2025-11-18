@@ -2507,13 +2507,13 @@ const handleDeleteMessage = async (req: Request) => {
   }
 
   const { instanceId, token, clientToken } = credentials;
-  const searchParams = new URLSearchParams({
+  const deleteSearchParams = new URLSearchParams({
     messageId,
     phone,
     owner: owner ? 'true' : 'false',
   });
 
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/messages?${searchParams.toString()}`;
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/messages?${deleteSearchParams.toString()}`;
 
   try {
     const response = await fetch(url, {

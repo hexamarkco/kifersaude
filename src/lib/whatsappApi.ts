@@ -277,51 +277,14 @@ export const deleteWhatsappMessage = async (
   payload: DeleteWhatsappMessagePayload,
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<DeleteWhatsappMessageResponse> => {
-  const fetcher = options.fetchImpl ?? fetch;
-  const credentials = getZapiCredentials();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers ?? {}),
-  };
-
-  if (credentials.clientToken) {
-    headers['Client-Token'] = credentials.clientToken;
-  }
-
-  const url = `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/messages`;
-
-  const response = await fetcher(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      messageId: payload.messageId,
-      phone: payload.phone,
-      owner: payload.owner,
-    }),
-  });
-
-  const rawBody = await response.text();
-  let parsedBody: unknown = null;
-
-  try {
-    parsedBody = rawBody ? JSON.parse(rawBody) : null;
-  } catch (_error) {
-    parsedBody = rawBody || null;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      (parsedBody && typeof parsedBody === 'object' && 'error' in (parsedBody as Record<string, unknown>)
-        ? String((parsedBody as { error?: unknown })?.error)
-        : null) || 'Erro ao apagar mensagem na Z-API',
-    );
-  }
-
-  return {
-    success: true,
-    details: parsedBody,
-  };
+  return callWhatsappFunction<DeleteWhatsappMessageResponse>(
+    '/whatsapp-webhook/delete-message',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
 };
 
 type SendMediaPayload = {

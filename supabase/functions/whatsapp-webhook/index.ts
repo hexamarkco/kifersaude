@@ -212,6 +212,7 @@ type WhatsappContactSummary = {
   phone: string;
   name: string | null;
   isBusiness: boolean;
+  photo: string | null;
 };
 
 type PendingReceivedEntry = {
@@ -1679,6 +1680,65 @@ const buildContactsMap = async (): Promise<Map<string, ZapiContact>> => {
   return map;
 };
 
+const fetchContactPhotosByPhone = async (phones: string[]): Promise<Map<string, string>> => {
+  const map = new Map<string, string>();
+
+  if (phones.length === 0) {
+    return map;
+  }
+
+  const CHUNK_SIZE = 500;
+  for (let index = 0; index < phones.length; index += CHUNK_SIZE) {
+    const chunk = phones.slice(index, index + CHUNK_SIZE);
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_contact_photos')
+      .select('phone, photo_url')
+      .in('phone', chunk);
+
+    if (error) {
+      throw error;
+    }
+
+    for (const entry of (data ?? []) as { phone: string; photo_url: string | null }[]) {
+      if (entry.phone && entry.photo_url) {
+        map.set(entry.phone, entry.photo_url);
+      }
+    }
+  }
+
+  return map;
+};
+
+const fetchChatPhotosByPhone = async (phones: string[]): Promise<Map<string, string>> => {
+  const map = new Map<string, string>();
+
+  if (phones.length === 0) {
+    return map;
+  }
+
+  const CHUNK_SIZE = 500;
+  for (let index = 0; index < phones.length; index += CHUNK_SIZE) {
+    const chunk = phones.slice(index, index + CHUNK_SIZE);
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('phone, sender_photo')
+      .in('phone', chunk);
+
+    if (error) {
+      throw error;
+    }
+
+    for (const entry of (data ?? []) as { phone: string | null; sender_photo: string | null }[]) {
+      const normalized = normalizePhoneIdentifier(entry.phone);
+      if (normalized && entry.sender_photo) {
+        map.set(normalized, entry.sender_photo);
+      }
+    }
+  }
+
+  return map;
+};
+
 const fetchLeadSummariesByPhones = async (
   phones: string[],
 ): Promise<Map<string, ChatLeadSummary>> => {
@@ -3014,6 +3074,11 @@ const handleListContacts = async (req: Request) => {
 
   try {
     const contactsMap = await buildContactsMap();
+    const normalizedPhones = Array.from(contactsMap.keys())
+      .map(phone => normalizePhoneIdentifier(phone))
+      .filter((phone): phone is string => Boolean(phone));
+    const contactPhotos = await fetchContactPhotosByPhone(normalizedPhones);
+    const chatPhotos = await fetchChatPhotosByPhone(normalizedPhones);
     const normalizedContacts: WhatsappContactSummary[] = [];
 
     for (const [phone, entry] of contactsMap.entries()) {
@@ -3043,7 +3108,10 @@ const handleListContacts = async (req: Request) => {
         return normalizedType.includes('business') || normalizedType.includes('empresa');
       })();
 
-      normalizedContacts.push({ phone, name, isBusiness });
+      const normalizedPhone = normalizePhoneIdentifier(phone) ?? phone;
+      const photo = normalizedPhone ? contactPhotos.get(normalizedPhone) ?? chatPhotos.get(normalizedPhone) ?? null : null;
+
+      normalizedContacts.push({ phone, name, isBusiness, photo });
     }
 
     normalizedContacts.sort((first, second) => {

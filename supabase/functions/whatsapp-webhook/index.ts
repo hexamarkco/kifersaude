@@ -2188,10 +2188,6 @@ const normalizeMessageStatus = (
     return null;
   }
 
-  if (fromMe && status.toUpperCase() === 'RECEIVED') {
-    return 'SENT';
-  }
-
   return status;
 };
 

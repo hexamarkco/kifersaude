@@ -169,12 +169,12 @@ const getMissingWhatsappEnvVars = () => {
   return REQUIRED_WHATSAPP_ENV_VARS.filter(key => !env?.[key]);
 };
 
-const formatDateTime = (value: string | null) => {
+const formatDateTime = (value: string | Date | null) => {
   if (!value) {
     return '';
   }
 
-  const date = new Date(value);
+  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
     return '';
   }
@@ -7571,14 +7571,10 @@ export default function WhatsappPage({
                                                     </div>
                                                     {participant.reactedAt ? (
                                                       <span className="text-xs text-slate-500">
-                                                        {formatDateTime(
-                                                          participant.reactedAt,
-                                                          selectedWhatsappSettings?.timezone,
-                                                          'numeric',
-                                                        )}
-                                                      </span>
-                                                    ) : null}
-                                                  </li>
+                                                {formatDateTime(participant.reactedAt)}
+                                              </span>
+                                            ) : null}
+                                          </li>
                                                 );
                                               })}
                                             </ul>

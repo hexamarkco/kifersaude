@@ -664,6 +664,47 @@ const MESSAGE_STATUS_DISPLAY: Record<string, MessageStatusDisplay> = {
   },
 };
 
+const MESSAGE_STATUS_PRIORITY: Record<string, number> = {
+  ERROR: 5,
+  FAILED: 5,
+  READ: 4,
+  READ_BY_ME: 4,
+  PLAYED: 4,
+  DELIVERED: 3,
+  SENT: 2,
+  SENDING: 1,
+};
+
+const normalizeStatusValue = (status: string | null | undefined): string | null => {
+  const trimmed = typeof status === 'string' ? status.trim() : '';
+  return trimmed ? trimmed.toUpperCase() : null;
+};
+
+const pickLatestStatus = (
+  currentStatus: string | null | undefined,
+  incomingStatus: string | null | undefined,
+): string | null => {
+  const normalizedCurrent = normalizeStatusValue(currentStatus);
+  const normalizedIncoming = normalizeStatusValue(incomingStatus);
+
+  if (!normalizedCurrent) {
+    return incomingStatus ?? null;
+  }
+
+  if (!normalizedIncoming) {
+    return currentStatus ?? null;
+  }
+
+  const currentPriority = MESSAGE_STATUS_PRIORITY[normalizedCurrent] ?? 0;
+  const incomingPriority = MESSAGE_STATUS_PRIORITY[normalizedIncoming] ?? 0;
+
+  if (incomingPriority >= currentPriority) {
+    return incomingStatus ?? null;
+  }
+
+  return currentStatus ?? null;
+};
+
 const resolveMessageStatusDisplay = (message: OptimisticMessage): MessageStatusDisplay | null => {
   if (!message.from_me) {
     return null;
@@ -1648,7 +1689,7 @@ const mergeMessageRecords = (
     id: incoming.id,
     message_id: incoming.message_id ?? current.message_id ?? null,
     text: incoming.text ?? current.text ?? null,
-    status: incoming.status ?? current.status ?? null,
+    status: pickLatestStatus(current.status, incoming.status),
     moment: incoming.moment ?? current.moment ?? null,
     raw_payload: resolvedRawPayload,
     isOptimistic: incoming.isOptimistic ?? current.isOptimistic ?? false,

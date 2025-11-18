@@ -1699,6 +1699,7 @@ export default function WhatsappPage({
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, string | null>>({});
   const [slaAlerts, setSlaAlerts] = useState<WhatsappChatSlaAlert[]>([]);
   const [slaAlertsLoading, setSlaAlertsLoading] = useState(false);
   const [slaAlertsError, setSlaAlertsError] = useState<string | null>(null);
@@ -1745,6 +1746,7 @@ export default function WhatsappPage({
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const initialChatRequestRef = useRef<string | null>(null);
   const messageElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const lastReadTimestampsRef = useRef<Record<string, string | null>>({});
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [quickRepliesMenuOpen, setQuickRepliesMenuOpen] = useState(false);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1920,6 +1922,21 @@ export default function WhatsappPage({
     }));
   }, []);
 
+  const updateLastReadTimestamp = useCallback((chatId: string, timestamp: string | null) => {
+    setLastReadTimestamps(previous => {
+      const nextTimestamp = timestamp ?? null;
+      const previousTimestamp = previous[chatId] ?? null;
+
+      if (previousTimestamp === nextTimestamp) {
+        return previous;
+      }
+
+      const next = { ...previous, [chatId]: nextTimestamp };
+      lastReadTimestampsRef.current = next;
+      return next;
+    });
+  }, []);
+
   const markChatAsRead = useCallback((chatId: string | null) => {
     if (!chatId) {
       return;
@@ -2078,6 +2095,27 @@ export default function WhatsappPage({
       });
 
       return changed ? next : previous;
+    });
+  }, [chats]);
+
+  useEffect(() => {
+    setLastReadTimestamps(previous => {
+      let changed = false;
+      const next = { ...previous };
+
+      chats.forEach(chat => {
+        if (next[chat.id] === undefined) {
+          next[chat.id] = chat.last_message_at;
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        lastReadTimestampsRef.current = next;
+        return next;
+      }
+
+      return previous;
     });
   }, [chats]);
 
@@ -3616,7 +3654,42 @@ export default function WhatsappPage({
 
     previousChatIdRef.current = selectedChatId;
 
-    if (!container) {
+    if (!container || !selectedChatId || messages.length === 0) {
+      return;
+    }
+
+    const lastReadTimestamp = lastReadTimestampsRef.current[selectedChatId] ?? null;
+    const unreadMessages = lastReadTimestamp
+      ? messages.filter(message => message.moment && message.moment > lastReadTimestamp)
+      : [];
+
+    if (chatChanged) {
+      if (unreadMessages.length > 0) {
+        const firstUnreadId = unreadMessages[0].id;
+        requestAnimationFrame(() => {
+          const targetContainer = messagesContainerRef.current;
+          const target = messageElementsRef.current[firstUnreadId];
+
+          if (target && targetContainer) {
+            target.scrollIntoView({ block: 'center' });
+            return;
+          }
+
+          if (targetContainer) {
+            targetContainer.scrollTop = targetContainer.scrollHeight;
+          }
+        });
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        const target = messagesContainerRef.current;
+        if (!target) {
+          return;
+        }
+
+        target.scrollTop = target.scrollHeight;
+      });
       return;
     }
 
@@ -3624,7 +3697,7 @@ export default function WhatsappPage({
       container.scrollHeight - container.scrollTop - container.clientHeight;
     const isNearBottom = distanceToBottom <= 120;
 
-    if (!chatChanged && !isNearBottom) {
+    if (!isNearBottom) {
       return;
     }
 
@@ -3636,11 +3709,25 @@ export default function WhatsappPage({
 
       target.scrollTop = target.scrollHeight;
     });
-  }, [messages, selectedChatId]);
+  }, [lastReadTimestamps, messages, selectedChatId]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
+
+  useEffect(() => {
+    if (!selectedChatId || messages.length === 0) {
+      return;
+    }
+
+    const latestMoment = getLatestMessageMoment(messages);
+    if (!latestMoment) {
+      return;
+    }
+
+    updateLastReadTimestamp(selectedChatId, latestMoment);
+    markChatAsRead(selectedChatId);
+  }, [getLatestMessageMoment, markChatAsRead, messages, selectedChatId, updateLastReadTimestamp]);
 
   useEffect(() => {
     upcomingSchedulesRef.current = upcomingSchedules;
@@ -4285,6 +4372,20 @@ export default function WhatsappPage({
       ...overrides,
     };
   };
+
+  const getLatestMessageMoment = useCallback((messageList: OptimisticMessage[]) => {
+    return messageList.reduce<string | null>((latest, message) => {
+      if (!message.moment) {
+        return latest;
+      }
+
+      if (!latest) {
+        return message.moment;
+      }
+
+      return message.moment > latest ? message.moment : latest;
+    }, null);
+  }, []);
 
   const sendWhatsappMessage = useCallback(
     async ({

@@ -2502,7 +2502,9 @@ const handleDeleteMessage = async (req: Request) => {
     return respondJson(400, { success: false, error: 'Campo owner é obrigatório' });
   }
 
-  if (!getZapiCredentials()) {
+  const credentials = getZapiCredentials();
+
+  if (!credentials) {
     return respondJson(500, { success: false, error: 'Credenciais da Z-API não configuradas' });
   }
 

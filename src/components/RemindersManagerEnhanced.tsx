@@ -47,6 +47,8 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
+  const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [manualReminderPrompt, setManualReminderPrompt] = useState<{
     lead: Lead;
     promptMessage: string;
@@ -243,27 +245,38 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Deseja remover este lembrete?')) return;
+  const handleDelete = (id: string) => {
+    const reminder = reminders.find(item => item.id === id);
+    if (reminder) {
+      setReminderPendingDeletion(reminder);
+    }
+  };
 
+  const confirmDeleteReminder = async () => {
+    if (!reminderPendingDeletion) return;
+
+    setIsDeletingReminder(true);
     try {
       const { error } = await supabase
         .from('reminders')
         .delete()
-        .eq('id', id);
+        .eq('id', reminderPendingDeletion.id);
 
       if (error) throw error;
-      setReminders(currentReminders => currentReminders.filter(reminder => reminder.id !== id));
+      setReminders(currentReminders => currentReminders.filter(reminder => reminder.id !== reminderPendingDeletion.id));
       setSelectedReminders(prev => {
-        if (!prev.has(id)) return prev;
+        if (!prev.has(reminderPendingDeletion.id)) return prev;
         const next = new Set(prev);
-        next.delete(id);
+        next.delete(reminderPendingDeletion.id);
         return next;
       });
-      pendingRefreshIdsRef.current.add(id);
+      pendingRefreshIdsRef.current.add(reminderPendingDeletion.id);
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
       alert('Erro ao remover lembrete');
+    } finally {
+      setIsDeletingReminder(false);
+      setReminderPendingDeletion(null);
     }
   };
 
@@ -957,6 +970,48 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       ) : (
         <div className="space-y-3">
           {filteredReminders.map(renderReminderCard)}
+        </div>
+      )}
+
+      {reminderPendingDeletion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start space-x-3">
+              <div className="p-3 rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Remover lembrete</h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  Tem certeza que deseja remover o lembrete
+                  <span className="font-semibold text-slate-900"> "{reminderPendingDeletion.titulo}"</span>?
+                  Esta ação não pode ser desfeita.
+                </p>
+                {reminderPendingDeletion.descricao && (
+                  <p className="mt-2 text-xs text-slate-500 break-words">
+                    {reminderPendingDeletion.descricao}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setReminderPendingDeletion(null)}
+                disabled={isDeletingReminder}
+                className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteReminder}
+                disabled={isDeletingReminder}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isDeletingReminder ? 'Removendo...' : 'Remover'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -18,6 +18,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -41,6 +42,7 @@ import {
   Settings,
   MoreVertical,
   Radio,
+  Reply,
   Bell,
   Check,
   CheckCheck,
@@ -68,6 +70,7 @@ import type { QuickReply } from '../lib/supabase';
 import {
   deleteWhatsappMessage,
   fetchWhatsappJson,
+  forwardWhatsappMessage,
   getWhatsappFunctionUrl,
   listWhatsappChatSlaAlerts,
 } from '../lib/whatsappApi';
@@ -1725,6 +1728,7 @@ export default function WhatsappPage({
   const [slaAlertToast, setSlaAlertToast] = useState<WhatsappChatSlaAlert | null>(null);
   const [chatPresenceMap, setChatPresenceMap] = useState<Record<string, ChatPresenceState>>({});
   const [messageInput, setMessageInput] = useState('');
+  const [replyingToMessage, setReplyingToMessage] = useState<WhatsappMessage | null>(null);
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
@@ -1746,6 +1750,7 @@ export default function WhatsappPage({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [schedulingMessage, setSchedulingMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [forwardingMessageIds, setForwardingMessageIds] = useState<Record<string, boolean>>({});
   const [chatActionLoading, setChatActionLoading] = useState<Record<string, boolean>>({});
   const [showChatListMobile, setShowChatListMobile] = useState(true);
   const [activeSection, setActiveSection] = useState<WhatsappSectionId>('painel');
@@ -4982,16 +4987,24 @@ export default function WhatsappPage({
     setMessageInput('');
 
     setErrorMessage(null);
+    const replyMessageId = replyingToMessage?.message_id?.trim();
     const wasSent = await sendWhatsappMessage({
       endpoint: '/whatsapp-webhook/send-message',
-      body: { phone: selectedChat.phone, message: trimmedMessage },
+      body: {
+        phone: selectedChat.phone,
+        message: trimmedMessage,
+        ...(replyMessageId ? { messageId: replyMessageId } : {}),
+      },
       optimisticMessage,
       errorFallback: 'Não foi possível enviar a mensagem.',
     });
 
     if (!wasSent) {
       setMessageInput(trimmedMessage);
+      return;
     }
+
+    setReplyingToMessage(null);
   };
 
   const handleCancelScheduledMessage = useCallback(async (scheduleId: string) => {
@@ -5034,6 +5047,80 @@ export default function WhatsappPage({
   const toggleMessageActionsMenu = useCallback((messageId: string) => {
     setMessageActionsMenuId(previous => (previous === messageId ? null : messageId));
   }, []);
+
+  const handleReplyToMessage = useCallback(
+    (message: WhatsappMessage) => {
+      if (!message.message_id) {
+        setErrorMessage('Não é possível responder esta mensagem porque falta o identificador.');
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        return;
+      }
+
+      setReplyingToMessage(message);
+      setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+
+      requestAnimationFrame(() => {
+        messageInputRef.current?.focus();
+      });
+    },
+    [messageInputRef],
+  );
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingToMessage(null);
+  }, []);
+
+  const handleForwardMessage = useCallback(
+    async (message: WhatsappMessage) => {
+      const messageId = message.message_id?.trim();
+      const chatPhone = chatsRef.current.find(chat => chat.id === message.chat_id)?.phone;
+      const messagePhone = chatPhone ?? selectedChat?.phone ?? null;
+
+      if (!messageId || !messagePhone) {
+        setErrorMessage('Não é possível reencaminhar esta mensagem.');
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        return;
+      }
+
+      const destinationPhoneRaw = window
+        .prompt('Número do destinatário (DDI DDD NÚMERO, apenas números)')
+        ?.trim();
+
+      if (!destinationPhoneRaw) {
+        return;
+      }
+
+      const phone = destinationPhoneRaw.replace(/\D/g, '');
+
+      if (!phone) {
+        setErrorMessage('Informe um número de telefone válido para reencaminhar.');
+        return;
+      }
+
+      setForwardingMessageIds(previous => ({ ...previous, [message.id]: true }));
+      setErrorMessage(null);
+
+      try {
+        const response = await forwardWhatsappMessage({ phone, messageId, messagePhone });
+
+        if (!response.success) {
+          throw new Error(response.error || 'Não foi possível reencaminhar a mensagem.');
+        }
+
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+      } catch (forwardError) {
+        console.error('Erro ao reencaminhar mensagem:', forwardError);
+        setErrorMessage('Não foi possível reencaminhar a mensagem.');
+      } finally {
+        setForwardingMessageIds(previous => {
+          const next = { ...previous };
+          delete next[message.id];
+          return next;
+        });
+      }
+    },
+    [selectedChat?.phone],
+  );
 
   const handleDeleteMessage = useCallback(
     async (message: WhatsappMessage) => {
@@ -7102,7 +7189,10 @@ export default function WhatsappPage({
                     .join(' ');
                   const messageActionMenuOpen = messageActionsMenuId === message.id;
                   const isDeletingMessage = Boolean(deletingMessageIds[message.id]);
-                  const canDeleteMessage = Boolean(message.message_id);
+                  const isForwardingMessage = Boolean(forwardingMessageIds[message.id]);
+                  const canDeleteMessage = Boolean(message.message_id) && Boolean(message.from_me);
+                  const canReplyToMessage = Boolean(message.message_id);
+                  const canForwardMessage = Boolean(message.message_id);
                   const summaryChipClassName =
                     hasOnlyMediaWithoutPadding || isFromMe
                       ? 'inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] text-white'
@@ -7169,222 +7259,294 @@ export default function WhatsappPage({
                             isFromMe ? 'items-end' : 'items-start'
                           }`}
                         >
-                          <button
-                            type="button"
-                            onClick={() => toggleMessageActionsMenu(message.id)}
-                            aria-haspopup="menu"
-                            aria-expanded={messageActionMenuOpen}
-                            aria-label="Abrir opções da mensagem"
-                            className={`absolute -top-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm shadow-sm transition hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
-                              isFromMe
-                                ? 'right-2 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
-                                : 'left-2 bg-white/90 text-slate-500 ring-1 ring-slate-200'
-                            } opacity-0 group-hover/message:opacity-100 focus:opacity-100`}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-
-                          {messageActionMenuOpen ? (
-                            <div
-                              className={`absolute bottom-full z-40 mb-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ${
-                                isFromMe ? 'right-0' : 'left-0'
-                              }`}
-                              role="menu"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteMessage(message)}
-                                disabled={!canDeleteMessage || isDeletingMessage}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
-                              >
-                                {isDeletingMessage ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash className="h-4 w-4" />
-                                )}
-                                <span>Deletar</span>
-                              </button>
-                            </div>
-                          ) : null}
-
                           <div
-                            className={`relative inline-flex w-full flex-col rounded-2xl text-left shadow-sm ${
-                              isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
-                            } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses} ${
-                              isPrimarySearchMatch
-                                ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50'
-                                : isSearchMatch
-                                ? 'ring-1 ring-emerald-200 ring-offset-2 ring-offset-slate-50'
-                                : ''
+                            className={`flex w-full items-stretch gap-2 ${
+                              isFromMe ? 'flex-row-reverse' : 'flex-row'
                             }`}
                           >
-                            {renderMessageContent(message, attachmentInfo)}
-                            {hasReactions && reactionSummary ? (
-                              <div className={summaryWrapperClassName}>
-                                {summaryInteractive ? (
+                            <div className="relative flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleMessageActionsMenu(message.id)}
+                                aria-haspopup="menu"
+                                aria-expanded={messageActionMenuOpen}
+                                aria-label="Abrir opções da mensagem"
+                                className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm shadow-sm transition hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
+                                  isFromMe
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                                    : 'bg-white/90 text-slate-500 ring-1 ring-slate-200'
+                                } opacity-0 group-hover/message:opacity-100 focus:opacity-100`}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </button>
+
+                              {messageActionMenuOpen ? (
+                                <div
+                                  className={`absolute top-full z-40 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ${
+                                    isFromMe ? 'right-0' : 'left-0'
+                                  }`}
+                                  role="menu"
+                                >
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (!messageIdKey) {
-                                        return;
-                                      }
-                                      setReactionDetailsMessageId(previous =>
-                                        previous === messageIdKey ? null : messageIdKey,
-                                      );
-                                    }}
-                                    className={summaryButtonClassName}
-                                    aria-expanded={isReactionDetailsOpen}
-                                    aria-label="Ver detalhes das reações"
+                                    onClick={() => handleReplyToMessage(message)}
+                                    disabled={!canReplyToMessage}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                                   >
-                                    {reactionSummaryContent}
+                                    <Reply className="h-4 w-4" />
+                                    <span>Responder</span>
                                   </button>
-                                ) : (
-                                  <div className={summaryButtonClassName}>{reactionSummaryContent}</div>
-                                )}
-                                {summaryInteractive && isReactionDetailsOpen && messageIdKey ? (
-                                  <div
-                                    ref={reactionDetailsPopoverRef}
-                                    className={`absolute ${
-                                      hasOnlyMediaWithoutPadding ? 'bottom-full mb-2' : 'top-full mt-2'
-                                    } ${
-                                      isFromMe ? 'right-0' : 'left-0'
-                                    } z-50 w-72 max-w-[calc(100vw-4rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-2xl`}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleForwardMessage(message)}
+                                    disabled={!canForwardMessage || isForwardingMessage}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                                   >
-                                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2">
-                                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        Reações
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                                          Total {reactionSummary.totalCount}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => setReactionDetailsMessageId(null)}
-                                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                          aria-label="Fechar detalhes das reações"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1 border-b border-slate-100 px-3 py-2">
-                                      {reactionSummary.entries.map(entry => (
-                                        <span
-                                          key={`summary-chip-${message.id}-${entry.emoji}`}
-                                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
-                                        >
-                                          <span className="text-base leading-none">{entry.emoji}</span>
-                                          <span>{entry.count}</span>
-                                        </span>
-                                      ))}
-                                    </div>
-                                    <div className="max-h-60 overflow-y-auto">
-                                      {reactionSummary.entries.map(entry => (
-                                        <div
-                                          key={`details-${message.id}-${entry.emoji}`}
-                                          className="border-b border-slate-100 px-3 py-2 last:border-b-0"
-                                        >
-                                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                            <span className="text-lg leading-none">{entry.emoji}</span>
-                                            <span className="text-xs font-medium text-slate-500">
-                                              {entry.count} {entry.count === 1 ? 'reação' : 'reações'}
-                                            </span>
-                                          </div>
-                                          <ul className="mt-2 space-y-2">
-                                            {entry.participants.map(participant => {
-                                              const phoneLabel = participant.phone
-                                                ? formatReactionPhoneNumber(participant.phone)
-                                                : null;
-                                              return (
-                                                <li
-                                                  key={`${participant.participantId}-${
-                                                    participant.reactedAt?.getTime() ?? 'sem-horario'
-                                                  }-${entry.emoji}`}
-                                                  className="flex items-center justify-between gap-3 text-sm text-slate-600"
-                                                >
-                                                  <div className="min-w-0">
-                                                    <p className="truncate font-medium text-slate-700">
-                                                      {participant.displayName ?? phoneLabel ?? 'Participante'}
-                                                    </p>
-                                                    {phoneLabel ? (
-                                                      <p className="truncate text-xs text-slate-500">{phoneLabel}</p>
-                                                    ) : null}
-                                                  </div>
-                                                  {participant.reactedAt ? (
-                                                    <span className="whitespace-nowrap text-xs text-slate-400">
-                                                      {formatReactionTime(participant.reactedAt)}
-                                                    </span>
-                                                  ) : null}
-                                                </li>
-                                              );
-                                            })}
-                                          </ul>
+                                    {isForwardingMessage ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <ArrowUpRight className="h-4 w-4" />
+                                    )}
+                                    <span>Reencaminhar</span>
+                                  </button>
+                                  {canDeleteMessage ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMessage(message)}
+                                      disabled={isDeletingMessage}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                                    >
+                                      {isDeletingMessage ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash className="h-4 w-4" />
+                                      )}
+                                      <span>Deletar</span>
+                                    </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+
+                            <div
+                              className={`relative inline-flex w-full flex-col rounded-2xl text-left shadow-sm ${
+                                isFromMe ? 'rounded-br-none' : 'rounded-bl-none'
+                              } ${bubblePaddingClasses} ${bubbleOverflowClass} ${bubbleClasses} ${
+                                isPrimarySearchMatch
+                                  ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50'
+                                  : isSearchMatch
+                                  ? 'ring-1 ring-emerald-200 ring-offset-2 ring-offset-slate-50'
+                                  : ''
+                              }`}
+                            >
+                              {renderMessageContent(message, attachmentInfo)}
+                              {hasReactions && reactionSummary ? (
+                                <div className={summaryWrapperClassName}>
+                                  {summaryInteractive ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!messageIdKey) {
+                                          return;
+                                        }
+
+                                        setReactionDetailsMessageId(previous =>
+                                          previous === messageIdKey ? null : messageIdKey,
+                                        );
+                                      }}
+                                      className={summaryButtonClassName}
+                                      aria-expanded={isReactionDetailsOpen}
+                                      aria-label="Ver detalhes das reações"
+                                    >
+                                      {reactionSummaryContent}
+                                    </button>
+                                  ) : (
+                                    <div className={summaryButtonClassName}>{reactionSummaryContent}</div>
+                                  )}
+                                  {summaryInteractive && isReactionDetailsOpen && messageIdKey ? (
+                                    <div
+                                      ref={reactionDetailsPopoverRef}
+                                      className={`absolute ${
+                                        hasOnlyMediaWithoutPadding ? 'bottom-full mb-2' : 'top-full mt-2'
+                                      } ${
+                                        isFromMe ? 'right-0' : 'left-0'
+                                      } z-50 w-72 max-w-[calc(100vw-4rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-2xl`}
+                                    >
+                                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                          Reações
                                         </div>
-                                      ))}
+                                        <div className="flex items-center gap-2">
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                            Total {reactionSummary.totalCount}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setReactionDetailsMessageId(null)}
+                                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                            aria-label="Fechar detalhes das reações"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 border-b border-slate-100 px-3 py-2">
+                                        {reactionSummary.entries.map(entry => (
+                                          <span
+                                            key={`summary-chip-${message.id}-${entry.emoji}`}
+                                            className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+                                          >
+                                            <span className="text-base leading-none">{entry.emoji}</span>
+                                            <span>{entry.count}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div className="max-h-60 overflow-y-auto">
+                                        {reactionSummary.entries.map(entry => (
+                                          <div
+                                            key={`details-${message.id}-${entry.emoji}`}
+                                            className="border-b border-slate-100 px-3 py-2 last:border-b-0"
+                                          >
+                                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                              <span className="text-lg leading-none">{entry.emoji}</span>
+                                              <span className="text-xs font-medium text-slate-500">
+                                                {entry.count} {entry.count === 1 ? 'reação' : 'reações'}
+                                              </span>
+                                            </div>
+                                            <ul className="mt-2 space-y-2">
+                                              {entry.participants.map(participant => {
+                                                const phoneLabel = participant.phone
+                                                  ? formatReactionPhoneNumber(participant.phone)
+                                                  : null;
+                                                return (
+                                                  <li
+                                                    key={`${participant.participantId}-${
+                                                      participant.reactedAt?.getTime() ?? 'sem-horario'
+                                                    }-${entry.emoji}`}
+                                                    className="flex items-center justify-between gap-3 text-sm text-slate-600"
+                                                  >
+                                                    <div className="min-w-0">
+                                                      <p className="truncate font-medium text-slate-700">
+                                                        {participant.displayName ?? phoneLabel ?? 'Participante'}
+                                                      </p>
+                                                      {phoneLabel ? (
+                                                        <p className="truncate text-xs text-slate-500">{phoneLabel}</p>
+                                                      ) : null}
+                                                    </div>
+                                                    {participant.reactedAt ? (
+                                                      <span className="text-xs text-slate-500">
+                                                        {formatDateTime(
+                                                          participant.reactedAt,
+                                                          selectedWhatsappSettings?.timezone,
+                                                          'numeric',
+                                                        )}
+                                                      </span>
+                                                    ) : null}
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {statusDisplay || scheduleMetadata?.scheduleLabel ? (
+                                <div
+                                  className={`mt-2 flex flex-wrap items-center gap-2 ${
+                                    isFromMe ? 'justify-end' : 'justify-start'
+                                  }`}
+                                >
+                                  {scheduleMetadata?.scheduleLabel ? (
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      <span>{scheduleMetadata.scheduleLabel}</span>
+                                    </div>
+                                  ) : null}
+                                  {transmissionInfo.isTransmission ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-amber-100">
+                                      <Megaphone className="h-3 w-3" />
+                                      <span>Transmissão</span>
+                                    </span>
+                                  ) : null}
+                                  {statusDisplay && statusClassName ? (
+                                    <span className={statusClassName}>
+                                      {statusDisplay.icon ? (
+                                        <statusDisplay.icon className="h-3.5 w-3.5" />
+                                      ) : null}
+                                      <span>{statusDisplay.label}</span>
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {scheduleMetadata?.lastError ? (
+                                <div className="text-[11px] font-medium normal-case text-rose-500">
+                                  {scheduleMetadata.lastError}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div
+                            className={`mt-1 flex flex-col gap-1 text-[10px] uppercase tracking-wide text-slate-400 ${
+                              isFromMe ? 'items-end text-right' : 'items-start text-left'
+                            }`}
+                          >
+                            {scheduleMetadata ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                {scheduleStatusLabel ? <span>{scheduleStatusLabel}</span> : null}
+                                {scheduleTimestamp ? (
+                                  <span className="normal-case text-[11px] text-slate-500">
+                                    {scheduleTimestamp}
+                                  </span>
                                 ) : null}
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{formatShortTime(message.moment)}</span>
+                                {transmissionInfo.isTransmission ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-amber-100">
+                                    <Megaphone className="h-3 w-3" />
+                                    <span>Transmissão</span>
+                                  </span>
+                                ) : null}
+                                {statusDisplay && statusClassName ? (
+                                  <span className={statusClassName}>
+                                    {statusDisplay.icon ? (
+                                      <statusDisplay.icon className="h-3.5 w-3.5" />
+                                    ) : null}
+                                    <span>{statusDisplay.label}</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+                            {scheduleMetadata?.lastError ? (
+                              <div className="text-[11px] font-medium normal-case text-rose-500">
+                                {scheduleMetadata.lastError}
                               </div>
                             ) : null}
                           </div>
+
+                          {scheduleMetadata && canCancelSchedule && scheduleId ? (
+                            <div
+                              className={`mt-2 flex flex-wrap gap-2 ${
+                                isFromMe ? 'justify-end' : 'justify-start'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleCancelScheduledMessage(scheduleId)}
+                                disabled={isCancellingSchedule}
+                                className="inline-flex items-center gap-2 rounded-full border border-emerald-400 px-3 py-1 text-[11px] font-semibold text-emerald-600 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {isCancellingSchedule ? 'Cancelando...' : 'Cancelar agendamento'}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                      <div
-                        className={`mt-1 flex flex-col gap-1 text-[10px] uppercase tracking-wide text-slate-400 ${
-                          isFromMe ? 'items-end text-right' : 'items-start text-left'
-                        }`}
-                      >
-                        {scheduleMetadata ? (
-                          <div className="flex flex-wrap items-center gap-2">
-                            {scheduleStatusLabel ? <span>{scheduleStatusLabel}</span> : null}
-                            {scheduleTimestamp ? (
-                              <span className="normal-case text-[11px] text-slate-500">
-                                {scheduleTimestamp}
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>{formatShortTime(message.moment)}</span>
-                            {transmissionInfo.isTransmission ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-amber-100">
-                                <Megaphone className="h-3 w-3" />
-                                <span>Transmissão</span>
-                              </span>
-                            ) : null}
-                            {statusDisplay && statusClassName ? (
-                              <span className={statusClassName}>
-                                {statusDisplay.icon ? (
-                                  <statusDisplay.icon className="h-3.5 w-3.5" />
-                                ) : null}
-                                <span>{statusDisplay.label}</span>
-                              </span>
-                            ) : null}
-                          </div>
-                        )}
-                        {scheduleMetadata?.lastError ? (
-                          <div className="text-[11px] font-medium normal-case text-rose-500">
-                            {scheduleMetadata.lastError}
-                          </div>
-                        ) : null}
-                      </div>
-                      {scheduleMetadata && canCancelSchedule && scheduleId ? (
-                        <div
-                          className={`mt-2 flex flex-wrap gap-2 ${
-                            isFromMe ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleCancelScheduledMessage(scheduleId)}
-                            disabled={isCancellingSchedule}
-                            className="inline-flex items-center gap-2 rounded-full border border-emerald-400 px-3 py-1 text-[11px] font-semibold text-emerald-600 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isCancellingSchedule ? 'Cancelando...' : 'Cancelar agendamento'}
-                          </button>
                         </div>
-                      ) : null}
-                    </div>
                     </Fragment>
                   );
                 })
@@ -7830,6 +7992,27 @@ export default function WhatsappPage({
                   ) : null}
 
                   <div className="relative flex-1">
+                    {replyingToMessage ? (
+                      <div className="mb-2 flex items-start justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                        <div className="pr-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                            Respondendo
+                          </p>
+                          <p className="line-clamp-2 text-sm leading-5">
+                            {replyingToMessage.text ?? 'Mensagem sem texto'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCancelReply}
+                          className="ml-2 rounded-full p-1 text-emerald-700 transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                          aria-label="Cancelar resposta"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
+
                     {slashCommandState ? (
                       <div className="absolute bottom-full left-0 z-10 mb-2 w-72 max-w-full rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
                         <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">

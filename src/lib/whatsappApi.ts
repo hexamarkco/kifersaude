@@ -9,6 +9,9 @@ type RuntimeEnv = {
   supabaseUrl?: string;
   anonKey?: string;
   serviceRoleKey?: string;
+  zapiInstanceId?: string;
+  zapiToken?: string;
+  zapiClientToken?: string;
 };
 
 const getServerEnv = (): RuntimeEnv => {
@@ -21,6 +24,9 @@ const getServerEnv = (): RuntimeEnv => {
           SUPABASE_URL: denoEnv.get('SUPABASE_URL'),
           SUPABASE_ANON_KEY: denoEnv.get('SUPABASE_ANON_KEY'),
           SUPABASE_SERVICE_ROLE_KEY: denoEnv.get('SUPABASE_SERVICE_ROLE_KEY'),
+          ZAPI_INSTANCE_ID: denoEnv.get('ZAPI_INSTANCE_ID'),
+          ZAPI_TOKEN: denoEnv.get('ZAPI_TOKEN'),
+          ZAPI_CLIENT_TOKEN: denoEnv.get('ZAPI_CLIENT_TOKEN'),
         }
       : {}),
     ...(globalProcess?.env ?? {}),
@@ -30,6 +36,9 @@ const getServerEnv = (): RuntimeEnv => {
     supabaseUrl: env.SUPABASE_URL,
     anonKey: env.SUPABASE_ANON_KEY,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    zapiInstanceId: env.ZAPI_INSTANCE_ID,
+    zapiToken: env.ZAPI_TOKEN,
+    zapiClientToken: env.ZAPI_CLIENT_TOKEN,
   };
 };
 
@@ -44,6 +53,9 @@ const getBrowserEnv = (): RuntimeEnv => {
     functionsUrl: metaEnv?.VITE_SUPABASE_FUNCTIONS_URL,
     supabaseUrl: metaEnv?.VITE_SUPABASE_URL,
     anonKey: metaEnv?.VITE_SUPABASE_ANON_KEY,
+    zapiInstanceId: metaEnv?.VITE_ZAPI_INSTANCE_ID,
+    zapiToken: metaEnv?.VITE_ZAPI_TOKEN,
+    zapiClientToken: metaEnv?.VITE_ZAPI_CLIENT_TOKEN,
   };
 };
 
@@ -77,6 +89,12 @@ type WhatsappFunctionRequestOptions = {
   headers?: Record<string, string>;
 };
 
+type ZapiCredentials = {
+  instanceId: string;
+  token: string;
+  clientToken?: string;
+};
+
 const getServiceRoleKey = (): string => {
   const env = getServerEnv();
   if (!env.serviceRoleKey) {
@@ -95,6 +113,22 @@ const getSupabaseAnonKey = (): string => {
   }
 
   return key;
+};
+
+const getZapiCredentials = (): ZapiCredentials => {
+  const env = resolveRuntimeEnv();
+  const instanceId = env.zapiInstanceId?.trim();
+  const token = env.zapiToken?.trim();
+
+  if (!instanceId || !token) {
+    throw new Error('Credenciais da Z-API não configuradas.');
+  }
+
+  return {
+    instanceId,
+    token,
+    clientToken: env.zapiClientToken?.trim() || undefined,
+  };
 };
 
 const buildFunctionUrl = (pathOrUrl: string): string => {
@@ -243,19 +277,51 @@ export const deleteWhatsappMessage = async (
   payload: DeleteWhatsappMessagePayload,
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<DeleteWhatsappMessageResponse> => {
-  const searchParams = new URLSearchParams({
-    messageId: payload.messageId,
-    phone: payload.phone,
-    owner: payload.owner ? 'true' : 'false',
+  const fetcher = options.fetchImpl ?? fetch;
+  const credentials = getZapiCredentials();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers ?? {}),
+  };
+
+  if (credentials.clientToken) {
+    headers['Client-Token'] = credentials.clientToken;
+  }
+
+  const url = `https://api.z-api.io/instances/${credentials.instanceId}/token/${credentials.token}/messages`;
+
+  const response = await fetcher(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      messageId: payload.messageId,
+      phone: payload.phone,
+      owner: payload.owner,
+    }),
   });
 
-  return callWhatsappFunction<DeleteWhatsappMessageResponse>(
-    `/whatsapp-webhook/delete-message?${searchParams.toString()}`,
-    {
-      method: 'DELETE',
-    },
-    options,
-  );
+  const rawBody = await response.text();
+  let parsedBody: unknown = null;
+
+  try {
+    parsedBody = rawBody ? JSON.parse(rawBody) : null;
+  } catch (_error) {
+    parsedBody = rawBody || null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      (parsedBody && typeof parsedBody === 'object' && 'error' in (parsedBody as Record<string, unknown>)
+        ? String((parsedBody as { error?: unknown })?.error)
+        : null) || 'Erro ao apagar mensagem na Z-API',
+    );
+  }
+
+  return {
+    success: true,
+    details: parsedBody,
+  };
 };
 
 type SendMediaPayload = {

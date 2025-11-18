@@ -126,11 +126,19 @@ const normalizeMessageStatus = (status: string | null | undefined, fromMe: boole
     return null;
   }
 
-  if (fromMe && status.toUpperCase() === 'RECEIVED') {
-    return 'SENT';
+  const normalized = status.trim().toUpperCase();
+
+  if (fromMe) {
+    if (normalized === 'DELIVERED') {
+      return 'RECEIVED';
+    }
+
+    if (normalized === 'READ_BY_ME') {
+      return 'READ_BY_ME';
+    }
   }
 
-  return status;
+  return normalized;
 };
 
 export const insertWhatsappMessage = async (input: MessageInsertInput): Promise<WhatsappMessage> => {

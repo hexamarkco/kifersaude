@@ -630,6 +630,11 @@ const MESSAGE_STATUS_DISPLAY: Record<string, MessageStatusDisplay> = {
     icon: CheckCheck,
     className: 'text-sky-500',
   },
+  READ_BY_ME: {
+    label: 'Lido',
+    icon: CheckCheck,
+    className: 'text-sky-500',
+  },
   PLAYED: {
     label: 'Ouvido',
     icon: CheckCheck,
@@ -7454,7 +7459,7 @@ export default function WhatsappPage({
                                   ) : null}
                                 </div>
                               ) : null}
-                              {statusDisplay || scheduleMetadata?.scheduleLabel ? (
+                              {scheduleMetadata?.scheduleLabel || transmissionInfo.isTransmission ? (
                                 <div
                                   className={`mt-2 flex flex-wrap items-center gap-2 ${
                                     isFromMe ? 'justify-end' : 'justify-start'
@@ -7470,14 +7475,6 @@ export default function WhatsappPage({
                                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-amber-100">
                                       <Megaphone className="h-3 w-3" />
                                       <span>Transmissão</span>
-                                    </span>
-                                  ) : null}
-                                  {statusDisplay && statusClassName ? (
-                                    <span className={statusClassName}>
-                                      {statusDisplay.icon ? (
-                                        <statusDisplay.icon className="h-3.5 w-3.5" />
-                                      ) : null}
-                                      <span>{statusDisplay.label}</span>
                                     </span>
                                   ) : null}
                                 </div>

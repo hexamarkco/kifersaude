@@ -1578,15 +1578,11 @@ const sendZapiAndPersist = async (input: {
       : input.phone;
   const chatName =
     typeof responseBody?.chatName === 'string' ? (responseBody.chatName as string) : undefined;
-  const senderPhoto =
-    typeof responseBody?.senderPhoto === 'string' ? (responseBody.senderPhoto as string) : undefined;
   const isGroupChat = responsePhone.endsWith('-group');
-  const resolvedSenderPhoto = isGroupChat ? undefined : senderPhoto;
 
   const chat = await upsertChatRecord({
     phone: responsePhone,
     chatName,
-    senderPhoto: resolvedSenderPhoto,
     isGroup: isGroupChat,
     lastMessageAt: now,
     lastMessagePreview: input.messagePreview ?? null,
@@ -2178,14 +2174,11 @@ const persistReceivedMessage = async (
   const momentDate = parseMoment(payload.momment) ?? new Date();
   const isGroup = payload.isGroup === true || phone.endsWith('-group');
   const chatName = payload.chatName ?? payload.senderName ?? phone;
-  const senderPhoto = payload.senderPhoto ?? null;
-  const resolvedSenderPhoto = isGroup ? undefined : senderPhoto;
 
   const chat = await upsertChatRecord({
     phone,
     chatName,
     isGroup,
-    senderPhoto: resolvedSenderPhoto,
     lastMessageAt: momentDate,
     lastMessagePreview: messageText,
   });
@@ -2216,7 +2209,6 @@ const upsertChatRecord = async (input: {
   phone: string;
   chatName?: string | null;
   isGroup?: boolean;
-  senderPhoto?: string | null;
   lastMessageAt?: Date | string | number | null;
   lastMessagePreview?: string | null;
 }): Promise<WhatsappChat> => {
@@ -2228,7 +2220,6 @@ const upsertChatRecord = async (input: {
     phone,
     chatName,
     isGroup,
-    senderPhoto,
     lastMessageAt,
     lastMessagePreview,
   } = input;
@@ -2261,10 +2252,6 @@ const upsertChatRecord = async (input: {
     updatePayload.chat_name = chatName;
   }
 
-  if (senderPhoto !== undefined) {
-    updatePayload.sender_photo = senderPhoto;
-  }
-
   if (existingChat) {
     const { error: updateError } = await supabaseAdmin
       .from('whatsapp_chats')
@@ -2278,7 +2265,6 @@ const upsertChatRecord = async (input: {
     return {
       ...existingChat,
       chat_name: updatePayload.chat_name ?? (existingChat.chat_name ?? null),
-      sender_photo: updatePayload.sender_photo ?? (existingChat.sender_photo ?? null),
       is_group:
         typeof updatePayload.is_group === 'boolean' ? Boolean(updatePayload.is_group) : existingChat.is_group,
       last_message_at: normalizedLastMessageAt,
@@ -2297,7 +2283,6 @@ const upsertChatRecord = async (input: {
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,
       is_group: Boolean(isGroup),
-      sender_photo: senderPhoto ?? null,
       is_archived: false,
       is_pinned: false,
     })
@@ -3496,7 +3481,6 @@ const handleFetchChatMetadata = async (req: Request, chatId: string) => {
       phone: chatRecord.phone,
       chatName: chatRecord.chat_name,
       isGroup: resolvedIsGroup,
-      senderPhoto: resolvedSenderPhoto,
       lastMessageAt: resolvedLastMessageAt,
       lastMessagePreview: resolvedLastMessagePreview,
     });

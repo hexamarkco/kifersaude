@@ -7260,11 +7260,11 @@ export default function WhatsappPage({
                             isFromMe ? 'items-end' : 'items-start'
                           }`}
                         >
-                          <div
-                            className={`flex w-full items-stretch gap-2 ${
-                              isFromMe ? 'flex-row-reverse' : 'flex-row'
-                            }`}
-                          >
+                            <div
+                              className={`flex w-full items-stretch gap-2 ${
+                                isFromMe ? 'flex-row' : 'flex-row-reverse'
+                              }`}
+                            >
                             <div className="relative flex items-center">
                               <button
                                 type="button"

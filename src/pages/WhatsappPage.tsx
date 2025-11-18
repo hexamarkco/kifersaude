@@ -3643,6 +3643,77 @@ export default function WhatsappPage({
   }, [selectedChatId]);
 
   useEffect(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`whatsapp-active-chat-${selectedChatId}`)
+      .on<RealtimePostgresChangesPayload<WhatsappMessage>>(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_messages',
+          filter: `chat_id=eq.${selectedChatId}`,
+        },
+        payload => {
+          if (payload.eventType === 'DELETE') {
+            const deletedMessage = (payload.old as WhatsappMessage | null) ?? null;
+            if (!deletedMessage) {
+              return;
+            }
+
+            setMessages(previousMessages =>
+              previousMessages.filter(message => message.id !== deletedMessage.id),
+            );
+            return;
+          }
+
+          const incomingMessage = payload.new
+            ? ((payload.new as unknown) as WhatsappMessage)
+            : null;
+
+          if (!incomingMessage) {
+            return;
+          }
+
+          const normalizedMessage: OptimisticMessage = {
+            ...incomingMessage,
+            isOptimistic: false,
+          };
+
+          setMessages(previousMessages => {
+            const merged = mergeMessageIntoList(previousMessages, normalizedMessage);
+            return sortMessagesByMoment(merged);
+          });
+
+          setChats(previousChats => {
+            const existing = previousChats.find(chat => chat.id === selectedChatId);
+            if (!existing) {
+              return previousChats;
+            }
+
+            const updated: WhatsappChat = {
+              ...existing,
+              last_message_preview:
+                normalizedMessage.text ?? existing.last_message_preview ?? null,
+              last_message_at: normalizedMessage.moment ?? existing.last_message_at ?? null,
+            };
+
+            const others = previousChats.filter(chat => chat.id !== selectedChatId);
+            return [updated, ...others];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedChatId]);
+
+  useEffect(() => {
     upcomingSchedulesRef.current = upcomingSchedules;
   }, [upcomingSchedules]);
 

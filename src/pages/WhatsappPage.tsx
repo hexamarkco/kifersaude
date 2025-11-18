@@ -7590,7 +7590,7 @@ export default function WhatsappPage({
               <div
                 ref={attachmentMenuRef}
                 className={`relative flex w-full flex-col gap-3 border border-slate-200 bg-slate-50/60 px-3 py-3 transition-[border-radius] duration-200 ${
-                  isComposerExpanded ? 'rounded-2xl' : 'rounded-full'
+                  isComposerExpanded ? 'rounded' : 'rounded'
                 }`}
               >
                 {isRecordingAudio ? (

@@ -47,7 +47,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [showLinkedOnly, setShowLinkedOnly] = useState(false);
   const [manualReminderPrompt, setManualReminderPrompt] = useState<{
     lead: Lead;
     promptMessage: string;
@@ -463,25 +462,17 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       return false;
     }
 
-    if (showLinkedOnly && !reminder.lead_id && !reminder.contract_id) {
-      return false;
-    }
-
     return true;
   });
 
   const groupedReminders = groupRemindersByPeriod(filteredReminders);
-
-  const contextLinkedReminders = reminders.filter((reminder) => reminder.lead_id || reminder.contract_id);
 
   const stats = {
     total: reminders.length,
     unread: reminders.filter(r => !r.lido).length,
     overdue: reminders.filter(r => isOverdue(r.data_lembrete) && !r.lido).length,
     today: groupedReminders.today.length,
-    completed: reminders.filter(r => r.lido).length,
-    linked: contextLinkedReminders.length,
-    linkedUnread: contextLinkedReminders.filter((reminder) => !reminder.lido).length,
+    completed: reminders.filter(r => r.lido).length
   };
 
   const getPriorityColor = (prioridade: string) => {
@@ -748,7 +739,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
-        <div className="flex items-center justify-end flex-wrap gap-2">
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowCalendar(true)}
             className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
@@ -764,18 +755,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
             title="Estatísticas"
           >
             <BarChart3 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowLinkedOnly((current) => !current)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 ${
-              showLinkedOnly
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-            title="Mostrar apenas lembretes com lead ou contrato vinculado"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>{showLinkedOnly ? `Com vínculo (${stats.linked})` : 'Todos os contextos'}</span>
           </button>
           <button
             onClick={() => setFilter('nao-lidos')}
@@ -811,7 +790,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       </div>
 
       {showStats && (
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="text-sm text-slate-600 mb-1">Total</div>
             <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
@@ -831,11 +810,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="text-sm text-slate-600 mb-1">Concluídos</div>
             <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="text-sm text-slate-600 mb-1">Com lead ou contrato</div>
-            <div className="text-3xl font-bold text-indigo-700">{stats.linked}</div>
-            <div className="text-xs text-slate-500 mt-1">Não lidos: {stats.linkedUnread}</div>
           </div>
         </div>
       )}

@@ -141,6 +141,27 @@ const normalizeMessageStatus = (status: string | null | undefined, fromMe: boole
   return normalized;
 };
 
+const MESSAGE_STATUS_PRIORITY: Record<string, number> = {
+  SENDING: 0,
+  PENDING: 0,
+  FAILED: 0,
+  ERROR: 0,
+  SENT: 1,
+  RECEIVED: 2,
+  DELIVERED: 2,
+  READ: 3,
+  READ_BY_ME: 3,
+  PLAYED: 4,
+};
+
+const resolveStatusPriority = (status: string | null): number => {
+  if (!status) {
+    return -1;
+  }
+
+  return MESSAGE_STATUS_PRIORITY[status] ?? -1;
+};
+
 export const insertWhatsappMessage = async (input: MessageInsertInput): Promise<WhatsappMessage> => {
   const { chatId, messageId, fromMe, status, text, moment, rawPayload } = input;
 
@@ -193,9 +214,9 @@ export const updateWhatsappMessageStatuses = async (
 
   const { data: messages, error: fetchError } = await supabaseAdmin
     .from('whatsapp_messages')
-    .select('id, message_id, from_me')
+    .select('id, message_id, from_me, status')
     .in('message_id', normalizedIds)
-    .returns<Pick<WhatsappMessage, 'id' | 'message_id' | 'from_me'>[]>();
+    .returns<Pick<WhatsappMessage, 'id' | 'message_id' | 'from_me' | 'status'>[]>();
 
   if (fetchError) {
     throw fetchError;
@@ -210,8 +231,20 @@ export const updateWhatsappMessageStatuses = async (
     }
 
     const normalizedStatus = normalizeMessageStatus(targetStatus, message.from_me);
+    const currentStatus = normalizeMessageStatus(message.status, message.from_me);
 
     if (!normalizedStatus) {
+      continue;
+    }
+
+    const nextPriority = resolveStatusPriority(normalizedStatus);
+    const currentPriority = resolveStatusPriority(currentStatus);
+
+    if (currentPriority > nextPriority) {
+      continue;
+    }
+
+    if (currentPriority === nextPriority && currentStatus === normalizedStatus) {
       continue;
     }
 

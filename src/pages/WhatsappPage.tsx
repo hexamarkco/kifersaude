@@ -970,6 +970,10 @@ type WhatsappMessageRawPayload = {
     videoUrl?: string | null;
     caption?: string | null;
   } | null;
+  sticker?: {
+    stickerUrl?: string | null;
+    mimeType?: string | null;
+  } | null;
   document?: {
     documentUrl?: string | null;
     fileName?: string | null;
@@ -5240,6 +5244,8 @@ export default function WhatsappPage({
     audioSeconds: number | null;
     videoUrl: string | null;
     videoCaption: string | null;
+    stickerUrl: string | null;
+    stickerMimeType: string | null;
     documentUrl: string | null;
     documentFileName: string;
     documentCaption: string | null;
@@ -5253,9 +5259,17 @@ export default function WhatsappPage({
         : null;
 
     const imageUrl = payload ? toNonEmptyString(payload?.image?.imageUrl) : null;
-    const videoUrl = payload ? toNonEmptyString(payload?.video?.videoUrl) : null;
+    const videoUrl = payload
+      ? toNonEmptyString(payload?.video?.videoUrl ?? (payload as { videoUrl?: unknown })?.videoUrl)
+      : null;
     const documentUrl = payload ? toNonEmptyString(payload?.document?.documentUrl) : null;
     const audioUrl = payload ? toNonEmptyString(payload?.audio?.audioUrl) : null;
+    const stickerUrl = payload
+      ? toNonEmptyString(
+          payload?.sticker?.stickerUrl ?? (payload as { stickerUrl?: unknown })?.stickerUrl,
+        )
+      : null;
+    const stickerMimeType = payload ? toNonEmptyString(payload?.sticker?.mimeType) : null;
 
     return {
       imageUrl,
@@ -5264,13 +5278,15 @@ export default function WhatsappPage({
       audioSeconds: payload?.audio?.seconds ?? payload?.audio?.duration ?? null,
       videoUrl,
       videoCaption: payload ? toNonEmptyString(payload?.video?.caption) : null,
+      stickerUrl,
+      stickerMimeType,
       documentUrl,
       documentFileName:
         toNonEmptyString(payload?.document?.fileName) ??
         toNonEmptyString(payload?.document?.title) ??
         'Documento',
       documentCaption: payload ? toNonEmptyString(payload?.document?.caption) : null,
-      hasMediaWithoutPadding: Boolean(imageUrl || videoUrl),
+      hasMediaWithoutPadding: Boolean(imageUrl || videoUrl || stickerUrl),
     };
   };
 
@@ -5841,6 +5857,19 @@ export default function WhatsappPage({
         ? (message.raw_payload as WhatsappMessageRawPayload)
         : null;
     const attachmentCardBaseClass = 'flex flex-col gap-2 rounded-lg bg-white p-3 text-slate-800';
+
+    if (attachmentInfo.stickerUrl) {
+      attachments.push(
+        <div key="sticker" className="flex items-start justify-start">
+          <img
+            src={attachmentInfo.stickerUrl}
+            alt="Figurinha recebida"
+            className="h-32 w-32 rounded-lg bg-white/60 object-contain shadow"
+            loading="lazy"
+          />
+        </div>,
+      );
+    }
 
     if (attachmentInfo.imageUrl) {
       const resolvedMessageId = message.id ?? message.message_id;

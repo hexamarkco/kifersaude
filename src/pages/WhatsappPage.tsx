@@ -7759,7 +7759,7 @@ export default function WhatsappPage({
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <button
                     type="button"
                     onClick={toggleAttachmentMenu}

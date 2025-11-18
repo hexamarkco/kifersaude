@@ -7357,7 +7357,7 @@ export default function WhatsappPage({
                           }`}
                         >
                             <div
-                              className={`flex w-full items-stretch gap-2 ${
+                              className={`flex w-full items-start gap-2 ${
                                 isFromMe ? 'flex-row' : 'flex-row-reverse'
                               }`}
                             >

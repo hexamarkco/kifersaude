@@ -30,7 +30,9 @@ export default function LandingPage() {
     nome: '',
     telefone: '',
     cidade: '',
-    tipoContratacao: 'PF'
+    tipoContratacao: 'PF',
+    numeroVidas: '',
+    idadeTitular: ''
   });
   const [ageRangeCounts, setAgeRangeCounts] = useState<Record<string, string>>(createInitialAgeRangeCounts());
   const navigate = useNavigate();
@@ -41,6 +43,7 @@ export default function LandingPage() {
   const [showAvaliacoesModal, setShowAvaliacoesModal] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const totalLives = parseInt(formData.numeroVidas, 10) || 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -119,16 +122,29 @@ export default function LandingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!totalLives || totalLives < 1) {
+      alert('Informe a quantidade de vidas no contrato.');
+      return;
+    }
+
     const formattedAgeRanges = Object.entries(ageRangeCounts)
       .map(([range, quantity]) => ({ range, quantity: parseInt(quantity, 10) }))
       .filter(({ quantity }) => !isNaN(quantity) && quantity > 0);
 
-    if (formattedAgeRanges.length === 0) {
+    if (totalLives > 1 && formattedAgeRanges.length === 0) {
       alert('Informe ao menos uma quantidade de vidas para prosseguir.');
       return;
     }
 
-    const agesText = formattedAgeRanges.map(({ range, quantity }) => `${range}: ${quantity}`).join(', ');
+    if (totalLives === 1 && !formData.idadeTitular.trim()) {
+      alert('Informe a idade da pessoa para prosseguir.');
+      return;
+    }
+
+    const agesText =
+      totalLives === 1
+        ? `1 vida - idade: ${formData.idadeTitular}`
+        : `${totalLives} vidas - ${formattedAgeRanges.map(({ range, quantity }) => `${range}: ${quantity}`).join(', ')}`;
 
     try {
       const leadData = {
@@ -159,7 +175,7 @@ export default function LandingPage() {
       const encodedMessage = encodeURIComponent(message);
       window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
 
-      setFormData({ nome: '', telefone: '', cidade: '', tipoContratacao: 'PF' });
+      setFormData({ nome: '', telefone: '', cidade: '', tipoContratacao: 'PF', numeroVidas: '', idadeTitular: '' });
       setAgeRangeCounts(createInitialAgeRangeCounts());
       setShowModal(false);
 
@@ -848,28 +864,59 @@ export default function LandingPage() {
                 </select>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Idade das vidas *
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Quantas vidas são no contrato? *
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {AGE_RANGES.map((range) => (
-                    <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
-                      <p className="text-sm font-semibold text-slate-700">{range}</p>
-                      <input
-                        type="number"
-                        min="0"
-                        inputMode="numeric"
-                        pattern="\d*"
-                        value={ageRangeCounts[range]}
-                        onChange={(e) => updateAgeRangeCount(range, e.target.value)}
-                        className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                        placeholder="Quantidade"
-                      />
-                    </div>
-                  ))}
-                </div>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={formData.numeroVidas}
+                  onChange={(e) => setFormData({ ...formData, numeroVidas: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  placeholder="Ex: 1, 2, 3..."
+                />
               </div>
+
+              {totalLives > 0 &&
+                (totalLives > 1 ? (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                      Idade das vidas *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {AGE_RANGES.map((range) => (
+                        <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
+                          <p className="text-sm font-semibold text-slate-700">{range}</p>
+                          <input
+                            type="number"
+                            min="0"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            value={ageRangeCounts[range]}
+                            onChange={(e) => updateAgeRangeCount(range, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                            placeholder="Quantidade"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Idade da pessoa *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={formData.idadeTitular}
+                      onChange={(e) => setFormData({ ...formData, idadeTitular: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                      placeholder="Informe a idade"
+                    />
+                  </div>
+                ))}
             </div>
 
             <button
@@ -1059,28 +1106,59 @@ export default function LandingPage() {
                   </select>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
-                    Idade das vidas *
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Quantas vidas são no contrato? *
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {AGE_RANGES.map((range) => (
-                      <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
-                        <p className="text-sm font-semibold text-slate-700">{range}</p>
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="numeric"
-                          pattern="\d*"
-                          value={ageRangeCounts[range]}
-                          onChange={(e) => updateAgeRangeCount(range, e.target.value)}
-                          className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                          placeholder="Quantidade"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={formData.numeroVidas}
+                    onChange={(e) => setFormData({ ...formData, numeroVidas: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="Ex: 1, 2, 3..."
+                  />
                 </div>
+
+                {totalLives > 0 &&
+                  (totalLives > 1 ? (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Idade das vidas *
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {AGE_RANGES.map((range) => (
+                          <div key={range} className="p-3 border-2 border-slate-200 rounded-xl">
+                            <p className="text-sm font-semibold text-slate-700">{range}</p>
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              pattern="\d*"
+                              value={ageRangeCounts[range]}
+                              onChange={(e) => updateAgeRangeCount(range, e.target.value)}
+                              className="mt-2 w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              placeholder="Quantidade"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Idade da pessoa *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={formData.idadeTitular}
+                        onChange={(e) => setFormData({ ...formData, idadeTitular: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                        placeholder="Informe a idade"
+                      />
+                    </div>
+                  ))}
               </div>
 
               <button

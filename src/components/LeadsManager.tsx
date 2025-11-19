@@ -48,13 +48,17 @@ const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
   },
 };
 
-export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: LeadsManagerProps) {
+export default function LeadsManager({
+  onConvertToContract,
+  onOpenWhatsapp,
+  initialStatusFilter = [],
+}: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter || []);
+  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);

@@ -107,7 +107,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       if (leadIds.length > 0) {
         const { data: leadsData } = await supabase
           .from('leads')
-          .select('id, nome_completo, telefone, responsavel')
+          .select('id, nome_completo, telefone, responsavel, proximo_retorno')
           .in('id', leadIds);
 
         if (leadsData) {
@@ -177,6 +177,40 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     loadReminders();
   };
 
+  const updateLeadNextReturnDate = async (
+    leadId: string,
+    nextReturnDate: string | null,
+    options?: { onlyIfMatches?: string }
+  ) => {
+    try {
+      let query = supabase
+        .from('leads')
+        .update({ proximo_retorno: nextReturnDate })
+        .eq('id', leadId);
+
+      if (options?.onlyIfMatches) {
+        query = query.eq('proximo_retorno', options.onlyIfMatches);
+      }
+
+      const { data, error } = await query
+        .select('id, nome_completo, telefone, responsavel, proximo_retorno')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setLeadsMap(prev => {
+          const next = new Map(prev);
+          const existing = next.get(leadId);
+          next.set(leadId, existing ? { ...existing, ...data } : (data as Lead));
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar próximo retorno do lead:', error);
+    }
+  };
+
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
     try {
       const reminder = reminders.find(r => r.id === id);
@@ -199,7 +233,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
         if (!leadInfo) {
           const { data: leadData } = await supabase
             .from('leads')
-            .select('id, nome_completo, telefone, responsavel')
+            .select('id, nome_completo, telefone, responsavel, proximo_retorno')
             .eq('id', reminder.lead_id)
             .maybeSingle();
 
@@ -257,22 +291,30 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   const confirmDeleteReminder = async () => {
     if (!reminderPendingDeletion) return;
 
+    const reminderToDelete = reminderPendingDeletion;
+
     setIsDeletingReminder(true);
     try {
       const { error } = await supabase
         .from('reminders')
         .delete()
-        .eq('id', reminderPendingDeletion.id);
+        .eq('id', reminderToDelete.id);
 
       if (error) throw error;
-      setReminders(currentReminders => currentReminders.filter(reminder => reminder.id !== reminderPendingDeletion.id));
+      setReminders(currentReminders => currentReminders.filter(reminder => reminder.id !== reminderToDelete.id));
       setSelectedReminders(prev => {
-        if (!prev.has(reminderPendingDeletion.id)) return prev;
+        if (!prev.has(reminderToDelete.id)) return prev;
         const next = new Set(prev);
-        next.delete(reminderPendingDeletion.id);
+        next.delete(reminderToDelete.id);
         return next;
       });
-      pendingRefreshIdsRef.current.add(reminderPendingDeletion.id);
+      pendingRefreshIdsRef.current.add(reminderToDelete.id);
+
+      if (reminderToDelete.lead_id) {
+        await updateLeadNextReturnDate(reminderToDelete.lead_id, null, {
+          onlyIfMatches: reminderToDelete.data_lembrete,
+        });
+      }
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
       alert('Erro ao remover lembrete');
@@ -296,6 +338,9 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
         .eq('id', reminder.id);
 
       if (error) throw error;
+      if (reminder.lead_id) {
+        await updateLeadNextReturnDate(reminder.lead_id, newDate);
+      }
       setOpenSnoozeMenu(null);
       loadReminders();
     } catch (error) {
@@ -313,15 +358,20 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
 
       const currentSnoozeCount = reminder.snooze_count || 0;
 
+      const newDate = new Date(customSnoozeDateTime).toISOString();
+
       const { error } = await supabase
         .from('reminders')
         .update({
-          data_lembrete: new Date(customSnoozeDateTime).toISOString(),
+          data_lembrete: newDate,
           snooze_count: currentSnoozeCount + 1
         })
         .eq('id', customSnoozeReminder);
 
       if (error) throw error;
+      if (reminder.lead_id) {
+        await updateLeadNextReturnDate(reminder.lead_id, newDate);
+      }
       setCustomSnoozeReminder(null);
       setCustomSnoozeDateTime('');
       setOpenSnoozeMenu(null);
@@ -359,7 +409,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           if (!leadInfo) {
             const { data: leadData } = await supabase
               .from('leads')
-              .select('id, nome_completo, telefone, responsavel')
+              .select('id, nome_completo, telefone, responsavel, proximo_retorno')
               .eq('id', completedReminder.lead_id)
               .maybeSingle();
 
@@ -405,13 +455,22 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     if (!confirmed) return;
 
     try {
+      const reminderIds = Array.from(selectedReminders);
+      const remindersToDelete = reminders.filter(reminder => reminderIds.includes(reminder.id));
+
       const { error } = await supabase
         .from('reminders')
         .delete()
-        .in('id', Array.from(selectedReminders));
+        .in('id', reminderIds);
 
       if (error) throw error;
       setSelectedReminders(new Set());
+      const leadUpdates = remindersToDelete
+        .filter(reminder => reminder.lead_id)
+        .map(reminder =>
+          updateLeadNextReturnDate(reminder.lead_id!, null, { onlyIfMatches: reminder.data_lembrete })
+        );
+      await Promise.all(leadUpdates);
       loadReminders();
     } catch (error) {
       console.error('Erro ao remover lembretes:', error);

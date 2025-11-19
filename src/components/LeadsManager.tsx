@@ -830,6 +830,19 @@ export default function LeadsManager({
           .eq('lead_id', leadId);
 
         if (deleteRemindersError) throw deleteRemindersError;
+
+        const { error: clearNextReturnError } = await supabase
+          .from('leads')
+          .update({ proximo_retorno: null })
+          .eq('id', leadId);
+
+        if (clearNextReturnError) throw clearNextReturnError;
+
+        setLeads((current) =>
+          current.map((leadItem) =>
+            leadItem.id === leadId ? { ...leadItem, proximo_retorno: null } : leadItem
+          )
+        );
       } else {
         const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
         if (reminderRule) {

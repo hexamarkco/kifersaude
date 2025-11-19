@@ -426,6 +426,7 @@ type TranscribeAudioResponse = {
 type RewriteSuggestion = {
   tone: string;
   text: string;
+  description?: string | null;
 };
 
 type RewriteMessageResponse = {
@@ -1853,7 +1854,6 @@ export default function WhatsappPage({
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
   const [spellcheckLoading, setSpellcheckLoading] = useState(false);
   const [spellcheckError, setSpellcheckError] = useState<string | null>(null);
-  const [spellcheckSuggestion, setSpellcheckSuggestion] = useState<SpellcheckSuggestion | null>(null);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
@@ -2791,11 +2791,6 @@ export default function WhatsappPage({
     setShowRewriteModal(false);
   }, []);
 
-  const clearSpellcheckSuggestion = useCallback(() => {
-    setSpellcheckSuggestion(null);
-    setSpellcheckError(null);
-  }, []);
-
   const handleMessageInputChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = event.target;
@@ -2810,8 +2805,8 @@ export default function WhatsappPage({
         clearRewriteSuggestions();
       }
 
-      if (spellcheckError || spellcheckSuggestion) {
-        clearSpellcheckSuggestion();
+      if (spellcheckError) {
+        setSpellcheckError(null);
       }
 
       if (selectedQuickReplyId) {
@@ -2853,9 +2848,7 @@ export default function WhatsappPage({
       rewriteSuggestions.length,
       selectedQuickReplyId,
       slashCommandState,
-      clearSpellcheckSuggestion,
       spellcheckError,
-      spellcheckSuggestion,
     ],
   );
 
@@ -2871,20 +2864,6 @@ export default function WhatsappPage({
       });
     },
     [],
-  );
-
-  const applySpellcheckSuggestion = useCallback(
-    (suggestion: SpellcheckSuggestion) => {
-      setMessageInput(suggestion.correctedText);
-      clearSpellcheckSuggestion();
-      setSlashCommandState(null);
-      setSlashSuggestionIndex(0);
-
-      requestAnimationFrame(() => {
-        messageInputRef.current?.focus();
-      });
-    },
-    [clearSpellcheckSuggestion],
   );
 
   useEffect(() => {
@@ -4964,6 +4943,8 @@ export default function WhatsappPage({
 
     setSpellcheckLoading(true);
     setSpellcheckError(null);
+    clearRewriteSuggestions();
+    setRewriteError(null);
 
     try {
       const response = await fetchJson<SpellcheckMessageResponse>(
@@ -4986,16 +4967,22 @@ export default function WhatsappPage({
         throw new Error(response.error || 'Não foi possível sugerir correções.');
       }
 
-      setSpellcheckSuggestion(suggestion);
+      const rewriteSuggestion: RewriteSuggestion = {
+        tone: 'Correção ortográfica',
+        text: suggestion.correctedText,
+        description: suggestion.explanation ?? null,
+      };
+
+      setRewriteSuggestions([rewriteSuggestion]);
+      setShowRewriteModal(true);
     } catch (error) {
       const fallbackMessage =
         error instanceof Error ? error.message : 'Não foi possível sugerir correções.';
       setSpellcheckError(fallbackMessage);
-      setSpellcheckSuggestion(null);
     } finally {
       setSpellcheckLoading(false);
     }
-  }, [fetchJson, messageInput, spellcheckLoading]);
+  }, [clearRewriteSuggestions, fetchJson, messageInput, spellcheckLoading]);
 
   const handleRewriteMessage = useCallback(async () => {
     const text = messageInput.trim();
@@ -5256,7 +5243,6 @@ export default function WhatsappPage({
         } else {
           setMessageInput('');
         }
-        clearSpellcheckSuggestion();
       }
       return;
     }
@@ -5320,7 +5306,6 @@ export default function WhatsappPage({
         setMessageInput('');
         setScheduledSendAt('');
         setIsScheduleEnabled(false);
-        clearSpellcheckSuggestion();
       } catch (scheduleError) {
         console.error('Erro ao agendar mensagem do WhatsApp:', scheduleError);
         setErrorMessage('Não foi possível agendar a mensagem.');
@@ -5334,7 +5319,6 @@ export default function WhatsappPage({
     setScheduleValidationError(null);
     const optimisticMessage = createOptimisticMessage({ text: trimmedMessage });
     setMessageInput('');
-    clearSpellcheckSuggestion();
 
     setErrorMessage(null);
     const replyMessageId = replyingToMessage?.message_id?.trim();
@@ -8579,38 +8563,10 @@ export default function WhatsappPage({
                   <p className="px-1 text-xs text-rose-600">{spellcheckError}</p>
                 ) : null}
 
-                {spellcheckSuggestion ? (
-                  <div className="mt-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                    <div className="mt-1 rounded-full bg-amber-100 p-2 text-amber-700">
-                      <SpellCheck className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-                        Sugestão de correção
-                      </p>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">
-                        {spellcheckSuggestion.correctedText}
-                      </p>
-                      {spellcheckSuggestion.explanation ? (
-                        <p className="text-xs text-slate-500">{spellcheckSuggestion.explanation}</p>
-                      ) : null}
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => applySpellcheckSuggestion(spellcheckSuggestion)}
-                          className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
-                        >
-                          Aplicar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={clearSpellcheckSuggestion}
-                          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                        >
-                          Descartar
-                        </button>
-                      </div>
-                    </div>
+                {rewritingMessage || spellcheckLoading ? (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Gerando sugestões...</span>
                   </div>
                 ) : null}
 
@@ -8703,6 +8659,9 @@ export default function WhatsappPage({
                       {suggestion.tone}
                     </p>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{suggestion.text}</p>
+                    {suggestion.description ? (
+                      <p className="text-xs text-slate-500 whitespace-pre-wrap">{suggestion.description}</p>
+                    ) : null}
                   </div>
                   <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Usar</span>
                 </button>

@@ -159,6 +159,22 @@ const processSchedules = async (): Promise<ProcessResult[]> => {
   return results;
 };
 
+const runAndLogProcess = async () => {
+  try {
+    await processSchedules();
+  } catch (error) {
+    console.error('[process-whatsapp-schedules] erro ao processar agendamentos', error);
+  }
+};
+
+if (typeof Deno !== 'undefined' && typeof Deno.cron === 'function') {
+  Deno.cron('process-whatsapp-schedules', '*/1 * * * *', runAndLogProcess);
+} else {
+  console.warn(
+    'Deno.cron não está disponível; os agendamentos do WhatsApp precisam ser acionados manualmente.',
+  );
+}
+
 serve(async req => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

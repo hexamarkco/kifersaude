@@ -31,6 +31,51 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
   });
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
+  const parseDate = (date?: string | null) => {
+    if (!date) return null;
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const daysUntil = (date?: string | null) => {
+    const parsed = parseDate(date);
+    if (!parsed) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsed.setHours(0, 0, 0, 0);
+    const diff = parsed.getTime() - today.getTime();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const buildDatePill = (label: string, date?: string | null) => {
+    const remaining = daysUntil(date);
+    const parsed = parseDate(date);
+    if (remaining === null || !parsed) return null;
+
+    const formattedDate = parsed.toLocaleDateString('pt-BR');
+    const tone = remaining < 0
+      ? 'bg-slate-100 text-slate-700 border-slate-200'
+      : remaining <= 7
+        ? 'bg-red-50 text-red-700 border-red-200'
+        : remaining <= 15
+          ? 'bg-amber-50 text-amber-700 border-amber-200'
+          : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+    const suffix = remaining === 0
+      ? 'hoje'
+      : remaining > 0
+        ? `em ${remaining} dia${remaining === 1 ? '' : 's'}`
+        : `há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'}`;
+
+    return (
+      <div key={`${label}-${date}`} className={`px-3 py-2 rounded-full text-xs font-medium border inline-flex items-center space-x-2 ${tone}`}>
+        <span className="font-semibold">{label}</span>
+        <span>{formattedDate}</span>
+        <span className="text-[11px] font-normal">{suffix}</span>
+      </div>
+    );
+  };
+
   useEffect(() => {
     loadData();
   }, [contract.id]);
@@ -156,6 +201,17 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 </div>
               )}
             </div>
+
+            {(contract.data_renovacao || contract.previsao_recebimento_comissao || contract.previsao_pagamento_bonificacao) && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
+                <div className="flex flex-wrap gap-2">
+                  {buildDatePill('Renovação', contract.data_renovacao)}
+                  {buildDatePill('Prev. comissão', contract.previsao_recebimento_comissao)}
+                  {buildDatePill('Prev. bonificação', contract.previsao_pagamento_bonificacao)}
+                </div>
+              </div>
+            )}
 
             {adjustments.length > 0 && contract.mensalidade_total && (
               <div className="mt-4 pt-4 border-t border-slate-200">

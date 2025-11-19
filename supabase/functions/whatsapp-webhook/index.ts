@@ -46,6 +46,7 @@ type WhatsappChat = {
   sender_photo: string | null;
   is_archived: boolean;
   is_pinned: boolean;
+  photo_refreshed_at?: string | null;
   display_name?: string | null;
   crm_lead?: ChatLeadSummary | null;
   crm_contracts?: ChatContractSummary[];
@@ -313,6 +314,10 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
       },
     })
   : null;
+
+const PHOTO_REFRESH_COOLDOWN_MS = 60 * 60 * 1000;
+const photoRefreshCache = new Map<string, number>();
+const chatPhotoSyncUrl = supabaseUrl ? `${supabaseUrl}/functions/v1/whatsapp-chat-photo-sync` : null;
 
 type IntegrationSettingsRow = {
   slug: string;
@@ -1600,10 +1605,12 @@ const sendZapiAndPersist = async (input: {
     rawPayload: mergedRawPayload,
   });
 
+  await triggerChatPhotoRefreshIfNeeded(chat);
+
   return { chat, message };
 };
 
-const normalizePhoneIdentifier = (value: unknown): string | null => {
+function normalizePhoneIdentifier(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
   }
@@ -1629,7 +1636,7 @@ const normalizePhoneIdentifier = (value: unknown): string | null => {
   }
 
   return null;
-};
+}
 
 const normalizeBoolean = (value: unknown): boolean | null => {
   if (typeof value === 'boolean') {
@@ -2202,6 +2209,8 @@ const persistReceivedMessage = async (
     rawPayload: normalizedRawPayload,
   });
 
+  await triggerChatPhotoRefreshIfNeeded(chat);
+
   return { chat, message };
 };
 
@@ -2356,6 +2365,69 @@ const insertWhatsappMessage = async (input: {
   }
 
   return insertedMessage;
+};
+
+const triggerChatPhotoRefreshIfNeeded = async (chat: WhatsappChat) => {
+  try {
+    if (!chat || chat.is_group) {
+      return;
+    }
+
+    const normalizedPhone = normalizePhoneIdentifier(chat.phone);
+
+    if (!normalizedPhone || normalizedPhone.endsWith('-group')) {
+      return;
+    }
+
+    const now = Date.now();
+    const cachedTimestamp = photoRefreshCache.get(normalizedPhone) ?? null;
+    const persistedTimestamp = chat.photo_refreshed_at ? Date.parse(chat.photo_refreshed_at) : null;
+    const lastTrigger = Math.max(cachedTimestamp ?? 0, persistedTimestamp ?? 0);
+
+    if (lastTrigger && now - lastTrigger < PHOTO_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+
+    const refreshIso = new Date(now).toISOString();
+    photoRefreshCache.set(normalizedPhone, now);
+
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin
+          .from('whatsapp_chats')
+          .update({ photo_refreshed_at: refreshIso })
+          .eq('id', chat.id);
+      } catch (error) {
+        console.error('Erro ao registrar photo_refreshed_at do chat:', error);
+      }
+    }
+
+    if (!chatPhotoSyncUrl || !supabaseServiceKey) {
+      console.warn('Não foi possível acionar sincronização de foto do WhatsApp (credenciais ausentes).');
+      return;
+    }
+
+    try {
+      const response = await fetch(chatPhotoSyncUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseServiceKey,
+          Authorization: `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({ phones: [normalizedPhone] }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Falha ao acionar sincronização de foto do WhatsApp:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('Erro ao acionar sincronização de foto do WhatsApp:', error);
+    }
+  } catch (error) {
+    console.error('Erro inesperado ao tentar sincronizar foto do WhatsApp:', error);
+  }
 };
 
 const updateExistingWhatsappMessagesStatus = async (status: string, messageIds: string[]) => {

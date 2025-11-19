@@ -7,6 +7,7 @@ type WhatsappChatRecord = {
   phone: string | null;
   sender_photo: string | null;
   is_group: boolean;
+  photo_refreshed_at: string | null;
 };
 
 type ContactPhotoRecord = {
@@ -38,6 +39,10 @@ type SyncSummary = {
   contactFailed: number;
   contactMissingPhoto: number;
   errors: { chatId: string | null; phone: string; error: string }[];
+};
+
+type PhotoSyncRequestBody = {
+  phones?: string[] | string | null;
 };
 
 const corsHeaders = {
@@ -287,15 +292,31 @@ const upsertContactPhoto = async (phone: string, photoUrl: string) => {
   }
 };
 
-const syncChatPhotos = async (): Promise<SyncSummary> => {
+const syncChatPhotos = async (options?: { phones?: string[] | null }): Promise<SyncSummary> => {
   const credentials = getZapiCredentials();
   if (!credentials) {
     throw new Error('Credenciais da Z-API não configuradas');
   }
 
-  const { data, error } = await supabaseAdmin
+  const requestedPhones = Array.isArray(options?.phones) ? options?.phones ?? [] : [];
+  const normalizedRequestedPhones = Array.from(
+    new Set(
+      requestedPhones
+        .map(phone => normalizePhone(typeof phone === 'string' ? phone : null))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const restrictedPhones = normalizedRequestedPhones.length > 0 ? normalizedRequestedPhones : null;
+
+  let chatQuery = supabaseAdmin
     .from('whatsapp_chats')
-    .select('id, phone, sender_photo, is_group');
+    .select('id, phone, sender_photo, is_group, photo_refreshed_at');
+
+  if (restrictedPhones) {
+    chatQuery = chatQuery.in('phone', restrictedPhones);
+  }
+
+  const { data, error } = await chatQuery;
 
   if (error) {
     throw error;
@@ -315,21 +336,30 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
     }
   }
 
-  const savedContactPhones = await fetchSavedContacts(credentials);
-  const contactOnlyPhones = savedContactPhones.filter(phone => !chatByPhone.has(phone));
-  const uniqueContactPhones = Array.from(new Set(contactOnlyPhones));
-  const photoCacheMap = await fetchExistingContactPhotos(uniqueContactPhones);
+  const shouldSyncContacts = !restrictedPhones;
+  const savedContactPhones = shouldSyncContacts ? await fetchSavedContacts(credentials) : [];
+  const contactOnlyPhones = shouldSyncContacts
+    ? savedContactPhones.filter(phone => !chatByPhone.has(phone))
+    : [];
+  const uniqueContactPhones = shouldSyncContacts ? Array.from(new Set(contactOnlyPhones)) : [];
+  const photoCacheMap: Map<string, string> = shouldSyncContacts
+    ? await fetchExistingContactPhotos(uniqueContactPhones)
+    : new Map();
 
-  const phonesToSync = new Set<string>([...chatByPhone.keys(), ...savedContactPhones]);
+  const phonesToSync = restrictedPhones
+    ? new Set<string>(restrictedPhones)
+    : new Set<string>([...chatByPhone.keys(), ...savedContactPhones]);
   const errors: { chatId: string | null; phone: string; error: string }[] = [];
 
-  let eligibleChats = chatByPhone.size;
+  const eligibleChats = restrictedPhones
+    ? restrictedPhones.filter(phone => chatByPhone.has(phone)).length
+    : chatByPhone.size;
   let updated = 0;
   let unchanged = 0;
   let failed = 0;
   let missingPhoto = 0;
 
-  let contactEligible = uniqueContactPhones.length;
+  const contactEligible = shouldSyncContacts ? uniqueContactPhones.length : 0;
   let contactUpdated = 0;
   let contactUnchanged = 0;
   let contactFailed = 0;
@@ -341,11 +371,21 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
     try {
       const metadata = await fetchChatMetadata(phone, credentials);
       const photoLink = toNonEmptyString(metadata?.profileThumbnail ?? null);
+      const refreshTimestamp = new Date().toISOString();
 
       if (!photoLink) {
         if (chat) {
+          const { error: refreshError } = await supabaseAdmin
+            .from('whatsapp_chats')
+            .update({ photo_refreshed_at: refreshTimestamp })
+            .eq('id', chat.id);
+
+          if (refreshError) {
+            throw refreshError;
+          }
+
           missingPhoto += 1;
-        } else {
+        } else if (shouldSyncContacts) {
           contactMissingPhoto += 1;
         }
         continue;
@@ -354,22 +394,28 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
       const storedPhotoUrl = await downloadAndStoreProfilePhoto(photoLink, phone);
 
       if (chat) {
-        if (storedPhotoUrl === (chat.sender_photo ?? '')) {
-          unchanged += 1;
-          continue;
+        const updates: Record<string, unknown> = { photo_refreshed_at: refreshTimestamp };
+        const photoChanged = storedPhotoUrl !== (chat.sender_photo ?? '');
+
+        if (photoChanged) {
+          updates.sender_photo = storedPhotoUrl;
         }
 
         const { error: updateError } = await supabaseAdmin
           .from('whatsapp_chats')
-          .update({ sender_photo: storedPhotoUrl })
+          .update(updates)
           .eq('id', chat.id);
 
         if (updateError) {
           throw updateError;
         }
 
-        updated += 1;
-      } else {
+        if (photoChanged) {
+          updated += 1;
+        } else {
+          unchanged += 1;
+        }
+      } else if (shouldSyncContacts) {
         const previousPhoto = photoCacheMap.get(phone) ?? null;
 
         if (previousPhoto === storedPhotoUrl) {
@@ -378,12 +424,13 @@ const syncChatPhotos = async (): Promise<SyncSummary> => {
         }
 
         await upsertContactPhoto(phone, storedPhotoUrl);
+        photoCacheMap.set(phone, storedPhotoUrl);
         contactUpdated += 1;
       }
     } catch (updateError) {
       if (chat) {
         failed += 1;
-      } else {
+      } else if (shouldSyncContacts) {
         contactFailed += 1;
       }
 
@@ -450,8 +497,27 @@ serve(async req => {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { headers: corsHeaders, status: 401 });
   }
 
+  let requestedPhones: string[] | null = null;
+
   try {
-    const summary = await syncChatPhotos();
+    const body = (await req.json()) as PhotoSyncRequestBody;
+    const rawPhones = Array.isArray(body?.phones)
+      ? body.phones.filter((value): value is string => typeof value === 'string')
+      : typeof body?.phones === 'string'
+      ? [body.phones]
+      : [];
+
+    const normalized = rawPhones
+      .map(phone => (typeof phone === 'string' ? phone.trim() : ''))
+      .filter(phone => phone.length > 0);
+
+    requestedPhones = normalized.length > 0 ? normalized : null;
+  } catch (_error) {
+    requestedPhones = null;
+  }
+
+  try {
+    const summary = await syncChatPhotos({ phones: requestedPhones ?? undefined });
     return new Response(JSON.stringify({ success: true, ...summary }), { headers: corsHeaders, status: 200 });
   } catch (error) {
     console.error('Erro ao atualizar fotos dos chats:', error);

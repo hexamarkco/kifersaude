@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -9,12 +9,13 @@ import LeadKanban from './LeadKanban';
 import Pagination from './Pagination';
 import { ObserverBanner } from './ObserverRestriction';
 import { useAuth } from '../contexts/AuthContext';
-import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { convertLocalToUTC, formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { getOverdueLeads } from '../lib/analytics';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
@@ -22,7 +23,32 @@ type LeadsManagerProps = {
   initialStatusFilter?: string[];
 };
 
-export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, initialStatusFilter }: LeadsManagerProps) {
+type StatusReminderRule = {
+  hoursFromNow: number;
+  title: string;
+  description?: string;
+  type?: string;
+  priority?: 'alta' | 'normal' | 'baixa';
+};
+
+const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
+  'contato realizado': {
+    hoursFromNow: 24,
+    title: 'Revisar contato e planejar próximo passo',
+    description: 'Confirme interesse e avance para proposta ou requalificação.',
+    type: 'Follow-up',
+    priority: 'alta',
+  },
+  'proposta em análise': {
+    hoursFromNow: 48,
+    title: 'Acompanhar proposta em análise',
+    description: 'Verifique dúvidas pendentes e reforçe benefícios do plano.',
+    type: 'Retorno',
+    priority: 'normal',
+  },
+};
+
+export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -32,6 +58,14 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterCanais, setFilterCanais] = useState<string[]>([]);
+  const [filterCreatedFrom, setFilterCreatedFrom] = useState('');
+  const [filterCreatedTo, setFilterCreatedTo] = useState('');
+  const [filterUltimoContatoFrom, setFilterUltimoContatoFrom] = useState('');
+  const [filterUltimoContatoTo, setFilterUltimoContatoTo] = useState('');
+  const [filterProximoRetornoFrom, setFilterProximoRetornoFrom] = useState('');
+  const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -42,7 +76,13 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
   const [showArchived, setShowArchived] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkResponsavel, setBulkResponsavel] = useState('');
+  const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
+  const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [overdueLeads, setOverdueLeads] = useState<Lead[]>([]);
+  const [recentlyOverdue, setRecentlyOverdue] = useState<Lead[]>([]);
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -88,6 +128,21 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
     [tipoContratacaoOptions]
   );
 
+  const syncOverdueLeads = useCallback(
+    (allLeads: Lead[], previousOverdue: Lead[] = []) => {
+      const updated = getOverdueLeads(allLeads);
+      const previousIds = new Set(previousOverdue.map(lead => lead.id));
+      const newOverdue = updated.filter(lead => !previousIds.has(lead.id));
+
+      if (newOverdue.length > 0) {
+        setRecentlyOverdue(newOverdue);
+      }
+
+      setOverdueLeads(updated);
+    },
+    []
+  );
+
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
@@ -102,12 +157,13 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
         fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
       }
       setLeads(fetchedLeads);
+      syncOverdueLeads(fetchedLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver]);
+  }, [isObserver, isOriginVisibleToObserver, syncOverdueLeads]);
 
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
@@ -166,7 +222,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
         }
       }
     },
-    [isObserver, isOriginVisibleToObserver]
+    [isObserver, isOriginVisibleToObserver, syncOverdueLeads]
   );
 
   useEffect(() => {
@@ -192,7 +248,22 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, itemsPerPage]);
+  }, [
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+    itemsPerPage,
+  ]);
 
   useEffect(() => {
     if (initialStatusFilter && initialStatusFilter.length > 0) {
@@ -233,13 +304,38 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
     });
   }, [tipoContratacaoOptions]);
 
+  useEffect(() => {
+    syncOverdueLeads(leads, overdueLeads);
+  }, [leads, syncOverdueLeads]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      syncOverdueLeads(leads, overdueLeads);
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, [leads, overdueLeads, syncOverdueLeads]);
+
+  useEffect(() => {
+    if (recentlyOverdue.length === 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setRecentlyOverdue([]);
+    }, 8000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [recentlyOverdue]);
+
   const filteredLeads = useMemo(() => {
-    let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
+    const baseList = showOverdueOnly ? overdueLeads : leads;
+    let filtered = baseList.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
 
     const selectedStatusSet = new Set(filterStatus);
     const selectedResponsavelSet = new Set(filterResponsavel);
     const selectedOrigemSet = new Set(filterOrigem);
     const selectedTipoSet = new Set(filterTipoContratacao);
+    const selectedTagSet = new Set(filterTags);
+    const selectedCanaisSet = new Set(filterCanais);
 
     if (isObserver) {
       filtered = filtered.filter((lead) => isOriginVisibleToObserver(lead.origem));
@@ -270,17 +366,46 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
       filtered = filtered.filter((lead) => lead.tipo_contratacao && selectedTipoSet.has(lead.tipo_contratacao));
     }
 
+    filtered = filtered.filter((lead) => isWithinDateRange(lead.created_at, filterCreatedFrom, filterCreatedTo));
+    filtered = filtered.filter((lead) =>
+      isWithinDateRange(lead.ultimo_contato, filterUltimoContatoFrom, filterUltimoContatoTo)
+    );
+    filtered = filtered.filter((lead) =>
+      isWithinDateRange(lead.proximo_retorno, filterProximoRetornoFrom, filterProximoRetornoTo)
+    );
+
+    if (selectedTagSet.size > 0) {
+      const requiredTags = Array.from(selectedTagSet);
+      filtered = filtered.filter(
+        (lead) => Array.isArray(lead.tags) && requiredTags.every((tag) => lead.tags?.includes(tag))
+      );
+    }
+
+    if (selectedCanaisSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.canal && selectedCanaisSet.has(lead.canal));
+    }
+
     return filtered;
   }, [
     leads,
+    overdueLeads,
     searchTerm,
     filterStatus,
     filterResponsavel,
     filterOrigem,
     filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
     isObserver,
     isOriginVisibleToObserver,
     showArchived,
+    showOverdueOnly,
   ]);
 
   useEffect(() => {
@@ -352,7 +477,55 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
   const clearSelection = useCallback(() => {
     setSelectedLeadIds([]);
     setBulkStatus('');
+    setBulkResponsavel('');
+    setBulkProximoRetorno('');
+    setBulkArchiveAction('none');
   }, []);
+
+  const handleBulkDetailsApply = async () => {
+    if (selectedLeadIds.length === 0) return;
+
+    const updates: Partial<Lead> = {};
+    const proximoRetorno = bulkProximoRetorno ? convertLocalToUTC(bulkProximoRetorno) || null : undefined;
+
+    if (bulkResponsavel) {
+      updates.responsavel = bulkResponsavel;
+    }
+    if (proximoRetorno !== undefined) {
+      updates.proximo_retorno = proximoRetorno;
+    }
+    if (bulkArchiveAction !== 'none') {
+      updates.arquivado = bulkArchiveAction === 'archive';
+    }
+
+    if (Object.keys(updates).length === 0) return;
+
+    setIsBulkUpdating(true);
+
+    setLeads((current) =>
+      current.map((lead) =>
+        selectedLeadIds.includes(lead.id)
+          ? {
+              ...lead,
+              ...updates,
+            }
+          : lead
+      )
+    );
+
+    try {
+      const { error } = await supabase.from('leads').update(updates).in('id', selectedLeadIds);
+      if (error) throw error;
+      alert('Dados aplicados com sucesso aos leads selecionados.');
+    } catch (error) {
+      console.error('Erro ao aplicar dados em massa:', error);
+      alert('Erro ao aplicar dados aos leads selecionados. Tente novamente.');
+      loadLeads();
+    } finally {
+      setIsBulkUpdating(false);
+      clearSelection();
+    }
+  };
 
   const handleBulkStatusApply = async () => {
     if (!bulkStatus || selectedLeadIds.length === 0) return;
@@ -449,9 +622,42 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
     };
   };
 
-  const handleWhatsAppContact = (lead: Lead) => {
+  const registerContact = async (lead: Lead, tipo: 'WhatsApp' | 'Email') => {
+    const timestamp = new Date().toISOString();
+
+    setLeads((current) =>
+      current.map((l) =>
+        l.id === lead.id
+          ? { ...l, ultimo_contato: timestamp }
+          : l
+      )
+    );
+
+    setSelectedLead((current) =>
+      current && current.id === lead.id ? { ...current, ultimo_contato: timestamp } : current
+    );
+
+    try {
+      await supabase
+        .from('interactions')
+        .insert([{ lead_id: lead.id, tipo, descricao: `Contato via ${tipo}`, responsavel: lead.responsavel }]);
+
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({ ultimo_contato: timestamp })
+        .eq('id', lead.id);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Erro ao registrar contato:', error);
+    }
+  };
+
+  const handleWhatsAppContact = async (lead: Lead) => {
     const launchParams = buildWhatsappLaunchParams(lead);
     if (!launchParams) return;
+
+    await registerContact(lead, 'WhatsApp');
 
     if (onOpenWhatsapp) {
       onOpenWhatsapp(launchParams);
@@ -475,9 +681,12 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
     return `mailto:${lead.email}?${params.toString()}`;
   };
 
-  const handleEmailContact = (lead: Lead) => {
+  const handleEmailContact = async (lead: Lead) => {
     const url = buildEmailUrl(lead);
     if (!url) return;
+
+    await registerContact(lead, 'Email');
+
     if (typeof window !== 'undefined') {
       window.location.href = url;
     }
@@ -542,6 +751,42 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
           .eq('lead_id', leadId);
 
         if (deleteRemindersError) throw deleteRemindersError;
+      } else {
+        const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
+        if (reminderRule) {
+          const reminderDate = new Date();
+          reminderDate.setHours(reminderDate.getHours() + reminderRule.hoursFromNow);
+          reminderDate.setMinutes(0, 0, 0);
+
+          const reminderDateISO = reminderDate.toISOString();
+
+          const { error: insertReminderError } = await supabase.from('reminders').insert([
+            {
+              lead_id: leadId,
+              tipo: reminderRule.type ?? 'Follow-up',
+              titulo: `${reminderRule.title} - ${lead.nome_completo}`,
+              descricao: reminderRule.description ?? null,
+              data_lembrete: reminderDateISO,
+              lido: false,
+              prioridade: reminderRule.priority ?? 'normal',
+            },
+          ]);
+
+          if (insertReminderError) throw insertReminderError;
+
+          const { error: leadUpdateError } = await supabase
+            .from('leads')
+            .update({ proximo_retorno: reminderDateISO })
+            .eq('id', leadId);
+
+          if (leadUpdateError) throw leadUpdateError;
+
+          setLeads((current) =>
+            current.map((leadItem) =>
+              leadItem.id === leadId ? { ...leadItem, proximo_retorno: reminderDateISO } : leadItem
+            )
+          );
+        }
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
@@ -584,6 +829,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
   useEffect(() => {
     if (selectedLeadIds.length === 0) {
       setBulkStatus('');
+      setBulkResponsavel('');
+      setBulkProximoRetorno('');
+      setBulkArchiveAction('none');
     }
   }, [selectedLeadIds.length]);
 
@@ -598,6 +846,75 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
   return (
     <div>
       <ObserverBanner />
+      {overdueLeads.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-orange-100 p-2 text-orange-700">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-orange-800">
+                  {overdueLeads.length} lead{overdueLeads.length === 1 ? '' : 's'} com retorno vencido
+                </p>
+                <p className="text-sm text-orange-700">
+                  Ordenados pelo próximo retorno. Mantenha o contato ativo para evitar perda de interesse.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowOverdueOnly((current) => !current)}
+                className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-orange-700 transition-colors"
+              >
+                {showOverdueOnly ? 'Ver todos os leads' : 'Filtrar atrasados'}
+              </button>
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="rounded-lg border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-800 hover:bg-orange-100 transition-colors"
+              >
+                Atualizar prioridade
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {overdueLeads.slice(0, 3).map((lead) => (
+              <div key={lead.id} className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{lead.nome_completo}</p>
+                    <p className="text-xs text-slate-600">Responsável: {lead.responsavel || 'Não atribuído'}</p>
+                  </div>
+                  <Calendar className="h-4 w-4 text-orange-500" />
+                </div>
+                {lead.proximo_retorno && (
+                  <p className="mt-2 text-xs font-medium text-orange-700">
+                    Próximo retorno: {formatDateTimeFullBR(lead.proximo_retorno)}
+                  </p>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedLead(lead);
+                      setViewMode('list');
+                    }}
+                    className="flex-1 rounded-lg bg-orange-100 px-2 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-200 transition-colors"
+                  >
+                    Abrir lead
+                  </button>
+                  <button
+                    onClick={() => setReminderLead(lead)}
+                    className="rounded-lg bg-orange-600 px-2 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
+                    type="button"
+                  >
+                    Agendar retorno
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>
@@ -670,9 +987,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-          <div className="relative xl:col-span-2">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4 space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -682,6 +999,23 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
               className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full lg:w-auto">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-50"
+            >
+              <Filter className="w-4 h-4" />
+              Limpar filtros
+            </button>
+            <div className="text-sm text-slate-600 flex items-center justify-end">
+              <span className="font-medium">{filteredLeads.length}</span>
+              <span className="ml-1">lead(s) encontrado(s)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
           <FilterMultiSelect
             icon={Filter}
             options={statusFilterOptions}
@@ -710,9 +1044,90 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
             values={filterTipoContratacao}
             onChange={setFilterTipoContratacao}
           />
-          <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
-            <span className="font-medium w-full sm:w-auto">{filteredLeads.length}</span>
-            <span className="ml-0 sm:ml-1 w-full sm:w-auto">lead(s) encontrado(s)</span>
+          <FilterMultiSelect
+            icon={Tag}
+            options={tagFilterOptions}
+            placeholder="Todas as tags"
+            values={filterTags}
+            onChange={setFilterTags}
+          />
+          <FilterMultiSelect
+            icon={Share2}
+            options={canalFilterOptions}
+            placeholder="Todos os canais"
+            values={filterCanais}
+            onChange={setFilterCanais}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <span>Criação</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={filterCreatedFrom}
+                onChange={(e) => setFilterCreatedFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="date"
+                value={filterCreatedTo}
+                onChange={(e) => setFilterCreatedTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <MessageCircle className="w-4 h-4 text-slate-500" />
+              <span>Último contato</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="datetime-local"
+                value={filterUltimoContatoFrom}
+                onChange={(e) => setFilterUltimoContatoFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="datetime-local"
+                value={filterUltimoContatoTo}
+                onChange={(e) => setFilterUltimoContatoTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Bell className="w-4 h-4 text-slate-500" />
+              <span>Próximo retorno</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="datetime-local"
+                value={filterProximoRetornoFrom}
+                onChange={(e) => setFilterProximoRetornoFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="datetime-local"
+                value={filterProximoRetornoTo}
+                onChange={(e) => setFilterProximoRetornoTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -757,6 +1172,40 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
                         </option>
                       ))}
                     </select>
+                    <select
+                      value={bulkResponsavel}
+                      onChange={(event) => setBulkResponsavel(event.target.value)}
+                      className="w-full sm:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    >
+                      <option value="" disabled>
+                        Selecionar responsável
+                      </option>
+                      {responsavelOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="datetime-local"
+                      value={bulkProximoRetorno}
+                      onChange={(event) => setBulkProximoRetorno(event.target.value)}
+                      className="w-full sm:w-56 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    />
+                    <select
+                      value={bulkArchiveAction}
+                      onChange={(event) =>
+                        setBulkArchiveAction(event.target.value as typeof bulkArchiveAction)
+                      }
+                      className="w-full sm:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    >
+                      <option value="none">Ação de arquivamento (opcional)</option>
+                      <option value="archive">Arquivar selecionados</option>
+                      <option value="unarchive">Reativar selecionados</option>
+                    </select>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -765,6 +1214,17 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
                         className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {isBulkUpdating ? 'Atualizando...' : 'Aplicar Status'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBulkDetailsApply}
+                        disabled={
+                          isBulkUpdating ||
+                          (!bulkResponsavel && !bulkProximoRetorno && bulkArchiveAction === 'none')
+                        }
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isBulkUpdating ? 'Aplicando...' : 'Aplicar dados'}
                       </button>
                       <button
                         type="button"
@@ -956,6 +1416,54 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, init
             onItemsPerPageChange={handleItemsPerPageChange}
           />
         )}
+        </div>
+      )}
+
+      {recentlyOverdue.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-40 space-y-3">
+          {recentlyOverdue.map((lead) => (
+            <div key={lead.id} className="w-80 rounded-2xl border border-orange-200 bg-white p-4 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 text-orange-700">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="text-sm font-semibold">Lead em atraso</span>
+                </div>
+                <button
+                  onClick={() => setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id))}
+                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                  aria-label="Fechar alerta de lead atrasado"
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{lead.nome_completo}</p>
+              {lead.responsavel && (
+                <p className="text-xs text-slate-600">Responsável: {lead.responsavel}</p>
+              )}
+              {lead.proximo_retorno && (
+                <p className="mt-2 text-xs text-orange-700">Retorno vencido: {formatDateTimeFullBR(lead.proximo_retorno)}</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedLead(lead);
+                    setViewMode('list');
+                  }}
+                  className="flex-1 rounded-lg bg-orange-100 px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-200 transition-colors"
+                >
+                  Abrir lead
+                </button>
+                <button
+                  onClick={() => setReminderLead(lead)}
+                  className="rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
+                  type="button"
+                >
+                  Agendar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

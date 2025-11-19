@@ -17,6 +17,41 @@ import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
 
+const isWithinDateRange = (
+  dateValue: string | null | undefined,
+  from: string,
+  to: string,
+) => {
+  if (!from && !to) {
+    return true;
+  }
+
+  if (!dateValue) {
+    return false;
+  }
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  if (from) {
+    const fromDate = new Date(`${from}T00:00:00`);
+    if (date < fromDate) {
+      return false;
+    }
+  }
+
+  if (to) {
+    const toDate = new Date(`${to}T23:59:59`);
+    if (date > toDate) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;

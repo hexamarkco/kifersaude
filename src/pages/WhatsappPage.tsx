@@ -141,6 +141,8 @@ const CHAT_WALLPAPERS: WhatsappWallpaperOption[] = [
 
 const DEFAULT_CHAT_WALLPAPER_ID = CHAT_WALLPAPERS[0].id;
 
+const WHATSAPP_FORMATTING_PATTERN = /(```[\s\S]+?```)|(\*[^*]+?\*)|(_[^_]+?_)|(~[^~]+?~)/g;
+
 const createCustomWallpaperOption = (imageDataUrl: string): WhatsappWallpaperOption => {
   return {
     id: CUSTOM_WALLPAPER_ID,
@@ -6015,16 +6017,71 @@ export default function WhatsappPage({
     [messageSearchMatches],
   );
 
-  const renderHighlightedText = useCallback(
-    (text: string) => {
+  type WhatsappFormattingType = 'bold' | 'italic' | 'strikethrough' | 'monospace' | null;
+
+  const formatWhatsappSegments = useCallback((text: string) => {
+    const segments: { text: string; format: WhatsappFormattingType }[] = [];
+    let lastIndex = 0;
+
+    text.replace(
+      WHATSAPP_FORMATTING_PATTERN,
+      (
+        match: string,
+        monospaceMatch: string | undefined,
+        boldMatch: string | undefined,
+        italicMatch: string | undefined,
+        strikeMatch: string | undefined,
+        offset: number,
+      ) => {
+        const matchIndex = typeof offset === 'number' ? offset : text.indexOf(match, lastIndex);
+
+        if (matchIndex > lastIndex) {
+          segments.push({ text: text.slice(lastIndex, matchIndex), format: null });
+        }
+
+        const content =
+          monospaceMatch !== undefined
+            ? match.slice(3, -3)
+            : match.slice(1, -1);
+
+        const format: WhatsappFormattingType = monospaceMatch
+          ? 'monospace'
+          : boldMatch
+            ? 'bold'
+            : italicMatch
+              ? 'italic'
+              : strikeMatch
+                ? 'strikethrough'
+                : null;
+
+        segments.push({ text: content, format });
+        lastIndex = matchIndex + match.length;
+
+        return match;
+      },
+    );
+
+    if (segments.length === 0) {
+      return [{ text, format: null }];
+    }
+
+    if (lastIndex < text.length) {
+      segments.push({ text: text.slice(lastIndex), format: null });
+    }
+
+    return segments;
+  }, []);
+
+  const applyHighlightToText = useCallback(
+    (text: string, keyPrefix: string) => {
       if (!trimmedMessageSearchTerm) {
-        return text;
+        return [text];
       }
 
       const normalizedText = text.toLowerCase();
       const term = normalizedMessageSearchTerm;
       if (!term) {
-        return text;
+        return [text];
       }
 
       const nodes: ReactNode[] = [];
@@ -6038,7 +6095,7 @@ export default function WhatsappPage({
 
         if (matchIndex > searchStart) {
           nodes.push(
-            <Fragment key={`text-${searchStart}`}>
+            <Fragment key={`${keyPrefix}-text-${searchStart}`}>
               {text.slice(searchStart, matchIndex)}
             </Fragment>,
           );
@@ -6047,7 +6104,7 @@ export default function WhatsappPage({
         const matchText = text.slice(matchIndex, matchIndex + term.length);
         nodes.push(
           <mark
-            key={`highlight-${matchIndex}`}
+            key={`${keyPrefix}-highlight-${matchIndex}`}
             className="rounded bg-yellow-200 px-0.5 text-inherit"
           >
             {matchText}
@@ -6058,18 +6115,67 @@ export default function WhatsappPage({
       }
 
       if (nodes.length === 0) {
-        return text;
+        return [text];
       }
 
       if (searchStart < text.length) {
         nodes.push(
-          <Fragment key={`text-${searchStart}`}>{text.slice(searchStart)}</Fragment>,
+          <Fragment key={`${keyPrefix}-text-${searchStart}`}>
+            {text.slice(searchStart)}
+          </Fragment>,
         );
       }
 
       return nodes;
     },
     [normalizedMessageSearchTerm, trimmedMessageSearchTerm],
+  );
+
+  const renderHighlightedText = useCallback(
+    (text: string) => {
+      const segments = formatWhatsappSegments(text);
+
+      return segments.map((segment, index) => {
+        const highlightedNodes = applyHighlightToText(segment.text, `segment-${index}`);
+
+        const formattedContent = (() => {
+          switch (segment.format) {
+            case 'bold':
+              return (
+                <strong key={`bold-${index}`} className="font-semibold">
+                  {highlightedNodes}
+                </strong>
+              );
+            case 'italic':
+              return (
+                <em key={`italic-${index}`} className="italic">
+                  {highlightedNodes}
+                </em>
+              );
+            case 'strikethrough':
+              return (
+                <span key={`strike-${index}`} className="line-through">
+                  {highlightedNodes}
+                </span>
+              );
+            case 'monospace':
+              return (
+                <code
+                  key={`mono-${index}`}
+                  className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.95em]"
+                >
+                  {highlightedNodes}
+                </code>
+              );
+            default:
+              return <Fragment key={`plain-${index}`}>{highlightedNodes}</Fragment>;
+          }
+        })();
+
+        return formattedContent;
+      });
+    },
+    [applyHighlightToText, formatWhatsappSegments],
   );
 
   const hasMessageSearch = normalizedMessageSearchTerm.length > 0;
@@ -8146,13 +8252,13 @@ export default function WhatsappPage({
                   <div className="relative flex-1">
                     {replyingToMessage ? (
                       <div className="mb-2 flex items-start justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-                        <div className="pr-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                            Respondendo
-                          </p>
-                          <p className="line-clamp-2 text-sm leading-5">
-                            {replyingToMessage.text ?? 'Mensagem sem texto'}
-                          </p>
+                      <div className="pr-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                          Respondendo
+                        </p>
+                        <p className="line-clamp-2 text-sm leading-5">
+                          {renderHighlightedText(replyingToMessage.text ?? 'Mensagem sem texto')}
+                        </p>
                         </div>
                         <button
                           type="button"

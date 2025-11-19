@@ -185,6 +185,12 @@ export default function ContractsManager({
 
   const parseDate = (date?: string | null) => {
     if (!date) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
     const parsed = new Date(date);
     return isNaN(parsed.getTime()) ? null : parsed;
   };
@@ -239,9 +245,7 @@ export default function ContractsManager({
 
   const renderDateBadges = (contract: Contract) => {
     const badges = [
-      buildDateBadge('Fim fidelidade', contract.data_renovacao),
-      buildDateBadge('Reajuste', contract.mes_reajuste),
-      buildDateBadge('Recebe comissão', contract.previsao_recebimento_comissao),
+      buildDateBadge('Renova', contract.data_renovacao),
       buildDateBadge('Paga bônus', contract.previsao_pagamento_bonificacao),
     ].filter(Boolean);
 
@@ -453,14 +457,17 @@ export default function ContractsManager({
                         </div>
                       )}
                       {contract.comissao_prevista && (
-                        <div>
-                          <span className="font-medium">Comissão:</span> R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">Comissão:</span>
+                          <span>
+                            R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
                           {contract.comissao_recebimento_adiantado === false ? (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                               Parcelada
                             </span>
                           ) : contract.comissao_recebimento_adiantado ? (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                               Adiantada
                             </span>
                           ) : null}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { LeadStatusConfig } from '../lib/supabase';
 import { getBadgeStyle } from '../lib/colorUtils';
@@ -22,6 +23,31 @@ export default function StatusDropdown({
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updateMenuPosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const minWidth = 160;
+    const desiredWidth = Math.max(rect.width, minWidth);
+    const rightBoundary = viewportWidth - 16;
+    let left = rect.left;
+
+    if (left + desiredWidth > rightBoundary) {
+      left = Math.max(16, rightBoundary - desiredWidth);
+    }
+
+    left = Math.max(16, left);
+
+    setMenuPosition({
+      top: rect.bottom + 4,
+      left,
+      width: desiredWidth,
+    });
+  };
 
   const getStatusInfo = (statusName: string) => {
     return statusOptions.find(option => option.nome === statusName) || null;
@@ -53,7 +79,12 @@ export default function StatusDropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        !(menuRef.current && menuRef.current.contains(target))
+      ) {
         setIsOpen(false);
       }
     };
@@ -64,6 +95,19 @@ export default function StatusDropdown({
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
     };
   }, [isOpen]);
 
@@ -96,6 +140,7 @@ export default function StatusDropdown({
   return (
     <div className="relative inline-block" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => !disabled && !isUpdating && setIsOpen(!isOpen)}
         disabled={disabled || isUpdating}
@@ -113,31 +158,41 @@ export default function StatusDropdown({
           <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         )}
       </button>
-
-      {isOpen && !disabled && !isUpdating && (
-        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]">
-          {statusOptions.map((status) => (
-            <button
-              type="button"
-              key={status.id}
-              onClick={() => handleStatusClick(status.nome)}
-              className={`
-                w-full text-left px-3 py-2 text-sm transition-colors
-                ${status.nome === currentStatus
-                  ? 'bg-slate-100 font-medium text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-50'
-                }
-              `}
+      {isOpen && !disabled && !isUpdating && menuPosition && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+              style={{
+                top: menuPosition.top,
+                left: menuPosition.left,
+                minWidth: menuPosition.width,
+              }}
             >
-              <span
-                className="inline-block w-2 h-2 rounded-full mr-2"
-                style={getOptionIndicatorStyle(status.nome)}
-              />
-              {status.nome}
-            </button>
-          ))}
-        </div>
-      )}
+              {statusOptions.map((status) => (
+                <button
+                  type="button"
+                  key={status.id}
+                  onClick={() => handleStatusClick(status.nome)}
+                  className={`
+                    w-full text-left px-3 py-2 text-sm transition-colors
+                    ${status.nome === currentStatus
+                      ? 'bg-slate-100 font-medium text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50'
+                    }
+                  `}
+                >
+                  <span
+                    className="inline-block w-2 h-2 rounded-full mr-2"
+                    style={getOptionIndicatorStyle(status.nome)}
+                  />
+                  {status.nome}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

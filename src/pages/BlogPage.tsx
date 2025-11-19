@@ -113,8 +113,6 @@ export default function BlogPage() {
   useEffect(() => {
     if (slug) {
       loadPostBySlug(slug);
-    } else {
-      loadPosts();
     }
   }, [slug]);
 
@@ -139,7 +137,16 @@ export default function BlogPage() {
     }
 
     if (!error && data) {
-      setPosts(data);
+      setPosts((prev) => (append ? [...prev, ...data] : data));
+      setHasMore(data.length === pageSize);
+    } else {
+      setHasMore(false);
+    }
+
+    if (append) {
+      setLoadingMore(false);
+    } else {
+      setLoading(false);
     }
     setLoading(false);
     setIsRetrying(false);
@@ -196,9 +203,16 @@ export default function BlogPage() {
 
   const categories = ['Todos', ...Array.from(new Set(posts.map(p => p.category)))];
 
-  const filteredPosts = selectedCategory === 'Todos'
-    ? posts
-    : posts.filter(p => p.category === selectedCategory);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPosts = posts.filter((post) => {
+    const matchesCategory = selectedCategory === 'Todos' || post.category === selectedCategory;
+    const matchesSearch =
+      !normalizedSearch ||
+      post.title.toLowerCase().includes(normalizedSearch) ||
+      post.excerpt.toLowerCase().includes(normalizedSearch);
+
+    return matchesCategory && matchesSearch;
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -276,6 +290,7 @@ export default function BlogPage() {
   ) : null;
 
   const isLoadingPost = Boolean(slug) && loading;
+  const isInitialLoading = loading && posts.length === 0;
 
   if (isLoadingPost) {
     return (
@@ -647,6 +662,16 @@ export default function BlogPage() {
           </p>
         </div>
 
+        <div className="max-w-3xl mx-auto mb-10">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por título ou resumo"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+
         <div className="flex flex-wrap gap-3 justify-center mb-12">
           {loading || isRetrying
             ? Array.from({ length: 6 }).map((_, index) => (
@@ -705,59 +730,96 @@ export default function BlogPage() {
             <p className="text-xl text-slate-500">Nenhum artigo publicado ainda.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post) => (
-              <article
-                key={post.id}
-                onClick={() => navigate(`/blog/${post.slug}`)}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer group"
-              >
-                {post.cover_image_url ? (
-                  <div className="h-56 overflow-hidden">
-                    <img
-                      src={post.cover_image_url}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-56 bg-gradient-to-br from-orange-100 to-amber-100" />
-                )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredPosts.map((post) => (
+                <article
+                  key={post.id}
+                  onClick={() => navigate(`/blog/${post.slug}`)}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer group"
+                >
+                  {post.cover_image_url ? (
+                    <div className="h-56 overflow-hidden">
+                      <img
+                        src={post.cover_image_url}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-56 bg-gradient-to-br from-orange-100 to-amber-100" />
+                  )}
 
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-3 flex-wrap">
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-                      {post.category}
-                    </span>
-                    <span className="text-xs text-slate-500 flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {formatDate(post.published_at)}
-                    </span>
-                    <span className="text-xs text-slate-500 flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {post.read_time}
-                    </span>
+                  <div className="p-6">
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
+                        {post.category}
+                      </span>
+                      <span className="text-xs text-slate-500 flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formatDate(post.published_at)}
+                      </span>
+                      <span className="text-xs text-slate-500 flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {post.read_time}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center">
+                        Ler artigo completo
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </button>
+                      <span className="text-xs text-slate-400 flex items-center">
+                        <Eye className="w-3 h-3 mr-1" />
+                        {post.views_count}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center">
-                      Ler artigo completo
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </button>
-                    <span className="text-xs text-slate-400 flex items-center">
-                      <Eye className="w-3 h-3 mr-1" />
-                      {post.views_count}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+              {(loading || loadingMore) &&
+                Array.from({ length: 3 }).map((_, index) => (
+                  <article key={`loader-${index}`} className={`${skeletonSurfaces.card} overflow-hidden`}>
+                    <Skeleton className="h-56 w-full" />
+                    <div className="p-6 space-y-5">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Skeleton variant="line" className="h-7 w-24" />
+                        <Skeleton variant="line" className="h-5 w-20" />
+                        <Skeleton variant="line" className="h-5 w-16" />
+                      </div>
+                      <Skeleton className="h-7 w-3/4" />
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-5/6" />
+                      <div className="flex items-center justify-between">
+                        <Skeleton variant="line" className="h-6 w-32" />
+                        <Skeleton variant="line" className="h-6 w-14" />
+                      </div>
+                    </div>
+                  </article>
+                ))}
+            </div>
+            {hasMore && filteredPosts.length > 0 && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loading || loadingMore}
+                  className={`px-8 py-3 rounded-full font-semibold transition-all ${
+                    loading || loadingMore
+                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-orange-600 text-white shadow-lg hover:bg-orange-700'
+                  }`}
+                >
+                  {loading || loadingMore ? 'Carregando...' : 'Carregar mais'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

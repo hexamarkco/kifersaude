@@ -1538,6 +1538,11 @@ export default function LeadsManager({
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           onUpdate={loadLeads}
+          onEdit={(lead) => {
+            setSelectedLead(null);
+            setEditingLead(lead);
+            setShowForm(true);
+          }}
         />
       )}
 

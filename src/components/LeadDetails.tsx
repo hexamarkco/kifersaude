@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, Lead, Interaction } from '../lib/supabase';
-import { X, MessageCircle, Plus } from 'lucide-react';
+import { X, MessageCircle, Plus, Pencil } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
@@ -11,9 +11,10 @@ type LeadDetailsProps = {
   lead: Lead;
   onClose: () => void;
   onUpdate: () => void;
+  onEdit: (lead: Lead) => void;
 };
 
-export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProps) {
+export default function LeadDetails({ lead, onClose, onUpdate, onEdit }: LeadDetailsProps) {
   const { isObserver } = useAuth();
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,13 +84,25 @@ export default function LeadDetails({ lead, onClose, onUpdate }: LeadDetailsProp
             <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">{lead.nome_completo}</h3>
             <p className="text-xs text-slate-600 sm:text-sm">Histórico de Interações</p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 transition-colors hover:bg-slate-100"
-            aria-label="Fechar detalhes do lead"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isObserver && (
+              <button
+                type="button"
+                onClick={() => onEdit(lead)}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-200"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="hidden sm:inline">Editar Lead</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 transition-colors hover:bg-slate-100"
+              aria-label="Fechar detalhes do lead"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">

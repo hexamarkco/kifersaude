@@ -60,7 +60,9 @@ const getBrowserEnv = (): RuntimeEnv => {
 };
 
 const resolveRuntimeEnv = (): RuntimeEnv => {
-  if (typeof window !== 'undefined') {
+  const isDenoRuntime = typeof (globalThis as { Deno?: unknown }).Deno !== 'undefined';
+
+  if (typeof window !== 'undefined' && !isDenoRuntime) {
     return getBrowserEnv();
   }
 

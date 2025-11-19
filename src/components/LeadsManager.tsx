@@ -13,6 +13,7 @@ import { convertLocalToUTC, formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
+import FilterDateRange from './FilterDateRange';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
@@ -86,14 +87,14 @@ const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
 export default function LeadsManager({
   onConvertToContract,
   onOpenWhatsapp,
-  initialStatusFilter = [],
+  initialStatusFilter,
 }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter);
+  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter ?? []);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
@@ -209,7 +210,7 @@ export default function LeadsManager({
 
   const resetFilters = useCallback(() => {
     setSearchTerm('');
-    setFilterStatus(initialStatusFilter);
+    setFilterStatus(initialStatusFilter ?? []);
     setFilterResponsavel([]);
     setFilterOrigem([]);
     setFilterTipoContratacao([]);
@@ -346,14 +347,12 @@ export default function LeadsManager({
   ]);
 
   useEffect(() => {
-    if (initialStatusFilter && initialStatusFilter.length > 0) {
-      setFilterStatus(initialStatusFilter);
+    if (initialStatusFilter === undefined) {
+      setFilterStatus([]);
       return;
     }
 
-    if (initialStatusFilter !== undefined) {
-      setFilterStatus([]);
-    }
+    setFilterStatus(initialStatusFilter);
   }, [initialStatusFilter]);
 
   useEffect(() => {
@@ -1141,74 +1140,33 @@ export default function LeadsManager({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Calendar className="w-4 h-4 text-slate-500" />
-              <span>Criação</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                value={filterCreatedFrom}
-                onChange={(e) => setFilterCreatedFrom(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="De"
-              />
-              <input
-                type="date"
-                value={filterCreatedTo}
-                onChange={(e) => setFilterCreatedTo(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Até"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <MessageCircle className="w-4 h-4 text-slate-500" />
-              <span>Último contato</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="datetime-local"
-                value={filterUltimoContatoFrom}
-                onChange={(e) => setFilterUltimoContatoFrom(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="De"
-              />
-              <input
-                type="datetime-local"
-                value={filterUltimoContatoTo}
-                onChange={(e) => setFilterUltimoContatoTo(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Até"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Bell className="w-4 h-4 text-slate-500" />
-              <span>Próximo retorno</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="datetime-local"
-                value={filterProximoRetornoFrom}
-                onChange={(e) => setFilterProximoRetornoFrom(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="De"
-              />
-              <input
-                type="datetime-local"
-                value={filterProximoRetornoTo}
-                onChange={(e) => setFilterProximoRetornoTo(e.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Até"
-              />
-            </div>
-          </div>
+          <FilterDateRange
+            icon={Calendar}
+            label="Criação"
+            fromValue={filterCreatedFrom}
+            toValue={filterCreatedTo}
+            onFromChange={setFilterCreatedFrom}
+            onToChange={setFilterCreatedTo}
+            type="date"
+          />
+          <FilterDateRange
+            icon={MessageCircle}
+            label="Último contato"
+            fromValue={filterUltimoContatoFrom}
+            toValue={filterUltimoContatoTo}
+            onFromChange={setFilterUltimoContatoFrom}
+            onToChange={setFilterUltimoContatoTo}
+            type="datetime-local"
+          />
+          <FilterDateRange
+            icon={Bell}
+            label="Próximo retorno"
+            fromValue={filterProximoRetornoFrom}
+            toValue={filterProximoRetornoTo}
+            onFromChange={setFilterProximoRetornoFrom}
+            onToChange={setFilterProximoRetornoTo}
+            type="datetime-local"
+          />
         </div>
       </div>
 

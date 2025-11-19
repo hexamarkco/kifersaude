@@ -57,6 +57,14 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterCanais, setFilterCanais] = useState<string[]>([]);
+  const [filterCreatedFrom, setFilterCreatedFrom] = useState('');
+  const [filterCreatedTo, setFilterCreatedTo] = useState('');
+  const [filterUltimoContatoFrom, setFilterUltimoContatoFrom] = useState('');
+  const [filterUltimoContatoTo, setFilterUltimoContatoTo] = useState('');
+  const [filterProximoRetornoFrom, setFilterProximoRetornoFrom] = useState('');
+  const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -236,7 +244,22 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, itemsPerPage]);
+  }, [
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+    itemsPerPage,
+  ]);
 
   useEffect(() => {
     setFilterStatus((current) => {
@@ -296,6 +319,8 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     const selectedResponsavelSet = new Set(filterResponsavel);
     const selectedOrigemSet = new Set(filterOrigem);
     const selectedTipoSet = new Set(filterTipoContratacao);
+    const selectedTagSet = new Set(filterTags);
+    const selectedCanaisSet = new Set(filterCanais);
 
     if (isObserver) {
       filtered = filtered.filter((lead) => isOriginVisibleToObserver(lead.origem));
@@ -326,6 +351,25 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
       filtered = filtered.filter((lead) => lead.tipo_contratacao && selectedTipoSet.has(lead.tipo_contratacao));
     }
 
+    filtered = filtered.filter((lead) => isWithinDateRange(lead.created_at, filterCreatedFrom, filterCreatedTo));
+    filtered = filtered.filter((lead) =>
+      isWithinDateRange(lead.ultimo_contato, filterUltimoContatoFrom, filterUltimoContatoTo)
+    );
+    filtered = filtered.filter((lead) =>
+      isWithinDateRange(lead.proximo_retorno, filterProximoRetornoFrom, filterProximoRetornoTo)
+    );
+
+    if (selectedTagSet.size > 0) {
+      const requiredTags = Array.from(selectedTagSet);
+      filtered = filtered.filter(
+        (lead) => Array.isArray(lead.tags) && requiredTags.every((tag) => lead.tags?.includes(tag))
+      );
+    }
+
+    if (selectedCanaisSet.size > 0) {
+      filtered = filtered.filter((lead) => lead.canal && selectedCanaisSet.has(lead.canal));
+    }
+
     return filtered;
   }, [
     leads,
@@ -335,6 +379,14 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     filterResponsavel,
     filterOrigem,
     filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
     isObserver,
     isOriginVisibleToObserver,
     showArchived,
@@ -869,9 +921,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-          <div className="relative xl:col-span-2">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4 space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -881,6 +933,23 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
               className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full lg:w-auto">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-50"
+            >
+              <Filter className="w-4 h-4" />
+              Limpar filtros
+            </button>
+            <div className="text-sm text-slate-600 flex items-center justify-end">
+              <span className="font-medium">{filteredLeads.length}</span>
+              <span className="ml-1">lead(s) encontrado(s)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
           <FilterMultiSelect
             icon={Filter}
             options={statusFilterOptions}
@@ -909,9 +978,90 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
             values={filterTipoContratacao}
             onChange={setFilterTipoContratacao}
           />
-          <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
-            <span className="font-medium w-full sm:w-auto">{filteredLeads.length}</span>
-            <span className="ml-0 sm:ml-1 w-full sm:w-auto">lead(s) encontrado(s)</span>
+          <FilterMultiSelect
+            icon={Tag}
+            options={tagFilterOptions}
+            placeholder="Todas as tags"
+            values={filterTags}
+            onChange={setFilterTags}
+          />
+          <FilterMultiSelect
+            icon={Share2}
+            options={canalFilterOptions}
+            placeholder="Todos os canais"
+            values={filterCanais}
+            onChange={setFilterCanais}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <span>Criação</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={filterCreatedFrom}
+                onChange={(e) => setFilterCreatedFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="date"
+                value={filterCreatedTo}
+                onChange={(e) => setFilterCreatedTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <MessageCircle className="w-4 h-4 text-slate-500" />
+              <span>Último contato</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="datetime-local"
+                value={filterUltimoContatoFrom}
+                onChange={(e) => setFilterUltimoContatoFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="datetime-local"
+                value={filterUltimoContatoTo}
+                onChange={(e) => setFilterUltimoContatoTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Bell className="w-4 h-4 text-slate-500" />
+              <span>Próximo retorno</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="datetime-local"
+                value={filterProximoRetornoFrom}
+                onChange={(e) => setFilterProximoRetornoFrom(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="De"
+              />
+              <input
+                type="datetime-local"
+                value={filterProximoRetornoTo}
+                onChange={(e) => setFilterProximoRetornoTo(e.target.value)}
+                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Até"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -44,6 +44,8 @@ export type Lead = {
   data_criacao: string;
   ultimo_contato?: string;
   proximo_retorno?: string;
+  tags?: string[];
+  canal?: string | null;
   observacoes?: string;
   arquivado: boolean;
   created_at: string;

@@ -507,9 +507,42 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     };
   };
 
-  const handleWhatsAppContact = (lead: Lead) => {
+  const registerContact = async (lead: Lead, tipo: 'WhatsApp' | 'Email') => {
+    const timestamp = new Date().toISOString();
+
+    setLeads((current) =>
+      current.map((l) =>
+        l.id === lead.id
+          ? { ...l, ultimo_contato: timestamp }
+          : l
+      )
+    );
+
+    setSelectedLead((current) =>
+      current && current.id === lead.id ? { ...current, ultimo_contato: timestamp } : current
+    );
+
+    try {
+      await supabase
+        .from('interactions')
+        .insert([{ lead_id: lead.id, tipo, descricao: `Contato via ${tipo}`, responsavel: lead.responsavel }]);
+
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({ ultimo_contato: timestamp })
+        .eq('id', lead.id);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Erro ao registrar contato:', error);
+    }
+  };
+
+  const handleWhatsAppContact = async (lead: Lead) => {
     const launchParams = buildWhatsappLaunchParams(lead);
     if (!launchParams) return;
+
+    await registerContact(lead, 'WhatsApp');
 
     if (onOpenWhatsapp) {
       onOpenWhatsapp(launchParams);
@@ -533,9 +566,12 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     return `mailto:${lead.email}?${params.toString()}`;
   };
 
-  const handleEmailContact = (lead: Lead) => {
+  const handleEmailContact = async (lead: Lead) => {
     const url = buildEmailUrl(lead);
     if (!url) return;
+
+    await registerContact(lead, 'Email');
+
     if (typeof window !== 'undefined') {
       window.location.href = url;
     }

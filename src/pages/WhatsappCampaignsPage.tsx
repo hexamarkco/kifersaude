@@ -81,16 +81,43 @@ const TARGET_STATUS_LABELS: Record<keyof WhatsappCampaignMetricsSummary, string>
   failed: 'Falhas',
 };
 
-const MESSAGE_VARIABLE_HINTS = [
-  '{{saudacao}}',
-  '{{nome}}',
-  '{{primeiro_nome}}',
-  '{{lead_status}}',
-  '{{lead_data_cadastro}}',
-  '{{contrato_codigo}}',
-  '{{contrato_status}}',
-  '{{contrato_mensalidade}}',
+const MESSAGE_VARIABLES = [
+  {
+    token: '{{saudacao}}',
+    description: 'Saudação automática de acordo com o horário (bom dia/boa tarde/boa noite).',
+  },
+  {
+    token: '{{greeting}}',
+    description: 'Alias de {{saudacao}}.',
+  },
+  { token: '{{nome}}', description: 'Nome completo do lead.' },
+  { token: '{{lead_nome}}', description: 'Alias de {{nome}}.' },
+  { token: '{{primeiro_nome}}', description: 'Primeiro nome do lead.' },
+  { token: '{{lead_primeiro_nome}}', description: 'Alias de {{primeiro_nome}}.' },
+  { token: '{{telefone}}', description: 'Telefone do lead.' },
+  { token: '{{lead_status}}', description: 'Status atual do lead.' },
+  { token: '{{lead_origem}}', description: 'Origem do lead.' },
+  { token: '{{lead_tipo_contratacao}}', description: 'Tipo de contratação do lead.' },
+  { token: '{{lead_responsavel}}', description: 'Responsável pelo lead.' },
+  { token: '{{lead_data_cadastro}}', description: 'Data de cadastro do lead.' },
+  { token: '{{campanha_nome}}', description: 'Nome da campanha atual.' },
+  { token: '{{data_envio}}', description: 'Data em que a mensagem é enviada.' },
+  { token: '{{hora_envio}}', description: 'Hora em que a mensagem é enviada.' },
+  { token: '{{contrato_codigo}}', description: 'Código do contrato do lead.' },
+  { token: '{{contrato_status}}', description: 'Status do contrato do lead.' },
+  { token: '{{contrato_modalidade}}', description: 'Modalidade do contrato do lead.' },
+  { token: '{{contrato_operadora}}', description: 'Operadora do contrato do lead.' },
+  { token: '{{contrato_plano}}', description: 'Plano/produto do contrato do lead.' },
+  { token: '{{contrato_mensalidade}}', description: 'Mensalidade formatada do contrato do lead.' },
+  { token: '{{contrato_criado_em}}', description: 'Data de criação do contrato do lead.' },
+  {
+    token: '{{meta_<campo>}}',
+    description:
+      'Metadados enviados com o lead (ex.: {{meta_cor}}, {{meta_uf}}). Útil para campos personalizados.',
+  },
 ];
+
+const MESSAGE_VARIABLE_HINTS = MESSAGE_VARIABLES.slice(0, 8).map(variable => variable.token);
 
 const summarizeTargets = (targets: WhatsappCampaignTarget[] | undefined): WhatsappCampaignMetricsSummary => {
   const summary: WhatsappCampaignMetricsSummary = {
@@ -119,6 +146,7 @@ export default function WhatsappCampaignsPage() {
   const [leadsPreview, setLeadsPreview] = useState<Lead[]>([]);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>(initialFilter);
   const [leadsLoading, setLeadsLoading] = useState(false);
+  const [showVariableList, setShowVariableList] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
@@ -666,18 +694,56 @@ export default function WhatsappCampaignsPage() {
                                   className="w-full rounded-lg border border-slate-200 px-3 py-2"
                                   placeholder="Mensagem que será enviada ao lead"
                                 />
-                                <p className="text-xs text-slate-500">
-                                  Use variáveis como{' '}
-                                  {MESSAGE_VARIABLE_HINTS.map((token, hintIndex) => (
-                                    <code
-                                      key={`${token}-${hintIndex}`}
-                                      className="mr-1 rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px] text-slate-700"
-                                    >
-                                      {token}
-                                    </code>
-                                  ))}
-                                  para personalizar com nome, saudação, datas e contratos.
-                                </p>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <p className="text-xs text-slate-500">
+                                    Use variáveis como{' '}
+                                    {MESSAGE_VARIABLE_HINTS.map((token, hintIndex) => (
+                                      <code
+                                        key={`${token}-${hintIndex}`}
+                                        className="mr-1 rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px] text-slate-700"
+                                      >
+                                        {token}
+                                      </code>
+                                    ))}
+                                    para personalizar com nome, saudação, datas e contratos.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowVariableList(previous => !previous)}
+                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-700 sm:w-auto"
+                                  >
+                                    {showVariableList ? 'Ocultar variáveis' : 'Ver todas as variáveis'}
+                                  </button>
+                                </div>
+                                {showVariableList ? (
+                                  <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm font-semibold text-slate-700">Variáveis disponíveis</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowVariableList(false)}
+                                        className="text-[11px] font-semibold text-slate-500 transition hover:text-slate-700"
+                                      >
+                                        Fechar
+                                      </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      {MESSAGE_VARIABLES.map(variable => (
+                                        <div
+                                          key={variable.token}
+                                          className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+                                        >
+                                          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700">
+                                            {variable.token}
+                                          </code>
+                                          <p className="mt-1 text-[11px] leading-snug text-slate-600">
+                                            {variable.description}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
                               </div>
                             ) : null}
 

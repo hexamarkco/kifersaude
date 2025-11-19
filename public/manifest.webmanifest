@@ -1,0 +1,22 @@
+{
+  "name": "Kifer Saúde",
+  "short_name": "Kifer Saúde",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d3557",
+  "description": "CRM e painel de leads da Kifer Saúde",
+  "icons": [
+    {
+      "src": "/image.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/image.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

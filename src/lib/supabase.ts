@@ -50,6 +50,7 @@ export type Lead = {
   arquivado: boolean;
   created_at: string;
   updated_at: string;
+  push_notified_at?: string | null;
 };
 
 export type QuickReply = {
@@ -162,6 +163,7 @@ export type Reminder = {
   ultima_modificacao?: string;
   whatsapp_schedule_id?: string;
   created_at: string;
+  push_notified_at?: string | null;
 };
 
 export type ContractValueAdjustment = {

@@ -3,11 +3,13 @@ import { Plus, Trash2, PaintBucket, GripVertical, Star } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { getBadgeStyle } from '../../lib/colorUtils';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 
 export default function LeadStatusManager() {
   const { leadStatuses, refreshLeadStatuses } = useConfig();
   const [newStatus, setNewStatus] = useState({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
   const [saving, setSaving] = useState(false);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const handleCreate = async () => {
     if (!newStatus.nome.trim()) {
@@ -50,7 +52,14 @@ export default function LeadStatusManager() {
       return;
     }
 
-    if (!confirm('Deseja remover este status?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir status',
+      description: 'Deseja remover este status? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     const { error } = await configService.deleteLeadStatus(id);
     if (error) {
@@ -220,6 +229,7 @@ export default function LeadStatusManager() {
           </button>
         </div>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

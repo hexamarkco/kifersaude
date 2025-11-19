@@ -3,6 +3,7 @@ import { supabase, Reminder, Lead } from '../lib/supabase';
 import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
 import { createAdditionalFollowUps } from '../lib/followUpService';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 export default function RemindersManager() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -13,6 +14,7 @@ export default function RemindersManager() {
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [respondingReminder, setRespondingReminder] = useState<string | null>(null);
   const [additionalFollowUps, setAdditionalFollowUps] = useState({ count: 3, intervalDays: 2 });
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
     loadReminders();
@@ -126,7 +128,14 @@ export default function RemindersManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja remover este lembrete?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir lembrete',
+      description: 'Deseja remover este lembrete? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -494,6 +503,7 @@ export default function RemindersManager() {
           })}
         </div>
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

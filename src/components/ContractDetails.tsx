@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
 import DependentForm from './DependentForm';
 import { formatDateOnly } from '../lib/dateUtils';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 type ContractDetailsProps = {
   contract: Contract;
@@ -28,6 +29,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
     descricao: '',
     responsavel: 'Luiza',
   });
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
     loadData();
@@ -67,7 +69,14 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
   };
 
   const handleDeleteDependent = async (id: string) => {
-    if (!confirm('Deseja remover este dependente?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Remover dependente',
+      description: 'Deseja remover este dependente? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase.from('dependents').delete().eq('id', id);
@@ -508,6 +517,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
           }}
         />
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

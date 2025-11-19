@@ -14,6 +14,7 @@ import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
@@ -41,6 +42,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
   const restrictedOriginNamesForObservers = useMemo(
@@ -364,7 +366,13 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   };
 
   const handleArchive = async (id: string) => {
-    if (!confirm('Deseja arquivar este lead?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Arquivar lead',
+      description: 'Deseja arquivar este lead? Você poderá reativá-lo depois.',
+      confirmLabel: 'Arquivar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -381,7 +389,13 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   };
 
   const handleUnarchive = async (id: string) => {
-    if (!confirm('Deseja reativar este lead?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Reativar lead',
+      description: 'Deseja reativar este lead?',
+      confirmLabel: 'Reativar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -968,6 +982,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
           defaultType="Follow-up"
         />
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

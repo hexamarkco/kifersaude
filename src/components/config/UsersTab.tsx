@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, UserProfile, getUserManagementId } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
@@ -19,6 +20,7 @@ export default function UsersTab() {
   const [editUserRole, setEditUserRole] = useState<'admin' | 'observer'>('observer');
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
     loadUsers();
@@ -237,16 +239,24 @@ export default function UsersTab() {
         }
       }
       showMessage('error', error.message || 'Erro ao atualizar usuário');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  } finally {
+    setActionLoading(false);
+  }
+};
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+const handleDeleteUser = async (userId: string) => {
+  const confirmed = await requestConfirmation({
+    title: 'Excluir usuário',
+    description: 'Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.',
+    confirmLabel: 'Excluir usuário',
+    cancelLabel: 'Cancelar',
+    tone: 'danger',
+  });
 
-    setActionLoading(true);
-    try {
+  if (!confirmed) return;
+
+  setActionLoading(true);
+  try {
       const { error } = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'deleteUser',
@@ -269,7 +279,14 @@ export default function UsersTab() {
   };
 
   const handleChangeRole = async (userId: string, newRole: 'admin' | 'observer') => {
-    if (!confirm(`Tem certeza que deseja alterar este usuário para ${newRole === 'admin' ? 'Administrador' : 'Observador'}?`)) return;
+    const confirmed = await requestConfirmation({
+      title: 'Alterar permissão',
+      description: `Tem certeza que deseja alterar este usuário para ${newRole === 'admin' ? 'Administrador' : 'Observador'}?`,
+      confirmLabel: 'Alterar permissão',
+      cancelLabel: 'Cancelar',
+    });
+
+    if (!confirmed) return;
 
     setActionLoading(true);
     try {
@@ -568,6 +585,7 @@ export default function UsersTab() {
           </div>
         </div>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

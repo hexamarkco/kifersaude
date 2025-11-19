@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { supabase, type Lead } from '../lib/supabase';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import type {
   WhatsappCampaignMetricsSummary,
   WhatsappCampaignStep,
@@ -153,6 +154,7 @@ export default function WhatsappCampaignsPage() {
   const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
   const [availableOwners, setAvailableOwners] = useState<string[]>([]);
   const [campaignEditor, setCampaignEditor] = useState<{ name: string; description: string } | null>(null);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const loadCampaigns = useCallback(async () => {
     setCampaignLoading(true);
@@ -321,7 +323,14 @@ export default function WhatsappCampaignsPage() {
       return;
     }
 
-    const confirmation = window.confirm('Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.');
+    const confirmation = await requestConfirmation({
+      title: 'Excluir campanha',
+      description: 'Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir campanha',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
     if (!confirmation) {
       return;
     }
@@ -348,7 +357,7 @@ export default function WhatsappCampaignsPage() {
       console.error('Erro ao excluir campanha:', err);
       setErrorMessage('Não foi possível excluir a campanha.');
     }
-  }, [loadCampaigns, selectedCampaignId]);
+  }, [loadCampaigns, requestConfirmation, selectedCampaignId]);
 
   const handleAddStep = (stepType: WhatsappCampaignStepType) => {
     setStepsDraft(prev => [
@@ -1053,6 +1062,7 @@ export default function WhatsappCampaignsPage() {
           </div>
         </main>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

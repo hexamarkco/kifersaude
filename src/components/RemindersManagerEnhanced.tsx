@@ -21,6 +21,7 @@ import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 type RemindersManagerEnhancedProps = {
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
@@ -56,6 +57,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     defaultDescription?: string;
     defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
   } | null>(null);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -393,7 +395,14 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
 
   const handleBatchDelete = async () => {
     if (selectedReminders.size === 0) return;
-    if (!confirm(`Deseja remover ${selectedReminders.size} lembrete(s)?`)) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir lembretes selecionados',
+      description: `Deseja remover ${selectedReminders.size} lembrete(s)? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir lembretes',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -411,7 +420,13 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!confirm('Deseja marcar todos os lembretes não lidos como lidos?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Marcar lembretes como lidos',
+      description: 'Deseja marcar todos os lembretes não lidos como lidos?',
+      confirmLabel: 'Marcar como lidos',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -1099,6 +1114,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           onSave={handleLeadSaved}
         />
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

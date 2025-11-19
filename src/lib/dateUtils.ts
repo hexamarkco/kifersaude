@@ -47,6 +47,13 @@ const DATE_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit'
 });
 
+const TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
 const TIMEZONE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   timeZone: SAO_PAULO_TIMEZONE,
   year: 'numeric',
@@ -172,11 +179,20 @@ export function formatDateTimeBR(date: string): string {
 
 export function formatTimeBR(date: string): string {
   const d = new Date(date);
-  return d.toLocaleTimeString('pt-BR', {
-    timeZone: SAO_PAULO_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+
+  if (Number.isNaN(d.getTime())) {
+    return '';
+  }
+
+  const parts = TIME_FORMATTER.formatToParts(d);
+  const hour = parts.find(part => part.type === 'hour')?.value ?? '';
+  const minute = parts.find(part => part.type === 'minute')?.value ?? '';
+
+  if (!hour || !minute) {
+    return '';
+  }
+
+  return `${hour}:${minute}`;
 }
 
 export function formatDateTimeFullBR(date: string): string {

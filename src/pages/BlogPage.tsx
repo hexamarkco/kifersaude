@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
@@ -92,13 +92,23 @@ export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
 
-  const PAGE_SIZE = 6;
+  const showShareFeedback = (type: 'success' | 'error', message: string) => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
+    }
+
+    setShareFeedback({ type, message });
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setShareFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 3000);
+  };
 
   useEffect(() => {
     if (slug) {
@@ -106,31 +116,25 @@ export default function BlogPage() {
     }
   }, [slug]);
 
-  useEffect(() => {
-    if (!slug) {
-      setPage(1);
-      loadPosts(searchTerm, 1, PAGE_SIZE, false);
+  useEffect(() => () => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
     }
-  }, [slug, searchTerm]);
+  }, []);
 
-  const loadPosts = async (search = '', pageNumber = 1, pageSize = PAGE_SIZE, append = false) => {
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
+  const loadPosts = async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('*')
+      .eq('published', true)
+      .order('published_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao carregar artigos do blog', error);
+      setError('Não foi possível carregar os artigos no momento.');
     }
-
-    const startRange = (pageNumber - 1) * pageSize;
-    const endRange = startRange + pageSize - 1;
-
-    let query = supabase.from('blog_posts').select('*').eq('published', true);
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`title.ilike.${term},excerpt.ilike.${term}`);
-    }
-
-    const { data, error } = await query.order('published_at', { ascending: false }).range(startRange, endRange);
 
     if (!error && data) {
       setPosts((prev) => (append ? [...prev, ...data] : data));
@@ -144,10 +148,15 @@ export default function BlogPage() {
     } else {
       setLoading(false);
     }
+    setLoading(false);
+    setIsRetrying(false);
   };
 
   const loadPostBySlug = async (postSlug: string) => {
     setLoading(true);
+    setError(null);
+    setSelectedPost(null);
+    setRelatedPosts([]);
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
@@ -155,12 +164,18 @@ export default function BlogPage() {
       .eq('published', true)
       .maybeSingle();
 
+    if (error) {
+      console.error('Erro ao carregar artigo pelo slug', error);
+      setError('Não foi possível carregar este artigo no momento.');
+    }
+
     if (!error && data) {
       setSelectedPost(data);
       incrementViewCount(data.id);
       loadRelatedPosts(data.category, data.id);
     }
     setLoading(false);
+    setIsRetrying(false);
   };
 
   const incrementViewCount = async (postId: string) => {
@@ -223,20 +238,56 @@ export default function BlogPage() {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const copyLink = (post: BlogPost) => {
+  const sharePost = async (post: BlogPost, fallback: 'whatsapp' | 'facebook' | 'linkedin' = 'whatsapp') => {
     const url = `https://kifersaude.com.br/blog/${post.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Link copiado para a área de transferência!');
-    });
+    const shareData = {
+      title: post.title,
+      text: post.excerpt,
+      url
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        showShareFeedback('success', 'Compartilhamento iniciado!');
+        return;
+      } catch (error) {
+        console.error('Erro ao compartilhar com navigator.share', error);
+      }
+    }
+
+    if (fallback === 'facebook') {
+      shareOnFacebook(post);
+    } else if (fallback === 'linkedin') {
+      shareOnLinkedIn(post);
+    } else {
+      shareOnWhatsApp(post);
+    }
   };
 
-  const handleLoadMore = () => {
-    if (loading || loadingMore || !hasMore) return;
+  const copyLink = async (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
 
-    const nextPage = page + 1;
-    setPage(nextPage);
-    loadPosts(searchTerm, nextPage, PAGE_SIZE, true);
+    try {
+      await navigator.clipboard.writeText(url);
+      showShareFeedback('success', 'Link copiado para a área de transferência.');
+    } catch (error) {
+      console.error('Erro ao copiar link', error);
+      showShareFeedback('error', 'Não foi possível copiar o link. Tente novamente.');
+    }
   };
+
+  const feedbackToast = shareFeedback ? (
+    <div
+      className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white transition-opacity ${
+        shareFeedback.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      {shareFeedback.message}
+    </div>
+  ) : null;
 
   const isLoadingPost = Boolean(slug) && loading;
   const isInitialLoading = loading && posts.length === 0;
@@ -318,6 +369,46 @@ export default function BlogPage() {
             </div>
           </div>
         </article>
+
+        <BlogFooter />
+        {feedbackToast}
+      </div>
+    );
+  }
+
+  if (error && slug) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/blog')}
+                className="flex items-center text-slate-600 hover:text-orange-600 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Voltar para o blog
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-slate-900">Kifer Saúde</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center space-y-6">
+          <h1 className="text-3xl font-bold text-slate-900">Ops! Não foi possível carregar o artigo</h1>
+          <p className="text-lg text-slate-600">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
 
         <BlogFooter />
       </div>
@@ -409,7 +500,7 @@ export default function BlogPage() {
             <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-slate-200">
               <span className="text-sm font-semibold text-slate-600">Compartilhar:</span>
               <button
-                onClick={() => shareOnWhatsApp(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'whatsapp')}
                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no WhatsApp"
               >
@@ -417,7 +508,7 @@ export default function BlogPage() {
                 WhatsApp
               </button>
               <button
-                onClick={() => shareOnFacebook(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'facebook')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no Facebook"
               >
@@ -425,7 +516,7 @@ export default function BlogPage() {
                 Facebook
               </button>
               <button
-                onClick={() => shareOnLinkedIn(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'linkedin')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no LinkedIn"
               >
@@ -528,6 +619,7 @@ export default function BlogPage() {
         </article>
 
         <BlogFooter />
+        {feedbackToast}
       </div>
     );
   }
@@ -581,7 +673,7 @@ export default function BlogPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 justify-center mb-12">
-          {isInitialLoading
+          {loading || isRetrying
             ? Array.from({ length: 6 }).map((_, index) => (
                 <Skeleton key={index} variant="line" className="h-11 w-28" />
               ))
@@ -600,7 +692,18 @@ export default function BlogPage() {
               ))}
         </div>
 
-        {isInitialLoading ? (
+        {error ? (
+          <div className="max-w-3xl mx-auto text-center bg-white rounded-2xl shadow-sm p-8 space-y-4">
+            <h2 className="text-2xl font-bold text-slate-900">Ops! Algo deu errado</h2>
+            <p className="text-slate-600">{error}</p>
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : loading || isRetrying ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Array.from({ length: 6 }).map((_, index) => (
               <article key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>
@@ -721,6 +824,7 @@ export default function BlogPage() {
       </div>
 
       <BlogFooter />
+      {feedbackToast}
     </div>
   );
 }

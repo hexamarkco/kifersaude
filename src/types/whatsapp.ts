@@ -46,6 +46,7 @@ export type WhatsappChat = {
   sender_photo: string | null;
   is_archived: boolean;
   is_pinned: boolean;
+  photo_refreshed_at?: string | null;
   display_name?: string | null;
   crm_lead?: WhatsappChatLeadSummary | null;
   crm_contracts?: WhatsappChatContractSummary[];

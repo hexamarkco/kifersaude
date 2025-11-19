@@ -9,7 +9,7 @@ import LeadKanban from './LeadKanban';
 import Pagination from './Pagination';
 import { ObserverBanner } from './ObserverRestriction';
 import { useAuth } from '../contexts/AuthContext';
-import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { convertLocalToUTC, formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
@@ -41,6 +41,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const [showArchived, setShowArchived] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkResponsavel, setBulkResponsavel] = useState('');
+  const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
+  const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
@@ -340,7 +343,55 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const clearSelection = useCallback(() => {
     setSelectedLeadIds([]);
     setBulkStatus('');
+    setBulkResponsavel('');
+    setBulkProximoRetorno('');
+    setBulkArchiveAction('none');
   }, []);
+
+  const handleBulkDetailsApply = async () => {
+    if (selectedLeadIds.length === 0) return;
+
+    const updates: Partial<Lead> = {};
+    const proximoRetorno = bulkProximoRetorno ? convertLocalToUTC(bulkProximoRetorno) || null : undefined;
+
+    if (bulkResponsavel) {
+      updates.responsavel = bulkResponsavel;
+    }
+    if (proximoRetorno !== undefined) {
+      updates.proximo_retorno = proximoRetorno;
+    }
+    if (bulkArchiveAction !== 'none') {
+      updates.arquivado = bulkArchiveAction === 'archive';
+    }
+
+    if (Object.keys(updates).length === 0) return;
+
+    setIsBulkUpdating(true);
+
+    setLeads((current) =>
+      current.map((lead) =>
+        selectedLeadIds.includes(lead.id)
+          ? {
+              ...lead,
+              ...updates,
+            }
+          : lead
+      )
+    );
+
+    try {
+      const { error } = await supabase.from('leads').update(updates).in('id', selectedLeadIds);
+      if (error) throw error;
+      alert('Dados aplicados com sucesso aos leads selecionados.');
+    } catch (error) {
+      console.error('Erro ao aplicar dados em massa:', error);
+      alert('Erro ao aplicar dados aos leads selecionados. Tente novamente.');
+      loadLeads();
+    } finally {
+      setIsBulkUpdating(false);
+      clearSelection();
+    }
+  };
 
   const handleBulkStatusApply = async () => {
     if (!bulkStatus || selectedLeadIds.length === 0) return;
@@ -572,6 +623,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   useEffect(() => {
     if (selectedLeadIds.length === 0) {
       setBulkStatus('');
+      setBulkResponsavel('');
+      setBulkProximoRetorno('');
+      setBulkArchiveAction('none');
     }
   }, [selectedLeadIds.length]);
 
@@ -745,6 +799,40 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
                         </option>
                       ))}
                     </select>
+                    <select
+                      value={bulkResponsavel}
+                      onChange={(event) => setBulkResponsavel(event.target.value)}
+                      className="w-full sm:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    >
+                      <option value="" disabled>
+                        Selecionar responsável
+                      </option>
+                      {responsavelOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="datetime-local"
+                      value={bulkProximoRetorno}
+                      onChange={(event) => setBulkProximoRetorno(event.target.value)}
+                      className="w-full sm:w-56 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    />
+                    <select
+                      value={bulkArchiveAction}
+                      onChange={(event) =>
+                        setBulkArchiveAction(event.target.value as typeof bulkArchiveAction)
+                      }
+                      className="w-full sm:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      disabled={isBulkUpdating}
+                    >
+                      <option value="none">Ação de arquivamento (opcional)</option>
+                      <option value="archive">Arquivar selecionados</option>
+                      <option value="unarchive">Reativar selecionados</option>
+                    </select>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -753,6 +841,17 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
                         className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {isBulkUpdating ? 'Atualizando...' : 'Aplicar Status'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBulkDetailsApply}
+                        disabled={
+                          isBulkUpdating ||
+                          (!bulkResponsavel && !bulkProximoRetorno && bulkArchiveAction === 'none')
+                        }
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isBulkUpdating ? 'Aplicando...' : 'Aplicar dados'}
                       </button>
                       <button
                         type="button"

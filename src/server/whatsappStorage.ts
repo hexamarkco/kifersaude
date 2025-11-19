@@ -3,6 +3,7 @@ import type { WhatsappChat, WhatsappMessage } from '../types/whatsapp';
 
 export type ChatUpsertInput = {
   phone: string;
+  chatLid?: string | null;
   chatName?: string | null;
   isGroup?: boolean;
   lastMessageAt?: Date | string | null;
@@ -35,6 +36,7 @@ const toIsoStringOrNull = (value: Date | string | null | undefined): string | nu
 export const upsertChatRecord = async (input: ChatUpsertInput): Promise<WhatsappChat> => {
   const {
     phone,
+    chatLid,
     chatName,
     isGroup,
     lastMessageAt,
@@ -61,6 +63,10 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     last_message_preview: lastMessagePreview ?? null,
   };
 
+  if (chatLid !== undefined) {
+    updatePayload.chat_lid = chatLid ?? null;
+  }
+
   if (typeof isGroup === 'boolean') {
     updatePayload.is_group = isGroup;
   }
@@ -81,6 +87,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
 
     return {
       ...existingChat,
+      chat_lid: updatePayload.chat_lid ?? existingChat.chat_lid,
       chat_name: updatePayload.chat_name ?? existingChat.chat_name,
       is_group: typeof updatePayload.is_group === 'boolean' ? updatePayload.is_group : existingChat.is_group,
       last_message_at: normalizedLastMessageAt,
@@ -92,6 +99,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     .from('whatsapp_chats')
     .insert({
       phone,
+      chat_lid: chatLid ?? null,
       chat_name: chatName ?? null,
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,
@@ -111,6 +119,24 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
   }
 
   return insertedChat;
+};
+
+export const getChatByChatLid = async (chatLid: string): Promise<WhatsappChat | null> => {
+  if (!chatLid) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('whatsapp_chats')
+    .select('*')
+    .eq('chat_lid', chatLid)
+    .maybeSingle<WhatsappChat>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? null;
 };
 
 const normalizeMessageStatus = (status: string | null | undefined, fromMe: boolean): string | null => {

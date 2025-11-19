@@ -214,20 +214,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     }
   };
 
-  const generateContractCode = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `KS${year}${month}${random}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
-      const codigo = formData.codigo_contrato || generateContractCode();
+      const codigo = formData.codigo_contrato.trim();
+
+      if (!codigo) {
+        alert('Informe o código do contrato.');
+        return;
+      }
 
       const dataToSave = {
         codigo_contrato: codigo,
@@ -335,9 +332,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.codigo_contrato}
                   onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
-                  placeholder="Será gerado automaticamente"
+                  placeholder="Informe o código fornecido pela operadora"
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>

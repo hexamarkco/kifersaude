@@ -24,11 +24,13 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
   const [showDependentForm, setShowDependentForm] = useState(false);
   const [editingDependent, setEditingDependent] = useState<Dependent | null>(null);
   const [showInteractionForm, setShowInteractionForm] = useState(false);
-  const [interactionData, setInteractionData] = useState({
+  const initialInteractionData = {
     tipo: 'Observação',
     descricao: '',
     responsavel: 'Luiza',
-  });
+  };
+  const [interactionData, setInteractionData] = useState(initialInteractionData);
+  const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const parseDate = (date?: string | null) => {
@@ -137,21 +139,62 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
     e.preventDefault();
 
     try {
-      const { error } = await supabase
-        .from('interactions')
-        .insert([{
-          contract_id: contract.id,
-          ...interactionData,
-        }]);
+      const { error } = editingInteraction
+        ? await supabase
+            .from('interactions')
+            .update({
+              tipo: interactionData.tipo,
+              descricao: interactionData.descricao,
+              responsavel: interactionData.responsavel,
+            })
+            .eq('id', editingInteraction.id)
+        : await supabase
+            .from('interactions')
+            .insert([{
+              contract_id: contract.id,
+              ...interactionData,
+            }]);
 
       if (error) throw error;
 
-      setInteractionData({ tipo: 'Observação', descricao: '', responsavel: 'Luiza' });
+      setInteractionData(initialInteractionData);
       setShowInteractionForm(false);
+      setEditingInteraction(null);
       loadData();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
       alert('Erro ao adicionar interação');
+    }
+  };
+
+  const handleEditInteraction = (interaction: Interaction) => {
+    setEditingInteraction(interaction);
+    setInteractionData({
+      tipo: interaction.tipo,
+      descricao: interaction.descricao,
+      responsavel: interaction.responsavel,
+    });
+    setShowInteractionForm(true);
+  };
+
+  const handleDeleteInteraction = async (interactionId: string) => {
+    const confirmed = await requestConfirmation({
+      title: 'Remover interação',
+      description: 'Deseja remover esta interação? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase.from('interactions').delete().eq('id', interactionId);
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Erro ao remover interação:', error);
+      alert('Erro ao remover interação');
     }
   };
 
@@ -439,7 +482,11 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
               {!isObserver && (
                 <button
-                  onClick={() => setShowInteractionForm(!showInteractionForm)}
+                  onClick={() => {
+                    setEditingInteraction(null);
+                    setInteractionData(initialInteractionData);
+                    setShowInteractionForm(!showInteractionForm);
+                  }}
                   className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -499,7 +546,11 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 <div className="flex items-center justify-end space-x-2">
                   <button
                     type="button"
-                    onClick={() => setShowInteractionForm(false)}
+                    onClick={() => {
+                      setShowInteractionForm(false);
+                      setEditingInteraction(null);
+                      setInteractionData(initialInteractionData);
+                    }}
                     className="px-4 py-2 text-slate-700 hover:bg-white rounded-lg transition-colors"
                   >
                     Cancelar
@@ -508,7 +559,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                     type="submit"
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   >
-                    Adicionar
+                    {editingInteraction ? 'Salvar alterações' : 'Adicionar'}
                   </button>
                 </div>
               </form>
@@ -530,10 +581,28 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                         </span>
                         <span className="text-sm text-slate-600">{interaction.responsavel}</span>
                       </div>
-                      <span className="text-sm text-slate-500">
-                        {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
-                        {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center space-x-3 text-sm text-slate-500">
+                        <span>
+                          {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
+                          {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {!isObserver && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleEditInteraction(interaction)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteInteraction(interaction.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-slate-700">{interaction.descricao}</p>
                   </div>

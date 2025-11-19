@@ -501,31 +501,6 @@ export default function WhatsappCampaignsPage() {
     }
   };
 
-  const handleStatusChange = async (status: string) => {
-    if (!selectedCampaignId) {
-      return;
-    }
-
-    setErrorMessage(null);
-    setFeedbackMessage(null);
-    try {
-      const { error } = await supabase
-        .from('whatsapp_campaigns')
-        .update({ status })
-        .eq('id', selectedCampaignId);
-
-      if (error) {
-        throw error;
-      }
-
-      await loadCampaigns();
-      setFeedbackMessage('Status atualizado.');
-    } catch (err) {
-      console.error('Erro ao atualizar status da campanha:', err);
-      setErrorMessage('Não foi possível atualizar o status da campanha.');
-    }
-  };
-
   const metricsSummary = summarizeTargets(selectedCampaign?.targets);
 
   return (
@@ -613,21 +588,11 @@ export default function WhatsappCampaignsPage() {
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Status
-                      </label>
-                      <select
-                        value={selectedCampaign.status}
-                        onChange={event => void handleStatusChange(event.target.value)}
-                        className="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      >
-                        {Object.keys(STATUS_LABELS).map(status => (
-                          <option key={status} value={status}>
-                            {STATUS_LABELS[status]}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {STATUS_LABELS[selectedCampaign.status] ?? selectedCampaign.status}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-4">

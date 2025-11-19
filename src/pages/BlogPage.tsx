@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
@@ -93,6 +93,20 @@ export default function BlogPage() {
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  const showShareFeedback = (type: 'success' | 'error', message: string) => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
+    }
+
+    setShareFeedback({ type, message });
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setShareFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 3000);
+  };
 
   useEffect(() => {
     if (slug) {
@@ -101,6 +115,12 @@ export default function BlogPage() {
       loadPosts();
     }
   }, [slug]);
+
+  useEffect(() => () => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
+    }
+  }, []);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -186,12 +206,56 @@ export default function BlogPage() {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const copyLink = (post: BlogPost) => {
+  const sharePost = async (post: BlogPost, fallback: 'whatsapp' | 'facebook' | 'linkedin' = 'whatsapp') => {
     const url = `https://kifersaude.com.br/blog/${post.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Link copiado para a área de transferência!');
-    });
+    const shareData = {
+      title: post.title,
+      text: post.excerpt,
+      url
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        showShareFeedback('success', 'Compartilhamento iniciado!');
+        return;
+      } catch (error) {
+        console.error('Erro ao compartilhar com navigator.share', error);
+      }
+    }
+
+    if (fallback === 'facebook') {
+      shareOnFacebook(post);
+    } else if (fallback === 'linkedin') {
+      shareOnLinkedIn(post);
+    } else {
+      shareOnWhatsApp(post);
+    }
   };
+
+  const copyLink = async (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showShareFeedback('success', 'Link copiado para a área de transferência.');
+    } catch (error) {
+      console.error('Erro ao copiar link', error);
+      showShareFeedback('error', 'Não foi possível copiar o link. Tente novamente.');
+    }
+  };
+
+  const feedbackToast = shareFeedback ? (
+    <div
+      className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white transition-opacity ${
+        shareFeedback.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      {shareFeedback.message}
+    </div>
+  ) : null;
 
   const isLoadingPost = Boolean(slug) && loading;
 
@@ -274,6 +338,7 @@ export default function BlogPage() {
         </article>
 
         <BlogFooter />
+        {feedbackToast}
       </div>
     );
   }
@@ -363,7 +428,7 @@ export default function BlogPage() {
             <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-slate-200">
               <span className="text-sm font-semibold text-slate-600">Compartilhar:</span>
               <button
-                onClick={() => shareOnWhatsApp(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'whatsapp')}
                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no WhatsApp"
               >
@@ -371,7 +436,7 @@ export default function BlogPage() {
                 WhatsApp
               </button>
               <button
-                onClick={() => shareOnFacebook(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'facebook')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no Facebook"
               >
@@ -379,7 +444,7 @@ export default function BlogPage() {
                 Facebook
               </button>
               <button
-                onClick={() => shareOnLinkedIn(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'linkedin')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no LinkedIn"
               >
@@ -482,6 +547,7 @@ export default function BlogPage() {
         </article>
 
         <BlogFooter />
+        {feedbackToast}
       </div>
     );
   }
@@ -628,6 +694,7 @@ export default function BlogPage() {
       </div>
 
       <BlogFooter />
+      {feedbackToast}
     </div>
   );
 }

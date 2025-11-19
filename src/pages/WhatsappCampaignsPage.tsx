@@ -6,6 +6,7 @@ import {
   Paperclip,
   Plus,
   RefreshCw,
+  Trash2,
   Users,
 } from 'lucide-react';
 import { supabase, type Lead } from '../lib/supabase';
@@ -286,6 +287,40 @@ export default function WhatsappCampaignsPage() {
       setErrorMessage('Não foi possível atualizar a campanha.');
     }
   }, [campaignEditor, selectedCampaignId, loadCampaigns]);
+
+  const handleDeleteCampaign = useCallback(async () => {
+    if (!selectedCampaignId) {
+      return;
+    }
+
+    const confirmation = window.confirm('Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.');
+    if (!confirmation) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setFeedbackMessage(null);
+    try {
+      await supabase.from('whatsapp_campaign_steps').delete().eq('campaign_id', selectedCampaignId);
+      await supabase.from('whatsapp_campaign_targets').delete().eq('campaign_id', selectedCampaignId);
+
+      const { error } = await supabase.from('whatsapp_campaigns').delete().eq('id', selectedCampaignId);
+
+      if (error) {
+        throw error;
+      }
+
+      setSelectedCampaignId(null);
+      setCampaignEditor(null);
+      setStepsDraft([]);
+      setLeadsPreview([]);
+      await loadCampaigns();
+      setFeedbackMessage('Campanha excluída com sucesso.');
+    } catch (err) {
+      console.error('Erro ao excluir campanha:', err);
+      setErrorMessage('Não foi possível excluir a campanha.');
+    }
+  }, [loadCampaigns, selectedCampaignId]);
 
   const handleAddStep = (stepType: WhatsappCampaignStepType) => {
     setStepsDraft(prev => [
@@ -583,14 +618,23 @@ export default function WhatsappCampaignsPage() {
                       className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     />
                   </div>
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
-                      onClick={handleCampaignInfoSave}
-                      className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                      onClick={handleDeleteCampaign}
+                      className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
                     >
-                      <RefreshCw className="h-4 w-4" /> Salvar informações
+                      <Trash2 className="h-4 w-4" /> Excluir campanha
                     </button>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleCampaignInfoSave}
+                        className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                      >
+                        <RefreshCw className="h-4 w-4" /> Salvar informações
+                      </button>
+                    </div>
                   </div>
                 </section>
 

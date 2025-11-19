@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Check, X } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 
 export default function LeadOriginsManager() {
   const { leadOrigins, refreshLeadOrigins } = useConfig();
@@ -9,6 +10,7 @@ export default function LeadOriginsManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [saving, setSaving] = useState(false);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const handleCreate = async () => {
     if (!newOrigin.trim()) {
@@ -52,7 +54,14 @@ export default function LeadOriginsManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja remover esta origem?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir origem',
+      description: 'Deseja remover esta origem? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     const { error } = await configService.deleteLeadOrigem(id);
     if (error) {
       alert('Erro ao remover origem');
@@ -199,6 +208,7 @@ export default function LeadOriginsManager() {
           </button>
         </div>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

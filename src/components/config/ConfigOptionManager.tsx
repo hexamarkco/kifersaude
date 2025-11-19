@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService, ConfigCategory } from '../../lib/configService';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -14,6 +15,7 @@ export default function ConfigOptionManager({ category, title, description, plac
   const { options, refreshCategory } = useConfig();
   const [newLabel, setNewLabel] = useState('');
   const [saving, setSaving] = useState(false);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const items = options[category] || [];
 
@@ -49,7 +51,14 @@ export default function ConfigOptionManager({ category, title, description, plac
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja remover esta opção?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir opção',
+      description: 'Deseja remover esta opção? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     const { error } = await configService.deleteConfigOption(category, id);
     if (error) {
       alert('Erro ao remover opção');
@@ -143,6 +152,7 @@ export default function ConfigOptionManager({ category, title, description, plac
           </button>
         </div>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

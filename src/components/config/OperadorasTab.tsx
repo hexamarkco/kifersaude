@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building2, Plus, Edit2, Trash2, CheckCircle, AlertCircle, Save, X } from 'lucide-react';
 import { Operadora } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 
 export default function OperadorasTab() {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -18,6 +19,7 @@ export default function OperadorasTab() {
     ativo: true,
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
     loadOperadoras();
@@ -88,7 +90,14 @@ export default function OperadorasTab() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta operadora?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir operadora',
+      description: 'Tem certeza que deseja excluir esta operadora? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     const { error } = await configService.deleteOperadora(id);
     if (error) {
@@ -332,6 +341,7 @@ export default function OperadorasTab() {
           )}
         </div>
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

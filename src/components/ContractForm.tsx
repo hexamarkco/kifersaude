@@ -5,6 +5,7 @@ import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 type ContractFormProps = {
   contract: Contract | null;
@@ -48,6 +49,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [editingAdjustment, setEditingAdjustment] = useState<ContractValueAdjustment | null>(null);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const contractStatusOptions = useMemo(
     () => (options.contract_status || []).filter(option => option.ativo),
     [options.contract_status]
@@ -195,7 +197,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   };
 
   const handleDeleteAdjustment = async (id: string) => {
-    if (!confirm('Deseja remover este ajuste?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Remover ajuste',
+      description: 'Deseja remover este ajuste? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -887,15 +896,16 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
             setShowAdjustmentForm(false);
             setEditingAdjustment(null);
           }}
-          onSave={async () => {
-            setShowAdjustmentForm(false);
-            setEditingAdjustment(null);
+        onSave={async () => {
+          setShowAdjustmentForm(false);
+          setEditingAdjustment(null);
             if (contract?.id) {
               await loadAdjustments(contract.id);
             }
           }}
         />
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

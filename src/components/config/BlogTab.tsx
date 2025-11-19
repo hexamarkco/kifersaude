@@ -3,6 +3,7 @@ import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIc
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadBlogImage } from '../../lib/imageUploadService';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -46,6 +47,7 @@ export default function BlogTab() {
     meta_title: '',
     meta_description: ''
   });
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const modules = useMemo(() => ({
     toolbar: [
@@ -174,7 +176,14 @@ export default function BlogTab() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este post?')) return;
+    const confirmed = await requestConfirmation({
+      title: 'Excluir post',
+      description: 'Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir post',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     const { error } = await supabase
       .from('blog_posts')
@@ -664,6 +673,7 @@ export default function BlogTab() {
           </div>
         )}
       </div>
+      {ConfirmationDialog}
     </div>
   );
 }

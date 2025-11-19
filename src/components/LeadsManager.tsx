@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X, Tag } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X, Tag, Share2 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -166,6 +166,31 @@ export default function LeadsManager({
     () => tipoContratacaoOptions.map((option) => ({ value: option.value, label: option.label })),
     [tipoContratacaoOptions]
   );
+  const tagFilterOptions = useMemo(() => {
+    const uniqueTags = new Set<string>();
+    for (const lead of leads) {
+      if (!Array.isArray(lead.tags)) continue;
+      for (const tag of lead.tags) {
+        if (typeof tag === 'string' && tag.trim() !== '') {
+          uniqueTags.add(tag);
+        }
+      }
+    }
+    return Array.from(uniqueTags)
+      .sort((a, b) => a.localeCompare(b))
+      .map((tag) => ({ value: tag, label: tag }));
+  }, [leads]);
+  const canalFilterOptions = useMemo(() => {
+    const uniqueChannels = new Set<string>();
+    for (const lead of leads) {
+      if (lead.canal && lead.canal.trim() !== '') {
+        uniqueChannels.add(lead.canal);
+      }
+    }
+    return Array.from(uniqueChannels)
+      .sort((a, b) => a.localeCompare(b))
+      .map((canal) => ({ value: canal, label: canal }));
+  }, [leads]);
 
   const syncOverdueLeads = useCallback(
     (allLeads: Lead[], previousOverdue: Lead[] = []) => {

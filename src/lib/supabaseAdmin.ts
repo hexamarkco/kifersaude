@@ -1,4 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+type SupabaseModule = typeof import('@supabase/supabase-js');
+
+const loadSupabaseModule = async (): Promise<SupabaseModule> => {
+  const hasDeno = typeof (globalThis as { Deno?: unknown }).Deno !== 'undefined';
+  if (hasDeno) {
+    const specifier = 'npm:@supabase/supabase-js@2.57.4';
+    return import(specifier) as Promise<SupabaseModule>;
+  }
+
+  return import('@supabase/supabase-js');
+};
+
+const { createClient } = await loadSupabaseModule();
 
 type DenoEnv = { get?: (key: string) => string | undefined };
 

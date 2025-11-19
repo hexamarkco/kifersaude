@@ -4,6 +4,8 @@ import {
   Activity,
   MessageSquare,
   Paperclip,
+  PauseCircle,
+  PlayCircle,
   Plus,
   RefreshCw,
   Trash2,
@@ -145,6 +147,7 @@ export default function WhatsappCampaignsPage() {
   const [stepsLoading, setStepsLoading] = useState(false);
   const [stepsDraft, setStepsDraft] = useState<EditableStep[]>([]);
   const [savingSteps, setSavingSteps] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [leadsPreview, setLeadsPreview] = useState<Lead[]>([]);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>(initialFilter);
   const [leadsLoading, setLeadsLoading] = useState(false);
@@ -317,6 +320,44 @@ export default function WhatsappCampaignsPage() {
       setErrorMessage('Não foi possível atualizar a campanha.');
     }
   }, [campaignEditor, selectedCampaignId, loadCampaigns]);
+
+  const handleCampaignStatusChange = useCallback(
+    async (status: WhatsappCampaignWithRelations['status']) => {
+      if (!selectedCampaignId) {
+        return;
+      }
+
+      setErrorMessage(null);
+      setFeedbackMessage(null);
+      setUpdatingStatus(true);
+
+      try {
+        const { error } = await supabase
+          .from('whatsapp_campaigns')
+          .update({ status })
+          .eq('id', selectedCampaignId);
+
+        if (error) {
+          throw error;
+        }
+
+        await loadCampaigns();
+        setFeedbackMessage(
+          status === 'running'
+            ? 'Campanha iniciada com sucesso.'
+            : status === 'paused'
+              ? 'Campanha pausada com sucesso.'
+              : 'Status atualizado com sucesso.',
+        );
+      } catch (err) {
+        console.error('Erro ao atualizar status da campanha:', err);
+        setErrorMessage('Não foi possível atualizar o status da campanha.');
+      } finally {
+        setUpdatingStatus(false);
+      }
+    },
+    [loadCampaigns, selectedCampaignId],
+  );
 
   const handleDeleteCampaign = useCallback(async () => {
     if (!selectedCampaignId) {
@@ -511,6 +552,8 @@ export default function WhatsappCampaignsPage() {
   };
 
   const metricsSummary = summarizeTargets(selectedCampaign?.targets);
+  const canStartCampaign = selectedCampaign?.status === 'draft' || selectedCampaign?.status === 'paused';
+  const canPauseCampaign = selectedCampaign?.status === 'running';
 
   return (
     <div className="flex h-full w-full flex-col bg-slate-50">
@@ -597,11 +640,36 @@ export default function WhatsappCampaignsPage() {
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       />
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Status</p>
-                      <p className="text-sm font-semibold text-slate-700">
-                        {STATUS_LABELS[selectedCampaign.status] ?? selectedCampaign.status}
-                      </p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                        <p className="text-sm font-semibold text-slate-700">
+                          {STATUS_LABELS[selectedCampaign.status] ?? selectedCampaign.status}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {canPauseCampaign ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCampaignStatusChange('paused')}
+                            disabled={updatingStatus}
+                            className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-300 disabled:opacity-60"
+                          >
+                            <PauseCircle className="h-4 w-4" /> Pausar campanha
+                          </button>
+                        ) : null}
+                        {canStartCampaign ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCampaignStatusChange('running')}
+                            disabled={updatingStatus}
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
+                          >
+                            <PlayCircle className="h-4 w-4" />
+                            {selectedCampaign.status === 'paused' ? 'Retomar campanha' : 'Iniciar campanha'}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                   <div className="mt-4">

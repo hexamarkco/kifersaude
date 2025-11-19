@@ -29,6 +29,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     acomodacao: contract?.acomodacao || '',
     data_inicio: contract?.data_inicio || '',
     data_renovacao: contract?.data_renovacao ? contract.data_renovacao.substring(0, 7) : '',
+    mes_reajuste: contract?.mes_reajuste ? contract.mes_reajuste.substring(0, 7) : '',
     carencia: contract?.carencia || '',
     mensalidade_total: contract?.mensalidade_total?.toString() || '',
     comissao_prevista: contract?.comissao_prevista?.toString() || '',
@@ -246,6 +247,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         acomodacao: formData.acomodacao || null,
         data_inicio: formData.data_inicio || null,
         data_renovacao: formData.data_renovacao ? `${formData.data_renovacao}-01` : null,
+        mes_reajuste: formData.mes_reajuste ? `${formData.mes_reajuste}-01` : null,
         carencia: formData.carencia || null,
         mensalidade_total: formData.mensalidade_total ? parseFloat(formData.mensalidade_total) : null,
         comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
@@ -524,12 +526,25 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Data de Renovação
+                  Fim da fidelidade
                 </label>
                 <input
                   type="month"
                   value={formData.data_renovacao}
                   onChange={(e) => setFormData({ ...formData, data_renovacao: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="MM/AAAA"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Mês de reajuste
+                </label>
+                <input
+                  type="month"
+                  value={formData.mes_reajuste}
+                  onChange={(e) => setFormData({ ...formData, mes_reajuste: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="MM/AAAA"
                 />

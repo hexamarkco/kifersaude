@@ -249,7 +249,8 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
                 <div className="flex flex-wrap gap-2">
-                  {buildDatePill('Renovação', contract.data_renovacao)}
+                  {buildDatePill('Fim da fidelidade', contract.data_renovacao)}
+                  {buildDatePill('Mês de reajuste', contract.mes_reajuste)}
                   {buildDatePill('Prev. comissão', contract.previsao_recebimento_comissao)}
                   {buildDatePill('Prev. bonificação', contract.previsao_pagamento_bonificacao)}
                 </div>

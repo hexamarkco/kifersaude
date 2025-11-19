@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, MessageCirclePlus, Pencil } from 'lucide-react';
 import type { QuickReply } from '../lib/supabase';
 
@@ -67,24 +67,28 @@ export default function QuickRepliesMenu({
   const [actionError, setActionError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isControlled = typeof controlledIsOpen === 'boolean';
   const menuOpen = isControlled ? (controlledIsOpen as boolean) : internalMenuOpen;
 
   const hasReplies = quickReplies.length > 0;
 
-  const resetEditingState = () => {
+  const resetEditingState = useCallback(() => {
     setEditingId(null);
     setDraft(DEFAULT_DRAFT);
     setSavingId(null);
-  };
+  }, []);
 
-  const setMenuOpenState = (nextState: boolean) => {
-    if (!isControlled) {
-      setInternalMenuOpen(nextState);
-    }
-    onOpenChange?.(nextState);
-  };
+  const setMenuOpenState = useCallback(
+    (nextState: boolean) => {
+      if (!isControlled) {
+        setInternalMenuOpen(nextState);
+      }
+      onOpenChange?.(nextState);
+    },
+    [isControlled, onOpenChange],
+  );
 
   const closeMenu = () => {
     if (!menuOpen) {
@@ -193,6 +197,34 @@ export default function QuickRepliesMenu({
     }
   }, [menuOpen, editingId]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target || !containerRef.current) {
+        return;
+      }
+
+      if (containerRef.current.contains(target)) {
+        return;
+      }
+
+      setMenuOpenState(false);
+      setActionError(null);
+      if (editingId) {
+        resetEditingState();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [editingId, menuOpen, resetEditingState, setMenuOpenState]);
+
   const handleDelete = async (id: string) => {
     if (!onDelete) {
       return;
@@ -214,7 +246,7 @@ export default function QuickRepliesMenu({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {renderTrigger ? (
         renderTrigger({
           menuOpen,

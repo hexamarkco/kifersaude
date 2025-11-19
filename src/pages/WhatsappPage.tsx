@@ -1856,6 +1856,10 @@ export default function WhatsappPage({
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [quickRepliesMenuOpen, setQuickRepliesMenuOpen] = useState(false);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
+  const chatActionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const chatActionsToggleRef = useRef<HTMLButtonElement | null>(null);
+  const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
+  const messageActionToggleRef = useRef<HTMLButtonElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -4094,27 +4098,57 @@ export default function WhatsappPage({
   );
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!attachmentMenuRef.current) {
-        return;
-      }
-
-      const target = event.target as Node | null;
-      if (target && attachmentMenuRef.current.contains(target)) {
-        return;
-      }
-
-      setShowAttachmentMenu(false);
-    };
-
-    if (showAttachmentMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (!messageActionsMenuId && !showAttachmentMenu && !showChatActionsMenu) {
+      return;
     }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+    const handleGlobalMenuClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+
+      if (!target) {
+        return;
+      }
+
+      if (messageActionsMenuId) {
+        const clickedInsideMessageMenu =
+          (messageActionMenuRef.current && messageActionMenuRef.current.contains(target)) ||
+          (messageActionToggleRef.current && messageActionToggleRef.current.contains(target));
+
+        if (!clickedInsideMessageMenu) {
+          setMessageActionsMenuId(null);
+        }
+      }
+
+      if (showChatActionsMenu) {
+        const clickedInsideChatMenu =
+          (chatActionsMenuRef.current && chatActionsMenuRef.current.contains(target)) ||
+          (chatActionsToggleRef.current && chatActionsToggleRef.current.contains(target));
+
+        if (!clickedInsideChatMenu) {
+          setShowChatActionsMenu(false);
+        }
+      }
+
+      if (showAttachmentMenu) {
+        const clickedInsideAttachmentMenu =
+          attachmentMenuRef.current && attachmentMenuRef.current.contains(target);
+
+        if (!clickedInsideAttachmentMenu) {
+          setShowAttachmentMenu(false);
+        }
+      }
     };
-  }, [showAttachmentMenu]);
+
+    document.addEventListener('mousedown', handleGlobalMenuClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleGlobalMenuClick);
+    };
+  }, [
+    messageActionsMenuId,
+    showAttachmentMenu,
+    showChatActionsMenu,
+  ]);
 
   useEffect(() => {
     const channel = supabase
@@ -7591,7 +7625,11 @@ export default function WhatsappPage({
                             <div className="relative flex items-center">
                               <button
                                 type="button"
-                                onClick={() => toggleMessageActionsMenu(message.id)}
+                                ref={messageActionMenuOpen ? messageActionToggleRef : undefined}
+                                onClick={event => {
+                                  messageActionToggleRef.current = event.currentTarget;
+                                  toggleMessageActionsMenu(message.id);
+                                }}
                                 aria-haspopup="menu"
                                 aria-expanded={messageActionMenuOpen}
                                 aria-label="Abrir opções da mensagem"
@@ -7606,6 +7644,7 @@ export default function WhatsappPage({
 
                               {messageActionMenuOpen ? (
                                 <div
+                                  ref={messageActionMenuRef}
                                   className="absolute top-full right-0 z-40 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
                                   role="menu"
                                 >
@@ -8102,6 +8141,7 @@ export default function WhatsappPage({
                   <div className="relative">
                     <button
                       type="button"
+                      ref={chatActionsToggleRef}
                       onClick={() => {
                         if (sendingMessage || schedulingMessage || isRecordingAudio) {
                           return;
@@ -8121,6 +8161,7 @@ export default function WhatsappPage({
 
                     {showChatActionsMenu ? (
                       <div
+                        ref={chatActionsMenuRef}
                         className="absolute bottom-full right-0 mb-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
                         role="menu"
                       >

@@ -552,6 +552,19 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return parseDateValue(dateValue);
   });
 
+  const activeLeadStatusNames = useMemo(
+    () => leadStatuses.filter((status) => status.ativo).map((status) => status.nome),
+    [leadStatuses],
+  );
+
+  const activeLeads = useMemo(
+    () =>
+      filteredLeads.filter(
+        (lead) => !lead.arquivado && activeLeadStatusNames.includes(lead.status ?? ''),
+      ),
+    [activeLeadStatusNames, filteredLeads],
+  );
+
   const filteredContracts = filterByPeriod(contractsVisibleToUser, (contract) => {
     return (
       parseDateValue(contract.data_inicio) ||
@@ -560,9 +573,9 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     );
   });
 
-  const totalLeads = filteredLeads.length;
-  const leadsAtivos = filteredLeads.filter(
-    (l) => !l.arquivado && !['Fechado', 'Perdido'].includes(l.status)
+  const totalLeads = activeLeads.length;
+  const leadsAtivos = activeLeads.filter(
+    (lead) => !['Fechado', 'Perdido'].includes(lead.status)
   ).length;
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
@@ -580,9 +593,11 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const ticketMedio =
     contratosAtivos.length > 0 ? mensalidadeTotal / contratosAtivos.length : 0;
 
-  const conversionRate = calculateConversionRate(filteredLeads, filteredContracts);
+  const conversionRate = calculateConversionRate(activeLeads, filteredContracts);
 
-  const leadStatusData = getLeadStatusDistribution(filteredLeads.filter(l => !l.arquivado && !['Fechado', 'Perdido'].includes(l.status)));
+  const leadStatusData = getLeadStatusDistribution(
+    activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status)),
+  );
   const operadoraData = getOperadoraDistribution(filteredContracts);
   const upcomingRenewals = getContractsToRenew(activeContracts, 30);
 
@@ -868,7 +883,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         )}
       </div>
 
-      <LeadFunnel leads={filteredLeads} />
+      <LeadFunnel leads={activeLeads} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">

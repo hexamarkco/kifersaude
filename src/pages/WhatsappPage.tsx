@@ -108,6 +108,7 @@ const DELETED_MESSAGE_PLACEHOLDER = '🗑️ Mensagem apagada para todos';
 
 const CUSTOM_WALLPAPER_ID = 'custom-upload';
 const CUSTOM_WALLPAPER_STORAGE_KEY = 'whatsappCustomWallpaper';
+const AUTO_UNARCHIVE_STORAGE_KEY = 'whatsappAutoUnarchiveArchivedChats';
 
 const CHAT_WALLPAPERS: WhatsappWallpaperOption[] = [
   {
@@ -1784,8 +1785,17 @@ export default function WhatsappPage({
 
   const [chats, setChats] = useState<WhatsappChat[]>([]);
   const chatsRef = useRef<WhatsappChat[]>([]);
+  const chatActionLoadingRef = useRef<Record<string, boolean>>({});
   const [chatsLoading, setChatsLoading] = useState(false);
   const [showArchivedChats, setShowArchivedChats] = useState(false);
+  const [autoUnarchiveArchivedChats, setAutoUnarchiveArchivedChats] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+
+    const storedValue = window.localStorage.getItem(AUTO_UNARCHIVE_STORAGE_KEY);
+    return storedValue === null ? true : storedValue === 'true';
+  });
   const [messages, setMessages] = useState<OptimisticMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -1907,6 +1917,21 @@ export default function WhatsappPage({
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
+
+  useEffect(() => {
+    chatActionLoadingRef.current = chatActionLoading;
+  }, [chatActionLoading]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(
+      AUTO_UNARCHIVE_STORAGE_KEY,
+      autoUnarchiveArchivedChats ? 'true' : 'false',
+    );
+  }, [autoUnarchiveArchivedChats]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -3474,7 +3499,7 @@ export default function WhatsappPage({
           chatId: params?.chatId,
           status: params?.status,
         });
-        setSlaAlerts(alerts);
+        setSlaAlerts(Array.isArray(alerts) ? alerts : []);
       } catch (error) {
         console.error('Erro ao carregar alertas de SLA:', error);
         setSlaAlertsError('Não foi possível carregar os alertas de SLA.');
@@ -4177,12 +4202,24 @@ export default function WhatsappPage({
             void loadChats();
           }
 
-          if (
-            payload.eventType === 'INSERT' &&
-            !resolvedMessage.from_me &&
-            resolvedMessage.chat_id !== selectedChatIdRef.current
-          ) {
+          const isIncomingInsert =
+            payload.eventType === 'INSERT' && !resolvedMessage.from_me;
+
+          if (isIncomingInsert && resolvedMessage.chat_id !== selectedChatIdRef.current) {
             incrementUnread(resolvedMessage.chat_id);
+          }
+
+          if (isIncomingInsert && autoUnarchiveArchivedChats) {
+            const chatToAutoUnarchive = chatsRef.current.find(
+              chat => chat.id === resolvedChatId,
+            );
+
+            if (
+              chatToAutoUnarchive?.is_archived &&
+              !chatActionLoadingRef.current[resolvedChatId]
+            ) {
+              void handleArchiveStatusChange(chatToAutoUnarchive, false);
+            }
           }
         },
       )
@@ -4221,7 +4258,12 @@ export default function WhatsappPage({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [incrementUnread, loadChats]);
+  }, [
+    autoUnarchiveArchivedChats,
+    handleArchiveStatusChange,
+    incrementUnread,
+    loadChats,
+  ]);
 
   useEffect(() => {
     setMessages([]);
@@ -8908,6 +8950,8 @@ export default function WhatsappPage({
                       onCustomWallpaperUpload={handleCustomWallpaperUpload}
                       onCustomWallpaperRemove={handleRemoveCustomWallpaper}
                       customWallpaper={customWallpaper}
+                      autoUnarchiveArchivedChats={autoUnarchiveArchivedChats}
+                      onAutoUnarchiveChange={setAutoUnarchiveArchivedChats}
                     />
                   </div>
                 </div>

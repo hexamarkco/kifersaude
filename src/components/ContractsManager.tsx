@@ -10,6 +10,7 @@ import Pagination from './Pagination';
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
   onConvertComplete?: () => void;
+  initialOperadoraFilter?: string;
 };
 
 type ContractHolder = {
@@ -21,7 +22,11 @@ type ContractHolder = {
   cnpj?: string;
 };
 
-export default function ContractsManager({ leadToConvert, onConvertComplete }: ContractsManagerProps) {
+export default function ContractsManager({
+  leadToConvert,
+  onConvertComplete,
+  initialOperadoraFilter,
+}: ContractsManagerProps) {
   const { isObserver } = useAuth();
   const { options } = useConfig();
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -37,6 +42,10 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const operadoraOptions = useMemo(
+    () => Array.from(new Set(contracts.map((contract) => contract.operadora).filter(Boolean))).sort(),
+    [contracts],
+  );
 
   const responsavelOptions = useMemo(
     () => (options.lead_responsavel || []).filter(option => option.ativo),
@@ -104,6 +113,14 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       setShowForm(true);
     }
   }, [leadToConvert]);
+
+  useEffect(() => {
+    if (initialOperadoraFilter) {
+      setFilterOperadora(initialOperadoraFilter);
+    } else if (initialOperadoraFilter === undefined) {
+      setFilterOperadora('todas');
+    }
+  }, [initialOperadoraFilter]);
 
   const loadContracts = async () => {
     setLoading(true);
@@ -305,7 +322,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -358,6 +375,20 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
             >
               <option value="todos">Todas as datas</option>
               <option value="proximos-30">Próximos 30 dias</option>
+            </select>
+          </div>
+          <div className="relative">
+            <select
+              value={filterOperadora}
+              onChange={(e) => setFilterOperadora(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
+            >
+              <option value="todas">Todas as operadoras</option>
+              {operadoraOptions.map((operadora) => (
+                <option key={operadora} value={operadora}>
+                  {operadora}
+                </option>
+              ))}
             </select>
           </div>
           <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">

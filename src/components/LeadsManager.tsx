@@ -20,6 +20,7 @@ import { getOverdueLeads } from '../lib/analytics';
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
+  initialStatusFilter?: string[];
 };
 
 type StatusReminderRule = {
@@ -53,7 +54,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter || []);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
@@ -263,6 +264,17 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     filterProximoRetornoTo,
     itemsPerPage,
   ]);
+
+  useEffect(() => {
+    if (initialStatusFilter && initialStatusFilter.length > 0) {
+      setFilterStatus(initialStatusFilter);
+      return;
+    }
+
+    if (initialStatusFilter !== undefined) {
+      setFilterStatus([]);
+    }
+  }, [initialStatusFilter]);
 
   useEffect(() => {
     setFilterStatus((current) => {

@@ -8,9 +8,10 @@ type DonutChartProps = {
   }>;
   size?: number;
   strokeWidth?: number;
+  onSegmentClick?: (label: string) => void;
 };
 
-export default function DonutChart({ data, size = 200, strokeWidth = 30 }: DonutChartProps) {
+export default function DonutChart({ data, size = 200, strokeWidth = 30, onSegmentClick }: DonutChartProps) {
   const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
 
   const radius = (size - strokeWidth) / 2;
@@ -76,7 +77,9 @@ export default function DonutChart({ data, size = 200, strokeWidth = 30 }: Donut
               transform: `rotate(${segment.rotation}deg)`,
               transformOrigin: 'center',
               transition: 'stroke-dasharray 0.3s ease',
+              cursor: onSegmentClick ? 'pointer' : 'default',
             }}
+            onClick={() => onSegmentClick?.(segment.label)}
           />
         ))}
         <text
@@ -92,7 +95,12 @@ export default function DonutChart({ data, size = 200, strokeWidth = 30 }: Donut
       </svg>
       <div className="mt-4 grid grid-cols-2 gap-3 w-full">
         {segments.map((segment, index) => (
-          <div key={index} className="flex items-center space-x-2">
+          <button
+            key={index}
+            type="button"
+            className="flex items-center space-x-2 text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 rounded"
+            onClick={() => onSegmentClick?.(segment.label)}
+          >
             <div
               className="w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: segment.color }}
@@ -103,7 +111,7 @@ export default function DonutChart({ data, size = 200, strokeWidth = 30 }: Donut
                 {segment.value} ({segment.percentage.toFixed(0)}%)
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

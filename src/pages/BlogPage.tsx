@@ -92,6 +92,8 @@ export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
@@ -124,20 +126,30 @@ export default function BlogPage() {
 
   const loadPosts = async () => {
     setLoading(true);
+    setError(null);
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
       .eq('published', true)
       .order('published_at', { ascending: false });
 
+    if (error) {
+      console.error('Erro ao carregar artigos do blog', error);
+      setError('Não foi possível carregar os artigos no momento.');
+    }
+
     if (!error && data) {
       setPosts(data);
     }
     setLoading(false);
+    setIsRetrying(false);
   };
 
   const loadPostBySlug = async (postSlug: string) => {
     setLoading(true);
+    setError(null);
+    setSelectedPost(null);
+    setRelatedPosts([]);
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
@@ -145,12 +157,18 @@ export default function BlogPage() {
       .eq('published', true)
       .maybeSingle();
 
+    if (error) {
+      console.error('Erro ao carregar artigo pelo slug', error);
+      setError('Não foi possível carregar este artigo no momento.');
+    }
+
     if (!error && data) {
       setSelectedPost(data);
       incrementViewCount(data.id);
       loadRelatedPosts(data.category, data.id);
     }
     setLoading(false);
+    setIsRetrying(false);
   };
 
   const incrementViewCount = async (postId: string) => {
@@ -339,6 +357,45 @@ export default function BlogPage() {
 
         <BlogFooter />
         {feedbackToast}
+      </div>
+    );
+  }
+
+  if (error && slug) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/blog')}
+                className="flex items-center text-slate-600 hover:text-orange-600 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Voltar para o blog
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-slate-900">Kifer Saúde</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center space-y-6">
+          <h1 className="text-3xl font-bold text-slate-900">Ops! Não foi possível carregar o artigo</h1>
+          <p className="text-lg text-slate-600">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+
+        <BlogFooter />
       </div>
     );
   }
@@ -591,7 +648,7 @@ export default function BlogPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 justify-center mb-12">
-          {loading
+          {loading || isRetrying
             ? Array.from({ length: 6 }).map((_, index) => (
                 <Skeleton key={index} variant="line" className="h-11 w-28" />
               ))
@@ -610,7 +667,18 @@ export default function BlogPage() {
               ))}
         </div>
 
-        {loading ? (
+        {error ? (
+          <div className="max-w-3xl mx-auto text-center bg-white rounded-2xl shadow-sm p-8 space-y-4">
+            <h2 className="text-2xl font-bold text-slate-900">Ops! Algo deu errado</h2>
+            <p className="text-slate-600">{error}</p>
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : loading || isRetrying ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Array.from({ length: 6 }).map((_, index) => (
               <article key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>

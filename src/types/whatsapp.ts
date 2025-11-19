@@ -6,6 +6,11 @@ export type WhatsappChatLeadSummary = {
   responsavel: string | null;
   ultimo_contato?: string | null;
   proximo_retorno?: string | null;
+  origem?: string | null;
+  tipo_contratacao?: string | null;
+  data_criacao?: string | null;
+  created_at?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type WhatsappChatContractSummary = {
@@ -21,6 +26,7 @@ export type WhatsappChatContractSummary = {
   responsavel: string | null;
   previsao_recebimento_comissao: string | null;
   previsao_pagamento_bonificacao: string | null;
+  created_at?: string | null;
 };
 
 export type WhatsappChatFinancialSummary = {

@@ -353,6 +353,42 @@ const truncateQuickReplyPreview = (text: string, limit = 80) => {
   return `${text.slice(0, limit - 3)}...`;
 };
 
+const QUICK_REPLY_VARIABLE_REGEX = /{{\s*([\w.]+)\s*}}/g;
+
+const resolveQuickReplyGreeting = (value: Date) => {
+  const hour = value.getHours();
+  if (hour < 12) {
+    return 'Bom dia';
+  }
+
+  if (hour < 18) {
+    return 'Boa tarde';
+  }
+
+  return 'Boa noite';
+};
+
+const formatDateForQuickReply = (value: string | null | undefined) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleDateString('pt-BR');
+};
+
+const formatCurrencyForQuickReply = (value: number | null | undefined) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '';
+  }
+
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
 const CHAT_PREVIEW_FALLBACK_TEXT = 'Sem mensagens recentes';
 
 type ChatPreviewInfo = {
@@ -2553,6 +2589,66 @@ export default function WhatsappPage({
     [sortQuickReplies],
   );
 
+  const resolveQuickReplyText = useCallback(
+    (text: string) => {
+      if (!text || !text.includes('{{')) {
+        return text;
+      }
+
+      const now = new Date();
+      const greeting = resolveQuickReplyGreeting(now);
+      const lead = selectedChatLead;
+      const contract = selectedChatContracts[0] ?? null;
+      const leadName = lead?.nome_completo?.trim() ?? '';
+      const firstName = leadName.split(' ')[0] ?? '';
+      const leadDataCadastro = lead?.data_criacao ?? lead?.created_at ?? null;
+      const leadMetadata = (lead as { metadata?: Record<string, unknown> | null } | null)?.metadata ?? null;
+
+      const replacements: Record<string, string> = {
+        saudacao: greeting,
+        greeting,
+        nome: leadName,
+        lead_nome: leadName,
+        primeiro_nome: firstName,
+        lead_primeiro_nome: firstName,
+        telefone: selectedChat?.phone ?? '',
+        lead_status: lead?.status ?? '',
+        lead_origem: lead?.origem ?? '',
+        lead_tipo_contratacao: lead?.tipo_contratacao ?? '',
+        lead_responsavel: lead?.responsavel ?? '',
+        lead_data_cadastro: formatDateForQuickReply(leadDataCadastro),
+        campanha_nome: '',
+        data_envio: formatDateForQuickReply(now.toISOString()),
+        hora_envio: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        contrato_codigo: contract?.codigo_contrato ?? '',
+        contrato_status: contract?.status ?? '',
+        contrato_modalidade: contract?.modalidade ?? '',
+        contrato_operadora: contract?.operadora ?? '',
+        contrato_plano: contract?.produto_plano ?? '',
+        contrato_mensalidade: formatCurrencyForQuickReply(contract?.mensalidade_total),
+        contrato_criado_em: formatDateForQuickReply(contract?.created_at ?? null),
+      };
+
+      if (leadMetadata && typeof leadMetadata === 'object') {
+        Object.entries(leadMetadata).forEach(([key, value]) => {
+          if (value === null || typeof value === 'undefined') {
+            return;
+          }
+
+          if (['string', 'number', 'boolean'].includes(typeof value)) {
+            replacements[`meta_${key}`] = String(value);
+          }
+        });
+      }
+
+      return text.replace(QUICK_REPLY_VARIABLE_REGEX, (_, rawKey) => {
+        const key = String(rawKey || '').toLowerCase();
+        return key in replacements ? replacements[key] : '';
+      });
+    },
+    [selectedChat, selectedChatContracts, selectedChatLead],
+  );
+
   const handleUpdateQuickReply = useCallback(
     async (id: string, { title, text }: { title: string; text: string }) => {
       const trimmedTitle = title.trim();
@@ -2581,7 +2677,7 @@ export default function WhatsappPage({
           );
 
           if (selectedQuickReplyId === id) {
-            setMessageInput(updated.text);
+            setMessageInput(resolveQuickReplyText(updated.text));
           }
         }
       } catch (updateError) {
@@ -2590,13 +2686,13 @@ export default function WhatsappPage({
         throw updateError;
       }
     },
-    [selectedQuickReplyId, sortQuickReplies],
+    [resolveQuickReplyText, selectedQuickReplyId, sortQuickReplies],
   );
 
   const handleQuickReplySelect = useCallback((reply: QuickReply) => {
     setSelectedQuickReplyId(reply.id);
-    setMessageInput(reply.text);
-  }, []);
+    setMessageInput(resolveQuickReplyText(reply.text));
+  }, [resolveQuickReplyText]);
 
   const applySlashQuickReply = useCallback(
     (reply: QuickReply) => {
@@ -2607,7 +2703,7 @@ export default function WhatsappPage({
       setMessageInput(previous => {
         const before = previous.slice(0, slashCommandState.start);
         const after = previous.slice(slashCommandState.end);
-        const inserted = reply.text;
+        const inserted = resolveQuickReplyText(reply.text);
         const nextValue = `${before}${inserted}${after}`;
         const caretPosition = before.length + inserted.length;
 
@@ -2632,7 +2728,7 @@ export default function WhatsappPage({
       setSlashSuggestionIndex(0);
       setSelectedQuickReplyId(null);
     },
-    [messageInputRef, slashCommandState],
+    [messageInputRef, resolveQuickReplyText, slashCommandState],
   );
 
   const handleMessageInputKeyDown = useCallback(
@@ -8183,8 +8279,8 @@ export default function WhatsappPage({
                               <MessageCirclePlus className="h-4 w-4" />
                             </span>
                             <span>
-                              <span className="block font-medium">Respostas rápidas</span>
-                              <span className="block text-xs text-slate-500">Use mensagens salvas nos atendimentos</span>
+                              <span className="block font-medium">Mensagens rápidas</span>
+                              <span className="block text-xs text-slate-500">Use templates salvos com variáveis personalizadas</span>
                             </span>
                           </button>
                           <button
@@ -8395,7 +8491,7 @@ export default function WhatsappPage({
                     {slashCommandState ? (
                       <div className="absolute bottom-full left-0 z-10 mb-2 w-72 max-w-full rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
                         <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          <span>Respostas rápidas</span>
+                          <span>Mensagens rápidas</span>
                           <span className="text-slate-400">/{slashCommandState.query || 'todas'}</span>
                         </div>
                         {slashCommandSuggestions.length > 0 ? (

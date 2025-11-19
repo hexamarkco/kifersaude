@@ -182,6 +182,22 @@ export default function LeadsManager({
     []
   );
 
+  const resetFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterStatus(initialStatusFilter);
+    setFilterResponsavel([]);
+    setFilterOrigem([]);
+    setFilterTipoContratacao([]);
+    setFilterTags([]);
+    setFilterCanais([]);
+    setFilterCreatedFrom('');
+    setFilterCreatedTo('');
+    setFilterUltimoContatoFrom('');
+    setFilterUltimoContatoTo('');
+    setFilterProximoRetornoFrom('');
+    setFilterProximoRetornoTo('');
+  }, [initialStatusFilter]);
+
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {

@@ -36,6 +36,7 @@ export default function ContractsManager({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterResponsavel, setFilterResponsavel] = useState('todos');
+  const [filterOperadora, setFilterOperadora] = useState('todas');
   const [dateProximityFilter, setDateProximityFilter] = useState<'todos' | 'proximos-30'>('todos');
   const [showForm, setShowForm] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -106,7 +107,7 @@ export default function ContractsManager({
   useEffect(() => {
     filterContracts();
     setCurrentPage(1);
-  }, [contracts, searchTerm, filterStatus, filterResponsavel, dateProximityFilter]);
+  }, [contracts, searchTerm, filterStatus, filterResponsavel, filterOperadora, dateProximityFilter]);
 
   useEffect(() => {
     if (leadToConvert) {
@@ -169,6 +170,10 @@ export default function ContractsManager({
 
     if (filterResponsavel !== 'todos') {
       filtered = filtered.filter(contract => contract.responsavel === filterResponsavel);
+    }
+
+    if (filterOperadora !== 'todas') {
+      filtered = filtered.filter(contract => contract.operadora === filterOperadora);
     }
 
     if (dateProximityFilter === 'proximos-30') {

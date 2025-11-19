@@ -447,6 +447,18 @@ const normalizePhoneForComparison = (value: string | null | undefined): string =
   return withoutSuffix.replace(/\D+/g, '');
 };
 
+const normalizeLeadStatus = (status: string | null | undefined): string => {
+  if (!status) {
+    return '';
+  }
+
+  return removeDiacritics(status.toLowerCase().trim());
+};
+
+const isLeadStatusNovo = (status: string | null | undefined): boolean => {
+  return normalizeLeadStatus(status) === 'novo';
+};
+
 const CONTACTS_PAGE_SIZE = 50;
 
 const sortContactsList = (list: WhatsappContactListEntry[]): WhatsappContactListEntry[] => {
@@ -1858,6 +1870,7 @@ export default function WhatsappPage({
   const [leadsLoaded, setLeadsLoaded] = useState(false);
   const [leadsError, setLeadsError] = useState<string | null>(null);
   const [leadSearchTerm, setLeadSearchTerm] = useState('');
+  const [leadStatusQuickFilter, setLeadStatusQuickFilter] = useState<'all' | 'novo'>('all');
   const [manualPhoneInput, setManualPhoneInput] = useState('');
   const [startingConversation, setStartingConversation] = useState(false);
   const [newChatError, setNewChatError] = useState<string | null>(null);
@@ -3207,6 +3220,7 @@ export default function WhatsappPage({
       setNewChatError(null);
       setContactSearchTerm('');
       setLeadSearchTerm('');
+      setLeadStatusQuickFilter('all');
       setManualPhoneInput('');
       setNewChatTab('contacts');
       return;
@@ -3310,16 +3324,31 @@ export default function WhatsappPage({
   const contactPageStartIndex = (currentContactPage - 1) * CONTACTS_PAGE_SIZE;
   const contactPageEndIndex = contactPageStartIndex + paginatedContacts.length;
 
+  const newLeadsCount = useMemo(
+    () => leads.filter(lead => isLeadStatusNovo(lead.status)).length,
+    [leads],
+  );
+  const hasNewLeads = newLeadsCount > 0;
+  const isFilteringNewLeads = leadStatusQuickFilter === 'novo';
+
+  const statusFilteredLeads = useMemo(() => {
+    if (leadStatusQuickFilter === 'novo') {
+      return leads.filter(lead => isLeadStatusNovo(lead.status));
+    }
+
+    return leads;
+  }, [leadStatusQuickFilter, leads]);
+
   const filteredLeads = useMemo(() => {
     if (!leadSearchTerm.trim()) {
-      return leads;
+      return statusFilteredLeads;
     }
 
     const normalizedTerm = removeDiacritics(leadSearchTerm.trim().toLowerCase());
     const digitsTerm = leadSearchTerm.replace(/\D+/g, '');
     const rawTermLower = leadSearchTerm.trim().toLowerCase();
 
-    return leads.filter(lead => {
+    return statusFilteredLeads.filter(lead => {
       const nameText = lead.nome_completo ? removeDiacritics(lead.nome_completo.toLowerCase()) : '';
       const statusText = lead.status ? removeDiacritics(lead.status.toLowerCase()) : '';
       const responsavelText = lead.responsavel
@@ -3336,7 +3365,7 @@ export default function WhatsappPage({
         (digitsTerm ? normalizedPhone.includes(digitsTerm) : false)
       );
     });
-  }, [leads, leadSearchTerm]);
+  }, [leadSearchTerm, statusFilteredLeads]);
 
   const scheduleSummaryRows = useMemo(() => scheduleSummary.slice(0, 8), [scheduleSummary]);
   const agendaSummaryDisplayRows = useMemo(
@@ -4433,6 +4462,15 @@ export default function WhatsappPage({
     },
     [handleStartConversation, manualPhoneInput, startingConversation],
   );
+
+  const handleOpenNewLeadShortcut = useCallback(() => {
+    setLeadSearchTerm('');
+    setContactSearchTerm('');
+    setManualPhoneInput('');
+    setLeadStatusQuickFilter('novo');
+    setNewChatTab('leads');
+    setShowNewChatModal(true);
+  }, []);
 
   useEffect(() => {
     if (!initialChatPhone) {
@@ -6981,6 +7019,21 @@ export default function WhatsappPage({
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={handleOpenNewLeadShortcut}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Abrir atalho de leads com status Novo"
+                title={'Leads com status "Novo"'}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="whitespace-nowrap">Leads "Novo"</span>
+                {newLeadsCount > 0 ? (
+                  <span className="inline-flex min-w-[1.5rem] justify-center rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-emerald-700 shadow-sm">
+                    {newLeadsCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowNewChatModal(true)}
                 className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-2 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={sendingMessage}
@@ -8687,13 +8740,57 @@ export default function WhatsappPage({
                       autoComplete="off"
                     />
                   </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Atalhos de status
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLeadStatusQuickFilter('all')}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
+                          leadStatusQuickFilter === 'all'
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-600'
+                        }`}
+                        aria-pressed={leadStatusQuickFilter === 'all'}
+                      >
+                        <MessageCirclePlus className="h-3.5 w-3.5" />
+                        Todos os leads
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLeadStatusQuickFilter('novo')}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
+                          leadStatusQuickFilter === 'novo'
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-600'
+                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                        aria-pressed={leadStatusQuickFilter === 'novo'}
+                        disabled={!hasNewLeads}
+                        title={hasNewLeads ? 'Ver somente leads com status "Novo"' : 'Nenhum lead com status "Novo" disponível'}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Status "Novo"
+                        <span
+                          className={`inline-flex min-w-[1.5rem] justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                            hasNewLeads ? 'bg-white/80 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {newLeadsCount}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                   {leadsLoading && leads.length === 0 ? (
                     <p className="text-sm text-slate-500">Carregando leads do CRM...</p>
                   ) : leads.length === 0 ? (
                     <p className="text-sm text-slate-500">Nenhum lead disponível para iniciar conversa.</p>
                   ) : filteredLeads.length === 0 ? (
                     <p className="text-sm text-slate-500">
-                      Nenhum lead corresponde à sua pesquisa.
+                      {isFilteringNewLeads
+                        ? 'Nenhum lead com status "Novo" corresponde à sua pesquisa.'
+                        : 'Nenhum lead corresponde à sua pesquisa.'}
                     </p>
                   ) : (
                     <div className="space-y-2">

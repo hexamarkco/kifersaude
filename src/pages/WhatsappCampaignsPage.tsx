@@ -19,6 +19,7 @@ import type {
   WhatsappCampaignStepConfig,
   WhatsappCampaignStepType,
   WhatsappCampaignTarget,
+  WhatsappCampaignTargetStatus,
   WhatsappCampaignWithRelations,
 } from '../types/whatsappCampaigns';
 
@@ -139,6 +140,13 @@ const summarizeTargets = (targets: WhatsappCampaignTarget[] | undefined): Whatsa
 
   return summary;
 };
+
+const REMOVABLE_TARGET_STATUSES: WhatsappCampaignTargetStatus[] = [
+  'pending',
+  'in_progress',
+  'waiting',
+  'paused',
+];
 
 export default function WhatsappCampaignsPage() {
   const [campaigns, setCampaigns] = useState<WhatsappCampaignWithRelations[]>([]);
@@ -513,7 +521,7 @@ export default function WhatsappCampaignsPage() {
   };
 
   const handleSyncAudience = async () => {
-    if (!selectedCampaignId || leadsPreview.length === 0) {
+    if (!selectedCampaignId) {
       return;
     }
 
@@ -530,20 +538,48 @@ export default function WhatsappCampaignsPage() {
           status: 'pending',
         }));
 
-      if (payload.length === 0) {
-        setErrorMessage('Nenhum lead com telefone válido para adicionar.');
+      const leadIds = new Set(payload.map(entry => entry.lead_id));
+      const targetsToRemove = (selectedCampaign?.targets ?? []).filter(
+        target =>
+          REMOVABLE_TARGET_STATUSES.includes(target.status) &&
+          (!target.lead_id || !leadIds.has(target.lead_id)),
+      );
+
+      if (payload.length === 0 && targetsToRemove.length === 0) {
+        setErrorMessage('Nenhum lead com telefone válido para sincronizar ou remover.');
         return;
       }
 
-      const { error } = await supabase
-        .from('whatsapp_campaign_targets')
-        .upsert(payload, { onConflict: 'campaign_id,lead_id' });
+      if (targetsToRemove.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('whatsapp_campaign_targets')
+          .delete()
+          .in('id', targetsToRemove.map(target => target.id));
 
-      if (error) {
-        throw error;
+        if (deleteError) {
+          throw deleteError;
+        }
       }
 
-      setFeedbackMessage('Público atualizado com sucesso.');
+      if (payload.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('whatsapp_campaign_targets')
+          .upsert(payload, { onConflict: 'campaign_id,lead_id' });
+
+        if (upsertError) {
+          throw upsertError;
+        }
+      }
+
+      const feedbackParts = [] as string[];
+      if (payload.length > 0) {
+        feedbackParts.push('público sincronizado');
+      }
+      if (targetsToRemove.length > 0) {
+        feedbackParts.push('fila atualizada');
+      }
+
+      setFeedbackMessage(`Público ${feedbackParts.join(' e ')} com sucesso.`);
       await loadCampaigns();
     } catch (err) {
       console.error('Erro ao atualizar público:', err);
@@ -552,6 +588,13 @@ export default function WhatsappCampaignsPage() {
   };
 
   const metricsSummary = summarizeTargets(selectedCampaign?.targets);
+  const hasQueuedTargets = useMemo(
+    () =>
+      (selectedCampaign?.targets ?? []).some(target =>
+        REMOVABLE_TARGET_STATUSES.includes(target.status),
+      ),
+    [selectedCampaign],
+  );
   const canStartCampaign = selectedCampaign?.status === 'draft' || selectedCampaign?.status === 'paused';
   const canPauseCampaign = selectedCampaign?.status === 'running';
 
@@ -1101,7 +1144,7 @@ export default function WhatsappCampaignsPage() {
                     <button
                       type="button"
                       onClick={handleSyncAudience}
-                      disabled={leadsPreview.length === 0}
+                      disabled={!hasQueuedTargets && leadsPreview.length === 0}
                       className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
                     >
                       Sincronizar público
@@ -1111,7 +1154,10 @@ export default function WhatsappCampaignsPage() {
                     {leadsLoading ? (
                       <p className="text-sm text-slate-500">Carregando leads...</p>
                     ) : leadsPreview.length === 0 ? (
-                      <p className="text-sm text-slate-400">Nenhum lead selecionado.</p>
+                      <p className="text-sm text-slate-400">
+                        Nenhum lead selecionado.
+                        {hasQueuedTargets ? ' Clique em sincronizar para remover o público atual da fila.' : ''}
+                      </p>
                     ) : (
                       <ul className="space-y-2">
                         {leadsPreview.map(lead => (

@@ -58,17 +58,12 @@ const MEDIA_ENDPOINT_MAP: Record<string, string> = {
 const getIsoString = (value: Date) => value.toISOString();
 
 export class WhatsappCampaignService {
-  private stepCache = new Map<string, WhatsappCampaignStep[]>();
   private leadCache = new Map<string, LeadSummary | null>();
   private leadContractCache = new Map<string, LeadContractSummary | null>();
 
   constructor(private readonly defaultFetch: typeof fetch = fetch) {}
 
   private async loadSteps(campaignId: string): Promise<WhatsappCampaignStep[]> {
-    if (this.stepCache.has(campaignId)) {
-      return this.stepCache.get(campaignId)!;
-    }
-
     const { data, error } = await supabaseAdmin
       .from('whatsapp_campaign_steps')
       .select('*')
@@ -80,7 +75,6 @@ export class WhatsappCampaignService {
     }
 
     const steps = (data ?? []) as WhatsappCampaignStep[];
-    this.stepCache.set(campaignId, steps);
     return steps;
   }
 

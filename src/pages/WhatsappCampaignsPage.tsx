@@ -39,8 +39,8 @@ type EditableStep = {
 };
 
 type AudienceFilter = {
-  status: string;
-  responsavel: string;
+  status: string[];
+  responsavel: string[];
   startDate: string;
   endDate: string;
   excludeToday: boolean;
@@ -69,8 +69,8 @@ const defaultStepConfig: Record<WhatsappCampaignStepType, WhatsappCampaignStepCo
 };
 
 const initialFilter: AudienceFilter = {
-  status: '',
-  responsavel: '',
+  status: [],
+  responsavel: [],
   startDate: '',
   endDate: '',
   excludeToday: false,
@@ -470,11 +470,11 @@ export default function WhatsappCampaignsPage() {
 
     try {
       let query = supabase.from('leads').select('*').eq('arquivado', false).limit(100);
-      if (audienceFilter.status) {
-        query = query.eq('status', audienceFilter.status);
+      if (audienceFilter.status.length > 0) {
+        query = query.in('status', audienceFilter.status);
       }
-      if (audienceFilter.responsavel) {
-        query = query.eq('responsavel', audienceFilter.responsavel);
+      if (audienceFilter.responsavel.length > 0) {
+        query = query.in('responsavel', audienceFilter.responsavel);
       }
       if (audienceFilter.excludeToday) {
         const today = new Date();
@@ -996,36 +996,48 @@ export default function WhatsappCampaignsPage() {
                     <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
                       Status do lead
                       <select
+                        multiple
                         value={audienceFilter.status}
                         onChange={event =>
-                          setAudienceFilter(previous => ({ ...previous, status: event.target.value }))
+                          setAudienceFilter(previous => ({
+                            ...previous,
+                            status: Array.from(event.target.selectedOptions, option => option.value),
+                          }))
                         }
                         className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       >
-                        <option value="">Todos</option>
                         {availableStatuses.map(status => (
                           <option key={status} value={status}>
                             {status}
                           </option>
                         ))}
                       </select>
+                      <span className="text-[11px] font-normal text-slate-400">
+                        Selecione um ou mais status para definir o público.
+                      </span>
                     </label>
                     <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
                       Responsável
                       <select
+                        multiple
                         value={audienceFilter.responsavel}
                         onChange={event =>
-                          setAudienceFilter(previous => ({ ...previous, responsavel: event.target.value }))
+                          setAudienceFilter(previous => ({
+                            ...previous,
+                            responsavel: Array.from(event.target.selectedOptions, option => option.value),
+                          }))
                         }
                         className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       >
-                        <option value="">Todos</option>
                         {availableOwners.map(owner => (
                           <option key={owner} value={owner}>
                             {owner}
                           </option>
                         ))}
                       </select>
+                      <span className="text-[11px] font-normal text-slate-400">
+                        Combine um ou mais responsáveis para montar o público.
+                      </span>
                     </label>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:col-span-2">
                       <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">

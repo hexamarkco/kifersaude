@@ -32,6 +32,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
+import type { TabNavigationOptions } from '../types/navigation';
 
 type TabConfig = {
   id: string;
@@ -45,7 +46,7 @@ type TabConfig = {
 type LayoutProps = {
   children: ReactNode;
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (tab: string, options?: TabNavigationOptions) => void;
   unreadReminders: number;
   hasActiveNotification?: boolean;
   newLeadsCount?: number;

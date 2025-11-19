@@ -11,6 +11,7 @@ import { notificationService } from './lib/notificationService';
 import { audioService } from './lib/audioService';
 import { useAuth } from './contexts/AuthContext';
 import { useConfig } from './contexts/ConfigContext';
+import type { TabNavigationOptions } from './types/navigation';
 
 function App() {
   const { isObserver } = useAuth();
@@ -105,7 +106,7 @@ function App() {
     setHasActiveNotification(false);
   };
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: string, _options?: TabNavigationOptions) => {
     setActiveTab(tab);
     if (tab === 'reminders') {
       setHasActiveNotification(false);

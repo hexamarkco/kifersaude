@@ -19,15 +19,16 @@ import { useConfirmationModal } from '../hooks/useConfirmationModal';
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
+  initialStatusFilter?: string[];
 };
 
-export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: LeadsManagerProps) {
+export default function LeadsManager({ onConvertToContract, onOpenWhatsapp, initialStatusFilter }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter || []);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
@@ -192,6 +193,17 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterResponsavel, filterOrigem, filterTipoContratacao, itemsPerPage]);
+
+  useEffect(() => {
+    if (initialStatusFilter && initialStatusFilter.length > 0) {
+      setFilterStatus(initialStatusFilter);
+      return;
+    }
+
+    if (initialStatusFilter !== undefined) {
+      setFilterStatus([]);
+    }
+  }, [initialStatusFilter]);
 
   useEffect(() => {
     setFilterStatus((current) => {

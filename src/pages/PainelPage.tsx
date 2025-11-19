@@ -20,6 +20,7 @@ import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
+import type { TabNavigationOptions } from '../types/navigation';
 
 export default function PainelPage() {
   const { isObserver } = useAuth();
@@ -34,6 +35,8 @@ export default function PainelPage() {
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [whatsappLaunchParams, setWhatsappLaunchParams] = useState<WhatsappLaunchParams | null>(null);
+  const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
+  const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
 
   const validTabIds = useMemo(
     () =>
@@ -201,7 +204,7 @@ export default function PainelPage() {
     handleTabChange('reminders');
   };
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: string, options?: TabNavigationOptions) => {
     setActiveTab(tab);
     updateSearchParamsForTab(tab, tab === 'whatsapp' ? whatsappLaunchParams : null);
 
@@ -215,6 +218,15 @@ export default function PainelPage() {
     }
     if (tab === 'leads') {
       setNewLeadsCount(0);
+      setLeadStatusFilter(options?.leadsStatusFilter);
+    } else if (options?.leadsStatusFilter === undefined) {
+      setLeadStatusFilter(undefined);
+    }
+
+    if (tab === 'contracts') {
+      setContractOperadoraFilter(options?.contractOperadoraFilter);
+    } else if (options?.contractOperadoraFilter === undefined) {
+      setContractOperadoraFilter(undefined);
     }
   };
 
@@ -238,9 +250,21 @@ export default function PainelPage() {
       case 'dashboard':
         return <Dashboard onNavigateToTab={handleTabChange} />;
       case 'leads':
-        return <LeadsManager onConvertToContract={handleConvertLead} onOpenWhatsapp={handleOpenWhatsapp} />;
+        return (
+          <LeadsManager
+            onConvertToContract={handleConvertLead}
+            onOpenWhatsapp={handleOpenWhatsapp}
+            initialStatusFilter={leadStatusFilter}
+          />
+        );
       case 'contracts':
-        return <ContractsManager leadToConvert={leadToConvert} onConvertComplete={() => setLeadToConvert(null)} />;
+        return (
+          <ContractsManager
+            leadToConvert={leadToConvert}
+            onConvertComplete={() => setLeadToConvert(null)}
+            initialOperadoraFilter={contractOperadoraFilter}
+          />
+        );
       case 'financeiro-comissoes':
         return <FinanceiroComissoesTab />;
       case 'financeiro-agenda':

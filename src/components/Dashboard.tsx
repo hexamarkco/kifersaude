@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { useSearchParams } from 'react-router-dom';
 import { supabase, Lead, Contract } from '../lib/supabase';
 import { parseDateWithoutTimezone } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
+import type { TabNavigationOptions } from '../types/navigation';
 import {
   TrendingUp,
   Users,
@@ -13,6 +15,8 @@ import {
   Activity,
   Cake,
   Filter,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
@@ -26,7 +30,7 @@ import {
 import { useConfig } from '../contexts/ConfigContext';
 
 type DashboardProps = {
-  onNavigateToTab?: (tab: string) => void;
+  onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
 };
 
 type Holder = {
@@ -49,6 +53,7 @@ type Dependent = {
 export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, loading: configLoading } = useConfig();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -59,9 +64,57 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isInitialLoadRef = useRef(true);
-  const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>('mes-atual');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
+    const urlValue = searchParams.get('periodFilter');
+    const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
+
+    if (urlValue && validValues.includes(urlValue)) {
+      return urlValue as 'mes-atual' | 'todo-periodo' | 'personalizado';
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboardPeriodFilter');
+      if (stored && validValues.includes(stored)) {
+        return stored as 'mes-atual' | 'todo-periodo' | 'personalizado';
+      }
+    }
+
+    return 'mes-atual';
+  });
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const urlValue = searchParams.get('customStartDate');
+
+    if (urlValue && validateDate(urlValue)) {
+      return urlValue;
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboardCustomStartDate');
+      if (stored && validateDate(stored)) {
+        return stored;
+      }
+    }
+
+    return '';
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    const urlValue = searchParams.get('customEndDate');
+
+    if (urlValue && validateDate(urlValue)) {
+      return urlValue;
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboardCustomEndDate');
+      if (stored && validateDate(stored)) {
+        return stored;
+      }
+    }
+
+    return '';
+  });
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [daysAhead, setDaysAhead] = useState(30);
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach(status => {
@@ -69,6 +122,80 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     });
     return map;
   }, [leadStatuses]);
+
+  const resolvePeriodFilter = useCallback(() => {
+    const urlValue = searchParams.get('periodFilter');
+    const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
+
+    if (urlValue && validValues.includes(urlValue)) {
+      return urlValue as 'mes-atual' | 'todo-periodo' | 'personalizado';
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboardPeriodFilter');
+      if (stored && validValues.includes(stored)) {
+        return stored as 'mes-atual' | 'todo-periodo' | 'personalizado';
+      }
+    }
+
+    return 'mes-atual';
+  }, [searchParams]);
+
+  const resolveCustomDate = useCallback(
+    (key: 'customStartDate' | 'customEndDate') => {
+      const urlValue = searchParams.get(key);
+
+      if (urlValue && validateDate(urlValue)) {
+        return urlValue;
+      }
+
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(`dashboard${key.charAt(0).toUpperCase() + key.slice(1)}`);
+        if (stored && validateDate(stored)) {
+          return stored;
+        }
+      }
+
+      return '';
+    },
+    [searchParams],
+  );
+
+  const persistFilters = useCallback(
+    (
+      nextPeriod: 'mes-atual' | 'todo-periodo' | 'personalizado' = periodFilter,
+      nextStart: string = customStartDate,
+      nextEnd: string = customEndDate,
+    ) => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dashboardPeriodFilter', nextPeriod);
+        localStorage.setItem('dashboardCustomStartDate', nextStart);
+        localStorage.setItem('dashboardCustomEndDate', nextEnd);
+      }
+
+      const params = new URLSearchParams(searchParams);
+      params.set('periodFilter', nextPeriod);
+
+      if (
+        nextPeriod === 'personalizado' &&
+        nextStart &&
+        nextEnd &&
+        validateDate(nextStart) &&
+        validateDate(nextEnd)
+      ) {
+        params.set('customStartDate', nextStart);
+        params.set('customEndDate', nextEnd);
+      } else {
+        params.delete('customStartDate');
+        params.delete('customEndDate');
+      }
+
+      if (params.toString() !== searchParams.toString()) {
+        setSearchParams(params, { replace: true });
+      }
+    },
+    [customEndDate, customStartDate, periodFilter, searchParams, setSearchParams],
+  );
 
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
@@ -224,6 +351,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       setContracts(contractsRes.data || []);
       setHolders(holdersRes.data || []);
       setDependents(dependentsRes.data || []);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       const message = error instanceof Error ? error.message : 'Erro desconhecido.';
@@ -472,9 +600,35 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     };
   }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
 
+  useEffect(() => {
+    const storedPeriod = resolvePeriodFilter();
+    const storedStart = resolveCustomDate('customStartDate');
+    const storedEnd = resolveCustomDate('customEndDate');
+
+    setPeriodFilter((current) => (current === storedPeriod ? current : storedPeriod));
+    setCustomStartDate((current) => (current === storedStart ? current : storedStart));
+    setCustomEndDate((current) => (current === storedEnd ? current : storedEnd));
+  }, [resolveCustomDate, resolvePeriodFilter]);
+
+  useEffect(() => {
+    persistFilters();
+  }, [customEndDate, customStartDate, periodFilter, persistFilters]);
+
   const getStartOfMonth = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
+  };
+
+  const formatLastUpdated = () => {
+    if (!lastUpdated) return '';
+
+    const date = lastUpdated.toLocaleDateString('pt-BR');
+    const time = lastUpdated.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return `${date} às ${time}`;
   };
 
   const parseDateString = (dateStr: string): Date => {
@@ -495,7 +649,21 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const validateDate = (dateStr: string): boolean => {
+  const getContractRenewalDate = (contract: Contract): Date | null => {
+    if (contract.data_renovacao) {
+      const [year, month] = contract.data_renovacao.split('-').map(Number);
+      return new Date(year, month - 1, 1);
+    }
+
+    if (contract.data_inicio) {
+      const startDate = new Date(contract.data_inicio);
+      return new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+    }
+
+    return null;
+  };
+
+  function validateDate(dateStr: string): boolean {
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     const match = dateStr.match(dateRegex);
 
@@ -511,7 +679,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
     const date = new Date(year, month - 1, day);
     return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
-  };
+  }
 
   const isCustomPeriodValid =
     periodFilter !== 'personalizado' ||
@@ -599,12 +767,26 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status)),
   );
   const operadoraData = getOperadoraDistribution(filteredContracts);
-  const upcomingRenewals = getContractsToRenew(activeContracts, 30);
+  const upcomingRenewals = useMemo(() => {
+    const renewals = getContractsToRenew(activeContracts, daysAhead);
 
-  const getUpcomingBirthdays = () => {
-    const hoje = new Date();
-    const daysAhead = 30;
-    const futureDate = new Date(hoje.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+    return renewals.sort((a, b) => {
+      const dateA = getContractRenewalDate(a);
+      const dateB = getContractRenewalDate(b);
+
+      if (!dateA || !dateB) return 0;
+
+      const daysA = Math.ceil((dateA.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      const daysB = Math.ceil((dateB.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+      return daysA - daysB;
+    });
+  }, [activeContracts, daysAhead]);
+
+  const getUpcomingBirthdays = useCallback(
+    (daysAheadValue: number) => {
+      const hoje = new Date();
+      const futureDate = new Date(hoje.getTime() + daysAheadValue * 24 * 60 * 60 * 1000);
 
     const birthdays: Array<{
       nome: string;
@@ -648,25 +830,31 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         });
       });
 
-    const upcomingBirthdays = birthdays.filter(b => {
-      const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
-      const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
-      const nextYearBirthday = new Date(hoje.getFullYear() + 1, month - 1, day);
+    const upcomingBirthdays = birthdays
+      .filter(b => {
+        const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
+        const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
+        const nextYearBirthday = new Date(hoje.getFullYear() + 1, month - 1, day);
 
-      const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : nextYearBirthday;
-      return nextBirthday <= futureDate && nextBirthday >= hoje;
-    }).map(b => {
-      const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
-      const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
-      const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : new Date(hoje.getFullYear() + 1, month - 1, day);
+        const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : nextYearBirthday;
+        return nextBirthday <= futureDate && nextBirthday >= hoje;
+      })
+      .map(b => {
+        const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
+        const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
+        const nextBirthday =
+          thisYearBirthday >= hoje ? thisYearBirthday : new Date(hoje.getFullYear() + 1, month - 1, day);
 
-      return { ...b, nextBirthday };
-    }).sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
+        const diasRestantes = Math.ceil((nextBirthday.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+        return { ...b, nextBirthday, diasRestantes };
+      })
+      .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
     return upcomingBirthdays;
-  };
+  }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
 
-  const upcomingBirthdays = getUpcomingBirthdays();
+  const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(daysAhead), [daysAhead, getUpcomingBirthdays]);
 
   const donutChartData = leadStatusData.map((item) => ({
     label: item.status,
@@ -716,6 +904,14 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatDateInput(e.target.value);
     setCustomEndDate(formatted);
+  };
+
+  const handleLeadStatusSegmentClick = (label: string) => {
+    onNavigateToTab?.('leads', { leadsStatusFilter: [label] });
+  };
+
+  const handleOperadoraSegmentClick = (label: string) => {
+    onNavigateToTab?.('contracts', { contractOperadoraFilter: label });
   };
 
   return (
@@ -785,6 +981,21 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                 />
               </div>
             )}
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+              <Clock className="h-4 w-4 text-slate-500" />
+              <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Atualizar agora</span>
+            </button>
           </div>
         </div>
       </div>
@@ -891,7 +1102,12 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             Distribuição de Leads por Status
           </h3>
           {leadStatusData.length > 0 ? (
-            <DonutChart data={donutChartData} size={240} strokeWidth={35} />
+            <DonutChart
+              data={donutChartData}
+              size={240}
+              strokeWidth={35}
+              onSegmentClick={handleLeadStatusSegmentClick}
+            />
           ) : (
             <div className="flex items-center justify-center h-64 text-slate-400">
               Nenhum lead ativo
@@ -904,7 +1120,12 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             Contratos por Operadora
           </h3>
           {operadoraChartData.length > 0 ? (
-            <DonutChart data={operadoraChartData} size={240} strokeWidth={35} />
+            <DonutChart
+              data={operadoraChartData}
+              size={240}
+              strokeWidth={35}
+              onSegmentClick={handleOperadoraSegmentClick}
+            />
           ) : (
             <div className="flex items-center justify-center h-64 text-slate-400">
               Nenhum contrato ativo
@@ -914,127 +1135,136 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       </div>
 
       {!isObserver && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Renovações Próximas</h3>
-              <Calendar className="w-5 h-5 text-orange-500" />
-            </div>
-            {upcomingRenewals.length > 0 ? (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {upcomingRenewals.map((contract) => {
-                let dataRenovacao: Date;
-
-                if (contract.data_renovacao) {
-                  const [year, month] = contract.data_renovacao.split('-').map(Number);
-                  dataRenovacao = new Date(year, month - 1, 1);
-                } else if (contract.data_inicio) {
-                  const { year, month, day } = parseDateWithoutTimezone(contract.data_inicio);
-                  dataRenovacao = new Date(year + 1, month - 1, day);
-                } else {
-                  return null;
-                }
-
-                const diasRestantes = Math.ceil(
-                  (dataRenovacao.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                );
-
-                return (
-                  <div
-                    key={contract.id}
-                    className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex-1">
-                      <p className="font-semibold text-slate-900 text-sm">
-                        {contract.codigo_contrato}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-0.5">{contract.operadora}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-orange-600">
-                        {diasRestantes} {diasRestantes === 1 ? 'dia' : 'dias'}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {dataRenovacao.toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-              <Calendar className="w-12 h-12 mb-2" />
-              <p className="text-sm">Nenhuma renovação próxima</p>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Aniversários Próximos</h3>
-            <Cake className="w-5 h-5 text-pink-500" />
+        <>
+          <div className="flex items-center justify-end gap-2 text-sm text-slate-600">
+            <span>Próximos</span>
+            <select
+              value={daysAhead}
+              onChange={(e) => setDaysAhead(Number(e.target.value))}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+            >
+              {[15, 30, 60].map((days) => (
+                <option key={days} value={days}>
+                  {days}
+                </option>
+              ))}
+            </select>
+            <span>dias</span>
           </div>
-          {upcomingBirthdays.length > 0 ? (
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {upcomingBirthdays.map((birthday, index) => {
-                const diasRestantes = Math.ceil(
-                  (birthday.nextBirthday.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                );
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Renovações Próximas (até {daysAhead} dias)</h3>
+                <Calendar className="w-5 h-5 text-orange-500" />
+              </div>
+              {upcomingRenewals.length > 0 ? (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {upcomingRenewals.map((contract) => {
+                    const dataRenovacao = getContractRenewalDate(contract);
 
-                return (
-                  <div
-                    key={`${birthday.contract_id}-${birthday.nome}-${index}`}
-                    className="flex flex-col p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                          {birthday.tipo}
-                          {birthday.tipo === 'Dependente' && birthday.holder && (
-                            <span className="text-slate-500"> • Titular: {birthday.holder.nome_completo}</span>
-                          )}
-                        </p>
-                        {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
-                          <p className="text-xs text-blue-600 mt-1 font-medium">
-                            {birthday.holder.razao_social || birthday.holder.nome_fantasia}
+                    if (!dataRenovacao) {
+                      return null;
+                    }
+
+                    const diasRestantes = Math.ceil(
+                      (dataRenovacao.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                    );
+
+                    return (
+                      <div
+                        key={contract.id}
+                        className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900 text-sm">
+                            {contract.codigo_contrato}
                           </p>
+                          <p className="text-xs text-slate-600 mt-0.5">{contract.operadora}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-orange-600">
+                            {diasRestantes} {diasRestantes === 1 ? 'dia' : 'dias'}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {dataRenovacao.toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <Calendar className="w-12 h-12 mb-2" />
+                  <p className="text-sm">Nenhuma renovação próxima</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Aniversários Próximos (até {daysAhead} dias)</h3>
+                <Cake className="w-5 h-5 text-pink-500" />
+              </div>
+              {upcomingBirthdays.length > 0 ? (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {upcomingBirthdays.map((birthday, index) => {
+                    const diasRestantes = birthday.diasRestantes;
+
+                    return (
+                      <div
+                        key={`${birthday.contract_id}-${birthday.nome}-${index}`}
+                        className="flex flex-col p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              {birthday.tipo}
+                              {birthday.tipo === 'Dependente' && birthday.holder && (
+                                <span className="text-slate-500"> • Titular: {birthday.holder.nome_completo}</span>
+                              )}
+                            </p>
+                            {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
+                              <p className="text-xs text-blue-600 mt-1 font-medium">
+                                {birthday.holder.razao_social || birthday.holder.nome_fantasia}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-pink-600">
+                              {diasRestantes === 0
+                                ? 'Hoje!'
+                                : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {birthday.nextBirthday.toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                        {birthday.contract && (
+                          <div className="pt-2 border-t border-pink-200">
+                            <p className="text-xs text-slate-600">
+                              <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
+                            </p>
+                            <p className="text-xs text-slate-600">
+                              <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
+                            </p>
+                          </div>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-pink-600">
-                          {diasRestantes === 0
-                            ? 'Hoje!'
-                            : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {birthday.nextBirthday.toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                    </div>
-                    {birthday.contract && (
-                      <div className="pt-2 border-t border-pink-200">
-                        <p className="text-xs text-slate-600">
-                          <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <Cake className="w-12 h-12 mb-2" />
+                  <p className="text-sm">Nenhum aniversário próximo</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-              <Cake className="w-12 h-12 mb-2" />
-              <p className="text-sm">Nenhum aniversário próximo</p>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
       )}
 
       <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl shadow-lg p-8 text-white">

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Contract, Lead } from '../lib/supabase';
 import { Plus, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 import Pagination from './Pagination';
@@ -22,6 +23,7 @@ type ContractHolder = {
 
 export default function ContractsManager({ leadToConvert, onConvertComplete }: ContractsManagerProps) {
   const { isObserver } = useAuth();
+  const { options } = useConfig();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Record<string, ContractHolder>>({});
@@ -35,6 +37,27 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter(option => option.ativo),
+    [options.lead_responsavel]
+  );
+
+  const responsavelFilterOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
+
+    responsavelOptions.forEach(option => {
+      optionMap.set(option.value, option.label);
+    });
+
+    contracts.forEach(contract => {
+      if (contract.responsavel && !optionMap.has(contract.responsavel)) {
+        optionMap.set(contract.responsavel, contract.responsavel);
+      }
+    });
+
+    return Array.from(optionMap.entries()).map(([value, label]) => ({ value, label }));
+  }, [contracts, responsavelOptions]);
 
   useEffect(() => {
     loadContracts();
@@ -320,8 +343,11 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
             >
               <option value="todos">Todos os responsáveis</option>
-              <option value="Luiza">Luiza</option>
-              <option value="Nick">Nick</option>
+              {responsavelFilterOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="relative">

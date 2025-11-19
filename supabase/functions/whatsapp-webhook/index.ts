@@ -39,6 +39,7 @@ type ChatFinancialSummary = {
 type WhatsappChat = {
   id: string;
   phone: string;
+  chat_lid?: string | null;
   chat_name: string | null;
   last_message_at: string | null;
   last_message_preview: string | null;
@@ -1657,8 +1658,99 @@ const normalizeBoolean = (value: unknown): boolean | null => {
   return null;
 };
 
+const pushStringCandidate = (target: string[], value: unknown) => {
+  if (typeof value !== 'string') {
+    return;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed) {
+    target.push(trimmed);
+  }
+};
+
+const pushNestedCandidates = (
+  target: string[],
+  source: unknown,
+  keys: string[],
+) => {
+  if (!source || typeof source !== 'object') {
+    return;
+  }
+
+  const record = source as Record<string, unknown>;
+  for (const key of keys) {
+    pushStringCandidate(target, record[key]);
+  }
+};
+
+const collectPhoneCandidates = (payload: ZapiWebhookPayload): string[] => {
+  const record = payload as Record<string, unknown>;
+  const directKeys = [
+    'phone',
+    'chatLid',
+    'chatName',
+    'chatPhone',
+    'chatId',
+    'chat_id',
+    'jid',
+    'remoteJid',
+    'remoteJID',
+    'remote_jid',
+    'conversationId',
+    'participant',
+    'senderPhone',
+    'recipientPhone',
+    'recipient',
+    'targetPhone',
+    'destination',
+    'to',
+    'from',
+    'clientPhone',
+    'contactPhone',
+    'contactPhoneNumber',
+    'waId',
+    'wa_id',
+  ];
+
+  const candidates: string[] = [];
+  for (const key of directKeys) {
+    pushStringCandidate(candidates, record[key]);
+  }
+
+  pushNestedCandidates(candidates, record.sender, ['phone', 'jid', 'waId', 'wa_id']);
+  pushNestedCandidates(candidates, record.contact, ['phone', 'jid', 'waId', 'wa_id', 'id']);
+  pushNestedCandidates(candidates, record.contextInfo, ['participant', 'remoteJid', 'remoteJID']);
+  pushNestedCandidates(candidates, record.context, ['participant', 'remoteJid', 'remoteJID']);
+  pushNestedCandidates(candidates, record.key, ['participant', 'remoteJid', 'remoteJID']);
+
+  if (record.message && typeof record.message === 'object') {
+    const messageRecord = record.message as Record<string, unknown>;
+    pushStringCandidate(candidates, messageRecord.participant);
+    pushStringCandidate(candidates, messageRecord.remoteJid);
+    pushNestedCandidates(candidates, messageRecord.key, ['participant', 'remoteJid', 'remoteJID']);
+  }
+
+  const arrayLikeKeys = ['participants', 'mentions'];
+  for (const arrayKey of arrayLikeKeys) {
+    const value = record[arrayKey];
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        pushStringCandidate(candidates, entry);
+      }
+    }
+  }
+
+  const notificationParameters = toNonEmptyStringArray(payload?.notificationParameters);
+  for (const entry of notificationParameters) {
+    pushStringCandidate(candidates, entry);
+  }
+
+  return candidates;
+};
+
 const resolvePhoneFromPayload = (payload: ZapiWebhookPayload): string | null => {
-  const candidates = [payload.phone, payload.chatLid, payload.chatName];
+  const candidates = collectPhoneCandidates(payload);
 
   for (const candidate of candidates) {
     const normalized = normalizePhoneIdentifier(candidate);
@@ -2170,8 +2262,16 @@ const persistReceivedMessage = async (
 ): Promise<{ chat: WhatsappChat; message: WhatsappMessage }> => {
   const phoneFromPayload = typeof payload.phone === 'string' ? payload.phone : undefined;
   const normalizedOverride = normalizePhoneIdentifier(options?.overridePhone ?? null);
-  const phone = normalizedOverride ?? normalizePhoneIdentifier(phoneFromPayload) ?? undefined;
+  const chatLid = typeof payload.chatLid === 'string' ? payload.chatLid.trim() : null;
+  let phone = normalizedOverride ?? normalizePhoneIdentifier(phoneFromPayload) ?? undefined;
   const originalPhone = options?.originalPhone ?? phoneFromPayload ?? null;
+
+  if (!phone && chatLid) {
+    const chatByLid = await getChatByChatLid(chatLid);
+    if (chatByLid?.phone) {
+      phone = chatByLid.phone;
+    }
+  }
 
   if (!phone) {
     throw new Error('Campo phone é obrigatório');
@@ -2184,6 +2284,7 @@ const persistReceivedMessage = async (
 
   const chat = await upsertChatRecord({
     phone,
+    chatLid,
     chatName,
     isGroup,
     lastMessageAt: momentDate,
@@ -2214,8 +2315,27 @@ const persistReceivedMessage = async (
   return { chat, message };
 };
 
+const getChatByChatLid = async (chatLid: string | null): Promise<WhatsappChat | null> => {
+  if (!supabaseAdmin || !chatLid) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('whatsapp_chats')
+    .select('*')
+    .eq('chat_lid', chatLid)
+    .maybeSingle<WhatsappChat>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? null;
+};
+
 const upsertChatRecord = async (input: {
   phone: string;
+  chatLid?: string | null;
   chatName?: string | null;
   isGroup?: boolean;
   lastMessageAt?: Date | string | number | null;
@@ -2227,6 +2347,7 @@ const upsertChatRecord = async (input: {
 
   const {
     phone,
+    chatLid,
     chatName,
     isGroup,
     lastMessageAt,
@@ -2253,6 +2374,10 @@ const upsertChatRecord = async (input: {
     last_message_preview: lastMessagePreview ?? null,
   };
 
+  if (chatLid !== undefined) {
+    updatePayload.chat_lid = chatLid ?? null;
+  }
+
   if (typeof isGroup === 'boolean') {
     updatePayload.is_group = isGroup;
   }
@@ -2273,6 +2398,7 @@ const upsertChatRecord = async (input: {
 
     return {
       ...existingChat,
+      chat_lid: updatePayload.chat_lid ?? existingChat.chat_lid ?? null,
       chat_name: updatePayload.chat_name ?? (existingChat.chat_name ?? null),
       is_group:
         typeof updatePayload.is_group === 'boolean' ? Boolean(updatePayload.is_group) : existingChat.is_group,
@@ -2288,6 +2414,7 @@ const upsertChatRecord = async (input: {
     .from('whatsapp_chats')
     .insert({
       phone,
+      chat_lid: chatLid ?? null,
       chat_name: chatName ?? null,
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,

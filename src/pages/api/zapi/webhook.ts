@@ -3,6 +3,7 @@ import {
   upsertChatRecord,
   insertWhatsappMessage,
   updateWhatsappMessageStatuses,
+  getChatByChatLid,
 } from '../../../server/whatsappStorage';
 import { resolveOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
 
@@ -368,6 +369,133 @@ const toNonEmptyStringArray = (value: unknown): string[] => {
 const normalizeStatusValue = (value: unknown): string | null => {
   const status = toNonEmptyString(value);
   return status ? status.toUpperCase() : null;
+};
+
+const normalizePhoneIdentifier = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.endsWith('-group')) {
+    return trimmed;
+  }
+
+  const withoutAt = trimmed.includes('@') ? trimmed.slice(0, trimmed.indexOf('@')) : trimmed;
+  if (withoutAt.endsWith('-group')) {
+    return withoutAt;
+  }
+
+  const digitsOnly = withoutAt.replace(/\D+/g, '');
+  return digitsOnly.length >= 5 ? digitsOnly : null;
+};
+
+const pushStringCandidate = (target: string[], value: unknown) => {
+  if (typeof value !== 'string') {
+    return;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed) {
+    target.push(trimmed);
+  }
+};
+
+const pushNestedCandidates = (
+  target: string[],
+  source: unknown,
+  keys: string[],
+) => {
+  if (!source || typeof source !== 'object') {
+    return;
+  }
+
+  const record = source as Record<string, unknown>;
+  for (const key of keys) {
+    pushStringCandidate(target, record[key]);
+  }
+};
+
+const collectPhoneCandidates = (payload: ZapiPayload): string[] => {
+  const record = payload as Record<string, unknown>;
+  const directKeys = [
+    'phone',
+    'chatLid',
+    'chatName',
+    'chatPhone',
+    'chatId',
+    'chat_id',
+    'jid',
+    'remoteJid',
+    'remoteJID',
+    'remote_jid',
+    'conversationId',
+    'participant',
+    'senderPhone',
+    'recipientPhone',
+    'recipient',
+    'targetPhone',
+    'destination',
+    'to',
+    'from',
+    'clientPhone',
+    'contactPhone',
+    'contactPhoneNumber',
+    'waId',
+    'wa_id',
+  ];
+
+  const candidates: string[] = [];
+  for (const key of directKeys) {
+    pushStringCandidate(candidates, record[key]);
+  }
+
+  pushNestedCandidates(candidates, record.sender, ['phone', 'jid', 'waId', 'wa_id']);
+  pushNestedCandidates(candidates, record.contact, ['phone', 'jid', 'waId', 'wa_id', 'id']);
+  pushNestedCandidates(candidates, record.contextInfo, ['participant', 'remoteJid', 'remoteJID']);
+  pushNestedCandidates(candidates, record.context, ['participant', 'remoteJid', 'remoteJID']);
+  pushNestedCandidates(candidates, record.key, ['participant', 'remoteJid', 'remoteJID']);
+
+  if (record.message && typeof record.message === 'object') {
+    const messageRecord = record.message as Record<string, unknown>;
+    pushStringCandidate(candidates, messageRecord.participant);
+    pushStringCandidate(candidates, messageRecord.remoteJid);
+    pushNestedCandidates(candidates, messageRecord.key, ['participant', 'remoteJid', 'remoteJID']);
+  }
+
+  const arrayLikeKeys = ['participants', 'mentions'];
+  for (const arrayKey of arrayLikeKeys) {
+    const value = record[arrayKey];
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        pushStringCandidate(candidates, entry);
+      }
+    }
+  }
+
+  const notificationParameters = toNonEmptyStringArray(payload?.notificationParameters);
+  for (const entry of notificationParameters) {
+    pushStringCandidate(candidates, entry);
+  }
+
+  return candidates;
+};
+
+const resolvePhoneFromPayload = (payload: ZapiPayload): string | null => {
+  const candidates = collectPhoneCandidates(payload);
+
+  for (const candidate of candidates) {
+    const normalized = normalizePhoneIdentifier(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
 };
 
 const resolveStatusWebhookIds = (payload: ZapiPayload): string[] => {
@@ -774,6 +902,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   console.info('Z-API received webhook payload:', payload);
 
+  const chatLid = typeof payload.chatLid === 'string' ? payload.chatLid.trim() : undefined;
   const statusIds = resolveStatusWebhookIds(payload);
   const normalizedStatus = normalizeStatusValue(payload.status);
 
@@ -788,7 +917,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(200).json({ success: true, ignored: true });
   }
 
-  let phone = typeof payload.phone === 'string' ? payload.phone : undefined;
+  const originalPhoneValue = typeof payload.phone === 'string' ? payload.phone : undefined;
+  let phone = resolvePhoneFromPayload(payload) ?? originalPhoneValue ?? undefined;
   const messageId = typeof payload.messageId === 'string' ? payload.messageId : undefined;
   const isFromMe = payload.fromMe === true;
 
@@ -796,17 +926,30 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const resolvedPhone = resolveOutgoingMessagePhone(messageId);
 
     if (resolvedPhone) {
+      const normalizedResolved = normalizePhoneIdentifier(resolvedPhone) ?? resolvedPhone;
       console.info('Resolved WhatsApp phone from send payload', {
         messageId,
-        originalPhone: phone,
-        resolvedPhone,
+        originalPhone: originalPhoneValue ?? phone ?? null,
+        resolvedPhone: normalizedResolved,
       });
-      phone = resolvedPhone;
+      phone = normalizedResolved ?? phone;
     } else {
       console.warn('Received fromMe webhook without matching send payload', {
         messageId,
-        originalPhone: phone,
+        originalPhone: originalPhoneValue ?? phone ?? null,
       });
+    }
+  }
+
+  if (!phone && chatLid) {
+    try {
+      const chatByLid = await getChatByChatLid(chatLid);
+      if (chatByLid?.phone) {
+        phone = chatByLid.phone;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar conversa pelo chatLid:', error);
+      return res.status(500).json({ error: 'Falha ao buscar conversa pelo chatLid' });
     }
   }
 
@@ -822,11 +965,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     const chat = await upsertChatRecord({
       phone,
+      chatLid,
       chatName,
       isGroup,
       lastMessageAt: momentDate,
       lastMessagePreview: messageText,
     });
+
+    const normalizedRawPayload: Record<string, any> = {
+      ...(payload as Record<string, any>),
+      phone,
+    };
+
+    if (originalPhoneValue && originalPhoneValue !== phone) {
+      normalizedRawPayload._originalPhone = originalPhoneValue;
+    }
 
     const message = await insertWhatsappMessage({
       chatId: chat.id,
@@ -835,7 +988,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       status: typeof payload.status === 'string' ? payload.status : null,
       text: messageText,
       moment: momentDate,
-      rawPayload: payload as Record<string, any>,
+      rawPayload: normalizedRawPayload,
     });
 
     return res.status(200).json({ success: true, chat, message });

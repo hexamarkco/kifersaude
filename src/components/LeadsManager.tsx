@@ -86,14 +86,15 @@ const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
 export default function LeadsManager({
   onConvertToContract,
   onOpenWhatsapp,
-  initialStatusFilter = [],
+  initialStatusFilter,
 }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
+  const normalizedInitialStatusFilter = useMemo(() => initialStatusFilter ?? [], [initialStatusFilter]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter);
+  const [filterStatus, setFilterStatus] = useState<string[]>(normalizedInitialStatusFilter);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
   const [filterTipoContratacao, setFilterTipoContratacao] = useState<string[]>([]);
@@ -209,7 +210,7 @@ export default function LeadsManager({
 
   const resetFilters = useCallback(() => {
     setSearchTerm('');
-    setFilterStatus(initialStatusFilter);
+    setFilterStatus(normalizedInitialStatusFilter);
     setFilterResponsavel([]);
     setFilterOrigem([]);
     setFilterTipoContratacao([]);
@@ -221,7 +222,7 @@ export default function LeadsManager({
     setFilterUltimoContatoTo('');
     setFilterProximoRetornoFrom('');
     setFilterProximoRetornoTo('');
-  }, [initialStatusFilter]);
+  }, [normalizedInitialStatusFilter]);
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -346,15 +347,15 @@ export default function LeadsManager({
   ]);
 
   useEffect(() => {
-    if (initialStatusFilter && initialStatusFilter.length > 0) {
-      setFilterStatus(initialStatusFilter);
+    if (normalizedInitialStatusFilter.length > 0) {
+      setFilterStatus(normalizedInitialStatusFilter);
       return;
     }
 
     if (initialStatusFilter !== undefined) {
       setFilterStatus([]);
     }
-  }, [initialStatusFilter]);
+  }, [initialStatusFilter, normalizedInitialStatusFilter]);
 
   useEffect(() => {
     setFilterStatus((current) => {

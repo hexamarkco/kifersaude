@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Contract, Lead } from '../lib/supabase';
 import { Plus, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 import Pagination from './Pagination';
@@ -22,6 +23,7 @@ type ContractHolder = {
 
 export default function ContractsManager({ leadToConvert, onConvertComplete }: ContractsManagerProps) {
   const { isObserver } = useAuth();
+  const { options } = useConfig();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Record<string, ContractHolder>>({});
@@ -29,11 +31,33 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterResponsavel, setFilterResponsavel] = useState('todos');
+  const [dateProximityFilter, setDateProximityFilter] = useState<'todos' | 'proximos-30'>('todos');
   const [showForm, setShowForm] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter(option => option.ativo),
+    [options.lead_responsavel]
+  );
+
+  const responsavelFilterOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
+
+    responsavelOptions.forEach(option => {
+      optionMap.set(option.value, option.label);
+    });
+
+    contracts.forEach(contract => {
+      if (contract.responsavel && !optionMap.has(contract.responsavel)) {
+        optionMap.set(contract.responsavel, contract.responsavel);
+      }
+    });
+
+    return Array.from(optionMap.entries()).map(([value, label]) => ({ value, label }));
+  }, [contracts, responsavelOptions]);
 
   useEffect(() => {
     loadContracts();
@@ -73,7 +97,7 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
   useEffect(() => {
     filterContracts();
     setCurrentPage(1);
-  }, [contracts, searchTerm, filterStatus, filterResponsavel]);
+  }, [contracts, searchTerm, filterStatus, filterResponsavel, dateProximityFilter]);
 
   useEffect(() => {
     if (leadToConvert) {
@@ -130,7 +154,77 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
       filtered = filtered.filter(contract => contract.responsavel === filterResponsavel);
     }
 
+    if (dateProximityFilter === 'proximos-30') {
+      filtered = filtered.filter(hasUpcomingImportantDate);
+    }
+
     setFilteredContracts(filtered);
+  };
+
+  const parseDate = (date?: string | null) => {
+    if (!date) return null;
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const daysUntil = (date?: string | null) => {
+    const parsed = parseDate(date);
+    if (!parsed) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsed.setHours(0, 0, 0, 0);
+    const diff = parsed.getTime() - today.getTime();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const hasUpcomingImportantDate = (contract: Contract) => {
+    const dates = [contract.data_renovacao, contract.previsao_recebimento_comissao, contract.previsao_pagamento_bonificacao];
+    return dates.some(date => {
+      const remaining = daysUntil(date);
+      return remaining !== null && remaining >= 0 && remaining <= 30;
+    });
+  };
+
+  const getBadgeTone = (days: number) => {
+    if (days < 0) return 'bg-slate-100 text-slate-600';
+    if (days <= 7) return 'bg-red-100 text-red-700';
+    if (days <= 15) return 'bg-amber-100 text-amber-700';
+    return 'bg-emerald-100 text-emerald-700';
+  };
+
+  const buildDateBadge = (label: string, date?: string | null) => {
+    const remaining = daysUntil(date);
+    if (remaining === null) return null;
+
+    const formattedDate = parseDate(date)?.toLocaleDateString('pt-BR');
+    const labelText = remaining === 0
+      ? `${label} hoje (${formattedDate})`
+      : remaining > 0
+        ? `${label} em ${remaining} dia${remaining === 1 ? '' : 's'} (${formattedDate})`
+        : `${label} há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'} (${formattedDate})`;
+
+    return (
+      <span key={`${label}-${date}`} className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${getBadgeTone(remaining)}`}>
+        {labelText}
+      </span>
+    );
+  };
+
+  const renderDateBadges = (contract: Contract) => {
+    const badges = [
+      buildDateBadge('Renova', contract.data_renovacao),
+      buildDateBadge('Recebe comissão', contract.previsao_recebimento_comissao),
+      buildDateBadge('Paga bônus', contract.previsao_pagamento_bonificacao),
+    ].filter(Boolean);
+
+    if (badges.length === 0) return null;
+
+    return <div className="flex flex-wrap gap-2">{badges}</div>;
+  };
+
+  const formatDate = (date?: string | null) => {
+    const parsed = parseDate(date);
+    return parsed ? parsed.toLocaleDateString('pt-BR') : null;
   };
 
   const getContractDisplayName = (contract: Contract): string => {
@@ -249,8 +343,21 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
             >
               <option value="todos">Todos os responsáveis</option>
-              <option value="Luiza">Luiza</option>
-              <option value="Nick">Nick</option>
+              {responsavelFilterOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <select
+              value={dateProximityFilter}
+              onChange={(e) => setDateProximityFilter(e.target.value as 'todos' | 'proximos-30')}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none"
+            >
+              <option value="todos">Todas as datas</option>
+              <option value="proximos-30">Próximos 30 dias</option>
             </select>
           </div>
           <div className="text-sm text-slate-600 flex items-center justify-between sm:justify-end text-center sm:text-right">
@@ -272,28 +379,29 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
                   <div className="flex-1 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900">{contract.codigo_contrato}</h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-                        {contract.status}
-                      </span>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                        {contract.modalidade}
-                      </span>
-                      {contract.comissao_multiplicador && contract.comissao_multiplicador !== 2.8 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center space-x-1">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>{contract.comissao_multiplicador}x</span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="mb-3">
-                      <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
-                      <div>
-                        <span className="font-medium">Operadora:</span> {contract.operadora}
-                      </div>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <h3 className="text-lg font-semibold text-slate-900">{contract.codigo_contrato}</h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+                    {contract.status}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                    {contract.modalidade}
+                  </span>
+                  {contract.comissao_multiplicador && contract.comissao_multiplicador !== 2.8 && (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center space-x-1">
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{contract.comissao_multiplicador}x</span>
+                    </span>
+                  )}
+                  {renderDateBadges(contract)}
+                </div>
+                <div className="mb-3">
+                  <span className="font-medium text-slate-700">{getContractDisplayName(contract)}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
+                  <div>
+                    <span className="font-medium">Operadora:</span> {contract.operadora}
+                  </div>
                       <div>
                         <span className="font-medium">Plano:</span> {contract.produto_plano}
                       </div>
@@ -316,16 +424,31 @@ export default function ContractsManager({ leadToConvert, onConvertComplete }: C
                           ) : null}
                         </div>
                       )}
-                      {bonusValue !== null && (
-                        <div>
-                          <span className="font-medium">Bonificação:</span> R$ {bonusValue.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2
-                          })}
-                        </div>
-                      )}
+                  {bonusValue !== null && (
+                    <div>
+                      <span className="font-medium">Bonificação:</span> R$ {bonusValue.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2
+                      })}
                     </div>
-                  </div>
-                  <div className="text-sm text-slate-500 lg:text-right">
+                  )}
+                  {contract.data_renovacao && (
+                    <div>
+                      <span className="font-medium">Renovação:</span> {formatDate(contract.data_renovacao)}
+                    </div>
+                  )}
+                  {contract.previsao_recebimento_comissao && (
+                    <div>
+                      <span className="font-medium">Prev. comissão:</span> {formatDate(contract.previsao_recebimento_comissao)}
+                    </div>
+                  )}
+                  {contract.previsao_pagamento_bonificacao && (
+                    <div>
+                      <span className="font-medium">Prev. bonificação:</span> {formatDate(contract.previsao_pagamento_bonificacao)}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="text-sm text-slate-500 lg:text-right">
                     <div>
                       Responsável: <span className="font-medium text-slate-700">{contract.responsavel}</span>
                     </div>

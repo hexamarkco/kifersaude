@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, Tag, Share2 } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -15,10 +15,36 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { getOverdueLeads } from '../lib/analytics';
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
+};
+
+type StatusReminderRule = {
+  hoursFromNow: number;
+  title: string;
+  description?: string;
+  type?: string;
+  priority?: 'alta' | 'normal' | 'baixa';
+};
+
+const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
+  'contato realizado': {
+    hoursFromNow: 24,
+    title: 'Revisar contato e planejar próximo passo',
+    description: 'Confirme interesse e avance para proposta ou requalificação.',
+    type: 'Follow-up',
+    priority: 'alta',
+  },
+  'proposta em análise': {
+    hoursFromNow: 48,
+    title: 'Acompanhar proposta em análise',
+    description: 'Verifique dúvidas pendentes e reforçe benefícios do plano.',
+    type: 'Retorno',
+    priority: 'normal',
+  },
 };
 
 export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: LeadsManagerProps) {
@@ -50,6 +76,9 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [overdueLeads, setOverdueLeads] = useState<Lead[]>([]);
+  const [recentlyOverdue, setRecentlyOverdue] = useState<Lead[]>([]);
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -95,37 +124,19 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     [tipoContratacaoOptions]
   );
 
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    leads.forEach((lead) => {
-      lead.tags?.forEach((tag) => {
-        const normalized = tag?.trim();
-        if (normalized) {
-          tagSet.add(normalized);
-        }
-      });
-    });
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
-  }, [leads]);
+  const syncOverdueLeads = useCallback(
+    (allLeads: Lead[], previousOverdue: Lead[] = []) => {
+      const updated = getOverdueLeads(allLeads);
+      const previousIds = new Set(previousOverdue.map(lead => lead.id));
+      const newOverdue = updated.filter(lead => !previousIds.has(lead.id));
 
-  const availableCanais = useMemo(() => {
-    const canalSet = new Set<string>();
-    leads.forEach((lead) => {
-      if (lead.canal) {
-        canalSet.add(lead.canal);
+      if (newOverdue.length > 0) {
+        setRecentlyOverdue(newOverdue);
       }
-    });
-    return Array.from(canalSet).sort((a, b) => a.localeCompare(b));
-  }, [leads]);
 
-  const tagFilterOptions = useMemo(
-    () => availableTags.map((tag) => ({ value: tag, label: tag })),
-    [availableTags]
-  );
-
-  const canalFilterOptions = useMemo(
-    () => availableCanais.map((canal) => ({ value: canal, label: canal })),
-    [availableCanais]
+      setOverdueLeads(updated);
+    },
+    []
   );
 
   const loadLeads = useCallback(async () => {
@@ -142,12 +153,13 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
         fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
       }
       setLeads(fetchedLeads);
+      syncOverdueLeads(fetchedLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver]);
+  }, [isObserver, isOriginVisibleToObserver, syncOverdueLeads]);
 
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
@@ -206,7 +218,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
         }
       }
     },
-    [isObserver, isOriginVisibleToObserver]
+    [isObserver, isOriginVisibleToObserver, syncOverdueLeads]
   );
 
   useEffect(() => {
@@ -278,60 +290,30 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   }, [tipoContratacaoOptions]);
 
   useEffect(() => {
-    setFilterTags((current) => current.filter((value) => availableTags.includes(value)));
-  }, [availableTags]);
+    syncOverdueLeads(leads, overdueLeads);
+  }, [leads, syncOverdueLeads]);
 
   useEffect(() => {
-    setFilterCanais((current) => current.filter((value) => availableCanais.includes(value)));
-  }, [availableCanais]);
+    const intervalId = window.setInterval(() => {
+      syncOverdueLeads(leads, overdueLeads);
+    }, 60000);
 
-  const isWithinDateRange = useCallback(
-    (value: string | null | undefined, from: string, to: string) => {
-      if (!from && !to) return true;
-      if (!value) return false;
+    return () => window.clearInterval(intervalId);
+  }, [leads, overdueLeads, syncOverdueLeads]);
 
-      const parsedValue = new Date(value);
-      if (Number.isNaN(parsedValue.getTime())) return false;
+  useEffect(() => {
+    if (recentlyOverdue.length === 0) return;
 
-      if (from) {
-        const fromDate = new Date(from);
-        if (from.length <= 10) {
-          fromDate.setHours(0, 0, 0, 0);
-        }
-        if (parsedValue < fromDate) return false;
-      }
+    const timeoutId = window.setTimeout(() => {
+      setRecentlyOverdue([]);
+    }, 8000);
 
-      if (to) {
-        const toDate = new Date(to);
-        if (to.length <= 10) {
-          toDate.setHours(23, 59, 59, 999);
-        }
-        if (parsedValue > toDate) return false;
-      }
-
-      return true;
-    },
-    []
-  );
-
-  const resetFilters = useCallback(() => {
-    setSearchTerm('');
-    setFilterStatus([]);
-    setFilterResponsavel([]);
-    setFilterOrigem([]);
-    setFilterTipoContratacao([]);
-    setFilterTags([]);
-    setFilterCanais([]);
-    setFilterCreatedFrom('');
-    setFilterCreatedTo('');
-    setFilterUltimoContatoFrom('');
-    setFilterUltimoContatoTo('');
-    setFilterProximoRetornoFrom('');
-    setFilterProximoRetornoTo('');
-  }, []);
+    return () => window.clearTimeout(timeoutId);
+  }, [recentlyOverdue]);
 
   const filteredLeads = useMemo(() => {
-    let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
+    const baseList = showOverdueOnly ? overdueLeads : leads;
+    let filtered = baseList.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
 
     const selectedStatusSet = new Set(filterStatus);
     const selectedResponsavelSet = new Set(filterResponsavel);
@@ -391,6 +373,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     return filtered;
   }, [
     leads,
+    overdueLeads,
     searchTerm,
     filterStatus,
     filterResponsavel,
@@ -407,7 +390,7 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     isObserver,
     isOriginVisibleToObserver,
     showArchived,
-    isWithinDateRange,
+    showOverdueOnly,
   ]);
 
   useEffect(() => {
@@ -576,9 +559,42 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     };
   };
 
-  const handleWhatsAppContact = (lead: Lead) => {
+  const registerContact = async (lead: Lead, tipo: 'WhatsApp' | 'Email') => {
+    const timestamp = new Date().toISOString();
+
+    setLeads((current) =>
+      current.map((l) =>
+        l.id === lead.id
+          ? { ...l, ultimo_contato: timestamp }
+          : l
+      )
+    );
+
+    setSelectedLead((current) =>
+      current && current.id === lead.id ? { ...current, ultimo_contato: timestamp } : current
+    );
+
+    try {
+      await supabase
+        .from('interactions')
+        .insert([{ lead_id: lead.id, tipo, descricao: `Contato via ${tipo}`, responsavel: lead.responsavel }]);
+
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({ ultimo_contato: timestamp })
+        .eq('id', lead.id);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Erro ao registrar contato:', error);
+    }
+  };
+
+  const handleWhatsAppContact = async (lead: Lead) => {
     const launchParams = buildWhatsappLaunchParams(lead);
     if (!launchParams) return;
+
+    await registerContact(lead, 'WhatsApp');
 
     if (onOpenWhatsapp) {
       onOpenWhatsapp(launchParams);
@@ -602,9 +618,12 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
     return `mailto:${lead.email}?${params.toString()}`;
   };
 
-  const handleEmailContact = (lead: Lead) => {
+  const handleEmailContact = async (lead: Lead) => {
     const url = buildEmailUrl(lead);
     if (!url) return;
+
+    await registerContact(lead, 'Email');
+
     if (typeof window !== 'undefined') {
       window.location.href = url;
     }
@@ -669,6 +688,42 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
           .eq('lead_id', leadId);
 
         if (deleteRemindersError) throw deleteRemindersError;
+      } else {
+        const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
+        if (reminderRule) {
+          const reminderDate = new Date();
+          reminderDate.setHours(reminderDate.getHours() + reminderRule.hoursFromNow);
+          reminderDate.setMinutes(0, 0, 0);
+
+          const reminderDateISO = reminderDate.toISOString();
+
+          const { error: insertReminderError } = await supabase.from('reminders').insert([
+            {
+              lead_id: leadId,
+              tipo: reminderRule.type ?? 'Follow-up',
+              titulo: `${reminderRule.title} - ${lead.nome_completo}`,
+              descricao: reminderRule.description ?? null,
+              data_lembrete: reminderDateISO,
+              lido: false,
+              prioridade: reminderRule.priority ?? 'normal',
+            },
+          ]);
+
+          if (insertReminderError) throw insertReminderError;
+
+          const { error: leadUpdateError } = await supabase
+            .from('leads')
+            .update({ proximo_retorno: reminderDateISO })
+            .eq('id', leadId);
+
+          if (leadUpdateError) throw leadUpdateError;
+
+          setLeads((current) =>
+            current.map((leadItem) =>
+              leadItem.id === leadId ? { ...leadItem, proximo_retorno: reminderDateISO } : leadItem
+            )
+          );
+        }
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
@@ -725,6 +780,75 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
   return (
     <div>
       <ObserverBanner />
+      {overdueLeads.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-orange-100 p-2 text-orange-700">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-orange-800">
+                  {overdueLeads.length} lead{overdueLeads.length === 1 ? '' : 's'} com retorno vencido
+                </p>
+                <p className="text-sm text-orange-700">
+                  Ordenados pelo próximo retorno. Mantenha o contato ativo para evitar perda de interesse.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowOverdueOnly((current) => !current)}
+                className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-orange-700 transition-colors"
+              >
+                {showOverdueOnly ? 'Ver todos os leads' : 'Filtrar atrasados'}
+              </button>
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="rounded-lg border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-800 hover:bg-orange-100 transition-colors"
+              >
+                Atualizar prioridade
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {overdueLeads.slice(0, 3).map((lead) => (
+              <div key={lead.id} className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{lead.nome_completo}</p>
+                    <p className="text-xs text-slate-600">Responsável: {lead.responsavel || 'Não atribuído'}</p>
+                  </div>
+                  <Calendar className="h-4 w-4 text-orange-500" />
+                </div>
+                {lead.proximo_retorno && (
+                  <p className="mt-2 text-xs font-medium text-orange-700">
+                    Próximo retorno: {formatDateTimeFullBR(lead.proximo_retorno)}
+                  </p>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedLead(lead);
+                      setViewMode('list');
+                    }}
+                    className="flex-1 rounded-lg bg-orange-100 px-2 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-200 transition-colors"
+                  >
+                    Abrir lead
+                  </button>
+                  <button
+                    onClick={() => setReminderLead(lead)}
+                    className="rounded-lg bg-orange-600 px-2 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
+                    type="button"
+                  >
+                    Agendar retorno
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>
@@ -1181,6 +1305,54 @@ export default function LeadsManager({ onConvertToContract, onOpenWhatsapp }: Le
             onItemsPerPageChange={handleItemsPerPageChange}
           />
         )}
+        </div>
+      )}
+
+      {recentlyOverdue.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-40 space-y-3">
+          {recentlyOverdue.map((lead) => (
+            <div key={lead.id} className="w-80 rounded-2xl border border-orange-200 bg-white p-4 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 text-orange-700">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="text-sm font-semibold">Lead em atraso</span>
+                </div>
+                <button
+                  onClick={() => setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id))}
+                  className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                  aria-label="Fechar alerta de lead atrasado"
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{lead.nome_completo}</p>
+              {lead.responsavel && (
+                <p className="text-xs text-slate-600">Responsável: {lead.responsavel}</p>
+              )}
+              {lead.proximo_retorno && (
+                <p className="mt-2 text-xs text-orange-700">Retorno vencido: {formatDateTimeFullBR(lead.proximo_retorno)}</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedLead(lead);
+                    setViewMode('list');
+                  }}
+                  className="flex-1 rounded-lg bg-orange-100 px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-200 transition-colors"
+                >
+                  Abrir lead
+                </button>
+                <button
+                  onClick={() => setReminderLead(lead)}
+                  className="rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
+                  type="button"
+                >
+                  Agendar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

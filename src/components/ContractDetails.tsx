@@ -24,12 +24,59 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
   const [showDependentForm, setShowDependentForm] = useState(false);
   const [editingDependent, setEditingDependent] = useState<Dependent | null>(null);
   const [showInteractionForm, setShowInteractionForm] = useState(false);
-  const [interactionData, setInteractionData] = useState({
+  const initialInteractionData = {
     tipo: 'Observação',
     descricao: '',
     responsavel: 'Luiza',
-  });
+  };
+  const [interactionData, setInteractionData] = useState(initialInteractionData);
+  const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+
+  const parseDate = (date?: string | null) => {
+    if (!date) return null;
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const daysUntil = (date?: string | null) => {
+    const parsed = parseDate(date);
+    if (!parsed) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsed.setHours(0, 0, 0, 0);
+    const diff = parsed.getTime() - today.getTime();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const buildDatePill = (label: string, date?: string | null) => {
+    const remaining = daysUntil(date);
+    const parsed = parseDate(date);
+    if (remaining === null || !parsed) return null;
+
+    const formattedDate = parsed.toLocaleDateString('pt-BR');
+    const tone = remaining < 0
+      ? 'bg-slate-100 text-slate-700 border-slate-200'
+      : remaining <= 7
+        ? 'bg-red-50 text-red-700 border-red-200'
+        : remaining <= 15
+          ? 'bg-amber-50 text-amber-700 border-amber-200'
+          : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+    const suffix = remaining === 0
+      ? 'hoje'
+      : remaining > 0
+        ? `em ${remaining} dia${remaining === 1 ? '' : 's'}`
+        : `há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'}`;
+
+    return (
+      <div key={`${label}-${date}`} className={`px-3 py-2 rounded-full text-xs font-medium border inline-flex items-center space-x-2 ${tone}`}>
+        <span className="font-semibold">{label}</span>
+        <span>{formattedDate}</span>
+        <span className="text-[11px] font-normal">{suffix}</span>
+      </div>
+    );
+  };
 
   useEffect(() => {
     loadData();
@@ -92,21 +139,62 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
     e.preventDefault();
 
     try {
-      const { error } = await supabase
-        .from('interactions')
-        .insert([{
-          contract_id: contract.id,
-          ...interactionData,
-        }]);
+      const { error } = editingInteraction
+        ? await supabase
+            .from('interactions')
+            .update({
+              tipo: interactionData.tipo,
+              descricao: interactionData.descricao,
+              responsavel: interactionData.responsavel,
+            })
+            .eq('id', editingInteraction.id)
+        : await supabase
+            .from('interactions')
+            .insert([{
+              contract_id: contract.id,
+              ...interactionData,
+            }]);
 
       if (error) throw error;
 
-      setInteractionData({ tipo: 'Observação', descricao: '', responsavel: 'Luiza' });
+      setInteractionData(initialInteractionData);
       setShowInteractionForm(false);
+      setEditingInteraction(null);
       loadData();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
       alert('Erro ao adicionar interação');
+    }
+  };
+
+  const handleEditInteraction = (interaction: Interaction) => {
+    setEditingInteraction(interaction);
+    setInteractionData({
+      tipo: interaction.tipo,
+      descricao: interaction.descricao,
+      responsavel: interaction.responsavel,
+    });
+    setShowInteractionForm(true);
+  };
+
+  const handleDeleteInteraction = async (interactionId: string) => {
+    const confirmed = await requestConfirmation({
+      title: 'Remover interação',
+      description: 'Deseja remover esta interação? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase.from('interactions').delete().eq('id', interactionId);
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Erro ao remover interação:', error);
+      alert('Erro ao remover interação');
     }
   };
 
@@ -156,6 +244,17 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 </div>
               )}
             </div>
+
+            {(contract.data_renovacao || contract.previsao_recebimento_comissao || contract.previsao_pagamento_bonificacao) && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
+                <div className="flex flex-wrap gap-2">
+                  {buildDatePill('Renovação', contract.data_renovacao)}
+                  {buildDatePill('Prev. comissão', contract.previsao_recebimento_comissao)}
+                  {buildDatePill('Prev. bonificação', contract.previsao_pagamento_bonificacao)}
+                </div>
+              </div>
+            )}
 
             {adjustments.length > 0 && contract.mensalidade_total && (
               <div className="mt-4 pt-4 border-t border-slate-200">
@@ -383,7 +482,11 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
               {!isObserver && (
                 <button
-                  onClick={() => setShowInteractionForm(!showInteractionForm)}
+                  onClick={() => {
+                    setEditingInteraction(null);
+                    setInteractionData(initialInteractionData);
+                    setShowInteractionForm(!showInteractionForm);
+                  }}
                   className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -443,7 +546,11 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                 <div className="flex items-center justify-end space-x-2">
                   <button
                     type="button"
-                    onClick={() => setShowInteractionForm(false)}
+                    onClick={() => {
+                      setShowInteractionForm(false);
+                      setEditingInteraction(null);
+                      setInteractionData(initialInteractionData);
+                    }}
                     className="px-4 py-2 text-slate-700 hover:bg-white rounded-lg transition-colors"
                   >
                     Cancelar
@@ -452,7 +559,7 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                     type="submit"
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   >
-                    Adicionar
+                    {editingInteraction ? 'Salvar alterações' : 'Adicionar'}
                   </button>
                 </div>
               </form>
@@ -474,10 +581,28 @@ export default function ContractDetails({ contract, onClose, onUpdate }: Contrac
                         </span>
                         <span className="text-sm text-slate-600">{interaction.responsavel}</span>
                       </div>
-                      <span className="text-sm text-slate-500">
-                        {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
-                        {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center space-x-3 text-sm text-slate-500">
+                        <span>
+                          {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
+                          {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {!isObserver && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleEditInteraction(interaction)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteInteraction(interaction.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-slate-700">{interaction.descricao}</p>
                   </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
@@ -92,32 +92,71 @@ export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  const showShareFeedback = (type: 'success' | 'error', message: string) => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
+    }
+
+    setShareFeedback({ type, message });
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setShareFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 3000);
+  };
 
   useEffect(() => {
     if (slug) {
       loadPostBySlug(slug);
-    } else {
-      loadPosts();
     }
   }, [slug]);
 
+  useEffect(() => () => {
+    if (feedbackTimeoutRef.current) {
+      window.clearTimeout(feedbackTimeoutRef.current);
+    }
+  }, []);
+
   const loadPosts = async () => {
     setLoading(true);
+    setError(null);
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
       .eq('published', true)
       .order('published_at', { ascending: false });
 
+    if (error) {
+      console.error('Erro ao carregar artigos do blog', error);
+      setError('Não foi possível carregar os artigos no momento.');
+    }
+
     if (!error && data) {
-      setPosts(data);
+      setPosts((prev) => (append ? [...prev, ...data] : data));
+      setHasMore(data.length === pageSize);
+    } else {
+      setHasMore(false);
+    }
+
+    if (append) {
+      setLoadingMore(false);
+    } else {
+      setLoading(false);
     }
     setLoading(false);
+    setIsRetrying(false);
   };
 
   const loadPostBySlug = async (postSlug: string) => {
     setLoading(true);
+    setError(null);
+    setSelectedPost(null);
+    setRelatedPosts([]);
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
@@ -125,12 +164,18 @@ export default function BlogPage() {
       .eq('published', true)
       .maybeSingle();
 
+    if (error) {
+      console.error('Erro ao carregar artigo pelo slug', error);
+      setError('Não foi possível carregar este artigo no momento.');
+    }
+
     if (!error && data) {
       setSelectedPost(data);
       incrementViewCount(data.id);
       loadRelatedPosts(data.category, data.id);
     }
     setLoading(false);
+    setIsRetrying(false);
   };
 
   const incrementViewCount = async (postId: string) => {
@@ -158,9 +203,16 @@ export default function BlogPage() {
 
   const categories = ['Todos', ...Array.from(new Set(posts.map(p => p.category)))];
 
-  const filteredPosts = selectedCategory === 'Todos'
-    ? posts
-    : posts.filter(p => p.category === selectedCategory);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPosts = posts.filter((post) => {
+    const matchesCategory = selectedCategory === 'Todos' || post.category === selectedCategory;
+    const matchesSearch =
+      !normalizedSearch ||
+      post.title.toLowerCase().includes(normalizedSearch) ||
+      post.excerpt.toLowerCase().includes(normalizedSearch);
+
+    return matchesCategory && matchesSearch;
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -186,14 +238,59 @@ export default function BlogPage() {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const copyLink = (post: BlogPost) => {
+  const sharePost = async (post: BlogPost, fallback: 'whatsapp' | 'facebook' | 'linkedin' = 'whatsapp') => {
     const url = `https://kifersaude.com.br/blog/${post.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Link copiado para a área de transferência!');
-    });
+    const shareData = {
+      title: post.title,
+      text: post.excerpt,
+      url
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        showShareFeedback('success', 'Compartilhamento iniciado!');
+        return;
+      } catch (error) {
+        console.error('Erro ao compartilhar com navigator.share', error);
+      }
+    }
+
+    if (fallback === 'facebook') {
+      shareOnFacebook(post);
+    } else if (fallback === 'linkedin') {
+      shareOnLinkedIn(post);
+    } else {
+      shareOnWhatsApp(post);
+    }
   };
 
+  const copyLink = async (post: BlogPost) => {
+    const url = `https://kifersaude.com.br/blog/${post.slug}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showShareFeedback('success', 'Link copiado para a área de transferência.');
+    } catch (error) {
+      console.error('Erro ao copiar link', error);
+      showShareFeedback('error', 'Não foi possível copiar o link. Tente novamente.');
+    }
+  };
+
+  const feedbackToast = shareFeedback ? (
+    <div
+      className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white transition-opacity ${
+        shareFeedback.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      {shareFeedback.message}
+    </div>
+  ) : null;
+
   const isLoadingPost = Boolean(slug) && loading;
+  const isInitialLoading = loading && posts.length === 0;
 
   if (isLoadingPost) {
     return (
@@ -272,6 +369,46 @@ export default function BlogPage() {
             </div>
           </div>
         </article>
+
+        <BlogFooter />
+        {feedbackToast}
+      </div>
+    );
+  }
+
+  if (error && slug) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/blog')}
+                className="flex items-center text-slate-600 hover:text-orange-600 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Voltar para o blog
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-slate-900">Kifer Saúde</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center space-y-6">
+          <h1 className="text-3xl font-bold text-slate-900">Ops! Não foi possível carregar o artigo</h1>
+          <p className="text-lg text-slate-600">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
 
         <BlogFooter />
       </div>
@@ -363,7 +500,7 @@ export default function BlogPage() {
             <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-slate-200">
               <span className="text-sm font-semibold text-slate-600">Compartilhar:</span>
               <button
-                onClick={() => shareOnWhatsApp(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'whatsapp')}
                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no WhatsApp"
               >
@@ -371,7 +508,7 @@ export default function BlogPage() {
                 WhatsApp
               </button>
               <button
-                onClick={() => shareOnFacebook(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'facebook')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no Facebook"
               >
@@ -379,7 +516,7 @@ export default function BlogPage() {
                 Facebook
               </button>
               <button
-                onClick={() => shareOnLinkedIn(selectedPost)}
+                onClick={() => sharePost(selectedPost, 'linkedin')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no LinkedIn"
               >
@@ -482,6 +619,7 @@ export default function BlogPage() {
         </article>
 
         <BlogFooter />
+        {feedbackToast}
       </div>
     );
   }
@@ -524,8 +662,18 @@ export default function BlogPage() {
           </p>
         </div>
 
+        <div className="max-w-3xl mx-auto mb-10">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por título ou resumo"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+
         <div className="flex flex-wrap gap-3 justify-center mb-12">
-          {loading
+          {loading || isRetrying
             ? Array.from({ length: 6 }).map((_, index) => (
                 <Skeleton key={index} variant="line" className="h-11 w-28" />
               ))
@@ -544,7 +692,18 @@ export default function BlogPage() {
               ))}
         </div>
 
-        {loading ? (
+        {error ? (
+          <div className="max-w-3xl mx-auto text-center bg-white rounded-2xl shadow-sm p-8 space-y-4">
+            <h2 className="text-2xl font-bold text-slate-900">Ops! Algo deu errado</h2>
+            <p className="text-slate-600">{error}</p>
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : loading || isRetrying ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Array.from({ length: 6 }).map((_, index) => (
               <article key={index} className={`${skeletonSurfaces.card} overflow-hidden`}>
@@ -571,63 +730,101 @@ export default function BlogPage() {
             <p className="text-xl text-slate-500">Nenhum artigo publicado ainda.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post) => (
-              <article
-                key={post.id}
-                onClick={() => navigate(`/blog/${post.slug}`)}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer group"
-              >
-                {post.cover_image_url ? (
-                  <div className="h-56 overflow-hidden">
-                    <img
-                      src={post.cover_image_url}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-56 bg-gradient-to-br from-orange-100 to-amber-100" />
-                )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredPosts.map((post) => (
+                <article
+                  key={post.id}
+                  onClick={() => navigate(`/blog/${post.slug}`)}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer group"
+                >
+                  {post.cover_image_url ? (
+                    <div className="h-56 overflow-hidden">
+                      <img
+                        src={post.cover_image_url}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-56 bg-gradient-to-br from-orange-100 to-amber-100" />
+                  )}
 
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-3 flex-wrap">
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-                      {post.category}
-                    </span>
-                    <span className="text-xs text-slate-500 flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {formatDate(post.published_at)}
-                    </span>
-                    <span className="text-xs text-slate-500 flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {post.read_time}
-                    </span>
+                  <div className="p-6">
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
+                        {post.category}
+                      </span>
+                      <span className="text-xs text-slate-500 flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formatDate(post.published_at)}
+                      </span>
+                      <span className="text-xs text-slate-500 flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {post.read_time}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center">
+                        Ler artigo completo
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </button>
+                      <span className="text-xs text-slate-400 flex items-center">
+                        <Eye className="w-3 h-3 mr-1" />
+                        {post.views_count}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center">
-                      Ler artigo completo
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </button>
-                    <span className="text-xs text-slate-400 flex items-center">
-                      <Eye className="w-3 h-3 mr-1" />
-                      {post.views_count}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+              {(loading || loadingMore) &&
+                Array.from({ length: 3 }).map((_, index) => (
+                  <article key={`loader-${index}`} className={`${skeletonSurfaces.card} overflow-hidden`}>
+                    <Skeleton className="h-56 w-full" />
+                    <div className="p-6 space-y-5">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Skeleton variant="line" className="h-7 w-24" />
+                        <Skeleton variant="line" className="h-5 w-20" />
+                        <Skeleton variant="line" className="h-5 w-16" />
+                      </div>
+                      <Skeleton className="h-7 w-3/4" />
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-5/6" />
+                      <div className="flex items-center justify-between">
+                        <Skeleton variant="line" className="h-6 w-32" />
+                        <Skeleton variant="line" className="h-6 w-14" />
+                      </div>
+                    </div>
+                  </article>
+                ))}
+            </div>
+            {hasMore && filteredPosts.length > 0 && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loading || loadingMore}
+                  className={`px-8 py-3 rounded-full font-semibold transition-all ${
+                    loading || loadingMore
+                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-orange-600 text-white shadow-lg hover:bg-orange-700'
+                  }`}
+                >
+                  {loading || loadingMore ? 'Carregando...' : 'Carregar mais'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       <BlogFooter />
+      {feedbackToast}
     </div>
   );
 }

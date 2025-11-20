@@ -206,7 +206,12 @@ export default function ContractsManager({
   };
 
   const hasUpcomingImportantDate = (contract: Contract) => {
-    const dates = [contract.data_renovacao, contract.previsao_recebimento_comissao, contract.previsao_pagamento_bonificacao];
+    const dates = [
+      contract.data_renovacao,
+      contract.mes_reajuste,
+      contract.previsao_recebimento_comissao,
+      contract.previsao_pagamento_bonificacao,
+    ];
     return dates.some(date => {
       const remaining = daysUntil(date);
       return remaining !== null && remaining >= 0 && remaining <= 30;
@@ -477,7 +482,12 @@ export default function ContractsManager({
                   )}
                   {contract.data_renovacao && (
                     <div>
-                      <span className="font-medium">Renovação:</span> {formatDate(contract.data_renovacao)}
+                      <span className="font-medium">Fim da fidelidade:</span> {formatDate(contract.data_renovacao)}
+                    </div>
+                  )}
+                  {contract.mes_reajuste && (
+                    <div>
+                      <span className="font-medium">Mês de reajuste:</span> {formatDate(contract.mes_reajuste)}
                     </div>
                   )}
                   {contract.previsao_recebimento_comissao && (

@@ -3815,9 +3815,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
       ultimo_contato: nowIso,
     };
 
-    const shouldClearNextReturn = normalizedStatus === 'perdido' || normalizedStatus === 'convertido';
-
-    if (shouldClearNextReturn) {
+    if (normalizedStatus === 'perdido') {
       updatePayload.proximo_retorno = null;
     }
 
@@ -3830,7 +3828,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
       throw updateLeadError;
     }
 
-    if (shouldClearNextReturn) {
+    if (normalizedStatus === 'perdido') {
       const { error: deleteRemindersError } = await supabaseAdmin
         .from('reminders')
         .delete()

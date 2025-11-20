@@ -4088,7 +4088,10 @@ export default function WhatsappPage({
               ...chat.crm_lead,
               status: normalizedNewStatus,
               ultimo_contato: nowIso,
-              proximo_retorno: shouldClearNextReturn ? null : chat.crm_lead.proximo_retorno,
+              proximo_retorno:
+                normalizedNewStatus.toLowerCase() === 'perdido'
+                  ? null
+                  : chat.crm_lead.proximo_retorno,
             },
           };
         }),
@@ -4136,7 +4139,7 @@ export default function WhatsappPage({
                   proximo_retorno:
                     typeof updatedProximoRetorno !== 'undefined'
                       ? updatedProximoRetorno
-                      : shouldClearNextReturn
+                      : normalizedNewStatus.toLowerCase() === 'perdido'
                         ? null
                         : chat.crm_lead.proximo_retorno,
                 },

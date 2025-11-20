@@ -902,6 +902,7 @@ export default function LeadsManager({
         );
         throw error;
       }
+    }
   };
 
   useEffect(() => {

@@ -73,7 +73,7 @@ export type Contract = {
   acomodacao?: string;
   data_inicio?: string;
   data_renovacao?: string;
-  mes_reajuste?: string;
+  mes_reajuste?: number | null;
   carencia?: string;
   mensalidade_total?: number;
   comissao_prevista?: number;

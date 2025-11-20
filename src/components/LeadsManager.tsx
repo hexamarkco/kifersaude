@@ -824,7 +824,7 @@ export default function LeadsManager({
 
   if (normalizedStatus === 'proposta enviada') {
     setReminderLead({ ...lead, status: newStatus });
-  } else if (normalizedStatus === 'perdido') {
+  } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
     const { error: deleteRemindersError } = await supabase
       .from('reminders')
       .delete()

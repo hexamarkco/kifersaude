@@ -792,117 +792,116 @@ export default function LeadsManager({
     );
 
     try {
-      const { error: updateError } = await supabase
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update({
+      status: newStatus,
+      ultimo_contato: new Date().toISOString(),
+    })
+    .eq('id', leadId);
+
+  if (updateError) throw updateError;
+
+  await supabase.from('interactions').insert([
+    {
+      lead_id: leadId,
+      tipo: 'Observação',
+      descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
+      responsavel: lead.responsavel,
+    },
+  ]);
+
+  await supabase.from('lead_status_history').insert([
+    {
+      lead_id: leadId,
+      status_anterior: oldStatus,
+      status_novo: newStatus,
+      responsavel: lead.responsavel,
+    },
+  ]);
+
+  const normalizedStatus = newStatus.trim().toLowerCase();
+
+  if (normalizedStatus === 'proposta enviada') {
+    setReminderLead({ ...lead, status: newStatus });
+  } else if (normalizedStatus === 'perdido') {
+    const { error: deleteRemindersError } = await supabase
+      .from('reminders')
+      .delete()
+      .eq('lead_id', leadId);
+
+    if (deleteRemindersError) throw deleteRemindersError;
+
+    const { error: clearNextReturnError } = await supabase
+      .from('leads')
+      .update({ proximo_retorno: null })
+      .eq('id', leadId);
+
+    if (clearNextReturnError) throw clearNextReturnError;
+
+    setLeads((current) =>
+      current.map((leadItem) =>
+        leadItem.id === leadId
+          ? { ...leadItem, proximo_retorno: null }
+          : leadItem
+      )
+    );
+  } else {
+    const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
+
+    if (reminderRule) {
+      const reminderDate = new Date();
+      reminderDate.setHours(
+        reminderDate.getHours() + reminderRule.hoursFromNow
+      );
+      reminderDate.setMinutes(0, 0, 0);
+
+      const reminderDateISO = reminderDate.toISOString();
+
+      const { error: insertReminderError } = await supabase
+        .from('reminders')
+        .insert([
+          {
+            lead_id: leadId,
+            tipo: reminderRule.type ?? 'Follow-up',
+            titulo: `${reminderRule.title} - ${lead.nome_completo}`,
+            descricao: reminderRule.description ?? null,
+            data_lembrete: reminderDateISO,
+            lido: false,
+            prioridade: reminderRule.priority ?? 'normal',
+          },
+        ]);
+
+      if (insertReminderError) throw insertReminderError;
+
+      const { error: leadUpdateError } = await supabase
         .from('leads')
-        .update({
-          status: newStatus,
-          ultimo_contato: new Date().toISOString(),
-        })
+        .update({ proximo_retorno: reminderDateISO })
         .eq('id', leadId);
 
-      if (updateError) throw updateError;
+      if (leadUpdateError) throw leadUpdateError;
 
-      await supabase
-        .from('interactions')
-        .insert([{
-          lead_id: leadId,
-          tipo: 'Observação',
-          descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
-          responsavel: lead.responsavel,
-        }]);
-
-      await supabase
-        .from('lead_status_history')
-        .insert([{
-          lead_id: leadId,
-          status_anterior: oldStatus,
-          status_novo: newStatus,
-          responsavel: lead.responsavel,
-        }]);
-
-      const normalizedStatus = newStatus.trim().toLowerCase();
-
-      try {
-        if (normalizedStatus === 'proposta enviada') {
-          setReminderLead({ ...lead, status: newStatus });
-      
-        } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
-          // 1) Apaga todos os reminders desse lead
-          const { error: deleteRemindersError } = await supabase
-            .from('reminders')
-            .delete()
-            .eq('lead_id', leadId);
-      
-          if (deleteRemindersError) throw deleteRemindersError;
-      
-          // 2) Zera o próximo retorno no banco
-          const { error: clearNextReturnError } = await supabase
-            .from('leads')
-            .update({ proximo_retorno: null })
-            .eq('id', leadId);
-      
-          if (clearNextReturnError) throw clearNextReturnError;
-      
-          // 3) Atualiza o estado local
-          setLeads((current) =>
-            current.map((leadItem) =>
-              leadItem.id === leadId
-                ? { ...leadItem, proximo_retorno: null }
-                : leadItem
-            )
-          );
-      
-        } else {
-          const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
-      
-          if (reminderRule) {
-            const reminderDate = new Date();
-            reminderDate.setHours(reminderDate.getHours() + reminderRule.hoursFromNow);
-            reminderDate.setMinutes(0, 0, 0);
-      
-            const reminderDateISO = reminderDate.toISOString();
-      
-            const { error: insertReminderError } = await supabase.from('reminders').insert([
-              {
-                lead_id: leadId,
-                tipo: reminderRule.type ?? 'Follow-up',
-                titulo: `${reminderRule.title} - ${lead.nome_completo}`,
-                descricao: reminderRule.description ?? null,
-                data_lembrete: reminderDateISO,
-                lido: false,
-                prioridade: reminderRule.priority ?? 'normal',
-              },
-            ]);
-      
-            if (insertReminderError) throw insertReminderError;
-      
-            const { error: leadUpdateError } = await supabase
-              .from('leads')
-              .update({ proximo_retorno: reminderDateISO })
-              .eq('id', leadId);
-      
-            if (leadUpdateError) throw leadUpdateError;
-      
-            setLeads((current) =>
-              current.map((leadItem) =>
-                leadItem.id === leadId
-                  ? { ...leadItem, proximo_retorno: reminderDateISO }
-                  : leadItem
-              )
-            );
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao atualizar status:', error);
-        alert('Erro ao atualizar status do lead');
-        setLeads((current) =>
-          current.map((l) =>
-            l.id === leadId ? { ...l, status: oldStatus } : l
-          )
-        );
-        throw error;
-      }
+      setLeads((current) =>
+        current.map((leadItem) =>
+          leadItem.id === leadId
+            ? { ...leadItem, proximo_retorno: reminderDateISO }
+            : leadItem
+        )
+      );
     }
+  }
+} catch (error) {
+  console.error('Erro ao atualizar status:', error);
+  alert('Erro ao atualizar status do lead');
+
+  setLeads((current) =>
+    current.map((l) =>
+      l.id === leadId ? { ...l, status: oldStatus } : l
+    )
+  );
+
+  throw error;
+}
   };
 
   useEffect(() => {

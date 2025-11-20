@@ -39,7 +39,7 @@ createRoot(document.getElementById('root')!).render(
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   const register = () => {
     navigator.serviceWorker
-      .register('/service-worker.js')
+      .register('/sw.js')
       .then((registration) => {
         console.info('Service worker registrado', registration.scope);
       })

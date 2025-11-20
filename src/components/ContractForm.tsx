@@ -541,13 +541,27 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Mês de reajuste
                 </label>
-                <input
-                  type="month"
+                <select
                   value={formData.mes_reajuste}
-                  onChange={(e) => setFormData({ ...formData, mes_reajuste: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mes_reajuste: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="MM/AAAA"
-                />
+                >
+                  <option value="">Selecione</option>
+                  <option value="01">Janeiro</option>
+                  <option value="02">Fevereiro</option>
+                  <option value="03">Março</option>
+                  <option value="04">Abril</option>
+                  <option value="05">Maio</option>
+                  <option value="06">Junho</option>
+                  <option value="07">Julho</option>
+                  <option value="08">Agosto</option>
+                  <option value="09">Setembro</option>
+                  <option value="10">Outubro</option>
+                  <option value="11">Novembro</option>
+                  <option value="12">Dezembro</option>
+                </select>
               </div>
 
               <div>

@@ -1188,6 +1188,7 @@ type UpdateLeadStatusResponse = {
     status: string | null;
     ultimo_contato: string | null;
     responsavel: string | null;
+    proximo_retorno?: string | null;
   };
   error?: string;
 };
@@ -4067,8 +4068,12 @@ export default function WhatsappPage({
       }
 
       const previousUltimoContato = selectedChatLead.ultimo_contato ?? null;
+      const previousProximoRetorno = selectedChatLead.proximo_retorno ?? null;
       const nowIso = new Date().toISOString();
       const responsavel = selectedChatLead.responsavel ?? 'Sistema';
+      const normalizedNewStatusLower = normalizedNewStatus.toLowerCase();
+      const shouldClearNextReturn =
+        normalizedNewStatusLower === 'perdido' || normalizedNewStatusLower === 'convertido';
 
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
@@ -4083,6 +4088,7 @@ export default function WhatsappPage({
               ...chat.crm_lead,
               status: normalizedNewStatus,
               ultimo_contato: nowIso,
+              proximo_retorno: shouldClearNextReturn ? null : chat.crm_lead.proximo_retorno,
             },
           };
         }),
@@ -4107,8 +4113,12 @@ export default function WhatsappPage({
         }
 
         if (response.lead) {
-          const { status, ultimo_contato: updatedUltimoContato, responsavel: updatedResponsavel } =
-            response.lead;
+          const {
+            status,
+            ultimo_contato: updatedUltimoContato,
+            responsavel: updatedResponsavel,
+            proximo_retorno: updatedProximoRetorno,
+          } = response.lead;
 
           setChats(previousChats =>
             previousChats.map(chat => {
@@ -4123,6 +4133,12 @@ export default function WhatsappPage({
                   status: status ?? normalizedNewStatus,
                   ultimo_contato: updatedUltimoContato ?? nowIso,
                   responsavel: updatedResponsavel ?? chat.crm_lead.responsavel ?? responsavel,
+                  proximo_retorno:
+                    typeof updatedProximoRetorno !== 'undefined'
+                      ? updatedProximoRetorno
+                      : shouldClearNextReturn
+                        ? null
+                        : chat.crm_lead.proximo_retorno,
                 },
               };
             }),
@@ -4136,16 +4152,17 @@ export default function WhatsappPage({
               return chat;
             }
 
-            return {
-              ...chat,
-              crm_lead: {
-                ...chat.crm_lead,
-                status: currentStatus,
-                ultimo_contato: previousUltimoContato,
-              },
-            };
-          }),
-        );
+              return {
+                ...chat,
+                crm_lead: {
+                  ...chat.crm_lead,
+                  status: currentStatus,
+                  ultimo_contato: previousUltimoContato,
+                  proximo_retorno: previousProximoRetorno,
+                },
+              };
+            }),
+          );
         throw error;
       } finally {
         setUpdatingLeadStatus(false);

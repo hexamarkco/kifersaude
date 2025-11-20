@@ -253,6 +253,7 @@ type LeadStatusUpdateResult = {
   status: string;
   ultimo_contato: string;
   responsavel: string;
+  proximo_retorno?: string | null;
 };
 
 type ZapiChatMetadata = {
@@ -3807,17 +3808,37 @@ const handleUpdateLeadStatus = async (req: Request) => {
     const responsavelRegistro =
       toNonEmptyString(body.responsavel) ?? toNonEmptyString(leadRecord.responsavel) ?? 'Sistema';
     const nowIso = new Date().toISOString();
+    const normalizedStatus = newStatus.trim().toLowerCase();
+
+    const updatePayload: Record<string, string | null> = {
+      status: newStatus,
+      ultimo_contato: nowIso,
+    };
+
+    const shouldClearNextReturn = normalizedStatus === 'perdido' || normalizedStatus === 'convertido';
+
+    if (shouldClearNextReturn) {
+      updatePayload.proximo_retorno = null;
+    }
 
     const { error: updateLeadError } = await supabaseAdmin
       .from('leads')
-      .update({
-        status: newStatus,
-        ultimo_contato: nowIso,
-      })
+      .update(updatePayload)
       .eq('id', leadId);
 
     if (updateLeadError) {
       throw updateLeadError;
+    }
+
+    if (shouldClearNextReturn) {
+      const { error: deleteRemindersError } = await supabaseAdmin
+        .from('reminders')
+        .delete()
+        .eq('lead_id', leadId);
+
+      if (deleteRemindersError) {
+        throw deleteRemindersError;
+      }
     }
 
     const descricao = `Status alterado de "${statusAnterior}" para "${newStatus}" pelo chat do WhatsApp`;
@@ -3858,6 +3879,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
       status: newStatus,
       ultimo_contato: nowIso,
       responsavel: responsavelRegistro,
+      proximo_retorno: updatePayload.proximo_retorno,
     };
 
     return respondJson(200, { success: true, lead: responsePayload });

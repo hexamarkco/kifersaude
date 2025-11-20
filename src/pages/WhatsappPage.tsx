@@ -4071,6 +4071,9 @@ export default function WhatsappPage({
       const previousProximoRetorno = selectedChatLead.proximo_retorno ?? null;
       const nowIso = new Date().toISOString();
       const responsavel = selectedChatLead.responsavel ?? 'Sistema';
+      const normalizedNewStatusLower = normalizedNewStatus.toLowerCase();
+      const shouldClearNextReturn =
+        normalizedNewStatusLower === 'perdido' || normalizedNewStatusLower === 'convertido';
 
       setUpdatingLeadStatus(true);
       setChats(previousChats =>

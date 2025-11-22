@@ -1,6 +1,8 @@
 import type { ApiRequest, ApiResponse } from '../types';
 import { upsertChatRecord, insertWhatsappMessage } from '../../../server/whatsappStorage';
 import { rememberOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
+import { supabaseAdmin } from '../../../server/lib/supabaseAdmin';
+import type { WhatsappChat } from '../../../types/whatsapp';
 
 const globalProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
 
@@ -31,6 +33,49 @@ const ensureJson = (rawBody: unknown): SendMessageBody => {
   }
 
   return {};
+};
+
+// Helper para manter só dígitos
+const normalizeDigits = (value: string): string => value.replace(/\D/g, '');
+
+// Busca um chat existente tanto por phone quanto por chat_lid
+const findChatByPhoneOrChatLid = async (
+  identifier: string | null | undefined,
+  chatLid?: string | null,
+): Promise<WhatsappChat | null> => {
+  if (!supabaseAdmin) return null;
+  if (!identifier && !chatLid) return null;
+
+  const normalized = identifier ? normalizeDigits(identifier) : null;
+  const lid = chatLid?.trim() || null;
+
+  // 1) Busca pelo phone normalizado
+  if (normalized) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('phone', normalized)
+      .maybeSingle<WhatsappChat>();
+
+    if (!error && data) {
+      return data;
+    }
+  }
+
+  // 2) Busca pelo chat_lid
+  if (lid) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('chat_lid', lid)
+      .maybeSingle<WhatsappChat>();
+
+    if (!error && data) {
+      return data;
+    }
+  }
+
+  return null;
 };
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
@@ -92,14 +137,39 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const chatName = typeof responseBody?.chatName === 'string' ? responseBody.chatName : undefined;
     const isGroupChat = responsePhone.endsWith('-group');
 
+    // 🔥 NOVA LÓGICA: evitar duplicar chat quando o responsePhone vem em formato estranho (JID/LID)
+    const normalizedIdentifier = normalizeDigits(responsePhone);
+    const chatLidFromResponse =
+      typeof responseBody?.chatLid === 'string' ? responseBody.chatLid.trim() : null;
+
+    // 1) Tenta achar um chat existente por phone OU chat_lid
+    const existingChat = await findChatByPhoneOrChatLid(
+      normalizedIdentifier || responsePhone,
+      chatLidFromResponse,
+    );
+
+    // 2) Define o phone real para o chat
+    const effectivePhone = existingChat
+      ? existingChat.phone // sempre preferir o phone já conhecido do chat
+      : normalizedIdentifier;
+
+    if (!effectivePhone) {
+      return res.status(500).json({
+        error: 'Não foi possível determinar um número de telefone válido após o envio',
+      });
+    }
+
+    // 3) Faz o upsert do chat usando o phone real e o chat_lid (se existir)
     const chat = await upsertChatRecord({
-      phone: responsePhone,
+      phone: effectivePhone,
+      chatLid: chatLidFromResponse,
       chatName,
       isGroup: isGroupChat,
       lastMessageAt: now,
       lastMessagePreview: message,
     });
 
+    // 4) Registra a mensagem no histórico
     const insertedMessage = await insertWhatsappMessage({
       chatId: chat.id,
       messageId,
@@ -110,8 +180,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       rawPayload: responseBody,
     });
 
-    if (messageId && responsePhone) {
-      rememberOutgoingMessagePhone(messageId, responsePhone);
+    // 5) Lembra qual phone foi usado para essa mensagem (para futuros updates de status)
+    if (messageId && effectivePhone) {
+      rememberOutgoingMessagePhone(messageId, effectivePhone);
     }
 
     return res.status(200).json({ success: true, message: insertedMessage, chat });

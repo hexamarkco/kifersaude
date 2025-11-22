@@ -958,10 +958,20 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   console.info('Z-API received webhook payload:', payload);
 
   // usa chatLid ou senderLid (sempre no padrão xxx@lid)
-  const chatLid =
+  const explicitChatLid =
     (typeof payload.chatLid === 'string' && payload.chatLid.trim()) ||
     (typeof payload.senderLid === 'string' && payload.senderLid.trim()) ||
     undefined;
+  
+  // se não veio chatLid nem senderLid, mas o "phone" termina com @lid, tratamos como LID
+  const lidFromPhone =
+    !explicitChatLid &&
+    typeof payload.phone === 'string' &&
+    payload.phone.trim().endsWith('@lid')
+      ? payload.phone.trim()
+      : undefined;
+  
+  const chatLid = explicitChatLid ?? lidFromPhone ?? undefined;
 
   const statusIds = resolveStatusWebhookIds(payload);
   const normalizedStatus = normalizeStatusValue(payload.status);

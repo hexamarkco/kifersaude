@@ -6,6 +6,8 @@ import {
   getChatByChatLid,
 } from '../../../server/whatsappStorage';
 import { resolveOutgoingMessagePhone } from '../../../server/zapiMessageRegistry';
+import { supabaseAdmin } from '../../../server/lib/supabaseAdmin';
+import type { WhatsappChat } from '../../../types/whatsapp';
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
 
@@ -96,6 +98,8 @@ type AudioPayload = {
   audioUrl?: string | null;
   mimeType?: string | null;
   viewOnce?: boolean | null;
+  // algumas libs usam "duration"
+  duration?: number | null;
 };
 
 type VideoPayload = {
@@ -302,6 +306,8 @@ type ZapiPayload = {
   profileName?: string | null;
   updatedPhoto?: string | null;
   productMessage?: Record<string, unknown> | null;
+  chatLid?: string | null;
+  senderLid?: string | null;
   [key: string]: any;
 };
 
@@ -394,6 +400,8 @@ const normalizePhoneIdentifier = (value: unknown): string | null => {
   return digitsOnly.length >= 5 ? digitsOnly : null;
 };
 
+const normalizeDigits = (value: string): string => value.replace(/\D+/g, '');
+
 const pushStringCandidate = (target: string[], value: unknown) => {
   if (typeof value !== 'string') {
     return;
@@ -425,6 +433,7 @@ const collectPhoneCandidates = (payload: ZapiPayload): string[] => {
   const directKeys = [
     'phone',
     'chatLid',
+    'senderLid',
     'chatName',
     'chatPhone',
     'chatId',
@@ -585,7 +594,7 @@ const resolveNotificationText = (payload: ZapiPayload): string | null => {
       .filter(Boolean)
       .join(' - ');
     return details
-      ? `Solicitação de aprovação para novo membro - ${details}`
+      ? `Solicação de aprovação para novo membro - ${details}`
       : 'Solicitação de aprovação para novo membro';
   }
 
@@ -893,6 +902,52 @@ const handleMessageStatusCallback = async (
   }
 };
 
+// helper para buscar chat por phone OU chat_lid
+const findChatByPhoneOrChatLid = async (
+  identifier: string | null | undefined,
+  chatLid?: string | null,
+): Promise<WhatsappChat | null> => {
+  if (!supabaseAdmin) return null;
+  if (!identifier && !chatLid) return null;
+
+  const normalizedFromIdentifier =
+    typeof identifier === 'string'
+      ? normalizePhoneIdentifier(identifier) ?? normalizeDigits(identifier)
+      : null;
+
+  const lid = chatLid?.trim() || null;
+
+  // 1) busca pelo phone normalizado
+  if (normalizedFromIdentifier) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('phone', normalizedFromIdentifier)
+      .limit(1)
+      .maybeSingle<WhatsappChat>();
+
+    if (!error && data) {
+      return data;
+    }
+  }
+
+  // 2) busca pelo chat_lid
+  if (lid) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('chat_lid', lid)
+      .limit(1)
+      .maybeSingle<WhatsappChat>();
+
+    if (!error && data) {
+      return data;
+    }
+  }
+
+  return null;
+};
+
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
@@ -902,7 +957,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   console.info('Z-API received webhook payload:', payload);
 
-  const chatLid = typeof payload.chatLid === 'string' ? payload.chatLid.trim() : undefined;
+  // usa chatLid ou senderLid (sempre no padrão xxx@lid)
+  const chatLid =
+    (typeof payload.chatLid === 'string' && payload.chatLid.trim()) ||
+    (typeof payload.senderLid === 'string' && payload.senderLid.trim()) ||
+    undefined;
+
   const statusIds = resolveStatusWebhookIds(payload);
   const normalizedStatus = normalizeStatusValue(payload.status);
 
@@ -917,11 +977,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(200).json({ success: true, ignored: true });
   }
 
-  const originalPhoneValue = typeof payload.phone === 'string' ? payload.phone : undefined;
-  let phone = resolvePhoneFromPayload(payload) ?? originalPhoneValue ?? undefined;
+  const originalPhoneValue =
+    typeof payload.phone === 'string' ? payload.phone.trim() : undefined;
+
+  let phone =
+    resolvePhoneFromPayload(payload) ??
+    originalPhoneValue ??
+    undefined;
+
   const messageId = typeof payload.messageId === 'string' ? payload.messageId : undefined;
   const isFromMe = payload.fromMe === true;
 
+  // se foi mensagem "fromMe", tenta reconciliar via messageId → registro de envio
   if (isFromMe && messageId) {
     const resolvedPhone = resolveOutgoingMessagePhone(messageId);
 
@@ -934,13 +1001,29 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       });
       phone = normalizedResolved ?? phone;
     } else {
-      console.warn('Received fromMe webhook without matching send payload', {
+      console.warn('Received fromMe webhook sem matching no registro de envio', {
         messageId,
         originalPhone: originalPhoneValue ?? phone ?? null,
       });
     }
   }
 
+  // tenta reconciliar com um chat já existente usando phone + chatLid
+  const identifierForLookup = phone ?? originalPhoneValue ?? null;
+  let existingChat: WhatsappChat | null = null;
+
+  if (identifierForLookup || chatLid) {
+    existingChat = await findChatByPhoneOrChatLid(
+      identifierForLookup,
+      chatLid ?? null,
+    );
+  }
+
+  if (existingChat?.phone) {
+    phone = existingChat.phone;
+  }
+
+  // fallback: se ainda não temos phone, tenta buscar pelo chatLid direto
   if (!phone && chatLid) {
     try {
       const chatByLid = await getChatByChatLid(chatLid);
@@ -957,14 +1040,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(400).json({ error: 'Campo phone é obrigatório' });
   }
 
+  // garante que phone esteja num formato normalizado para novos chats
+  const normalizedPhone = normalizePhoneIdentifier(phone) ?? phone;
+
   const messageText = resolveMessageText(payload);
   const momentDate = parseMoment(payload.momment) ?? new Date();
-  const isGroup = payload.isGroup === true || phone.endsWith('-group');
-  const chatName = payload.chatName ?? payload.senderName ?? phone;
+  const isGroup = payload.isGroup === true || normalizedPhone.endsWith('-group');
+  const chatName = payload.chatName ?? payload.senderName ?? normalizedPhone;
 
   try {
     const chat = await upsertChatRecord({
-      phone,
+      phone: normalizedPhone,
       chatLid,
       chatName,
       isGroup,
@@ -974,10 +1060,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const normalizedRawPayload: Record<string, any> = {
       ...(payload as Record<string, any>),
-      phone,
+      phone: normalizedPhone,
     };
 
-    if (originalPhoneValue && originalPhoneValue !== phone) {
+    if (originalPhoneValue && originalPhoneValue !== normalizedPhone) {
       normalizedRawPayload._originalPhone = originalPhoneValue;
     }
 

@@ -47,14 +47,34 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     throw new Error('Phone number is required to upsert a WhatsApp chat');
   }
 
-  const { data: existingChat, error: fetchError } = await supabaseAdmin
+  // 1) tenta achar pelo phone
+  let existingChat: WhatsappChat | null = null;
+
+  const { data: chatByPhone, error: fetchByPhoneError } = await supabaseAdmin
     .from('whatsapp_chats')
     .select('*')
     .eq('phone', phone)
     .maybeSingle<WhatsappChat>();
 
-  if (fetchError) {
-    throw fetchError;
+  if (fetchByPhoneError) {
+    throw fetchByPhoneError;
+  }
+
+  existingChat = chatByPhone ?? null;
+
+  // 2) se não achou pelo phone e temos um chatLid, tenta achar pelo chat_lid
+  if (!existingChat && chatLid) {
+    const { data: chatByLid, error: fetchByLidError } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('*')
+      .eq('chat_lid', chatLid)
+      .maybeSingle<WhatsappChat>();
+
+    if (fetchByLidError) {
+      throw fetchByLidError;
+    }
+
+    existingChat = chatByLid ?? null;
   }
 
   const normalizedLastMessageAt = toIsoStringOrNull(lastMessageAt);
@@ -63,8 +83,14 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     last_message_preview: lastMessagePreview ?? null,
   };
 
+  // Só atualiza chat_lid se:
+  // - foi enviado um chatLid no input
+  // - e OU não existe chat ainda
+  // - OU o chat existente ainda não tem chat_lid
   if (chatLid !== undefined) {
-    updatePayload.chat_lid = chatLid ?? null;
+    if (!existingChat || !existingChat.chat_lid) {
+      updatePayload.chat_lid = chatLid ?? null;
+    }
   }
 
   if (typeof isGroup === 'boolean') {
@@ -87,7 +113,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
 
     return {
       ...existingChat,
-      chat_lid: updatePayload.chat_lid ?? existingChat.chat_lid,
+      chat_lid: (updatePayload.chat_lid ?? existingChat.chat_lid) ?? null,
       chat_name: updatePayload.chat_name ?? existingChat.chat_name,
       is_group: typeof updatePayload.is_group === 'boolean' ? updatePayload.is_group : existingChat.is_group,
       last_message_at: normalizedLastMessageAt,
@@ -95,6 +121,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     };
   }
 
+  // Não achou chat nem por phone, nem por chat_lid → cria um novo
   const { data: insertedChat, error: insertError } = await supabaseAdmin
     .from('whatsapp_chats')
     .insert({

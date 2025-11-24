@@ -1039,7 +1039,6 @@ export default function LeadsManager({
         )
       );
       setOverdueLeads((current) => current.filter((item) => item.id !== lead.id));
-      setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id));
     } catch (error) {
       console.error('Erro ao limpar retorno vencido:', error);
       alert('Não foi possível atualizar o retorno vencido. Tente novamente.');
@@ -1059,6 +1058,14 @@ export default function LeadsManager({
   const handleCompleteOverdue = async (lead: Lead) => {
     try {
       await clearOverdueReturn(lead, 'complete');
+
+      const shouldScheduleReminder = window.confirm(
+        'Retorno concluído. Deseja agendar um novo lembrete para este lead?'
+      );
+
+      if (shouldScheduleReminder) {
+        setReminderLead({ ...lead, proximo_retorno: null });
+      }
     } catch (error) {
       console.error('Erro ao concluir retorno vencido:', error);
     }

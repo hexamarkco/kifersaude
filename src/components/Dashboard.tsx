@@ -64,6 +64,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isInitialLoadRef = useRef(true);
+  const lastBirthdayReminderSync = useRef<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
     const urlValue = searchParams.get('periodFilter');
     const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
@@ -601,6 +602,22 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
 
   useEffect(() => {
+    const todayKey = new Date().toISOString().split('T')[0];
+
+    if (lastBirthdayReminderSync.current === todayKey) {
+      return;
+    }
+
+    ensureBirthdayRemindersForToday()
+      .then(() => {
+        lastBirthdayReminderSync.current = todayKey;
+      })
+      .catch((error) => {
+        console.error('Erro ao processar lembretes de aniversário:', error);
+      });
+  }, [ensureBirthdayRemindersForToday]);
+
+  useEffect(() => {
     const storedPeriod = resolvePeriodFilter();
     const storedStart = resolveCustomDate('customStartDate');
     const storedEnd = resolveCustomDate('customEndDate');
@@ -852,6 +869,109 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
     return upcomingBirthdays;
+  }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
+
+  const ensureBirthdayRemindersForToday = useCallback(async () => {
+    const today = new Date();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+
+    const activeContractMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
+    if (activeContractMap.size === 0) {
+      return;
+    }
+
+    const birthdaysToday: Array<{
+      nome: string;
+      tipo: 'Titular' | 'Dependente';
+      contract_id: string;
+      contract?: Contract;
+      holder?: Holder;
+    }> = [];
+
+    holdersVisibleToUser.forEach((holder) => {
+      if (!activeContractMap.has(holder.contract_id)) return;
+
+      const { month, day } = parseDateWithoutTimezone(holder.data_nascimento);
+      if (month === todayMonth && day === todayDay) {
+        birthdaysToday.push({
+          nome: holder.nome_completo,
+          tipo: 'Titular',
+          contract_id: holder.contract_id,
+          contract: activeContractMap.get(holder.contract_id),
+          holder,
+        });
+      }
+    });
+
+    dependentsVisibleToUser.forEach((dependent) => {
+      if (!activeContractMap.has(dependent.contract_id)) return;
+
+      const { month, day } = parseDateWithoutTimezone(dependent.data_nascimento);
+      if (month === todayMonth && day === todayDay) {
+        birthdaysToday.push({
+          nome: dependent.nome_completo,
+          tipo: 'Dependente',
+          contract_id: dependent.contract_id,
+          contract: activeContractMap.get(dependent.contract_id),
+          holder: holdersVisibleToUser.find((holder) => holder.contract_id === dependent.contract_id),
+        });
+      }
+    });
+
+    if (birthdaysToday.length === 0) {
+      return;
+    }
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const { data: existingReminders, error: remindersFetchError } = await supabase
+      .from('reminders')
+      .select('id, contract_id, lead_id, titulo, tipo, data_lembrete')
+      .eq('tipo', 'Aniversário')
+      .gte('data_lembrete', startOfToday.toISOString())
+      .lte('data_lembrete', endOfToday.toISOString());
+
+    if (remindersFetchError) {
+      console.error('Erro ao verificar lembretes de aniversário existentes:', remindersFetchError);
+      return;
+    }
+
+    const existingKeys = new Set(
+      (existingReminders || []).map((reminder) => `${reminder.contract_id ?? ''}|${reminder.titulo}`),
+    );
+
+    const reminderTime = new Date();
+    reminderTime.setHours(9, 0, 0, 0);
+    const reminderDateISO = reminderTime.toISOString();
+
+    const remindersToInsert = birthdaysToday
+      .filter((birthday) => !existingKeys.has(`${birthday.contract_id}|Aniversário de ${birthday.nome}`))
+      .map((birthday) => ({
+        contract_id: birthday.contract_id,
+        lead_id: birthday.contract?.lead_id ?? null,
+        tipo: 'Aniversário',
+        titulo: `Aniversário de ${birthday.nome}`,
+        descricao:
+          birthday.tipo === 'Titular'
+            ? `Enviar parabéns ao titular ${birthday.nome}.`
+            : `Enviar parabéns ao dependente ${birthday.nome}${birthday.holder ? ` (titular: ${birthday.holder.nome_completo})` : ''}.`,
+        data_lembrete: reminderDateISO,
+        lido: false,
+        prioridade: 'normal',
+      }));
+
+    if (remindersToInsert.length === 0) {
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('reminders').insert(remindersToInsert);
+    if (insertError) {
+      console.error('Erro ao criar lembretes de aniversário:', insertError);
+    }
   }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
 
   const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(daysAhead), [daysAhead, getUpcomingBirthdays]);

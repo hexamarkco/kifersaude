@@ -17,6 +17,7 @@ import FilterDateRange from './FilterDateRange';
 import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
+import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -250,23 +251,39 @@ export default function LeadsManager({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      let fetchedLeads = data || [];
-      if (isObserver) {
-        fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
-      }
-      setLeads(fetchedLeads);
-      syncOverdueLeads(fetchedLeads);
+      const mappedLeads = (data || []).map((lead) =>
+        mapLeadRelations(lead, {
+          origins: leadOrigins,
+          statuses: leadStatuses,
+          tipoContratacao: tipoContratacaoOptions,
+          responsaveis: responsavelOptions,
+        }),
+      );
+
+      const visibleLeads = isObserver
+        ? mappedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem))
+        : mappedLeads;
+
+      setLeads(visibleLeads);
+      syncOverdueLeads(visibleLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver, syncOverdueLeads]);
+  }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions, syncOverdueLeads]);
 
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
       const { eventType } = payload;
-      const newLead = payload.new as Lead | null;
+      const newLead = payload.new
+        ? mapLeadRelations(payload.new as Lead, {
+            origins: leadOrigins,
+            statuses: leadStatuses,
+            tipoContratacao: tipoContratacaoOptions,
+            responsaveis: responsavelOptions,
+          })
+        : null;
       const oldLead = payload.old as Lead | null;
 
       setLeads((current) => {
@@ -320,7 +337,15 @@ export default function LeadsManager({
         }
       }
     },
-    [isObserver, isOriginVisibleToObserver, syncOverdueLeads]
+    [
+      isObserver,
+      isOriginVisibleToObserver,
+      leadOrigins,
+      leadStatuses,
+      tipoContratacaoOptions,
+      responsavelOptions,
+      syncOverdueLeads,
+    ]
   );
 
   useEffect(() => {
@@ -578,8 +603,11 @@ export default function LeadsManager({
     const updates: Partial<Lead> = {};
     const proximoRetorno = bulkProximoRetorno ? convertLocalToUTC(bulkProximoRetorno) || null : undefined;
 
-    if (bulkResponsavel) {
-      updates.responsavel = bulkResponsavel;
+    const responsavelId = bulkResponsavel
+      ? resolveResponsavelIdByLabel(responsavelOptions, bulkResponsavel)
+      : null;
+    if (responsavelId) {
+      (updates as any).responsavel_id = responsavelId;
     }
     if (proximoRetorno !== undefined) {
       updates.proximo_retorno = proximoRetorno;
@@ -598,6 +626,7 @@ export default function LeadsManager({
           ? {
               ...lead,
               ...updates,
+              responsavel: bulkResponsavel ? bulkResponsavel : lead.responsavel,
             }
           : lead
       )
@@ -823,6 +852,11 @@ export default function LeadsManager({
     if (!lead) return;
 
     const oldStatus = lead.status;
+    const statusId = resolveStatusIdByName(leadStatuses, newStatus);
+    if (!statusId) {
+      console.error('Status não encontrado para atualização');
+      return;
+    }
 
     setLeads((current) =>
       current.map((l) =>
@@ -835,10 +869,10 @@ export default function LeadsManager({
     try {
       const { error: updateError } = await supabase
         .from('leads')
-        .update({
-          status: newStatus,
-          ultimo_contato: new Date().toISOString(),
-        })
+          .update({
+            status_id: statusId,
+            ultimo_contato: new Date().toISOString(),
+          })
         .eq('id', leadId);
 
       if (updateError) throw updateError;

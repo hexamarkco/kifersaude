@@ -80,6 +80,7 @@
                 <p class="text-slate-600 mb-4">
                     Esta API permite gerenciar leads através de requisições HTTP. Todos os endpoints requerem autenticação via API Key.
                 </p>
+                <p class="text-slate-600 mb-4 text-sm">A tabela de leads utiliza chaves estrangeiras para origem, tipo de contratação, status e responsável. Envie os campos <code>origem_id</code>, <code>tipo_contratacao_id</code>, <code>status_id</code> e <code>responsavel_id</code> com os IDs das tabelas de configuração, ou os nomes correspondentes nos campos textuais para compatibilidade.</p>
                 <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
                     <p class="text-sm font-medium text-blue-800">Base URL</p>
                     <code class="text-blue-600 text-sm">https://seu-projeto.supabase.co/functions/v1/leads-api</code>
@@ -126,7 +127,13 @@ Content-Type: application/json</pre>
       "nome_completo": "João Silva",
       "telefone": "11999999999",
       "email": "joao@email.com",
+      "origem_id": "origem-uuid",
+      "origem": "Instagram",
+      "tipo_contratacao_id": "tipo-uuid",
+      "tipo_contratacao": "Pessoa Física",
+      "status_id": "status-uuid",
       "status": "Novo",
+      "responsavel_id": "responsavel-uuid",
       "responsavel": "Luiza",
       "data_criacao": "2024-01-01T10:00:00Z"
     }
@@ -179,15 +186,16 @@ Content-Type: application/json</pre>
   "nome_completo": "Maria Santos",
   "telefone": "11988888888",
   "email": "maria@email.com",
-  "origem": "Instagram",
-  "tipo_contratacao": "Pessoa Física",
-  "status": "Novo",
-  "responsavel": "Luiza",
+  "origem_id": "origem-uuid",
+  "tipo_contratacao_id": "tipo-uuid",
+  "status_id": "status-uuid",
+  "responsavel_id": "responsavel-uuid",
   "observacoes": "Interessada em plano familiar",
   "data_criacao": "2024-01-15"
 }</pre>
                     </div>
 
+                    <p class="text-slate-600 mb-4 text-sm">Use os IDs das tabelas de configuração (<code>lead_origens</code>, <code>lead_tipos_contratacao</code>, <code>lead_status_config</code> e <code>lead_responsaveis</code>). Para compatibilidade, você também pode enviar os campos textuais <code>origem</code>, <code>tipo_contratacao</code>, <code>status</code> e <code>responsavel</code>, desde que correspondam exatamente aos rótulos existentes.</p>
                     <p class="text-slate-600 mb-4 text-sm">O campo <code>data_criacao</code> é opcional e aceita valores no formato ISO 8601 ou <code>YYYY-MM-DD</code>. Quando não informado, a data atual é utilizada automaticamente.</p>
 
                     <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
@@ -196,7 +204,7 @@ Content-Type: application/json</pre>
   -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
   -H "apikey: SEU_SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"nome_completo":"Maria Santos","telefone":"11988888888","data_criacao":"2024-01-15"}'</pre>
+  -d '{"nome_completo":"Maria Santos","telefone":"11988888888","origem_id":"origem-uuid","tipo_contratacao_id":"tipo-uuid","responsavel_id":"responsavel-uuid"}'</pre>
                     </div>
 
                     <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso (201):</h4>
@@ -207,7 +215,14 @@ Content-Type: application/json</pre>
     "id": "uuid-gerado",
     "nome_completo": "Maria Santos",
     "telefone": "11988888888",
-    "status": "Novo"
+    "origem_id": "origem-uuid",
+    "origem": "Instagram",
+    "tipo_contratacao_id": "tipo-uuid",
+    "tipo_contratacao": "Pessoa Física",
+    "status_id": "status-uuid",
+    "status": "Novo",
+    "responsavel_id": "responsavel-uuid",
+    "responsavel": "Luiza"
   }
 }</pre>
                     </div>
@@ -234,10 +249,12 @@ Content-Type: application/json</pre>
                     <h4 class="font-semibold text-slate-800 mb-2">Corpo da Requisição:</h4>
                     <div class="code-block mb-4">
                         <pre>{
-  "status": "Cotando",
+  "status_id": "status-uuid",
   "observacoes": "Cliente solicitou cotação completa"
 }</pre>
                     </div>
+
+                    <p class="text-slate-600 mb-4 text-sm">Assim como na criação, você pode usar <code>status</code>, <code>origem</code>, <code>tipo_contratacao</code> ou <code>responsavel</code> com os respectivos rótulos existentes, mas os IDs das tabelas dedicadas são preferíveis.</p>
 
                     <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
                     <div class="code-block">
@@ -245,7 +262,7 @@ Content-Type: application/json</pre>
   -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
   -H "apikey: SEU_SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"status":"Cotando"}'</pre>
+  -d '{"status_id":"status-uuid"}'</pre>
                     </div>
 
                     <div class="mt-4 grid gap-2">
@@ -253,7 +270,7 @@ Content-Type: application/json</pre>
                                class="px-4 py-2 border border-slate-300 rounded-lg">
                         <textarea id="updateLeadBody" rows="4"
                                   class="px-4 py-2 border border-slate-300 rounded-lg font-mono text-sm"
-                                  placeholder='{"status":"Cotando"}'></textarea>
+                                  placeholder='{"status_id":"status-uuid"}'></textarea>
                         <button onclick="testEndpoint('PUT', '/leads/' + document.getElementById('updateLeadId').value, document.getElementById('updateLeadBody').value)"
                                 class="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
                             🧪 Testar Endpoint
@@ -373,28 +390,28 @@ Content-Type: application/json</pre>
                                 <td class="py-3 px-4">E-mail do lead</td>
                             </tr>
                             <tr class="border-b border-slate-100">
-                                <td class="py-3 px-4 font-mono text-xs">status</td>
-                                <td class="py-3 px-4">string</td>
-                                <td class="py-3 px-4">❌ Não</td>
-                                <td class="py-3 px-4">Status atual (Novo, Contato iniciado, Em atendimento, Cotando, Proposta enviada, Fechado, Perdido)</td>
+                                <td class="py-3 px-4 font-mono text-xs">status_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_status_config</code>. Você pode enviar <code>status</code> (texto) como alternativa.</td>
                             </tr>
                             <tr class="border-b border-slate-100">
-                                <td class="py-3 px-4 font-mono text-xs">origem</td>
-                                <td class="py-3 px-4">string</td>
-                                <td class="py-3 px-4">❌ Não</td>
-                                <td class="py-3 px-4">Origem do lead</td>
+                                <td class="py-3 px-4 font-mono text-xs">origem_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_origens</code>. Campo <code>origem</code> (texto) é aceito para compatibilidade.</td>
                             </tr>
                             <tr class="border-b border-slate-100">
-                                <td class="py-3 px-4 font-mono text-xs">tipo_contratacao</td>
-                                <td class="py-3 px-4">string</td>
-                                <td class="py-3 px-4">❌ Não</td>
-                                <td class="py-3 px-4">Tipo de contratação (Pessoa Física, MEI, CNPJ, Adesão)</td>
+                                <td class="py-3 px-4 font-mono text-xs">tipo_contratacao_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_tipos_contratacao</code>. Você pode enviar <code>tipo_contratacao</code> (texto) como alternativa.</td>
                             </tr>
                             <tr class="border-b border-slate-100">
-                                <td class="py-3 px-4 font-mono text-xs">responsavel</td>
-                                <td class="py-3 px-4">string</td>
-                                <td class="py-3 px-4">❌ Não</td>
-                                <td class="py-3 px-4">Responsável pelo lead</td>
+                                <td class="py-3 px-4 font-mono text-xs">responsavel_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_responsaveis</code>. Campo <code>responsavel</code> (texto) é aceito para compatibilidade.</td>
                             </tr>
                             <tr>
                                 <td class="py-3 px-4 font-mono text-xs">observacoes</td>

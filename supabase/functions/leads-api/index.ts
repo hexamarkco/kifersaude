@@ -6,12 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
-const origensValidas = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'] as const;
-
-const origemAliases: Record<string, (typeof origensValidas)[number]> = {
-  ully: 'Ully',
-  'painel do corretor': 'Ully',
+type LeadLookupMaps = {
+  originById: Map<string, string>;
+  originByName: Map<string, string>;
+  tipoById: Map<string, string>;
+  tipoByLabel: Map<string, string>;
+  statusById: Map<string, string>;
+  statusByName: Map<string, string>;
+  defaultStatusId: string | null;
+  responsavelById: Map<string, string>;
+  responsavelByLabel: Map<string, string>;
 };
+
+type LookupTableRow = { id: string; nome?: string | null; label?: string | null; padrao?: boolean | null };
 
 function normalizeText(value: string): string {
   return value
@@ -22,25 +29,106 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
-const origemAliasMap: Record<string, (typeof origensValidas)[number]> = origensValidas.reduce(
-  (acc, origem) => {
-    acc[normalizeText(origem)] = origem;
-    return acc;
-  },
-  {} as Record<string, (typeof origensValidas)[number]>
-);
+function buildLookupMaps({
+  origins,
+  statuses,
+  tipos,
+  responsaveis,
+}: {
+  origins: LookupTableRow[];
+  statuses: LookupTableRow[];
+  tipos: LookupTableRow[];
+  responsaveis: LookupTableRow[];
+}): LeadLookupMaps {
+  const originById = new Map<string, string>();
+  const originByName = new Map<string, string>();
+  origins.forEach((origin) => {
+    if (origin.id && origin.nome) {
+      originById.set(origin.id, origin.nome);
+      originByName.set(normalizeText(origin.nome), origin.id);
+    }
+  });
 
-Object.entries(origemAliases).forEach(([alias, canonical]) => {
-  origemAliasMap[normalizeText(alias)] = canonical;
-});
+  const tipoById = new Map<string, string>();
+  const tipoByLabel = new Map<string, string>();
+  tipos.forEach((tipo) => {
+    if (tipo.id && tipo.label) {
+      tipoById.set(tipo.id, tipo.label);
+      tipoByLabel.set(normalizeText(tipo.label), tipo.id);
+    }
+  });
 
-function getCanonicalOrigem(origem?: string): (typeof origensValidas)[number] | null {
-  if (!origem || typeof origem !== 'string') {
-    return null;
+  const statusById = new Map<string, string>();
+  const statusByName = new Map<string, string>();
+  statuses.forEach((status) => {
+    if (status.id && status.nome) {
+      statusById.set(status.id, status.nome);
+      statusByName.set(normalizeText(status.nome), status.id);
+    }
+  });
+
+  const responsavelById = new Map<string, string>();
+  const responsavelByLabel = new Map<string, string>();
+  responsaveis.forEach((responsavel) => {
+    if (responsavel.id && responsavel.label) {
+      responsavelById.set(responsavel.id, responsavel.label);
+      responsavelByLabel.set(normalizeText(responsavel.label), responsavel.id);
+    }
+  });
+
+  const defaultStatusId =
+    statuses.find((status) => status.padrao)?.id || statuses.find((status) => status.id)?.id || null;
+
+  return {
+    originById,
+    originByName,
+    tipoById,
+    tipoByLabel,
+    statusById,
+    statusByName,
+    defaultStatusId,
+    responsavelById,
+    responsavelByLabel,
+  };
+}
+
+async function loadLeadLookupMaps(supabase: ReturnType<typeof createClient>): Promise<LeadLookupMaps> {
+  const [origins, statuses, tipos, responsaveis] = await Promise.all([
+    supabase.from('lead_origens').select('id, nome'),
+    supabase.from('lead_status_config').select('id, nome, padrao'),
+    supabase.from('lead_tipos_contratacao').select('id, label'),
+    supabase.from('lead_responsaveis').select('id, label'),
+  ]);
+
+  const errors = [origins.error, statuses.error, tipos.error, responsaveis.error].filter(Boolean);
+  if (errors.length > 0) {
+    throw new Error(errors.map((err) => err?.message).join('; '));
   }
 
-  const normalized = normalizeText(origem);
-  return origemAliasMap[normalized] ?? null;
+  return buildLookupMaps({
+    origins: origins.data || [],
+    statuses: statuses.data || [],
+    tipos: tipos.data || [],
+    responsaveis: responsaveis.data || [],
+  });
+}
+
+function resolveForeignKey(
+  idInput: unknown,
+  nameInput: unknown,
+  idMap: Map<string, string>,
+  nameMap: Map<string, string>,
+): string | null {
+  if (typeof idInput === 'string' && idInput.trim() && idMap.has(idInput.trim())) {
+    return idInput.trim();
+  }
+
+  if (typeof nameInput === 'string' && nameInput.trim()) {
+    const normalized = normalizeText(nameInput);
+    return nameMap.get(normalized) ?? null;
+  }
+
+  return null;
 }
 
 interface LeadData {
@@ -49,11 +137,14 @@ interface LeadData {
   email?: string | null;
   cidade?: string | null;
   regiao?: string | null;
-  origem: string;
-  tipo_contratacao: string;
+  cep?: string | null;
+  endereco?: string | null;
+  estado?: string | null;
+  origem_id: string;
+  tipo_contratacao_id: string;
   operadora_atual?: string | null;
-  status?: string;
-  responsavel: string;
+  status_id: string;
+  responsavel_id: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
   data_criacao: string;
@@ -97,7 +188,19 @@ function parseDateInputToISOString(value: unknown): string | null {
   return parsed.toISOString();
 }
 
-function validateLeadData(data: any): { valid: boolean; errors: string[] } {
+function sanitizeOptionalString(value: any): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  return null;
+}
+
+function validateLeadData(
+  data: any,
+  lookups: LeadLookupMaps,
+): { valid: boolean; errors: string[]; leadData?: LeadData } {
   const errors: string[] = [];
 
   if (!data.nome_completo || typeof data.nome_completo !== 'string') {
@@ -108,38 +211,36 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     errors.push('Campo "telefone" é obrigatório e deve ser uma string');
   }
 
-  if (!data.origem || typeof data.origem !== 'string') {
-    errors.push('Campo "origem" é obrigatório e deve ser uma string');
+  const origemId = resolveForeignKey(data.origem_id, data.origem, lookups.originById, lookups.originByName);
+  if (!origemId) {
+    errors.push('Campo "origem_id" é obrigatório e deve corresponder a uma origem válida');
   }
 
-  const origemCanonical = getCanonicalOrigem(data.origem);
-  if (data.origem && !origemCanonical) {
-    const aliasHint = Object.keys(origemAliases).length
-      ? ` (variações aceitas: ${Object.keys(origemAliases).join(', ')})`
-      : '';
-    errors.push(
-      `Campo "origem" deve ser um dos valores: ${origensValidas.join(', ')}${aliasHint}`
-    );
-  } else if (origemCanonical) {
-    data.origem = origemCanonical;
+  const tipoContratacaoId = resolveForeignKey(
+    data.tipo_contratacao_id,
+    data.tipo_contratacao,
+    lookups.tipoById,
+    lookups.tipoByLabel,
+  );
+  if (!tipoContratacaoId) {
+    errors.push('Campo "tipo_contratacao_id" é obrigatório e deve corresponder a um tipo de contratação válido');
   }
 
-  if (!data.tipo_contratacao || typeof data.tipo_contratacao !== 'string') {
-    errors.push('Campo "tipo_contratacao" é obrigatório e deve ser uma string');
+  const responsavelId = resolveForeignKey(
+    data.responsavel_id,
+    data.responsavel,
+    lookups.responsavelById,
+    lookups.responsavelByLabel,
+  );
+  if (!responsavelId) {
+    errors.push('Campo "responsavel_id" é obrigatório e deve corresponder a um responsável válido');
   }
 
-  const tiposValidos = ['Pessoa Física', 'MEI', 'CNPJ', 'Adesão'];
-  if (data.tipo_contratacao && !tiposValidos.includes(data.tipo_contratacao)) {
-    errors.push(`Campo "tipo_contratacao" deve ser um dos valores: ${tiposValidos.join(', ')}`);
-  }
-
-  if (!data.responsavel || typeof data.responsavel !== 'string') {
-    errors.push('Campo "responsavel" é obrigatório e deve ser uma string');
-  }
-
-  const responsaveisValidos = ['Luiza', 'Nick'];
-  if (data.responsavel && !responsaveisValidos.includes(data.responsavel)) {
-    errors.push(`Campo "responsavel" deve ser um dos valores: ${responsaveisValidos.join(', ')}`);
+  const statusId =
+    resolveForeignKey(data.status_id, data.status, lookups.statusById, lookups.statusByName) ||
+    lookups.defaultStatusId;
+  if (!statusId) {
+    errors.push('Campo "status_id" é obrigatório e deve corresponder a um status válido');
   }
 
   if (data.email && typeof data.email === 'string') {
@@ -149,9 +250,150 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     }
   }
 
-  const statusValidos = ['Novo', 'Em contato', 'Cotando', 'Proposta enviada', 'Fechado', 'Perdido'];
-  if (data.status && !statusValidos.includes(data.status)) {
-    errors.push(`Campo "status" deve ser um dos valores: ${statusValidos.join(', ')}`);
+  let creationDateIso: string | null = null;
+  if (data.data_criacao !== undefined) {
+    creationDateIso = parseDateInputToISOString(data.data_criacao);
+    if (!creationDateIso) {
+      errors.push('Campo "data_criacao" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+    }
+  }
+
+  let proximoRetorno: string | null = null;
+  if (data.proximo_retorno !== undefined) {
+    const parsed = parseDateInputToISOString(data.proximo_retorno);
+    if (data.proximo_retorno && !parsed) {
+      errors.push('Campo "proximo_retorno" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+    } else {
+      proximoRetorno = parsed;
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  const now = new Date();
+  const creationDate = creationDateIso ? new Date(creationDateIso) : now;
+  const creationDateIsoValue = creationDate.toISOString();
+
+  const leadData: LeadData = {
+    nome_completo: data.nome_completo.trim(),
+    telefone: normalizeTelefone(data.telefone),
+    email: sanitizeOptionalString(data.email),
+    cidade: sanitizeOptionalString(data.cidade),
+    regiao: sanitizeOptionalString(data.regiao),
+    cep: sanitizeOptionalString(data.cep),
+    endereco: sanitizeOptionalString(data.endereco),
+    estado: sanitizeOptionalString(data.estado),
+    origem_id: origemId!,
+    tipo_contratacao_id: tipoContratacaoId!,
+    operadora_atual: sanitizeOptionalString(data.operadora_atual),
+    status_id: statusId!,
+    responsavel_id: responsavelId!,
+    proximo_retorno: proximoRetorno,
+    observacoes: sanitizeOptionalString(data.observacoes),
+    data_criacao: creationDateIsoValue,
+    ultimo_contato: creationDateIsoValue,
+    arquivado: false,
+  };
+
+  return { valid: true, errors: [], leadData };
+}
+
+function validateLeadUpdate(
+  data: any,
+  lookups: LeadLookupMaps,
+): { valid: boolean; errors: string[]; updateData: Partial<LeadData> } {
+  const errors: string[] = [];
+  const updateData: Partial<LeadData> = {};
+
+  if (data.nome_completo !== undefined) {
+    if (typeof data.nome_completo !== 'string') {
+      errors.push('Campo "nome_completo" deve ser uma string');
+    } else {
+      updateData.nome_completo = data.nome_completo.trim();
+    }
+  }
+
+  if (data.telefone !== undefined) {
+    if (typeof data.telefone !== 'string') {
+      errors.push('Campo "telefone" deve ser uma string');
+    } else {
+      updateData.telefone = normalizeTelefone(data.telefone);
+    }
+  }
+
+  if (data.email !== undefined) {
+    const email = sanitizeOptionalString(data.email);
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        errors.push('Campo "email" deve ser um endereço de e-mail válido');
+      }
+    }
+    updateData.email = email;
+  }
+
+  if (data.cidade !== undefined) updateData.cidade = sanitizeOptionalString(data.cidade);
+  if (data.regiao !== undefined) updateData.regiao = sanitizeOptionalString(data.regiao);
+  if (data.cep !== undefined) updateData.cep = sanitizeOptionalString(data.cep);
+  if (data.endereco !== undefined) updateData.endereco = sanitizeOptionalString(data.endereco);
+  if (data.estado !== undefined) updateData.estado = sanitizeOptionalString(data.estado);
+  if (data.operadora_atual !== undefined) updateData.operadora_atual = sanitizeOptionalString(data.operadora_atual);
+  if (data.proximo_retorno !== undefined) {
+    const parsed = parseDateInputToISOString(data.proximo_retorno);
+    if (data.proximo_retorno && !parsed) {
+      errors.push('Campo "proximo_retorno" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+    } else {
+      updateData.proximo_retorno = parsed;
+    }
+  }
+  if (data.observacoes !== undefined) updateData.observacoes = sanitizeOptionalString(data.observacoes);
+
+  if (data.origem_id !== undefined || data.origem !== undefined) {
+    const origemId = resolveForeignKey(data.origem_id, data.origem, lookups.originById, lookups.originByName);
+    if (!origemId) {
+      errors.push('Campo "origem_id" deve corresponder a uma origem válida');
+    } else {
+      updateData.origem_id = origemId;
+    }
+  }
+
+  if (data.tipo_contratacao_id !== undefined || data.tipo_contratacao !== undefined) {
+    const tipoId = resolveForeignKey(
+      data.tipo_contratacao_id,
+      data.tipo_contratacao,
+      lookups.tipoById,
+      lookups.tipoByLabel,
+    );
+    if (!tipoId) {
+      errors.push('Campo "tipo_contratacao_id" deve corresponder a um tipo de contratação válido');
+    } else {
+      updateData.tipo_contratacao_id = tipoId;
+    }
+  }
+
+  if (data.responsavel_id !== undefined || data.responsavel !== undefined) {
+    const responsavelId = resolveForeignKey(
+      data.responsavel_id,
+      data.responsavel,
+      lookups.responsavelById,
+      lookups.responsavelByLabel,
+    );
+    if (!responsavelId) {
+      errors.push('Campo "responsavel_id" deve corresponder a um responsável válido');
+    } else {
+      updateData.responsavel_id = responsavelId;
+    }
+  }
+
+  if (data.status_id !== undefined || data.status !== undefined) {
+    const statusId = resolveForeignKey(data.status_id, data.status, lookups.statusById, lookups.statusByName);
+    if (!statusId) {
+      errors.push('Campo "status_id" deve corresponder a um status válido');
+    } else {
+      updateData.status_id = statusId;
+    }
   }
 
   if (data.data_criacao !== undefined) {
@@ -159,11 +401,33 @@ function validateLeadData(data: any): { valid: boolean; errors: string[] } {
     if (!parsedDate) {
       errors.push('Campo "data_criacao" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
     } else {
-      data.data_criacao = parsedDate;
+      updateData.data_criacao = parsedDate;
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return { valid: errors.length === 0, errors, updateData };
+}
+
+function resolveFilterId(
+  value: string | null,
+  idMap: Map<string, string>,
+  nameMap: Map<string, string>,
+): string | null {
+  if (!value) return null;
+  if (idMap.has(value)) return value;
+  return nameMap.get(normalizeText(value)) ?? null;
+}
+
+function mapLeadRelationsForResponse(lead: any, lookups: LeadLookupMaps) {
+  return {
+    ...lead,
+    origem: lead.origem ?? (lead.origem_id ? lookups.originById.get(lead.origem_id) ?? null : null),
+    tipo_contratacao:
+      lead.tipo_contratacao ?? (lead.tipo_contratacao_id ? lookups.tipoById.get(lead.tipo_contratacao_id) ?? null : null),
+    status: lead.status ?? (lead.status_id ? lookups.statusById.get(lead.status_id) ?? null : null),
+    responsavel:
+      lead.responsavel ?? (lead.responsavel_id ? lookups.responsavelById.get(lead.responsavel_id) ?? null : null),
+  };
 }
 
 function normalizeTelefone(telefone: string): string {
@@ -186,6 +450,14 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const path = url.pathname;
 
+    let lookupMaps: LeadLookupMaps | null = null;
+    const getLookups = async () => {
+      if (!lookupMaps) {
+        lookupMaps = await loadLeadLookupMaps(supabase);
+      }
+      return lookupMaps;
+    };
+
     if (path.endsWith('/health')) {
       return new Response(
         JSON.stringify({
@@ -202,9 +474,10 @@ Deno.serve(async (req: Request) => {
 
     if (path.endsWith('/leads') && req.method === 'POST') {
       const body = await req.json();
-      const validation = validateLeadData(body);
+      const lookups = await getLookups();
+      const validation = validateLeadData(body, lookups);
 
-      if (!validation.valid) {
+      if (!validation.valid || !validation.leadData) {
         return new Response(
           JSON.stringify({
             success: false,
@@ -218,49 +491,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const hasCustomCreationDate =
-        typeof body.data_criacao === 'string' && body.data_criacao.trim() !== '';
-      const now = new Date();
-      const creationDate = hasCustomCreationDate ? new Date(body.data_criacao) : now;
-
-      if (Number.isNaN(creationDate.getTime())) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Dados inválidos',
-            details: ['Campo "data_criacao" deve ser uma data válida'],
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      const creationDateIso = creationDate.toISOString();
-      const ultimoContatoIso = hasCustomCreationDate ? creationDateIso : now.toISOString();
-
-      const leadData: LeadData = {
-        nome_completo: body.nome_completo.trim(),
-        telefone: normalizeTelefone(body.telefone),
-        email: body.email?.trim() || null,
-        cidade: body.cidade?.trim() || null,
-        regiao: body.regiao?.trim() || null,
-        origem: getCanonicalOrigem(body.origem) ?? body.origem,
-        tipo_contratacao: body.tipo_contratacao,
-        operadora_atual: body.operadora_atual?.trim() || null,
-        status: body.status || 'Novo',
-        responsavel: body.responsavel,
-        proximo_retorno: body.proximo_retorno || null,
-        observacoes: body.observacoes?.trim() || null,
-        data_criacao: creationDateIso,
-        ultimo_contato: ultimoContatoIso,
-        arquivado: false,
-      };
-
       const { data, error } = await supabase
         .from('leads')
-        .insert([leadData])
+        .insert([validation.leadData])
         .select()
         .single();
 
@@ -283,7 +516,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           success: true,
           message: 'Lead criado com sucesso',
-          data: data,
+          data: mapLeadRelationsForResponse(data, lookups),
         }),
         {
           status: 201,
@@ -293,12 +526,46 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path.endsWith('/leads') && req.method === 'GET') {
+      const lookups = await getLookups();
       const searchParams = url.searchParams;
-      const status = searchParams.get('status');
-      const responsavel = searchParams.get('responsavel');
+      const status = searchParams.get('status_id') || searchParams.get('status');
+      const responsavel = searchParams.get('responsavel_id') || searchParams.get('responsavel');
+      const origem = searchParams.get('origem_id') || searchParams.get('origem');
+      const tipoContratacao = searchParams.get('tipo_contratacao_id') || searchParams.get('tipo_contratacao');
       const telefone = searchParams.get('telefone');
       const email = searchParams.get('email');
-      const limit = parseInt(searchParams.get('limit') || '100');
+      const parsedLimit = parseInt(searchParams.get('limit') || '100', 10);
+      const limit = Number.isNaN(parsedLimit) ? 100 : parsedLimit;
+
+      const statusId = resolveFilterId(status, lookups.statusById, lookups.statusByName);
+      const responsavelId = resolveFilterId(
+        responsavel,
+        lookups.responsavelById,
+        lookups.responsavelByLabel,
+      );
+      const origemId = resolveFilterId(origem, lookups.originById, lookups.originByName);
+      const tipoContratacaoId = resolveFilterId(
+        tipoContratacao,
+        lookups.tipoById,
+        lookups.tipoByLabel,
+      );
+
+      const invalidFilters: string[] = [];
+      if (status && !statusId) invalidFilters.push('status');
+      if (responsavel && !responsavelId) invalidFilters.push('responsavel');
+      if (origem && !origemId) invalidFilters.push('origem');
+      if (tipoContratacao && !tipoContratacaoId) invalidFilters.push('tipo_contratacao');
+
+      if (invalidFilters.length > 0) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Filtros inválidos',
+            details: invalidFilters.map((field) => `Valor de filtro inválido para "${field}"`),
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
       let query = supabase
         .from('leads')
@@ -307,8 +574,10 @@ Deno.serve(async (req: Request) => {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      if (status) query = query.eq('status', status);
-      if (responsavel) query = query.eq('responsavel', responsavel);
+      if (statusId) query = query.eq('status_id', statusId);
+      if (responsavelId) query = query.eq('responsavel_id', responsavelId);
+      if (origemId) query = query.eq('origem_id', origemId);
+      if (tipoContratacaoId) query = query.eq('tipo_contratacao_id', tipoContratacaoId);
       if (telefone) query = query.eq('telefone', normalizeTelefone(telefone));
       if (email) query = query.ilike('email', email);
 
@@ -329,11 +598,13 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const leads = (data || []).map((lead) => mapLeadRelationsForResponse(lead, lookups));
+
       return new Response(
         JSON.stringify({
           success: true,
-          count: data.length,
-          data: data,
+          count: leads.length,
+          data: leads,
         }),
         {
           status: 200,
@@ -345,24 +616,23 @@ Deno.serve(async (req: Request) => {
     if (path.match(/\/leads\/[a-f0-9-]+$/) && req.method === 'PUT') {
       const leadId = path.split('/').pop();
       const body = await req.json();
+      const lookups = await getLookups();
+      const validation = validateLeadUpdate(body, lookups);
 
-      const updateData: Partial<LeadData> = {};
-      if (body.nome_completo) updateData.nome_completo = body.nome_completo.trim();
-      if (body.telefone) updateData.telefone = normalizeTelefone(body.telefone);
-      if (body.email !== undefined) updateData.email = body.email?.trim() || null;
-      if (body.cidade !== undefined) updateData.cidade = body.cidade?.trim() || null;
-      if (body.regiao !== undefined) updateData.regiao = body.regiao?.trim() || null;
-      if (body.origem) updateData.origem = body.origem;
-      if (body.tipo_contratacao) updateData.tipo_contratacao = body.tipo_contratacao;
-      if (body.operadora_atual !== undefined) updateData.operadora_atual = body.operadora_atual?.trim() || null;
-      if (body.status) updateData.status = body.status;
-      if (body.responsavel) updateData.responsavel = body.responsavel;
-      if (body.proximo_retorno !== undefined) updateData.proximo_retorno = body.proximo_retorno || null;
-      if (body.observacoes !== undefined) updateData.observacoes = body.observacoes?.trim() || null;
+      if (!validation.valid) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Dados inválidos',
+            details: validation.errors,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
       const { data, error } = await supabase
         .from('leads')
-        .update(updateData)
+        .update(validation.updateData)
         .eq('id', leadId)
         .select()
         .single();
@@ -386,7 +656,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           success: true,
           message: 'Lead atualizado com sucesso',
-          data: data,
+          data: mapLeadRelationsForResponse(data, lookups),
         }),
         {
           status: 200,
@@ -397,7 +667,8 @@ Deno.serve(async (req: Request) => {
 
     if (path.endsWith('/leads/batch') && req.method === 'POST') {
       const body = await req.json();
-      
+      const lookups = await getLookups();
+
       if (!Array.isArray(body.leads)) {
         return new Response(
           JSON.stringify({
@@ -417,9 +688,9 @@ Deno.serve(async (req: Request) => {
       };
 
       for (const [index, leadInput] of body.leads.entries()) {
-        const validation = validateLeadData(leadInput);
-        
-        if (!validation.valid) {
+        const validation = validateLeadData(leadInput, lookups);
+
+        if (!validation.valid || !validation.leadData) {
           results.failed.push({
             index,
             data: leadInput,
@@ -428,27 +699,9 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const leadData: LeadData = {
-          nome_completo: leadInput.nome_completo.trim(),
-          telefone: normalizeTelefone(leadInput.telefone),
-          email: leadInput.email?.trim() || null,
-          cidade: leadInput.cidade?.trim() || null,
-          regiao: leadInput.regiao?.trim() || null,
-          origem: leadInput.origem,
-          tipo_contratacao: leadInput.tipo_contratacao,
-          operadora_atual: leadInput.operadora_atual?.trim() || null,
-          status: leadInput.status || 'Novo',
-          responsavel: leadInput.responsavel,
-          proximo_retorno: leadInput.proximo_retorno || null,
-          observacoes: leadInput.observacoes?.trim() || null,
-          data_criacao: new Date().toISOString(),
-          ultimo_contato: new Date().toISOString(),
-          arquivado: false,
-        };
-
         const { data, error } = await supabase
           .from('leads')
-          .insert([leadData])
+          .insert([validation.leadData])
           .select()
           .single();
 
@@ -461,7 +714,7 @@ Deno.serve(async (req: Request) => {
         } else {
           results.success.push({
             index,
-            data: data,
+            data: mapLeadRelationsForResponse(data, lookups),
           });
         }
       }

@@ -17,10 +17,12 @@ import {
   UserCircle,
 } from 'lucide-react';
 
-type LeadSummary = Pick<
-  Lead,
-  'id' | 'nome_completo' | 'telefone' | 'status' | 'responsavel' | 'observacoes'
->;
+type LeadSummary = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'observacoes'> & {
+  status_nome?: string | null;
+  status_value?: string | null;
+  responsavel_label?: string | null;
+  responsavel_value?: string | null;
+};
 
 type LeadDetailsPanelProps = {
   className?: string;
@@ -90,12 +92,12 @@ export default function LeadDetailsPanel({
     );
   }
 
-  const safeResponsavelValue = lead.responsavel ?? '';
+  const safeResponsavelValue = lead.responsavel_value ?? '';
   const observations = lead.observacoes?.trim() || null;
 
   const handleResponsavelChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const nextResponsavel = event.target.value;
-    if (!nextResponsavel || nextResponsavel === lead.responsavel) {
+    if (!nextResponsavel || nextResponsavel === lead.responsavel_value) {
       return;
     }
 
@@ -180,7 +182,8 @@ export default function LeadDetailsPanel({
               </div>
               {mensalidade && (
                 <p className="mt-3 text-xs text-slate-500">
-                  Mensalidade total: <span className="font-semibold text-slate-700">{mensalidade}</span>
+                  Mensalidade total:{' '}
+                  <span className="font-semibold text-slate-700">{mensalidade}</span>
                 </p>
               )}
             </div>
@@ -194,7 +197,9 @@ export default function LeadDetailsPanel({
     <aside className={rootClassName}>
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Lead selecionado</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Lead selecionado
+          </p>
           <h3 className="mt-1 text-base font-semibold text-slate-900">
             {lead.nome_completo || 'Lead sem nome'}
           </h3>
@@ -235,7 +240,7 @@ export default function LeadDetailsPanel({
           <div className="space-y-3">
             {statusOptions.length > 0 ? (
               <StatusDropdown
-                currentStatus={lead.status}
+                currentStatus={lead.status_value ?? ''}
                 leadId={lead.id}
                 statusOptions={statusOptions}
                 onStatusChange={onStatusChange}
@@ -244,7 +249,7 @@ export default function LeadDetailsPanel({
             ) : (
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                 <span className="font-medium text-slate-700">Status:</span>{' '}
-                {lead.status}
+                {lead.status_nome ?? 'Status não informado'}
               </div>
             )}
 
@@ -265,7 +270,7 @@ export default function LeadDetailsPanel({
                 </select>
               ) : (
                 <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                  {lead.responsavel || 'Responsável não informado'}
+                  {lead.responsavel_label || 'Responsável não informado'}
                 </div>
               )}
               {isUpdatingResponsavel && (

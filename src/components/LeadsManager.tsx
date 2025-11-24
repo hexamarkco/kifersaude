@@ -1738,3 +1738,4 @@ export default function LeadsManager({
       {ConfirmationDialog}
     </div>
   );
+}

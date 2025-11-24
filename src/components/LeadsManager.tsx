@@ -115,6 +115,7 @@ export default function LeadsManager({
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [leadContractIds, setLeadContractIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkResponsavel, setBulkResponsavel] = useState('');
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
@@ -224,6 +225,30 @@ export default function LeadsManager({
     setFilterProximoRetornoTo('');
   }, [initialStatusFilter]);
 
+  const fetchContractsForLeads = useCallback(async (leadIds: string[]) => {
+    if (leadIds.length === 0) {
+      setLeadContractIds(new Set());
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('lead_id')
+        .in('lead_id', leadIds);
+
+      if (error) throw error;
+
+      const ids = (data || [])
+        .map((contract) => contract.lead_id)
+        .filter((leadId): leadId is string => Boolean(leadId));
+
+      setLeadContractIds(new Set(ids));
+    } catch (error) {
+      console.error('Erro ao carregar contratos dos leads:', error);
+    }
+  }, []);
+
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
@@ -326,6 +351,10 @@ export default function LeadsManager({
       supabase.removeChannel(channel);
     };
   }, [loadLeads, handleRealtimeLeadChange]);
+
+  useEffect(() => {
+    void fetchContractsForLeads(leads.map((lead) => lead.id));
+  }, [fetchContractsForLeads, leads]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1324,6 +1353,15 @@ export default function LeadsManager({
                         />
                       )}
                       <h3 className="text-lg font-semibold text-slate-900">{lead.nome_completo}</h3>
+                      {leadContractIds.has(lead.id) && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                          title="Contrato cadastrado para este lead"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Contrato
+                        </span>
+                      )}
                       {!isObserver ? (
                         <StatusDropdown
                           currentStatus={lead.status}

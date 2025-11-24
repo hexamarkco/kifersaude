@@ -76,6 +76,7 @@ import {
   getWhatsappFunctionUrl,
   listWhatsappChatSlaAlerts,
 } from '../lib/whatsappApi';
+import { mapLeadRelations } from '../lib/leadRelations';
 import type {
   WhatsappChat,
   WhatsappChatInsight,
@@ -1182,6 +1183,16 @@ type LeadSummary = {
   telefone: string | null;
   status: string | null;
   responsavel: string | null;
+  status_id?: string | null;
+  responsavel_id?: string | null;
+  origem?: string | null;
+  origem_id?: string | null;
+  tipo_contratacao?: string | null;
+  tipo_contratacao_id?: string | null;
+  proximo_retorno?: string | null;
+  ultimo_contato?: string | null;
+  created_at?: string | null;
+  data_criacao?: string | null;
 };
 
 type UpdateLeadStatusResponse = {
@@ -2173,7 +2184,7 @@ export default function WhatsappPage({
     }
   }, [slashCommandState, slashCommandSuggestions, slashSuggestionIndex]);
 
-  const { leadStatuses } = useConfig();
+  const { leadStatuses, leadOrigins, options } = useConfig();
   const activeLeadStatuses = useMemo(
     () => leadStatuses.filter(status => status.ativo),
     [leadStatuses],
@@ -3248,14 +3259,41 @@ export default function WhatsappPage({
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, nome_completo, telefone, status, responsavel')
+        .select(
+          [
+            'id',
+            'nome_completo',
+            'telefone',
+            'status',
+            'status_id',
+            'responsavel',
+            'responsavel_id',
+            'origem',
+            'origem_id',
+            'tipo_contratacao',
+            'tipo_contratacao_id',
+            'proximo_retorno',
+            'ultimo_contato',
+            'created_at',
+            'data_criacao',
+          ].join(', '),
+        )
         .order('nome_completo', { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      setLeads((data as LeadSummary[] | null) ?? []);
+      const mappedLeads = ((data as LeadSummary[] | null) ?? []).map((lead) =>
+        mapLeadRelations(lead as any, {
+          origins: leadOrigins,
+          statuses: leadStatuses,
+          tipoContratacao: options.lead_tipo_contratacao || [],
+          responsaveis: options.lead_responsavel || [],
+        }),
+      );
+
+      setLeads(mappedLeads);
     } catch (error) {
       console.error('Erro ao carregar leads do CRM:', error);
       setLeads([]);
@@ -3264,7 +3302,7 @@ export default function WhatsappPage({
       setLeadsLoading(false);
       setLeadsLoaded(true);
     }
-  }, []);
+  }, [leadOrigins, leadStatuses, options.lead_responsavel, options.lead_tipo_contratacao]);
 
   const loadUpcomingSchedules = useCallback(async () => {
     setUpcomingSchedulesLoading(true);

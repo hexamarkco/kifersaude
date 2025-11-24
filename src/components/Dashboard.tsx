@@ -28,6 +28,7 @@ import {
   getContractsToRenew,
 } from '../lib/analytics';
 import { useConfig } from '../contexts/ConfigContext';
+import { mapLeadRelations } from '../lib/leadRelations';
 
 type DashboardProps = {
   onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
@@ -52,7 +53,7 @@ type Dependent = {
 
 export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const { isObserver } = useAuth();
-  const { leadStatuses, leadOrigins, loading: configLoading } = useConfig();
+  const { leadStatuses, leadOrigins, options, loading: configLoading } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -203,6 +204,19 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     [leadOrigins],
   );
 
+  const mapLeadWithRelations = useCallback(
+    (lead: Lead | null | undefined) =>
+      lead
+        ? mapLeadRelations(lead, {
+            origins: leadOrigins,
+            statuses: leadStatuses,
+            tipoContratacao: options.lead_tipo_contratacao || [],
+            responsaveis: options.lead_responsavel || [],
+          })
+        : null,
+    [leadOrigins, leadStatuses, options.lead_responsavel, options.lead_tipo_contratacao],
+  );
+
   const areSetsEqual = useCallback((a: Set<string>, b: Set<string>) => {
     if (a.size !== b.size) {
       return false;
@@ -331,11 +345,13 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         supabase.from('dependents').select('*'),
       ]);
 
-      const allLeads = leadsRes.data || [];
+      const mappedLeads = (leadsRes.data || [])
+        .map((lead) => mapLeadWithRelations(lead))
+        .filter((lead): lead is Lead => Boolean(lead));
 
       if (isObserver) {
         const hiddenLeadIds = new Set(
-          allLeads
+          mappedLeads
             .filter((lead) => !isOriginVisibleToObserver(lead.origem))
             .map((lead) => lead.id),
         );
@@ -343,10 +359,10 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         setHiddenLeadIdsForObserver((currentHidden) =>
           areSetsEqual(currentHidden, hiddenLeadIds) ? currentHidden : hiddenLeadIds,
         );
-        setLeads(allLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
+        setLeads(mappedLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
       } else {
         setHiddenLeadIdsForObserver((currentHidden) => (currentHidden.size === 0 ? currentHidden : new Set()));
-        setLeads(allLeads);
+        setLeads(mappedLeads);
       }
 
       setContracts(contractsRes.data || []);
@@ -386,7 +402,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
         },
         (payload: RealtimePostgresChangesPayload<Lead>) => {
           const { eventType } = payload;
-          const newLead = payload.new as Lead | null;
+          const newLead = mapLeadWithRelations(payload.new as Lead | null);
           const oldLead = payload.old as Lead | null;
 
           setLeads((currentLeads) => {

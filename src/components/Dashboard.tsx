@@ -602,22 +602,6 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
 
   useEffect(() => {
-    const todayKey = new Date().toISOString().split('T')[0];
-
-    if (lastBirthdayReminderSync.current === todayKey) {
-      return;
-    }
-
-    ensureBirthdayRemindersForToday()
-      .then(() => {
-        lastBirthdayReminderSync.current = todayKey;
-      })
-      .catch((error) => {
-        console.error('Erro ao processar lembretes de aniversário:', error);
-      });
-  }, [ensureBirthdayRemindersForToday]);
-
-  useEffect(() => {
     const storedPeriod = resolvePeriodFilter();
     const storedStart = resolveCustomDate('customStartDate');
     const storedEnd = resolveCustomDate('customEndDate');
@@ -975,6 +959,22 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
 
   const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(daysAhead), [daysAhead, getUpcomingBirthdays]);
+
+  useEffect(() => {
+    const todayKey = new Date().toISOString().split('T')[0];
+
+    if (lastBirthdayReminderSync.current === todayKey) {
+      return;
+    }
+
+    ensureBirthdayRemindersForToday()
+      .then(() => {
+        lastBirthdayReminderSync.current = todayKey;
+      })
+      .catch((error) => {
+        console.error('Erro ao processar lembretes de aniversário:', error);
+      });
+  }, [ensureBirthdayRemindersForToday]);
 
   const donutChartData = leadStatusData.map((item) => ({
     label: item.status,

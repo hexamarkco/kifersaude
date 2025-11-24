@@ -265,6 +265,10 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
         }
 
         if (leadInfo) {
+          await updateLeadNextReturnDate(reminder.lead_id, null, {
+            onlyIfMatches: reminder.data_lembrete,
+          });
+
           setManualReminderPrompt({
             lead: leadInfo,
             promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
@@ -417,6 +421,16 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
         .in('id', Array.from(selectedReminders));
 
       if (error) throw error;
+
+      const leadUpdates = remindersToUpdate
+        .filter(reminder => reminder.lead_id)
+        .map(reminder =>
+          updateLeadNextReturnDate(reminder.lead_id!, null, {
+            onlyIfMatches: reminder.data_lembrete,
+          })
+        );
+
+      await Promise.all(leadUpdates);
 
       if (remindersToUpdate.length === 1) {
         const [completedReminder] = remindersToUpdate;

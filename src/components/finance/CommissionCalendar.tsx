@@ -347,7 +347,7 @@ export default function CommissionCalendar() {
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
             <CalendarDays className="w-6 h-6 text-emerald-600" />
@@ -357,7 +357,7 @@ export default function CommissionCalendar() {
             Visualize as previsões de recebimento para o mês selecionado e organize o fluxo financeiro.
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-4 lg:justify-end">
           <div className="text-right">
             <p className="text-xs uppercase text-slate-500 tracking-wide">Comissão prevista</p>
             <p className="text-lg font-semibold text-emerald-600">{formatCurrency(totals.commission)}</p>
@@ -370,7 +370,7 @@ export default function CommissionCalendar() {
       </div>
 
       <div className="mt-6 border rounded-xl border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50">
           <button
             onClick={goToPreviousMonth}
             className="p-2 rounded-lg hover:bg-white transition-colors"
@@ -397,14 +397,16 @@ export default function CommissionCalendar() {
               Carregando informações financeiras...
             </div>
           ) : (
-            <>
-              {renderCalendarDays()}
-              {monthEvents.length === 0 && (
-                <div className="text-center text-sm text-slate-500 py-10">
-                  Nenhuma previsão cadastrada para este mês.
-                </div>
-              )}
-            </>
+            <div className="overflow-x-auto pb-2">
+              <div className="min-w-[640px]">
+                {renderCalendarDays()}
+                {monthEvents.length === 0 && (
+                  <div className="text-center text-sm text-slate-500 py-10">
+                    Nenhuma previsão cadastrada para este mês.
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

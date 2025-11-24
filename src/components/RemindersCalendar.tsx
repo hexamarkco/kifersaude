@@ -134,8 +134,8 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
   const dayReminders = getDayReminders();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+      <div className="modal-panel bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <h2 className="text-2xl font-bold text-slate-900">Calendário de Lembretes</h2>
           <button
@@ -146,7 +146,7 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="modal-panel-content flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <div className="bg-white rounded-xl border border-slate-200 p-4">

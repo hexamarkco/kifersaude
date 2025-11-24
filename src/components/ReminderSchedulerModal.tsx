@@ -130,8 +130,8 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[70] flex items-stretch justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+      <div className="modal-panel w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col">
         <div className="flex items-center justify-between bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
           <div className="flex items-center space-x-3">
             <div className="rounded-xl bg-white/20 p-2">
@@ -154,7 +154,7 @@ export default function ReminderSchedulerModal({
           </button>
         </div>
 
-        <div className="space-y-6 px-6 py-6">
+        <div className="modal-panel-content space-y-6 px-6 py-6">
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
             <div className="flex items-start space-x-3">
               <Clock className="h-5 w-5 flex-shrink-0 text-teal-600" />

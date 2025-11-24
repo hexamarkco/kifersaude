@@ -227,7 +227,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex w-full items-stretch justify-center bg-slate-900/60 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-2xl">
+      <div className="modal-panel relative flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <h3 className="text-xl font-bold text-slate-900">
             {lead ? 'Editar Lead' : 'Novo Lead'}

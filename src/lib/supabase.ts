@@ -127,6 +127,7 @@ export type ContractHolder = {
 export type Dependent = {
   id: string;
   contract_id: string;
+  holder_id: string;
   nome_completo: string;
   cpf?: string;
   data_nascimento: string;

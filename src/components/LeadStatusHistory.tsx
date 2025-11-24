@@ -3,7 +3,7 @@ import { supabase, LeadStatusHistory } from '../lib/supabase';
 import { History, Clock } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
-import { getContrastTextColor } from '../lib/colorUtils';
+import { getBadgeStyle } from '../lib/colorUtils';
 
 type LeadStatusHistoryProps = {
   leadId: string;
@@ -38,18 +38,7 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
 
   const getStatusStyles = (status: string) => {
     const match = leadStatuses.find(s => s.nome === status);
-    if (!match) {
-      return {
-        backgroundColor: 'rgba(100,116,139,0.15)',
-        color: '#475569',
-        borderColor: 'rgba(100,116,139,0.35)',
-      };
-    }
-    return {
-      backgroundColor: `${match.cor || '#2563eb'}1A`,
-      color: getContrastTextColor(match.cor || '#2563eb'),
-      borderColor: `${match.cor || '#2563eb'}33`,
-    };
+    return getBadgeStyle(match?.cor || '#64748b', 0.18);
   };
 
   if (loading) {

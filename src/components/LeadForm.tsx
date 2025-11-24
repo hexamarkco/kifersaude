@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { X, Search } from 'lucide-react';
-import { formatDateForInput, formatDateTimeForInput, convertLocalToUTC } from '../lib/dateUtils';
+import {
+  formatDateForInput,
+  formatDateTimeForInput,
+  convertLocalToUTC,
+} from '../lib/dateUtils';
 import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,69 +17,101 @@ type LeadFormProps = {
   onSave: () => void;
 };
 
+type LeadFormState = {
+  nome_completo: string;
+  telefone: string;
+  email: string;
+  data_criacao: string;
+  cep: string;
+  endereco: string;
+  cidade: string;
+  estado: string;
+  regiao: string;
+  origem_id: string;
+  tipo_contratacao_id: string;
+  operadora_atual: string;
+  status_id: string;
+  responsavel_id: string;
+  proximo_retorno: string;
+  observacoes: string;
+};
+
 export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
   const { isObserver } = useAuth();
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<LeadFormState>({
     nome_completo: lead?.nome_completo || '',
     telefone: lead?.telefone || '',
     email: lead?.email || '',
     data_criacao: formatDateForInput(lead?.data_criacao || new Date().toISOString()),
-    cep: '',
-    endereco: '',
+    cep: lead?.cep || '',
+    endereco: lead?.endereco || '',
     cidade: lead?.cidade || '',
     estado: lead?.estado || '',
     regiao: lead?.regiao || '',
-    origem: lead?.origem || '',
-    tipo_contratacao: lead?.tipo_contratacao || '',
+    origem_id: (lead as any)?.origem_id || '',
+    tipo_contratacao_id: (lead as any)?.tipo_contratacao_id || '',
     operadora_atual: lead?.operadora_atual || '',
-    status: lead?.status || '',
-    responsavel: lead?.responsavel || '',
+    status_id: (lead as any)?.status_id || '',
+    responsavel_id: (lead as any)?.responsavel_id || '',
     proximo_retorno: formatDateTimeForInput(lead?.proximo_retorno),
     observacoes: lead?.observacoes || '',
   });
+
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
-  const activeLeadStatuses = leadStatuses.filter(status => status.ativo);
-  const defaultStatus = activeLeadStatuses.find(status => status.padrao) || activeLeadStatuses[0];
+
+  const activeLeadStatuses = leadStatuses.filter((status) => status.ativo);
+  const defaultStatus = activeLeadStatuses.find((status) => status.padrao) || activeLeadStatuses[0];
+
   const restrictedOriginNames = useMemo(
-    () => leadOrigins.filter(origin => origin.visivel_para_observadores === false).map(origin => origin.nome),
+    () =>
+      leadOrigins
+        .filter((origin) => origin.visivel_para_observadores === false)
+        .map((origin) => origin.nome),
     [leadOrigins],
   );
+
   const activeOrigins = useMemo(
     () =>
       leadOrigins.filter(
-        origin =>
+        (origin) =>
           origin.ativo && (!isObserver || !restrictedOriginNames.includes(origin.nome)),
       ),
     [leadOrigins, isObserver, restrictedOriginNames],
   );
-  const tipoContratacaoOptions = (options.lead_tipo_contratacao || []).filter(option => option.ativo);
-  const responsavelOptions = (options.lead_responsavel || []).filter(option => option.ativo);
+
+  const tipoContratacaoOptions = (options.lead_tipo_contratacao || []).filter(
+    (option) => option.ativo,
+  );
+  const responsavelOptions = (options.lead_responsavel || []).filter(
+    (option) => option.ativo,
+  );
 
   useEffect(() => {
-    if (!lead && !formData.status && defaultStatus) {
-      setFormData(prev => ({ ...prev, status: defaultStatus.nome }));
+    if (!lead && !formData.status_id && defaultStatus) {
+      setFormData((prev) => ({ ...prev, status_id: defaultStatus.id }));
     }
-  }, [lead, defaultStatus, formData.status]);
+  }, [lead, defaultStatus, formData.status_id]);
 
   useEffect(() => {
-    if (!lead && !formData.origem && activeOrigins.length > 0) {
-      setFormData(prev => ({ ...prev, origem: activeOrigins[0].nome }));
+    if (!lead && !formData.origem_id && activeOrigins.length > 0) {
+      setFormData((prev) => ({ ...prev, origem_id: activeOrigins[0].id }));
     }
-  }, [lead, activeOrigins, formData.origem]);
+  }, [lead, activeOrigins, formData.origem_id]);
 
   useEffect(() => {
-    if (!lead && !formData.tipo_contratacao && tipoContratacaoOptions.length > 0) {
-      setFormData(prev => ({ ...prev, tipo_contratacao: tipoContratacaoOptions[0].value }));
+    if (!lead && !formData.tipo_contratacao_id && tipoContratacaoOptions.length > 0) {
+      setFormData((prev) => ({ ...prev, tipo_contratacao_id: tipoContratacaoOptions[0].id }));
     }
-  }, [lead, tipoContratacaoOptions, formData.tipo_contratacao]);
+  }, [lead, tipoContratacaoOptions, formData.tipo_contratacao_id]);
 
   useEffect(() => {
-    if (!lead && !formData.responsavel && responsavelOptions.length > 0) {
-      setFormData(prev => ({ ...prev, responsavel: responsavelOptions[0].value }));
+    if (!lead && !formData.responsavel_id && responsavelOptions.length > 0) {
+      setFormData((prev) => ({ ...prev, responsavel_id: responsavelOptions[0].id }));
     }
-  }, [lead, responsavelOptions, formData.responsavel]);
+  }, [lead, responsavelOptions, formData.responsavel_id]);
 
   if (configLoading && !lead) {
     return (
@@ -98,13 +134,13 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     try {
       const data = await consultarCep(formData.cep);
       if (data) {
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           endereco: data.logradouro,
           cidade: data.localidade,
           estado: data.uf,
           regiao: data.uf,
-        });
+        }));
       }
     } catch (error) {
       alert('Erro ao consultar CEP. Verifique o CEP informado.');
@@ -115,7 +151,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   const handleCepChange = (value: string) => {
     const formatted = formatCep(value);
-    setFormData({ ...formData, cep: formatted });
+    setFormData((prev) => ({ ...prev, cep: formatted }));
 
     if (formatted.replace(/\D/g, '').length === 8) {
       handleCepSearch();
@@ -132,15 +168,17 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         : '';
       const nowIso = new Date().toISOString();
       const effectiveCreationDateIso =
-        creationDateIso
-          || (formData.data_criacao
-            ? new Date(`${formData.data_criacao}T00:00:00-03:00`).toISOString()
-            : nowIso);
+        creationDateIso ||
+        (formData.data_criacao
+          ? new Date(`${formData.data_criacao}T00:00:00-03:00`).toISOString()
+          : nowIso);
 
       const dataToSave = {
         ...formData,
         data_criacao: effectiveCreationDateIso,
-        proximo_retorno: formData.proximo_retorno ? convertLocalToUTC(formData.proximo_retorno) : null,
+        proximo_retorno: formData.proximo_retorno
+          ? convertLocalToUTC(formData.proximo_retorno)
+          : null,
         ultimo_contato: formData.data_criacao ? effectiveCreationDateIso : nowIso,
       };
 
@@ -150,11 +188,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         cidade: normalizeTitleCase(dataToSave.cidade),
         estado: normalizeSentenceCase(dataToSave.estado),
         regiao: normalizeTitleCase(dataToSave.regiao),
-        origem: normalizeSentenceCase(dataToSave.origem) ?? '',
-        tipo_contratacao: normalizeSentenceCase(dataToSave.tipo_contratacao) ?? '',
         operadora_atual: normalizeSentenceCase(dataToSave.operadora_atual),
-        status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
-        responsavel: normalizeTitleCase(dataToSave.responsavel) ?? dataToSave.responsavel,
         endereco: normalizeTitleCase(dataToSave.endereco),
       };
 
@@ -198,21 +232,21 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
               descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
               data_lembrete: reminderDate,
-              prioridade: 'alta'
+              prioridade: 'alta',
             })
             .eq('id', existingReminder.data.id);
         } else {
-          await supabase
-            .from('reminders')
-            .insert([{
+          await supabase.from('reminders').insert([
+            {
               lead_id: savedLeadId,
               tipo: 'Retorno',
               titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
               descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
               data_lembrete: reminderDate,
               lido: false,
-              prioridade: 'alta'
-            }]);
+              prioridade: 'alta',
+            },
+          ]);
         }
       }
 
@@ -240,7 +274,10 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
+        >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -250,7 +287,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 type="text"
                 required
                 value={formData.nome_completo}
-                onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -263,7 +302,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 type="tel"
                 required
                 value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, telefone: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -275,7 +316,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -317,7 +360,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="text"
                 value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, endereco: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -329,7 +374,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="text"
                 value={formData.cidade}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, cidade: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -341,7 +388,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="text"
                 value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, estado: e.target.value }))
+                }
                 maxLength={2}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent uppercase"
               />
@@ -351,32 +400,37 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Origem do Lead *
               </label>
-                {activeOrigins.length > 0 ? (
-                  <select
-                    required
-                    value={formData.origem}
-                    onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {!activeOrigins.some(origin => origin.nome === formData.origem) && formData.origem && (
-                      <option value={formData.origem} hidden>
-                        {formData.origem}
+              {activeOrigins.length > 0 ? (
+                <select
+                  required
+                  value={formData.origem_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, origem_id: e.target.value }))
+                  }
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  {!activeOrigins.some((origin) => origin.id === formData.origem_id) &&
+                    formData.origem_id && (
+                      <option value={formData.origem_id} hidden>
+                        Origem selecionada
                       </option>
                     )}
-                    {activeOrigins.map(origin => (
-                      <option key={origin.id} value={origin.nome}>
-                        {origin.nome}
-                      </option>
-                    ))}
+                  {activeOrigins.map((origin) => (
+                    <option key={origin.id} value={origin.id}>
+                      {origin.nome}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
                   type="text"
                   required
-                  value={formData.origem}
-                  onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                  value={formData.origem_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, origem_id: e.target.value }))
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe a origem"
+                  placeholder="Informe a origem (id)"
                 />
               )}
             </div>
@@ -385,32 +439,45 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Tipo de Contratação *
               </label>
-                {tipoContratacaoOptions.length > 0 ? (
-                  <select
-                    required
-                    value={formData.tipo_contratacao}
-                    onChange={(e) => setFormData({ ...formData, tipo_contratacao: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {!tipoContratacaoOptions.some(option => option.value === formData.tipo_contratacao) && formData.tipo_contratacao && (
-                      <option value={formData.tipo_contratacao} hidden>
-                        {formData.tipo_contratacao}
+              {tipoContratacaoOptions.length > 0 ? (
+                <select
+                  required
+                  value={formData.tipo_contratacao_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      tipo_contratacao_id: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  {!tipoContratacaoOptions.some(
+                    (option) => option.id === formData.tipo_contratacao_id,
+                  ) &&
+                    formData.tipo_contratacao_id && (
+                      <option value={formData.tipo_contratacao_id} hidden>
+                        Tipo selecionado
                       </option>
                     )}
-                    {tipoContratacaoOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                  {tipoContratacaoOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
                   type="text"
                   required
-                  value={formData.tipo_contratacao}
-                  onChange={(e) => setFormData({ ...formData, tipo_contratacao: e.target.value })}
+                  value={formData.tipo_contratacao_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      tipo_contratacao_id: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o tipo de contratação"
+                  placeholder="Informe o tipo de contratação (id)"
                 />
               )}
             </div>
@@ -422,7 +489,12 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="text"
                 value={formData.operadora_atual}
-                onChange={(e) => setFormData({ ...formData, operadora_atual: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    operadora_atual: e.target.value,
+                  }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -431,32 +503,39 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Status *
               </label>
-                {activeLeadStatuses.length > 0 ? (
-                  <select
-                    required
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {!activeLeadStatuses.some(status => status.nome === formData.status) && formData.status && (
-                      <option value={formData.status} hidden>
-                        {formData.status}
+              {activeLeadStatuses.length > 0 ? (
+                <select
+                  required
+                  value={formData.status_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, status_id: e.target.value }))
+                  }
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  {!activeLeadStatuses.some(
+                    (status) => status.id === formData.status_id,
+                  ) &&
+                    formData.status_id && (
+                      <option value={formData.status_id} hidden>
+                        Status selecionado
                       </option>
                     )}
-                    {activeLeadStatuses.map(status => (
-                      <option key={status.id} value={status.nome}>
-                        {status.nome}
-                      </option>
-                    ))}
+                  {activeLeadStatuses.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.nome}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
                   type="text"
                   required
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  value={formData.status_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, status_id: e.target.value }))
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o status"
+                  placeholder="Informe o status (id)"
                 />
               )}
             </div>
@@ -465,32 +544,45 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Responsável *
               </label>
-                {responsavelOptions.length > 0 ? (
-                  <select
-                    required
-                    value={formData.responsavel}
-                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {!responsavelOptions.some(option => option.value === formData.responsavel) && formData.responsavel && (
-                      <option value={formData.responsavel} hidden>
-                        {formData.responsavel}
+              {responsavelOptions.length > 0 ? (
+                <select
+                  required
+                  value={formData.responsavel_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      responsavel_id: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  {!responsavelOptions.some(
+                    (option) => option.id === formData.responsavel_id,
+                  ) &&
+                    formData.responsavel_id && (
+                      <option value={formData.responsavel_id} hidden>
+                        Responsável selecionado
                       </option>
                     )}
-                    {responsavelOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                  {responsavelOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
                   type="text"
                   required
-                  value={formData.responsavel}
-                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                  value={formData.responsavel_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      responsavel_id: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o responsável"
+                  placeholder="Informe o responsável (id)"
                 />
               )}
             </div>
@@ -502,7 +594,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="date"
                 value={formData.data_criacao}
-                onChange={(e) => setFormData({ ...formData, data_criacao: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, data_criacao: e.target.value }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -514,7 +608,12 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <input
                 type="datetime-local"
                 value={formData.proximo_retorno}
-                onChange={(e) => setFormData({ ...formData, proximo_retorno: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    proximo_retorno: e.target.value,
+                  }))
+                }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -525,7 +624,12 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               </label>
               <textarea
                 value={formData.observacoes}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    observacoes: e.target.value,
+                  }))
+                }
                 rows={3}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />

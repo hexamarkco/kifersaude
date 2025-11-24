@@ -61,7 +61,7 @@ WHERE responsavel IS NOT NULL
 
 -- Add foreign key constraints to enforce valid references
 ALTER TABLE leads
-  ADD CONSTRAINT fk_leads_origem FOREIGN KEY (origem) REFERENCES lead_origens(nome),
+  ADD CONSTRAINT fk_leads_origem FOREIGN KEY (origem) REFERENCES lead_origens(nome) ON UPDATE CASCADE,
   ADD CONSTRAINT fk_leads_tipo_contratacao FOREIGN KEY (tipo_contratacao) REFERENCES lead_tipos_contratacao(value),
-  ADD CONSTRAINT fk_leads_status FOREIGN KEY (status) REFERENCES lead_status_config(nome),
+  ADD CONSTRAINT fk_leads_status FOREIGN KEY (status) REFERENCES lead_status_config(nome) ON UPDATE CASCADE,
   ADD CONSTRAINT fk_leads_responsavel FOREIGN KEY (responsavel) REFERENCES lead_responsaveis(value);

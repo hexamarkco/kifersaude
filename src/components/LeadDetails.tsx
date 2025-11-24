@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, Lead, Interaction } from '../lib/supabase';
-import { X, MessageCircle, Plus, Pencil } from 'lucide-react';
+import { X, MessageCircle, Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
@@ -12,9 +12,10 @@ type LeadDetailsProps = {
   onClose: () => void;
   onUpdate: () => void;
   onEdit: (lead: Lead) => void;
+  onDelete?: (lead: Lead) => void;
 };
 
-export default function LeadDetails({ lead, onClose, onUpdate, onEdit }: LeadDetailsProps) {
+export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete }: LeadDetailsProps) {
   const { isObserver } = useAuth();
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +94,16 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit }: LeadDet
               >
                 <Pencil className="h-4 w-4" />
                 <span className="hidden sm:inline">Editar Lead</span>
+              </button>
+            )}
+            {!isObserver && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(lead)}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Excluir</span>
               </button>
             )}
             <button

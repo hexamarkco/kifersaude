@@ -1,17 +1,22 @@
-import { useState } from 'react';
-import { supabase, Dependent } from '../lib/supabase';
+import { useState, useMemo, useEffect } from 'react';
+import { supabase, Dependent, ContractHolder } from '../lib/supabase';
 import { X, Users } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 
 type DependentFormProps = {
   contractId: string;
+  holders: ContractHolder[];
   dependent: Dependent | null;
+  selectedHolderId?: string | null;
   onClose: () => void;
   onSave: () => void;
 };
 
-export default function DependentForm({ contractId, dependent, onClose, onSave }: DependentFormProps) {
+export default function DependentForm({ contractId, holders, dependent, selectedHolderId, onClose, onSave }: DependentFormProps) {
+  const holderOptions = useMemo(() => holders.map(holder => ({ value: holder.id, label: holder.nome_completo })), [holders]);
+  const defaultHolderId = dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '';
   const [formData, setFormData] = useState({
+    holder_id: defaultHolderId,
     nome_completo: dependent?.nome_completo || '',
     cpf: dependent?.cpf || '',
     data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
@@ -20,6 +25,19 @@ export default function DependentForm({ contractId, dependent, onClose, onSave }
     valor_individual: dependent?.valor_individual?.toString() || '',
     carencia_individual: dependent?.carencia_individual || '',
   });
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      holder_id: dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '',
+      nome_completo: dependent?.nome_completo || '',
+      cpf: dependent?.cpf || '',
+      data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
+      relacao: dependent?.relacao || 'Filho(a)',
+      elegibilidade: dependent?.elegibilidade || '',
+      valor_individual: dependent?.valor_individual?.toString() || '',
+      carencia_individual: dependent?.carencia_individual || '',
+    }));
+  }, [dependent, holderOptions, selectedHolderId]);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,8 +45,13 @@ export default function DependentForm({ contractId, dependent, onClose, onSave }
     setSaving(true);
 
     try {
+      if (!formData.holder_id) {
+        throw new Error('Selecione um titular para o dependente');
+      }
+
       const dataToSave = {
         contract_id: contractId,
+        holder_id: formData.holder_id,
         nome_completo: formData.nome_completo,
         cpf: formData.cpf || null,
         data_nascimento: formData.data_nascimento,
@@ -82,6 +105,25 @@ export default function DependentForm({ contractId, dependent, onClose, onSave }
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Titular *
+              </label>
+              <select
+                required
+                value={formData.holder_id}
+                onChange={(e) => setFormData({ ...formData, holder_id: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              >
+                <option value="">Selecione um titular</option>
+                {holderOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Nome Completo *

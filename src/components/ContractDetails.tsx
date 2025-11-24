@@ -16,7 +16,7 @@ type ContractDetailsProps = {
 
 export default function ContractDetails({ contract, onClose, onUpdate, onDelete }: ContractDetailsProps) {
   const { isObserver } = useAuth();
-  const [holder, setHolder] = useState<ContractHolder | null>(null);
+  const [holders, setHolders] = useState<ContractHolder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
@@ -24,6 +24,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [showDependentForm, setShowDependentForm] = useState(false);
   const [editingDependent, setEditingDependent] = useState<Dependent | null>(null);
+  const [editingHolder, setEditingHolder] = useState<ContractHolder | null>(null);
+  const [selectedHolderId, setSelectedHolderId] = useState<string | null>(null);
   const [showInteractionForm, setShowInteractionForm] = useState(false);
   const initialInteractionData = {
     tipo: 'Observação',
@@ -86,14 +88,16 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [holderRes, dependentsRes, interactionsRes, adjustmentsRes] = await Promise.all([
-        supabase.from('contract_holders').select('*').eq('contract_id', contract.id).maybeSingle(),
+      const [holdersRes, dependentsRes, interactionsRes, adjustmentsRes] = await Promise.all([
+        supabase.from('contract_holders').select('*').eq('contract_id', contract.id).order('created_at'),
         supabase.from('dependents').select('*').eq('contract_id', contract.id).order('created_at'),
         supabase.from('interactions').select('*').eq('contract_id', contract.id).order('data_interacao', { ascending: false }),
         supabase.from('contract_value_adjustments').select('*').eq('contract_id', contract.id).order('created_at'),
       ]);
 
-      setHolder(holderRes.data);
+      const holdersData = holdersRes.data || [];
+      setHolders(holdersData);
+      setSelectedHolderId((current) => current || holdersData[0]?.id || null);
       setDependents(dependentsRes.data || []);
       setInteractions(interactionsRes.data || []);
       setAdjustments(adjustmentsRes.data || []);
@@ -383,30 +387,54 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-slate-900 flex items-center">
                 <User className="w-5 h-5 mr-2" />
-                Titular
+                Titulares ({holders.length})
               </h4>
-              {holder && (
+              {!isObserver && (
                 <button
-                  onClick={() => setShowHolderForm(true)}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  onClick={() => {
+                    setEditingHolder(null);
+                    setShowHolderForm(true);
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
-                  <Edit className="w-4 h-4" />
-                  <span>Editar</span>
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Titular</span>
                 </button>
               )}
             </div>
 
-            {holder ? (
-              <div className="bg-white border border-slate-200 rounded-lg p-4">
-                <h5 className="font-semibold text-slate-900 mb-3">{holder.nome_completo}</h5>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
-                  <div><span className="font-medium">CPF:</span> {holder.cpf}</div>
-                  <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(holder.data_nascimento)}</div>
-                  <div><span className="font-medium">Telefone:</span> {holder.telefone}</div>
-                  {holder.email && <div><span className="font-medium">E-mail:</span> {holder.email}</div>}
-                  {holder.cidade && <div><span className="font-medium">Cidade:</span> {holder.cidade}/{holder.estado}</div>}
-                  {holder.cnpj && <div><span className="font-medium">CNPJ:</span> {holder.cnpj}</div>}
-                </div>
+            {holders.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {holders.map((holderItem) => (
+                  <div key={holderItem.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-slate-900 mb-3">{holderItem.nome_completo}</h5>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
+                          <div><span className="font-medium">CPF:</span> {holderItem.cpf}</div>
+                          <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(holderItem.data_nascimento)}</div>
+                          <div><span className="font-medium">Telefone:</span> {holderItem.telefone}</div>
+                          {holderItem.email && <div><span className="font-medium">E-mail:</span> {holderItem.email}</div>}
+                          {holderItem.cidade && <div><span className="font-medium">Cidade:</span> {holderItem.cidade}/{holderItem.estado}</div>}
+                          {holderItem.cnpj && <div><span className="font-medium">CNPJ:</span> {holderItem.cnpj}</div>}
+                        </div>
+                      </div>
+                      {!isObserver && (
+                        <div className="flex items-center space-x-2 ml-4">
+                          <button
+                            onClick={() => {
+                              setEditingHolder(holderItem);
+                              setShowHolderForm(true);
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
@@ -414,7 +442,10 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <p className="text-slate-600 mb-3">Nenhum titular cadastrado</p>
                 {!isObserver && (
                   <button
-                    onClick={() => setShowHolderForm(true)}
+                    onClick={() => {
+                      setEditingHolder(null);
+                      setShowHolderForm(true);
+                    }}
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   >
                     Adicionar Titular
@@ -423,6 +454,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               </div>
             )}
           </div>
+
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -433,7 +465,12 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               {!isObserver && (
                 <button
                   onClick={() => {
+                    if (holders.length === 0) {
+                      alert('Cadastre um titular antes de adicionar dependentes.');
+                      return;
+                    }
                     setEditingDependent(null);
+                    setSelectedHolderId(holders[0]?.id || null);
                     setShowDependentForm(true);
                   }}
                   className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
@@ -444,53 +481,84 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               )}
             </div>
 
-            {dependents.length > 0 ? (
-              <div className="space-y-3">
-                {dependents.map((dependent) => (
-                  <div key={dependent.id} className="bg-white border border-slate-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-slate-900 mb-2">{dependent.nome_completo}</h5>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
-                          <div><span className="font-medium">Relação:</span> {dependent.relacao}</div>
-                          <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(dependent.data_nascimento)}</div>
-                          {dependent.cpf && <div><span className="font-medium">CPF:</span> {dependent.cpf}</div>}
-                          {dependent.valor_individual && (
-                            <div><span className="font-medium">Valor:</span> R$ {dependent.valor_individual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                          )}
+            {holders.length > 0 ? (
+              <div className="space-y-4">
+                {holders.map((holderItem) => {
+                  const holderDependents = dependents.filter((d) => d.holder_id === holderItem.id);
+                  return (
+                    <div key={holderItem.id} className="bg-white border border-slate-200 rounded-lg">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+                        <div>
+                          <p className="text-sm text-slate-600">Titular</p>
+                          <p className="font-semibold text-slate-900">{holderItem.nome_completo}</p>
                         </div>
-                      </div>
-                      {!isObserver && (
-                        <div className="flex items-center space-x-2 ml-4">
+                        {!isObserver && (
                           <button
                             onClick={() => {
-                              setEditingDependent(dependent);
+                              setSelectedHolderId(holderItem.id);
+                              setEditingDependent(null);
                               setShowDependentForm(true);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Plus className="w-4 h-4" />
+                            <span>Adicionar dependente</span>
                           </button>
-                          <button
-                            onClick={() => handleDeleteDependent(dependent.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        {holderDependents.length > 0 ? (
+                          holderDependents.map((dependent) => (
+                            <div key={dependent.id} className="flex items-start justify-between border border-slate-200 rounded-lg p-3">
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-slate-900 mb-1">{dependent.nome_completo}</h5>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
+                                  <div><span className="font-medium">Relação:</span> {dependent.relacao}</div>
+                                  <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(dependent.data_nascimento)}</div>
+                                  {dependent.cpf && <div><span className="font-medium">CPF:</span> {dependent.cpf}</div>}
+                                  {dependent.valor_individual && (
+                                    <div><span className="font-medium">Valor:</span> R$ {dependent.valor_individual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                                  )}
+                                </div>
+                              </div>
+                              {!isObserver && (
+                                <div className="flex items-center space-x-2 ml-4">
+                                  <button
+                                    onClick={() => {
+                                      setEditingDependent(dependent);
+                                      setSelectedHolderId(dependent.holder_id);
+                                      setShowDependentForm(true);
+                                    }}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDependent(dependent.id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-600">Nenhum dependente para este titular.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                 <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600">Nenhum dependente cadastrado</p>
+                <p className="text-slate-600">Cadastre um titular para incluir dependentes.</p>
               </div>
             )}
           </div>
-
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
@@ -631,10 +699,14 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
         <HolderForm
           contractId={contract.id}
           modalidade={contract.modalidade}
-          holder={holder || undefined}
-          onClose={() => setShowHolderForm(false)}
+          holder={editingHolder || undefined}
+          onClose={() => {
+            setShowHolderForm(false);
+            setEditingHolder(null);
+          }}
           onSave={() => {
             setShowHolderForm(false);
+            setEditingHolder(null);
             loadData();
             onUpdate();
           }}
@@ -644,14 +716,18 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       {showDependentForm && (
         <DependentForm
           contractId={contract.id}
+          holders={holders}
           dependent={editingDependent}
+          selectedHolderId={selectedHolderId}
           onClose={() => {
             setShowDependentForm(false);
             setEditingDependent(null);
+            setSelectedHolderId(null);
           }}
           onSave={() => {
             setShowDependentForm(false);
             setEditingDependent(null);
+            setSelectedHolderId(null);
             loadData();
           }}
         />

@@ -32,7 +32,7 @@ export default function ContractsManager({
   const { options } = useConfig();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
-  const [holders, setHolders] = useState<Record<string, ContractHolder>>({});
+  const [holders, setHolders] = useState<Record<string, ContractHolder[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
@@ -141,9 +141,12 @@ export default function ContractsManager({
 
       if (holdersError) throw holdersError;
 
-      const holdersMap: Record<string, ContractHolder> = {};
+      const holdersMap: Record<string, ContractHolder[]> = {};
       holdersData?.forEach(holder => {
-        holdersMap[holder.contract_id] = holder;
+        if (!holdersMap[holder.contract_id]) {
+          holdersMap[holder.contract_id] = [];
+        }
+        holdersMap[holder.contract_id].push(holder);
       });
 
       setContracts(contractsData || []);
@@ -290,14 +293,18 @@ export default function ContractsManager({
   };
 
   const getContractDisplayName = (contract: Contract): string => {
-    const holder = holders[contract.id];
-    if (!holder) return 'Sem titular';
+    const contractHolders = holders[contract.id] || [];
+    if (contractHolders.length === 0) return 'Sem titular';
 
+    const primaryHolder = contractHolders[0];
     if (contract.modalidade === 'MEI' || contract.modalidade === 'CNPJ') {
-      return holder.nome_fantasia || holder.razao_social || holder.nome_completo;
+      return primaryHolder.nome_fantasia || primaryHolder.razao_social || primaryHolder.nome_completo;
     }
 
-    return holder.nome_completo;
+    const additionalCount = contractHolders.length - 1;
+    return additionalCount > 0
+      ? `${primaryHolder.nome_completo} (+${additionalCount})`
+      : primaryHolder.nome_completo;
   };
 
   const getBonusValue = (contract: Contract) => {

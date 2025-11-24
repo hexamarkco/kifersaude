@@ -800,7 +800,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
     const activeContractIds = activeContracts.map(c => c.id);
     const contractsMap = new Map(activeContracts.map(c => [c.id, c]));
-    const holdersMap = new Map(holdersVisibleToUser.map(h => [h.contract_id, h]));
+    const holdersMap = new Map(holdersVisibleToUser.map(h => [h.id, h]));
 
     holdersVisibleToUser
       .filter(h => activeContractIds.includes(h.contract_id))
@@ -825,7 +825,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
           tipo: 'Dependente',
           contract_id: d.contract_id,
           contract: contractsMap.get(d.contract_id),
-          holder: holdersMap.get(d.contract_id),
+          holder: holdersMap.get(d.holder_id || ''),
           isPJ: false
         });
       });

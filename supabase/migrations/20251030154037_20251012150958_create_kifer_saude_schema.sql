@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS contracts (
 -- Tabela de Titulares (1:1 com contrato)
 CREATE TABLE IF NOT EXISTS contract_holders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  contract_id uuid UNIQUE NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  contract_id uuid NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
   nome_completo text NOT NULL,
   cpf text NOT NULL,
   rg text,
@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS contract_holders (
 CREATE TABLE IF NOT EXISTS dependents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   contract_id uuid NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  holder_id uuid NOT NULL REFERENCES contract_holders(id) ON DELETE CASCADE,
   nome_completo text NOT NULL,
   cpf text,
   data_nascimento date NOT NULL,
@@ -187,6 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
 CREATE INDEX IF NOT EXISTS idx_contracts_responsavel ON contracts(responsavel);
 CREATE INDEX IF NOT EXISTS idx_contracts_lead_id ON contracts(lead_id);
 CREATE INDEX IF NOT EXISTS idx_dependents_contract_id ON dependents(contract_id);
+CREATE INDEX IF NOT EXISTS idx_dependents_holder_id ON dependents(holder_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_lead_id ON interactions(lead_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_contract_id ON interactions(contract_id);
 CREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);

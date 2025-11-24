@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, Info, KeyRound, Loader2, Megaphone, Plug, Save, ShieldCheck } from 'lucide-react';
 
 import { configService } from '../../lib/configService';
+import { useConfig } from '../../contexts/ConfigContext';
 import type { IntegrationSetting } from '../../lib/supabase';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
@@ -15,9 +16,14 @@ const TEXT_MODEL_OPTIONS = [
 
 const DEFAULT_TEXT_MODEL = TEXT_MODEL_OPTIONS[0].value;
 
-const ORIGEM_OPTIONS = ['tráfego pago', 'Telein', 'indicação', 'orgânico', 'Ully'];
-const RESPONSAVEL_OPTIONS = ['Luiza', 'Nick'];
-const TIPO_CONTRATACAO_OPTIONS = ['Pessoa Física', 'MEI', 'CNPJ', 'Adesão'];
+const FALLBACK_ORIGEM = 'tráfego pago';
+
+const normalizeOrigemLabel = (label: string) =>
+  label
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
@@ -53,13 +59,14 @@ const normalizeFacebookSettings = (integration: IntegrationSetting | null): Face
   return {
     pageAccessToken: typeof settings.pageAccessToken === 'string' ? settings.pageAccessToken : '',
     verifyToken: typeof settings.verifyToken === 'string' ? settings.verifyToken : '',
-    defaultOrigem: asString(settings.defaultOrigem, 'tráfego pago') || 'tráfego pago',
-    defaultTipoContratacao: asString(settings.defaultTipoContratacao, 'Pessoa Física') || 'Pessoa Física',
-    defaultResponsavel: asString(settings.defaultResponsavel, 'Luiza') || 'Luiza',
+    defaultOrigem: asString(settings.defaultOrigem, FALLBACK_ORIGEM) || FALLBACK_ORIGEM,
+    defaultTipoContratacao: asString(settings.defaultTipoContratacao, ''),
+    defaultResponsavel: asString(settings.defaultResponsavel, ''),
   };
 };
 
 export default function IntegrationsTab() {
+  const { leadOrigins, options } = useConfig();
   const [gptIntegration, setGptIntegration] = useState<IntegrationSetting | null>(null);
   const [gptFormState, setGptFormState] = useState<GptFormState>(() => normalizeGptSettings(null));
   const [facebookIntegration, setFacebookIntegration] = useState<IntegrationSetting | null>(null);
@@ -74,10 +81,60 @@ export default function IntegrationsTab() {
   const [showPageToken, setShowPageToken] = useState(false);
   const [showVerifyToken, setShowVerifyToken] = useState(false);
 
+  const origemOptions = useMemo(() => {
+    const uniques = new Map<string, string>();
+
+    leadOrigins.forEach(origin => {
+      const label = (origin.nome || '').trim();
+      if (!label) return;
+
+      const normalized = normalizeOrigemLabel(label);
+      if (!uniques.has(normalized)) {
+        uniques.set(normalized, label);
+      }
+    });
+
+    const options = Array.from(uniques.values());
+    const hasFallback = options.some(option => normalizeOrigemLabel(option) === normalizeOrigemLabel(FALLBACK_ORIGEM));
+
+    if (!hasFallback) {
+      options.unshift(FALLBACK_ORIGEM);
+    }
+
+    return options;
+  }, [leadOrigins]);
+
+  const tipoContratacaoOptions = useMemo(
+    () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
+    [options.lead_tipo_contratacao],
+  );
+
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter(option => option.ativo),
+    [options.lead_responsavel],
+  );
+
+  const defaultTipoContratacaoFallback = tipoContratacaoOptions[0]?.value || '';
+  const defaultResponsavelFallback = responsavelOptions[0]?.value || '';
+
   useEffect(() => {
     loadGptIntegration();
     loadFacebookIntegration();
   }, []);
+
+  useEffect(() => {
+    setFacebookFormState(prev => {
+      if (prev.defaultTipoContratacao || !defaultTipoContratacaoFallback) return prev;
+      return { ...prev, defaultTipoContratacao: defaultTipoContratacaoFallback };
+    });
+  }, [defaultTipoContratacaoFallback]);
+
+  useEffect(() => {
+    setFacebookFormState(prev => {
+      if (prev.defaultResponsavel || !defaultResponsavelFallback) return prev;
+      return { ...prev, defaultResponsavel: defaultResponsavelFallback };
+    });
+  }, [defaultResponsavelFallback]);
 
   const loadGptIntegration = async () => {
     setLoadingGpt(true);
@@ -397,7 +454,7 @@ export default function IntegrationsTab() {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
               disabled={!facebookIntegration}
             >
-              {ORIGEM_OPTIONS.map(option => (
+              {origemOptions.map(option => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -414,11 +471,15 @@ export default function IntegrationsTab() {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
               disabled={!facebookIntegration}
             >
-              {TIPO_CONTRATACAO_OPTIONS.map(option => (
-                <option key={option} value={option}>
-                  {option}
+              {tipoContratacaoOptions.map(option => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
                 </option>
               ))}
+              {!tipoContratacaoOptions.some(option => option.value === facebookFormState.defaultTipoContratacao) &&
+                facebookFormState.defaultTipoContratacao && (
+                  <option value={facebookFormState.defaultTipoContratacao}>{facebookFormState.defaultTipoContratacao}</option>
+                )}
             </select>
             <p className="text-xs text-slate-500 mt-2">Usado para preencher o campo tipo de contratação na criação do lead.</p>
           </div>
@@ -431,11 +492,15 @@ export default function IntegrationsTab() {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
               disabled={!facebookIntegration}
             >
-              {RESPONSAVEL_OPTIONS.map(option => (
-                <option key={option} value={option}>
-                  {option}
+              {responsavelOptions.map(option => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
                 </option>
               ))}
+              {!responsavelOptions.some(option => option.value === facebookFormState.defaultResponsavel) &&
+                facebookFormState.defaultResponsavel && (
+                  <option value={facebookFormState.defaultResponsavel}>{facebookFormState.defaultResponsavel}</option>
+                )}
             </select>
             <p className="text-xs text-slate-500 mt-2">Defina quem recebe os leads importados do Facebook.</p>
           </div>

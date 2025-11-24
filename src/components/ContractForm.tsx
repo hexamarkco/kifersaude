@@ -377,10 +377,22 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         endereco_empresa: formData.endereco_empresa || null,
       };
 
+      const normalizedContractData = {
+        ...dataToSave,
+        status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
+        modalidade: normalizeSentenceCase(dataToSave.modalidade) ?? dataToSave.modalidade,
+        operadora: normalizeSentenceCase(dataToSave.operadora) ?? dataToSave.operadora,
+        produto_plano: normalizeSentenceCase(dataToSave.produto_plano) ?? dataToSave.produto_plano,
+        abrangencia: normalizeSentenceCase(dataToSave.abrangencia),
+        acomodacao: normalizeSentenceCase(dataToSave.acomodacao),
+        carencia: normalizeSentenceCase(dataToSave.carencia),
+        responsavel: normalizeTitleCase(dataToSave.responsavel) ?? dataToSave.responsavel,
+      };
+
       if (contract) {
         const { error } = await supabase
           .from('contracts')
-          .update(dataToSave)
+          .update(normalizedContractData)
           .eq('id', contract.id);
 
         if (error) throw error;
@@ -388,7 +400,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       } else {
         const { data, error } = await supabase
           .from('contracts')
-          .insert([dataToSave])
+          .insert([normalizedContractData])
           .select()
           .single();
 

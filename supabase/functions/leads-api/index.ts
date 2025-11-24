@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
+function log(message: string, details?: Record<string, unknown>) {
+  const timestamp = new Date().toISOString();
+
+  if (details && Object.keys(details).length > 0) {
+    console.log(`[leads-api] ${timestamp} - ${message}`, details);
+  } else {
+    console.log(`[leads-api] ${timestamp} - ${message}`);
+  }
+}
+
 type LeadLookupMaps = {
   originById: Map<string, string>;
   originByName: Map<string, string>;
@@ -435,6 +445,10 @@ function normalizeTelefone(telefone: string): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID();
+  const logWithContext = (message: string, details?: Record<string, unknown>) =>
+    log(message, { requestId, ...details });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -450,10 +464,19 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const path = url.pathname;
 
+    logWithContext('Request received', { method: req.method, path, search: url.search || undefined });
+
     let lookupMaps: LeadLookupMaps | null = null;
     const getLookups = async () => {
       if (!lookupMaps) {
+        logWithContext('Loading lookup tables');
         lookupMaps = await loadLeadLookupMaps(supabase);
+        logWithContext('Lookup tables loaded', {
+          origins: lookupMaps.originById.size,
+          statuses: lookupMaps.statusById.size,
+          tipos: lookupMaps.tipoById.size,
+          responsaveis: lookupMaps.responsavelById.size,
+        });
       }
       return lookupMaps;
     };
@@ -478,6 +501,7 @@ Deno.serve(async (req: Request) => {
       const validation = validateLeadData(body, lookups);
 
       if (!validation.valid || !validation.leadData) {
+        logWithContext('Lead creation validation failed', { errors: validation.errors });
         return new Response(
           JSON.stringify({
             success: false,
@@ -511,6 +535,8 @@ Deno.serve(async (req: Request) => {
           }
         );
       }
+
+      logWithContext('Lead created successfully', { leadId: data.id });
 
       return new Response(
         JSON.stringify({
@@ -567,6 +593,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      logWithContext('Listing leads', {
+        filters: { statusId, responsavelId, origemId, tipoContratacaoId, telefone: telefone ? normalizeTelefone(telefone) : null, email },
+        limit,
+      });
+
       let query = supabase
         .from('leads')
         .select('*')
@@ -600,6 +631,8 @@ Deno.serve(async (req: Request) => {
 
       const leads = (data || []).map((lead) => mapLeadRelationsForResponse(lead, lookups));
 
+      logWithContext('Lead search completed', { count: leads.length });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -620,6 +653,7 @@ Deno.serve(async (req: Request) => {
       const validation = validateLeadUpdate(body, lookups);
 
       if (!validation.valid) {
+        logWithContext('Lead update validation failed', { leadId, errors: validation.errors });
         return new Response(
           JSON.stringify({
             success: false,
@@ -652,6 +686,8 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      logWithContext('Lead updated successfully', { leadId });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -670,6 +706,7 @@ Deno.serve(async (req: Request) => {
       const lookups = await getLookups();
 
       if (!Array.isArray(body.leads)) {
+        logWithContext('Batch lead creation failed: leads is not array');
         return new Response(
           JSON.stringify({
             success: false,
@@ -719,6 +756,12 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      logWithContext('Batch lead creation summary', {
+        total: body.leads.length,
+        success: results.success.length,
+        failed: results.failed.length,
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -744,6 +787,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
+    logWithContext('Erro interno', { error: error instanceof Error ? error.message : String(error) });
     console.error('Erro interno:', error);
     return new Response(
       JSON.stringify({

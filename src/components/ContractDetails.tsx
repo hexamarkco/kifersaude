@@ -140,6 +140,15 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     return total;
   };
 
+  const vidasNumber = contract.vidas || 1;
+  const bonusTotal = contract.bonus_por_vida_valor
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * vidasNumber : contract.bonus_por_vida_valor)
+    : null;
+  const bonusMonthlyCap = contract.bonus_limite_mensal
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_limite_mensal * vidasNumber : contract.bonus_limite_mensal)
+    : null;
+  const bonusInstallments = bonusTotal && bonusMonthlyCap ? Math.ceil(bonusTotal / bonusMonthlyCap) : null;
+
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Remover dependente',
@@ -384,9 +393,18 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                     <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
                     <span className="font-bold text-green-700 text-xl">
-                      R$ {((contract.bonus_por_vida_valor * (contract.vidas || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))}
+                      R$ {(bonusTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
+                  {bonusMonthlyCap && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
+                      <span className="text-sm font-semibold text-green-800">Limite mensal previsto:</span>
+                      <span className="font-bold text-green-700">
+                        R$ {bonusMonthlyCap.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {bonusInstallments && bonusInstallments > 1 && ` · ${bonusInstallments} mês(es)`}
+                      </span>
+                    </div>
+                  )}
                   {contract.previsao_pagamento_bonificacao && (
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                       <span className="text-sm font-semibold text-green-800">Pagamento previsto:</span>
@@ -397,7 +415,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   )}
                 </div>
                 <p className="text-xs text-green-600 mt-2">
-                  Pagamento único por vida do contrato (pode ser parcelado)
+                  Pagamento por vida do contrato, com possibilidade de parcelamento mensal limitado pela operadora.
                 </p>
               </div>
             )}

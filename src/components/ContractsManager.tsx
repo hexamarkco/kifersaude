@@ -347,6 +347,15 @@ export default function ContractsManager({
       : contract.bonus_por_vida_valor;
   };
 
+  const getBonusMonthlyCap = (contract: Contract) => {
+    if (!contract.bonus_limite_mensal || contract.bonus_limite_mensal <= 0) return null;
+
+    const vidas = contract.vidas || 1;
+    return contract.bonus_por_vida_aplicado
+      ? contract.bonus_limite_mensal * vidas
+      : contract.bonus_limite_mensal;
+  };
+
   const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -485,6 +494,10 @@ export default function ContractsManager({
         <div className="grid grid-cols-1 gap-4 p-4">
           {paginatedContracts.map((contract) => {
             const bonusValue = getBonusValue(contract);
+            const bonusMonthlyCap = getBonusMonthlyCap(contract);
+            const bonusInstallments = bonusMonthlyCap && bonusValue
+              ? Math.ceil(bonusValue / bonusMonthlyCap)
+              : null;
 
             return (
               <div
@@ -546,6 +559,14 @@ export default function ContractsManager({
                       <span className="font-medium">Bonificação:</span> R$ {bonusValue.toLocaleString('pt-BR', {
                         minimumFractionDigits: 2
                       })}
+                      {bonusMonthlyCap && (
+                        <span className="block text-xs text-slate-500 mt-1">
+                          Limite mensal: R$ {bonusMonthlyCap.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {bonusInstallments && bonusInstallments > 1 && (
+                            <> · Previsão: {bonusInstallments} mês(es)</>
+                          )}
+                        </span>
+                      )}
                     </div>
                   )}
                   {contract.data_renovacao && (

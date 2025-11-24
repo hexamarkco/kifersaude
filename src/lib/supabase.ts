@@ -84,6 +84,7 @@ export type Contract = {
   vidas?: number;
   bonus_por_vida_valor?: number;
   bonus_por_vida_aplicado?: boolean;
+  bonus_limite_mensal?: number | null;
   responsavel: string;
   observacoes_internas?: string;
   created_at: string;

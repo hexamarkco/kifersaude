@@ -17,6 +17,7 @@ import {
   Filter,
   RefreshCw,
   Clock,
+  BadgePercent,
 } from 'lucide-react';
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
@@ -25,7 +26,6 @@ import {
   calculateConversionRate,
   getLeadStatusDistribution,
   getOperadoraDistribution,
-  getContractsToRenew,
 } from '../lib/analytics';
 import { useConfig } from '../contexts/ConfigContext';
 import { mapLeadRelations } from '../lib/leadRelations';
@@ -117,6 +117,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   });
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [daysAhead, setDaysAhead] = useState(30);
+  const [timelineDirection, setTimelineDirection] = useState<'future' | 'past'>('future');
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach(status => {
@@ -784,92 +785,264 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status)),
   );
   const operadoraData = getOperadoraDistribution(filteredContracts);
-  const upcomingRenewals = useMemo(() => {
-    const renewals = getContractsToRenew(activeContracts, daysAhead);
+  const getAdjustmentDateForDirection = useCallback(
+    (monthNumber: number, direction: 'future' | 'past') => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    return renewals.sort((a, b) => {
-      const dateA = getContractRenewalDate(a);
-      const dateB = getContractRenewalDate(b);
+      const currentYear = today.getFullYear();
+      const monthIndex = monthNumber - 1;
+      let targetDate = new Date(currentYear, monthIndex, 1);
+      targetDate.setHours(0, 0, 0, 0);
 
-      if (!dateA || !dateB) return 0;
+      if (direction === 'future' && targetDate < today) {
+        targetDate = new Date(currentYear + 1, monthIndex, 1);
+      }
 
-      const daysA = Math.ceil((dateA.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      const daysB = Math.ceil((dateB.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (direction === 'past' && targetDate > today) {
+        targetDate = new Date(currentYear - 1, monthIndex, 1);
+      }
 
-      return daysA - daysB;
-    });
-  }, [activeContracts, daysAhead]);
+      return targetDate;
+    },
+    [],
+  );
 
-  const getUpcomingBirthdays = useCallback(
-    (daysAheadValue: number) => {
-      const hoje = new Date();
-      const futureDate = new Date(hoje.getTime() + daysAheadValue * 24 * 60 * 60 * 1000);
+  const getBirthdaysWithinRange = useCallback(
+    (daysAheadValue: number, direction: 'future' | 'past') => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    const birthdays: Array<{
-      nome: string;
-      data_nascimento: string;
-      tipo: 'Titular' | 'Dependente';
-      contract_id: string;
+      const windowStart =
+        direction === 'future'
+          ? today
+          : new Date(today.getTime() - daysAheadValue * 24 * 60 * 60 * 1000);
+      windowStart.setHours(0, 0, 0, 0);
+
+      const windowEnd =
+        direction === 'future'
+          ? new Date(today.getTime() + daysAheadValue * 24 * 60 * 60 * 1000)
+          : today;
+      windowEnd.setHours(23, 59, 59, 999);
+
+      const birthdays: Array<{
+        nome: string;
+        data_nascimento: string;
+        tipo: 'Titular' | 'Dependente';
+        contract_id: string;
+        contract?: Contract;
+        holder?: Holder;
+        isPJ: boolean;
+      }> = [];
+
+      const activeContractIds = activeContracts.map((c) => c.id);
+      const contractsMap = new Map(activeContracts.map((c) => [c.id, c]));
+      const holdersByContract = new Map(holdersVisibleToUser.map((h) => [h.contract_id, h]));
+
+      holdersVisibleToUser.forEach((holder) => {
+        if (!activeContractIds.includes(holder.contract_id)) return;
+
+        const birthDate = parseDateWithoutTimezone(holder.data_nascimento);
+        if (!birthDate) return;
+
+        const futureBirthday = new Date(today);
+        futureBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        futureBirthday.setHours(0, 0, 0, 0);
+
+        const previousBirthday = new Date(futureBirthday);
+        if (futureBirthday > today) {
+          previousBirthday.setFullYear(today.getFullYear() - 1);
+        }
+
+        if (futureBirthday < today) {
+          futureBirthday.setFullYear(today.getFullYear() + 1);
+        }
+
+        const selectedBirthday = direction === 'future' ? futureBirthday : previousBirthday;
+
+        if (selectedBirthday >= windowStart && selectedBirthday <= windowEnd) {
+          birthdays.push({
+            nome: holder.nome_completo,
+            data_nascimento: holder.data_nascimento,
+            tipo: 'Titular',
+            contract_id: holder.contract_id,
+            contract: contractsMap.get(holder.contract_id),
+            isPJ: Boolean(contractsMap.get(holder.contract_id)?.cnpj),
+          });
+        }
+      });
+
+      dependentsVisibleToUser.forEach((dependent) => {
+        if (!activeContractIds.includes(dependent.contract_id)) return;
+
+        const birthDate = parseDateWithoutTimezone(dependent.data_nascimento);
+        if (!birthDate) return;
+
+        const futureBirthday = new Date(today);
+        futureBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        futureBirthday.setHours(0, 0, 0, 0);
+
+        const previousBirthday = new Date(futureBirthday);
+        if (futureBirthday > today) {
+          previousBirthday.setFullYear(today.getFullYear() - 1);
+        }
+
+        if (futureBirthday < today) {
+          futureBirthday.setFullYear(today.getFullYear() + 1);
+        }
+
+        const selectedBirthday = direction === 'future' ? futureBirthday : previousBirthday;
+
+        if (selectedBirthday >= windowStart && selectedBirthday <= windowEnd) {
+          const holder = holdersByContract.get(dependent.contract_id);
+          birthdays.push({
+            nome: dependent.nome_completo,
+            data_nascimento: dependent.data_nascimento,
+            tipo: 'Dependente',
+            contract_id: dependent.contract_id,
+            contract: contractsMap.get(dependent.contract_id),
+            holder,
+            isPJ: Boolean(holder?.cnpj),
+          });
+        }
+      });
+
+      return birthdays
+        .map((birthday) => {
+          const birthDate = parseDateWithoutTimezone(birthday.data_nascimento);
+          if (!birthDate) return null;
+
+          const referenceBirthday = new Date(today);
+          referenceBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+          referenceBirthday.setHours(0, 0, 0, 0);
+
+          if (direction === 'future' && referenceBirthday < today) {
+            referenceBirthday.setFullYear(today.getFullYear() + 1);
+          }
+
+          if (direction === 'past' && referenceBirthday > today) {
+            referenceBirthday.setFullYear(today.getFullYear() - 1);
+          }
+
+          const diasRestantes = Math.ceil(
+            (referenceBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+          );
+
+          return {
+            ...birthday,
+            diasRestantes,
+            nextBirthday: referenceBirthday,
+          };
+        })
+        .filter((birthday): birthday is NonNullable<typeof birthday> => birthday !== null)
+        .sort((a, b) =>
+          direction === 'future' ? a.diasRestantes - b.diasRestantes : b.diasRestantes - a.diasRestantes,
+        );
+    },
+    [activeContracts, dependentsVisibleToUser, holdersVisibleToUser],
+  );
+
+  const ageAdjustmentMilestones = useMemo(() => [19, 24, 29, 34, 39, 44, 49, 54, 59], []);
+
+  const adjustmentsInRange = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const windowStart =
+      timelineDirection === 'future'
+        ? today
+        : new Date(today.getTime() - daysAhead * 24 * 60 * 60 * 1000);
+    windowStart.setHours(0, 0, 0, 0);
+
+    const windowEnd =
+      timelineDirection === 'future'
+        ? new Date(today.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+        : today;
+    windowEnd.setHours(23, 59, 59, 999);
+
+    type AdjustmentItem = {
+      id: string;
+      date: Date;
+      tipo: 'idade' | 'anual';
       contract?: Contract;
-      holder?: Holder;
-      isPJ: boolean;
-    }> = [];
+      personName?: string;
+      role?: string;
+      age?: number;
+    };
 
-    const activeContractIds = activeContracts.map(c => c.id);
-    const contractsMap = new Map(activeContracts.map(c => [c.id, c]));
-    const holdersMap = new Map(holdersVisibleToUser.map(h => [h.id, h]));
+    const adjustments: AdjustmentItem[] = [];
 
-    holdersVisibleToUser
-      .filter(h => activeContractIds.includes(h.contract_id))
-      .forEach(h => {
-        birthdays.push({
-          nome: h.nome_completo,
-          data_nascimento: h.data_nascimento,
-          tipo: 'Titular',
-          contract_id: h.contract_id,
-          contract: contractsMap.get(h.contract_id),
-          holder: h,
-          isPJ: !!h.cnpj
-        });
+    const contractsMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
+
+    const evaluateBirthdayAdjustment = (
+      person: Holder | Dependent,
+      role: 'Titular' | 'Dependente',
+    ) => {
+      const contract = contractsMap.get(person.contract_id);
+      if (!contract) return;
+
+      const birthDate = parseDateWithoutTimezone(person.data_nascimento);
+      if (!birthDate) return;
+
+      const candidateDates = ageAdjustmentMilestones
+        .map((age) => {
+          const targetDate = new Date(birthDate);
+          targetDate.setFullYear(birthDate.getFullYear() + age);
+          targetDate.setHours(0, 0, 0, 0);
+          return { age, date: targetDate };
+        })
+        .filter(({ date }) => date <= windowEnd && date >= windowStart);
+
+      if (candidateDates.length === 0) return;
+
+      const selected = candidateDates.reduce((acc, curr) => {
+        if (timelineDirection === 'future') {
+          return !acc || curr.date < acc.date ? curr : acc;
+        }
+        return !acc || curr.date > acc.date ? curr : acc;
       });
 
-    dependentsVisibleToUser
-      .filter(d => activeContractIds.includes(d.contract_id))
-      .forEach(d => {
-        birthdays.push({
-          nome: d.nome_completo,
-          data_nascimento: d.data_nascimento,
-          tipo: 'Dependente',
-          contract_id: d.contract_id,
-          contract: contractsMap.get(d.contract_id),
-          holder: holdersMap.get(d.holder_id || ''),
-          isPJ: false
-        });
+      adjustments.push({
+        id: `${person.id}-${selected.age}`,
+        date: selected.date,
+        tipo: 'idade',
+        contract,
+        personName: 'nome_completo' in person ? person.nome_completo : undefined,
+        role,
+        age: selected.age,
       });
+    };
 
-    const upcomingBirthdays = birthdays
-      .filter(b => {
-        const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
-        const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
-        const nextYearBirthday = new Date(hoje.getFullYear() + 1, month - 1, day);
+    holdersVisibleToUser.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
+    dependentsVisibleToUser.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
 
-        const nextBirthday = thisYearBirthday >= hoje ? thisYearBirthday : nextYearBirthday;
-        return nextBirthday <= futureDate && nextBirthday >= hoje;
-      })
-      .map(b => {
-        const { month, day } = parseDateWithoutTimezone(b.data_nascimento);
-        const thisYearBirthday = new Date(hoje.getFullYear(), month - 1, day);
-        const nextBirthday =
-          thisYearBirthday >= hoje ? thisYearBirthday : new Date(hoje.getFullYear() + 1, month - 1, day);
+    activeContracts.forEach((contract) => {
+      if (!contract.mes_reajuste) return;
 
-        const diasRestantes = Math.ceil((nextBirthday.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      const adjustmentDate = getAdjustmentDateForDirection(contract.mes_reajuste, timelineDirection);
 
-        return { ...b, nextBirthday, diasRestantes };
-      })
-      .sort((a, b) => a.diasRestantes - b.diasRestantes);
+      if (adjustmentDate >= windowStart && adjustmentDate <= windowEnd) {
+        adjustments.push({
+          id: `${contract.id}-${adjustmentDate.getFullYear()}`,
+          date: adjustmentDate,
+          tipo: 'anual',
+          contract,
+        });
+      }
+    });
 
-    return upcomingBirthdays;
-  }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
+    return adjustments.sort((a, b) =>
+      timelineDirection === 'future' ? a.date.getTime() - b.date.getTime() : b.date.getTime() - a.date.getTime(),
+    );
+  }, [
+    activeContracts,
+    daysAhead,
+    getAdjustmentDateForDirection,
+    holdersVisibleToUser,
+    dependentsVisibleToUser,
+    timelineDirection,
+    ageAdjustmentMilestones,
+  ]);
 
   const ensureBirthdayRemindersForToday = useCallback(async () => {
     const today = new Date();
@@ -974,7 +1147,10 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     }
   }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
 
-  const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(daysAhead), [daysAhead, getUpcomingBirthdays]);
+  const upcomingBirthdays = useMemo(
+    () => getBirthdaysWithinRange(daysAhead, timelineDirection),
+    [daysAhead, getBirthdaysWithinRange, timelineDirection],
+  );
 
   useEffect(() => {
     const todayKey = new Date().toISOString().split('T')[0];
@@ -1272,58 +1448,117 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
       {!isObserver && (
         <>
-          <div className="flex items-center justify-end gap-2 text-sm text-slate-600">
-            <span>Próximos</span>
-            <select
-              value={daysAhead}
-              onChange={(e) => setDaysAhead(Number(e.target.value))}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-            >
-              {[15, 30, 60].map((days) => (
-                <option key={days} value={days}>
-                  {days}
-                </option>
-              ))}
-            </select>
-            <span>dias</span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-600">
+            <div className="flex items-center gap-2">
+              <span>{timelineDirection === 'future' ? 'Próximos' : 'Últimos'}</span>
+              <select
+                value={daysAhead}
+                onChange={(e) => setDaysAhead(Number(e.target.value))}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+              >
+                {[15, 30, 60].map((days) => (
+                  <option key={days} value={days}>
+                    {days}
+                  </option>
+                ))}
+              </select>
+              <span>dias</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>Exibir</span>
+              <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setTimelineDirection('future')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    timelineDirection === 'future'
+                      ? 'bg-teal-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Futuros
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimelineDirection('past')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    timelineDirection === 'past'
+                      ? 'bg-teal-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Passados
+                </button>
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Renovações Próximas (até {daysAhead} dias)</h3>
-                <Calendar className="w-5 h-5 text-orange-500" />
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Reajustes</h3>
+                  <p className="text-xs text-slate-500">
+                    {timelineDirection === 'future'
+                      ? `Próximos reajustes em até ${daysAhead} dias`
+                      : `Reajustes que aconteceram nos últimos ${daysAhead} dias`}
+                  </p>
+                </div>
+                <BadgePercent className="w-5 h-5 text-teal-600" />
               </div>
-              {upcomingRenewals.length > 0 ? (
+              {adjustmentsInRange.length > 0 ? (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {upcomingRenewals.map((contract) => {
-                    const dataRenovacao = getContractRenewalDate(contract);
-
-                    if (!dataRenovacao) {
-                      return null;
-                    }
-
+                  {adjustmentsInRange.map((adjustment) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
                     const diasRestantes = Math.ceil(
-                      (dataRenovacao.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                      (adjustment.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
                     );
+
+                    const distanceLabel =
+                      timelineDirection === 'future'
+                        ? diasRestantes === 0
+                          ? 'Hoje'
+                          : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`
+                        : `${Math.abs(diasRestantes)} ${Math.abs(diasRestantes) === 1 ? 'dia' : 'dias'} atrás`;
 
                     return (
                       <div
-                        key={contract.id}
-                        className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 hover:shadow-md transition-shadow"
+                        key={adjustment.id}
+                        className="flex flex-col gap-2 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900 text-sm">
-                            {contract.codigo_contrato}
-                          </p>
-                          <p className="text-xs text-slate-600 mt-0.5">{contract.operadora}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-orange-600">
-                            {diasRestantes} {diasRestantes === 1 ? 'dia' : 'dias'}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {dataRenovacao.toLocaleDateString('pt-BR')}
-                          </p>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                                  adjustment.tipo === 'idade'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                }`}
+                              >
+                                {adjustment.tipo === 'idade' ? 'Reajuste por idade' : 'Reajuste anual'}
+                              </span>
+                              <span className="text-xs text-slate-500">{distanceLabel}</span>
+                            </div>
+                            {adjustment.tipo === 'idade' ? (
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {adjustment.personName}
+                                  {adjustment.age && ` • ${adjustment.age} anos`}
+                                </p>
+                                <p className="text-xs text-slate-600">{adjustment.role}</p>
+                              </div>
+                            ) : (
+                              <p className="text-sm font-semibold text-slate-900">Reajuste contratual</p>
+                            )}
+                          </div>
+                          <div className="text-right text-xs text-slate-500">
+                            <p className="font-semibold text-slate-900">
+                              {adjustment.contract?.codigo_contrato}
+                            </p>
+                            <p>{adjustment.contract?.operadora}</p>
+                            <p>{adjustment.date.toLocaleDateString('pt-BR')}</p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1331,15 +1566,19 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                  <Calendar className="w-12 h-12 mb-2" />
-                  <p className="text-sm">Nenhuma renovação próxima</p>
+                  <BadgePercent className="w-12 h-12 mb-2" />
+                  <p className="text-sm">Nenhum reajuste no período selecionado</p>
                 </div>
               )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Aniversários Próximos (até {daysAhead} dias)</h3>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {timelineDirection === 'future'
+                    ? `Aniversários Próximos (até ${daysAhead} dias)`
+                    : `Aniversários Recentes (últimos ${daysAhead} dias)`}
+                </h3>
                 <Cake className="w-5 h-5 text-pink-500" />
               </div>
               {upcomingBirthdays.length > 0 ? (
@@ -1352,11 +1591,11 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                         key={`${birthday.contract_id}-${birthday.nome}-${index}`}
                         className="flex flex-col p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1">
-                            <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
-                            <p className="text-xs text-slate-600 mt-0.5">
-                              {birthday.tipo}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
+                              <p className="text-xs text-slate-600 mt-0.5">
+                                {birthday.tipo}
                               {birthday.tipo === 'Dependente' && birthday.holder && (
                                 <span className="text-slate-500"> • Titular: {birthday.holder.nome_completo}</span>
                               )}
@@ -1369,9 +1608,13 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-pink-600">
-                              {diasRestantes === 0
-                                ? 'Hoje!'
-                                : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
+                              {timelineDirection === 'future'
+                                ? diasRestantes === 0
+                                  ? 'Hoje!'
+                                  : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`
+                                : `${Math.abs(diasRestantes)} ${
+                                    Math.abs(diasRestantes) === 1 ? 'dia' : 'dias'
+                                  } atrás`}
                             </p>
                             <p className="text-xs text-slate-500">
                               {birthday.nextBirthday.toLocaleDateString('pt-BR')}

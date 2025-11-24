@@ -57,22 +57,46 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     return isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const daysUntil = (date?: string | null) => {
-    const parsed = parseDate(date);
-    if (!parsed) return null;
+  const getFidelityEndDate = (monthValue?: string | null) => {
+    if (!monthValue) return null;
+    const [year, month] = monthValue.split('-').map(Number);
+    if (!year || !month) return null;
+    const endOfMonth = new Date(year, month, 0);
+    endOfMonth.setHours(0, 0, 0, 0);
+    return endOfMonth;
+  };
+
+  const getNextAdjustmentDate = (monthNumber?: number | null) => {
+    if (!monthNumber) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    parsed.setHours(0, 0, 0, 0);
-    const diff = parsed.getTime() - today.getTime();
+
+    const currentYear = today.getFullYear();
+    const adjustmentMonthIndex = monthNumber - 1;
+    let nextDate = new Date(currentYear, adjustmentMonthIndex, 1);
+    nextDate.setHours(0, 0, 0, 0);
+
+    if (nextDate.getTime() < today.getTime()) {
+      nextDate = new Date(currentYear + 1, adjustmentMonthIndex, 1);
+      nextDate.setHours(0, 0, 0, 0);
+    }
+
+    return nextDate;
+  };
+
+  const daysUntil = (date?: Date | null) => {
+    if (!date) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = date.getTime() - today.getTime();
     return Math.round(diff / (1000 * 60 * 60 * 24));
   };
 
-  const buildDatePill = (label: string, date?: string | null) => {
+  const buildDatePill = (label: string, date?: Date | null) => {
     const remaining = daysUntil(date);
-    const parsed = parseDate(date);
-    if (remaining === null || !parsed) return null;
+    if (remaining === null || !date) return null;
 
-    const formattedDate = parsed.toLocaleDateString('pt-BR');
+    const formattedDate = date.toLocaleDateString('pt-BR');
     const tone = remaining < 0
       ? 'bg-slate-100 text-slate-700 border-slate-200'
       : remaining <= 7
@@ -132,6 +156,15 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     });
     return total;
   };
+
+  const vidasNumber = contract.vidas || 1;
+  const bonusTotal = contract.bonus_por_vida_valor
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * vidasNumber : contract.bonus_por_vida_valor)
+    : null;
+  const bonusMonthlyCap = contract.bonus_limite_mensal
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_limite_mensal * vidasNumber : contract.bonus_limite_mensal)
+    : null;
+  const bonusInstallments = bonusTotal && bonusMonthlyCap ? Math.ceil(bonusTotal / bonusMonthlyCap) : null;
 
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
@@ -279,10 +312,10 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
                 <div className="flex flex-wrap gap-2">
-                  {buildDatePill('Fim da fidelidade', contract.data_renovacao)}
-                  {buildDatePill('Mês de reajuste', contract.mes_reajuste)}
-                  {buildDatePill('Prev. comissão', contract.previsao_recebimento_comissao)}
-                  {buildDatePill('Prev. bonificação', contract.previsao_pagamento_bonificacao)}
+                  {buildDatePill('Fim da fidelidade', getFidelityEndDate(contract.data_renovacao))}
+                  {buildDatePill('Mês de reajuste', getNextAdjustmentDate(contract.mes_reajuste))}
+                  {buildDatePill('Prev. comissão', parseDate(contract.previsao_recebimento_comissao))}
+                  {buildDatePill('Prev. bonificação', parseDate(contract.previsao_pagamento_bonificacao))}
                 </div>
               </div>
             )}
@@ -411,9 +444,18 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                     <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
                     <span className="font-bold text-green-700 text-xl">
-                      R$ {((contract.bonus_por_vida_valor * (contract.vidas || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))}
+                      R$ {(bonusTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
+                  {bonusMonthlyCap && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
+                      <span className="text-sm font-semibold text-green-800">Limite mensal previsto:</span>
+                      <span className="font-bold text-green-700">
+                        R$ {bonusMonthlyCap.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {bonusInstallments && bonusInstallments > 1 && ` · ${bonusInstallments} mês(es)`}
+                      </span>
+                    </div>
+                  )}
                   {contract.previsao_pagamento_bonificacao && (
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                       <span className="text-sm font-semibold text-green-800">Pagamento previsto:</span>
@@ -424,7 +466,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   )}
                 </div>
                 <p className="text-xs text-green-600 mt-2">
-                  Pagamento único por vida do contrato (pode ser parcelado)
+                  Pagamento por vida do contrato, com possibilidade de parcelamento mensal limitado pela operadora.
                 </p>
               </div>
             )}

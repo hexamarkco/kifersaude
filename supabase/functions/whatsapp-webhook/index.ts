@@ -122,6 +122,7 @@ type ZapiWebhookPayload = {
   ids?: (string | number | null | undefined)[] | null;
   id?: string | number | null;
   chatLid?: string;
+  senderLid?: string;
   fromMe?: boolean;
   momment?: number | string;
   status?: string;
@@ -1772,6 +1773,26 @@ const normalizeDigitsOnly = (value: string | null | undefined): string | null =>
   return digits.length > 0 ? digits : null;
 };
 
+const normalizeChatLid = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const withoutSuffix = trimmed.replace(/@lid$/i, '');
+  const digits = normalizeDigitsOnly(withoutSuffix);
+
+  if (!digits) {
+    return null;
+  }
+
+  return `${digits}@lid`;
+};
+
 const buildPhoneVariants = (value: string): string[] => {
   const normalized = normalizeDigitsOnly(value);
   if (!normalized) {
@@ -1788,6 +1809,53 @@ const buildPhoneVariants = (value: string): string[] => {
   }
 
   return Array.from(variants);
+};
+
+const findChatByPhoneOrChatLid = async (identifier: string): Promise<WhatsappChat | null> => {
+  if (!supabaseAdmin) {
+    return null;
+  }
+
+  const phoneVariants = buildPhoneVariants(identifier);
+  const normalizedChatLid = normalizeChatLid(identifier);
+  const digits = normalizeDigitsOnly(identifier);
+  const chatLidVariants = new Set<string>();
+
+  if (normalizedChatLid) {
+    chatLidVariants.add(normalizedChatLid);
+  }
+
+  if (digits) {
+    chatLidVariants.add(digits);
+    chatLidVariants.add(`${digits}@lid`);
+  }
+
+  const orConditions: string[] = [];
+
+  for (const variant of phoneVariants) {
+    orConditions.push(`phone.eq.${variant}`);
+  }
+
+  for (const chatLidVariant of chatLidVariants) {
+    orConditions.push(`chat_lid.eq.${chatLidVariant}`);
+  }
+
+  if (orConditions.length === 0) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('whatsapp_chats')
+    .select('*')
+    .or(orConditions.join(','))
+    .limit(1)
+    .maybeSingle<WhatsappChat>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? null;
 };
 
 const findLeadSummaryForPhone = (
@@ -2262,10 +2330,30 @@ const persistReceivedMessage = async (
   options?: { overridePhone?: string | null; originalPhone?: string | null }
 ): Promise<{ chat: WhatsappChat; message: WhatsappMessage }> => {
   const phoneFromPayload = typeof payload.phone === 'string' ? payload.phone : undefined;
+  const fromMe = payload.fromMe === true;
+  const senderLid = normalizeChatLid(payload.senderLid ?? null);
+  const chatLidFromPayload = normalizeChatLid(payload.chatLid ?? null);
   const normalizedOverride = normalizePhoneIdentifier(options?.overridePhone ?? null);
-  const chatLid = typeof payload.chatLid === 'string' ? payload.chatLid.trim() : null;
+  let chatLid = chatLidFromPayload ?? senderLid ?? null;
   let phone = normalizedOverride ?? normalizePhoneIdentifier(phoneFromPayload) ?? undefined;
   const originalPhone = options?.originalPhone ?? phoneFromPayload ?? null;
+
+  if (fromMe) {
+    const lookupIdentifier =
+      normalizePhoneIdentifier(phoneFromPayload) ?? normalizeChatLid(phoneFromPayload) ?? senderLid ?? null;
+
+    if (lookupIdentifier) {
+      const matchedChat = await findChatByPhoneOrChatLid(lookupIdentifier);
+
+      if (matchedChat) {
+        phone = matchedChat.phone;
+
+        if (!chatLid && matchedChat.chat_lid) {
+          chatLid = normalizeChatLid(matchedChat.chat_lid);
+        }
+      }
+    }
+  }
 
   if (!phone && chatLid) {
     const chatByLid = await getChatByChatLid(chatLid);
@@ -2317,14 +2405,16 @@ const persistReceivedMessage = async (
 };
 
 const getChatByChatLid = async (chatLid: string | null): Promise<WhatsappChat | null> => {
-  if (!supabaseAdmin || !chatLid) {
+  const normalizedChatLid = normalizeChatLid(chatLid);
+
+  if (!supabaseAdmin || !normalizedChatLid) {
     return null;
   }
 
   const { data, error } = await supabaseAdmin
     .from('whatsapp_chats')
     .select('*')
-    .eq('chat_lid', chatLid)
+    .eq('chat_lid', normalizedChatLid)
     .maybeSingle<WhatsappChat>();
 
   if (error) {
@@ -2359,6 +2449,8 @@ const upsertChatRecord = async (input: {
     throw new Error('Phone number is required to upsert a WhatsApp chat');
   }
 
+  const normalizedChatLid = chatLid === undefined ? undefined : normalizeChatLid(chatLid);
+
   const { data: existingChat, error: fetchError } = await supabaseAdmin
     .from('whatsapp_chats')
     .select('*')
@@ -2375,8 +2467,8 @@ const upsertChatRecord = async (input: {
     last_message_preview: lastMessagePreview ?? null,
   };
 
-  if (chatLid !== undefined) {
-    updatePayload.chat_lid = chatLid ?? null;
+  if (normalizedChatLid !== undefined && (!existingChat?.chat_lid || normalizeChatLid(existingChat.chat_lid) === null)) {
+    updatePayload.chat_lid = normalizedChatLid ?? null;
   }
 
   if (typeof isGroup === 'boolean') {
@@ -2415,7 +2507,7 @@ const upsertChatRecord = async (input: {
     .from('whatsapp_chats')
     .insert({
       phone,
-      chat_lid: chatLid ?? null,
+      chat_lid: normalizedChatLid ?? null,
       chat_name: chatName ?? null,
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,

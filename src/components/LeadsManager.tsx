@@ -663,6 +663,36 @@ export default function LeadsManager({
     }
   };
 
+  const handleDeleteLead = async (lead: Lead) => {
+    const confirmed = await requestConfirmation({
+      title: 'Excluir lead',
+      description: `Deseja excluir o lead ${lead.nome_completo}? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', lead.id);
+
+      if (error) throw error;
+
+      setSelectedLead((current) => (current?.id === lead.id ? null : current));
+      setEditingLead((current) => (current?.id === lead.id ? null : current));
+      setReminderLead((current) => (current?.id === lead.id ? null : current));
+      setSelectedLeadIds((current) => current.filter((id) => id !== lead.id));
+      loadLeads();
+    } catch (error) {
+      console.error('Erro ao excluir lead:', error);
+      alert('Erro ao excluir lead');
+    }
+  };
+
   const handleUnarchive = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Reativar lead',
@@ -1455,6 +1485,15 @@ export default function LeadsManager({
                     <Bell className="w-4 h-4" />
                     <span className="hidden sm:inline">Agendar Lembrete</span>
                   </button>
+                  <button
+                    onClick={() => handleDeleteLead(lead)}
+                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    aria-label="Excluir lead"
+                    type="button"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Excluir</span>
+                  </button>
                   {!showArchived ? (
                     <button
                       onClick={() => handleArchive(lead.id)}
@@ -1527,6 +1566,7 @@ export default function LeadsManager({
             setEditingLead(lead);
             setShowForm(true);
           }}
+          onDelete={handleDeleteLead}
         />
       )}
 

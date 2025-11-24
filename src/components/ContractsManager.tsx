@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Contract, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Eye, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 import Pagination from './Pagination';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -43,6 +44,7 @@ export default function ContractsManager({
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
     () => Array.from(new Set(contracts.map((contract) => contract.operadora).filter(Boolean))).sort(),
     [contracts],
@@ -216,6 +218,34 @@ export default function ContractsManager({
       const remaining = daysUntil(date);
       return remaining !== null && remaining >= 0 && remaining <= 30;
     });
+  };
+
+  const handleDeleteContract = async (contract: Contract) => {
+    const confirmed = await requestConfirmation({
+      title: 'Excluir contrato',
+      description: `Deseja excluir o contrato ${contract.codigo_contrato}? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('id', contract.id);
+
+      if (error) throw error;
+
+      setSelectedContract((current) => (current?.id === contract.id ? null : current));
+      setEditingContract((current) => (current?.id === contract.id ? null : current));
+      loadContracts();
+    } catch (error) {
+      console.error('Erro ao excluir contrato:', error);
+      alert('Erro ao excluir contrato');
+    }
   };
 
   const getBadgeTone = (days: number) => {
@@ -518,15 +548,25 @@ export default function ContractsManager({
                     <span>Ver Detalhes</span>
                   </button>
                   {!isObserver && (
-                    <button
-                      onClick={() => {
-                        setEditingContract(contract);
-                        setShowForm(true);
-                      }}
-                      className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingContract(contract);
+                          setShowForm(true);
+                        }}
+                        className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteContract(contract)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                        type="button"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Excluir</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -577,8 +617,10 @@ export default function ContractsManager({
           contract={selectedContract}
           onClose={() => setSelectedContract(null)}
           onUpdate={loadContracts}
+          onDelete={handleDeleteContract}
         />
       )}
+      {ConfirmationDialog}
     </div>
   );
 }

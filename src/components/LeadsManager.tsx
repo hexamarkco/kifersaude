@@ -18,6 +18,7 @@ import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
+import { getBadgeStyle } from '../lib/colorUtils';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -751,6 +752,23 @@ export default function LeadsManager({
     const [firstName] = trimmedName.split(/\s+/);
     return firstName;
   };
+
+  const getStatusBadgeStyles = useCallback(
+    (statusName: string | null | undefined) => {
+      const statusConfig = activeLeadStatuses.find((status) => status.nome === statusName);
+
+      if (!statusConfig) {
+        return {
+          backgroundColor: 'rgba(148, 163, 184, 0.15)',
+          color: '#475569',
+          borderColor: 'rgba(148, 163, 184, 0.35)',
+        } as const;
+      }
+
+      return getBadgeStyle(statusConfig.cor, 1);
+    },
+    [activeLeadStatuses]
+  );
 
   const buildWhatsappMessage = (lead: Lead) =>
     `Olá *${getLeadFirstName(lead.nome_completo)}*, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`;
@@ -1493,7 +1511,10 @@ export default function LeadsManager({
                           statusOptions={activeLeadStatuses}
                         />
                       ) : (
-                        <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded">
+                        <span
+                          className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold"
+                          style={getStatusBadgeStyles(lead.status)}
+                        >
                           {lead.status}
                         </span>
                       )}

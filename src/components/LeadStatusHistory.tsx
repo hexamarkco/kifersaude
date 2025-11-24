@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, LeadStatusHistory } from '../lib/supabase';
 import { History, Clock } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -14,11 +14,38 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
   const [loading, setLoading] = useState(true);
   const { leadStatuses } = useConfig();
 
-  useEffect(() => {
-    loadHistory();
-  }, [leadId]);
+  const statusStylesMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { backgroundColor: string; color: string; borderColor: string }
+    >();
 
-  const loadHistory = async () => {
+    for (const status of leadStatuses) {
+      const color = status.cor || '#2563eb';
+      map.set(status.nome, {
+        backgroundColor: `${color}1A`,
+        color: getContrastTextColor(color),
+        borderColor: `${color}33`,
+      });
+    }
+
+    return map;
+  }, [leadStatuses]);
+
+  const getStatusStyles = (status: string) => {
+    const styles = statusStylesMap.get(status);
+    if (styles) {
+      return styles;
+    }
+
+    return {
+      backgroundColor: 'rgba(100,116,139,0.15)',
+      color: '#475569',
+      borderColor: 'rgba(100,116,139,0.35)',
+    };
+  };
+
+  const loadHistory = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -34,23 +61,11 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
     } finally {
       setLoading(false);
     }
-  };
+  }, [leadId]);
 
-  const getStatusStyles = (status: string) => {
-    const match = leadStatuses.find(s => s.nome === status);
-    if (!match) {
-      return {
-        backgroundColor: 'rgba(100,116,139,0.15)',
-        color: '#475569',
-        borderColor: 'rgba(100,116,139,0.35)',
-      };
-    }
-    return {
-      backgroundColor: `${match.cor || '#2563eb'}1A`,
-      color: getContrastTextColor(match.cor || '#2563eb'),
-      borderColor: `${match.cor || '#2563eb'}33`,
-    };
-  };
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   if (loading) {
     return (
@@ -64,7 +79,9 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
     return (
       <div className="text-center py-8 bg-slate-50 rounded-lg">
         <History className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-        <p className="text-slate-600 text-sm">Nenhuma mudança de status registrada</p>
+        <p className="text-slate-600 text-sm">
+          Nenhuma mudança de status registrada para este lead.
+        </p>
       </div>
     );
   }
@@ -73,7 +90,12 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
     <div className="space-y-3">
       <div className="flex items-center space-x-2 mb-4">
         <History className="w-5 h-5 text-slate-600" />
-        <h4 className="font-semibold text-slate-900">Histórico de Status</h4>
+        <h4
+          className="font-semibold text-slate-900"
+          aria-label="Histórico de mudanças de status"
+        >
+          Histórico de Status
+        </h4>
       </div>
 
       <div className="space-y-2">
@@ -102,14 +124,3 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
               <div className="flex items-center justify-between text-xs text-slate-600">
                 <span className="font-medium">{item.responsavel}</span>
                 <span>{formatDateTimeFullBR(item.created_at)}</span>
-              </div>
-              {item.observacao && (
-                <p className="text-xs text-slate-500 mt-1">{item.observacao}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

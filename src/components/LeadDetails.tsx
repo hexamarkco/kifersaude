@@ -7,12 +7,17 @@ import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
 import WhatsappCampaignDrawer from './WhatsappCampaignDrawer';
 
+type LeadWithRelations = Lead & {
+  status_nome?: string | null;
+  responsavel_label?: string | null;
+};
+
 type LeadDetailsProps = {
-  lead: Lead;
+  lead: LeadWithRelations;
   onClose: () => void;
   onUpdate: () => void;
-  onEdit: (lead: Lead) => void;
-  onDelete?: (lead: Lead) => void;
+  onEdit: (lead: LeadWithRelations) => void;
+  onDelete?: (lead: LeadWithRelations) => void;
 };
 
 export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete }: LeadDetailsProps) {
@@ -55,10 +60,12 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     try {
       const { error } = await supabase
         .from('interactions')
-        .insert([{
-          lead_id: lead.id,
-          ...formData,
-        }]);
+        .insert([
+          {
+            lead_id: lead.id,
+            ...formData,
+          },
+        ]);
 
       if (error) throw error;
 
@@ -131,11 +138,15 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               )}
               <div>
                 <span className="font-medium text-slate-700">Status:</span>
-                <span className="ml-2 text-slate-900">{lead.status}</span>
+                <span className="ml-2 text-slate-900">
+                  {lead.status_nome ?? 'Sem status'}
+                </span>
               </div>
               <div>
                 <span className="font-medium text-slate-700">Responsável:</span>
-                <span className="ml-2 text-slate-900">{lead.responsavel}</span>
+                <span className="ml-2 text-slate-900">
+                  {lead.responsavel_label ?? 'Sem responsável'}
+                </span>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -150,7 +161,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
           </div>
 
           <div className="mb-6">
-            <NextStepSuggestion leadStatus={lead.status} lastContact={lead.ultimo_contato} />
+            <NextStepSuggestion
+              leadStatus={lead.status_nome ?? null}
+              lastContact={lead.ultimo_contato}
+            />
           </div>
 
           <div className="mb-6">

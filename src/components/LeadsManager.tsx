@@ -112,6 +112,18 @@ export default function LeadsManager({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [reminderLead, setReminderLead] = useState<Lead | null>(null);
+  const [reminderPromptMessage, setReminderPromptMessage] = useState<string | undefined>(
+    undefined
+  );
+  const openReminderScheduler = (lead: Lead, promptMessage?: string) => {
+    setReminderLead(lead);
+    setReminderPromptMessage(promptMessage);
+  };
+
+  const closeReminderScheduler = () => {
+    setReminderLead(null);
+    setReminderPromptMessage(undefined);
+  };
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -463,8 +475,8 @@ export default function LeadsManager({
         lead.nome_completo.toLowerCase().includes(lowerSearch) ||
         lead.telefone.includes(searchTerm) ||
         lead.email?.toLowerCase().includes(lowerSearch)
-      );
-    }
+  );
+}
 
     if (selectedStatusSet.size > 0) {
       filtered = filtered.filter((lead) => lead.status && selectedStatusSet.has(lead.status));
@@ -716,7 +728,7 @@ export default function LeadsManager({
 
       setSelectedLead((current) => (current?.id === lead.id ? null : current));
       setEditingLead((current) => (current?.id === lead.id ? null : current));
-      setReminderLead((current) => (current?.id === lead.id ? null : current));
+      closeReminderScheduler();
       setSelectedLeadIds((current) => current.filter((id) => id !== lead.id));
       loadLeads();
     } catch (error) {
@@ -918,7 +930,10 @@ export default function LeadsManager({
       const normalizedStatus = newStatus.trim().toLowerCase();
 
       if (normalizedStatus === 'proposta enviada') {
-        setReminderLead({ ...lead, status: newStatus });
+        openReminderScheduler(
+          { ...lead, status: newStatus },
+          'Deseja agendar o primeiro lembrete após a proposta enviada?'
+        );
       } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
         const { error: deleteRemindersError } = await supabase
           .from('reminders')
@@ -1051,7 +1066,7 @@ export default function LeadsManager({
   const handleRescheduleOverdue = async (lead: Lead) => {
     try {
       await clearOverdueReturn(lead, 'delete');
-      setReminderLead({ ...lead, proximo_retorno: null });
+      openReminderScheduler({ ...lead, proximo_retorno: null });
     } catch (error) {
       console.error('Erro ao reagendar retorno vencido:', error);
     }
@@ -1060,14 +1075,10 @@ export default function LeadsManager({
   const handleCompleteOverdue = async (lead: Lead) => {
     try {
       await clearOverdueReturn(lead, 'complete');
-
-      const shouldScheduleReminder = window.confirm(
-        'Retorno concluído. Deseja agendar um novo lembrete para este lead?'
+      openReminderScheduler(
+        { ...lead, proximo_retorno: null },
+        'Retorno concluído. Deseja marcar um próximo lembrete para este lead?'
       );
-
-      if (shouldScheduleReminder) {
-        setReminderLead({ ...lead, proximo_retorno: null });
-      }
     } catch (error) {
       console.error('Erro ao concluir retorno vencido:', error);
     }
@@ -1617,7 +1628,7 @@ export default function LeadsManager({
                     <span>Converter em Contrato</span>
                   </button>
                   <button
-                    onClick={() => setReminderLead(lead)}
+                    onClick={() => openReminderScheduler(lead)}
                     className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
                     aria-label="Agendar lembrete"
                     type="button"
@@ -1713,16 +1724,17 @@ export default function LeadsManager({
       {reminderLead && (
         <ReminderSchedulerModal
           lead={reminderLead}
-          onClose={() => setReminderLead(null)}
+          onClose={closeReminderScheduler}
           onScheduled={(_details) => {
-            setReminderLead(null);
+            closeReminderScheduler();
             loadLeads();
           }}
-          promptMessage="Deseja agendar o primeiro lembrete após a proposta enviada?"
+          promptMessage={
+            reminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta enviada?'
+          }
           defaultType="Follow-up"
         />
       )}
       {ConfirmationDialog}
     </div>
   );
-}

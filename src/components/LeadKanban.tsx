@@ -270,20 +270,10 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
                         onClick={() => onLeadClick && onLeadClick(lead)}
                         className="bg-white rounded-lg p-4 border border-slate-200 hover:shadow-md transition-all cursor-move"
                       >
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="mb-2">
                           <h4 className="font-semibold text-slate-900 truncate">
                             {lead.nome_completo}
                           </h4>
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[11px] font-semibold border"
-                            style={{
-                              backgroundColor: `${chipColor}1A`,
-                              color: chipText,
-                              borderColor: `${chipColor}40`,
-                            }}
-                          >
-                            {column.nome}
-                          </span>
                         </div>
 
                         <div className="space-y-1.5 text-sm text-slate-600 mb-3">

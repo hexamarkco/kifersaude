@@ -82,8 +82,34 @@ export default function CommissionCalendar() {
       if (commissionDate && contract.comissao_prevista) {
         const totalCommission = contract.comissao_prevista;
         const isUpfront = contract.comissao_recebimento_adiantado ?? true;
+        const customInstallments = Array.isArray(contract.comissao_parcelas)
+          ? contract.comissao_parcelas
+          : [];
 
-        if (!isUpfront && contract.mensalidade_total && contract.mensalidade_total > 0) {
+        if (!isUpfront && customInstallments.length > 0) {
+          const totalPercentual = customInstallments.reduce(
+            (sum, parcel) => sum + (parcel.percentual || 0),
+            0
+          );
+
+          customInstallments.forEach((parcel, index) => {
+            const parcelDate = toDate(parcel.data_pagamento) || commissionDate;
+            const parcelValue =
+              totalPercentual > 0
+                ? roundCurrency((totalCommission * (parcel.percentual || 0)) / totalPercentual)
+                : roundCurrency(totalCommission);
+
+            mappedEvents.push({
+              id: `${contract.id}-comissao-${index + 1}`,
+              date: getDateKey(parcelDate),
+              type: 'comissao',
+              value: parcelValue,
+              contract,
+              installmentIndex: index + 1,
+              installmentCount: customInstallments.length,
+            });
+          });
+        } else if (!isUpfront && contract.mensalidade_total && contract.mensalidade_total > 0) {
           const monthlyCap = contract.mensalidade_total;
           const installments: { value: number; date: Date }[] = [];
           let remaining = roundCurrency(totalCommission);

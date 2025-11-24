@@ -8,6 +8,11 @@ import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { consultarEmpresaPorCNPJ } from '../lib/receitaService';
 
+type CommissionInstallment = {
+  percentual: string;
+  data_pagamento: string;
+};
+
 type ContractFormProps = {
   contract: Contract | null;
   leadToConvert?: Lead | null;
@@ -50,6 +55,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     nome_fantasia: contract?.nome_fantasia || '',
     endereco_empresa: contract?.endereco_empresa || '',
   });
+  const [commissionInstallments, setCommissionInstallments] = useState<CommissionInstallment[]>(() =>
+    Array.isArray(contract?.comissao_parcelas)
+      ? (contract?.comissao_parcelas || []).map(parcel => ({
+          percentual: parcel.percentual?.toString() ?? '',
+          data_pagamento: parcel.data_pagamento ?? '',
+        }))
+      : []
+  );
   const [saving, setSaving] = useState(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [contractId, setContractId] = useState<string | null>(contract?.id || null);
@@ -79,6 +92,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     () => leadStatuses.filter(status => status.ativo).map(status => status.nome),
     [leadStatuses]
   );
+
+  const totalInstallmentPercent = useMemo(
+    () =>
+      commissionInstallments.reduce((sum, parcel) => {
+        const percentual = parseFloat(parcel.percentual || '0');
+        return sum + (isNaN(percentual) ? 0 : percentual);
+      }, 0),
+    [commissionInstallments]
+  );
+
+  const MAX_COMMISSION_PERCENT = 280;
 
   useEffect(() => {
     if (!contract && !formData.status && contractStatusOptions.length > 0) {
@@ -131,17 +155,25 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   }, [contract?.id, convertibleLeadStatuses]);
 
   useEffect(() => {
-    if (formData.mensalidade_total && formData.comissao_multiplicador) {
-      const mensalidade = parseFloat(formData.mensalidade_total);
-      const multiplicador = parseFloat(formData.comissao_multiplicador);
+    if (adjustedMensalidade > 0) {
+      const multiplicador = parseFloat(formData.comissao_multiplicador || '0');
+      const effectivePercentual =
+        !formData.comissao_recebimento_adiantado && totalInstallmentPercent > 0
+          ? Math.min(totalInstallmentPercent, MAX_COMMISSION_PERCENT) / 100
+          : multiplicador;
 
-      if (!isNaN(mensalidade) && !isNaN(multiplicador)) {
-        const adjustedValue = calculateAdjustedValue(mensalidade);
-        const comissao = adjustedValue * multiplicador;
+      if (!isNaN(effectivePercentual)) {
+        const comissao = adjustedMensalidade * effectivePercentual;
         setFormData(prev => ({ ...prev, comissao_prevista: comissao.toFixed(2) }));
       }
     }
-  }, [formData.mensalidade_total, formData.comissao_multiplicador, adjustments]);
+  }, [
+    adjustedMensalidade,
+    formData.comissao_multiplicador,
+    formData.comissao_recebimento_adiantado,
+    totalInstallmentPercent,
+    adjustments,
+  ]);
 
   const loadLeads = async () => {
     try {
@@ -285,6 +317,34 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         return;
       }
 
+      const installmentsPayload = commissionInstallments
+        .map(parcel => ({
+          percentual: parseFloat(parcel.percentual || '0'),
+          data_pagamento: parcel.data_pagamento || null,
+        }))
+        .filter(parcel => !isNaN(parcel.percentual) && parcel.percentual > 0);
+
+      if (!formData.comissao_recebimento_adiantado) {
+        if (installmentsPayload.length === 0) {
+          alert('Adicione ao menos uma parcela de comissão ou marque como adiantamento.');
+          setSaving(false);
+          return;
+        }
+
+        const hasMissingDates = installmentsPayload.some(parcel => !parcel.data_pagamento);
+        if (hasMissingDates) {
+          alert('Informe a data prevista de pagamento para cada parcela.');
+          setSaving(false);
+          return;
+        }
+
+        if (totalInstallmentPercent > MAX_COMMISSION_PERCENT) {
+          alert(`O total das parcelas não pode ultrapassar ${MAX_COMMISSION_PERCENT}% da mensalidade.`);
+          setSaving(false);
+          return;
+        }
+      }
+
       const dataToSave = {
         codigo_contrato: codigo,
         lead_id: formData.lead_id || null,
@@ -302,6 +362,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
         comissao_recebimento_adiantado: formData.comissao_recebimento_adiantado,
+        comissao_parcelas: formData.comissao_recebimento_adiantado ? [] : installmentsPayload,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
         previsao_pagamento_bonificacao: formData.previsao_pagamento_bonificacao || null,
         vidas: formData.vidas ? parseInt(formData.vidas) : 1,
@@ -884,16 +945,132 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     }
                     className="mt-1 w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
                   />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Receber comissão adiantada (pagamento único)
-                    </p>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque quando a
-                      operadora pagar a comissão parcelada mês a mês (limitando-se a 100% da mensalidade por parcela).
-                    </p>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        Receber comissão adiantada (pagamento único)
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a
+                        comissão em parcelas com percentuais e datas específicas.
+                      </p>
+                    </div>
+                  </label>
+
+                {!formData.comissao_recebimento_adiantado && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Parcelas personalizadas</p>
+                        <p className="text-xs text-slate-600">
+                          Distribua até {MAX_COMMISSION_PERCENT}% da mensalidade em parcelas, definindo o percentual e a data de
+                          pagamento de cada mês.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddInstallment}
+                        className="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Adicionar parcela</span>
+                      </button>
+                    </div>
+
+                    {commissionInstallments.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500 bg-slate-50">
+                        Nenhuma parcela definida. Adicione ao menos uma para indicar como a comissão será recebida.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {commissionInstallments.map((parcel, index) => {
+                          const percentual = parseFloat(parcel.percentual || '0');
+                          const value = !isNaN(percentual)
+                            ? (adjustedMensalidade * percentual) / 100
+                            : 0;
+
+                          return (
+                            <div
+                              key={`parcel-${index}`}
+                              className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-slate-800">Parcela {index + 1}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveInstallment(index)}
+                                  className="text-slate-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Percentual</label>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max={MAX_COMMISSION_PERCENT}
+                                      step="0.01"
+                                      value={parcel.percentual}
+                                      onChange={(e) => handleInstallmentChange(index, 'percentual', e.target.value)}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                      placeholder="0.00"
+                                    />
+                                    <span className="text-sm text-slate-500">%</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 mt-1">
+                                    Valor estimado: R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Data de pagamento</label>
+                                  <input
+                                    type="date"
+                                    value={parcel.data_pagamento}
+                                    onChange={(e) => handleInstallmentChange(index, 'data_pagamento', e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  />
+                                  <p className="text-[11px] text-slate-500 mt-1">Defina o dia previsto para esta parcela.</p>
+                                </div>
+                                <div className="bg-teal-50 border border-teal-100 rounded-lg p-3 flex flex-col justify-center">
+                                  <span className="text-[11px] text-teal-700">Total acumulado</span>
+                                  <span className="text-lg font-bold text-teal-800">
+                                    {totalInstallmentPercent.toFixed(2)}%
+                                  </span>
+                                  <span className="text-xs text-teal-700">Limite: {MAX_COMMISSION_PERCENT}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                      <div>
+                        <p className="font-medium text-slate-700">Total das parcelas</p>
+                        <p className="text-xs text-slate-500">
+                          {totalInstallmentPercent.toFixed(2)}% ({totalCommissionFromInstallments.toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          })})
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Restante disponível: {Math.max(0, MAX_COMMISSION_PERCENT - totalInstallmentPercent).toFixed(2)}%
+                        </p>
+                      </div>
+                      {totalInstallmentPercent > MAX_COMMISSION_PERCENT && (
+                        <div className="flex items-center space-x-2 text-amber-600 mt-2 sm:mt-0">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="text-xs font-medium">
+                            O total excede o limite permitido de {MAX_COMMISSION_PERCENT}%.
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </label>
+                )}
               </div>
             </div>
 

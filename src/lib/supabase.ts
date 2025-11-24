@@ -86,6 +86,10 @@ export type Contract = {
   bonus_por_vida_aplicado?: boolean;
   responsavel: string;
   observacoes_internas?: string;
+  cnpj?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  endereco_empresa?: string;
   created_at: string;
   updated_at: string;
 };

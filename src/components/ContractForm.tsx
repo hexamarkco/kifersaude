@@ -6,6 +6,7 @@ import ValueAdjustmentForm from './ValueAdjustmentForm';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { consultarEmpresaPorCNPJ } from '../lib/receitaService';
 
 type ContractFormProps = {
   contract: Contract | null;
@@ -43,6 +44,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
     responsavel: contract?.responsavel || leadToConvert?.responsavel || '',
     observacoes_internas: contract?.observacoes_internas || '',
+    cnpj: contract?.cnpj || '',
+    razao_social: contract?.razao_social || '',
+    nome_fantasia: contract?.nome_fantasia || '',
+    endereco_empresa: contract?.endereco_empresa || '',
   });
   const [saving, setSaving] = useState(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
@@ -51,6 +56,8 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [editingAdjustment, setEditingAdjustment] = useState<ContractValueAdjustment | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
   const contractStatusOptions = useMemo(
     () => (options.contract_status || []).filter(option => option.ativo),
     [options.contract_status]
@@ -63,6 +70,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     () => (options.lead_responsavel || []).filter(option => option.ativo),
     [options.lead_responsavel]
   );
+  const modalidadeRequerCNPJ = useMemo(() => {
+    const normalized = (formData.modalidade || '').toLowerCase();
+    return ['pme', 'empresarial', 'cnpj'].some(keyword => normalized.includes(keyword));
+  }, [formData.modalidade]);
   const convertibleLeadStatuses = useMemo(
     () => leadStatuses.filter(status => status.ativo).map(status => status.nome),
     [leadStatuses]
@@ -170,6 +181,36 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     }
   };
 
+  const handleConsultarCNPJ = async () => {
+    setCnpjLookupError(null);
+    setCnpjLoading(true);
+
+    try {
+      const empresa = await consultarEmpresaPorCNPJ(formData.cnpj);
+      const enderecoCompleto = [
+        empresa.endereco,
+        empresa.numero,
+        empresa.bairro,
+        empresa.cidade && empresa.estado ? `${empresa.cidade} - ${empresa.estado}` : empresa.cidade,
+        empresa.cep ? `CEP: ${empresa.cep}` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+
+      setFormData(prev => ({
+        ...prev,
+        razao_social: empresa.razao_social || prev.razao_social,
+        nome_fantasia: empresa.nome_fantasia || prev.nome_fantasia,
+        endereco_empresa: enderecoCompleto || prev.endereco_empresa,
+      }));
+    } catch (error) {
+      console.error('Erro ao consultar CNPJ do contrato:', error);
+      setCnpjLookupError(error instanceof Error ? error.message : 'Não foi possível consultar CNPJ');
+    } finally {
+      setCnpjLoading(false);
+    }
+  };
+
   const loadAdjustments = async (contractId: string) => {
     try {
       const { data, error } = await supabase
@@ -260,6 +301,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
         observacoes_internas: formData.observacoes_internas || null,
+        cnpj: formData.cnpj || null,
+        razao_social: formData.razao_social || null,
+        nome_fantasia: formData.nome_fantasia || null,
+        endereco_empresa: formData.endereco_empresa || null,
       };
 
       if (contract) {
@@ -424,6 +469,70 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   />
                 )}
               </div>
+
+              {modalidadeRequerCNPJ && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      CNPJ (Receita)
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={formData.cnpj}
+                        onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleConsultarCNPJ}
+                        disabled={cnpjLoading}
+                        className="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                      >
+                        {cnpjLoading ? 'Buscando...' : 'Buscar na Receita'}
+                      </button>
+                    </div>
+                    {cnpjLookupError && <p className="text-xs text-red-600 mt-1">{cnpjLookupError}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Razão Social
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.razao_social}
+                      onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Nome Fantasia
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.nome_fantasia}
+                      onChange={(e) => setFormData({ ...formData, nome_fantasia: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Endereço da Empresa (Receita)
+                    </label>
+                    <textarea
+                      value={formData.endereco_empresa}
+                      onChange={(e) => setFormData({ ...formData, endereco_empresa: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      rows={2}
+                      placeholder="Preenchido automaticamente pela consulta do CNPJ"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">

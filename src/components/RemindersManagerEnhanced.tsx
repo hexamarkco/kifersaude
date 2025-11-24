@@ -154,39 +154,59 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     }
   };
 
-  const handleOpenLead = async (leadId: string) => {
+  const fetchLeadInfo = async (leadId: string) => {
     if (!leadId) {
-      return;
+      return null;
+    }
+
+    const cachedLead = leadsMap.get(leadId);
+    if (cachedLead) {
+      return cachedLead;
     }
 
     setLoadingLeadId(leadId);
+
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('*')
+        .select('id, nome_completo, telefone, responsavel, proximo_retorno')
         .eq('id', leadId)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (!data) {
-        alert('Não foi possível localizar os dados deste lead.');
-        return;
-      }
+      if (!data) return null;
 
       const leadData = data as Lead;
-      setLeadsMap((current) => {
+
+      setLeadsMap(current => {
         const next = new Map(current);
         next.set(leadData.id, leadData);
         return next;
       });
-      setEditingLead(leadData);
+
+      return leadData;
     } catch (error) {
       console.error('Erro ao carregar dados do lead:', error);
-      alert('Erro ao carregar dados do lead');
+      return null;
     } finally {
       setLoadingLeadId(null);
     }
+  };
+
+  const handleOpenLead = async (leadId: string) => {
+    if (!leadId) {
+      return;
+    }
+
+    const leadData = await fetchLeadInfo(leadId);
+
+    if (!leadData) {
+      alert('Não foi possível localizar os dados deste lead.');
+      return;
+    }
+
+    setEditingLead(leadData);
   };
 
   const handleLeadSaved = () => {
@@ -633,6 +653,37 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     }
   };
 
+  const handleReminderWhatsappClick = async (
+    reminder: Reminder,
+    leadInfo?: Lead,
+    contract?: Contract
+  ) => {
+    const existingParams = buildWhatsappLaunchParams(reminder, leadInfo);
+
+    if (existingParams) {
+      handleWhatsappClick(existingParams);
+      return;
+    }
+
+    const targetLeadId = reminder.lead_id ?? contract?.lead_id;
+
+    if (!targetLeadId) {
+      return;
+    }
+
+    const fetchedLead = await fetchLeadInfo(targetLeadId);
+
+    if (!fetchedLead) {
+      return;
+    }
+
+    const fetchedParams = buildWhatsappLaunchParams(reminder, fetchedLead);
+
+    if (fetchedParams) {
+      handleWhatsappClick(fetchedParams);
+    }
+  };
+
   const renderReminderCard = (reminder: Reminder) => {
     const overdue = isOverdue(reminder.data_lembrete);
     const urgency = getUrgencyLevel(reminder);
@@ -644,6 +695,8 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
         ? leadsMap.get(contract.lead_id)
         : undefined;
     const whatsappParams = buildWhatsappLaunchParams(reminder, leadInfo);
+    const relatedLeadId = reminder.lead_id ?? contract?.lead_id;
+    const isLoadingWhatsappLead = relatedLeadId && loadingLeadId === relatedLeadId;
 
     return (
       <div
@@ -738,14 +791,19 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
-            {whatsappParams && (
+            {relatedLeadId && (
               <button
                 type="button"
-                onClick={() => handleWhatsappClick(whatsappParams)}
-                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                onClick={() => handleReminderWhatsappClick(reminder, leadInfo, contract)}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
                 title="Conversar via WhatsApp"
+                disabled={Boolean(isLoadingWhatsappLead)}
               >
-                <MessageCircle className="w-5 h-5" />
+                {isLoadingWhatsappLead ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <MessageCircle className="w-5 h-5" />
+                )}
               </button>
             )}
             {!reminder.lido && (

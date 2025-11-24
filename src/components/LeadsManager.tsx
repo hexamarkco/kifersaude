@@ -482,7 +482,9 @@ export default function LeadsManager({
       filtered = filtered.filter((lead) => lead.tipo_contratacao && selectedTipoSet.has(lead.tipo_contratacao));
     }
 
-    filtered = filtered.filter((lead) => isWithinDateRange(lead.created_at, filterCreatedFrom, filterCreatedTo));
+    filtered = filtered.filter((lead) =>
+      isWithinDateRange(lead.data_criacao ?? lead.created_at, filterCreatedFrom, filterCreatedTo)
+    );
     filtered = filtered.filter((lead) =>
       isWithinDateRange(lead.ultimo_contato, filterUltimoContatoFrom, filterUltimoContatoTo)
     );

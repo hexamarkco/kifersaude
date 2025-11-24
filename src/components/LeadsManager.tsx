@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X, Tag, Share2 } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, X, Tag, Share2, Check } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -792,116 +792,183 @@ export default function LeadsManager({
     );
 
     try {
-  const { error: updateError } = await supabase
-    .from('leads')
-    .update({
-      status: newStatus,
-      ultimo_contato: new Date().toISOString(),
-    })
-    .eq('id', leadId);
-
-  if (updateError) throw updateError;
-
-  await supabase.from('interactions').insert([
-    {
-      lead_id: leadId,
-      tipo: 'Observação',
-      descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
-      responsavel: lead.responsavel,
-    },
-  ]);
-
-  await supabase.from('lead_status_history').insert([
-    {
-      lead_id: leadId,
-      status_anterior: oldStatus,
-      status_novo: newStatus,
-      responsavel: lead.responsavel,
-    },
-  ]);
-
-  const normalizedStatus = newStatus.trim().toLowerCase();
-
-  if (normalizedStatus === 'proposta enviada') {
-    setReminderLead({ ...lead, status: newStatus });
-  } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
-    const { error: deleteRemindersError } = await supabase
-      .from('reminders')
-      .delete()
-      .eq('lead_id', leadId);
-
-    if (deleteRemindersError) throw deleteRemindersError;
-
-    const { error: clearNextReturnError } = await supabase
-      .from('leads')
-      .update({ proximo_retorno: null })
-      .eq('id', leadId);
-
-    if (clearNextReturnError) throw clearNextReturnError;
-
-    setLeads((current) =>
-      current.map((leadItem) =>
-        leadItem.id === leadId
-          ? { ...leadItem, proximo_retorno: null }
-          : leadItem
-      )
-    );
-  } else {
-    const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
-
-    if (reminderRule) {
-      const reminderDate = new Date();
-      reminderDate.setHours(
-        reminderDate.getHours() + reminderRule.hoursFromNow
-      );
-      reminderDate.setMinutes(0, 0, 0);
-
-      const reminderDateISO = reminderDate.toISOString();
-
-      const { error: insertReminderError } = await supabase
-        .from('reminders')
-        .insert([
-          {
-            lead_id: leadId,
-            tipo: reminderRule.type ?? 'Follow-up',
-            titulo: `${reminderRule.title} - ${lead.nome_completo}`,
-            descricao: reminderRule.description ?? null,
-            data_lembrete: reminderDateISO,
-            lido: false,
-            prioridade: reminderRule.priority ?? 'normal',
-          },
-        ]);
-
-      if (insertReminderError) throw insertReminderError;
-
-      const { error: leadUpdateError } = await supabase
+      const { error: updateError } = await supabase
         .from('leads')
-        .update({ proximo_retorno: reminderDateISO })
+        .update({
+          status: newStatus,
+          ultimo_contato: new Date().toISOString(),
+        })
         .eq('id', leadId);
 
-      if (leadUpdateError) throw leadUpdateError;
+      if (updateError) throw updateError;
+
+      await supabase.from('interactions').insert([
+        {
+          lead_id: leadId,
+          tipo: 'Observação',
+          descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
+          responsavel: lead.responsavel,
+        },
+      ]);
+
+      await supabase.from('lead_status_history').insert([
+        {
+          lead_id: leadId,
+          status_anterior: oldStatus,
+          status_novo: newStatus,
+          responsavel: lead.responsavel,
+        },
+      ]);
+
+      const normalizedStatus = newStatus.trim().toLowerCase();
+
+      if (normalizedStatus === 'proposta enviada') {
+        setReminderLead({ ...lead, status: newStatus });
+      } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
+        const { error: deleteRemindersError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('lead_id', leadId);
+
+        if (deleteRemindersError) throw deleteRemindersError;
+
+        const { error: clearNextReturnError } = await supabase
+          .from('leads')
+          .update({ proximo_retorno: null })
+          .eq('id', leadId);
+
+        if (clearNextReturnError) throw clearNextReturnError;
+
+        setLeads((current) =>
+          current.map((leadItem) =>
+            leadItem.id === leadId
+              ? { ...leadItem, proximo_retorno: null }
+              : leadItem
+          )
+        );
+      } else {
+        const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
+
+        if (reminderRule) {
+          const reminderDate = new Date();
+          reminderDate.setHours(
+            reminderDate.getHours() + reminderRule.hoursFromNow
+          );
+          reminderDate.setMinutes(0, 0, 0);
+
+          const reminderDateISO = reminderDate.toISOString();
+
+          const { error: insertReminderError } = await supabase
+            .from('reminders')
+            .insert([
+              {
+                lead_id: leadId,
+                tipo: reminderRule.type ?? 'Follow-up',
+                titulo: `${reminderRule.title} - ${lead.nome_completo}`,
+                descricao: reminderRule.description ?? null,
+                data_lembrete: reminderDateISO,
+                lido: false,
+                prioridade: reminderRule.priority ?? 'normal',
+              },
+            ]);
+
+          if (insertReminderError) throw insertReminderError;
+
+          const { error: leadUpdateError } = await supabase
+            .from('leads')
+            .update({ proximo_retorno: reminderDateISO })
+            .eq('id', leadId);
+
+          if (leadUpdateError) throw leadUpdateError;
+
+          setLeads((current) =>
+            current.map((leadItem) =>
+              leadItem.id === leadId
+                ? { ...leadItem, proximo_retorno: reminderDateISO }
+                : leadItem
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      alert('Erro ao atualizar status do lead');
+
+      setLeads((current) =>
+        current.map((l) =>
+          l.id === leadId ? { ...l, status: oldStatus } : l
+        )
+      );
+
+      throw error;
+    }
+  };
+
+  const clearOverdueReturn = async (
+    lead: Lead,
+    action: 'delete' | 'complete'
+  ) => {
+    if (!lead.proximo_retorno) return;
+
+    try {
+      if (action === 'delete') {
+        const { error: deleteReminderError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('lead_id', lead.id)
+          .eq('data_lembrete', lead.proximo_retorno);
+
+        if (deleteReminderError) throw deleteReminderError;
+      } else {
+        const { error: completeReminderError } = await supabase
+          .from('reminders')
+          .update({
+            lido: true,
+            concluido_em: new Date().toISOString(),
+          })
+          .eq('lead_id', lead.id)
+          .eq('data_lembrete', lead.proximo_retorno);
+
+        if (completeReminderError) throw completeReminderError;
+      }
+
+      const { error: clearNextReturnError } = await supabase
+        .from('leads')
+        .update({ proximo_retorno: null })
+        .eq('id', lead.id)
+        .eq('proximo_retorno', lead.proximo_retorno);
+
+      if (clearNextReturnError) throw clearNextReturnError;
 
       setLeads((current) =>
         current.map((leadItem) =>
-          leadItem.id === leadId
-            ? { ...leadItem, proximo_retorno: reminderDateISO }
-            : leadItem
+          leadItem.id === lead.id ? { ...leadItem, proximo_retorno: null } : leadItem
         )
       );
+      setOverdueLeads((current) => current.filter((item) => item.id !== lead.id));
+      setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id));
+    } catch (error) {
+      console.error('Erro ao limpar retorno vencido:', error);
+      alert('Não foi possível atualizar o retorno vencido. Tente novamente.');
+      throw error;
     }
-  }
-} catch (error) {
-  console.error('Erro ao atualizar status:', error);
-  alert('Erro ao atualizar status do lead');
+  };
 
-  setLeads((current) =>
-    current.map((l) =>
-      l.id === leadId ? { ...l, status: oldStatus } : l
-    )
-  );
+  const handleRescheduleOverdue = async (lead: Lead) => {
+    try {
+      await clearOverdueReturn(lead, 'delete');
+      setReminderLead({ ...lead, proximo_retorno: null });
+    } catch (error) {
+      console.error('Erro ao reagendar retorno vencido:', error);
+    }
+  };
 
-  throw error;
-}
+  const handleCompleteOverdue = async (lead: Lead) => {
+    try {
+      await clearOverdueReturn(lead, 'complete');
+    } catch (error) {
+      console.error('Erro ao concluir retorno vencido:', error);
+    }
   };
 
   useEffect(() => {
@@ -1007,11 +1074,20 @@ export default function LeadsManager({
                     Abrir lead
                   </button>
                   <button
-                    onClick={() => setReminderLead(lead)}
+                    onClick={() => handleCompleteOverdue(lead)}
+                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                    type="button"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span className="hidden sm:inline">Concluir retorno</span>
+                    <span className="sm:hidden">Concluir</span>
+                  </button>
+                  <button
+                    onClick={() => handleRescheduleOverdue(lead)}
                     className="rounded-lg bg-orange-600 px-2 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
                     type="button"
                   >
-                    Agendar retorno
+                    Reagendar retorno
                   </button>
                 </div>
               </div>
@@ -1518,11 +1594,20 @@ export default function LeadsManager({
                   Abrir lead
                 </button>
                 <button
-                  onClick={() => setReminderLead(lead)}
+                  onClick={() => handleCompleteOverdue(lead)}
+                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                  type="button"
+                >
+                  <Check className="h-4 w-4" />
+                  <span className="hidden sm:inline">Concluir retorno</span>
+                  <span className="sm:hidden">Concluir</span>
+                </button>
+                <button
+                  onClick={() => handleRescheduleOverdue(lead)}
                   className="rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
                   type="button"
                 >
-                  Agendar
+                  Reagendar
                 </button>
               </div>
             </div>

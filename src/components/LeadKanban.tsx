@@ -12,31 +12,54 @@ type LeadKanbanProps = {
 };
 
 export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKanbanProps) {
-  const { leadStatuses, leadOrigins } = useConfig();
+  const { leadStatuses, leadOrigins, options } = useConfig();
   const { isObserver } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
 
   const statusColumns = useMemo(
-    () => leadStatuses.filter(status => status.ativo).sort((a, b) => a.ordem - b.ordem),
-    [leadStatuses]
+    () => leadStatuses.filter((status) => status.ativo).sort((a, b) => a.ordem - b.ordem),
+    [leadStatuses],
   );
 
-  const restrictedOriginNamesForObservers = useMemo(
-    () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
+  const restrictedOriginIdsForObservers = useMemo(
+    () =>
+      leadOrigins
+        .filter((origin) => origin.visivel_para_observadores === false)
+        .map((origin) => origin.id),
     [leadOrigins],
   );
 
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter((option) => option.ativo),
+    [options],
+  );
+
+  const responsavelLabelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const option of responsavelOptions) {
+      if (option.id) {
+        map[option.id] = option.label;
+      }
+    }
+    return map;
+  }, [responsavelOptions]);
+
+  const getResponsavelLabel = (lead: Lead): string => {
+    const responsavelId = (lead as any).responsavel_id as string | null | undefined;
+    if (!responsavelId) return 'Não definido';
+    return responsavelLabelById[responsavelId] || 'Não definido';
+  };
+
   const isOriginVisibleToObserver = useCallback(
-    (originName: string | null | undefined) => {
-      if (!originName) {
+    (originId: string | null | undefined) => {
+      if (!originId) {
         return true;
       }
-
-      return !restrictedOriginNamesForObservers.includes(originName);
+      return !restrictedOriginIdsForObservers.includes(originId);
     },
-    [restrictedOriginNamesForObservers],
+    [restrictedOriginIdsForObservers],
   );
 
   const loadLeads = useCallback(async () => {
@@ -52,14 +75,20 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
         .from('leads')
         .select('*')
         .eq('arquivado', false)
-        .in('status', statusColumns.map(column => column.nome))
+        .in(
+          'status_id',
+          statusColumns.map((column) => column.id),
+        )
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      let fetchedLeads = data || [];
+      let fetchedLeads: Lead[] = (data as Lead[]) || [];
+
       if (isObserver) {
-        fetchedLeads = fetchedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem));
+        fetchedLeads = fetchedLeads.filter((lead) =>
+          isOriginVisibleToObserver((lead as any).origem_id as string | null | undefined),
+        );
       }
 
       setLeads(fetchedLeads);
@@ -81,11 +110,11 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
           event: '*',
           schema: 'public',
           table: 'leads',
-          filter: 'arquivado=eq.false'
+          filter: 'arquivado=eq.false',
         },
         () => {
           loadLeads();
-        }
+        },
       )
       .subscribe();
 
@@ -102,65 +131,81 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     event.preventDefault();
   };
 
-  const handleDrop = async (newStatus: string) => {
-    if (!draggedLead || draggedLead.status === newStatus) {
+  const handleDrop = async (newStatusId: string) => {
+    if (!draggedLead) {
       setDraggedLead(null);
       return;
     }
 
-    const oldStatus = draggedLead.status;
+    const oldStatusId = (draggedLead as any).status_id as string | null | undefined;
+
+    if (oldStatusId === newStatusId) {
+      setDraggedLead(null);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const oldStatusName =
+      statusColumns.find((s) => s.id === oldStatusId)?.nome ?? 'Desconhecido';
+    const newStatusName =
+      statusColumns.find((s) => s.id === newStatusId)?.nome ?? 'Desconhecido';
+    const responsavelLabel = getResponsavelLabel(draggedLead);
 
     setLeads((current) =>
       current.map((lead) =>
         lead.id === draggedLead.id
-          ? { ...lead, status: newStatus, ultimo_contato: new Date().toISOString() }
-          : lead
-      )
+          ? ({ ...lead, status_id: newStatusId, ultimo_contato: nowIso } as any)
+          : lead,
+      ),
     );
 
     try {
       const { error: updateError } = await supabase
         .from('leads')
         .update({
-          status: newStatus,
-          ultimo_contato: new Date().toISOString(),
+          status_id: newStatusId,
+          ultimo_contato: nowIso,
         })
         .eq('id', draggedLead.id);
 
       if (updateError) throw updateError;
 
-      await supabase
-        .from('interactions')
-        .insert([{
+      await supabase.from('interactions').insert([
+        {
           lead_id: draggedLead.id,
           tipo: 'Observação',
-          descricao: `Status alterado de "${oldStatus}" para "${newStatus}" (via Kanban)`,
-          responsavel: draggedLead.responsavel,
-        }]);
+          descricao: `Status alterado de "${oldStatusName}" para "${newStatusName}" (via Kanban)`,
+          responsavel: responsavelLabel,
+        },
+      ]);
 
-      await supabase
-        .from('lead_status_history')
-        .insert([{
+      await supabase.from('lead_status_history').insert([
+        {
           lead_id: draggedLead.id,
-          status_anterior: oldStatus,
-          status_novo: newStatus,
-          responsavel: draggedLead.responsavel,
-        }]);
+          status_anterior: oldStatusName,
+          status_novo: newStatusName,
+          responsavel: responsavelLabel,
+        },
+      ]);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status do lead');
       setLeads((current) =>
         current.map((lead) =>
-          lead.id === draggedLead.id ? { ...lead, status: oldStatus } : lead
-        )
+          lead.id === draggedLead.id
+            ? ({ ...lead, status_id: oldStatusId } as any)
+            : lead,
+        ),
       );
     }
 
     setDraggedLead(null);
   };
 
-  const getLeadsByStatus = (status: string) => {
-    return leads.filter((lead) => lead.status === status);
+  const getLeadsByStatus = (statusId: string) => {
+    return leads.filter(
+      (lead) => (lead as any).status_id === statusId && !lead.arquivado,
+    );
   };
 
   if (loading) {
@@ -183,7 +228,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     <div className="overflow-x-auto pb-4 snap-x snap-mandatory">
       <div className="flex space-x-4 min-w-max">
         {statusColumns.map((column) => {
-          const columnLeads = getLeadsByStatus(column.nome);
+          const columnLeads = getLeadsByStatus(column.id);
           const chipColor = column.cor || '#2563eb';
           const chipText = getContrastTextColor(chipColor);
 
@@ -192,7 +237,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
               key={column.id}
               className="flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4 snap-start"
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(column.nome)}
+              onDrop={() => handleDrop(column.id)}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -214,65 +259,80 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
                     <p className="text-sm">Nenhum lead</p>
                   </div>
                 ) : (
-                  columnLeads.map((lead) => (
-                    <div
-                      key={lead.id}
-                      draggable
-                      onDragStart={() => handleDragStart(lead)}
-                      onClick={() => onLeadClick && onLeadClick(lead)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 hover:shadow-md transition-all cursor-move"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-slate-900 truncate">{lead.nome_completo}</h4>
-                        <span
-                          className="px-2 py-0.5 rounded-full text-[11px] font-semibold border"
-                          style={{
-                            backgroundColor: `${chipColor}1A`,
-                            color: chipText,
-                            borderColor: `${chipColor}40`
-                          }}
-                        >
-                          {column.nome}
-                        </span>
-                      </div>
+                  columnLeads.map((lead) => {
+                    const responsavelLabel = getResponsavelLabel(lead);
 
-                      <div className="space-y-1.5 text-sm text-slate-600 mb-3">
-                        <div className="flex items-center space-x-2">
-                          <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="truncate">{lead.telefone}</span>
+                    return (
+                      <div
+                        key={lead.id}
+                        draggable
+                        onDragStart={() => handleDragStart(lead)}
+                        onClick={() => onLeadClick && onLeadClick(lead)}
+                        className="bg-white rounded-lg p-4 border border-slate-200 hover:shadow-md transition-all cursor-move"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-slate-900 truncate">
+                            {lead.nome_completo}
+                          </h4>
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[11px] font-semibold border"
+                            style={{
+                              backgroundColor: `${chipColor}1A`,
+                              color: chipText,
+                              borderColor: `${chipColor}40`,
+                            }}
+                          >
+                            {column.nome}
+                          </span>
                         </div>
-                        {lead.email && (
+
+                        <div className="space-y-1.5 text-sm text-slate-600 mb-3">
                           <div className="flex items-center space-x-2">
-                            <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">{lead.email}</span>
+                            <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate">{lead.telefone}</span>
                           </div>
-                        )}
-                        {lead.proximo_retorno && (
-                          <div className="flex items-center space-x-2 text-orange-600">
-                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>{formatDateTimeFullBR(lead.proximo_retorno)}</span>
-                          </div>
+                          {lead.email && (
+                            <div className="flex items-center space-x-2">
+                              <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="truncate">{lead.email}</span>
+                            </div>
+                          )}
+                          {lead.proximo_retorno && (
+                            <div className="flex items-center space-x-2 text-orange-600">
+                              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>{formatDateTimeFullBR(lead.proximo_retorno)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>
+                            Responsável:{' '}
+                            <strong className="text-slate-700">
+                              {responsavelLabel}
+                            </strong>
+                          </span>
+                          <span>
+                            {lead.data_criacao
+                              ? new Date(lead.data_criacao).toLocaleDateString('pt-BR')
+                              : ''}
+                          </span>
+                        </div>
+
+                        {onConvertToContract && (
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onConvertToContract(lead);
+                            }}
+                            className="mt-3 w-full text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg py-1.5 hover:bg-teal-50 transition-colors"
+                          >
+                            Converter em contrato
+                          </button>
                         )}
                       </div>
-
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Responsável: <strong className="text-slate-700">{lead.responsavel}</strong></span>
-                        <span>{new Date(lead.data_criacao).toLocaleDateString('pt-BR')}</span>
-                      </div>
-
-                      {onConvertToContract && (
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onConvertToContract(lead);
-                          }}
-                          className="mt-3 w-full text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg py-1.5 hover:bg-teal-50 transition-colors"
-                        >
-                          Converter em contrato
-                        </button>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

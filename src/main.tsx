@@ -35,22 +35,3 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>
 );
-
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  const register = () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.info('Service worker registrado', registration.scope);
-      })
-      .catch((error) => {
-        console.error('Falha ao registrar o service worker', error);
-      });
-  };
-
-  if (document.readyState === 'complete') {
-    register();
-  } else {
-    window.addEventListener('load', register, { once: true });
-  }
-}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import { Lead } from '../lib/supabase';
+import { useConfig } from '../contexts/ConfigContext';
 
 type LeadNotificationToastProps = {
   lead: Lead;
@@ -8,18 +9,46 @@ type LeadNotificationToastProps = {
   onViewLead: () => void;
 };
 
-export default function LeadNotificationToast({ lead, onClose, onViewLead }: LeadNotificationToastProps) {
+export default function LeadNotificationToast({
+  lead,
+  onClose,
+  onViewLead,
+}: LeadNotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const { leadStatuses, leadOrigins, options } = useConfig();
+
+  const statusId = (lead as any).status_id as string | null | undefined;
+  const origemId = (lead as any).origem_id as string | null | undefined;
+  const tipoContratacaoId = (lead as any).tipo_contratacao_id as string | null | undefined;
+  const responsavelId = (lead as any).responsavel_id as string | null | undefined;
+
+  const status = leadStatuses.find((s) => s.id === statusId);
+  const origem = leadOrigins.find((o) => o.id === origemId);
+  const tipoContratacao = (options.lead_tipo_contratacao || []).find(
+    (t) => t.id === tipoContratacaoId,
+  );
+  const responsavel = (options.lead_responsavel || []).find(
+    (r) => r.id === responsavelId,
+  );
+
+  const statusLabel = status?.nome ?? 'Não definido';
+  const origemLabel = origem?.nome ?? 'Não definida';
+  const tipoContratacaoLabel = tipoContratacao?.label ?? 'Não definido';
+  const responsavelLabel = responsavel?.label ?? 'Não definido';
 
   useEffect(() => {
-    setTimeout(() => setIsVisible(true), 100);
+    const showTimer = setTimeout(() => setIsVisible(true), 100);
 
     const autoCloseTimer = setTimeout(() => {
       handleClose();
     }, 10000);
 
-    return () => clearTimeout(autoCloseTimer);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(autoCloseTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClose = () => {
@@ -59,7 +88,12 @@ export default function LeadNotificationToast({ lead, onClose, onViewLead }: Lea
         <div className="p-4 space-y-3">
           <div>
             <p className="font-bold text-lg text-slate-900">{lead.nome_completo}</p>
-            <p className="text-sm text-slate-600">Status: <span className="font-medium text-blue-600">{lead.status}</span></p>
+            <p className="text-sm text-slate-600">
+              Status:{' '}
+              <span className="font-medium text-blue-600">
+                {statusLabel}
+              </span>
+            </p>
           </div>
 
           <div className="space-y-2 text-sm text-slate-700">
@@ -85,11 +119,11 @@ export default function LeadNotificationToast({ lead, onClose, onViewLead }: Lea
 
           <div className="pt-2 border-t border-slate-200">
             <p className="text-xs text-slate-500 mb-2">
-              <span className="font-medium">Origem:</span> {lead.origem} |
-              <span className="font-medium ml-2">Tipo:</span> {lead.tipo_contratacao}
+              <span className="font-medium">Origem:</span> {origemLabel} |
+              <span className="font-medium ml-2">Tipo:</span> {tipoContratacaoLabel}
             </p>
             <p className="text-xs text-slate-500">
-              <span className="font-medium">Responsável:</span> {lead.responsavel}
+              <span className="font-medium">Responsável:</span> {responsavelLabel}
             </p>
           </div>
 

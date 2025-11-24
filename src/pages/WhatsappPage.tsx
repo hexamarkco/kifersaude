@@ -4567,7 +4567,7 @@ export default function WhatsappPage({
   }, []);
 
   const handleStartConversation = useCallback(
-    async (phoneInput: string, chatName?: string | null) => {
+    async (phoneInput: string, chatName?: string | null, lead?: LeadSummary | null) => {
       const normalizedPhone = normalizePhoneForComparison(phoneInput);
       if (!normalizedPhone) {
         setNewChatError('Informe um telefone válido para iniciar a conversa.');
@@ -4583,25 +4583,44 @@ export default function WhatsappPage({
         );
 
         let targetChat = existingChat ?? null;
+        const crmLead =
+          lead
+            ? {
+                id: lead.id,
+                nome_completo: lead.nome_completo ?? null,
+                telefone: lead.telefone ?? null,
+                status: lead.status ?? null,
+                responsavel: lead.responsavel ?? null,
+              }
+            : null;
 
         if (!targetChat) {
           const ensuredChat = await ensureChat(normalizedPhone, chatName ?? null);
-          targetChat = ensuredChat;
+          const enhancedChat = crmLead ? { ...ensuredChat, crm_lead: crmLead } : ensuredChat;
+          targetChat = enhancedChat;
           setChats(previous => {
-            const others = previous.filter(chat => chat.id !== ensuredChat.id);
-            return [ensuredChat, ...others];
+            const others = previous.filter(chat => chat.id !== enhancedChat.id);
+            return [enhancedChat, ...others];
           });
         } else if (chatName && chatName.trim() && chatName !== targetChat.chat_name) {
           try {
             const ensuredChat = await ensureChat(normalizedPhone, chatName);
-            targetChat = ensuredChat;
+            const enhancedChat = crmLead ? { ...ensuredChat, crm_lead: crmLead } : ensuredChat;
+            targetChat = enhancedChat;
             setChats(previous => {
-              const others = previous.filter(chat => chat.id !== ensuredChat.id);
-              return [ensuredChat, ...others];
+              const others = previous.filter(chat => chat.id !== enhancedChat.id);
+              return [enhancedChat, ...others];
             });
           } catch (updateError) {
             console.error('Não foi possível atualizar o nome do chat:', updateError);
           }
+        } else if (crmLead && (!targetChat.crm_lead || targetChat.crm_lead.id !== crmLead.id)) {
+          const enhancedChat = { ...targetChat, crm_lead: crmLead };
+          targetChat = enhancedChat;
+          setChats(previous => {
+            const others = previous.filter(chat => chat.id !== enhancedChat.id);
+            return [enhancedChat, ...others];
+          });
         }
 
         if (targetChat) {
@@ -8953,7 +8972,7 @@ export default function WhatsappPage({
                               if (!lead.telefone) {
                                 return;
                               }
-                              void handleStartConversation(lead.telefone, leadName);
+                              void handleStartConversation(lead.telefone, leadName, lead);
                             }}
                             className={`flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 ${
                               hasPhone

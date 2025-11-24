@@ -34,28 +34,69 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
+  const commissionInstallments = Array.isArray(contract.comissao_parcelas) ? contract.comissao_parcelas : [];
+  const totalCommissionPercent = commissionInstallments.reduce(
+    (sum, parcel) => sum + (parcel.percentual || 0),
+    0
+  );
+  const commissionBaseValue = contract.comissao_prevista || 0;
+
+  const calculateInstallmentValue = (percentual: number) => {
+    if (commissionBaseValue > 0 && totalCommissionPercent > 0) {
+      return (commissionBaseValue * percentual) / totalCommissionPercent;
+    }
+    if (contract.mensalidade_total) {
+      return (contract.mensalidade_total * percentual) / 100;
+    }
+    return 0;
+  };
+
   const parseDate = (date?: string | null) => {
     if (!date) return null;
     const parsed = new Date(date);
     return isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const daysUntil = (date?: string | null) => {
-    const parsed = parseDate(date);
-    if (!parsed) return null;
+  const getFidelityEndDate = (monthValue?: string | null) => {
+    if (!monthValue) return null;
+    const [year, month] = monthValue.split('-').map(Number);
+    if (!year || !month) return null;
+    const endOfMonth = new Date(year, month, 0);
+    endOfMonth.setHours(0, 0, 0, 0);
+    return endOfMonth;
+  };
+
+  const getNextAdjustmentDate = (monthNumber?: number | null) => {
+    if (!monthNumber) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    parsed.setHours(0, 0, 0, 0);
-    const diff = parsed.getTime() - today.getTime();
+
+    const currentYear = today.getFullYear();
+    const adjustmentMonthIndex = monthNumber - 1;
+    let nextDate = new Date(currentYear, adjustmentMonthIndex, 1);
+    nextDate.setHours(0, 0, 0, 0);
+
+    if (nextDate.getTime() < today.getTime()) {
+      nextDate = new Date(currentYear + 1, adjustmentMonthIndex, 1);
+      nextDate.setHours(0, 0, 0, 0);
+    }
+
+    return nextDate;
+  };
+
+  const daysUntil = (date?: Date | null) => {
+    if (!date) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = date.getTime() - today.getTime();
     return Math.round(diff / (1000 * 60 * 60 * 24));
   };
 
-  const buildDatePill = (label: string, date?: string | null) => {
+  const buildDatePill = (label: string, date?: Date | null) => {
     const remaining = daysUntil(date);
-    const parsed = parseDate(date);
-    if (remaining === null || !parsed) return null;
+    if (remaining === null || !date) return null;
 
-    const formattedDate = parsed.toLocaleDateString('pt-BR');
+    const formattedDate = date.toLocaleDateString('pt-BR');
     const tone = remaining < 0
       ? 'bg-slate-100 text-slate-700 border-slate-200'
       : remaining <= 7
@@ -115,6 +156,15 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     });
     return total;
   };
+
+  const vidasNumber = contract.vidas || 1;
+  const bonusTotal = contract.bonus_por_vida_valor
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * vidasNumber : contract.bonus_por_vida_valor)
+    : null;
+  const bonusMonthlyCap = contract.bonus_limite_mensal
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_limite_mensal * vidasNumber : contract.bonus_limite_mensal)
+    : null;
+  const bonusInstallments = bonusTotal && bonusMonthlyCap ? Math.ceil(bonusTotal / bonusMonthlyCap) : null;
 
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
@@ -262,10 +312,10 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
                 <div className="flex flex-wrap gap-2">
-                  {buildDatePill('Fim da fidelidade', contract.data_renovacao)}
-                  {buildDatePill('Mês de reajuste', contract.mes_reajuste)}
-                  {buildDatePill('Prev. comissão', contract.previsao_recebimento_comissao)}
-                  {buildDatePill('Prev. bonificação', contract.previsao_pagamento_bonificacao)}
+                  {buildDatePill('Fim da fidelidade', getFidelityEndDate(contract.data_renovacao))}
+                  {buildDatePill('Mês de reajuste', getNextAdjustmentDate(contract.mes_reajuste))}
+                  {buildDatePill('Prev. comissão', parseDate(contract.previsao_recebimento_comissao))}
+                  {buildDatePill('Prev. bonificação', parseDate(contract.previsao_pagamento_bonificacao))}
                 </div>
               </div>
             )}
@@ -329,11 +379,45 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   </span>
                 </div>
                 {contract.comissao_recebimento_adiantado === false ? (
-                  <div className="mt-2 flex items-center space-x-2 text-xs text-amber-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>
-                      Comissão parcelada pela operadora (máximo de 100% da mensalidade por parcela).
-                    </span>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center space-x-2 text-xs text-amber-600">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Recebimento parcelado com percentuais e datas personalizadas.</span>
+                    </div>
+                    {commissionInstallments.length > 0 ? (
+                      <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 space-y-2">
+                        {commissionInstallments.map((parcel, index) => (
+                          <div key={`parcel-${index}`} className="flex items-center justify-between text-xs text-amber-800">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold">Parcela {index + 1}</span>
+                              <span>• {parcel.percentual?.toFixed(2)}%</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {parcel.data_pagamento && (
+                                <span>Pagamento: {formatDateOnly(parcel.data_pagamento)}</span>
+                              )}
+                              <span className="font-semibold">
+                                R$ {calculateInstallmentValue(parcel.percentual || 0).toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="pt-2 border-t border-amber-100 text-xs text-amber-800 flex items-center justify-between">
+                          <span className="font-semibold">Total</span>
+                          <span className="font-semibold">
+                            {totalCommissionPercent.toFixed(2)}% • R$ {commissionBaseValue.toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Defina os percentuais e datas para acompanhar o recebimento parcelado desta comissão.
+                      </p>
+                    )}
                   </div>
                 ) : contract.comissao_recebimento_adiantado ? (
                   <div className="mt-2 flex items-center space-x-2 text-xs text-emerald-600">
@@ -360,9 +444,18 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                     <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
                     <span className="font-bold text-green-700 text-xl">
-                      R$ {((contract.bonus_por_vida_valor * (contract.vidas || 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))}
+                      R$ {(bonusTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
+                  {bonusMonthlyCap && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
+                      <span className="text-sm font-semibold text-green-800">Limite mensal previsto:</span>
+                      <span className="font-bold text-green-700">
+                        R$ {bonusMonthlyCap.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {bonusInstallments && bonusInstallments > 1 && ` · ${bonusInstallments} mês(es)`}
+                      </span>
+                    </div>
+                  )}
                   {contract.previsao_pagamento_bonificacao && (
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                       <span className="text-sm font-semibold text-green-800">Pagamento previsto:</span>
@@ -373,7 +466,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   )}
                 </div>
                 <p className="text-xs text-green-600 mt-2">
-                  Pagamento único por vida do contrato (pode ser parcelado)
+                  Pagamento por vida do contrato, com possibilidade de parcelamento mensal limitado pela operadora.
                 </p>
               </div>
             )}

@@ -82,8 +82,34 @@ export default function CommissionCalendar() {
       if (commissionDate && contract.comissao_prevista) {
         const totalCommission = contract.comissao_prevista;
         const isUpfront = contract.comissao_recebimento_adiantado ?? true;
+        const customInstallments = Array.isArray(contract.comissao_parcelas)
+          ? contract.comissao_parcelas
+          : [];
 
-        if (!isUpfront && contract.mensalidade_total && contract.mensalidade_total > 0) {
+        if (!isUpfront && customInstallments.length > 0) {
+          const totalPercentual = customInstallments.reduce(
+            (sum, parcel) => sum + (parcel.percentual || 0),
+            0
+          );
+
+          customInstallments.forEach((parcel, index) => {
+            const parcelDate = toDate(parcel.data_pagamento) || commissionDate;
+            const parcelValue =
+              totalPercentual > 0
+                ? roundCurrency((totalCommission * (parcel.percentual || 0)) / totalPercentual)
+                : roundCurrency(totalCommission);
+
+            mappedEvents.push({
+              id: `${contract.id}-comissao-${index + 1}`,
+              date: getDateKey(parcelDate),
+              type: 'comissao',
+              value: parcelValue,
+              contract,
+              installmentIndex: index + 1,
+              installmentCount: customInstallments.length,
+            });
+          });
+        } else if (!isUpfront && contract.mensalidade_total && contract.mensalidade_total > 0) {
           const monthlyCap = contract.mensalidade_total;
           const installments: { value: number; date: Date }[] = [];
           let remaining = roundCurrency(totalCommission);
@@ -139,14 +165,57 @@ export default function CommissionCalendar() {
         const totalBonus = contract.bonus_por_vida_aplicado
           ? contract.bonus_por_vida_valor * vidas
           : contract.bonus_por_vida_valor;
+        const monthlyCap = contract.bonus_limite_mensal
+          ? (contract.bonus_por_vida_aplicado ? contract.bonus_limite_mensal * vidas : contract.bonus_limite_mensal)
+          : null;
 
-        mappedEvents.push({
-          id: `${contract.id}-bonus`,
-          date: getDateKey(bonusDate),
-          type: 'bonificacao',
-          value: totalBonus,
-          contract,
-        });
+        if (monthlyCap && monthlyCap > 0 && monthlyCap < totalBonus) {
+          const installments: { value: number; date: Date }[] = [];
+          let remaining = roundCurrency(totalBonus);
+          let installmentIndex = 0;
+          const MAX_INSTALLMENTS = 60;
+
+          while (remaining > 0.009 && installmentIndex < MAX_INSTALLMENTS) {
+            const value = roundCurrency(Math.min(monthlyCap, remaining));
+            const installmentDate = new Date(bonusDate);
+            installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
+
+            installments.push({ value, date: installmentDate });
+
+            remaining = roundCurrency(remaining - value);
+            installmentIndex += 1;
+          }
+
+          if (installments.length === 0) {
+            mappedEvents.push({
+              id: `${contract.id}-bonus`,
+              date: getDateKey(bonusDate),
+              type: 'bonificacao',
+              value: totalBonus,
+              contract,
+            });
+          } else {
+            installments.forEach((installment, index) => {
+              mappedEvents.push({
+                id: `${contract.id}-bonus-${index + 1}`,
+                date: getDateKey(installment.date),
+                type: 'bonificacao',
+                value: installment.value,
+                contract,
+                installmentIndex: index + 1,
+                installmentCount: installments.length,
+              });
+            });
+          }
+        } else {
+          mappedEvents.push({
+            id: `${contract.id}-bonus`,
+            date: getDateKey(bonusDate),
+            type: 'bonificacao',
+            value: totalBonus,
+            contract,
+          });
+        }
       }
     });
 
@@ -397,7 +466,7 @@ export default function CommissionCalendar() {
                       <p className="text-xs text-slate-600 mt-1">
                         Contrato {event.contract.codigo_contrato} • {event.contract.operadora}
                       </p>
-                      {event.type === 'comissao' && event.installmentCount && event.installmentIndex && (
+                      {event.installmentCount && event.installmentIndex && (
                         <p className="text-[11px] text-slate-500 mt-1">
                           Parcela {event.installmentIndex} de {event.installmentCount}
                         </p>

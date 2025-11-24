@@ -197,22 +197,47 @@ export default function ContractsManager({
     return isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const daysUntil = (date?: string | null) => {
-    const parsed = parseDate(date);
-    if (!parsed) return null;
+  const getFidelityEndDate = (monthValue?: string | null) => {
+    if (!monthValue) return null;
+    const [year, month] = monthValue.split('-').map(Number);
+    if (!year || !month) return null;
+    const endOfMonth = new Date(year, month, 0);
+    endOfMonth.setHours(0, 0, 0, 0);
+    return endOfMonth;
+  };
+
+  const getNextAdjustmentDate = (monthNumber?: number | null) => {
+    if (!monthNumber) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    parsed.setHours(0, 0, 0, 0);
-    const diff = parsed.getTime() - today.getTime();
+
+    const currentYear = today.getFullYear();
+    const adjustmentMonthIndex = monthNumber - 1;
+    let nextDate = new Date(currentYear, adjustmentMonthIndex, 1);
+    nextDate.setHours(0, 0, 0, 0);
+
+    if (nextDate.getTime() < today.getTime()) {
+      nextDate = new Date(currentYear + 1, adjustmentMonthIndex, 1);
+      nextDate.setHours(0, 0, 0, 0);
+    }
+
+    return nextDate;
+  };
+
+  const daysUntil = (date?: Date | null) => {
+    if (!date) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = date.getTime() - today.getTime();
     return Math.round(diff / (1000 * 60 * 60 * 24));
   };
 
   const hasUpcomingImportantDate = (contract: Contract) => {
     const dates = [
-      contract.data_renovacao,
-      contract.mes_reajuste,
-      contract.previsao_recebimento_comissao,
-      contract.previsao_pagamento_bonificacao,
+      getFidelityEndDate(contract.data_renovacao),
+      getNextAdjustmentDate(contract.mes_reajuste),
+      parseDate(contract.previsao_recebimento_comissao),
+      parseDate(contract.previsao_pagamento_bonificacao),
     ];
     return dates.some(date => {
       const remaining = daysUntil(date);
@@ -256,10 +281,16 @@ export default function ContractsManager({
   };
 
   const buildDateBadge = (label: string, date?: string | null) => {
-    const remaining = daysUntil(date);
-    if (remaining === null) return null;
+    const normalizedDate = label === 'Renova'
+      ? getFidelityEndDate(date)
+      : label === 'Reajusta'
+        ? getNextAdjustmentDate(Number(date))
+        : parseDate(date);
 
-    const formattedDate = parseDate(date)?.toLocaleDateString('pt-BR');
+    const remaining = daysUntil(normalizedDate);
+    if (remaining === null || !normalizedDate) return null;
+
+    const formattedDate = normalizedDate.toLocaleDateString('pt-BR');
     const labelText = remaining === 0
       ? `${label} hoje (${formattedDate})`
       : remaining > 0
@@ -276,6 +307,7 @@ export default function ContractsManager({
   const renderDateBadges = (contract: Contract) => {
     const badges = [
       buildDateBadge('Renova', contract.data_renovacao),
+      buildDateBadge('Reajusta', contract.mes_reajuste?.toString() || null),
       buildDateBadge('Paga bônus', contract.previsao_pagamento_bonificacao),
     ].filter(Boolean);
 
@@ -284,8 +316,14 @@ export default function ContractsManager({
     return <div className="flex flex-wrap gap-2">{badges}</div>;
   };
 
-  const formatDate = (date?: string | null) => {
-    const parsed = parseDate(date);
+  const formatDate = (date?: string | null, type: 'default' | 'monthYear' | 'monthOnly' = 'default') => {
+    const parsed =
+      type === 'monthYear'
+        ? getFidelityEndDate(date)
+        : type === 'monthOnly'
+          ? getNextAdjustmentDate(date ? Number(date) : null)
+          : parseDate(date);
+
     return parsed ? parsed.toLocaleDateString('pt-BR') : null;
   };
 
@@ -307,6 +345,15 @@ export default function ContractsManager({
     return contract.bonus_por_vida_aplicado
       ? contract.bonus_por_vida_valor * vidas
       : contract.bonus_por_vida_valor;
+  };
+
+  const getBonusMonthlyCap = (contract: Contract) => {
+    if (!contract.bonus_limite_mensal || contract.bonus_limite_mensal <= 0) return null;
+
+    const vidas = contract.vidas || 1;
+    return contract.bonus_por_vida_aplicado
+      ? contract.bonus_limite_mensal * vidas
+      : contract.bonus_limite_mensal;
   };
 
   const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
@@ -447,6 +494,10 @@ export default function ContractsManager({
         <div className="grid grid-cols-1 gap-4 p-4">
           {paginatedContracts.map((contract) => {
             const bonusValue = getBonusValue(contract);
+            const bonusMonthlyCap = getBonusMonthlyCap(contract);
+            const bonusInstallments = bonusMonthlyCap && bonusValue
+              ? Math.ceil(bonusValue / bonusMonthlyCap)
+              : null;
 
             return (
               <div
@@ -481,11 +532,11 @@ export default function ContractsManager({
                       <div>
                         <span className="font-medium">Plano:</span> {contract.produto_plano}
                       </div>
-                      {contract.mensalidade_total && (
-                        <div>
-                          <span className="font-medium">Mensalidade:</span> R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      )}
+                  {contract.mensalidade_total && (
+                    <div>
+                      <span className="font-medium">Mensalidade:</span> R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  )}
                       {contract.comissao_prevista && (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">Comissão:</span>
@@ -508,16 +559,24 @@ export default function ContractsManager({
                       <span className="font-medium">Bonificação:</span> R$ {bonusValue.toLocaleString('pt-BR', {
                         minimumFractionDigits: 2
                       })}
+                      {bonusMonthlyCap && (
+                        <span className="block text-xs text-slate-500 mt-1">
+                          Limite mensal: R$ {bonusMonthlyCap.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {bonusInstallments && bonusInstallments > 1 && (
+                            <> · Previsão: {bonusInstallments} mês(es)</>
+                          )}
+                        </span>
+                      )}
                     </div>
                   )}
                   {contract.data_renovacao && (
                     <div>
-                      <span className="font-medium">Fim da fidelidade:</span> {formatDate(contract.data_renovacao)}
+                      <span className="font-medium">Fim da fidelidade:</span> {formatDate(contract.data_renovacao, 'monthYear')}
                     </div>
                   )}
                   {contract.mes_reajuste && (
                     <div>
-                      <span className="font-medium">Mês de reajuste:</span> {formatDate(contract.mes_reajuste)}
+                      <span className="font-medium">Mês de reajuste:</span> {formatDate(contract.mes_reajuste?.toString(), 'monthOnly')}
                     </div>
                   )}
                   {contract.previsao_recebimento_comissao && (

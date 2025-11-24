@@ -6,6 +6,7 @@ import ValueAdjustmentForm from './ValueAdjustmentForm';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 
 type ContractFormProps = {
   contract: Contract | null;
@@ -262,10 +263,22 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         observacoes_internas: formData.observacoes_internas || null,
       };
 
+      const normalizedContractData = {
+        ...dataToSave,
+        status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
+        modalidade: normalizeSentenceCase(dataToSave.modalidade) ?? dataToSave.modalidade,
+        operadora: normalizeSentenceCase(dataToSave.operadora) ?? dataToSave.operadora,
+        produto_plano: normalizeSentenceCase(dataToSave.produto_plano) ?? dataToSave.produto_plano,
+        abrangencia: normalizeSentenceCase(dataToSave.abrangencia),
+        acomodacao: normalizeSentenceCase(dataToSave.acomodacao),
+        carencia: normalizeSentenceCase(dataToSave.carencia),
+        responsavel: normalizeTitleCase(dataToSave.responsavel) ?? dataToSave.responsavel,
+      };
+
       if (contract) {
         const { error } = await supabase
           .from('contracts')
-          .update(dataToSave)
+          .update(normalizedContractData)
           .eq('id', contract.id);
 
         if (error) throw error;
@@ -273,7 +286,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       } else {
         const { data, error } = await supabase
           .from('contracts')
-          .insert([dataToSave])
+          .insert([normalizedContractData])
           .select()
           .single();
 

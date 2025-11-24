@@ -5,6 +5,7 @@ import { formatDateForInput, formatDateTimeForInput, convertLocalToUTC } from '.
 import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
+import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -143,19 +144,33 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         ultimo_contato: formData.data_criacao ? effectiveCreationDateIso : nowIso,
       };
 
+      const normalizedLeadData = {
+        ...dataToSave,
+        nome_completo: normalizeTitleCase(dataToSave.nome_completo) ?? '',
+        cidade: normalizeTitleCase(dataToSave.cidade),
+        estado: normalizeSentenceCase(dataToSave.estado),
+        regiao: normalizeTitleCase(dataToSave.regiao),
+        origem: normalizeSentenceCase(dataToSave.origem) ?? '',
+        tipo_contratacao: normalizeSentenceCase(dataToSave.tipo_contratacao) ?? '',
+        operadora_atual: normalizeSentenceCase(dataToSave.operadora_atual),
+        status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
+        responsavel: normalizeTitleCase(dataToSave.responsavel) ?? dataToSave.responsavel,
+        endereco: normalizeTitleCase(dataToSave.endereco),
+      };
+
       let savedLeadId = lead?.id;
 
       if (lead) {
         const { error } = await supabase
           .from('leads')
-          .update(dataToSave)
+          .update(normalizedLeadData)
           .eq('id', lead.id);
 
         if (error) throw error;
       } else {
         const { data: insertedLead, error } = await supabase
           .from('leads')
-          .insert([dataToSave])
+          .insert([normalizedLeadData])
           .select()
           .single();
 
@@ -180,8 +195,8 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           await supabase
             .from('reminders')
             .update({
-              titulo: `Retorno agendado: ${formData.nome_completo}`,
-              descricao: `Retorno agendado para ${formData.nome_completo}. Telefone: ${formData.telefone}`,
+              titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
+              descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
               data_lembrete: reminderDate,
               prioridade: 'alta'
             })
@@ -192,8 +207,8 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
             .insert([{
               lead_id: savedLeadId,
               tipo: 'Retorno',
-              titulo: `Retorno agendado: ${formData.nome_completo}`,
-              descricao: `Retorno agendado para ${formData.nome_completo}. Telefone: ${formData.telefone}`,
+              titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
+              descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
               data_lembrete: reminderDate,
               lido: false,
               prioridade: 'alta'

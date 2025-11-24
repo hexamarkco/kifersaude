@@ -103,7 +103,38 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       if (error) throw error;
       setReminders(data || []);
 
-      const leadIds = [...new Set((data || []).map(r => r.lead_id).filter(Boolean))];
+      const contractIds = [...new Set((data || []).map(r => r.contract_id).filter(Boolean))];
+      let fetchedContracts = [] as Contract[];
+
+      if (contractIds.length > 0) {
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .in('id', contractIds);
+
+        if (contractsData) {
+          fetchedContracts = contractsData as Contract[];
+          const newContractsMap = new Map();
+          contractsData.forEach(contract => newContractsMap.set(contract.id, contract));
+          setContractsMap(newContractsMap);
+        }
+      }
+
+      const contractLeadIds = [
+        ...new Set(
+          fetchedContracts
+            .map(contract => contract.lead_id)
+            .filter(Boolean) as string[]
+        ),
+      ];
+
+      const leadIds = [
+        ...new Set([
+          ...(data || []).map(r => r.lead_id).filter(Boolean),
+          ...contractLeadIds,
+        ]),
+      ];
+
       if (leadIds.length > 0) {
         const { data: leadsData } = await supabase
           .from('leads')
@@ -114,20 +145,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           const newLeadsMap = new Map();
           leadsData.forEach(lead => newLeadsMap.set(lead.id, lead));
           setLeadsMap(newLeadsMap);
-        }
-      }
-
-      const contractIds = [...new Set((data || []).map(r => r.contract_id).filter(Boolean))];
-      if (contractIds.length > 0) {
-        const { data: contractsData } = await supabase
-          .from('contracts')
-          .select('*')
-          .in('id', contractIds);
-
-        if (contractsData) {
-          const newContractsMap = new Map();
-          contractsData.forEach(contract => newContractsMap.set(contract.id, contract));
-          setContractsMap(newContractsMap);
         }
       }
     } catch (error) {
@@ -620,7 +637,12 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     const overdue = isOverdue(reminder.data_lembrete);
     const urgency = getUrgencyLevel(reminder);
     const isSelected = selectedReminders.has(reminder.id);
-    const leadInfo = reminder.lead_id ? leadsMap.get(reminder.lead_id) : undefined;
+    const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
+    const leadInfo = reminder.lead_id
+      ? leadsMap.get(reminder.lead_id)
+      : contract?.lead_id
+        ? leadsMap.get(contract.lead_id)
+        : undefined;
     const whatsappParams = buildWhatsappLaunchParams(reminder, leadInfo);
 
     return (
@@ -704,7 +726,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
                 )}
                 {(reminder.lead_id || reminder.contract_id) && (
                   <ReminderContextLink
-                    leadId={reminder.lead_id}
+                    leadId={reminder.lead_id ?? contract?.lead_id}
                     contractId={reminder.contract_id}
                     leadName={leadInfo?.nome_completo}
                     onLeadClick={handleOpenLead}

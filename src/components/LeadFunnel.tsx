@@ -19,19 +19,22 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
   const funnelLeads = useMemo(
     () =>
       leads.filter(
-        (lead) => !lead.arquivado && stages.some((stage) => stage.nome === lead.status)
+        (lead) =>
+          !lead.arquivado &&
+          (lead as any).status_id &&
+          stages.some((stage) => stage.id === (lead as any).status_id)
       ),
     [leads, stages]
   );
 
-  const getLeadsByStatus = (status: string) => {
-    return funnelLeads.filter((lead) => lead.status === status);
+  const getLeadsByStatus = (statusId: string) => {
+    return funnelLeads.filter((lead) => (lead as any).status_id === statusId);
   };
 
   const calculateConversionRate = (index: number): number => {
     if (index === 0) return 100;
-    const previousCount = getLeadsByStatus(stages[index - 1].nome).length;
-    const currentCount = getLeadsByStatus(stages[index].nome).length;
+    const previousCount = getLeadsByStatus(stages[index - 1].id).length;
+    const currentCount = getLeadsByStatus(stages[index].id).length;
     if (previousCount === 0) return 0;
     return (currentCount / previousCount) * 100;
   };
@@ -52,7 +55,9 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Funil de Vendas</h3>
-          <p className="mt-1 text-sm text-slate-600">Visualização do pipeline e taxas de conversão</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Visualização do pipeline e taxas de conversão
+          </p>
         </div>
         <div className="flex items-center justify-between gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:text-sm">
           <Users className="h-4 w-4 text-slate-500" />
@@ -63,7 +68,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
       <div className="space-y-4">
         {stages.map((stage, index) => {
-          const stageLeads = getLeadsByStatus(stage.nome);
+          const stageLeads = getLeadsByStatus(stage.id);
           const count = stageLeads.length;
           const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
           const width = totalLeads > 0 ? (count / totalLeads) * maxWidth : 0;
@@ -85,11 +90,15 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                   {index > 0 && (
                     <div className="flex items-center gap-1 text-xs sm:text-sm">
                       <TrendingDown className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="text-slate-600">{conversionRate.toFixed(0)}%</span>
+                      <span className="text-slate-600">
+                        {conversionRate.toFixed(0)}%
+                      </span>
                     </div>
                   )}
                   <span className="font-semibold text-slate-900">{count}</span>
-                  <span className="w-16 text-right text-slate-500">{percentage.toFixed(1)}%</span>
+                  <span className="w-16 text-right text-slate-500">
+                    {percentage.toFixed(1)}%
+                  </span>
                 </div>
               </div>
 
@@ -100,7 +109,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                     style={{
                       width: `${width}%`,
                       backgroundColor: color,
-                      color: textColor
+                      color: textColor,
                     }}
                   >
                     {count > 0 && (

@@ -7,6 +7,8 @@ import DependentForm from './DependentForm';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
+const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
+
 type ContractDetailsProps = {
   contract: Contract;
   onClose: () => void;
@@ -121,6 +123,43 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       </div>
     );
   };
+
+  const getAgeAdjustmentAlerts = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    const holdersToAdjust = holders.filter((holder) => {
+      const birthDate = parseDate(holder.data_nascimento);
+      if (!birthDate) return false;
+
+      const ageThisYear = currentYear - birthDate.getFullYear();
+      return birthDate.getMonth() === currentMonth && AGE_ADJUSTMENT_MILESTONES.includes(ageThisYear);
+    });
+
+    const dependentsToAdjust = dependents.filter((dependent) => {
+      const birthDate = parseDate(dependent.data_nascimento);
+      if (!birthDate) return false;
+
+      const ageThisYear = currentYear - birthDate.getFullYear();
+      return birthDate.getMonth() === currentMonth && AGE_ADJUSTMENT_MILESTONES.includes(ageThisYear);
+    });
+
+    return [
+      ...holdersToAdjust.map((holder) => ({
+        id: holder.id,
+        name: holder.nome_completo,
+        role: 'Titular',
+      })),
+      ...dependentsToAdjust.map((dependent) => ({
+        id: dependent.id,
+        name: dependent.nome_completo,
+        role: dependent.relacao,
+      })),
+    ];
+  };
+
+  const ageAdjustmentAlerts = getAgeAdjustmentAlerts();
 
   useEffect(() => {
     loadData();
@@ -321,6 +360,28 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   {buildDatePill('Prev. comissão', parseDate(contract.previsao_recebimento_comissao))}
                   {buildDatePill('Prev. bonificação', parseDate(contract.previsao_pagamento_bonificacao))}
                 </div>
+              </div>
+            )}
+
+            {ageAdjustmentAlerts.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Reajuste por idade previsto este mês</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ageAdjustmentAlerts.map((person) => (
+                    <span
+                      key={person.id}
+                      className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+                    >
+                      {person.name} • {person.role}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-600 mt-2">
+                  Os planos reajustam por idade quando um titular ou dependente completa 19, 24, 29, 34, 39, 44, 49, 54 ou 59 anos.
+                </p>
               </div>
             )}
 

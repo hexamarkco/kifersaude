@@ -34,6 +34,23 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
+  const commissionInstallments = Array.isArray(contract.comissao_parcelas) ? contract.comissao_parcelas : [];
+  const totalCommissionPercent = commissionInstallments.reduce(
+    (sum, parcel) => sum + (parcel.percentual || 0),
+    0
+  );
+  const commissionBaseValue = contract.comissao_prevista || 0;
+
+  const calculateInstallmentValue = (percentual: number) => {
+    if (commissionBaseValue > 0 && totalCommissionPercent > 0) {
+      return (commissionBaseValue * percentual) / totalCommissionPercent;
+    }
+    if (contract.mensalidade_total) {
+      return (contract.mensalidade_total * percentual) / 100;
+    }
+    return 0;
+  };
+
   const parseDate = (date?: string | null) => {
     if (!date) return null;
     const parsed = new Date(date);
@@ -329,11 +346,45 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   </span>
                 </div>
                 {contract.comissao_recebimento_adiantado === false ? (
-                  <div className="mt-2 flex items-center space-x-2 text-xs text-amber-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>
-                      Comissão parcelada pela operadora (máximo de 100% da mensalidade por parcela).
-                    </span>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center space-x-2 text-xs text-amber-600">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Recebimento parcelado com percentuais e datas personalizadas.</span>
+                    </div>
+                    {commissionInstallments.length > 0 ? (
+                      <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 space-y-2">
+                        {commissionInstallments.map((parcel, index) => (
+                          <div key={`parcel-${index}`} className="flex items-center justify-between text-xs text-amber-800">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold">Parcela {index + 1}</span>
+                              <span>• {parcel.percentual?.toFixed(2)}%</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {parcel.data_pagamento && (
+                                <span>Pagamento: {formatDateOnly(parcel.data_pagamento)}</span>
+                              )}
+                              <span className="font-semibold">
+                                R$ {calculateInstallmentValue(parcel.percentual || 0).toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="pt-2 border-t border-amber-100 text-xs text-amber-800 flex items-center justify-between">
+                          <span className="font-semibold">Total</span>
+                          <span className="font-semibold">
+                            {totalCommissionPercent.toFixed(2)}% • R$ {commissionBaseValue.toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Defina os percentuais e datas para acompanhar o recebimento parcelado desta comissão.
+                      </p>
+                    )}
                   </div>
                 ) : contract.comissao_recebimento_adiantado ? (
                   <div className="mt-2 flex items-center space-x-2 text-xs text-emerald-600">

@@ -456,11 +456,20 @@ export default function ChatLeadDetailsDrawer({
         </div>
         {hasContracts ? (
           <div className="space-y-3">
-            {contracts.map(contract => (
-              <div
-                key={contract.id}
-                className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm"
-              >
+            {contracts.map(contract => {
+              const commissionInstallments = Array.isArray(contract.comissao_parcelas)
+                ? contract.comissao_parcelas
+                : [];
+              const totalCommissionPercent = commissionInstallments.reduce(
+                (sum, parcel) => sum + (parcel.percentual || 0),
+                0
+              );
+
+              return (
+                <div
+                  key={contract.id}
+                  className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm"
+                >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-semibold text-slate-800">{contract.codigo_contrato || 'Contrato sem código'}</p>
@@ -495,19 +504,38 @@ export default function ChatLeadDetailsDrawer({
                     </div>
                   ) : null}
                   {contract.comissao_recebimento_adiantado != null ? (
-                    <div
-                      className={`flex items-center gap-2 text-xs ${
-                        contract.comissao_recebimento_adiantado ? 'text-emerald-600' : 'text-amber-600'
-                      }`}
-                    >
-                      <Info
-                        className={`h-4 w-4 ${
-                          contract.comissao_recebimento_adiantado ? 'text-emerald-500' : 'text-amber-500'
+                    <div className="space-y-1 text-xs">
+                      <div
+                        className={`flex items-center gap-2 ${
+                          contract.comissao_recebimento_adiantado ? 'text-emerald-600' : 'text-amber-600'
                         }`}
-                      />
-                      {contract.comissao_recebimento_adiantado
-                        ? 'Recebimento adiantado (pagamento único)'
-                        : 'Recebimento parcelado (limite de 100% ao mês)'}
+                      >
+                        <Info
+                          className={`h-4 w-4 ${
+                            contract.comissao_recebimento_adiantado ? 'text-emerald-500' : 'text-amber-500'
+                          }`}
+                        />
+                        {contract.comissao_recebimento_adiantado
+                          ? 'Recebimento adiantado (pagamento único)'
+                          : 'Recebimento parcelado configurado pelo gestor'}
+                      </div>
+                      {!contract.comissao_recebimento_adiantado && commissionInstallments.length > 0 && (
+                        <div className="ml-6 space-y-1 text-amber-700">
+                          {commissionInstallments.slice(0, 2).map((parcel, idx) => (
+                            <div key={`parcel-${idx}`} className="flex items-center gap-2">
+                              <span className="font-semibold">{parcel.percentual?.toFixed(2)}%</span>
+                              {parcel.data_pagamento && (
+                                <span className="text-[11px]">{formatDateOnly(parcel.data_pagamento)}</span>
+                              )}
+                            </div>
+                          ))}
+                          {commissionInstallments.length > 2 && (
+                            <span className="text-[11px] font-medium">
+                              + {commissionInstallments.length - 2} parcela(s) • Total {totalCommissionPercent.toFixed(2)}%
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : null}
                   {contract.previsao_recebimento_comissao ? (
@@ -523,8 +551,9 @@ export default function ChatLeadDetailsDrawer({
                     </div>
                   ) : null}
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">

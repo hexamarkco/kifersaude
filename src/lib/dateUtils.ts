@@ -27,6 +27,22 @@ export function parseDateWithoutTimezone(dateString: string): { year: number; mo
   return { year, month, day };
 }
 
+export function parseDateWithoutTimezoneAsDate(dateString: string | null | undefined): Date | null {
+  if (!dateString) return null;
+
+  const { year, month, day } = parseDateWithoutTimezone(dateString);
+
+  if ([year, month, day].some((value) => Number.isNaN(value))) {
+    return null;
+  }
+
+  const date = new Date();
+  date.setFullYear(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function formatDateTimeForInput(date: string | null | undefined): string {
   if (!date) return '';
 

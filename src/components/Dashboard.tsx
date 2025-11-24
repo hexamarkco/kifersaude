@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useSearchParams } from 'react-router-dom';
 import { supabase, Lead, Contract } from '../lib/supabase';
-import { parseDateWithoutTimezone } from '../lib/dateUtils';
+import { parseDateWithoutTimezone, parseDateWithoutTimezoneAsDate } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import type { TabNavigationOptions } from '../types/navigation';
 import {
@@ -842,7 +842,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       holdersVisibleToUser.forEach((holder) => {
         if (!activeContractIds.includes(holder.contract_id)) return;
 
-        const birthDate = parseDateWithoutTimezone(holder.data_nascimento);
+        const birthDate = parseDateWithoutTimezoneAsDate(holder.data_nascimento);
         if (!birthDate) return;
 
         const futureBirthday = new Date(today);
@@ -875,7 +875,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       dependentsVisibleToUser.forEach((dependent) => {
         if (!activeContractIds.includes(dependent.contract_id)) return;
 
-        const birthDate = parseDateWithoutTimezone(dependent.data_nascimento);
+        const birthDate = parseDateWithoutTimezoneAsDate(dependent.data_nascimento);
         if (!birthDate) return;
 
         const futureBirthday = new Date(today);
@@ -909,7 +909,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
       return birthdays
         .map((birthday) => {
-          const birthDate = parseDateWithoutTimezone(birthday.data_nascimento);
+          const birthDate = parseDateWithoutTimezoneAsDate(birthday.data_nascimento);
           if (!birthDate) return null;
 
           const referenceBirthday = new Date(today);
@@ -981,7 +981,7 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
       const contract = contractsMap.get(person.contract_id);
       if (!contract) return;
 
-      const birthDate = parseDateWithoutTimezone(person.data_nascimento);
+      const birthDate = parseDateWithoutTimezoneAsDate(person.data_nascimento);
       if (!birthDate) return;
 
       const candidateDates = ageAdjustmentMilestones

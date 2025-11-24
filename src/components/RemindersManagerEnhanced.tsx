@@ -60,6 +60,18 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
 
+  const getLeadIdForReminder = (reminder?: Reminder | null) => {
+    if (!reminder) return null;
+    if (reminder.lead_id) return reminder.lead_id;
+
+    if (reminder.contract_id) {
+      const contract = contractsMap.get(reminder.contract_id);
+      if (contract?.lead_id) return contract.lead_id;
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     loadReminders();
 
@@ -251,6 +263,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
     try {
       const reminder = reminders.find(r => r.id === id);
+      const leadId = getLeadIdForReminder(reminder);
       const completionDate = !currentStatus ? new Date().toISOString() : null;
       const updateData: Pick<Reminder, 'lido' | 'concluido_em'> = {
         lido: !currentStatus,
@@ -264,14 +277,14 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
 
       if (error) throw error;
 
-      if (completionDate && reminder?.lead_id) {
-        let leadInfo = leadsMap.get(reminder.lead_id);
+      if (completionDate && leadId) {
+        let leadInfo = leadsMap.get(leadId);
 
         if (!leadInfo) {
           const { data: leadData } = await supabase
             .from('leads')
             .select('id, nome_completo, telefone, responsavel, proximo_retorno')
-            .eq('id', reminder.lead_id)
+            .eq('id', leadId)
             .maybeSingle();
 
           if (leadData) {
@@ -284,8 +297,8 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           }
         }
 
-        if (leadInfo) {
-          await updateLeadNextReturnDate(reminder.lead_id, null, {
+        if (leadInfo && reminder) {
+          await updateLeadNextReturnDate(leadId, null, {
             onlyIfMatches: reminder.data_lembrete,
           });
 
@@ -443,9 +456,10 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       if (error) throw error;
 
       const leadUpdates = remindersToUpdate
-        .filter(reminder => reminder.lead_id)
-        .map(reminder =>
-          updateLeadNextReturnDate(reminder.lead_id!, null, {
+        .map(reminder => ({ reminder, leadId: getLeadIdForReminder(reminder) }))
+        .filter(({ leadId }) => Boolean(leadId))
+        .map(({ reminder, leadId }) =>
+          updateLeadNextReturnDate(leadId!, null, {
             onlyIfMatches: reminder.data_lembrete,
           })
         );
@@ -454,14 +468,15 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
 
       if (remindersToUpdate.length === 1) {
         const [completedReminder] = remindersToUpdate;
-        if (completedReminder.lead_id) {
-          let leadInfo = leadsMap.get(completedReminder.lead_id);
+        const leadId = getLeadIdForReminder(completedReminder);
+        if (leadId) {
+          let leadInfo = leadsMap.get(leadId);
 
           if (!leadInfo) {
             const { data: leadData } = await supabase
               .from('leads')
               .select('id, nome_completo, telefone, responsavel, proximo_retorno')
-              .eq('id', completedReminder.lead_id)
+              .eq('id', leadId)
               .maybeSingle();
 
             if (leadData) {

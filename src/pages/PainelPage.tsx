@@ -14,7 +14,6 @@ import WhatsappPage from './WhatsappPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import { notificationService } from '../lib/notificationService';
-import { pushSubscriptionService } from '../lib/pushSubscriptionService';
 import { audioService } from '../lib/audioService';
 import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab';
 import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
@@ -24,7 +23,7 @@ import type { WhatsappLaunchParams } from '../types/whatsapp';
 import type { TabNavigationOptions } from '../types/navigation';
 
 export default function PainelPage() {
-  const { isObserver, session } = useAuth();
+  const { isObserver } = useAuth();
   const { leadOrigins, loading: configLoading } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -168,46 +167,6 @@ export default function PainelPage() {
       unsubscribe();
     };
   }, [loadUnreadReminders]);
-
-  useEffect(() => {
-    if (!session?.user) {
-      return;
-    }
-
-    pushSubscriptionService.ensureSubscription().catch((error) => {
-      console.error('Erro ao sincronizar a assinatura push', error);
-    });
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.serviceWorker) {
-      return;
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.source !== 'push-service') {
-        return;
-      }
-
-      const payload = event.data.payload;
-      if (!payload) {
-        return;
-      }
-
-      if (payload.type === 'reminder' && payload.reminder?.id) {
-        notificationService.markAsNotified(payload.reminder.id);
-      }
-
-      if (payload.type === 'lead' && payload.lead?.id) {
-        notificationService.markLeadAsNotified(payload.lead.id);
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('message', handleMessage);
-    return () => {
-      navigator.serviceWorker.removeEventListener('message', handleMessage);
-    };
-  }, []);
 
   useEffect(() => {
     if (configLoading) {

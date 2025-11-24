@@ -8,14 +8,13 @@ import RemindersManagerEnhanced from './components/RemindersManagerEnhanced';
 import NotificationToast from './components/NotificationToast';
 import LeadNotificationToast from './components/LeadNotificationToast';
 import { notificationService } from './lib/notificationService';
-import { pushSubscriptionService } from './lib/pushSubscriptionService';
 import { audioService } from './lib/audioService';
 import { useAuth } from './contexts/AuthContext';
 import { useConfig } from './contexts/ConfigContext';
 import type { TabNavigationOptions } from './types/navigation';
 
 function App() {
-  const { isObserver, session } = useAuth();
+  const { isObserver } = useAuth();
   const { leadOrigins } = useConfig();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
@@ -73,46 +72,6 @@ function App() {
       unsubscribe();
     };
   }, [loadUnreadReminders]);
-
-  useEffect(() => {
-    if (!session?.user) {
-      return;
-    }
-
-    pushSubscriptionService.ensureSubscription().catch((error) => {
-      console.error('Erro ao sincronizar a assinatura push', error);
-    });
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.serviceWorker) {
-      return;
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.source !== 'push-service') {
-        return;
-      }
-
-      const payload = event.data.payload;
-      if (!payload) {
-        return;
-      }
-
-      if (payload.type === 'reminder' && payload.reminder?.id) {
-        notificationService.markAsNotified(payload.reminder.id);
-      }
-
-      if (payload.type === 'lead' && payload.lead?.id) {
-        notificationService.markLeadAsNotified(payload.lead.id);
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('message', handleMessage);
-    return () => {
-      navigator.serviceWorker.removeEventListener('message', handleMessage);
-    };
-  }, []);
 
   useEffect(() => {
     const unsubscribeLeads = notificationService.subscribeToLeads((lead) => {

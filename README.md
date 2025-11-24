@@ -17,7 +17,6 @@
    - `VITE_SUPABASE_URL`: normalmente `https://<project>.supabase.co` ou, no Supabase CLI, `http://127.0.0.1:54321`.
    - `VITE_SUPABASE_FUNCTIONS_URL`: use o endpoint das funções (`https://<project>.supabase.co/functions/v1` ou `http://127.0.0.1:54321/functions/v1`).
    - `VITE_SUPABASE_ANON_KEY`: chave anônima (`anon key`) do projeto.
-   - `VITE_WEB_PUSH_PUBLIC_KEY`: chave pública VAPID utilizada para as notificações web push.
 
 Sem esses valores a aba de WhatsApp não consegue montar as URLs das funções.
 

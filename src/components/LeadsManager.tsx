@@ -61,6 +61,8 @@ type LeadsManagerProps = {
   initialStatusFilter?: string[];
 };
 
+type SortField = 'created_at' | 'nome' | 'origem' | 'tipo_contratacao' | 'telefone';
+
 type StatusReminderRule = {
   hoursFromNow: number;
   title: string;
@@ -86,6 +88,14 @@ const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
   },
 };
 
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'created_at', label: 'Data de criação' },
+  { value: 'nome', label: 'Nome (A-Z)' },
+  { value: 'origem', label: 'Origem (A-Z)' },
+  { value: 'tipo_contratacao', label: 'Tipo (A-Z)' },
+  { value: 'telefone', label: 'Telefone (0-9)' },
+];
+
 export default function LeadsManager({
   onConvertToContract,
   onOpenWhatsapp,
@@ -108,6 +118,8 @@ export default function LeadsManager({
   const [filterUltimoContatoTo, setFilterUltimoContatoTo] = useState('');
   const [filterProximoRetornoFrom, setFilterProximoRetornoFrom] = useState('');
   const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState('');
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -515,7 +527,56 @@ export default function LeadsManager({
       filtered = filtered.filter((lead) => lead.canal && selectedCanaisSet.has(lead.canal));
     }
 
-    return filtered;
+    const normalizePhone = (phone: string | null | undefined) => (phone ? phone.replace(/\D/g, '') : '');
+
+    const sorted = [...filtered].sort((a, b) => {
+      const sortValue = (lead: Lead): string | number | null => {
+        switch (sortField) {
+          case 'nome':
+            return lead.nome_completo || '';
+          case 'origem':
+            return lead.origem || '';
+          case 'tipo_contratacao':
+            return lead.tipo_contratacao || '';
+          case 'telefone':
+            return normalizePhone(lead.telefone);
+          case 'created_at':
+          default: {
+            const createdDate = lead.data_criacao ?? lead.created_at;
+            if (!createdDate) return null;
+            const timestamp = new Date(createdDate).getTime();
+            return Number.isNaN(timestamp) ? null : timestamp;
+          }
+        }
+      };
+
+      const valueA = sortValue(a);
+      const valueB = sortValue(b);
+
+      if (typeof valueA === 'number' || typeof valueB === 'number') {
+        const numA = typeof valueA === 'number' ? valueA : null;
+        const numB = typeof valueB === 'number' ? valueB : null;
+
+        if (numA === null && numB === null) return 0;
+        if (numA === null) return 1;
+        if (numB === null) return -1;
+
+        const numberResult = numA - numB;
+        return sortDirection === 'asc' ? numberResult : -numberResult;
+      }
+
+      const stringA = typeof valueA === 'string' ? valueA : '';
+      const stringB = typeof valueB === 'string' ? valueB : '';
+
+      if (!stringA && !stringB) return 0;
+      if (!stringA) return 1;
+      if (!stringB) return -1;
+
+      const stringResult = stringA.localeCompare(stringB, 'pt-BR', { sensitivity: 'base' });
+      return sortDirection === 'asc' ? stringResult : -stringResult;
+    });
+
+    return sorted;
   }, [
     leads,
     overdueLeads,
@@ -536,6 +597,8 @@ export default function LeadsManager({
     isOriginVisibleToObserver,
     showArchived,
     showOverdueOnly,
+    sortDirection,
+    sortField,
   ]);
 
   useEffect(() => {
@@ -1293,6 +1356,34 @@ export default function LeadsManager({
             />
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <label className="text-sm font-medium text-slate-700" htmlFor="lead-sort-field">
+                Ordenar por
+              </label>
+              <div className="flex gap-2">
+                <select
+                  id="lead-sort-field"
+                  value={sortField}
+                  onChange={(event) => setSortField(event.target.value as SortField)}
+                  className="w-48 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Direção da ordenação"
+                  value={sortDirection}
+                  onChange={(event) => setSortDirection(event.target.value as typeof sortDirection)}
+                  className="w-40 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  <option value="asc">Crescente</option>
+                  <option value="desc">Decrescente</option>
+                </select>
+              </div>
+            </div>
             <button
               type="button"
               onClick={resetFilters}

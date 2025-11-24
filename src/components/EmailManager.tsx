@@ -567,8 +567,8 @@ export default function EmailManager() {
       </div>
 
       {isAddingAccount && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 px-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-6">
+        <div className="fixed inset-0 z-40 flex items-stretch justify-center bg-slate-900/60 px-0 sm:items-center sm:px-4">
+          <div className="modal-panel bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-6">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-slate-900">Conectar nova conta</h3>
@@ -673,10 +673,10 @@ export default function EmailManager() {
       )}
 
       {isComposeOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 px-4">
+        <div className="fixed inset-0 z-40 flex items-stretch justify-center bg-slate-900/60 px-0 sm:items-center sm:px-4">
           <form
             onSubmit={handleCompose}
-            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-4"
+            className="modal-panel bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-4"
           >
             <div className="flex items-start justify-between">
               <div>

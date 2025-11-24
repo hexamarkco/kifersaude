@@ -385,13 +385,13 @@ export default function QuickRepliesMenu({
         <>
           <div className="fixed inset-0 z-40 bg-slate-900/60" aria-hidden="true" onClick={closeMenu} />
           <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center px-4 py-10">
+            <div className="flex min-h-full items-stretch justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-10">
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={modalTitleId}
                 aria-describedby={modalDescriptionId}
-                className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                className="modal-panel w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col"
               >
                 <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
                   <div>
@@ -417,7 +417,7 @@ export default function QuickRepliesMenu({
                   </div>
                 </div>
 
-                <div className="px-6 py-5">
+                <div className="modal-panel-content px-6 py-5">
                   {error ? (
                     <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                       {error}

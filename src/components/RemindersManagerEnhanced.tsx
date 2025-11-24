@@ -824,9 +824,9 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowCalendar(true)}
             className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
@@ -902,7 +902,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-        <div className="flex items-center space-x-4 mb-4">
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
@@ -925,7 +925,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:w-48"
           >
             <option value="all">Todos os tipos</option>
             <option value="Documentos pendentes">Documentos pendentes</option>
@@ -938,7 +938,7 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:w-40"
           >
             <option value="all">Todas prioridades</option>
             <option value="baixa">Baixa</option>
@@ -1048,8 +1048,8 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       )}
 
       {reminderPendingDeletion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full p-6 flex flex-col">
             <div className="flex items-start space-x-3">
               <div className="p-3 rounded-full bg-red-100">
                 <Trash2 className="h-6 w-6 text-red-600" />
@@ -1090,8 +1090,8 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       )}
 
       {customSnoozeReminder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full p-6 flex flex-col">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Adiar para data/hora personalizada</h3>
 
             <div className="mb-6">

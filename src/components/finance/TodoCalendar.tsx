@@ -343,8 +343,8 @@ export default function TodoCalendar() {
               }
             }}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center px-0 sm:items-center sm:px-4">
+            <div className="modal-panel w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
@@ -479,8 +479,8 @@ export default function TodoCalendar() {
       {isDayModalOpen && isAddModalOpen && (
         <Fragment>
           <div className="fixed inset-0 z-60 bg-slate-900/70" aria-hidden="true" onClick={closeAddModal} />
-          <div className="fixed inset-0 z-70 flex items-center justify-center px-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+          <div className="fixed inset-0 z-70 flex items-stretch justify-center px-0 sm:items-center sm:px-4">
+            <div className="modal-panel w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h4 className="text-lg font-semibold text-slate-900">Nova tarefa</h4>

@@ -110,6 +110,9 @@ export default function LeadsManager({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [reminderLead, setReminderLead] = useState<Lead | null>(null);
+  const [pendingOverdueToClear, setPendingOverdueToClear] = useState<
+    { lead: Lead; returnDate: string | null } | null
+  >(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -947,9 +950,12 @@ export default function LeadsManager({
 
   const clearOverdueReturn = async (
     lead: Lead,
-    action: 'delete' | 'complete'
+    action: 'delete' | 'complete',
+    options?: { targetReturnDate?: string | null; preserveNextReturn?: boolean }
   ) => {
-    if (!lead.proximo_retorno) return;
+    const targetReturnDate = options?.targetReturnDate ?? lead.proximo_retorno;
+
+    if (!targetReturnDate) return;
 
     try {
       if (action === 'delete') {
@@ -957,7 +963,7 @@ export default function LeadsManager({
           .from('reminders')
           .delete()
           .eq('lead_id', lead.id)
-          .eq('data_lembrete', lead.proximo_retorno);
+          .eq('data_lembrete', targetReturnDate);
 
         if (deleteReminderError) throw deleteReminderError;
       } else {
@@ -968,26 +974,28 @@ export default function LeadsManager({
             concluido_em: new Date().toISOString(),
           })
           .eq('lead_id', lead.id)
-          .eq('data_lembrete', lead.proximo_retorno);
+          .eq('data_lembrete', targetReturnDate);
 
         if (completeReminderError) throw completeReminderError;
       }
 
-      const { error: clearNextReturnError } = await supabase
-        .from('leads')
-        .update({ proximo_retorno: null })
-        .eq('id', lead.id)
-        .eq('proximo_retorno', lead.proximo_retorno);
+      if (!options?.preserveNextReturn) {
+        const { error: clearNextReturnError } = await supabase
+          .from('leads')
+          .update({ proximo_retorno: null })
+          .eq('id', lead.id)
+          .eq('proximo_retorno', targetReturnDate);
 
-      if (clearNextReturnError) throw clearNextReturnError;
+        if (clearNextReturnError) throw clearNextReturnError;
 
-      setLeads((current) =>
-        current.map((leadItem) =>
-          leadItem.id === lead.id ? { ...leadItem, proximo_retorno: null } : leadItem
-        )
-      );
-      setOverdueLeads((current) => current.filter((item) => item.id !== lead.id));
-      setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id));
+        setLeads((current) =>
+          current.map((leadItem) =>
+            leadItem.id === lead.id ? { ...leadItem, proximo_retorno: null } : leadItem
+          )
+        );
+        setOverdueLeads((current) => current.filter((item) => item.id !== lead.id));
+        setRecentlyOverdue((current) => current.filter((item) => item.id !== lead.id));
+      }
     } catch (error) {
       console.error('Erro ao limpar retorno vencido:', error);
       alert('Não foi possível atualizar o retorno vencido. Tente novamente.');
@@ -996,12 +1004,8 @@ export default function LeadsManager({
   };
 
   const handleRescheduleOverdue = async (lead: Lead) => {
-    try {
-      await clearOverdueReturn(lead, 'delete');
-      setReminderLead({ ...lead, proximo_retorno: null });
-    } catch (error) {
-      console.error('Erro ao reagendar retorno vencido:', error);
-    }
+    setPendingOverdueToClear({ lead, returnDate: lead.proximo_retorno });
+    setReminderLead(lead);
   };
 
   const handleCompleteOverdue = async (lead: Lead) => {
@@ -1649,9 +1653,24 @@ export default function LeadsManager({
       {reminderLead && (
         <ReminderSchedulerModal
           lead={reminderLead}
-          onClose={() => setReminderLead(null)}
-          onScheduled={(_details) => {
+          onClose={() => {
             setReminderLead(null);
+            setPendingOverdueToClear(null);
+          }}
+          onScheduled={async (_details) => {
+            if (pendingOverdueToClear?.returnDate) {
+              try {
+                await clearOverdueReturn(pendingOverdueToClear.lead, 'delete', {
+                  targetReturnDate: pendingOverdueToClear.returnDate,
+                  preserveNextReturn: true,
+                });
+              } catch (error) {
+                console.error('Erro ao limpar retorno vencido após reagendamento:', error);
+              }
+            }
+
+            setReminderLead(null);
+            setPendingOverdueToClear(null);
             loadLeads();
           }}
           promptMessage="Deseja agendar o primeiro lembrete após a proposta enviada?"

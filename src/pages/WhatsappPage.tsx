@@ -49,6 +49,7 @@ import {
   CheckCheck,
   User,
   UserPlus,
+  Sticker,
   Video as VideoIcon,
   Trash,
   X,
@@ -527,6 +528,7 @@ const LEADING_PREVIEW_EMOJI_MAP: Array<{ icon: LucideIcon; emojis: string[] }> =
   { icon: FileText, emojis: ['📄'] },
   { icon: MapPin, emojis: ['📍'] },
   { icon: Mic, emojis: ['🎙️', '🎙', '🎤', '🎧'] },
+  { icon: Sticker, emojis: ['🎴', '🃏'] },
 ];
 
 const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = [
@@ -536,6 +538,7 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
   { icon: FileText, prefixes: ['documento recebido', 'documento enviado'] },
   { icon: MapPin, prefixes: ['localizacao recebida', 'localizacao enviada'] },
   { icon: UserPlus, prefixes: ['contato recebido', 'contato enviado'] },
+  { icon: Sticker, prefixes: ['figurinha recebida', 'figurinha enviada'] },
 ];
 
 const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);

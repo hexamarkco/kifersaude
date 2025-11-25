@@ -63,6 +63,7 @@ import { AudioEditorModal } from '../components/AudioEditorModal';
 import { LiveAudioVisualizer } from '../components/LiveAudioVisualizer';
 import StatusDropdown from '../components/StatusDropdown';
 import ChatLeadDetailsDrawer from '../components/ChatLeadDetailsDrawer';
+import LeadRemindersPanel from '../components/LeadRemindersPanel';
 import WhatsappCampaignDrawer from '../components/WhatsappCampaignDrawer';
 import WhatsappSettingsPanel, { WhatsappWallpaperOption } from '../components/WhatsappSettingsPanel';
 import { useConfig } from '../contexts/ConfigContext';
@@ -70,7 +71,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import QuickRepliesMenu from '../components/QuickRepliesMenu';
 import { convertLocalToUTC, formatDateTimeForInput } from '../lib/dateUtils';
 import { supabase } from '../lib/supabase';
-import type { QuickReply } from '../lib/supabase';
+import type { QuickReply, Reminder } from '../lib/supabase';
 import {
   deleteWhatsappMessage,
   editWhatsappMessage,
@@ -1984,6 +1985,9 @@ export default function WhatsappPage({
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadsLoaded, setLeadsLoaded] = useState(false);
   const [leadsError, setLeadsError] = useState<string | null>(null);
+  const [leadReminders, setLeadReminders] = useState<Reminder[]>([]);
+  const [leadRemindersLoading, setLeadRemindersLoading] = useState(false);
+  const [leadRemindersError, setLeadRemindersError] = useState<string | null>(null);
   const [leadSearchTerm, setLeadSearchTerm] = useState('');
   const [leadStatusQuickFilter, setLeadStatusQuickFilter] = useState<'all' | 'novo'>('all');
   const [manualPhoneInput, setManualPhoneInput] = useState('');
@@ -3428,6 +3432,191 @@ export default function WhatsappPage({
     }
   }, []);
 
+  const loadLeadReminders = useCallback(async (leadId: string) => {
+    setLeadRemindersLoading(true);
+    setLeadRemindersError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('data_lembrete', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setLeadReminders(((data as Reminder[] | null) ?? []).filter(reminder => Boolean(reminder.lead_id)));
+    } catch (error) {
+      console.error('Erro ao carregar lembretes do lead:', error);
+      setLeadReminders([]);
+      setLeadRemindersError('Não foi possível carregar os lembretes deste lead.');
+    } finally {
+      setLeadRemindersLoading(false);
+    }
+  }, []);
+
+  const syncLeadNextReturnDate = useCallback(
+    async (
+      leadId: string,
+      nextReturnDate: string | null,
+      options?: { onlyIfMatches?: string },
+    ) => {
+      try {
+        let query = supabase.from('leads').update({ proximo_retorno: nextReturnDate }).eq('id', leadId);
+
+        if (options?.onlyIfMatches) {
+          query = query.eq('proximo_retorno', options.onlyIfMatches);
+        }
+
+        const { data, error } = await query.select('id, proximo_retorno').maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        const syncedValue = data?.proximo_retorno ?? nextReturnDate ?? null;
+
+        setLeads(previousLeads =>
+          previousLeads.map(lead =>
+            lead.id === leadId ? { ...lead, proximo_retorno: syncedValue } : lead,
+          ),
+        );
+
+        setChats(previousChats =>
+          previousChats.map(chat => {
+            const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;
+
+            if (!matchesLead) {
+              return chat;
+            }
+
+            return {
+              ...chat,
+              lead_id: chat.lead_id ?? leadId,
+              crm_lead: chat.crm_lead
+                ? { ...chat.crm_lead, proximo_retorno: syncedValue }
+                : chat.crm_lead,
+            };
+          }),
+        );
+      } catch (error) {
+        console.error('Erro ao sincronizar próximo retorno do lead pelo chat:', error);
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const handleLeadReminderToggleRead = useCallback(
+    async (reminderId: string, currentStatus: boolean) => {
+      const targetReminder = leadReminders.find(reminder => reminder.id === reminderId);
+      const completionDate = !currentStatus ? new Date().toISOString() : null;
+
+      setLeadReminders(previousReminders =>
+        previousReminders.map(reminder =>
+          reminder.id === reminderId
+            ? { ...reminder, lido: !currentStatus, concluido_em: completionDate ?? undefined }
+            : reminder,
+        ),
+      );
+
+      try {
+        const { error } = await supabase
+          .from('reminders')
+          .update({ lido: !currentStatus, concluido_em: completionDate ?? null })
+          .eq('id', reminderId);
+
+        if (error) {
+          throw error;
+        }
+
+        if (!currentStatus && targetReminder?.lead_id) {
+          await syncLeadNextReturnDate(targetReminder.lead_id, null, {
+            onlyIfMatches: targetReminder.data_lembrete,
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar lembrete pelo chat:', error);
+        setLeadReminders(previousReminders =>
+          previousReminders.map(reminder =>
+            reminder.id === reminderId
+              ? { ...reminder, lido: currentStatus, concluido_em: targetReminder?.concluido_em }
+              : reminder,
+          ),
+        );
+        throw error;
+      }
+    },
+    [leadReminders, syncLeadNextReturnDate],
+  );
+
+  const handleLeadReminderReschedule = useCallback(
+    async (reminderId: string, newDateTime: string) => {
+      const targetReminder = leadReminders.find(reminder => reminder.id === reminderId);
+
+      if (!targetReminder) {
+        throw new Error('Lembrete não encontrado.');
+      }
+
+      const newDateISO = convertLocalToUTC(newDateTime);
+
+      if (!newDateISO) {
+        throw new Error('Data do lembrete inválida.');
+      }
+
+      const snoozeCount = targetReminder.snooze_count ?? 0;
+
+      setLeadReminders(previousReminders => {
+        const updated = previousReminders.map(reminder =>
+          reminder.id === reminderId
+            ? {
+                ...reminder,
+                data_lembrete: newDateISO,
+                snooze_count: snoozeCount + 1,
+                lido: false,
+                concluido_em: null,
+              }
+            : reminder,
+        );
+
+        return updated.sort(
+          (a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime(),
+        );
+      });
+
+      try {
+        const { error } = await supabase
+          .from('reminders')
+          .update({
+            data_lembrete: newDateISO,
+            snooze_count: snoozeCount + 1,
+            lido: false,
+            concluido_em: null,
+          })
+          .eq('id', reminderId);
+
+        if (error) {
+          throw error;
+        }
+
+        if (targetReminder.lead_id) {
+          await syncLeadNextReturnDate(targetReminder.lead_id, newDateISO);
+        }
+      } catch (error) {
+        console.error('Erro ao reagendar lembrete pelo chat:', error);
+
+        if (selectedChatLead?.id) {
+          await loadLeadReminders(selectedChatLead.id);
+        }
+
+        throw error;
+      }
+    },
+    [leadReminders, loadLeadReminders, selectedChatLead?.id, syncLeadNextReturnDate],
+  );
+
   const loadLeads = useCallback(async () => {
     setLeadsLoading(true);
     setLeadsError(null);
@@ -3634,6 +3823,17 @@ export default function WhatsappPage({
       setShowLeadDetails(false);
     }
   }, [selectedChatLead]);
+
+  useEffect(() => {
+    if (!selectedChatLead?.id) {
+      setLeadReminders([]);
+      setLeadRemindersError(null);
+      setLeadRemindersLoading(false);
+      return;
+    }
+
+    void loadLeadReminders(selectedChatLead.id);
+  }, [loadLeadReminders, selectedChatLead?.id]);
 
   const sortedContacts = useMemo(() => sortContactsList(contacts), [contacts]);
 
@@ -8043,6 +8243,22 @@ export default function WhatsappPage({
                 </div>
               </div>
             </header>
+
+            {selectedChatLead ? (
+              <LeadRemindersPanel
+                leadName={selectedChatLead.nome_completo}
+                reminders={leadReminders}
+                loading={leadRemindersLoading}
+                error={leadRemindersError}
+                onReload={() => {
+                  if (selectedChatLead.id) {
+                    void loadLeadReminders(selectedChatLead.id);
+                  }
+                }}
+                onToggleRead={handleLeadReminderToggleRead}
+                onReschedule={handleLeadReminderReschedule}
+              />
+            ) : null}
 
             {showMessageSearch ? (
               <div className="border-b border-slate-200 px-4 py-3">

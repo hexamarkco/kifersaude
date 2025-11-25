@@ -3474,6 +3474,14 @@ export default function WhatsappPage({
   }, []);
 
   useEffect(() => {
+    if (leadsLoaded || leadsLoading) {
+      return;
+    }
+
+    void loadLeads();
+  }, [leadsLoaded, leadsLoading, loadLeads]);
+
+  useEffect(() => {
     if (!showNewChatModal) {
       setNewChatError(null);
       setContactSearchTerm('');

@@ -7684,7 +7684,7 @@ export default function WhatsappPage({
                   <div
                     className={`flex min-w-0 flex-1 items-center gap-3 ${
                       selectedChatLead
-                        ? 'cursor-pointer rounded-lg px-2 py-1 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
+                        ? 'cursor-pointer rounded-full px-2 py-2 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40'
                         : ''
                     }`}
                     onClick={selectedChatLead ? handleChatHeaderClick : undefined}

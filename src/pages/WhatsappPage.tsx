@@ -3482,6 +3482,42 @@ export default function WhatsappPage({
   }, [leadsLoaded, leadsLoading, loadLeads]);
 
   useEffect(() => {
+    if (!leadsLoaded || leads.length === 0) {
+      return;
+    }
+
+    setChats(previousChats =>
+      previousChats.map(chat => {
+        if (chat.crm_lead || !chat.lead_id) {
+          return chat;
+        }
+
+        const lead = leads.find(item => item.id === chat.lead_id);
+        if (!lead) {
+          return chat;
+        }
+
+        return {
+          ...chat,
+          crm_lead: {
+            id: lead.id,
+            nome_completo: lead.nome_completo ?? null,
+            telefone: lead.telefone,
+            status: lead.status ?? null,
+            responsavel: lead.responsavel ?? null,
+            ultimo_contato: lead.ultimo_contato ?? null,
+            proximo_retorno: lead.proximo_retorno ?? null,
+            origem: lead.origem ?? null,
+            tipo_contratacao: lead.tipo_contratacao ?? null,
+            data_criacao: lead.data_criacao ?? lead.created_at ?? null,
+            metadata: null,
+          },
+        };
+      }),
+    );
+  }, [leads, leadsLoaded]);
+
+  useEffect(() => {
     if (!showNewChatModal) {
       setNewChatError(null);
       setContactSearchTerm('');
@@ -4252,21 +4288,25 @@ export default function WhatsappPage({
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
         previousChats.map(chat => {
-          if (chat.crm_lead?.id !== leadId) {
+          const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;
+
+          if (!matchesLead) {
             return chat;
           }
 
+          const existingLead = chat.crm_lead ?? selectedChatLead;
+
           return {
             ...chat,
-            crm_lead: {
-              ...chat.crm_lead,
-              status: normalizedNewStatus,
-              ultimo_contato: nowIso,
-              proximo_retorno:
-                normalizedNewStatus.toLowerCase() === 'perdido'
-                  ? null
-                  : chat.crm_lead.proximo_retorno,
-            },
+            lead_id: chat.lead_id ?? leadId,
+            crm_lead: existingLead
+              ? {
+                  ...existingLead,
+                  status: normalizedNewStatus,
+                  ultimo_contato: nowIso,
+                  proximo_retorno: shouldClearNextReturn ? null : existingLead.proximo_retorno,
+                }
+              : chat.crm_lead,
           };
         }),
       );
@@ -4299,24 +4339,31 @@ export default function WhatsappPage({
 
           setChats(previousChats =>
             previousChats.map(chat => {
-              if (chat.crm_lead?.id !== leadId) {
+              const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;
+
+              if (!matchesLead) {
                 return chat;
               }
 
+              const existingLead = chat.crm_lead ?? selectedChatLead;
+
               return {
                 ...chat,
-                crm_lead: {
-                  ...chat.crm_lead,
-                  status: status ?? normalizedNewStatus,
-                  ultimo_contato: updatedUltimoContato ?? nowIso,
-                  responsavel: updatedResponsavel ?? chat.crm_lead.responsavel ?? responsavel,
-                  proximo_retorno:
-                    typeof updatedProximoRetorno !== 'undefined'
-                      ? updatedProximoRetorno
-                      : normalizedNewStatus.toLowerCase() === 'perdido'
-                        ? null
-                        : chat.crm_lead.proximo_retorno,
-                },
+                lead_id: chat.lead_id ?? leadId,
+                crm_lead: existingLead
+                  ? {
+                      ...existingLead,
+                      status: status ?? normalizedNewStatus,
+                      ultimo_contato: updatedUltimoContato ?? nowIso,
+                      responsavel: updatedResponsavel ?? existingLead.responsavel ?? responsavel,
+                      proximo_retorno:
+                        typeof updatedProximoRetorno !== 'undefined'
+                          ? updatedProximoRetorno
+                          : shouldClearNextReturn
+                            ? null
+                            : existingLead.proximo_retorno,
+                    }
+                  : chat.crm_lead,
               };
             }),
           );
@@ -4325,21 +4372,28 @@ export default function WhatsappPage({
         console.error('Erro ao atualizar status do lead via chat:', error);
         setChats(previousChats =>
           previousChats.map(chat => {
-            if (chat.crm_lead?.id !== leadId) {
+            const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;
+
+            if (!matchesLead) {
               return chat;
             }
 
-              return {
-                ...chat,
-                crm_lead: {
-                  ...chat.crm_lead,
-                  status: currentStatus,
-                  ultimo_contato: previousUltimoContato,
-                  proximo_retorno: previousProximoRetorno,
-                },
-              };
-            }),
-          );
+            const existingLead = chat.crm_lead ?? selectedChatLead;
+
+            return {
+              ...chat,
+              lead_id: chat.lead_id ?? leadId,
+              crm_lead: existingLead
+                ? {
+                    ...existingLead,
+                    status: currentStatus,
+                    ultimo_contato: previousUltimoContato,
+                    proximo_retorno: previousProximoRetorno,
+                  }
+                : chat.crm_lead,
+            };
+          }),
+        );
         throw error;
       } finally {
         setUpdatingLeadStatus(false);

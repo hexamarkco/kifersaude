@@ -1,4 +1,4 @@
-import type { WhatsappChat, WhatsappMessage } from './whatsapp';
+import type { WhatsappChat, WhatsappMessage } from './whatsapp.ts';
 
 export type WhatsappCampaignStatus =
   | 'draft'

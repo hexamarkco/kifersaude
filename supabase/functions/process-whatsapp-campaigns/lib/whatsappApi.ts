@@ -2,7 +2,7 @@ import type {
   SendWhatsappMessageResponse,
   WhatsappChatSlaAlert,
   WhatsappChatSlaStatus,
-} from '../types/whatsapp';
+} from '../types/whatsapp.ts';
 
 type RuntimeEnv = {
   functionsUrl?: string;

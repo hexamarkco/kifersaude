@@ -3747,6 +3747,51 @@ export default function WhatsappPage({
     }
   }, []);
 
+  const loadReturnAgenda = useCallback(async () => {
+    setReturnAgendaLoading(true);
+    setReturnAgendaError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .not('lead_id', 'is', null)
+        .not('data_lembrete', 'is', null)
+        .order('data_lembrete', { ascending: true })
+        .limit(300);
+
+      if (error) {
+        throw error;
+      }
+
+      const remindersWithLead: ReminderWithLead[] = ((data ?? []) as Reminder[]).map(reminder => {
+        const leadInfo = leads.find(item => item.id === reminder.lead_id) ?? null;
+
+        return {
+          ...reminder,
+          lead: leadInfo
+            ? {
+                id: leadInfo.id,
+                nome_completo: leadInfo.nome_completo,
+                telefone: leadInfo.telefone,
+                proximo_retorno: leadInfo.proximo_retorno ?? null,
+              }
+            : null,
+        };
+      });
+
+      setReturnAgenda(remindersWithLead);
+    } catch (error) {
+      console.error('Erro ao carregar agenda de retornos:', error);
+      setReturnAgenda([]);
+      setReturnAgendaError(
+        'Não foi possível carregar a agenda de retornos. Tente novamente em alguns instantes.',
+      );
+    } finally {
+      setReturnAgendaLoading(false);
+    }
+  }, [leads]);
+  
   useEffect(() => {
     if (leadsLoaded || leadsLoading) {
       return;

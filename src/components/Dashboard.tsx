@@ -1408,6 +1408,22 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [],
   );
 
+  const formatSelectedMetricValue = useCallback(
+    (value: number) => {
+      if (selectedMetric === 'comissoes') {
+        return value.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      return value.toLocaleString('pt-BR');
+    },
+    [selectedMetric],
+  );
+
   const latestMonthlyPoint =
     displayedMonthlySeries.length > 0
       ? displayedMonthlySeries[displayedMonthlySeries.length - 1]

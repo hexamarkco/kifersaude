@@ -2207,7 +2207,7 @@ export default function WhatsappPage({
     }
   }, [slashCommandState, slashCommandSuggestions, slashSuggestionIndex]);
 
-  const { leadStatuses, leadOrigins, options } = useConfig();
+  const { leadStatuses, leadOrigins, options, loading: configLoading } = useConfig();
   const activeLeadStatuses = useMemo(
     () => leadStatuses.filter(status => status.ativo),
     [leadStatuses],
@@ -3474,12 +3474,12 @@ export default function WhatsappPage({
   }, []);
 
   useEffect(() => {
-    if (leadsLoaded || leadsLoading) {
+    if (configLoading || leadsLoaded || leadsLoading) {
       return;
     }
 
     void loadLeads();
-  }, [leadsLoaded, leadsLoading, loadLeads]);
+  }, [configLoading, leadsLoaded, leadsLoading, loadLeads]);
 
   useEffect(() => {
     if (!showNewChatModal) {
@@ -3496,13 +3496,14 @@ export default function WhatsappPage({
       void loadContacts();
     }
 
-    if (!leadsLoaded && !leadsLoading) {
+    if (!leadsLoaded && !leadsLoading && !configLoading) {
       void loadLeads();
     }
   }, [
     showNewChatModal,
     contactsLoaded,
     contactsLoading,
+    configLoading,
     leadsLoaded,
     leadsLoading,
     loadContacts,

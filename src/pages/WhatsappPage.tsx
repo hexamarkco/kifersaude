@@ -3264,7 +3264,6 @@ export default function WhatsappPage({
             'id',
             'nome_completo',
             'telefone',
-            'status',
             'status_id',
             'responsavel',
             'responsavel_id',

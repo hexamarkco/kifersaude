@@ -253,6 +253,7 @@ export const fetchSupabaseRestJson = async <T>(
 type SendMessagePayload = {
   phone: string;
   message: string;
+  editMessageId?: string;
 };
 
 export type DeleteWhatsappMessagePayload = {
@@ -274,6 +275,7 @@ export type ReplyWhatsappMessagePayload = {
   messageId: string;
   delayMessage?: number;
   privateAnswer?: boolean;
+  editMessageId?: string;
 };
 
 export type DeleteWhatsappMessageResponse = {
@@ -331,6 +333,22 @@ export const replyWhatsappMessage = async (
 ): Promise<SendWhatsappMessageResponse> => {
   return callWhatsappFunction<SendWhatsappMessageResponse>(
     '/whatsapp-webhook/send-text',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
+};
+
+export type EditWhatsappMessagePayload = SendMessagePayload & { editMessageId: string };
+
+export const editWhatsappMessage = async (
+  payload: EditWhatsappMessagePayload,
+  options: WhatsappFunctionRequestOptions = {},
+): Promise<SendWhatsappMessageResponse> => {
+  return callWhatsappFunction<SendWhatsappMessageResponse>(
+    '/whatsapp-webhook/send-message',
     {
       method: 'POST',
       body: JSON.stringify(payload),

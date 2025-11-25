@@ -139,13 +139,13 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               <div>
                 <span className="font-medium text-slate-700">Status:</span>
                 <span className="ml-2 text-slate-900">
-                  {lead.status_nome ?? 'Sem status'}
+                  {lead.status_nome ?? lead.status ?? 'Sem status'}
                 </span>
               </div>
               <div>
                 <span className="font-medium text-slate-700">Responsável:</span>
                 <span className="ml-2 text-slate-900">
-                  {lead.responsavel_label ?? 'Sem responsável'}
+                  {lead.responsavel_label ?? lead.responsavel ?? 'Sem responsável'}
                 </span>
               </div>
             </div>

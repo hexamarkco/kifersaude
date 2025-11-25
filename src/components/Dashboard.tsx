@@ -1518,14 +1518,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           </div>
         </div>
       )}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>
           <p className="mt-1 text-sm text-slate-600">
             Visão geral do seu negócio em tempo real
           </p>
         </div>
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-slate-400" />

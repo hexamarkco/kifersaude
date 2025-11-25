@@ -435,6 +435,11 @@ type RewriteSuggestion = {
   description?: string | null;
 };
 
+type FollowUpSuggestion = {
+  variant: string;
+  text: string;
+};
+
 type RewriteMessageResponse = {
   success: boolean;
   rewrittenVersions?: RewriteSuggestion[];
@@ -449,6 +454,12 @@ type SpellcheckSuggestion = {
 type SpellcheckMessageResponse = {
   success: boolean;
   suggestion?: SpellcheckSuggestion | null;
+  error?: string | null;
+};
+
+type GenerateFollowUpResponse = {
+  success: boolean;
+  suggestions?: FollowUpSuggestion[];
   error?: string | null;
 };
 
@@ -1917,6 +1928,10 @@ export default function WhatsappPage({
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
+  const [followUpSuggestions, setFollowUpSuggestions] = useState<FollowUpSuggestion[]>([]);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [spellcheckLoading, setSpellcheckLoading] = useState(false);
   const [spellcheckError, setSpellcheckError] = useState<string | null>(null);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
@@ -2982,6 +2997,11 @@ export default function WhatsappPage({
     setShowRewriteModal(false);
   }, []);
 
+  const clearFollowUpSuggestions = useCallback(() => {
+    setFollowUpSuggestions([]);
+    setShowFollowUpModal(false);
+  }, []);
+
   const handleMessageInputChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = event.target;
@@ -3614,6 +3634,13 @@ export default function WhatsappPage({
     setShowMessageSearch(false);
     setShowChatActionsMenu(false);
     messageElementsRef.current = {};
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    setFollowUpSuggestions([]);
+    setFollowUpError(null);
+    setShowFollowUpModal(false);
+    setFollowUpLoading(false);
   }, [selectedChatId]);
 
   useEffect(() => {
@@ -5297,6 +5324,91 @@ export default function WhatsappPage({
     }
   }, []);
 
+  const resolveFollowUpMessageContent = useCallback((message: OptimisticMessage) => {
+    const directText = toNonEmptyString(message.text);
+    if (directText) {
+      return directText;
+    }
+
+    const payload =
+      message.raw_payload && typeof message.raw_payload === 'object'
+        ? (message.raw_payload as WhatsappMessageRawPayload)
+        : null;
+
+    if (!payload) {
+      return 'Mensagem sem texto';
+    }
+
+    if (payload.document?.documentUrl || payload.document?.fileName || payload.document?.title) {
+      const fileName =
+        toNonEmptyString(payload.document?.caption) ??
+        toNonEmptyString(payload.document?.fileName) ??
+        toNonEmptyString(payload.document?.title) ??
+        'Documento compartilhado';
+      return `Documento: ${fileName}`;
+    }
+
+    if (payload.image?.imageUrl) {
+      return payload.image?.caption ? `Imagem: ${payload.image.caption}` : 'Imagem enviada';
+    }
+
+    if (payload.video?.videoUrl) {
+      return payload.video?.caption ? `Vídeo: ${payload.video.caption}` : 'Vídeo enviado';
+    }
+
+    if (payload.audio?.audioUrl) {
+      const seconds = payload.audio?.seconds ?? null;
+      return seconds ? `Áudio (${seconds}s)` : 'Áudio enviado';
+    }
+
+    if (payload.sticker?.stickerUrl) {
+      return 'Figurinha enviada';
+    }
+
+    if (payload.location?.title || payload.location?.address) {
+      const title = toNonEmptyString(payload.location?.title) ?? 'Localização enviada';
+      const address = toNonEmptyString(payload.location?.address);
+      return address ? `${title} - ${address}` : title;
+    }
+
+    if (payload.contact || payload.contacts?.length) {
+      return 'Contato compartilhado';
+    }
+
+    if (payload.reaction) {
+      return 'Reação a uma mensagem';
+    }
+
+    return 'Interação sem texto';
+  }, []);
+
+  const buildFollowUpHistory = useCallback(() => {
+    if (!selectedChat) {
+      return '';
+    }
+
+    const displayName =
+      selectedChatDisplayName?.trim() || selectedChat.chat_name || selectedChat.phone || 'Contato';
+
+    const sortedMessages = [...messages].sort((first, second) => {
+      const firstDate = first.moment ? new Date(first.moment).getTime() : 0;
+      const secondDate = second.moment ? new Date(second.moment).getTime() : 0;
+      const safeFirst = Number.isFinite(firstDate) ? firstDate : 0;
+      const safeSecond = Number.isFinite(secondDate) ? secondDate : 0;
+      return safeFirst - safeSecond;
+    });
+
+    return sortedMessages
+      .map(message => {
+        const timestamp = formatDateTime(message.moment) || 'Data desconhecida';
+        const sender = message.from_me ? 'Equipe' : displayName;
+        const content = resolveFollowUpMessageContent(message);
+        return `[${timestamp}] ${sender}: ${content}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+  }, [messages, resolveFollowUpMessageContent, selectedChat, selectedChatDisplayName]);
+
   const handleSpellcheckMessage = useCallback(async () => {
     const text = messageInput.trim();
 
@@ -5351,6 +5463,62 @@ export default function WhatsappPage({
       setSpellcheckLoading(false);
     }
   }, [clearRewriteSuggestions, fetchJson, messageInput, spellcheckLoading]);
+
+  const handleGenerateFollowUpSuggestions = useCallback(async () => {
+    if (followUpLoading) {
+      return;
+    }
+
+    const history = buildFollowUpHistory();
+
+    if (!history.trim()) {
+      setFollowUpError('Carregue o histórico do chat para gerar follow-ups.');
+      return;
+    }
+
+    setFollowUpLoading(true);
+    setFollowUpError(null);
+    clearFollowUpSuggestions();
+
+    try {
+      const response = await fetchJson<GenerateFollowUpResponse>(
+        getWhatsappFunctionUrl('/whatsapp-webhook/generate-follow-ups'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ history }),
+        },
+      );
+
+      const normalizedSuggestions =
+        response.suggestions?.map((suggestion, index) => ({
+          text: suggestion.text.trim(),
+          variant: suggestion.variant.trim() || `Variação ${index + 1}`,
+        })) ?? [];
+
+      const validSuggestions = normalizedSuggestions.filter(suggestion => suggestion.text.length > 0);
+
+      if (!response.success || validSuggestions.length === 0) {
+        throw new Error(response.error || 'Não foi possível gerar follow-ups.');
+      }
+
+      setFollowUpSuggestions(validSuggestions);
+      setShowFollowUpModal(true);
+    } catch (error) {
+      const fallbackMessage =
+        error instanceof Error ? error.message : 'Não foi possível gerar follow-ups agora.';
+      setFollowUpError(fallbackMessage);
+    } finally {
+      setFollowUpLoading(false);
+    }
+  }, [
+    buildFollowUpHistory,
+    clearFollowUpSuggestions,
+    fetchJson,
+    followUpLoading,
+    setFollowUpSuggestions,
+    setShowFollowUpModal,
+  ]);
 
   const handleRewriteMessage = useCallback(async () => {
     const text = messageInput.trim();
@@ -5411,6 +5579,15 @@ export default function WhatsappPage({
     (suggestion: RewriteSuggestion) => {
       applyRewriteSuggestion(suggestion);
       setShowRewriteModal(false);
+    },
+    [applyRewriteSuggestion],
+  );
+
+  const handleApplyFollowUpSuggestion = useCallback(
+    (suggestion: FollowUpSuggestion) => {
+      applyRewriteSuggestion({ tone: suggestion.variant, text: suggestion.text });
+      setFollowUpError(null);
+      setShowFollowUpModal(false);
     },
     [applyRewriteSuggestion],
   );
@@ -8598,6 +8775,46 @@ export default function WhatsappPage({
               onSubmit={handleSubmit}
               className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
             >
+              {followUpError ? (
+                <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {followUpError}
+                </div>
+              ) : null}
+
+              {followUpSuggestions.length > 0 ? (
+                <div className="mb-3 space-y-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                        Follow-ups sugeridos
+                      </p>
+                      <p className="text-xs text-blue-800">
+                        {followUpSuggestions.length} variações prontas para personalizar.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:-translate-y-[1px] hover:shadow"
+                        onClick={() => setShowFollowUpModal(true)}
+                      >
+                        Ver opções
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-blue-700 underline underline-offset-4 transition hover:text-blue-800"
+                        onClick={clearFollowUpSuggestions}
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    Abra para escolher a variação ideal e preencher o campo de mensagem automaticamente.
+                  </p>
+                </div>
+              ) : null}
+
               {rewriteSuggestions.length > 0 ? (
                 <div className="mb-3 space-y-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -8894,6 +9111,36 @@ export default function WhatsappPage({
                             <span>
                               <span className="block font-medium">Pesquisar no chat</span>
                               <span className="block text-xs text-slate-500">Encontre mensagens rapidamente</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowChatActionsMenu(false);
+                              setShowAttachmentMenu(false);
+                              setQuickRepliesMenuOpen(false);
+                              void handleGenerateFollowUpSuggestions();
+                            }}
+                            role="menuitem"
+                            className="mt-1 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100"
+                            disabled={
+                              sendingMessage ||
+                              schedulingMessage ||
+                              isRecordingAudio ||
+                              followUpLoading ||
+                              messagesLoading
+                            }
+                          >
+                            <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                              {followUpLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MessageSquareText className="h-4 w-4" />
+                              )}
+                            </span>
+                            <span>
+                              <span className="block font-medium">Gerar follow-ups</span>
+                              <span className="block text-xs text-slate-500">Use IA com o histórico do chat</span>
                             </span>
                           </button>
                           <button
@@ -9256,6 +9503,68 @@ export default function WhatsappPage({
           </div>
         )}
       </section>
+      {showFollowUpModal && followUpSuggestions.length > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-6">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Escolha um follow-up</h3>
+                <p className="text-sm text-slate-500">Selecione a versão que quer aplicar na mensagem.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFollowUpModal(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                aria-label="Fechar modal de follow-up"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto divide-y divide-slate-200">
+              {followUpSuggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion.variant}-${index}`}
+                  type="button"
+                  onClick={() => handleApplyFollowUpSuggestion(suggestion)}
+                  className="flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                >
+                  <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                      {suggestion.variant}
+                    </p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{suggestion.text}</p>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Usar</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3">
+              <p className="text-xs text-slate-600">Toque em uma sugestão para preencher o campo de mensagem automaticamente.</p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-blue-700 underline underline-offset-4 transition hover:text-blue-800"
+                  onClick={clearFollowUpSuggestions}
+                >
+                  Limpar sugestões
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                  onClick={() => setShowFollowUpModal(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showRewriteModal && rewriteSuggestions.length > 0 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-6">
           <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">

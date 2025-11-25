@@ -5754,7 +5754,7 @@ export default function WhatsappPage({
     setErrorMessage(null);
     const replyMessageId = replyingToMessage?.message_id?.trim();
     const wasSent = await sendWhatsappMessage({
-      endpoint: '/whatsapp-webhook/send-text',
+      endpoint: '/whatsapp-webhook/send-message',
       body: {
         phone: selectedChat.phone,
         message: trimmedMessage,

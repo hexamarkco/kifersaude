@@ -3767,39 +3767,36 @@ export default function WhatsappPage({
     }
   }, [leads]);
 
-  const loadLeadReminders = async (leadId: number) => {
-  try {
-    setReturnAgendaLoading(true);
-    setReturnAgendaError(null);
+    const loadLeadReminders = useCallback(
+    async (leadId: string) => {
+      setLeadRemindersLoading(true);
+      setLeadRemindersError(null);
 
-    const { data, error } = await supabase
-      .from('return_agenda')
-      .select(`
-        id,
-        lead_id,
-        titulo,
-        descricao,
-        data_lembrete,
-        lido,
-        lead:leads(id, nome_completo, telefone)
-      `)
-      .eq('lead_id', leadId)
-      .order('data_lembrete', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('reminders')
+          .select('*')
+          .eq('lead_id', leadId)
+          .order('data_lembrete', { ascending: true });
 
-    if (error) {
-      console.error(error);
-      setReturnAgendaError('Não foi possível carregar os lembretes deste lead.');
-      return;
-    }
+        if (error) {
+          throw error;
+        }
 
-    setReturnAgenda(data || []);
-  } catch (err) {
-    console.error(err);
-    setReturnAgendaError('Erro inesperado ao buscar lembretes.');
-  } finally {
-    setReturnAgendaLoading(false);
-  }
-};
+        // Garante array só com lembretes que realmente têm lead_id
+        setLeadReminders(
+          ((data as Reminder[] | null) ?? []).filter(reminder => Boolean(reminder.lead_id)),
+        );
+      } catch (error) {
+        console.error('Erro ao carregar lembretes do lead:', error);
+        setLeadReminders([]);
+        setLeadRemindersError('Não foi possível carregar os lembretes deste lead.');
+      } finally {
+        setLeadRemindersLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (leadsLoaded || leadsLoading) {

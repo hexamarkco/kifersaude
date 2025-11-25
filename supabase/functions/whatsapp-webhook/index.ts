@@ -3955,12 +3955,30 @@ const handleUpdateLeadStatus = async (req: Request) => {
     const nowIso = new Date().toISOString();
     const normalizedStatus = newStatus.trim().toLowerCase();
 
+    const { data: statusRow, error: statusLookupError } = await supabaseAdmin
+      .from('lead_status_config')
+      .select('id')
+      .ilike('nome', newStatus)
+      .maybeSingle<{ id: string }>();
+
+    if (statusLookupError) {
+      throw statusLookupError;
+    }
+
+    if (!statusRow?.id) {
+      return respondJson(400, {
+        success: false,
+        error: 'Status informado não encontrado.',
+      });
+    }
+
     const updatePayload: Record<string, string | null> = {
       status: newStatus,
+      status_id: statusRow.id,
       ultimo_contato: nowIso,
     };
 
-    if (normalizedStatus === 'perdido') {
+    if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
       updatePayload.proximo_retorno = null;
     }
 
@@ -3973,7 +3991,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
       throw updateLeadError;
     }
 
-    if (normalizedStatus === 'perdido') {
+    if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
       const { error: deleteRemindersError } = await supabaseAdmin
         .from('reminders')
         .delete()

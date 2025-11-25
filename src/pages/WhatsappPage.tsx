@@ -4100,6 +4100,77 @@ export default function WhatsappPage({
     });
     return map;
   }, [chats, getChatDisplayNameWithLeadFallback]);
+    const returnAgendaByDay = useMemo<ReturnAgendaDay[]>(() => {
+    if (!returnAgenda || returnAgenda.length === 0) {
+      return [];
+    }
+
+    const byDay = new Map<string, { date: Date; reminders: ReminderWithLead[] }>();
+
+    for (const reminder of returnAgenda) {
+      const date = parseDateValue(reminder.data_lembrete);
+      if (!date) {
+        continue;
+      }
+
+      // Normaliza para meia-noite daquele dia
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateKey = dayStart.toISOString().slice(0, 10); // yyyy-mm-dd
+
+      const existing = byDay.get(dateKey);
+      if (existing) {
+        existing.reminders.push(reminder);
+      } else {
+        byDay.set(dateKey, { date: dayStart, reminders: [reminder] });
+      }
+    }
+
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    const days: ReturnAgendaDay[] = Array.from(byDay.entries())
+      .map(([dateKey, group]) => {
+        const diffDays = Math.round(
+          (group.date.getTime() - todayStart.getTime()) / oneDayMs,
+        );
+
+        let label: string;
+        if (diffDays === 0) {
+          label = 'Hoje';
+        } else if (diffDays === 1) {
+          label = 'Amanhã';
+        } else if (diffDays === -1) {
+          label = 'Ontem';
+        } else if (diffDays === -2) {
+          label = 'Anteontem';
+        } else {
+          label = group.date.toLocaleDateString('pt-BR', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+          });
+        }
+
+        const reminders = [...group.reminders].sort((a, b) => {
+          const aDate = parseDateValue(a.data_lembrete)?.getTime() ?? 0;
+          const bDate = parseDateValue(b.data_lembrete)?.getTime() ?? 0;
+          return aDate - bDate;
+        });
+
+        return { dateKey, label, reminders };
+      })
+      .sort((a, b) => {
+        const aDate = new Date(a.dateKey).getTime();
+        const bDate = new Date(b.dateKey).getTime();
+        const safeATime = Number.isNaN(aDate) ? 0 : aDate;
+        const safeBTime = Number.isNaN(bDate) ? 0 : bDate;
+        return safeATime - safeBTime;
+      });
+
+    return days;
+  }, [returnAgenda]);
+
   const groupedReturnAgenda = useMemo(() => returnAgendaByDay, [returnAgendaByDay]);
 
   const insightSentimentDisplay = useMemo(() => {

@@ -653,6 +653,11 @@ const resolveNotificationText = (payload: ZapiPayload): string | null => {
   return `Notificação: ${notification}`;
 };
 
+const shouldIgnorePayload = (payload: ZapiPayload): boolean => {
+  const notification = toNonEmptyString(payload?.notification);
+  return notification === 'GROUP_PARTICIPANT_INVITE';
+};
+
 const resolveMessageText = (payload: ZapiPayload): string => {
   const resolvers: Array<() => string | null> = [
     () => toNonEmptyString(payload?.text?.message),
@@ -989,6 +994,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const originalPhoneValue =
     typeof payload.phone === 'string' ? payload.phone.trim() : undefined;
+
+  if (shouldIgnorePayload(payload)) {
+    return res.status(200).json({ success: true, ignored: true });
+  }
 
   let phone =
     resolvePhoneFromPayload(payload) ??

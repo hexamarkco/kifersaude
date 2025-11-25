@@ -64,6 +64,8 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
+  const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
   const isInitialLoadRef = useRef(true);
   const lastBirthdayReminderSync = useRef<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
@@ -667,6 +669,48 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const formatMonthLabel = (date: Date) =>
+    date.toLocaleDateString('pt-BR', {
+      month: 'short',
+      year: '2-digit',
+    });
+
+  const aggregateMonthlyTotals = <T,>(
+    items: T[],
+    getDate: (item: T) => Date | null,
+    getValue: (item: T) => number = () => 1,
+  ) => {
+    const totals = new Map<
+      string,
+      {
+        date: Date;
+        total: number;
+      }
+    >();
+
+    items.forEach((item) => {
+      const date = getDate(item);
+      if (!date) return;
+
+      const monthDate = new Date(date.getFullYear(), date.getMonth(), 1);
+      const key = monthDate.toISOString();
+      const current = totals.get(key) || { date: monthDate, total: 0 };
+
+      totals.set(key, {
+        date: monthDate,
+        total: current.total + getValue(item),
+      });
+    });
+
+    return Array.from(totals.values())
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .map((item) => ({
+        label: formatMonthLabel(item.date),
+        value: item.total,
+        date: item.date,
+      }));
+  };
+
   const getContractRenewalDate = (contract: Contract): Date | null => {
     if (contract.data_renovacao) {
       const [year, month] = contract.data_renovacao.split('-').map(Number);
@@ -778,6 +822,87 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
 
   const ticketMedio =
     contratosAtivos.length > 0 ? mensalidadeTotal / contratosAtivos.length : 0;
+
+  const addVariationToSeries = useCallback(
+    (series: { label: string; value: number; date: Date }[]) =>
+      series.map((point, index) => {
+        const previous = series[index - 1];
+
+        if (!previous) {
+          return { ...point, variation: null };
+        }
+
+        const delta = point.value - previous.value;
+        const variation = previous.value === 0 ? 100 : (delta / previous.value) * 100;
+
+        return { ...point, variation };
+      }),
+    [],
+  );
+
+  const monthlyLeadSeries = useMemo(
+    () =>
+      addVariationToSeries(
+        aggregateMonthlyTotals(filteredLeads, (lead) =>
+          parseDateValue(lead.data_criacao || lead.created_at),
+        ),
+      ),
+    [addVariationToSeries, filteredLeads],
+  );
+
+  const monthlyContractSeries = useMemo(
+    () =>
+      addVariationToSeries(
+        aggregateMonthlyTotals(filteredContracts, (contract) =>
+          parseDateValue(contract.data_inicio || contract.previsao_recebimento_comissao || contract.created_at),
+        ),
+      ),
+    [addVariationToSeries, filteredContracts],
+  );
+
+  const monthlyCommissionSeries = useMemo(
+    () =>
+      addVariationToSeries(
+        aggregateMonthlyTotals(
+          filteredContracts,
+          (contract) =>
+            parseDateValue(contract.data_inicio || contract.previsao_recebimento_comissao || contract.created_at),
+          (contract) => contract.comissao_prevista || 0,
+        ),
+      ),
+    [addVariationToSeries, filteredContracts],
+  );
+
+  const selectedMonthlySeries = useMemo(() => {
+    switch (selectedMetric) {
+      case 'contratos':
+        return monthlyContractSeries;
+      case 'comissoes':
+        return monthlyCommissionSeries;
+      default:
+        return monthlyLeadSeries;
+    }
+  }, [monthlyCommissionSeries, monthlyContractSeries, monthlyLeadSeries, selectedMetric]);
+
+  const displayedMonthlySeries = useMemo(() => {
+    if (selectedMonthlySeries.length === 0) return [];
+
+    const startIndex = Math.max(selectedMonthlySeries.length - chartRangeInMonths, 0);
+    const slice = selectedMonthlySeries.slice(startIndex);
+
+    return slice.map((point, index) => {
+      const previous = slice[index - 1];
+
+      if (!previous) {
+        return { ...point, variation: null };
+      }
+
+      const delta = point.value - previous.value;
+      const variation = previous.value === 0 ? 100 : (delta / previous.value) * 100;
+
+      return { ...point, variation };
+    });
+  }, [chartRangeInMonths, selectedMonthlySeries]);
 
   const conversionRate = calculateConversionRate(activeLeads, filteredContracts);
 
@@ -1174,6 +1299,24 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     color: statusColorMap[item.status] || '#64748b',
   }));
 
+  const metricColorMap: Record<typeof selectedMetric, string> = useMemo(
+    () => ({
+      leads: '#0ea5e9',
+      contratos: '#8b5cf6',
+      comissoes: '#22c55e',
+    }),
+    [],
+  );
+
+  const latestMonthlyPoint =
+    displayedMonthlySeries.length > 0
+      ? displayedMonthlySeries[displayedMonthlySeries.length - 1]
+      : undefined;
+  const previousMonthlyPoint =
+    displayedMonthlySeries.length > 1
+      ? displayedMonthlySeries[displayedMonthlySeries.length - 2]
+      : undefined;
+
   const operadoraColors = [
     '#14b8a6',
     '#3b82f6',
@@ -1225,6 +1368,21 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const handleOperadoraSegmentClick = (label: string) => {
     onNavigateToTab?.('contracts', { contractOperadoraFilter: label });
   };
+
+  const formatSelectedMetricValue = useCallback(
+    (value: number) => {
+      if (selectedMetric === 'comissoes') {
+        return value.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+          maximumFractionDigits: 2,
+        });
+      }
+
+      return value.toLocaleString('pt-BR');
+    },
+    [selectedMetric],
+  );
 
   return (
     <div className="space-y-6">
@@ -1404,6 +1562,117 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
             subtitle="Por contrato"
           />
         )}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Evolução mensal</h3>
+            <p className="text-sm text-slate-500">
+              Tendência por mês considerando o período selecionado e os filtros atuais.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <select
+              value={periodFilter}
+              onChange={(e) => {
+                setPeriodFilter(e.target.value as 'mes-atual' | 'todo-periodo' | 'personalizado');
+                if (e.target.value !== 'personalizado') {
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                }
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="mes-atual">Mês atual</option>
+              <option value="todo-periodo">Todo período</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm">
+              {(
+                [
+                  { key: 'leads', label: 'Leads' },
+                  { key: 'contratos', label: 'Contratos' },
+                  { key: 'comissoes', label: 'Comissões' },
+                ] as const
+              ).map((metric) => (
+                <button
+                  key={metric.key}
+                  type="button"
+                  onClick={() => setSelectedMetric(metric.key)}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                    selectedMetric === metric.key
+                      ? 'bg-white text-teal-700 shadow-sm ring-1 ring-teal-100'
+                      : 'text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  {metric.label}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={chartRangeInMonths}
+              onChange={(e) => setChartRangeInMonths(Number(e.target.value) as 6 | 12)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+            >
+              <option value={6}>Últimos 6 meses</option>
+              <option value={12}>Últimos 12 meses</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-6 lg:grid-cols-5">
+          <div className="space-y-4 lg:col-span-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <BadgePercent className="h-4 w-4 text-teal-600" />
+                  <span>Variação mensal</span>
+                </div>
+                <span className="text-xs text-slate-500">
+                  {previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'Primeiro mês'}
+                </span>
+              </div>
+              <p
+                className={`mt-3 text-2xl font-bold ${
+                  (latestMonthlyPoint?.variation || 0) > 0
+                    ? 'text-emerald-600'
+                    : (latestMonthlyPoint?.variation || 0) < 0
+                      ? 'text-red-600'
+                      : 'text-slate-700'
+                }`}
+              >
+                {latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
+                  ? `${latestMonthlyPoint.variation.toFixed(1)}%`
+                  : 'Sem dados'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <TrendingUp className="h-4 w-4 text-teal-600" />
+                <span>{latestMonthlyPoint?.label || 'Sem dados'}</span>
+              </div>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">Referência do mês mais recente exibido</p>
+            </div>
+          </div>
+
+          <div className="lg:col-span-3">
+            <LineChart
+              data={displayedMonthlySeries.map((point) => ({
+                label: point.label,
+                value: point.value,
+              }))}
+              color={metricColorMap[selectedMetric]}
+              height={260}
+            />
+          </div>
+        </div>
       </div>
 
       <LeadFunnel leads={activeLeads} />

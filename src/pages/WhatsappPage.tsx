@@ -35,6 +35,7 @@ import {
   Megaphone,
   Mic,
   Sparkles,
+  SmilePlus,
   SpellCheck,
   Pin,
   PinOff,
@@ -1184,6 +1185,7 @@ type WhatsappMessageRawPayload = {
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
 const REACTION_PREVIEW_TEXT = 'Reagiu à sua mensagem';
+const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 
 type PendingMediaAttachment = {
   kind: 'image' | 'video';
@@ -2015,7 +2017,9 @@ export default function WhatsappPage({
   const [customWallpaper, setCustomWallpaper] = useState<WhatsappWallpaperOption | null>(null);
   const [selectedWallpaperId, setSelectedWallpaperId] = useState(DEFAULT_CHAT_WALLPAPER_ID);
   const [messageActionsMenuId, setMessageActionsMenuId] = useState<string | null>(null);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<string | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<Record<string, boolean>>({});
+  const [reactingMessageIds, setReactingMessageIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     chatsRef.current = chats;
@@ -4535,6 +4539,12 @@ export default function WhatsappPage({
   ]);
 
   useEffect(() => {
+    if (!messageActionsMenuId) {
+      setReactionPickerMessageId(null);
+    }
+  }, [messageActionsMenuId]);
+
+  useEffect(() => {
     const channel = supabase
       .channel('whatsapp-messages-listener')
       .on<RealtimePostgresChangesPayload<WhatsappMessage>>(
@@ -5918,6 +5928,83 @@ export default function WhatsappPage({
       }
     },
     [selectedChat?.phone],
+  );
+
+  const handleReactToMessage = useCallback(
+    async (message: WhatsappMessage, reaction: string) => {
+      const normalizedReaction = reaction.trim();
+
+      if (!selectedChat?.phone) {
+        setErrorMessage('Selecione uma conversa para reagir à mensagem.');
+        return;
+      }
+
+      const messageId = message.message_id?.trim();
+
+      if (!messageId) {
+        setErrorMessage('Não é possível reagir a esta mensagem porque falta o identificador.');
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        return;
+      }
+
+      if (!normalizedReaction) {
+        setErrorMessage('Escolha um emoji de reação para continuar.');
+        return;
+      }
+
+      const now = new Date();
+      const optimisticRawPayload: WhatsappMessageRawPayload = {
+        reaction: {
+          value: normalizedReaction,
+          time: now.toISOString(),
+          reactionBy: 'me',
+          referencedMessage: {
+            messageId,
+            fromMe: message.from_me,
+            phone: selectedChat.phone,
+            participant: selectedChat.phone,
+          },
+        },
+      };
+
+      const optimisticMessage: OptimisticMessage = {
+        id: `reaction-${message.id}-${now.getTime()}`,
+        chat_id: message.chat_id,
+        message_id: null,
+        from_me: true,
+        status: 'SENDING',
+        text: REACTION_PREVIEW_TEXT,
+        moment: now.toISOString(),
+        raw_payload: optimisticRawPayload,
+        isOptimistic: true,
+      };
+
+      setReactingMessageIds(previous => ({ ...previous, [message.id]: true }));
+      setErrorMessage(null);
+
+      try {
+        await sendWhatsappMessage({
+          endpoint: '/whatsapp-webhook/send-reaction',
+          body: {
+            phone: selectedChat.phone,
+            reaction: normalizedReaction,
+            messageId,
+          },
+          optimisticMessage,
+          errorFallback: 'Não foi possível enviar a reação.',
+        });
+      } finally {
+        setReactingMessageIds(previous => {
+          const next = { ...previous };
+          delete next[message.id];
+          return next;
+        });
+
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        setReactionPickerMessageId(null);
+      }
+    },
+    [selectedChat?.phone, sendWhatsappMessage],
   );
 
   const handleDeleteMessage = useCallback(
@@ -8100,9 +8187,11 @@ export default function WhatsappPage({
                   const messageActionMenuOpen = messageActionsMenuId === message.id;
                   const isDeletingMessage = Boolean(deletingMessageIds[message.id]);
                   const isForwardingMessage = Boolean(forwardingMessageIds[message.id]);
+                  const isReactingToMessage = Boolean(reactingMessageIds[message.id]);
                   const canDeleteMessage = Boolean(message.message_id) && Boolean(message.from_me);
                   const canReplyToMessage = Boolean(message.message_id);
                   const canForwardMessage = Boolean(message.message_id);
+                  const canReactToMessage = Boolean(message.message_id);
                   const canEditMessage = Boolean(message.message_id) && Boolean(message.from_me);
                   const isEditingThisMessage = editingMessage?.id === message.id;
                   const summaryChipClassName =
@@ -8211,6 +8300,44 @@ export default function WhatsappPage({
                                     <Reply className="h-4 w-4" />
                                     <span>Responder</span>
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setReactionPickerMessageId(previous =>
+                                        previous === message.id ? null : message.id,
+                                      )
+                                    }
+                                    disabled={!canReactToMessage || isReactingToMessage}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                                  >
+                                    <SmilePlus className="h-4 w-4" />
+                                    <span>Reagir</span>
+                                  </button>
+                                  {reactionPickerMessageId === message.id ? (
+                                    <div className="border-t border-slate-100 px-3 py-2">
+                                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        Escolha um emoji
+                                      </p>
+                                      <div className="mt-2 flex flex-wrap gap-2">
+                                        {REACTION_OPTIONS.map(option => (
+                                          <button
+                                            key={`${message.id}-reaction-${option}`}
+                                            type="button"
+                                            onClick={() => handleReactToMessage(message, option)}
+                                            disabled={!canReactToMessage || isReactingToMessage || sendingMessage}
+                                            className="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 text-lg transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                                            aria-label={`Reagir com ${option}`}
+                                          >
+                                            {isReactingToMessage ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              option
+                                            )}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : null}
                                   {canEditMessage ? (
                                     <button
                                       type="button"

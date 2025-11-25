@@ -334,6 +334,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     });
   }, [contracts, hiddenLeadIdsForObserver, isObserver, visibleLeadIdsForObserver]);
 
+  const leadsById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
+
   const visibleContractIds = useMemo(() => new Set(contractsVisibleToUser.map((contract) => contract.id)), [
     contractsVisibleToUser,
   ]);
@@ -896,13 +898,49 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [activeLeadStatusNames, filteredLeads],
   );
 
-  const filteredContracts = filterByPeriod(contractsVisibleToUser, (contract) => {
-    return (
-      parseDateValue(contract.data_inicio) ||
-      parseDateValue(contract.previsao_recebimento_comissao) ||
-      parseDateValue(contract.created_at)
-    );
-  });
+  const filteredContracts = useMemo(() => {
+    const periodFilteredContracts = filterByPeriod(contractsVisibleToUser, (contract) => {
+      return (
+        parseDateValue(contract.data_inicio) ||
+        parseDateValue(contract.previsao_recebimento_comissao) ||
+        parseDateValue(contract.created_at)
+      );
+    });
+
+    return periodFilteredContracts.filter((contract) => {
+      const lead = contract.lead_id ? leadsById.get(contract.lead_id) : null;
+
+      if (dashboardOriginFilter && (!lead || lead.origem !== dashboardOriginFilter)) {
+        return false;
+      }
+
+      if (dashboardOwnerFilter && (!lead || lead.responsavel !== dashboardOwnerFilter)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    contractsVisibleToUser,
+    dashboardOriginFilter,
+    dashboardOwnerFilter,
+    leadsById,
+    periodFilter,
+    customStartDate,
+    customEndDate,
+  ]);
+
+  const filteredContractIds = useMemo(() => new Set(filteredContracts.map((contract) => contract.id)), [
+    filteredContracts,
+  ]);
+
+  const holdersVisibleWithFilters = useMemo(() => {
+    return holdersVisibleToUser.filter((holder) => filteredContractIds.has(holder.contract_id));
+  }, [filteredContractIds, holdersVisibleToUser]);
+
+  const dependentsVisibleWithFilters = useMemo(() => {
+    return dependentsVisibleToUser.filter((dependent) => filteredContractIds.has(dependent.contract_id));
+  }, [dependentsVisibleToUser, filteredContractIds]);
 
   const totalLeads = activeLeads.length;
   const leadsAtivos = activeLeads.filter(
@@ -911,8 +949,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
   const activeContracts = useMemo(
-    () => contractsVisibleToUser.filter((contract) => contract.status === 'Ativo'),
-    [contractsVisibleToUser]
+    () => filteredContracts.filter((contract) => contract.status === 'Ativo'),
+    [filteredContracts],
   );
   const comissaoTotal = contratosAtivos.reduce((sum, c) => sum + (c.comissao_prevista || 0), 0);
 
@@ -1063,9 +1101,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       const activeContractIds = activeContracts.map((c) => c.id);
       const contractsMap = new Map(activeContracts.map((c) => [c.id, c]));
-      const holdersByContract = new Map(holdersVisibleToUser.map((h) => [h.contract_id, h]));
+      const holdersByContract = new Map(holdersVisibleWithFilters.map((h) => [h.contract_id, h]));
 
-      holdersVisibleToUser.forEach((holder) => {
+      holdersVisibleWithFilters.forEach((holder) => {
         if (!activeContractIds.includes(holder.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(holder.data_nascimento);
@@ -1098,7 +1136,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         }
       });
 
-      dependentsVisibleToUser.forEach((dependent) => {
+      dependentsVisibleWithFilters.forEach((dependent) => {
         if (!activeContractIds.includes(dependent.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(dependent.data_nascimento);
@@ -1165,7 +1203,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           direction === 'future' ? a.diasRestantes - b.diasRestantes : b.diasRestantes - a.diasRestantes,
         );
     },
-    [activeContracts, dependentsVisibleToUser, holdersVisibleToUser],
+    [activeContracts, dependentsVisibleWithFilters, holdersVisibleWithFilters],
   );
 
   const ageAdjustmentMilestones = useMemo(() => [19, 24, 29, 34, 39, 44, 49, 54, 59], []);
@@ -1239,8 +1277,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       });
     };
 
-    holdersVisibleToUser.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
-    dependentsVisibleToUser.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
+    holdersVisibleWithFilters.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
+    dependentsVisibleWithFilters.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
 
     activeContracts.forEach((contract) => {
       if (!contract.mes_reajuste) return;
@@ -1264,8 +1302,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     activeContracts,
     daysAhead,
     getAdjustmentDateForDirection,
-    holdersVisibleToUser,
-    dependentsVisibleToUser,
+    holdersVisibleWithFilters,
+    dependentsVisibleWithFilters,
     timelineDirection,
     ageAdjustmentMilestones,
   ]);
@@ -1288,7 +1326,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       holder?: Holder;
     }> = [];
 
-    holdersVisibleToUser.forEach((holder) => {
+    holdersVisibleWithFilters.forEach((holder) => {
       if (!activeContractMap.has(holder.contract_id)) return;
 
       const { month, day } = parseDateWithoutTimezone(holder.data_nascimento);
@@ -1303,7 +1341,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       }
     });
 
-    dependentsVisibleToUser.forEach((dependent) => {
+    dependentsVisibleWithFilters.forEach((dependent) => {
       if (!activeContractMap.has(dependent.contract_id)) return;
 
       const { month, day } = parseDateWithoutTimezone(dependent.data_nascimento);
@@ -1313,7 +1351,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           tipo: 'Dependente',
           contract_id: dependent.contract_id,
           contract: activeContractMap.get(dependent.contract_id),
-          holder: holdersVisibleToUser.find((holder) => holder.contract_id === dependent.contract_id),
+          holder: holdersVisibleWithFilters.find((holder) => holder.contract_id === dependent.contract_id),
         });
       }
     });
@@ -1371,7 +1409,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     if (insertError) {
       console.error('Erro ao criar lembretes de aniversário:', insertError);
     }
-  }, [activeContracts, dependentsVisibleToUser, holdersVisibleToUser]);
+  }, [activeContracts, dependentsVisibleWithFilters, holdersVisibleWithFilters]);
 
   const upcomingBirthdays = useMemo(
     () => getBirthdaysWithinRange(daysAhead, timelineDirection),

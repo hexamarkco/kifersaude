@@ -214,6 +214,10 @@ type SpellcheckMessageBody = {
   text?: string;
 };
 
+type GenerateFollowUpBody = {
+  history?: string;
+};
+
 type DeleteMessageBody = {
   messageId?: string;
   phone?: string;
@@ -228,6 +232,11 @@ type RewriteSuggestion = {
 type SpellcheckSuggestion = {
   correctedText: string;
   explanation?: string | null;
+};
+
+type FollowUpSuggestion = {
+  text: string;
+  variant: string;
 };
 
 type WhatsappContactSummary = {
@@ -1486,6 +1495,265 @@ const spellcheckMessageWithGpt = async (text: string): Promise<SpellcheckSuggest
   }
 
   return suggestion;
+};
+
+const FOLLOW_UP_PROMPT = `🎯 *Objetivo do Projeto*
+
+Este chat tem como função gerar mensagens de follow-up *personalizadas, inteligentes e estrategicamente persuasivas*, usando:
+
+✅ Análise completa do histórico da conversa  
+✅ Leitura do comportamento e tom do cliente  
+✅ Técnicas de PNL, copywriting de vendas e gatilhos mentais
+
+---
+
+🔍 *Como Funciona? – Leitura e Análise*
+
+O sistema deve obrigatoriamente:
+
+✅ Analisar todo o histórico fornecido, que pode conter:  
+- Perguntas feitas  
+- Propostas/cotações enviadas  
+- Follow-ups anteriores  
+- Respostas (ou ausência delas)  
+- Tom e comportamento do cliente
+
+✅ Entender o cenário atual, por exemplo:  
+- Cliente demonstrou interesse ou não  
+- Pediu tempo para pensar  
+- Sumiu após a proposta  
+- Ignorou follow-ups  
+- Apresentou objeções (preço, rede, momento financeiro etc.)  
+- Mostra-se indeciso, frio, curioso, ansioso etc.
+
+✅ Adaptar a comunicação *ao contexto e perfil* do cliente, em tom e abordagem.
+
+---
+
+🔥 *Tipos de Follow-Up Possíveis*
+
+A IA deve identificar, pelo histórico, qual abordagem utilizar:
+
+➕ *Cliente Sumido (nenhuma resposta até hoje):*  
+- Tom leve, descontraído, sem pressão, mas mantendo presença.
+
+➕ *Cliente que respondeu antes, mas sumiu depois:*  
+- Tom assertivo, reforçando benefícios, demonstrando acompanhamento.
+
+➕ *Cliente que pediu tempo para pensar:*  
+- Tom respeitoso, mantendo conexão, mas trazendo reforços de benefício ou diferencial.
+
+➕ *Cliente com objeção clara:*  
+- Foco absoluto em *resolver a objeção específica* antes de qualquer outra coisa.
+
+➕ *Cliente engajado, mas esfriou:*  
+- Uso moderado de gatilhos de urgência, escassez e emoção, sem ser invasivo.
+
+---
+
+🏗️ *Estrutura Ideal do Follow-Up*
+
+🧡 *1. Abertura Personalizada*  
+- Sempre usar o nome do cliente.  
+- Espelhar o tom da conversa anterior (descontraído, sério, objetivo).
+
+🔄 *2. Contextualização (quando necessário)*  
+- Primeiro follow-up:  
+  _“Passei aqui só pra saber se conseguiu avaliar a proposta que te enviei…”_
+
+- Se houver outros follow-ups:  
+  _“Vi que você ainda não conseguiu me responder…”_
+
+- Se já houve resposta:  
+  _“Como ficou seu pensamento desde nossa última conversa?”_
+
+📜 *3. Reforço dos Benefícios (curto e objetivo)*  
+- Exemplo:  
+  _“Só reforçando… o plano que te passei inclui consultas, exames, internações e cirurgias, na rede {REDE}, com valor de R$ {VALOR}.”_
+
+🎯 *4. Gatilhos Mentais (moderados e inteligentes)*  
+- Escassez → “Essa condição pode mudar a qualquer momento…”  
+- Urgência → “Condições assim não costumam ficar disponíveis por muito tempo…”  
+- Segurança → “Estou aqui pra te ajudar em qualquer dúvida.”  
+- Comprometimento → “Lembrando que fico responsável por todo o suporte, não te deixo sozinho nesse processo.”
+
+🚀 *5. Chamada para Ação (CTA) Clara*  
+- Exemplos:  
+  _“Me responde por aqui pra gente seguir.”_  
+  _“Se quiser, podemos retomar de onde paramos.”_  
+  _“Me avisa se ficou alguma dúvida, tá?”_
+
+---
+
+🧠 *PNL e Inteligência na Comunicação*
+
+Sempre usar:  
+- Espelhamento de tom e linguagem  
+- Comandos embutidos → “Quando você me responder, já consigo agilizar tudo pra você.”  
+- Foco em soluções → “Quero que você se sinta seguro de que está fazendo a escolha certa.”  
+- Imagens mentais → “Imagina ter a segurança de saber que, em qualquer emergência, sua saúde está protegida.”
+
+---
+
+📦 *Dados de Entrada no Prompt*
+
+- Histórico completo da conversa, incluindo:  
+  - Abertura  
+  - Perguntas feitas  
+  - Cotação enviada  
+  - Follow-ups anteriores (se houver)  
+  - Respostas ou ausência delas
+
+→ *Não é necessário reenviar dados técnicos separados. O histórico contém tudo.*
+
+---
+
+✅ *Saída Esperada*
+
+Gerar *uma mensagem de follow-up*:  
+- Totalmente contextualizada ao cenário do cliente  
+- Adaptada ao tom e comportamento anterior  
+- Organizada com:  
+  - Abertura personalizada  
+  - Reforço dos benefícios (curto)  
+  - Chamada para ação clara
+
+🔶 *A mensagem deve vir com estas regras de formatação em áreas de destaque:  
+- Negrito → *Texto*  
+- Itálico → _Texto_  
+- Riscado → ~Texto~  
+
+Adendo: Sempre use "Oi" junto de "bom dia", "boa tarde" ou "boa noite" na abordagem.`;
+
+const createFollowUpPrompt = (history: string) => {
+  const normalizedHistory = history.trim() || 'Sem histórico de mensagens disponível.';
+
+  return [
+    FOLLOW_UP_PROMPT,
+    '',
+    'Considere o histórico do chat abaixo (ordem cronológica, com datas):',
+    normalizedHistory,
+    '',
+    'Instruções finais:',
+    '- Gere exatamente 3 mensagens de follow-up diferentes e totalmente contextualizadas.',
+    '- Cada mensagem deve seguir todas as regras acima, incluindo o uso de "Oi" + saudação adequada.',
+    '- Responda SOMENTE em JSON válido no formato {"variations":[{"variant":"Variação 1","text":"mensagem"}]} sem texto extra.',
+  ].join('\n');
+};
+
+const extractFollowUpSuggestionsFromRaw = (rawText: string): FollowUpSuggestion[] => {
+  const cleaned = stripMarkdownCodeFence(rawText);
+  const suggestions: FollowUpSuggestion[] = [];
+
+  const tryPushFromEntry = (entry: unknown, index: number) => {
+    if (!entry) {
+      return;
+    }
+
+    if (typeof entry === 'string') {
+      const trimmed = entry.trim();
+      if (trimmed) {
+        suggestions.push({ variant: `Variação ${index + 1}`, text: trimmed });
+      }
+      return;
+    }
+
+    if (typeof entry === 'object') {
+      const castEntry = entry as { text?: unknown; message?: unknown; variant?: unknown; title?: unknown };
+      const textCandidate =
+        (typeof castEntry.text === 'string' ? castEntry.text : null) ||
+        (typeof castEntry.message === 'string' ? castEntry.message : null);
+      if (textCandidate?.trim()) {
+        const variantLabel =
+          typeof castEntry.variant === 'string' && castEntry.variant.trim()
+            ? castEntry.variant.trim()
+            : typeof castEntry.title === 'string' && castEntry.title.trim()
+              ? castEntry.title.trim()
+              : `Variação ${index + 1}`;
+        suggestions.push({ variant: variantLabel, text: textCandidate.trim() });
+      }
+    }
+  };
+
+  try {
+    const parsed = JSON.parse(cleaned) as unknown;
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach((entry, index) => tryPushFromEntry(entry, index));
+    }
+
+    if (suggestions.length === 0 && parsed && typeof parsed === 'object') {
+      const candidateList =
+        (parsed as { variations?: unknown }).variations ||
+        (parsed as { mensagens?: unknown }).mensagens ||
+        (parsed as { messages?: unknown }).messages;
+
+      if (Array.isArray(candidateList)) {
+        candidateList.forEach((entry, index) => tryPushFromEntry(entry, index));
+      }
+    }
+  } catch (_error) {
+    // Se não for JSON válido, tenta dividir por linhas em branco.
+  }
+
+  if (suggestions.length === 0) {
+    const fallbackEntries = cleaned.split(/\n\s*\n/).map(entry => entry.trim()).filter(Boolean);
+    fallbackEntries.forEach((entry, index) => tryPushFromEntry(entry, index));
+  }
+
+  return suggestions.slice(0, 3);
+};
+
+const generateFollowUpMessagesWithGpt = async (history: string): Promise<FollowUpSuggestion[]> => {
+  const { apiKey, textModel } = await getGptIntegrationConfig();
+  const prompt = createFollowUpPrompt(history);
+
+  const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: textModel || DEFAULT_OPENAI_TEXT_MODEL,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      max_output_tokens: 700,
+    }),
+  });
+
+  const rawBody = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao gerar follow-ups (${response.status}): ${rawBody || 'erro desconhecido'}`,
+    );
+  }
+
+  let parsedBody: unknown = null;
+  try {
+    parsedBody = rawBody ? JSON.parse(rawBody) : null;
+  } catch (_error) {
+    parsedBody = rawBody ? { output_text: rawBody } : null;
+  }
+
+  const suggestionsText = extractOpenAiResponseText(parsedBody);
+  const suggestions = suggestionsText ? extractFollowUpSuggestionsFromRaw(suggestionsText) : [];
+
+  if (suggestions.length === 0) {
+    throw new Error('A API GPT não retornou variações de follow-up.');
+  }
+
+  return suggestions;
 };
 
 const ensureJsonBody = async <T = unknown>(req: Request): Promise<T | null> => {
@@ -3612,6 +3880,31 @@ const handleSpellcheckMessage = async (req: Request) => {
   }
 };
 
+const handleGenerateFollowUpMessages = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<GenerateFollowUpBody>(req)) ?? {};
+  const history = toNonEmptyString(body.history);
+
+  if (!history) {
+    return respondJson(400, {
+      success: false,
+      error: 'Forneça o histórico completo do chat para gerar follow-ups.',
+    });
+  }
+
+  try {
+    const suggestions = await generateFollowUpMessagesWithGpt(history.slice(0, 12_000));
+    return respondJson(200, { success: true, suggestions });
+  } catch (error) {
+    console.error('Erro ao gerar follow-ups com GPT:', error);
+    const message = error instanceof Error ? error.message : 'Erro ao gerar follow-ups';
+    return respondJson(500, { success: false, error: message });
+  }
+};
+
 const handleSendLocation = async (req: Request) => {
   if (req.method !== 'POST') {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -4457,6 +4750,8 @@ Deno.serve(async (req) => {
       return handleRewriteMessage(req);
     case '/spellcheck-message':
       return handleSpellcheckMessage(req);
+    case '/generate-follow-ups':
+      return handleGenerateFollowUpMessages(req);
     case '/transcribe-audio':
       return handleTranscribeAudio(req);
     case '/send-video':

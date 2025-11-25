@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { whatsappCampaignService } from '../../../src/server/whatsappCampaignService.ts';
+import { whatsappCampaignService } from './whatsappCampaignService.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

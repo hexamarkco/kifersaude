@@ -553,7 +553,7 @@ export default function LeadsManager({
             return normalizePhone(lead.telefone);
           case 'created_at':
           default: {
-            const createdDate = lead.data_criacao ?? lead.created_at;
+            const createdDate = lead.created_at ?? lead.data_criacao;
             if (!createdDate) return null;
             const timestamp = new Date(createdDate).getTime();
             return Number.isNaN(timestamp) ? null : timestamp;

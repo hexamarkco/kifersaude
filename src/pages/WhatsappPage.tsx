@@ -79,6 +79,7 @@ import {
 import { mapLeadRelations } from '../lib/leadRelations';
 import type {
   WhatsappChat,
+  WhatsappChatLeadSummary,
   WhatsappChatInsight,
   WhatsappChatInsightSentiment,
   WhatsappChatInsightStatus,
@@ -485,6 +486,23 @@ const normalizePhoneForComparison = (value: string | null | undefined): string =
 
   const withoutSuffix = value.includes('@') ? value.slice(0, value.indexOf('@')) : value;
   return withoutSuffix.replace(/\D+/g, '');
+};
+
+const buildPhoneComparisonVariants = (value: string | null | undefined): string[] => {
+  const normalized = normalizePhoneForComparison(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalized]);
+
+  if (normalized.startsWith('55') && normalized.length > 2) {
+    variants.add(normalized.slice(2));
+  } else if (!normalized.startsWith('55') && normalized.length >= 10) {
+    variants.add(`55${normalized}`);
+  }
+
+  return Array.from(variants);
 };
 
 const normalizeLeadStatus = (status: string | null | undefined): string => {
@@ -2367,7 +2385,47 @@ export default function WhatsappPage({
     markChatAsRead(selectedChatId);
   }, [markChatAsRead, selectedChatId]);
 
-  const selectedChatLead = selectedChat?.crm_lead ?? null;
+  const selectedChatLead = useMemo(() => {
+    if (!selectedChat) {
+      return null;
+    }
+
+    if (selectedChat.crm_lead) {
+      return selectedChat.crm_lead;
+    }
+
+    const chatPhoneVariants = buildPhoneComparisonVariants(selectedChat.phone);
+    if (chatPhoneVariants.length === 0) {
+      return null;
+    }
+
+    const matchingLead = leads.find(lead => {
+      const leadVariants = buildPhoneComparisonVariants(lead.telefone);
+      if (leadVariants.length === 0) {
+        return false;
+      }
+
+      return leadVariants.some(variant => chatPhoneVariants.includes(variant));
+    });
+
+    if (!matchingLead) {
+      return null;
+    }
+
+    return {
+      id: matchingLead.id,
+      nome_completo: matchingLead.nome_completo ?? null,
+      telefone: matchingLead.telefone,
+      status: matchingLead.status ?? null,
+      responsavel: matchingLead.responsavel ?? null,
+      ultimo_contato: matchingLead.ultimo_contato ?? null,
+      proximo_retorno: matchingLead.proximo_retorno ?? null,
+      origem: matchingLead.origem ?? null,
+      tipo_contratacao: matchingLead.tipo_contratacao ?? null,
+      data_criacao: matchingLead.data_criacao ?? matchingLead.created_at ?? null,
+      metadata: null,
+    } satisfies WhatsappChatLeadSummary;
+  }, [leads, selectedChat]);
   const selectedChatContracts = selectedChat?.crm_contracts ?? [];
   const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
 

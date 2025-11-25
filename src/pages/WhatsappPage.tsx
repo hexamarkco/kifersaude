@@ -2390,45 +2390,6 @@ export default function WhatsappPage({
     markChatAsRead(selectedChatId);
   }, [markChatAsRead, selectedChatId]);
 
-  const leadDisplayNameByPhoneVariant = useMemo(() => {
-    const map = new Map<string, string>();
-
-    leads.forEach(lead => {
-      const name = toNonEmptyString(lead.nome_completo);
-      if (!name) {
-        return;
-      }
-
-      buildPhoneComparisonVariants(lead.telefone).forEach(variant => {
-        if (variant && !map.has(variant)) {
-          map.set(variant, name);
-        }
-      });
-    });
-
-    return map;
-  }, [leads]);
-
-  const getChatDisplayNameWithLeadFallback = useCallback(
-    (chat: WhatsappChat): string => {
-      const leadName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
-      if (leadName) {
-        return leadName;
-      }
-
-      const phoneVariants = buildPhoneComparisonVariants(chat.phone);
-      for (const variant of phoneVariants) {
-        const mappedName = leadDisplayNameByPhoneVariant.get(variant);
-        if (mappedName) {
-          return mappedName;
-        }
-      }
-
-      return getChatDisplayName(chat);
-    },
-    [leadDisplayNameByPhoneVariant],
-  );
-
   const selectedChatLead = useMemo(() => {
     if (!selectedChat) {
       return null;

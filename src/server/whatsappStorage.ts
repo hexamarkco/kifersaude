@@ -6,6 +6,7 @@ export type ChatUpsertInput = {
   chatLid?: string | null;
   chatName?: string | null;
   isGroup?: boolean;
+  leadId?: string | null;
   lastMessageAt?: Date | string | null;
   lastMessagePreview?: string | null;
 };
@@ -39,6 +40,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     chatLid,
     chatName,
     isGroup,
+    leadId,
     lastMessageAt,
     lastMessagePreview,
   } = input;
@@ -83,6 +85,10 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
     last_message_preview: lastMessagePreview ?? null,
   };
 
+  if (typeof leadId === 'string') {
+    updatePayload.lead_id = leadId;
+  }
+
   // Só atualiza chat_lid se:
   // - foi enviado um chatLid no input
   // - e OU não existe chat ainda
@@ -116,6 +122,10 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
       chat_lid: (updatePayload.chat_lid ?? existingChat.chat_lid) ?? null,
       chat_name: updatePayload.chat_name ?? existingChat.chat_name,
       is_group: typeof updatePayload.is_group === 'boolean' ? updatePayload.is_group : existingChat.is_group,
+      lead_id:
+        typeof updatePayload.lead_id === 'undefined'
+          ? existingChat.lead_id ?? null
+          : (updatePayload.lead_id ?? null),
       last_message_at: normalizedLastMessageAt,
       last_message_preview: updatePayload.last_message_preview ?? existingChat.last_message_preview,
     };
@@ -128,6 +138,7 @@ export const upsertChatRecord = async (input: ChatUpsertInput): Promise<Whatsapp
       phone,
       chat_lid: chatLid ?? null,
       chat_name: chatName ?? null,
+      lead_id: leadId ?? null,
       last_message_at: normalizedLastMessageAt,
       last_message_preview: lastMessagePreview ?? null,
       is_group: Boolean(isGroup),

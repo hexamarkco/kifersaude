@@ -47,6 +47,7 @@ export type WhatsappChat = {
   phone: string;
   chat_lid?: string | null;
   chat_name: string | null;
+  lead_id?: string | null;
   last_message_at: string | null;
   last_message_preview: string | null;
   is_group: boolean;

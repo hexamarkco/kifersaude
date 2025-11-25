@@ -347,14 +347,7 @@ export const editWhatsappMessage = async (
   payload: EditWhatsappMessagePayload,
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<SendWhatsappMessageResponse> => {
-  return callWhatsappFunction<SendWhatsappMessageResponse>(
-    '/whatsapp-webhook/send-message',
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    },
-    options,
-  );
+  return sendWhatsappMessage(payload, options);
 };
 
 type SendMediaPayload = {

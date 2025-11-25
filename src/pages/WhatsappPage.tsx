@@ -3457,31 +3457,6 @@ export default function WhatsappPage({
     }
   }, []);
 
-  const loadLeadReminders = useCallback(async (leadId: string) => {
-    setLeadRemindersLoading(true);
-    setLeadRemindersError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('reminders')
-        .select('*')
-        .eq('lead_id', leadId)
-        .order('data_lembrete', { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      setLeadReminders(((data as Reminder[] | null) ?? []).filter(reminder => Boolean(reminder.lead_id)));
-    } catch (error) {
-      console.error('Erro ao carregar lembretes do lead:', error);
-      setLeadReminders([]);
-      setLeadRemindersError('Não foi possível carregar os lembretes deste lead.');
-    } finally {
-      setLeadRemindersLoading(false);
-    }
-  }, []);
-
   const syncLeadNextReturnDate = useCallback(
     async (
       leadId: string,

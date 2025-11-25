@@ -8051,7 +8051,9 @@ export default function WhatsappPage({
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         {returnAgendaError ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">{returnAgendaError}</p>
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            {returnAgendaError}
+          </p>
         ) : returnAgendaLoading ? (
           <div className="space-y-3">
             {[0, 1, 2].map(index => (
@@ -8074,116 +8076,241 @@ export default function WhatsappPage({
           </div>
         ) : (
           <div className="space-y-4">
-            {groupedReturnAgenda.map(day => (
-              <div key={day.dateKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{day.label}</p>
-                    <p className="text-xs text-slate-500">{day.reminders.length} retorno(s)</p>
+            {groupedReturnAgenda.map(day => {
+              const pendingReminders = day.reminders.filter(reminder => !reminder.lido);
+              const completedReminders = day.reminders.filter(reminder => reminder.lido);
+
+              return (
+                <div key={day.dateKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{day.label}</p>
+                      <p className="text-xs text-slate-500">
+                        {day.reminders.length} retorno(s)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-3 space-y-4">
+                    {pendingReminders.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Pendentes
+                        </p>
+                        <div className="divide-y divide-slate-100">
+                          {pendingReminders.map(reminder => {
+                            const isLoading = Boolean(returnAgendaActionLoading[reminder.id]);
+                            const isRescheduling = returnAgendaRescheduleId === reminder.id;
+
+                            return (
+                              <div key={reminder.id} className="py-3">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                        {formatDateTime(reminder.data_lembrete)}
+                                      </span>
+                                      <span className="text-sm font-semibold text-slate-900">
+                                        {reminder.titulo || 'Retorno'}
+                                      </span>
+                                      {reminder.lido ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                          Concluído
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <p className="text-xs text-slate-600">
+                                      Lead: {reminder.lead?.nome_completo ?? 'Sem nome'}
+                                    </p>
+                                    {reminder.descricao ? (
+                                      <p className="text-xs text-slate-600">{reminder.descricao}</p>
+                                    ) : null}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenReturnChat(reminder)}
+                                      className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                    >
+                                      <MessageSquareText className="h-4 w-4" /> Abrir chat
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isLoading}
+                                      onClick={() => handleReturnAgendaToggle(reminder)}
+                                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                      {reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isLoading}
+                                      onClick={() => {
+                                        setReturnAgendaRescheduleId(reminder.id);
+                                        setReturnAgendaRescheduleValue(
+                                          formatDateTimeForInput(reminder.data_lembrete),
+                                        );
+                                      }}
+                                      className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      <ArrowUpRight className="h-4 w-4" /> Reagendar
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {isRescheduling ? (
+                                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                    <label className="block text-xs font-semibold text-slate-700">
+                                      Nova data e hora
+                                    </label>
+                                    <input
+                                      type="datetime-local"
+                                      value={returnAgendaRescheduleValue}
+                                      min={new Date().toISOString().slice(0, 16)}
+                                      onChange={event =>
+                                        setReturnAgendaRescheduleValue(event.target.value)
+                                      }
+                                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                    />
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setReturnAgendaRescheduleId(null);
+                                          setReturnAgendaRescheduleValue('');
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                                      >
+                                        Cancelar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isLoading || !returnAgendaRescheduleValue}
+                                        onClick={() =>
+                                          handleReturnAgendaReschedule(
+                                            reminder,
+                                            returnAgendaRescheduleValue,
+                                          )
+                                        }
+                                        className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {isLoading ? 'Salvando...' : 'Salvar novo horário'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {completedReminders.length > 0 && (
+                      <div className="border-t border-slate-100 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Concluídos
+                        </p>
+                        <div className="divide-y divide-slate-100">
+                          {completedReminders.map(reminder => {
+                            const isLoading = Boolean(returnAgendaActionLoading[reminder.id]);
+                            const isRescheduling = returnAgendaRescheduleId === reminder.id;
+
+                            return (
+                              <div key={reminder.id} className="py-3">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between opacity-80">
+                                  <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                        {formatDateTime(reminder.data_lembrete)}
+                                      </span>
+                                      <span className="text-sm font-semibold text-slate-900">
+                                        {reminder.titulo || 'Retorno'}
+                                      </span>
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                        Concluído
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-slate-600">
+                                      Lead: {reminder.lead?.nome_completo ?? 'Sem nome'}
+                                    </p>
+                                    {reminder.descricao ? (
+                                      <p className="text-xs text-slate-600">{reminder.descricao}</p>
+                                    ) : null}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isLoading}
+                                      onClick={() => handleReturnAgendaToggle(reminder)}
+                                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                      Marcar como não lido
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {isRescheduling ? (
+                                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                    <label className="block text-xs font-semibold text-slate-700">
+                                      Nova data e hora
+                                    </label>
+                                    <input
+                                      type="datetime-local"
+                                      value={returnAgendaRescheduleValue}
+                                      min={new Date().toISOString().slice(0, 16)}
+                                      onChange={event =>
+                                        setReturnAgendaRescheduleValue(event.target.value)
+                                      }
+                                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                    />
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setReturnAgendaRescheduleId(null);
+                                          setReturnAgendaRescheduleValue('');
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                                      >
+                                        Cancelar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isLoading || !returnAgendaRescheduleValue}
+                                        onClick={() =>
+                                          handleReturnAgendaReschedule(
+                                            reminder,
+                                            returnAgendaRescheduleValue,
+                                          )
+                                        }
+                                        className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {isLoading ? 'Salvando...' : 'Salvar novo horário'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="divide-y divide-slate-100">
-                  {day.reminders.map(reminder => {
-                    const isLoading = Boolean(returnAgendaActionLoading[reminder.id]);
-                    const isRescheduling = returnAgendaRescheduleId === reminder.id;
-
-                    return (
-                      <div key={reminder.id} className="px-4 py-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                                {formatDateTime(reminder.data_lembrete)}
-                              </span>
-                              <span className="text-sm font-semibold text-slate-900">
-                                {reminder.titulo || 'Retorno'}
-                              </span>
-                              {reminder.lido ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                                  Concluído
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-slate-600">Lead: {reminder.lead?.nome_completo ?? 'Sem nome'}</p>
-                            {reminder.descricao ? (
-                              <p className="text-xs text-slate-600">{reminder.descricao}</p>
-                            ) : null}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReturnChat(reminder)}
-                              className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            >
-                              <MessageSquareText className="h-4 w-4" /> Abrir chat
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => handleReturnAgendaToggle(reminder)}
-                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Check className="h-4 w-4" />
-                              {reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => {
-                                setReturnAgendaRescheduleId(reminder.id);
-                                setReturnAgendaRescheduleValue(formatDateTimeForInput(reminder.data_lembrete));
-                              }}
-                              className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <ArrowUpRight className="h-4 w-4" /> Reagendar
-                            </button>
-                          </div>
-                        </div>
-
-                        {isRescheduling ? (
-                          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <label className="block text-xs font-semibold text-slate-700">Nova data e hora</label>
-                            <input
-                              type="datetime-local"
-                              value={returnAgendaRescheduleValue}
-                              min={new Date().toISOString().slice(0, 16)}
-                              onChange={event => setReturnAgendaRescheduleValue(event.target.value)}
-                              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            />
-                            <div className="mt-3 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setReturnAgendaRescheduleId(null);
-                                  setReturnAgendaRescheduleValue('');
-                                }}
-                                className="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                              >
-                                Cancelar
-                              </button>
-                              <button
-                                type="button"
-                                disabled={isLoading || !returnAgendaRescheduleValue}
-                                onClick={() => handleReturnAgendaReschedule(reminder, returnAgendaRescheduleValue)}
-                                className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {isLoading ? 'Salvando...' : 'Salvar novo horário'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
+
   const conversationWorkspace = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:flex-row">
       <aside

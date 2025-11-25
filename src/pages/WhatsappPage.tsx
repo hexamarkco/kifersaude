@@ -27,6 +27,7 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
+  Pencil,
   MessageSquareText,
   MessageCirclePlus,
   Plus,
@@ -71,6 +72,7 @@ import { supabase } from '../lib/supabase';
 import type { QuickReply } from '../lib/supabase';
 import {
   deleteWhatsappMessage,
+  editWhatsappMessage,
   fetchWhatsappJson,
   forwardWhatsappMessage,
   getWhatsappFunctionUrl,
@@ -1887,6 +1889,7 @@ export default function WhatsappPage({
   const [chatPresenceMap, setChatPresenceMap] = useState<Record<string, ChatPresenceState>>({});
   const [messageInput, setMessageInput] = useState('');
   const [replyingToMessage, setReplyingToMessage] = useState<WhatsappMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<WhatsappMessage | null>(null);
   const [rewritingMessage, setRewritingMessage] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
@@ -2891,6 +2894,12 @@ export default function WhatsappPage({
         return;
       }
 
+      if (key === 'Escape' && editingMessage) {
+        event.preventDefault();
+        handleCancelEdit();
+        return;
+      }
+
       if (!slashCommandState) {
         return;
       }
@@ -2926,7 +2935,14 @@ export default function WhatsappPage({
         setSlashSuggestionIndex(0);
       }
     },
-    [applySlashQuickReply, slashCommandState, slashCommandSuggestions, slashSuggestionIndex],
+    [
+      applySlashQuickReply,
+      editingMessage,
+      handleCancelEdit,
+      slashCommandState,
+      slashCommandSuggestions,
+      slashSuggestionIndex,
+    ],
   );
 
   const clearRewriteSuggestions = useCallback(() => {
@@ -4786,6 +4802,12 @@ export default function WhatsappPage({
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
+      setEditingMessage(null);
+      setReplyingToMessage(null);
+      setPendingAttachment(null);
+      setIsScheduleEnabled(false);
+      setScheduledSendAt('');
+      setMessageInput('');
       setMessagesLoading(true);
       setMessages([]);
       setSelectedChatId(chatId);
@@ -5512,6 +5534,16 @@ export default function WhatsappPage({
 
     const shouldScheduleMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
 
+    if (editingMessage && pendingAttachment) {
+      setErrorMessage('Remova o anexo para editar a mensagem.');
+      return;
+    }
+
+    if (editingMessage && shouldScheduleMessage) {
+      setErrorMessage('Não é possível agendar uma mensagem enquanto edita outra.');
+      return;
+    }
+
     if (pendingAttachment) {
       if (shouldScheduleMessage) {
         setErrorMessage('Não é possível agendar mensagens com anexos.');
@@ -5535,6 +5567,69 @@ export default function WhatsappPage({
       if (shouldScheduleMessage) {
         setScheduleValidationError('Informe uma mensagem para agendar.');
       }
+      return;
+    }
+
+    if (editingMessage) {
+      const editMessageId = editingMessage.message_id?.trim();
+
+      if (!editMessageId) {
+        setErrorMessage('Não é possível editar esta mensagem porque falta o identificador.');
+        setEditingMessage(null);
+        return;
+      }
+
+      setSendingMessage(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await editWhatsappMessage({
+          phone: selectedChat.phone,
+          message: trimmedMessage,
+          editMessageId,
+        });
+
+        if (!response.success) {
+          throw new Error(response.error || 'Não foi possível editar a mensagem.');
+        }
+
+        const previousText = editingMessage.text ?? null;
+
+        setMessages(previousMessages =>
+          previousMessages.map(currentMessage =>
+            currentMessage.id === editingMessage.id || currentMessage.message_id === editMessageId
+              ? { ...currentMessage, text: trimmedMessage }
+              : currentMessage,
+          ),
+        );
+
+        setChats(previousChats =>
+          previousChats.map(chat => {
+            if (chat.id !== editingMessage.chat_id) {
+              return chat;
+            }
+
+            const shouldUpdatePreview =
+              chat.last_message_preview === previousText || chat.last_message_at === editingMessage.moment;
+
+            if (!shouldUpdatePreview) {
+              return chat;
+            }
+
+            return { ...chat, last_message_preview: trimmedMessage };
+          }),
+        );
+
+        setEditingMessage(null);
+        setMessageInput('');
+        adjustMessageInputHeight();
+      } catch (editError) {
+        console.error('Erro ao editar mensagem do WhatsApp:', editError);
+        setErrorMessage('Não foi possível editar a mensagem.');
+      } finally {
+        setSendingMessage(false);
+      }
+
       return;
     }
 
@@ -5674,6 +5769,7 @@ export default function WhatsappPage({
       }
 
       setReplyingToMessage(message);
+      setEditingMessage(null);
       setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
 
       requestAnimationFrame(() => {
@@ -5686,6 +5782,44 @@ export default function WhatsappPage({
   const handleCancelReply = useCallback(() => {
     setReplyingToMessage(null);
   }, []);
+
+  const handleStartEditingMessage = useCallback(
+    (message: WhatsappMessage) => {
+      if (!message.from_me) {
+        setErrorMessage('Só é possível editar mensagens enviadas por você.');
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        return;
+      }
+
+      const messageId = message.message_id?.trim();
+      if (!messageId) {
+        setErrorMessage('Não é possível editar esta mensagem porque falta o identificador.');
+        setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+        return;
+      }
+
+      setReplyingToMessage(null);
+      setErrorMessage(null);
+      setEditingMessage(message);
+      setPendingAttachment(null);
+      setIsScheduleEnabled(false);
+      setScheduledSendAt('');
+      setMessageInput(message.text ?? '');
+      setMessageActionsMenuId(previous => (previous === message.id ? null : previous));
+
+      requestAnimationFrame(() => {
+        adjustMessageInputHeight();
+        messageInputRef.current?.focus();
+      });
+    },
+    [adjustMessageInputHeight],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setMessageInput('');
+    adjustMessageInputHeight();
+  }, [adjustMessageInputHeight]);
 
   const handleForwardMessage = useCallback(
     async (message: WhatsappMessage) => {
@@ -7232,13 +7366,18 @@ export default function WhatsappPage({
 
   const trimmedMessageInput = messageInput.trim();
   const shouldScheduleCurrentMessage = isScheduleEnabled && scheduledSendAt.trim().length > 0;
+  const isEditingMessage = Boolean(editingMessage);
   const shouldShowAudioAction =
-    !pendingAttachment && trimmedMessageInput.length === 0 && !shouldScheduleCurrentMessage;
+    !pendingAttachment &&
+    trimmedMessageInput.length === 0 &&
+    !shouldScheduleCurrentMessage &&
+    !isEditingMessage;
   const isSendDisabled =
     sendingMessage ||
     schedulingMessage ||
     isRecordingAudio ||
-    (!pendingAttachment && trimmedMessageInput.length === 0);
+    (!pendingAttachment && trimmedMessageInput.length === 0) ||
+    (isEditingMessage && Boolean(pendingAttachment));
   const isActionButtonDisabled = shouldShowAudioAction
     ? sendingMessage || schedulingMessage || isRecordingAudio
     : isSendDisabled;
@@ -7249,7 +7388,9 @@ export default function WhatsappPage({
     showAttachmentMenu ||
     showChatActionsMenu ||
     quickRepliesMenuOpen;
-  const messagePlaceholder = pendingAttachment
+  const messagePlaceholder = editingMessage
+    ? 'Edite sua mensagem'
+    : pendingAttachment
     ? pendingAttachment.kind === 'audio'
       ? 'Adicione uma mensagem (opcional)'
       : 'Adicione uma legenda (opcional)'
@@ -7915,6 +8056,8 @@ export default function WhatsappPage({
                   const canDeleteMessage = Boolean(message.message_id) && Boolean(message.from_me);
                   const canReplyToMessage = Boolean(message.message_id);
                   const canForwardMessage = Boolean(message.message_id);
+                  const canEditMessage = Boolean(message.message_id) && Boolean(message.from_me);
+                  const isEditingThisMessage = editingMessage?.id === message.id;
                   const summaryChipClassName =
                     hasOnlyMediaWithoutPadding || isFromMe
                       ? 'inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] text-white'
@@ -8021,6 +8164,17 @@ export default function WhatsappPage({
                                     <Reply className="h-4 w-4" />
                                     <span>Responder</span>
                                   </button>
+                                  {canEditMessage ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditingMessage(message)}
+                                      disabled={sendingMessage && isEditingThisMessage}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                      <span>Editar</span>
+                                    </button>
+                                  ) : null}
                                   <button
                                     type="button"
                                     onClick={() => handleForwardMessage(message)}
@@ -8735,6 +8889,27 @@ export default function WhatsappPage({
                   ) : null}
 
                   <div className="relative flex-1">
+                    {editingMessage ? (
+                      <div className="mb-2 flex items-start justify-between rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        <div className="pr-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                            Editando
+                          </p>
+                          <p className="line-clamp-2 text-sm leading-5">
+                            {renderHighlightedText(editingMessage.text ?? 'Mensagem sem texto')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="ml-2 rounded-full p-1 text-amber-700 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                          aria-label="Cancelar edição"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
+
                     {replyingToMessage ? (
                       <div className="mb-2 flex items-start justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                       <div className="pr-2">

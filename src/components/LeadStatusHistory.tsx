@@ -38,7 +38,7 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
 
   const getStatusStyles = (status: string) => {
     const match = leadStatuses.find(s => s.nome === status);
-    return getBadgeStyle(match?.cor || '#64748b');
+    return getBadgeStyle(match?.cor || '#64748b', 1);
   };
 
   if (loading) {

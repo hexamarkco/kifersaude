@@ -2278,6 +2278,59 @@ const fetchChatSlaMetrics = async (): Promise<Map<string, ChatSlaMetrics>> => {
   }
 };
 
+const handleListSlaAlerts = async (req: Request) => {
+  if (req.method !== 'GET') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  if (!supabaseAdmin) {
+    return respondJson(500, { success: false, error: 'Supabase client não configurado' });
+  }
+
+  const url = new URL(req.url);
+  const limitParam = url.searchParams.get('limit');
+  const chatId = url.searchParams.get('chat_id') ?? url.searchParams.get('chatId');
+  const statusParam = url.searchParams.get('sla_status') ?? url.searchParams.get('status');
+
+  const limit = Number.isFinite(Number(limitParam)) && Number(limitParam) > 0
+    ? Number(limitParam)
+    : 150;
+
+  try {
+    let query = supabaseAdmin
+      .from('whatsapp_chat_sla_alerts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (chatId) {
+      query = query.eq('chat_id', chatId);
+    }
+
+    if (statusParam) {
+      const statuses = statusParam
+        .split(',')
+        .map(status => status.trim())
+        .filter(Boolean);
+
+      if (statuses.length > 0) {
+        query = query.in('sla_status', statuses);
+      }
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return respondJson(200, { alerts: data ?? [] });
+  } catch (error) {
+    console.error('Erro ao listar alertas de SLA do WhatsApp:', error);
+    return respondJson(500, { success: false, error: 'Falha ao carregar alertas de SLA' });
+  }
+};
+
 const resolveContactDisplayName = (contact: ZapiContact | undefined): string | null => {
   if (!contact) {
     return null;
@@ -4138,6 +4191,8 @@ Deno.serve(async (req) => {
       return handleSendLocation(req);
     case '/send-contact':
       return handleSendContact(req);
+    case '/sla-alerts':
+      return handleListSlaAlerts(req);
     case '/ensure-chat':
       return handleEnsureChat(req);
     case '/health':

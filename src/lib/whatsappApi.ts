@@ -366,26 +366,31 @@ type ListSlaAlertsParams = {
 
 export const listWhatsappChatSlaAlerts = async (
   params: ListSlaAlertsParams = {},
-  options: WhatsappSupabaseRequestOptions = {},
+  options: WhatsappFunctionRequestOptions = {},
 ): Promise<WhatsappChatSlaAlert[]> => {
   const searchParams = new URLSearchParams();
   const limit = Number.isFinite(params.limit ?? null) ? Number(params.limit) : 100;
-  searchParams.set('order', 'created_at.desc');
   searchParams.set('limit', String(limit));
 
   if (params.chatId) {
-    searchParams.set('chat_id', `eq.${params.chatId}`);
+    searchParams.set('chat_id', params.chatId);
   }
 
   if (params.status && params.status.length > 0) {
     const normalizedStatuses = params.status.filter(Boolean).join(',');
     if (normalizedStatuses) {
-      searchParams.set('sla_status', `in.(${normalizedStatuses})`);
+      searchParams.set('sla_status', normalizedStatuses);
     }
   }
 
   const queryString = searchParams.toString();
-  const path = `/rest/v1/whatsapp_chat_sla_alerts${queryString ? `?${queryString}` : ''}`;
+  const path = `/whatsapp-webhook/sla-alerts${queryString ? `?${queryString}` : ''}`;
 
-  return fetchSupabaseRestJson<WhatsappChatSlaAlert[]>(path, undefined, options);
+  const response = await callWhatsappFunction<{ alerts: WhatsappChatSlaAlert[] }>(
+    path,
+    { method: 'GET' },
+    options,
+  );
+
+  return Array.isArray(response.alerts) ? response.alerts : [];
 };

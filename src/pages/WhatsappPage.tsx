@@ -3766,7 +3766,41 @@ export default function WhatsappPage({
       setReturnAgendaLoading(false);
     }
   }, [leads]);
-  
+
+  const loadLeadReminders = async (leadId: number) => {
+  try {
+    setReturnAgendaLoading(true);
+    setReturnAgendaError(null);
+
+    const { data, error } = await supabase
+      .from('return_agenda')
+      .select(`
+        id,
+        lead_id,
+        titulo,
+        descricao,
+        data_lembrete,
+        lido,
+        lead:leads(id, nome_completo, telefone)
+      `)
+      .eq('lead_id', leadId)
+      .order('data_lembrete', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      setReturnAgendaError('Não foi possível carregar os lembretes deste lead.');
+      return;
+    }
+
+    setReturnAgenda(data || []);
+  } catch (err) {
+    console.error(err);
+    setReturnAgendaError('Erro inesperado ao buscar lembretes.');
+  } finally {
+    setReturnAgendaLoading(false);
+  }
+};
+
   useEffect(() => {
     if (leadsLoaded || leadsLoading) {
       return;

@@ -807,6 +807,11 @@ const resolveNotificationText = (payload: ZapiWebhookPayload): string | null => 
   return `Notificação: ${notification}`;
 };
 
+const shouldIgnorePayload = (payload: ZapiWebhookPayload): boolean => {
+  const notification = toNonEmptyString(payload?.notification);
+  return notification === 'GROUP_PARTICIPANT_INVITE';
+};
+
 const resolveMessageText = (payload: ZapiWebhookPayload): string => {
   const textMessage = toNonEmptyString(payload?.text?.message);
   if (textMessage) {
@@ -2955,6 +2960,10 @@ const handleOnMessageReceived = async (req: Request) => {
 
   const fromMe = payload.fromMe === true;
   const messageId = typeof payload.messageId === 'string' ? payload.messageId : undefined;
+
+  if (shouldIgnorePayload(payload)) {
+    return respondJson(200, { success: true, ignored: true });
+  }
 
   try {
     if (fromMe) {

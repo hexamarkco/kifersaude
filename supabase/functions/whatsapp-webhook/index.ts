@@ -90,8 +90,10 @@ type LeadSummaryRecord = {
   id: string;
   telefone: string | null;
   nome_completo: string | null;
-  status: string | null;
-  responsavel: string | null;
+  status?: string | null;
+  status_id?: string | null;
+  responsavel?: string | null;
+  responsavel_id?: string | null;
   ultimo_contato: string | null;
   proximo_retorno: string | null;
   updated_at: string | null;
@@ -2066,6 +2068,41 @@ const fetchLeadSummariesByPhones = async (
     return leadsMap;
   }
 
+  const [statusLookup, responsavelLookup] = await Promise.all([
+    supabaseAdmin
+      .from('lead_status_config')
+      .select('id, nome')
+      .returns<{ id: string; nome: string | null }[]>(),
+    supabaseAdmin
+      .from('lead_responsaveis')
+      .select('id, label, value')
+      .returns<{ id: string; label: string | null; value: string | null }[]>(),
+  ]);
+
+  if (statusLookup.error) {
+    throw statusLookup.error;
+  }
+
+  if (responsavelLookup.error) {
+    throw responsavelLookup.error;
+  }
+
+  const statusById = new Map<string, string>();
+  for (const status of statusLookup.data ?? []) {
+    const name = toNonEmptyString(status.nome);
+    if (name) {
+      statusById.set(status.id, name);
+    }
+  }
+
+  const responsavelById = new Map<string, string>();
+  for (const responsavel of responsavelLookup.data ?? []) {
+    const label = toNonEmptyString(responsavel.label) ?? toNonEmptyString(responsavel.value);
+    if (label) {
+      responsavelById.set(responsavel.id, label);
+    }
+  }
+
   const conditions: string[] = [];
 
   for (const variant of variants) {
@@ -2091,7 +2128,7 @@ const fetchLeadSummariesByPhones = async (
       const query = supabaseAdmin
         .from('leads')
         .select(
-          'id, telefone, nome_completo, status, responsavel, ultimo_contato, proximo_retorno, updated_at',
+          'id, telefone, nome_completo, status, status_id, responsavel, responsavel_id, ultimo_contato, proximo_retorno, updated_at',
         )
         .or(chunk.join(','))
         .returns<LeadSummaryRecord[]>();
@@ -2103,6 +2140,22 @@ const fetchLeadSummariesByPhones = async (
       }
 
       for (const lead of data ?? []) {
+        const statusName =
+          (typeof lead.status_id === 'string' && lead.status_id.trim().length > 0
+            ? statusById.get(lead.status_id.trim()) ?? null
+            : null) ??
+          (typeof lead.status === 'string' && lead.status.trim().length > 0
+            ? lead.status.trim()
+            : null);
+
+        const responsavelName =
+          (typeof lead.responsavel_id === 'string' && lead.responsavel_id.trim().length > 0
+            ? responsavelById.get(lead.responsavel_id.trim()) ?? null
+            : null) ??
+          (typeof lead.responsavel === 'string' && lead.responsavel.trim().length > 0
+            ? lead.responsavel.trim()
+            : null);
+
         const normalizedPhone = normalizeDigitsOnly(lead.telefone ?? null);
         const summary: ChatLeadSummary = {
           id: lead.id,
@@ -2114,14 +2167,8 @@ const fetchLeadSummariesByPhones = async (
             typeof lead.telefone === 'string' && lead.telefone.trim().length > 0
               ? lead.telefone.trim()
               : null,
-          status:
-            typeof lead.status === 'string' && lead.status.trim().length > 0
-              ? lead.status.trim()
-              : null,
-          responsavel:
-            typeof lead.responsavel === 'string' && lead.responsavel.trim().length > 0
-              ? lead.responsavel.trim()
-              : null,
+          status: statusName,
+          responsavel: responsavelName,
           ultimo_contato:
             typeof lead.ultimo_contato === 'string' && lead.ultimo_contato.trim().length > 0
               ? lead.ultimo_contato
@@ -3934,9 +3981,9 @@ const handleUpdateLeadStatus = async (req: Request) => {
   try {
     const { data: leadRecord, error: fetchError } = await supabaseAdmin
       .from('leads')
-      .select('id, status, responsavel')
+      .select('id, status_id, responsavel_id')
       .eq('id', leadId)
-      .maybeSingle<{ id: string; status: string | null; responsavel: string | null }>();
+      .maybeSingle<{ id: string; status_id: string | null; responsavel_id: string | null }>();
 
     if (fetchError) {
       throw fetchError;
@@ -3949,17 +3996,45 @@ const handleUpdateLeadStatus = async (req: Request) => {
       });
     }
 
-    const statusAnterior = toNonEmptyString(leadRecord.status) ?? 'Sem status';
+    const [statusAnteriorLookup, responsavelLookup] = await Promise.all([
+      leadRecord.status_id
+        ? supabaseAdmin
+            .from('lead_status_config')
+            .select('nome')
+            .eq('id', leadRecord.status_id)
+            .maybeSingle<{ nome: string | null }>()
+        : Promise.resolve({ data: null, error: null }),
+      leadRecord.responsavel_id
+        ? supabaseAdmin
+            .from('lead_responsaveis')
+            .select('label, value')
+            .eq('id', leadRecord.responsavel_id)
+            .maybeSingle<{ label: string | null; value: string | null }>()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    if (statusAnteriorLookup.error) {
+      throw statusAnteriorLookup.error;
+    }
+
+    if (responsavelLookup.error) {
+      throw responsavelLookup.error;
+    }
+
+    const statusAnterior = toNonEmptyString(statusAnteriorLookup.data?.nome) ?? 'Sem status';
     const responsavelRegistro =
-      toNonEmptyString(body.responsavel) ?? toNonEmptyString(leadRecord.responsavel) ?? 'Sistema';
+      toNonEmptyString(body.responsavel) ??
+      toNonEmptyString(responsavelLookup.data?.label) ??
+      toNonEmptyString(responsavelLookup.data?.value) ??
+      'Sistema';
     const nowIso = new Date().toISOString();
     const normalizedStatus = newStatus.trim().toLowerCase();
 
     const { data: statusRow, error: statusLookupError } = await supabaseAdmin
       .from('lead_status_config')
-      .select('id')
+      .select('id, nome')
       .ilike('nome', newStatus)
-      .maybeSingle<{ id: string }>();
+      .maybeSingle<{ id: string; nome: string | null }>();
 
     if (statusLookupError) {
       throw statusLookupError;
@@ -3972,8 +4047,9 @@ const handleUpdateLeadStatus = async (req: Request) => {
       });
     }
 
+    const statusNovoNome = toNonEmptyString(statusRow.nome) ?? newStatus;
+
     const updatePayload: Record<string, string | null> = {
-      status: newStatus,
       status_id: statusRow.id,
       ultimo_contato: nowIso,
     };
@@ -4002,7 +4078,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
       }
     }
 
-    const descricao = `Status alterado de "${statusAnterior}" para "${newStatus}" pelo chat do WhatsApp`;
+    const descricao = `Status alterado de "${statusAnterior}" para "${statusNovoNome}" pelo chat do WhatsApp`;
 
     const [interactionResult, historyResult] = await Promise.all([
       supabaseAdmin
@@ -4021,7 +4097,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
           {
             lead_id: leadId,
             status_anterior: statusAnterior,
-            status_novo: newStatus,
+            status_novo: statusNovoNome,
             responsavel: responsavelRegistro,
           },
         ]),
@@ -4037,7 +4113,7 @@ const handleUpdateLeadStatus = async (req: Request) => {
 
     const responsePayload: LeadStatusUpdateResult = {
       id: leadId,
-      status: newStatus,
+      status: statusNovoNome,
       ultimo_contato: nowIso,
       responsavel: responsavelRegistro,
       proximo_retorno: updatePayload.proximo_retorno,

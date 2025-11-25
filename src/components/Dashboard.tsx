@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Clock,
   BadgePercent,
+  Download,
 } from 'lucide-react';
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
@@ -118,6 +119,8 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [daysAhead, setDaysAhead] = useState(30);
   const [timelineDirection, setTimelineDirection] = useState<'future' | 'past'>('future');
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach(status => {
@@ -1188,6 +1191,128 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     color: operadoraColors[index % operadoraColors.length],
   }));
 
+  const convertToCSV = useCallback((rows: Record<string, unknown>[]) => {
+    if (rows.length === 0) return '';
+
+    const headers = Object.keys(rows[0]);
+    const escapeValue = (value: unknown) => {
+      if (value === null || value === undefined) return '';
+      const stringValue = Array.isArray(value) ? value.join('; ') : String(value);
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    };
+
+    const csvRows = [headers.join(';')];
+
+    rows.forEach(row => {
+      const values = headers.map(header => escapeValue(row[header]));
+      csvRows.push(values.join(';'));
+    });
+
+    return csvRows.join('\n');
+  }, []);
+
+  const getFileDateStamp = useCallback(() => {
+    const reference = lastUpdated ? new Date(lastUpdated) : new Date();
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${reference.getFullYear()}-${pad(reference.getMonth() + 1)}-${pad(reference.getDate())}`;
+  }, [lastUpdated]);
+
+  const downloadCSV = useCallback(
+    (rows: Record<string, unknown>[], baseName: string) => {
+      if (rows.length === 0) {
+        throw new Error('Não há dados filtrados para exportar.');
+      }
+
+      const csvContent = convertToCSV(rows);
+      const fileName = `${baseName}-${getFileDateStamp()}.csv`;
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    [convertToCSV, getFileDateStamp],
+  );
+
+  const handleExport = useCallback(
+    async (type: 'leads' | 'contracts' | 'leadStatus' | 'operadoras') => {
+      setExportError(null);
+      setExporting(type);
+
+      try {
+        if (type === 'leads') {
+          downloadCSV(
+            filteredLeads.map((lead) => ({
+              ID: lead.id,
+              Nome: lead.nome_completo,
+              Telefone: lead.telefone,
+              Email: lead.email ?? '',
+              Cidade: lead.cidade ?? '',
+              Estado: lead.estado ?? '',
+              Origem: lead.origem ?? '',
+              Status: lead.status ?? '',
+              Responsável: lead.responsavel ?? '',
+              'Data de Criação': lead.data_criacao,
+              'Último Contato': lead.ultimo_contato ?? '',
+              'Próximo Retorno': lead.proximo_retorno ?? '',
+            })),
+            'leads-filtrados',
+          );
+        } else if (type === 'contracts') {
+          downloadCSV(
+            filteredContracts.map((contract) => ({
+              ID: contract.id,
+              Código: contract.codigo_contrato,
+              Status: contract.status,
+              Operadora: contract.operadora,
+              Produto: contract.produto_plano,
+              Modalidade: contract.modalidade,
+              Abrangência: contract.abrangencia ?? '',
+              Acomodação: contract.acomodacao ?? '',
+              'Data de Início': contract.data_inicio ?? '',
+              'Previsão Comissão': contract.previsao_recebimento_comissao ?? '',
+              Mensalidade: contract.mensalidade_total ?? 0,
+              'Comissão Prevista': contract.comissao_prevista ?? 0,
+              Vidas: contract.vidas ?? '',
+              Responsável: contract.responsavel ?? '',
+              'Criado em': contract.created_at,
+            })),
+            'contratos-filtrados',
+          );
+        } else if (type === 'leadStatus') {
+          downloadCSV(
+            leadStatusData.map((item) => ({
+              Status: item.status,
+              Quantidade: item.count,
+              'Percentual (%)': item.percentage.toFixed(2),
+            })),
+            'leads-por-status',
+          );
+        } else {
+          downloadCSV(
+            operadoraData.map((item) => ({
+              Operadora: item.operadora,
+              Contratos: item.count,
+              Receita: item.revenue,
+            })),
+            'contratos-por-operadora',
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erro ao exportar dados.';
+        setExportError(message);
+      } finally {
+        setExporting(null);
+      }
+    },
+    [downloadCSV, filteredContracts, filteredLeads, leadStatusData, operadoraData],
+  );
+
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1294,22 +1419,76 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-              <Clock className="h-4 w-4 text-slate-500" />
-              <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                <Clock className="h-4 w-4 text-slate-500" />
+                <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Atualizar agora</span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Atualizar agora</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => handleExport('leads')}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                disabled={!!exporting}
+              >
+                <Download className="h-4 w-4" />
+                Exportar Leads
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport('contracts')}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                disabled={!!exporting}
+              >
+                <Download className="h-4 w-4" />
+                Exportar Contratos
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport('leadStatus')}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                disabled={!!exporting}
+              >
+                <Download className="h-4 w-4" />
+                Status dos Leads
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport('operadoras')}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                disabled={!!exporting}
+              >
+                <Download className="h-4 w-4" />
+                Operadoras
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+      <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        {exporting && (
+          <div className="flex items-center gap-2 text-teal-700">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Gerando arquivo...</span>
+          </div>
+        )}
+        {!exporting && exportError && <span className="text-red-600">{exportError}</span>}
+        {!exporting && !exportError && (
+          <span className="text-xs text-slate-500">
+            Arquivos carimbados com a última atualização: {getFileDateStamp()}
+          </span>
+        )}
       </div>
 
       {error && (

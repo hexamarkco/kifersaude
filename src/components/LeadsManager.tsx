@@ -858,9 +858,6 @@ export default function LeadsManager({
     [activeLeadStatuses]
   );
 
-  const buildWhatsappMessage = (lead: Lead) =>
-    `Olá *${getLeadFirstName(lead.nome_completo)}*, tudo bem? Sou *Luiza Kifer*, especialista em planos de saúde aqui da UnitedClass, e vi que você demonstrou interesse em um plano de saúde.`;
-
   const buildWhatsappLaunchParams = (lead: Lead): WhatsappLaunchParams | null => {
     if (!lead.telefone) return null;
 
@@ -871,7 +868,6 @@ export default function LeadsManager({
 
     return {
       phone: phoneWithCountry,
-      message: buildWhatsappMessage(lead),
       chatName: lead.nome_completo,
       leadId: lead.id,
     };
@@ -920,7 +916,9 @@ export default function LeadsManager({
     }
 
     if (typeof window !== 'undefined') {
-      const url = `https://wa.me/${launchParams.phone}?text=${encodeURIComponent(launchParams.message ?? '')}`;
+      const url = launchParams.message
+        ? `https://wa.me/${launchParams.phone}?text=${encodeURIComponent(launchParams.message)}`
+        : `https://wa.me/${launchParams.phone}`;
       window.open(url, '_blank');
     }
   };

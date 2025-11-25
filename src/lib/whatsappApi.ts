@@ -262,6 +262,13 @@ export type DeleteWhatsappMessagePayload = {
   owner: boolean;
 };
 
+export type SendWhatsappReactionPayload = {
+  phone: string;
+  messageId: string;
+  reaction: string;
+  delayMessage?: number;
+};
+
 export type ForwardWhatsappMessagePayload = {
   phone: string;
   messageId: string;
@@ -305,6 +312,20 @@ export const deleteWhatsappMessage = async (
 ): Promise<DeleteWhatsappMessageResponse> => {
   return callWhatsappFunction<DeleteWhatsappMessageResponse>(
     '/whatsapp-webhook/delete-message',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
+};
+
+export const sendWhatsappReaction = async (
+  payload: SendWhatsappReactionPayload,
+  options: WhatsappFunctionRequestOptions = {},
+): Promise<SendWhatsappMessageResponse> => {
+  return callWhatsappFunction<SendWhatsappMessageResponse>(
+    '/whatsapp-webhook/send-reaction',
     {
       method: 'POST',
       body: JSON.stringify(payload),

@@ -147,6 +147,13 @@ type SendMessageBody = {
   message?: string;
 };
 
+type SendReactionBody = {
+  phone?: string;
+  reaction?: string;
+  messageId?: string;
+  delayMessage?: number;
+};
+
 type SendDocumentBody = {
   phone?: string;
   document?: string;
@@ -3120,6 +3127,73 @@ const handleSendMessage = async (req: Request) => {
   }
 };
 
+const REACTION_PREVIEW_TEXT = 'Reagiu à sua mensagem';
+
+const handleSendReaction = async (req: Request) => {
+  if (req.method !== 'POST') {
+    return respondJson(405, { success: false, error: 'Método não permitido' });
+  }
+
+  const body = (await ensureJsonBody<SendReactionBody>(req)) ?? {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const reaction = typeof body.reaction === 'string' ? body.reaction.trim() : '';
+  const messageId = typeof body.messageId === 'string' ? body.messageId.trim() : '';
+  const delayMessage =
+    typeof body.delayMessage === 'number' && Number.isFinite(body.delayMessage)
+      ? Math.min(Math.max(Math.round(body.delayMessage), 1), 15)
+      : null;
+
+  if (!phone || !reaction || !messageId) {
+    return respondJson(400, {
+      success: false,
+      error: 'Os campos phone, reaction e messageId são obrigatórios',
+    });
+  }
+
+  const requestBody: Record<string, unknown> = { phone, reaction, messageId };
+
+  if (delayMessage) {
+    requestBody.delayMessage = delayMessage;
+  }
+
+  const reactionTimestamp = new Date();
+
+  try {
+    const rawPayloadOverride: Record<string, unknown> = {
+      reaction: {
+        value: reaction,
+        time: reactionTimestamp.toISOString(),
+        reactionBy: 'me',
+        referencedMessage: {
+          messageId,
+          phone,
+        },
+      },
+    };
+
+    const { chat, message } = await sendZapiAndPersist({
+      phone,
+      endpoint: '/send-reaction',
+      body: requestBody,
+      messagePreview: REACTION_PREVIEW_TEXT,
+      rawPayloadOverride,
+    });
+
+    return respondJson(200, { success: true, chat, message });
+  } catch (error) {
+    if (error instanceof ZapiRequestError) {
+      return respondJson(error.status, {
+        success: false,
+        error: error.message,
+        details: error.details ?? undefined,
+      });
+    }
+
+    console.error('Erro ao enviar reação pela Z-API:', error);
+    return respondJson(500, { success: false, error: 'Erro interno ao enviar reação' });
+  }
+};
+
 const handleDeleteMessage = async (req: Request) => {
   if (!['POST', 'DELETE'].includes(req.method)) {
     return respondJson(405, { success: false, error: 'Método não permitido' });
@@ -4369,6 +4443,8 @@ Deno.serve(async (req) => {
       return handleOnMessageSend(req);
     case '/send-message':
       return handleSendMessage(req);
+    case '/send-reaction':
+      return handleSendReaction(req);
     case '/delete-message':
       return handleDeleteMessage(req);
     case '/send-document':

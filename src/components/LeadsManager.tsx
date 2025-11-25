@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Pencil, Bell, MapPin, Layers, UserCircle, AlertTriangle, Tag, Share2, Check, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Bell, MapPin, Layers, UserCircle, AlertTriangle, Tag, Share2, Check, Trash2 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -1721,24 +1721,13 @@ export default function LeadsManager({
               <button
                 onClick={() => setSelectedLead(lead)}
                 className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                aria-label="Ver detalhes do lead"
+                aria-label={isObserver ? 'Ver detalhes do lead' : 'Ver e editar lead'}
               >
                 <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Ver Detalhes</span>
+                <span className="hidden sm:inline">{isObserver ? 'Ver Detalhes' : 'Ver/Editar'}</span>
               </button>
               {!isObserver && (
                 <>
-                  <button
-                    onClick={() => {
-                      setEditingLead(lead);
-                      setShowForm(true);
-                    }}
-                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    aria-label="Editar lead"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    <span className="hidden sm:inline">Editar</span>
-                  </button>
                   <button
                     onClick={() => handleConvertToContract(lead)}
                     className="hidden md:inline-flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"

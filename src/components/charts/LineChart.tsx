@@ -107,6 +107,9 @@ export default function LineChart({
               strokeWidth="0.5"
               className="transition-all duration-300 hover:r-2"
             />
+            <title>
+              {`${point.label}: ${point.value.toLocaleString('pt-BR')}`}
+            </title>
           </g>
         ))}
       </svg>

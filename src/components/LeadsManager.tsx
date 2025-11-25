@@ -59,6 +59,7 @@ type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
   initialStatusFilter?: string[];
+  initialLeadIdFilter?: string;
 };
 
 type SortField = 'created_at' | 'nome' | 'origem' | 'tipo_contratacao' | 'telefone';
@@ -100,12 +101,13 @@ export default function LeadsManager({
   onConvertToContract,
   onOpenWhatsapp,
   initialStatusFilter,
+  initialLeadIdFilter,
 }: LeadsManagerProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? '');
   const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter ?? []);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>([]);
   const [filterOrigem, setFilterOrigem] = useState<string[]>([]);
@@ -131,6 +133,14 @@ export default function LeadsManager({
     setReminderLead(lead);
     setReminderPromptMessage(promptMessage);
   };
+
+  useEffect(() => {
+    if (initialLeadIdFilter !== undefined) {
+      setSearchTerm(initialLeadIdFilter);
+    } else {
+      setSearchTerm('');
+    }
+  }, [initialLeadIdFilter]);
 
   const closeReminderScheduler = () => {
     setReminderLead(null);
@@ -485,6 +495,7 @@ export default function LeadsManager({
       const lowerSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((lead) =>
         lead.nome_completo.toLowerCase().includes(lowerSearch) ||
+        lead.id?.includes(searchTerm) ||
         lead.telefone.includes(searchTerm) ||
         lead.email?.toLowerCase().includes(lowerSearch)
   );

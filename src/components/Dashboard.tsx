@@ -30,10 +30,6 @@ import {
 import { useConfig } from '../contexts/ConfigContext';
 import { mapLeadRelations } from '../lib/leadRelations';
 
-type DashboardProps = {
-  onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
-};
-
 type Holder = {
   id: string;
   contract_id: string;
@@ -51,7 +47,19 @@ type Dependent = {
   data_nascimento: string;
 };
 
-export default function Dashboard({ onNavigateToTab }: DashboardProps) {
+type ReminderRequest = {
+  contractId?: string;
+  leadId?: string;
+  title?: string;
+  description?: string;
+};
+
+type DashboardProps = {
+  onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
+  onCreateReminder?: (options: ReminderRequest) => void;
+};
+
+export default function Dashboard({ onNavigateToTab, onCreateReminder }: DashboardProps) {
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options, loading: configLoading } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1369,20 +1377,27 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
     onNavigateToTab?.('contracts', { contractOperadoraFilter: label });
   };
 
-  const formatSelectedMetricValue = useCallback(
-    (value: number) => {
-      if (selectedMetric === 'comissoes') {
-        return value.toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-          maximumFractionDigits: 2,
-        });
-      }
+  const handleNavigateToContract = (contract?: Contract | null) => {
+    if (!contract) return;
 
-      return value.toLocaleString('pt-BR');
-    },
-    [selectedMetric],
-  );
+    const options = contract.operadora ? { contractOperadoraFilter: contract.operadora } : undefined;
+    onNavigateToTab?.('contracts', options);
+  };
+
+  const handleNavigateToLead = (leadId?: string | null) => {
+    if (!leadId) return;
+
+    onNavigateToTab?.('leads', { leadIdFilter: leadId });
+  };
+
+  const handleCreateReminderRequest = (options: ReminderRequest) => {
+    if (onCreateReminder) {
+      onCreateReminder(options);
+      return;
+    }
+
+    onNavigateToTab?.('reminders');
+  };
 
   return (
     <div className="space-y-6">
@@ -1829,6 +1844,41 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                             <p>{adjustment.date.toLocaleDateString('pt-BR')}</p>
                           </div>
                         </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-teal-100 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => handleNavigateToContract(adjustment.contract)}
+                            className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                          >
+                            Ver contrato
+                          </button>
+                          {adjustment.contract?.lead_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleNavigateToLead(adjustment.contract?.lead_id)}
+                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                            >
+                              Abrir lead
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCreateReminderRequest({
+                                contractId: adjustment.contract?.id,
+                                leadId: adjustment.contract?.lead_id,
+                                title:
+                                  adjustment.tipo === 'idade'
+                                    ? `Reajuste por idade - ${adjustment.personName ?? 'beneficiário'}`
+                                    : `Reajuste anual - ${adjustment.contract?.operadora ?? ''}`,
+                                description: `Data: ${adjustment.date.toLocaleDateString('pt-BR')}`,
+                              })
+                            }
+                            className="inline-flex items-center rounded-md border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 shadow-sm transition-colors hover:bg-white"
+                          >
+                            Criar lembrete
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -1900,6 +1950,40 @@ export default function Dashboard({ onNavigateToTab }: DashboardProps) {
                             </p>
                           </div>
                         )}
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pink-200 pt-3">
+                          {birthday.contract && (
+                            <button
+                              type="button"
+                              onClick={() => handleNavigateToContract(birthday.contract)}
+                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                            >
+                              Ver contrato
+                            </button>
+                          )}
+                          {birthday.contract?.lead_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleNavigateToLead(birthday.contract?.lead_id)}
+                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                            >
+                              Abrir lead
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCreateReminderRequest({
+                                contractId: birthday.contract?.id,
+                                leadId: birthday.contract?.lead_id,
+                                title: `Aniversário de ${birthday.nome}`,
+                                description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
+                              })
+                            }
+                            className="inline-flex items-center rounded-md border border-pink-200 bg-pink-50 px-3 py-1.5 text-xs font-semibold text-pink-700 shadow-sm transition-colors hover:bg-white"
+                          >
+                            Criar lembrete
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

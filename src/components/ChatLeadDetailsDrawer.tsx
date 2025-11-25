@@ -13,11 +13,10 @@ import {
   ArrowDown,
   RefreshCw,
 } from 'lucide-react';
-import { supabase, type Lead, type Reminder } from '../lib/supabase';
+import { supabase, type Lead } from '../lib/supabase';
 import LeadStatusHistory from './LeadStatusHistory';
 import StatusDropdown from './StatusDropdown';
 import { formatDateTimeFullBR, formatDateOnly, formatDateTime } from '../lib/dateUtils';
-import LeadRemindersPanel from './LeadRemindersPanel';
 import type {
   WhatsappChatContractSummary,
   WhatsappChatFinancialSummary,
@@ -107,12 +106,6 @@ type ChatLeadDetailsDrawerProps = {
   agendaError?: string | null;
   onCancelSchedule?: (scheduleId: string) => void;
   onReorderSchedule?: (scheduleId: string, direction: 'up' | 'down') => void;
-  leadReminders?: Reminder[];
-  leadRemindersLoading?: boolean;
-  leadRemindersError?: string | null;
-  onReloadLeadReminders?: (() => void) | undefined;
-  onLeadReminderToggle?: ((reminderId: string, currentStatus: boolean) => Promise<void>) | undefined;
-  onLeadReminderReschedule?: ((reminderId: string, newDate: string) => Promise<void>) | undefined;
 };
 
 const DRAWER_TRANSITION_CLASS =
@@ -144,12 +137,6 @@ export default function ChatLeadDetailsDrawer({
   agendaError,
   onCancelSchedule,
   onReorderSchedule,
-  leadReminders = [],
-  leadRemindersLoading = false,
-  leadRemindersError,
-  onReloadLeadReminders,
-  onLeadReminderToggle,
-  onLeadReminderReschedule,
 }: ChatLeadDetailsDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -448,26 +435,6 @@ export default function ChatLeadDetailsDrawer({
           </div>
         ) : null}
       </section>
-
-      {leadId ? (
-        <LeadRemindersPanel
-          leadName={lead?.nome_completo ?? leadSummary?.nome_completo ?? null}
-          reminders={leadReminders}
-          loading={leadRemindersLoading}
-          error={leadRemindersError ?? null}
-          onReload={() => onReloadLeadReminders?.()}
-          onToggleRead={async (reminderId, currentStatus) => {
-            if (onLeadReminderToggle) {
-              await onLeadReminderToggle(reminderId, currentStatus);
-            }
-          }}
-          onReschedule={async (reminderId, newDate) => {
-            if (onLeadReminderReschedule) {
-              await onLeadReminderReschedule(reminderId, newDate);
-            }
-          }}
-        />
-      ) : null}
 
         {leadId ? (
           <section>

@@ -290,7 +290,7 @@ export const sendWhatsappMessage = async (
   options: WhatsappFunctionRequestOptions = {},
 ): Promise<SendWhatsappMessageResponse> => {
   return callWhatsappFunction<SendWhatsappMessageResponse>(
-    '/whatsapp-webhook/send-message',
+    '/whatsapp-webhook/send-text',
     {
       method: 'POST',
       body: JSON.stringify(payload),

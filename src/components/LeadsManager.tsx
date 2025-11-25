@@ -1411,78 +1411,95 @@ export default function LeadsManager({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-          <FilterMultiSelect
-            icon={Filter}
-            options={statusFilterOptions}
-            placeholder="Todos os status"
-            values={filterStatus}
-            onChange={setFilterStatus}
-          />
-          <FilterMultiSelect
-            icon={UserCircle}
-            options={responsavelFilterOptions}
-            placeholder="Todos os responsáveis"
-            values={filterResponsavel}
-            onChange={setFilterResponsavel}
-          />
-          <FilterMultiSelect
-            icon={MapPin}
-            options={origemFilterOptions}
-            placeholder="Todas as origens"
-            values={filterOrigem}
-            onChange={setFilterOrigem}
-          />
-          <FilterMultiSelect
-            icon={Layers}
-            options={tipoContratacaoFilterOptions}
-            placeholder="Todos os tipos"
-            values={filterTipoContratacao}
-            onChange={setFilterTipoContratacao}
-          />
-          <FilterMultiSelect
-            icon={Tag}
-            options={tagFilterOptions}
-            placeholder="Todas as tags"
-            values={filterTags}
-            onChange={setFilterTags}
-          />
-          <FilterMultiSelect
-            icon={Share2}
-            options={canalFilterOptions}
-            placeholder="Todos os canais"
-            values={filterCanais}
-            onChange={setFilterCanais}
-          />
+          {[
+            {
+              key: 'status',
+              icon: Filter,
+              options: statusFilterOptions,
+              placeholder: 'Todos os status',
+              values: filterStatus,
+              onChange: setFilterStatus,
+            },
+            {
+              key: 'responsavel',
+              icon: UserCircle,
+              options: responsavelFilterOptions,
+              placeholder: 'Todos os responsáveis',
+              values: filterResponsavel,
+              onChange: setFilterResponsavel,
+            },
+            {
+              key: 'origem',
+              icon: MapPin,
+              options: origemFilterOptions,
+              placeholder: 'Todas as origens',
+              values: filterOrigem,
+              onChange: setFilterOrigem,
+            },
+            {
+              key: 'tipo-contratacao',
+              icon: Layers,
+              options: tipoContratacaoFilterOptions,
+              placeholder: 'Todos os tipos',
+              values: filterTipoContratacao,
+              onChange: setFilterTipoContratacao,
+            },
+            {
+              key: 'tags',
+              icon: Tag,
+              options: tagFilterOptions,
+              placeholder: 'Todas as tags',
+              values: filterTags,
+              onChange: setFilterTags,
+            },
+            {
+              key: 'canais',
+              icon: Share2,
+              options: canalFilterOptions,
+              placeholder: 'Todos os canais',
+              values: filterCanais,
+              onChange: setFilterCanais,
+            },
+          ].map((filter) => (
+            <FilterMultiSelect key={filter.key} {...filter} />
+          ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          <FilterDateRange
-            icon={Calendar}
-            label="Criação"
-            fromValue={filterCreatedFrom}
-            toValue={filterCreatedTo}
-            onFromChange={setFilterCreatedFrom}
-            onToChange={setFilterCreatedTo}
-            type="date"
-          />
-          <FilterDateRange
-            icon={MessageCircle}
-            label="Último contato"
-            fromValue={filterUltimoContatoFrom}
-            toValue={filterUltimoContatoTo}
-            onFromChange={setFilterUltimoContatoFrom}
-            onToChange={setFilterUltimoContatoTo}
-            type="datetime-local"
-          />
-          <FilterDateRange
-            icon={Bell}
-            label="Próximo retorno"
-            fromValue={filterProximoRetornoFrom}
-            toValue={filterProximoRetornoTo}
-            onFromChange={setFilterProximoRetornoFrom}
-            onToChange={setFilterProximoRetornoTo}
-            type="datetime-local"
-          />
+          {[
+            {
+              key: 'criacao',
+              icon: Calendar,
+              label: 'Criação',
+              fromValue: filterCreatedFrom,
+              toValue: filterCreatedTo,
+              onFromChange: setFilterCreatedFrom,
+              onToChange: setFilterCreatedTo,
+              type: 'date' as const,
+            },
+            {
+              key: 'ultimo-contato',
+              icon: MessageCircle,
+              label: 'Último contato',
+              fromValue: filterUltimoContatoFrom,
+              toValue: filterUltimoContatoTo,
+              onFromChange: setFilterUltimoContatoFrom,
+              onToChange: setFilterUltimoContatoTo,
+              type: 'datetime-local' as const,
+            },
+            {
+              key: 'proximo-retorno',
+              icon: Bell,
+              label: 'Próximo retorno',
+              fromValue: filterProximoRetornoFrom,
+              toValue: filterProximoRetornoTo,
+              onFromChange: setFilterProximoRetornoFrom,
+              onToChange: setFilterProximoRetornoTo,
+              type: 'datetime-local' as const,
+            },
+          ].map((dateFilter) => (
+            <FilterDateRange key={dateFilter.key} {...dateFilter} />
+          ))}
         </div>
       </div>
 

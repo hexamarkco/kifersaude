@@ -128,6 +128,12 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [daysAhead, setDaysAhead] = useState(30);
   const [timelineDirection, setTimelineDirection] = useState<'future' | 'past'>('future');
+  const [dashboardOriginFilter, setDashboardOriginFilter] = useState(
+    () => searchParams.get('dashboardOrigin') || '',
+  );
+  const [dashboardOwnerFilter, setDashboardOwnerFilter] = useState(
+    () => searchParams.get('dashboardOwner') || '',
+  );
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach(status => {
@@ -179,6 +185,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       nextPeriod: 'mes-atual' | 'todo-periodo' | 'personalizado' = periodFilter,
       nextStart: string = customStartDate,
       nextEnd: string = customEndDate,
+      nextOrigin: string = dashboardOriginFilter,
+      nextOwner: string = dashboardOwnerFilter,
     ) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('dashboardPeriodFilter', nextPeriod);
@@ -203,11 +211,31 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         params.delete('customEndDate');
       }
 
+      if (nextOrigin) {
+        params.set('dashboardOrigin', nextOrigin);
+      } else {
+        params.delete('dashboardOrigin');
+      }
+
+      if (nextOwner) {
+        params.set('dashboardOwner', nextOwner);
+      } else {
+        params.delete('dashboardOwner');
+      }
+
       if (params.toString() !== searchParams.toString()) {
         setSearchParams(params, { replace: true });
       }
     },
-    [customEndDate, customStartDate, periodFilter, searchParams, setSearchParams],
+    [
+      customEndDate,
+      customStartDate,
+      dashboardOriginFilter,
+      dashboardOwnerFilter,
+      periodFilter,
+      searchParams,
+      setSearchParams,
+    ],
   );
 
   const restrictedOriginNamesForObservers = useMemo(
@@ -632,15 +660,50 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     const storedPeriod = resolvePeriodFilter();
     const storedStart = resolveCustomDate('customStartDate');
     const storedEnd = resolveCustomDate('customEndDate');
+    const availableOrigins = leadOrigins
+      .filter((origin) => origin.ativo && (!isObserver || isOriginVisibleToObserver(origin.nome)))
+      .map((origin) => origin.nome);
+    const availableOwners = (options.lead_responsavel || [])
+      .filter((option) => option.ativo)
+      .map((option) => option.value);
+
+    const resolvedOrigin =
+      searchParams.get('dashboardOrigin') &&
+      availableOrigins.includes(searchParams.get('dashboardOrigin') || '')
+        ? (searchParams.get('dashboardOrigin') as string)
+        : '';
+
+    const resolvedOwner =
+      searchParams.get('dashboardOwner') &&
+      availableOwners.includes(searchParams.get('dashboardOwner') || '')
+        ? (searchParams.get('dashboardOwner') as string)
+        : '';
 
     setPeriodFilter((current) => (current === storedPeriod ? current : storedPeriod));
     setCustomStartDate((current) => (current === storedStart ? current : storedStart));
     setCustomEndDate((current) => (current === storedEnd ? current : storedEnd));
-  }, [resolveCustomDate, resolvePeriodFilter]);
+    setDashboardOriginFilter((current) => (current === resolvedOrigin ? current : resolvedOrigin));
+    setDashboardOwnerFilter((current) => (current === resolvedOwner ? current : resolvedOwner));
+  }, [
+    isObserver,
+    isOriginVisibleToObserver,
+    leadOrigins,
+    options.lead_responsavel,
+    resolveCustomDate,
+    resolvePeriodFilter,
+    searchParams,
+  ]);
 
   useEffect(() => {
     persistFilters();
-  }, [customEndDate, customStartDate, periodFilter, persistFilters]);
+  }, [
+    customEndDate,
+    customStartDate,
+    dashboardOriginFilter,
+    dashboardOwnerFilter,
+    periodFilter,
+    persistFilters,
+  ]);
 
   const getStartOfMonth = () => {
     const now = new Date();
@@ -785,10 +848,39 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     });
   };
 
-  const filteredLeads = filterByPeriod(leads, (lead) => {
+  const periodFilteredLeads = filterByPeriod(leads, (lead) => {
     const dateValue = lead.data_criacao || lead.created_at;
     return parseDateValue(dateValue);
   });
+
+  const visibleLeadOrigins = useMemo(
+    () =>
+      leadOrigins.filter(
+        (origin) => origin.ativo && (!isObserver || isOriginVisibleToObserver(origin.nome)),
+      ),
+    [isObserver, isOriginVisibleToObserver, leadOrigins],
+  );
+
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter((option) => option.ativo),
+    [options.lead_responsavel],
+  );
+
+  const filteredLeads = useMemo(
+    () =>
+      periodFilteredLeads.filter((lead) => {
+        if (dashboardOriginFilter && lead.origem !== dashboardOriginFilter) {
+          return false;
+        }
+
+        if (dashboardOwnerFilter && lead.responsavel !== dashboardOwnerFilter) {
+          return false;
+        }
+
+        return true;
+      }),
+    [dashboardOriginFilter, dashboardOwnerFilter, periodFilteredLeads],
+  );
 
   const activeLeadStatusNames = useMemo(
     () => leadStatuses.filter((status) => status.ativo).map((status) => status.nome),
@@ -1417,7 +1509,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-slate-400" />
               <select
@@ -1466,6 +1558,44 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 />
               </div>
             )}
+            <div className="flex w-full items-center gap-2 sm:w-56">
+              <Target className="h-5 w-5 text-slate-400" />
+              <select
+                value={dashboardOriginFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDashboardOriginFilter(value);
+                  persistFilters(undefined, undefined, undefined, value, dashboardOwnerFilter);
+                }}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="">Todas as origens</option>
+                {visibleLeadOrigins.map((origin) => (
+                  <option key={origin.id} value={origin.nome}>
+                    {origin.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex w-full items-center gap-2 sm:w-56">
+              <Users className="h-5 w-5 text-slate-400" />
+              <select
+                value={dashboardOwnerFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDashboardOwnerFilter(value);
+                  persistFilters(undefined, undefined, undefined, dashboardOriginFilter, value);
+                }}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="">Todos os responsáveis</option>
+                {responsavelOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">

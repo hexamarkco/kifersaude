@@ -2390,6 +2390,35 @@ export default function WhatsappPage({
     markChatAsRead(selectedChatId);
   }, [markChatAsRead, selectedChatId]);
 
+  const getChatDisplayNameWithLeadFallback = useCallback(
+    (chat: WhatsappChat): string => {
+      const primaryName = getChatDisplayName(chat);
+      const normalizedPrimary = toNonEmptyString(primaryName);
+
+      if (normalizedPrimary && normalizedPrimary !== chat.phone) {
+        return primaryName;
+      }
+
+      const chatPhoneVariants = buildPhoneComparisonVariants(chat.phone);
+      if (chatPhoneVariants.length === 0) {
+        return primaryName;
+      }
+
+      const matchingLead = leads.find(lead => {
+        const leadVariants = buildPhoneComparisonVariants(lead.telefone);
+        if (leadVariants.length === 0) {
+          return false;
+        }
+
+        return leadVariants.some(variant => chatPhoneVariants.includes(variant));
+      });
+
+      const leadName = toNonEmptyString(matchingLead?.nome_completo);
+      return leadName ?? primaryName;
+    },
+    [leads],
+  );
+
   const selectedChatLead = useMemo(() => {
     if (!selectedChat) {
       return null;

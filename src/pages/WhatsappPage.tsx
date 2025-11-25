@@ -1430,6 +1430,11 @@ const getChatDisplayName = (chat: WhatsappChat): string => {
     return normalizedDisplayName;
   }
 
+  const normalizedLeadName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
+  if (normalizedLeadName) {
+    return normalizedLeadName;
+  }
+
   const normalizedChatName = toNonEmptyString(chat.chat_name);
   if (normalizedChatName) {
     return normalizedChatName;
@@ -2430,8 +2435,8 @@ export default function WhatsappPage({
   const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
 
   const selectedChatDisplayName = useMemo(
-    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
-    [selectedChat],
+    () => (selectedChat ? getChatDisplayNameWithLeadFallback(selectedChat) : ''),
+    [getChatDisplayNameWithLeadFallback, selectedChat],
   );
 
   const selectedChatIsArchived = selectedChat?.is_archived ?? false;
@@ -3275,7 +3280,7 @@ export default function WhatsappPage({
 
     const normalizedTerm = chatSearchTerm.trim().toLowerCase();
     return baseList.filter(chat => {
-      const displayName = getChatDisplayName(chat).toLowerCase();
+      const displayName = getChatDisplayNameWithLeadFallback(chat).toLowerCase();
       const phone = chat.phone?.toLowerCase() ?? '';
       const preview = chat.last_message_preview?.toLowerCase() ?? '';
 
@@ -3285,7 +3290,7 @@ export default function WhatsappPage({
         preview.includes(normalizedTerm)
       );
     });
-  }, [chatSearchTerm, chatsByStatus, showArchivedChats]);
+  }, [chatSearchTerm, chatsByStatus, getChatDisplayNameWithLeadFallback, showArchivedChats]);
 
   const visibleChatsBase = showArchivedChats ? chatsByStatus.archived : chatsByStatus.active;
 
@@ -3653,10 +3658,10 @@ export default function WhatsappPage({
   const chatNameById = useMemo(() => {
     const map = new Map<string, string>();
     chats.forEach(chat => {
-      map.set(chat.id, getChatDisplayName(chat));
+      map.set(chat.id, getChatDisplayNameWithLeadFallback(chat));
     });
     return map;
-  }, [chats]);
+  }, [chats, getChatDisplayNameWithLeadFallback]);
 
   const markSlaAlertAsSeen = useCallback((alertId: string) => {
     setUnseenSlaAlertIds(previous => previous.filter(id => id !== alertId));
@@ -7399,7 +7404,7 @@ export default function WhatsappPage({
           ) : (
             filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
-              const displayName = getChatDisplayName(chat);
+              const displayName = getChatDisplayNameWithLeadFallback(chat);
               const previewInfo = getChatPreviewInfo(chat.last_message_preview);
               const previewText = sanitizeChatPreviewText(previewInfo.text, chat, displayName);
               const PreviewIcon = previewInfo.icon;

@@ -2391,8 +2391,9 @@ export default function WhatsappPage({
   }, [markChatAsRead, selectedChatId]);
 
   const getChatDisplayNameWithLeadFallback = useCallback(
-    (chat: WhatsappChat): string => {
+    (chat: WhatsappChat, identifiedLeadName?: string): string => {
       const primaryName = toNonEmptyString(getChatDisplayName(chat));
+      const preidentifiedLeadName = toNonEmptyString(identifiedLeadName ?? null);
 
       if (primaryName && primaryName !== chat.phone) {
         return primaryName;
@@ -2403,9 +2404,13 @@ export default function WhatsappPage({
         return crmName;
       }
 
+      if (preidentifiedLeadName) {
+        return preidentifiedLeadName;
+      }
+
       const chatPhoneVariants = buildPhoneComparisonVariants(chat.phone);
       if (chatPhoneVariants.length === 0) {
-        return primaryName ?? chat.phone;
+        return primaryName ?? preidentifiedLeadName ?? chat.phone;
       }
 
       const matchingLead = leads.find(lead => {
@@ -2418,7 +2423,7 @@ export default function WhatsappPage({
       });
 
       const leadName = toNonEmptyString(matchingLead?.nome_completo);
-      return leadName ?? primaryName ?? chat.phone;
+      return leadName ?? primaryName ?? preidentifiedLeadName ?? chat.phone;
     },
     [leads],
   );
@@ -2488,8 +2493,15 @@ export default function WhatsappPage({
   const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
 
   const selectedChatDisplayName = useMemo(
-    () => (selectedChat ? getChatDisplayNameWithLeadFallback(selectedChat) : ''),
-    [getChatDisplayNameWithLeadFallback, selectedChat],
+    () => {
+      if (!selectedChat) {
+        return '';
+      }
+
+      const identifiedLeadName = toNonEmptyString(selectedChatLead?.nome_completo ?? null);
+      return getChatDisplayNameWithLeadFallback(selectedChat, identifiedLeadName);
+    },
+    [getChatDisplayNameWithLeadFallback, selectedChat, selectedChatLead],
   );
 
   const selectedChatIsArchived = selectedChat?.is_archived ?? false;
@@ -7524,7 +7536,8 @@ export default function WhatsappPage({
           ) : (
             filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
-              const displayName = getChatDisplayNameWithLeadFallback(chat);
+              const preidentifiedLeadName = chatNameById.get(chat.id);
+              const displayName = getChatDisplayNameWithLeadFallback(chat, preidentifiedLeadName);
               const previewInfo = getChatPreviewInfo(chat.last_message_preview);
               const previewText = sanitizeChatPreviewText(previewInfo.text, chat, displayName);
               const PreviewIcon = previewInfo.icon;

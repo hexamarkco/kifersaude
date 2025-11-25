@@ -196,6 +196,14 @@ Deno.serve(async req => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log(`facebook-leads-webhook: received ${req.method} request`, {
+    url: req.url,
+    headers: {
+      'user-agent': req.headers.get('user-agent'),
+      'content-type': req.headers.get('content-type'),
+    },
+  });
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -214,6 +222,12 @@ Deno.serve(async req => {
       const mode = url.searchParams.get('hub.mode');
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
+
+      console.log('facebook-leads-webhook: GET verification', {
+        mode,
+        hasToken: Boolean(token),
+        hasChallenge: Boolean(challenge),
+      });
 
       if (mode === 'subscribe' && token && token === settings.verifyToken) {
         return new Response(challenge ?? '', { status: 200, headers: corsHeaders });
@@ -242,6 +256,10 @@ Deno.serve(async req => {
     const body = await req.json();
     const entries = Array.isArray(body?.entry) ? body.entry : [];
 
+    console.log('facebook-leads-webhook: POST payload received', {
+      entriesCount: entries.length,
+    });
+
     const results = [] as { leadId: string; status: 'success' | 'skipped' | 'error'; message?: string }[];
 
     for (const entry of entries) {
@@ -250,6 +268,8 @@ Deno.serve(async req => {
       for (const change of changes) {
         const leadId = change?.value?.leadgen_id || change?.value?.lead_id;
         if (!leadId) continue;
+
+        console.log('facebook-leads-webhook: processing lead', { leadId });
 
         const leadPayload = await fetchLeadDetails(String(leadId), settings.pageAccessToken!);
         if (!leadPayload) {
@@ -260,11 +280,13 @@ Deno.serve(async req => {
         const leadRecord = buildLeadRecord(leadPayload, settings);
         if (!leadRecord) {
           results.push({ leadId: String(leadId), status: 'skipped', message: 'Lead sem telefone válido.' });
+          console.log('facebook-leads-webhook: lead skipped due to missing phone', { leadId });
           continue;
         }
 
         try {
           await storeLead(supabaseUrl, serviceRoleKey, leadRecord);
+          console.log('facebook-leads-webhook: lead stored successfully', { leadId });
           results.push({ leadId: String(leadId), status: 'success' });
         } catch (error) {
           console.error('Erro ao salvar lead do Facebook:', error);

@@ -17,6 +17,7 @@ import {
   WHATSAPP_MESSAGE_VARIABLES,
   WHATSAPP_MESSAGE_VARIABLE_HINTS,
 } from '../constants/whatsappMessageVariables';
+import { useConfig } from '../contexts/ConfigContext';
 import type {
   WhatsappCampaignMetricsSummary,
   WhatsappCampaignStep,
@@ -132,6 +133,8 @@ export default function WhatsappCampaignsPage() {
   const [availableOwners, setAvailableOwners] = useState<string[]>([]);
   const [campaignEditor, setCampaignEditor] = useState<{ name: string; description: string } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const { leadStatuses, options } = useConfig();
+  const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options]);
 
   const loadCampaigns = useCallback(async () => {
     setCampaignLoading(true);
@@ -159,35 +162,10 @@ export default function WhatsappCampaignsPage() {
     }
   }, [selectedCampaignId]);
 
-  const loadLeadsMetadata = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('status, responsavel')
-        .eq('arquivado', false);
-
-      if (error) {
-        throw error;
-      }
-
-      const statuses = new Set<string>();
-      const owners = new Set<string>();
-
-      (data ?? []).forEach(entry => {
-        if (entry.status) {
-          statuses.add(entry.status);
-        }
-        if (entry.responsavel) {
-          owners.add(entry.responsavel);
-        }
-      });
-
-      setAvailableStatuses(Array.from(statuses));
-      setAvailableOwners(Array.from(owners));
-    } catch (err) {
-      console.error('Erro ao carregar metadados de leads:', err);
-    }
-  }, []);
+  const loadLeadsMetadata = useCallback(() => {
+    setAvailableStatuses(leadStatuses.map(status => status.nome));
+    setAvailableOwners(responsavelOptions.map(option => option.label));
+  }, [leadStatuses, responsavelOptions]);
 
   const loadSteps = useCallback(async (campaignId: string) => {
     setStepsLoading(true);

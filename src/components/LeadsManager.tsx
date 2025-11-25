@@ -977,7 +977,6 @@ export default function LeadsManager({
         .from('leads')
           .update({
             status_id: statusId,
-            status: newStatus,
             ultimo_contato: new Date().toISOString(),
           })
         .eq('id', leadId);

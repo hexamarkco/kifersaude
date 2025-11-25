@@ -2392,16 +2392,20 @@ export default function WhatsappPage({
 
   const getChatDisplayNameWithLeadFallback = useCallback(
     (chat: WhatsappChat): string => {
-      const primaryName = getChatDisplayName(chat);
-      const normalizedPrimary = toNonEmptyString(primaryName);
+      const primaryName = toNonEmptyString(getChatDisplayName(chat));
 
-      if (normalizedPrimary && normalizedPrimary !== chat.phone) {
+      if (primaryName && primaryName !== chat.phone) {
         return primaryName;
+      }
+
+      const crmName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
+      if (crmName) {
+        return crmName;
       }
 
       const chatPhoneVariants = buildPhoneComparisonVariants(chat.phone);
       if (chatPhoneVariants.length === 0) {
-        return primaryName;
+        return primaryName ?? chat.phone;
       }
 
       const matchingLead = leads.find(lead => {
@@ -2414,7 +2418,7 @@ export default function WhatsappPage({
       });
 
       const leadName = toNonEmptyString(matchingLead?.nome_completo);
-      return leadName ?? primaryName;
+      return leadName ?? primaryName ?? chat.phone;
     },
     [leads],
   );
@@ -2426,6 +2430,26 @@ export default function WhatsappPage({
 
     if (selectedChat.crm_lead) {
       return selectedChat.crm_lead;
+    }
+
+    const leadFromListById = selectedChat.lead_id
+      ? leads.find(lead => lead.id === selectedChat.lead_id)
+      : null;
+
+    if (leadFromListById) {
+      return {
+        id: leadFromListById.id,
+        nome_completo: leadFromListById.nome_completo ?? null,
+        telefone: leadFromListById.telefone,
+        status: leadFromListById.status ?? null,
+        responsavel: leadFromListById.responsavel ?? null,
+        ultimo_contato: leadFromListById.ultimo_contato ?? null,
+        proximo_retorno: leadFromListById.proximo_retorno ?? null,
+        origem: leadFromListById.origem ?? null,
+        tipo_contratacao: leadFromListById.tipo_contratacao ?? null,
+        data_criacao: leadFromListById.data_criacao ?? leadFromListById.created_at ?? null,
+        metadata: null,
+      } satisfies WhatsappChatLeadSummary;
     }
 
     const chatPhoneVariants = buildPhoneComparisonVariants(selectedChat.phone);
@@ -3756,6 +3780,7 @@ export default function WhatsappPage({
           return {
             ...existing,
             ...chat,
+            lead_id: chat.lead_id ?? existing?.lead_id ?? null,
             display_name: chat.display_name ?? existing?.display_name ?? null,
             crm_lead: chat.crm_lead ?? existing?.crm_lead ?? null,
             crm_contracts: chat.crm_contracts ?? existing?.crm_contracts ?? [],
@@ -4176,13 +4201,13 @@ export default function WhatsappPage({
   }, [upcomingSchedules]);
 
   const ensureChat = useCallback(
-    async (phone: string, chatName: string | null = null): Promise<WhatsappChat> => {
+    async (phone: string, chatName: string | null = null, leadId?: string | null): Promise<WhatsappChat> => {
       const response = await fetchJson<{ success: boolean; chat: WhatsappChat }>(
         getWhatsappFunctionUrl('/whatsapp-webhook/ensure-chat'),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, chatName }),
+          body: JSON.stringify({ phone, chatName, leadId: leadId ?? null }),
         },
       );
 
@@ -4733,8 +4758,10 @@ export default function WhatsappPage({
             : null;
 
         if (!targetChat) {
-          const ensuredChat = await ensureChat(normalizedPhone, chatName ?? null);
-          const enhancedChat = crmLead ? { ...ensuredChat, crm_lead: crmLead } : ensuredChat;
+          const ensuredChat = await ensureChat(normalizedPhone, chatName ?? null, crmLead?.id ?? lead?.id ?? null);
+          const enhancedChat = crmLead
+            ? { ...ensuredChat, lead_id: crmLead.id, crm_lead: crmLead }
+            : ensuredChat;
           targetChat = enhancedChat;
           setChats(previous => {
             const others = previous.filter(chat => chat.id !== enhancedChat.id);
@@ -4742,8 +4769,10 @@ export default function WhatsappPage({
           });
         } else if (chatName && chatName.trim() && chatName !== targetChat.chat_name) {
           try {
-            const ensuredChat = await ensureChat(normalizedPhone, chatName);
-            const enhancedChat = crmLead ? { ...ensuredChat, crm_lead: crmLead } : ensuredChat;
+            const ensuredChat = await ensureChat(normalizedPhone, chatName, crmLead?.id ?? lead?.id ?? null);
+            const enhancedChat = crmLead
+              ? { ...ensuredChat, lead_id: crmLead.id, crm_lead: crmLead }
+              : ensuredChat;
             targetChat = enhancedChat;
             setChats(previous => {
               const others = previous.filter(chat => chat.id !== enhancedChat.id);
@@ -4753,7 +4782,7 @@ export default function WhatsappPage({
             console.error('Não foi possível atualizar o nome do chat:', updateError);
           }
         } else if (crmLead && (!targetChat.crm_lead || targetChat.crm_lead.id !== crmLead.id)) {
-          const enhancedChat = { ...targetChat, crm_lead: crmLead };
+          const enhancedChat = { ...targetChat, lead_id: crmLead.id, crm_lead: crmLead };
           targetChat = enhancedChat;
           setChats(previous => {
             const others = previous.filter(chat => chat.id !== enhancedChat.id);

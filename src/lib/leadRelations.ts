@@ -27,18 +27,13 @@ export const mapLeadRelations = (
   lead: Lead,
   lookups: LeadRelationLookups,
 ): Lead => {
-  const resolvedOrigin = findLabelById(lookups.origins, lead.origem_id) ?? lead.origem;
-  const resolvedTipoContratacao =
-    findLabelById(lookups.tipoContratacao, lead.tipo_contratacao_id) ?? lead.tipo_contratacao;
-  const resolvedStatus = findLabelById(lookups.statuses, lead.status_id) ?? lead.status;
-  const resolvedResponsavel = findLabelById(lookups.responsaveis, lead.responsavel_id) ?? lead.responsavel;
-
   return {
     ...lead,
-    origem: resolvedOrigin,
-    tipo_contratacao: resolvedTipoContratacao,
-    status: resolvedStatus,
-    responsavel: resolvedResponsavel,
+    origem: lead.origem ?? findLabelById(lookups.origins, lead.origem_id),
+    tipo_contratacao:
+      lead.tipo_contratacao ?? findLabelById(lookups.tipoContratacao, lead.tipo_contratacao_id),
+    status: lead.status ?? findLabelById(lookups.statuses, lead.status_id),
+    responsavel: lead.responsavel ?? findLabelById(lookups.responsaveis, lead.responsavel_id),
   };
 };
 

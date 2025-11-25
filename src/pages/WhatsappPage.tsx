@@ -3932,15 +3932,22 @@ export default function WhatsappPage({
   }, [loadInsightForChat, selectedChatId]);
 
   useEffect(() => {
-    const container = messagesContainerRef.current;
-    const previousChatId = previousChatIdRef.current;
-    const chatChanged = selectedChatId !== previousChatId;
-
-    previousChatIdRef.current = selectedChatId;
-
-    if (!container || !selectedChatId || messages.length === 0) {
+    if (!selectedChatId || messages.length === 0) {
       return;
     }
+
+    const setPreviousChatId = () => {
+      previousChatIdRef.current = selectedChatId;
+    };
+
+    const container = messagesContainerRef.current;
+    if (!container) {
+      setPreviousChatId();
+      return;
+    }
+
+    const previousChatId = previousChatIdRef.current;
+    const chatChanged = selectedChatId !== previousChatId;
 
     const lastReadTimestamp = lastReadTimestampsRef.current[selectedChatId] ?? null;
     const unreadMessages = lastReadTimestamp
@@ -3956,11 +3963,13 @@ export default function WhatsappPage({
 
           if (target && targetContainer) {
             target.scrollIntoView({ block: 'center' });
+            setPreviousChatId();
             return;
           }
 
           if (targetContainer) {
             targetContainer.scrollTop = targetContainer.scrollHeight;
+            setPreviousChatId();
           }
         });
         return;
@@ -3973,6 +3982,7 @@ export default function WhatsappPage({
         }
 
         target.scrollTop = target.scrollHeight;
+        setPreviousChatId();
       });
       return;
     }
@@ -3982,6 +3992,7 @@ export default function WhatsappPage({
     const isNearBottom = distanceToBottom <= 120;
 
     if (!isNearBottom) {
+      setPreviousChatId();
       return;
     }
 
@@ -3992,6 +4003,7 @@ export default function WhatsappPage({
       }
 
       target.scrollTop = target.scrollHeight;
+      setPreviousChatId();
     });
   }, [lastReadTimestamps, messages, selectedChatId]);
 

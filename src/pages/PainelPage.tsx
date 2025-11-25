@@ -36,6 +36,7 @@ export default function PainelPage() {
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [whatsappLaunchParams, setWhatsappLaunchParams] = useState<WhatsappLaunchParams | null>(null);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
+  const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
 
   const validTabIds = useMemo(
@@ -219,8 +220,10 @@ export default function PainelPage() {
     if (tab === 'leads') {
       setNewLeadsCount(0);
       setLeadStatusFilter(options?.leadsStatusFilter);
+      setLeadIdFilter(options?.leadIdFilter);
     } else if (options?.leadsStatusFilter === undefined) {
       setLeadStatusFilter(undefined);
+      setLeadIdFilter(undefined);
     }
 
     if (tab === 'contracts') {
@@ -255,6 +258,7 @@ export default function PainelPage() {
             onConvertToContract={handleConvertLead}
             onOpenWhatsapp={handleOpenWhatsapp}
             initialStatusFilter={leadStatusFilter}
+            initialLeadIdFilter={leadIdFilter}
           />
         );
       case 'contracts':

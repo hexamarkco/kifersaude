@@ -3964,10 +3964,11 @@ export default function WhatsappPage({
               ...existingChat,
               ...incomingChat,
               display_name: incomingChat.display_name ?? existingChat.display_name ?? null,
-              crm_lead: existingChat.crm_lead,
-              crm_contracts: existingChat.crm_contracts,
-              crm_financial_summary: existingChat.crm_financial_summary,
-              sla_metrics: existingChat.sla_metrics,
+              crm_lead: incomingChat.crm_lead ?? existingChat.crm_lead ?? null,
+              crm_contracts: incomingChat.crm_contracts ?? existingChat.crm_contracts ?? [],
+              crm_financial_summary:
+                incomingChat.crm_financial_summary ?? existingChat.crm_financial_summary ?? null,
+              sla_metrics: incomingChat.sla_metrics ?? existingChat.sla_metrics,
             };
 
             const next = [...previous];
@@ -4235,6 +4236,7 @@ export default function WhatsappPage({
 
       const previousUltimoContato = selectedChatLead.ultimo_contato ?? null;
       const previousProximoRetorno = selectedChatLead.proximo_retorno ?? null;
+      const previousLeadData = leads.find(lead => lead.id === leadId) ?? null;
       const nowIso = new Date().toISOString();
       const responsavel = selectedChatLead.responsavel ?? 'Sistema';
       const normalizedNewStatusLower = normalizedNewStatus.toLowerCase();
@@ -4242,6 +4244,18 @@ export default function WhatsappPage({
         normalizedNewStatusLower === 'perdido' || normalizedNewStatusLower === 'convertido';
 
       setUpdatingLeadStatus(true);
+      setLeads(previousLeads =>
+        previousLeads.map(lead =>
+          lead.id === leadId
+            ? {
+                ...lead,
+                status: normalizedNewStatus,
+                ultimo_contato: nowIso,
+                proximo_retorno: shouldClearNextReturn ? null : lead.proximo_retorno,
+              }
+            : lead,
+        ),
+      );
       setChats(previousChats =>
         previousChats.map(chat => {
           if (chat.crm_lead?.id !== leadId) {
@@ -4289,6 +4303,24 @@ export default function WhatsappPage({
             proximo_retorno: updatedProximoRetorno,
           } = response.lead;
 
+          setLeads(previousLeads =>
+            previousLeads.map(lead =>
+              lead.id === leadId
+                ? {
+                    ...lead,
+                    status: status ?? normalizedNewStatus,
+                    ultimo_contato: updatedUltimoContato ?? nowIso,
+                    responsavel: updatedResponsavel ?? lead.responsavel ?? responsavel,
+                    proximo_retorno:
+                      typeof updatedProximoRetorno !== 'undefined'
+                        ? updatedProximoRetorno
+                        : shouldClearNextReturn
+                          ? null
+                          : lead.proximo_retorno,
+                  }
+                : lead,
+            ),
+          );
           setChats(previousChats =>
             previousChats.map(chat => {
               if (chat.crm_lead?.id !== leadId) {
@@ -4315,6 +4347,20 @@ export default function WhatsappPage({
         }
       } catch (error) {
         console.error('Erro ao atualizar status do lead via chat:', error);
+        if (previousLeadData) {
+          setLeads(previousLeads =>
+            previousLeads.map(lead =>
+              lead.id === leadId
+                ? {
+                    ...lead,
+                    status: previousLeadData.status ?? lead.status ?? null,
+                    ultimo_contato: previousUltimoContato,
+                    proximo_retorno: previousProximoRetorno,
+                  }
+                : lead,
+            ),
+          );
+        }
         setChats(previousChats =>
           previousChats.map(chat => {
             if (chat.crm_lead?.id !== leadId) {
@@ -4337,7 +4383,7 @@ export default function WhatsappPage({
         setUpdatingLeadStatus(false);
       }
     },
-    [selectedChatLead],
+    [leads, selectedChatLead],
   );
 
   const handleChatHeaderClick = useCallback(() => {

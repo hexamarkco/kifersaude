@@ -2899,6 +2899,12 @@ export default function WhatsappPage({
     [messageInputRef, resolveQuickReplyText, slashCommandState],
   );
 
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setMessageInput('');
+    adjustMessageInputHeight();
+  }, [adjustMessageInputHeight]);
+
   const handleMessageInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       const { key, ctrlKey } = event;
@@ -5861,12 +5867,6 @@ export default function WhatsappPage({
     },
     [adjustMessageInputHeight],
   );
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingMessage(null);
-    setMessageInput('');
-    adjustMessageInputHeight();
-  }, [adjustMessageInputHeight]);
 
   const handleForwardMessage = useCallback(
     async (message: WhatsappMessage) => {

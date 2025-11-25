@@ -5463,7 +5463,7 @@ export default function WhatsappPage({
       if (captionOrNull) {
         const textOptimisticMessage = createOptimisticMessage({ text: captionOrNull });
         const textWasSent = await sendWhatsappMessage({
-          endpoint: '/whatsapp-webhook/send-message',
+          endpoint: '/whatsapp-webhook/send-text',
           body: { phone: selectedChat.phone, message: captionOrNull },
           optimisticMessage: textOptimisticMessage,
           errorFallback: 'Não foi possível enviar a mensagem.',

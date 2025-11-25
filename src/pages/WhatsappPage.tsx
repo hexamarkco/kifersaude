@@ -3482,7 +3482,7 @@ export default function WhatsappPage({
   }, [leadsLoaded, leadsLoading, loadLeads]);
 
   useEffect(() => {
-    if (!leadsLoaded || leads.length === 0) {
+    if (!leadsLoaded || leads.length === 0 || chats.length === 0) {
       return;
     }
 
@@ -3515,7 +3515,7 @@ export default function WhatsappPage({
         };
       }),
     );
-  }, [leads, leadsLoaded]);
+  }, [leads, leadsLoaded, chats.length]);
 
   useEffect(() => {
     if (!showNewChatModal) {

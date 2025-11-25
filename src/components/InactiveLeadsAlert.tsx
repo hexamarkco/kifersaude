@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import { AlertCircle, Clock, Phone, Mail } from 'lucide-react';
-import { useConfig } from '../contexts/ConfigContext';
 
 type InactiveLeadsAlertProps = {
   onLeadClick?: (lead: Lead) => void;
@@ -11,66 +10,6 @@ export default function InactiveLeadsAlert({ onLeadClick }: InactiveLeadsAlertPr
   const [inactiveLeads, setInactiveLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [daysThreshold] = useState(7);
-  const { leadStatuses } = useConfig();
-
-  const statusLabelById = useMemo(() => {
-    const map: Record<string, string> = {};
-    leadStatuses.forEach((status) => {
-      if (status.id) {
-        map[status.id] = status.nome;
-      }
-    });
-    return map;
-  }, [leadStatuses]);
-
-  const closedStatusIds = useMemo(
-    () =>
-      leadStatuses
-        .filter((status) => status.nome === 'Fechado' || status.nome === 'Perdido')
-        .map((status) => status.id)
-        .filter(Boolean) as string[],
-    [leadStatuses],
-  );
-
-  const closedStatusIdSet = useMemo(() => new Set(closedStatusIds), [closedStatusIds]);
-
-  const loadInactiveLeads = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
-
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false)
-        .lt('ultimo_contato', cutoffDate.toISOString())
-        .order('ultimo_contato', { ascending: true })
-        .limit(10);
-
-      if (error) throw error;
-      const filteredLeads = (data as Lead[] | null | undefined) || [];
-      const leadsWithoutClosedStatuses = closedStatusIdSet.size
-        ? filteredLeads.filter((lead) => {
-            const statusId = (lead as any).status_id as string | null | undefined;
-            if (!statusId) return true;
-            return !closedStatusIdSet.has(statusId);
-          })
-        : filteredLeads;
-
-      const mappedLeads = leadsWithoutClosedStatuses.map((lead) => {
-        const statusId = (lead as any).status_id as string | null | undefined;
-        const resolvedStatus = lead.status ?? (statusId ? statusLabelById[statusId] : undefined);
-        return { ...lead, status: resolvedStatus } as Lead;
-      });
-
-      setInactiveLeads(mappedLeads);
-    } catch (error) {
-      console.error('Erro ao carregar leads inativos:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [closedStatusIdSet, daysThreshold, statusLabelById]);
 
   useEffect(() => {
     loadInactiveLeads();
@@ -93,7 +32,31 @@ export default function InactiveLeadsAlert({ onLeadClick }: InactiveLeadsAlertPr
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [daysThreshold, loadInactiveLeads]);
+  }, [daysThreshold]);
+
+  const loadInactiveLeads = async () => {
+    setLoading(true);
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('arquivado', false)
+        .not('status', 'in', '("Fechado","Perdido")')
+        .lt('ultimo_contato', cutoffDate.toISOString())
+        .order('ultimo_contato', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+      setInactiveLeads(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar leads inativos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getDaysInactive = (lastContact?: string): number => {
     if (!lastContact) return 999;

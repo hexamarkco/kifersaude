@@ -196,8 +196,12 @@ Deno.serve(async req => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestUrl = new URL(req.url);
+  const sanitizedUrl = `${requestUrl.origin}${requestUrl.pathname}`;
+
   console.log(`facebook-leads-webhook: received ${req.method} request`, {
-    url: req.url,
+    url: sanitizedUrl,
+    hasQueryParams: requestUrl.searchParams.size > 0,
     headers: {
       'user-agent': req.headers.get('user-agent'),
       'content-type': req.headers.get('content-type'),

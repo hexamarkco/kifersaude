@@ -1,12 +1,12 @@
-import { supabaseAdmin } from './lib/supabaseAdmin';
-import { sendWhatsappMedia, sendWhatsappMessage } from './lib/whatsappApi';
+import { supabaseAdmin } from './lib/supabaseAdmin.ts';
+import { sendWhatsappMedia, sendWhatsappMessage } from './lib/whatsappApi.ts';
 import type {
   CampaignSendResult,
   WhatsappCampaign,
   WhatsappCampaignStep,
   WhatsappCampaignTarget,
   WhatsappCampaignTargetConditionState,
-} from './types/whatsappCampaigns';
+} from './types/whatsappCampaigns.ts';
 
 const DEFAULT_WAIT_SECONDS = 60;
 

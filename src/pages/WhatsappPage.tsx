@@ -560,6 +560,7 @@ const MEDIA_PREVIEW_PATTERNS: Array<{ icon: LucideIcon; prefixes: string[] }> = 
   { icon: MapPin, prefixes: ['localizacao recebida', 'localizacao enviada'] },
   { icon: UserPlus, prefixes: ['contato recebido', 'contato enviado'] },
   { icon: Sticker, prefixes: ['figurinha recebida', 'figurinha enviada'] },
+  { icon: Sparkles, prefixes: ['reagiu a sua mensagem'] },
 ];
 
 const CHAT_SKELETON_INDICES = Array.from({ length: 6 }, (_, index) => index);
@@ -1100,6 +1101,26 @@ type UpdateChatFlagsResponse = {
   error?: string;
 };
 
+const isReactionMessage = (message: { raw_payload?: Record<string, unknown> | null }) => {
+  const payload =
+    message.raw_payload && typeof message.raw_payload === 'object'
+      ? (message.raw_payload as WhatsappMessageRawPayload)
+      : null;
+
+  return Boolean(payload?.reaction);
+};
+
+const applyReactionPreviewToChat = (
+  chat: WhatsappChat,
+  reactionMoment: string | null | undefined,
+): WhatsappChat => {
+  return {
+    ...chat,
+    last_message_preview: REACTION_PREVIEW_TEXT,
+    last_message_at: reactionMoment ?? chat.last_message_at ?? null,
+  };
+};
+
 type WhatsappMessageRawPayload = {
   reaction?: {
     value?: string | null;
@@ -1162,6 +1183,7 @@ type WhatsappMessageRawPayload = {
 };
 
 const UNSUPPORTED_MESSAGE_PLACEHOLDER = '[tipo de mensagem não suportado ainda]';
+const REACTION_PREVIEW_TEXT = 'Reagiu à sua mensagem';
 
 type PendingMediaAttachment = {
   kind: 'image' | 'video';
@@ -2877,6 +2899,12 @@ export default function WhatsappPage({
     [messageInputRef, resolveQuickReplyText, slashCommandState],
   );
 
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setMessageInput('');
+    adjustMessageInputHeight();
+  }, [adjustMessageInputHeight]);
+
   const handleMessageInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       const { key, ctrlKey } = event;
@@ -4251,9 +4279,14 @@ export default function WhatsappPage({
 
             const updated: WhatsappChat = {
               ...existing,
-              last_message_preview:
-                normalizedMessage.text ?? existing.last_message_preview ?? null,
-              last_message_at: normalizedMessage.moment ?? existing.last_message_at ?? null,
+              ...(isReactionMessage(normalizedMessage)
+                ? applyReactionPreviewToChat(existing, normalizedMessage.moment)
+                : {
+                    last_message_preview:
+                      normalizedMessage.text ?? existing.last_message_preview ?? null,
+                    last_message_at:
+                      normalizedMessage.moment ?? existing.last_message_at ?? null,
+                  }),
             };
 
             const others = previousChats.filter(chat => chat.id !== selectedChatId);
@@ -4573,10 +4606,14 @@ export default function WhatsappPage({
             const existingChat = previousChats[existingIndex];
             const updatedChat: WhatsappChat = {
               ...existingChat,
-              last_message_preview:
-                resolvedMessage.text ?? existingChat.last_message_preview ?? null,
-              last_message_at:
-                resolvedMessage.moment ?? existingChat.last_message_at ?? null,
+              ...(isReactionMessage(resolvedMessage)
+                ? applyReactionPreviewToChat(existingChat, resolvedMessage.moment)
+                : {
+                    last_message_preview:
+                      resolvedMessage.text ?? existingChat.last_message_preview ?? null,
+                    last_message_at:
+                      resolvedMessage.moment ?? existingChat.last_message_at ?? null,
+                  }),
             };
 
             const otherChats = previousChats.filter(chat => chat.id !== resolvedChatId);
@@ -4590,11 +4627,17 @@ export default function WhatsappPage({
           const isIncomingInsert =
             payload.eventType === 'INSERT' && !resolvedMessage.from_me;
 
-          if (isIncomingInsert && resolvedMessage.chat_id !== selectedChatIdRef.current) {
+          const isReaction = isReactionMessage(resolvedMessage);
+
+          if (
+            isIncomingInsert &&
+            !isReaction &&
+            resolvedMessage.chat_id !== selectedChatIdRef.current
+          ) {
             incrementUnread(resolvedMessage.chat_id);
           }
 
-          if (isIncomingInsert && autoUnarchiveArchivedChats) {
+          if (isIncomingInsert && !isReaction && autoUnarchiveArchivedChats) {
             const chatToAutoUnarchive = chatsRef.current.find(
               chat => chat.id === resolvedChatId,
             );
@@ -5085,6 +5128,8 @@ export default function WhatsappPage({
         }
 
         if (!response.message) {
+          const isReaction = isReactionMessage(optimisticMessage);
+
           setMessages(previous =>
             previous.map(message =>
               message.id === optimisticId
@@ -5108,11 +5153,15 @@ export default function WhatsappPage({
               return previous;
             }
 
-            const updatedChat: WhatsappChat = {
-              ...referenceChat,
-              last_message_preview: optimisticMessage.text ?? referenceChat.last_message_preview ?? null,
-              last_message_at: optimisticMessage.moment ?? referenceChat.last_message_at ?? null,
-            };
+            const updatedChat: WhatsappChat = isReaction
+              ? applyReactionPreviewToChat(referenceChat, optimisticMessage.moment)
+              : {
+                  ...referenceChat,
+                  last_message_preview:
+                    optimisticMessage.text ?? referenceChat.last_message_preview ?? null,
+                  last_message_at:
+                    optimisticMessage.moment ?? referenceChat.last_message_at ?? null,
+                };
 
             const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
             return [updatedChat, ...otherChats];
@@ -5125,6 +5174,8 @@ export default function WhatsappPage({
           ...response.message,
           isOptimistic: false,
         };
+
+        const isReaction = isReactionMessage(serverMessage);
 
         setMessages(previous => {
           const withoutOptimistic = previous.filter(message => message.id !== optimisticId);
@@ -5146,12 +5197,14 @@ export default function WhatsappPage({
               null,
           };
 
-          const updatedChat: WhatsappChat = {
-            ...mergedChat,
-            last_message_preview:
-              response.message.text ?? mergedChat.last_message_preview ?? null,
-            last_message_at: response.message.moment ?? mergedChat.last_message_at ?? null,
-          };
+          const updatedChat: WhatsappChat = isReaction
+            ? applyReactionPreviewToChat(mergedChat, response.message.moment)
+            : {
+                ...mergedChat,
+                last_message_preview:
+                  response.message.text ?? mergedChat.last_message_preview ?? null,
+                last_message_at: response.message.moment ?? mergedChat.last_message_at ?? null,
+              };
 
           const otherChats = previous.filter(chat => chat.id !== updatedChat.id);
           return [updatedChat, ...otherChats];
@@ -5814,12 +5867,6 @@ export default function WhatsappPage({
     },
     [adjustMessageInputHeight],
   );
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingMessage(null);
-    setMessageInput('');
-    adjustMessageInputHeight();
-  }, [adjustMessageInputHeight]);
 
   const handleForwardMessage = useCallback(
     async (message: WhatsappMessage) => {

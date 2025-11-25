@@ -1182,7 +1182,7 @@ type LeadSummary = {
   nome_completo: string;
   telefone: string | null;
   status: string | null;
-  responsavel: string | null;
+  responsavel?: string | null;
   status_id?: string | null;
   responsavel_id?: string | null;
   origem?: string | null;
@@ -3265,7 +3265,6 @@ export default function WhatsappPage({
             'nome_completo',
             'telefone',
             'status_id',
-            'responsavel',
             'responsavel_id',
             'origem',
             'origem_id',

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
+import LineChart from './charts/LineChart';
 import LeadFunnel from './LeadFunnel';
 import {
   calculateConversionRate,

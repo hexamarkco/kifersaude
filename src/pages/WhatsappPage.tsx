@@ -79,6 +79,7 @@ import {
 import { mapLeadRelations } from '../lib/leadRelations';
 import type {
   WhatsappChat,
+  WhatsappChatLeadSummary,
   WhatsappChatInsight,
   WhatsappChatInsightSentiment,
   WhatsappChatInsightStatus,
@@ -485,6 +486,23 @@ const normalizePhoneForComparison = (value: string | null | undefined): string =
 
   const withoutSuffix = value.includes('@') ? value.slice(0, value.indexOf('@')) : value;
   return withoutSuffix.replace(/\D+/g, '');
+};
+
+const buildPhoneComparisonVariants = (value: string | null | undefined): string[] => {
+  const normalized = normalizePhoneForComparison(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalized]);
+
+  if (normalized.startsWith('55') && normalized.length > 2) {
+    variants.add(normalized.slice(2));
+  } else if (!normalized.startsWith('55') && normalized.length >= 10) {
+    variants.add(`55${normalized}`);
+  }
+
+  return Array.from(variants);
 };
 
 const normalizeLeadStatus = (status: string | null | undefined): string => {
@@ -1410,6 +1428,11 @@ const getChatDisplayName = (chat: WhatsappChat): string => {
   const normalizedDisplayName = toNonEmptyString(chat.display_name);
   if (normalizedDisplayName) {
     return normalizedDisplayName;
+  }
+
+  const normalizedLeadName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
+  if (normalizedLeadName) {
+    return normalizedLeadName;
   }
 
   const normalizedChatName = toNonEmptyString(chat.chat_name);
@@ -2367,13 +2390,92 @@ export default function WhatsappPage({
     markChatAsRead(selectedChatId);
   }, [markChatAsRead, selectedChatId]);
 
-  const selectedChatLead = selectedChat?.crm_lead ?? null;
+  const leadDisplayNameByPhoneVariant = useMemo(() => {
+    const map = new Map<string, string>();
+
+    leads.forEach(lead => {
+      const name = toNonEmptyString(lead.nome_completo);
+      if (!name) {
+        return;
+      }
+
+      buildPhoneComparisonVariants(lead.telefone).forEach(variant => {
+        if (variant && !map.has(variant)) {
+          map.set(variant, name);
+        }
+      });
+    });
+
+    return map;
+  }, [leads]);
+
+  const getChatDisplayNameWithLeadFallback = useCallback(
+    (chat: WhatsappChat): string => {
+      const leadName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
+      if (leadName) {
+        return leadName;
+      }
+
+      const phoneVariants = buildPhoneComparisonVariants(chat.phone);
+      for (const variant of phoneVariants) {
+        const mappedName = leadDisplayNameByPhoneVariant.get(variant);
+        if (mappedName) {
+          return mappedName;
+        }
+      }
+
+      return getChatDisplayName(chat);
+    },
+    [leadDisplayNameByPhoneVariant],
+  );
+
+  const selectedChatLead = useMemo(() => {
+    if (!selectedChat) {
+      return null;
+    }
+
+    if (selectedChat.crm_lead) {
+      return selectedChat.crm_lead;
+    }
+
+    const chatPhoneVariants = buildPhoneComparisonVariants(selectedChat.phone);
+    if (chatPhoneVariants.length === 0) {
+      return null;
+    }
+
+    const matchingLead = leads.find(lead => {
+      const leadVariants = buildPhoneComparisonVariants(lead.telefone);
+      if (leadVariants.length === 0) {
+        return false;
+      }
+
+      return leadVariants.some(variant => chatPhoneVariants.includes(variant));
+    });
+
+    if (!matchingLead) {
+      return null;
+    }
+
+    return {
+      id: matchingLead.id,
+      nome_completo: matchingLead.nome_completo ?? null,
+      telefone: matchingLead.telefone,
+      status: matchingLead.status ?? null,
+      responsavel: matchingLead.responsavel ?? null,
+      ultimo_contato: matchingLead.ultimo_contato ?? null,
+      proximo_retorno: matchingLead.proximo_retorno ?? null,
+      origem: matchingLead.origem ?? null,
+      tipo_contratacao: matchingLead.tipo_contratacao ?? null,
+      data_criacao: matchingLead.data_criacao ?? matchingLead.created_at ?? null,
+      metadata: null,
+    } satisfies WhatsappChatLeadSummary;
+  }, [leads, selectedChat]);
   const selectedChatContracts = selectedChat?.crm_contracts ?? [];
   const selectedChatFinancialSummary = selectedChat?.crm_financial_summary ?? null;
 
   const selectedChatDisplayName = useMemo(
-    () => (selectedChat ? getChatDisplayName(selectedChat) : ''),
-    [selectedChat],
+    () => (selectedChat ? getChatDisplayNameWithLeadFallback(selectedChat) : ''),
+    [getChatDisplayNameWithLeadFallback, selectedChat],
   );
 
   const selectedChatIsArchived = selectedChat?.is_archived ?? false;
@@ -3217,7 +3319,7 @@ export default function WhatsappPage({
 
     const normalizedTerm = chatSearchTerm.trim().toLowerCase();
     return baseList.filter(chat => {
-      const displayName = getChatDisplayName(chat).toLowerCase();
+      const displayName = getChatDisplayNameWithLeadFallback(chat).toLowerCase();
       const phone = chat.phone?.toLowerCase() ?? '';
       const preview = chat.last_message_preview?.toLowerCase() ?? '';
 
@@ -3227,7 +3329,7 @@ export default function WhatsappPage({
         preview.includes(normalizedTerm)
       );
     });
-  }, [chatSearchTerm, chatsByStatus, showArchivedChats]);
+  }, [chatSearchTerm, chatsByStatus, getChatDisplayNameWithLeadFallback, showArchivedChats]);
 
   const visibleChatsBase = showArchivedChats ? chatsByStatus.archived : chatsByStatus.active;
 
@@ -3595,10 +3697,10 @@ export default function WhatsappPage({
   const chatNameById = useMemo(() => {
     const map = new Map<string, string>();
     chats.forEach(chat => {
-      map.set(chat.id, getChatDisplayName(chat));
+      map.set(chat.id, getChatDisplayNameWithLeadFallback(chat));
     });
     return map;
-  }, [chats]);
+  }, [chats, getChatDisplayNameWithLeadFallback]);
 
   const markSlaAlertAsSeen = useCallback((alertId: string) => {
     setUnseenSlaAlertIds(previous => previous.filter(id => id !== alertId));
@@ -7341,7 +7443,7 @@ export default function WhatsappPage({
           ) : (
             filteredChats.map(chat => {
               const isActive = chat.id === selectedChatId;
-              const displayName = getChatDisplayName(chat);
+              const displayName = getChatDisplayNameWithLeadFallback(chat);
               const previewInfo = getChatPreviewInfo(chat.last_message_preview);
               const previewText = sanitizeChatPreviewText(previewInfo.text, chat, displayName);
               const PreviewIcon = previewInfo.icon;

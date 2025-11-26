@@ -4593,6 +4593,7 @@ export default function WhatsappPage({
       const normalizedNewStatusLower = normalizedNewStatus.toLowerCase();
       const shouldClearNextReturn =
         normalizedNewStatusLower === 'perdido' || normalizedNewStatusLower === 'convertido';
+      
       setLeads(prevLeads =>
         prevLeads.map(lead =>
           lead.id === leadId
@@ -4605,6 +4606,7 @@ export default function WhatsappPage({
             : lead,
         ),
       );
+      
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
         previousChats.map(chat => {

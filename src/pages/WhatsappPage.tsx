@@ -4711,6 +4711,20 @@ export default function WhatsappPage({
         }
       } catch (error) {
         console.error('Erro ao atualizar status do lead via chat:', error);
+
+        setLeads(prevLeads =>
+          prevLeads.map(lead =>
+            lead.id === leadId
+              ? {
+                  ...lead,
+                  status: currentStatus || null,
+                  ultimo_contato: previousUltimoContato,
+                  proximo_retorno: previousProximoRetorno,
+                }
+              : lead,
+          ),
+        );
+        
         setChats(previousChats =>
           previousChats.map(chat => {
             const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;

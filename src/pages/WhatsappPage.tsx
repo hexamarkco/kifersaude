@@ -2439,42 +2439,59 @@ export default function WhatsappPage({
   }, [markChatAsRead, selectedChatId]);
 
   const getChatDisplayNameWithLeadFallback = useCallback(
-    (chat: WhatsappChat, identifiedLeadName?: string): string => {
-      const primaryName = toNonEmptyString(getChatDisplayName(chat));
-      const preidentifiedLeadName = toNonEmptyString(identifiedLeadName ?? null);
+  (chat: WhatsappChat, identifiedLeadName?: string): string => {
+    // Nome “bruto” vindo do WhatsApp (display_name, chat_name, etc.)
+    const rawPrimaryName = toNonEmptyString(getChatDisplayName(chat));
+    const preidentifiedLeadName = toNonEmptyString(identifiedLeadName ?? null);
 
-      if (primaryName && primaryName !== chat.phone) {
-        return primaryName;
+    // Normalizamos os dois para comparar telefone ignorando máscara / espaços
+    const phoneNormalized = normalizePhoneForComparison(chat.phone);
+    const primaryNormalized = normalizePhoneForComparison(rawPrimaryName);
+
+    // Se o "nome" for basicamente o mesmo telefone, descartamos como nome
+    const primaryName =
+      rawPrimaryName &&
+      phoneNormalized &&
+      primaryNormalized === phoneNormalized
+        ? null
+        : rawPrimaryName;
+
+    // 1) Se temos um nome que NÃO é telefone, usamos ele
+    if (primaryName) {
+      return primaryName;
+    }
+
+    // 2) Senão, tentamos o nome do lead já vinculado ao chat
+    const crmName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
+    if (crmName) {
+      return crmName;
+    }
+
+    // 3) Depois tentamos algum nome já identificado externamente
+    if (preidentifiedLeadName) {
+      return preidentifiedLeadName;
+    }
+
+    // 4) Última tentativa: procurar pelo telefone nos leads carregados
+    const chatPhoneVariants = buildPhoneComparisonVariants(chat.phone);
+    if (chatPhoneVariants.length === 0) {
+      return primaryName ?? preidentifiedLeadName ?? chat.phone;
+    }
+
+    const matchingLead = leads.find(lead => {
+      const leadVariants = buildPhoneComparisonVariants(lead.telefone);
+      if (leadVariants.length === 0) {
+        return false;
       }
 
-      const crmName = toNonEmptyString(chat.crm_lead?.nome_completo ?? null);
-      if (crmName) {
-        return crmName;
-      }
+      return leadVariants.some(variant => chatPhoneVariants.includes(variant));
+    });
 
-      if (preidentifiedLeadName) {
-        return preidentifiedLeadName;
-      }
-
-      const chatPhoneVariants = buildPhoneComparisonVariants(chat.phone);
-      if (chatPhoneVariants.length === 0) {
-        return primaryName ?? preidentifiedLeadName ?? chat.phone;
-      }
-
-      const matchingLead = leads.find(lead => {
-        const leadVariants = buildPhoneComparisonVariants(lead.telefone);
-        if (leadVariants.length === 0) {
-          return false;
-        }
-
-        return leadVariants.some(variant => chatPhoneVariants.includes(variant));
-      });
-
-      const leadName = toNonEmptyString(matchingLead?.nome_completo);
-      return leadName ?? primaryName ?? preidentifiedLeadName ?? chat.phone;
-    },
-    [leads],
-  );
+    const leadName = toNonEmptyString(matchingLead?.nome_completo);
+    return leadName ?? primaryName ?? preidentifiedLeadName ?? chat.phone;
+  },
+  [leads],
+);
 
   const selectedChatLead = useMemo(() => {
     if (!selectedChat) {

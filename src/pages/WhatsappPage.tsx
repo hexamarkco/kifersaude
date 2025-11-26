@@ -4659,6 +4659,25 @@ export default function WhatsappPage({
             proximo_retorno: updatedProximoRetorno,
           } = response.lead;
 
+          setLeads(prevLeads =>
+            prevLeads.map(lead =>
+              lead.id === leadId
+                ? {
+                    ...lead,
+                    status: status ?? normalizedNewStatus,
+                    ultimo_contato: updatedUltimoContato ?? nowIso,
+                    responsavel: updatedResponsavel ?? lead.responsavel ?? responsavel,
+                    proximo_retorno:
+                      typeof updatedProximoRetorno !== 'undefined'
+                        ? updatedProximoRetorno
+                        : shouldClearNextReturn
+                          ? null
+                          : lead.proximo_retorno,
+                  }
+                : lead,
+            ),
+          );
+
           setChats(previousChats =>
             previousChats.map(chat => {
               const matchesLead = chat.crm_lead?.id === leadId || chat.lead_id === leadId;

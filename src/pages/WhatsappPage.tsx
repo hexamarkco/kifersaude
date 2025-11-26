@@ -4593,7 +4593,18 @@ export default function WhatsappPage({
       const normalizedNewStatusLower = normalizedNewStatus.toLowerCase();
       const shouldClearNextReturn =
         normalizedNewStatusLower === 'perdido' || normalizedNewStatusLower === 'convertido';
-
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === leadId
+            ? {
+                ...lead,
+                status: normalizedNewStatus,
+                ultimo_contato: nowIso,
+                proximo_retorno: shouldClearNextReturn ? null : lead.proximo_retorno,
+              }
+            : lead,
+        ),
+      );
       setUpdatingLeadStatus(true);
       setChats(previousChats =>
         previousChats.map(chat => {

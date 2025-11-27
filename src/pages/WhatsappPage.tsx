@@ -7974,7 +7974,7 @@ export default function WhatsappPage({
     setActiveSection('configs');
   };
 
-    const openSlaAlertsPanel = () => {
+  const openSlaAlertsPanel = () => {
     setActiveSection('sla-alerts');
     void loadRemindersCenter();
   };

@@ -2459,7 +2459,7 @@ const fetchLeadSummariesByPhones = async (
       const query = supabaseAdmin
         .from('leads')
         .select(
-          'id, telefone, nome_completo, status, status_id, responsavel, responsavel_id, ultimo_contato, proximo_retorno, updated_at',
+          'id, telefone, nome_completo, status_id, responsavel, responsavel_id, ultimo_contato, proximo_retorno, updated_at',
         )
         .or(chunk.join(','))
         .returns<LeadSummaryRecord[]>();

@@ -2506,7 +2506,7 @@ const fetchLeadSummariesByIds = async (leadIds: string[]): Promise<Map<string, C
   const { data, error } = await supabaseAdmin
     .from('leads')
     .select(
-      'id, telefone, nome_completo, status, status_id, responsavel, responsavel_id, ultimo_contato, proximo_retorno, updated_at',
+      'id, telefone, nome_completo, status_id, responsavel, responsavel_id, ultimo_contato, proximo_retorno, updated_at',
     )
     .in('id', uniqueIds)
     .returns<LeadSummaryRecord[]>();

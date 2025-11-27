@@ -415,7 +415,7 @@ type WhatsappSectionId = 'painel' | 'sla-alerts' | 'configs';
 
 const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [
   { id: 'painel', label: 'Chats', icon: MessageSquareText },
-  { id: 'sla-alerts', label: 'Alertas de SLA', icon: AlertTriangle },
+  { id: 'sla-alerts', label: 'Lembretes', icon: Bell },
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 

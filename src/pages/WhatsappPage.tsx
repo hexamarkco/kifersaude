@@ -4160,6 +4160,18 @@ const [selectedReminderDate, setSelectedReminderDate] = useState<string | null>(
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [remindersCenter]);
 
+  const remindersCenterByDateMap = useMemo(() => {
+  // transforma o array [ [data, lembretes], ... ]
+  // em { "2025-11-29": [lembretes...], ... }
+  return Object.fromEntries(remindersCenterByDate);
+}, [remindersCenterByDate]);
+
+const reminderDateKeysSorted = useMemo(
+  () => remindersCenterByDate.map(([date]) => date),
+  [remindersCenterByDate],
+);
+
+
 
   const insightSentimentDisplay = useMemo(() => {
     if (!chatInsight?.sentiment) {

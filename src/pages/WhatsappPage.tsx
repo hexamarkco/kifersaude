@@ -4143,6 +4143,25 @@ export default function WhatsappPage({
     });
   }, [slaAlertChatFilter, slaAlertStatusFilter, slaAlerts]);
 
+    const remindersCenterByDate = useMemo(() => {
+    const groups: Record<string, ReminderWithLead[]> = {};
+
+    for (const reminder of remindersCenter) {
+      const key =
+        reminder.data_lembrete && reminder.data_lembrete.length >= 10
+          ? reminder.data_lembrete.slice(0, 10) // yyyy-mm-dd
+          : 'sem-data';
+
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(reminder);
+    }
+
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [remindersCenter]);
+
+
   const insightSentimentDisplay = useMemo(() => {
     if (!chatInsight?.sentiment) {
       return null;

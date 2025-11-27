@@ -2019,6 +2019,9 @@ export default function WhatsappPage({
   const [leadReminders, setLeadReminders] = useState<Reminder[]>([]);
   const [leadRemindersLoading, setLeadRemindersLoading] = useState(false);
   const [leadRemindersError, setLeadRemindersError] = useState<string | null>(null);
+  const [remindersCenter, setRemindersCenter] = useState<ReminderWithLead[]>([]);
+  const [remindersCenterLoading, setRemindersCenterLoading] = useState(false);
+  const [remindersCenterError, setRemindersCenterError] = useState<string | null>(null);
   const [leadSearchTerm, setLeadSearchTerm] = useState('');
   const [leadStatusQuickFilter, setLeadStatusQuickFilter] = useState<'all' | 'novo'>('all');
   const [manualPhoneInput, setManualPhoneInput] = useState('');

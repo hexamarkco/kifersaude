@@ -411,6 +411,14 @@ const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIco
   { id: 'configs', label: 'Configurações', icon: Settings },
 ];
 
+type ReminderWithLead = Reminder & {
+  lead?: {
+    id: string;
+    nome_completo: string | null;
+    telefone: string | null;
+  } | null;
+};
+
 type WhatsappPageProps = {
   onUnreadCountChange?: (count: number) => void;
   initialChatPhone?: string | null;

@@ -2012,6 +2012,13 @@ export default function WhatsappPage({
   const [leadRemindersLoading, setLeadRemindersLoading] = useState(false);
   const [leadRemindersError, setLeadRemindersError] = useState<string | null>(null);
   const [remindersCenter, setRemindersCenter] = useState<ReminderWithLead[]>([]);
+  const [currentReminderMonth, setCurrentReminderMonth] = useState<Date>(() => {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), 1);
+});
+
+const [selectedReminderDate, setSelectedReminderDate] = useState<string | null>(null);
+
   const [remindersCenterLoading, setRemindersCenterLoading] = useState(false);
   const [remindersCenterError, setRemindersCenterError] = useState<string | null>(null);
   const [leadSearchTerm, setLeadSearchTerm] = useState('');

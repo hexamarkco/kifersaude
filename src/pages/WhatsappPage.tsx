@@ -8043,184 +8043,112 @@ export default function WhatsappPage({
     { id: 'critical', label: 'Crítico' },
   ];
 
-  const slaAlertsPanel = (
+    const slaAlertsPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={returnToWhatsappChats}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             aria-label="Voltar para as conversas do WhatsApp"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Voltar
           </button>
           <div className="space-y-0.5">
-            <p className="text-lg font-semibold text-slate-800">Alertas de SLA</p>
-            <p className="text-sm text-slate-500">Acompanhe conversas com risco de estourar o SLA.</p>
+            <p className="text-lg font-semibold text-slate-800">Central de lembretes</p>
+            <p className="text-sm text-slate-500">
+              Veja os lembretes de todos os leads, separados por dia.
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => loadSlaAlerts({
-              chatId: slaAlertChatFilter === 'all' ? undefined : slaAlertChatFilter,
-              status: slaAlertStatusFilter === 'all' ? undefined : [slaAlertStatusFilter],
-            })}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            onClick={() => loadRemindersCenter()}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
           >
             <ArrowUp className="h-4 w-4" />
             Atualizar
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {statusFilterButtons.map(filter => {
-            const isActive = slaAlertStatusFilter === filter.id;
-            return (
-              <button
-                key={filter.id}
-                type="button"
-                onClick={() => setSlaAlertStatusFilter(filter.id)}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${
-                  isActive
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700'
-                }`}
-                aria-pressed={isActive}
-              >
-                <Radio className={`h-4 w-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-                {filter.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold text-slate-600" htmlFor="sla-alert-chat-filter">
-            Chat
-          </label>
-          <select
-            id="sla-alert-chat-filter"
-            value={slaAlertChatFilter}
-            onChange={event => setSlaAlertChatFilter(event.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <option value="all">Todos os chats</option>
-            {chats.map(chat => {
-              const name = chatNameById.get(chat.id) ?? chat.display_name ?? chat.chat_name ?? chat.phone;
-              return (
-                <option key={chat.id} value={chat.id}>
-                  {name}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-      </div>
+
       <div className="flex-1 overflow-y-auto p-4">
-        {slaAlertsError ? (
-          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{slaAlertsError}</p>
-        ) : slaAlertsLoading ? (
-          <div className="space-y-3">
-            {[0, 1, 2].map(index => (
-              <div key={index} className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="h-4 w-32 rounded bg-slate-200" />
-                  <div className="h-6 w-20 rounded bg-slate-200" />
-                </div>
-                <div className="mt-3 h-3 w-3/4 rounded bg-slate-200" />
-                <div className="mt-2 h-3 w-2/3 rounded bg-slate-100" />
-              </div>
-            ))}
-          </div>
-        ) : filteredSlaAlerts.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum alerta encontrado para os filtros selecionados.</p>
+        {remindersCenterError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {remindersCenterError}
+          </p>
+        ) : remindersCenterLoading ? (
+          <p className="text-sm text-slate-500">Carregando lembretes...</p>
+        ) : remindersCenterByDate.length === 0 ? (
+          <p className="text-sm text-slate-500">Você ainda não tem lembretes cadastrados.</p>
         ) : (
-          <div className="space-y-3">
-            {filteredSlaAlerts.map(alert => {
-              const chatName = chatNameById.get(alert.chat_id) ?? 'Chat desconhecido';
-              const isUnseen = unseenSlaAlertIds.includes(alert.id);
-              const wasSeen = seenSlaAlertIds.includes(alert.id);
-              const badgeClass = SLA_STATUS_BADGE_CLASSES[alert.sla_status] ?? SLA_STATUS_BADGE_CLASSES.warning;
-              return (
-                <div
-                  key={alert.id}
-                  className={`rounded-xl border p-4 shadow-sm transition ${
-                    isUnseen
-                      ? 'border-rose-200 bg-rose-50/60 ring-1 ring-rose-100'
-                      : 'border-slate-200 bg-white hover:border-emerald-200'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
-                        <AlertTriangle className="h-4 w-4" />
-                        {alert.sla_status === 'critical' ? 'Crítico' : alert.sla_status === 'warning' ? 'Alerta' : 'SLA ok'}
-                      </span>
-                      {isUnseen ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                          Novo
-                        </span>
-                      ) : null}
-                      {wasSeen && !isUnseen ? (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          Visto
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="text-xs font-medium text-slate-500">{formatDateTime(alert.created_at)}</p>
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <p className="text-sm font-semibold text-slate-800">{chatName}</p>
-                    <p className="text-sm text-slate-600">{alert.alert_message ?? 'Alerta de SLA disparado para o chat selecionado.'}</p>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      <Clock className="h-4 w-4 text-slate-500" />
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-xs text-slate-500">Aguardando</span>
-                        <span className="font-semibold text-slate-800">{formatWaitingLabel(alert.waiting_minutes ?? null, 'há instantes')}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      <MessageSquareText className="h-4 w-4 text-slate-500" />
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-xs text-slate-500">Pendentes</span>
-                        <span className="font-semibold text-slate-800">{alert.pending_inbound_count} mensagem(ns)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      <Clock className="h-4 w-4 text-slate-500" />
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-xs text-slate-500">Desde</span>
-                        <span className="font-semibold text-slate-800">{formatShortTime(alert.waiting_since)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenSlaAlertChat(alert)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    >
-                      <MessageSquareText className="h-4 w-4" />
-                      Abrir chat
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMarkAlertAsSeen(alert.id)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Marcar como visto
-                    </button>
-                  </div>
+          remindersCenterByDate.map(([dateKey, reminders]) => {
+            const label =
+              dateKey === 'sem-data'
+                ? 'Sem data definida'
+                : new Date(dateKey + 'T00:00:00').toLocaleDateString('pt-BR', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: '2-digit',
+                  });
+
+            return (
+              <div key={dateKey} className="mb-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {label}
+                  </p>
+                  <span className="text-xs text-slate-400">
+                    {reminders.length} lembrete{reminders.length > 1 ? 's' : ''}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+                <div className="space-y-2">
+                  {reminders.map(reminder => {
+                    const leadName =
+                      reminder.lead?.nome_completo?.trim() || 'Lead sem nome';
+                    const phone = reminder.lead?.telefone || '';
+                    const timeLabel =
+                      reminder.data_lembrete &&
+                      new Date(reminder.data_lembrete).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                    return (
+                      <div
+                        key={reminder.id}
+                        className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-800">
+                              {leadName}
+                            </p>
+                            {phone ? (
+                              <p className="truncate text-xs text-slate-500">{phone}</p>
+                            ) : null}
+                          </div>
+                          {timeLabel ? (
+                            <span className="whitespace-nowrap text-xs text-slate-500">
+                              {timeLabel}
+                            </span>
+                          ) : null}
+                        </div>
+                        {reminder.titulo || reminder.descricao ? (
+                          <p className="mt-1 text-xs text-slate-600">
+                            {reminder.titulo || reminder.descricao}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

@@ -8484,24 +8484,6 @@ export default function WhatsappPage({
               </div>
             </header>
 
-            {selectedChatLead ? (
-            /* Lembretes do lead removidos do topo do chat
-              <LeadRemindersPanel
-                leadName={selectedChatLead.nome_completo}
-                reminders={leadReminders}
-                loading={leadRemindersLoading}
-                error={leadRemindersError}
-                onReload={() => {
-                  if (selectedChatLead.id) {
-                    void loadLeadReminders(selectedChatLead.id);
-                  }
-                }}
-                onToggleRead={handleLeadReminderToggleRead}
-                onReschedule={handleLeadReminderReschedule}
-              />
-              */}
-            ) : null}
-
             {showMessageSearch ? (
               <div className="border-b border-slate-200 px-4 py-3">
                 <label className="sr-only" htmlFor="whatsapp-message-search">

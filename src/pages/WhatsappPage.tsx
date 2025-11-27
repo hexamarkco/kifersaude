@@ -8485,6 +8485,7 @@ export default function WhatsappPage({
             </header>
 
             {selectedChatLead ? (
+            /* Lembretes do lead removidos do topo do chat
               <LeadRemindersPanel
                 leadName={selectedChatLead.nome_completo}
                 reminders={leadReminders}
@@ -8498,6 +8499,7 @@ export default function WhatsappPage({
                 onToggleRead={handleLeadReminderToggleRead}
                 onReschedule={handleLeadReminderReschedule}
               />
+              */}
             ) : null}
 
             {showMessageSearch ? (

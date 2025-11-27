@@ -3513,6 +3513,31 @@ export default function WhatsappPage({
     }
   }, []);
 
+    const loadRemindersCenter = useCallback(async () => {
+    setRemindersCenterLoading(true);
+    setRemindersCenterError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*, lead:leads(id, nome_completo, telefone)')
+        .order('data_lembrete', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setRemindersCenter((data as ReminderWithLead[] | null) ?? []);
+    } catch (error) {
+      console.error('Erro ao carregar lembretes da central:', error);
+      setRemindersCenter([]);
+      setRemindersCenterError('Não foi possível carregar os lembretes.');
+    } finally {
+      setRemindersCenterLoading(false);
+    }
+  }, []);
+
+
   const syncLeadNextReturnDate = useCallback(
     async (
       leadId: string,

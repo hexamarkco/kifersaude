@@ -403,6 +403,14 @@ type ChatPreviewInfo = {
   text: string;
 };
 
+type ReminderWithLead = Reminder & {
+  lead?: {
+    id: string;
+    nome_completo: string | null;
+    telefone: string | null;
+  } | null;
+};
+
 type WhatsappSectionId = 'painel' | 'sla-alerts' | 'configs';
 
 const WHATSAPP_SECTIONS: { id: WhatsappSectionId; label: string; icon: LucideIcon }[] = [

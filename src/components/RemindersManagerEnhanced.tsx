@@ -20,14 +20,9 @@ import {
 import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
-import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
-type RemindersManagerEnhancedProps = {
-  onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
-};
-
-export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersManagerEnhancedProps = {}) {
+export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [filter, setFilter] = useState<'todos' | 'nao-lidos' | 'lidos'>('nao-lidos');
   const [loading, setLoading] = useState(true);
@@ -649,70 +644,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
     return <Icon className="w-5 h-5" />;
   };
 
-  const buildWhatsappLaunchParams = (reminder: Reminder, lead?: Lead): WhatsappLaunchParams | null => {
-    if (!lead?.telefone) return null;
-
-    const digits = lead.telefone.replace(/\D/g, '');
-    if (!digits) return null;
-
-    const phoneWithCountry = digits.startsWith('55') ? digits : `55${digits}`;
-
-    return {
-      phone: phoneWithCountry,
-      chatName: lead.nome_completo,
-      leadId: lead.id,
-      message: reminder.descricao ?? null,
-    };
-  };
-
-  const handleWhatsappClick = (params: WhatsappLaunchParams) => {
-    if (onOpenWhatsapp) {
-      onOpenWhatsapp(params);
-      return;
-    }
-
-    const urlParams = new URLSearchParams({ phone: params.phone });
-
-    if (params.message) {
-      urlParams.set('text', params.message);
-    }
-
-    if (typeof window !== 'undefined') {
-      window.open(`https://api.whatsapp.com/send?${urlParams.toString()}`, '_blank');
-    }
-  };
-
-  const handleReminderWhatsappClick = async (
-    reminder: Reminder,
-    leadInfo?: Lead,
-    contract?: Contract
-  ) => {
-    const existingParams = buildWhatsappLaunchParams(reminder, leadInfo);
-
-    if (existingParams) {
-      handleWhatsappClick(existingParams);
-      return;
-    }
-
-    const targetLeadId = reminder.lead_id ?? contract?.lead_id;
-
-    if (!targetLeadId) {
-      return;
-    }
-
-    const fetchedLead = await fetchLeadInfo(targetLeadId);
-
-    if (!fetchedLead) {
-      return;
-    }
-
-    const fetchedParams = buildWhatsappLaunchParams(reminder, fetchedLead);
-
-    if (fetchedParams) {
-      handleWhatsappClick(fetchedParams);
-    }
-  };
-
   const renderReminderCard = (reminder: Reminder) => {
     const overdue = isOverdue(reminder.data_lembrete);
     const urgency = getUrgencyLevel(reminder);
@@ -723,9 +654,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
       : contract?.lead_id
         ? leadsMap.get(contract.lead_id)
         : undefined;
-    const whatsappParams = buildWhatsappLaunchParams(reminder, leadInfo);
-    const relatedLeadId = reminder.lead_id ?? contract?.lead_id;
-    const isLoadingWhatsappLead = relatedLeadId && loadingLeadId === relatedLeadId;
 
     return (
       <div
@@ -820,21 +748,6 @@ export default function RemindersManagerEnhanced({ onOpenWhatsapp }: RemindersMa
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
-            {relatedLeadId && (
-              <button
-                type="button"
-                onClick={() => handleReminderWhatsappClick(reminder, leadInfo, contract)}
-                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Conversar via WhatsApp"
-                disabled={Boolean(isLoadingWhatsappLead)}
-              >
-                {isLoadingWhatsappLead ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <MessageCircle className="w-5 h-5" />
-                )}
-              </button>
-            )}
             {!reminder.lido && (
               <div className="relative">
                 <button

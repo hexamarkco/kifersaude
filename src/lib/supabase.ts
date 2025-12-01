@@ -172,7 +172,6 @@ export type Reminder = {
   concluido_em?: string;
   snooze_count?: number;
   ultima_modificacao?: string;
-  whatsapp_schedule_id?: string;
   created_at: string;
 };
 

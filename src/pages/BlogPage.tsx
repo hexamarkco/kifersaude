@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, MessageCircle, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
@@ -219,15 +219,6 @@ export default function BlogPage() {
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
-  const openWhatsApp = () => {
-    window.open('https://wa.me/5521979302389?text=Olá! Vim através do blog e gostaria de mais informações sobre planos de saúde.', '_blank');
-  };
-
-  const shareOnWhatsApp = (post: BlogPost) => {
-    const text = `${post.title}\n\nLeia mais: https://kifersaude.com.br/blog/${post.slug}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
   const shareOnFacebook = (post: BlogPost) => {
     const url = `https://kifersaude.com.br/blog/${post.slug}`;
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
@@ -238,7 +229,7 @@ export default function BlogPage() {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const sharePost = async (post: BlogPost, fallback: 'whatsapp' | 'facebook' | 'linkedin' = 'whatsapp') => {
+  const sharePost = async (post: BlogPost, fallback: 'facebook' | 'linkedin' = 'facebook') => {
     const url = `https://kifersaude.com.br/blog/${post.slug}`;
     const shareData = {
       title: post.title,
@@ -260,9 +251,11 @@ export default function BlogPage() {
       shareOnFacebook(post);
     } else if (fallback === 'linkedin') {
       shareOnLinkedIn(post);
-    } else {
-      shareOnWhatsApp(post);
     }
+  };
+
+  const openEmailContact = () => {
+    window.open('mailto:contato@kifersaude.com.br?subject=Interesse em planos de saúde', '_blank');
   };
 
   const copyLink = async (post: BlogPost) => {
@@ -500,14 +493,6 @@ export default function BlogPage() {
             <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-slate-200">
               <span className="text-sm font-semibold text-slate-600">Compartilhar:</span>
               <button
-                onClick={() => sharePost(selectedPost, 'whatsapp')}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
-                title="Compartilhar no WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-                WhatsApp
-              </button>
-              <button
                 onClick={() => sharePost(selectedPost, 'facebook')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
                 title="Compartilhar no Facebook"
@@ -567,11 +552,11 @@ export default function BlogPage() {
                   Entre em contato e tire suas dúvidas sobre planos de saúde
                 </p>
                 <button
-                  onClick={openWhatsApp}
+                  onClick={openEmailContact}
                   className="px-8 py-4 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-all inline-flex items-center justify-center"
                 >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Falar no WhatsApp
+                  <Mail className="w-5 h-5 mr-2" />
+                  Enviar e-mail
                 </button>
               </div>
             </div>

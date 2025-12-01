@@ -407,7 +407,7 @@ export function AudioEditorModal({ dataUrl, durationSeconds, mimeType, onSave, o
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">Editar áudio</p>
-            <p className="text-xs text-slate-500">Ajuste o trecho antes de enviar no WhatsApp.</p>
+            <p className="text-xs text-slate-500">Ajuste o trecho antes de enviar para o cliente.</p>
             <p className="text-[11px] text-slate-400">Formato original: {mimeType || 'desconhecido'}</p>
           </div>
           <button

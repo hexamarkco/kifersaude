@@ -60,7 +60,7 @@ INSERT INTO integration_settings (slug, name, description, settings)
 VALUES (
   'gpt_transcription',
   'Integração Geral do GPT',
-  'Configurações usadas para recursos do GPT, como transcrever áudios e reescrever mensagens no WhatsApp.',
+  'Configurações usadas para recursos do GPT, como transcrever áudios e reescrever mensagens.',
   jsonb_build_object(
     'apiKey', '',
     'textModel', 'gpt-4o-mini'

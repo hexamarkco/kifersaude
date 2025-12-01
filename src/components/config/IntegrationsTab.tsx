@@ -254,14 +254,14 @@ export default function IntegrationsTab() {
             <h3 className="text-lg font-semibold text-slate-900">GPT - Assistente Inteligente</h3>
             <p className="text-sm text-slate-500">
               Essas credenciais são usadas para transcrever áudios recebidos e aplicar recursos de texto/reescrita antes do
-              envio na aba de WhatsApp.
+              envio de mensagens.
             </p>
             <div className="mt-3 text-xs text-slate-500 space-y-1">
               <p className="font-semibold text-slate-600">Como utilizamos o GPT:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Áudios usam o modelo Whisper no endpoint /v1/audio/transcriptions.</li>
                 <li>Recursos de texto usam o modelo selecionado abaixo.</li>
-                <li>Reescritas enviadas pelo WhatsApp usam o endpoint /v1/responses.</li>
+                <li>Reescritas enviadas pela aplicação usam o endpoint /v1/responses.</li>
               </ul>
             </div>
           </div>

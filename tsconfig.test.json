@@ -11,8 +11,7 @@
   },
   "include": [
     "src/vite-env.d.ts",
-    "src/components/__tests__/ChatMetricsBadges.test.tsx",
-    "src/pages/__tests__/WhatsappQuickReplies.test.tsx"
+    "src/components/__tests__/ChatMetricsBadges.test.tsx"
   ],
   "exclude": []
 }

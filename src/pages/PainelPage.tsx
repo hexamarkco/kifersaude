@@ -10,7 +10,6 @@ import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
 import EmailManager from '../components/EmailManager';
 import BlogTab from '../components/config/BlogTab';
 import ConfigPage from './ConfigPage';
-import WhatsappPage from './WhatsappPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import { notificationService } from '../lib/notificationService';
@@ -19,7 +18,6 @@ import FinanceiroComissoesTab from '../components/finance/FinanceiroComissoesTab
 import FinanceiroAgendaTab from '../components/finance/FinanceiroAgendaTab';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
-import type { WhatsappLaunchParams } from '../types/whatsapp';
 import type { TabNavigationOptions } from '../types/navigation';
 
 export default function PainelPage() {
@@ -28,13 +26,11 @@ export default function PainelPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
-  const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
-  const [whatsappLaunchParams, setWhatsappLaunchParams] = useState<WhatsappLaunchParams | null>(null);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
   const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
@@ -47,7 +43,6 @@ export default function PainelPage() {
         'contracts',
         'financeiro-comissoes',
         'financeiro-agenda',
-        'whatsapp',
         'reminders',
         'email',
         'blog',
@@ -57,38 +52,9 @@ export default function PainelPage() {
   );
 
   const updateSearchParamsForTab = useCallback(
-    (tabId: string, nextWhatsappParams?: WhatsappLaunchParams | null) => {
+    (tabId: string) => {
       const nextParams = new URLSearchParams(searchParams);
-
       nextParams.set('tab', tabId);
-
-      if (tabId === 'whatsapp' && nextWhatsappParams?.phone) {
-        nextParams.set('whatsappPhone', nextWhatsappParams.phone);
-
-        if (nextWhatsappParams.chatName) {
-          nextParams.set('whatsappName', nextWhatsappParams.chatName);
-        } else {
-          nextParams.delete('whatsappName');
-        }
-
-        if (nextWhatsappParams.leadId) {
-          nextParams.set('whatsappLeadId', nextWhatsappParams.leadId);
-        } else {
-          nextParams.delete('whatsappLeadId');
-        }
-
-        if (nextWhatsappParams.message !== undefined && nextWhatsappParams.message !== null) {
-          nextParams.set('whatsappMessage', nextWhatsappParams.message);
-        } else {
-          nextParams.delete('whatsappMessage');
-        }
-      } else {
-        nextParams.delete('whatsappPhone');
-        nextParams.delete('whatsappName');
-        nextParams.delete('whatsappLeadId');
-        nextParams.delete('whatsappMessage');
-      }
-
       setSearchParams(nextParams, { replace: true });
     },
     [searchParams, setSearchParams],
@@ -114,25 +80,6 @@ export default function PainelPage() {
     const requestedTab = tabParam && validTabIds.has(tabParam) ? tabParam : 'dashboard';
 
     setActiveTab(previous => (previous !== requestedTab ? requestedTab : previous));
-
-    const phoneParam = searchParams.get('whatsappPhone');
-
-    if (phoneParam) {
-      const messageParam = searchParams.get('whatsappMessage');
-      const chatNameParam = searchParams.get('whatsappName');
-      const leadIdParam = searchParams.get('whatsappLeadId');
-
-      setWhatsappLaunchParams({
-        phone: phoneParam,
-        chatName: chatNameParam,
-        leadId: leadIdParam,
-        message: messageParam === null ? undefined : messageParam,
-      });
-
-      setActiveTab('whatsapp');
-    } else {
-      setWhatsappLaunchParams(previous => (previous ? null : previous));
-    }
   }, [searchParams, validTabIds]);
 
   const loadUnreadReminders = useCallback(async () => {
@@ -207,11 +154,7 @@ export default function PainelPage() {
 
   const handleTabChange = (tab: string, options?: TabNavigationOptions) => {
     setActiveTab(tab);
-    updateSearchParamsForTab(tab, tab === 'whatsapp' ? whatsappLaunchParams : null);
-
-    if (tab !== 'whatsapp') {
-      setWhatsappLaunchParams(null);
-    }
+    updateSearchParamsForTab(tab);
 
     if (tab === 'reminders') {
       setHasActiveNotification(false);
@@ -242,12 +185,6 @@ export default function PainelPage() {
     setActiveLeadNotifications([]);
   };
 
-  const handleOpenWhatsapp = (params: WhatsappLaunchParams) => {
-    setWhatsappLaunchParams(params);
-    setActiveTab('whatsapp');
-    updateSearchParamsForTab('whatsapp', params);
-  };
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -256,7 +193,6 @@ export default function PainelPage() {
         return (
           <LeadsManager
             onConvertToContract={handleConvertLead}
-            onOpenWhatsapp={handleOpenWhatsapp}
             initialStatusFilter={leadStatusFilter}
             initialLeadIdFilter={leadIdFilter}
           />
@@ -273,17 +209,8 @@ export default function PainelPage() {
         return <FinanceiroComissoesTab />;
       case 'financeiro-agenda':
         return <FinanceiroAgendaTab />;
-      case 'whatsapp':
-        return (
-          <WhatsappPage
-            onUnreadCountChange={setWhatsappUnreadCount}
-            initialChatPhone={whatsappLaunchParams?.phone}
-            initialChatName={whatsappLaunchParams?.chatName}
-            initialMessage={whatsappLaunchParams?.message ?? undefined}
-          />
-        );
       case 'reminders':
-        return <RemindersManagerEnhanced onOpenWhatsapp={handleOpenWhatsapp} />;
+        return <RemindersManagerEnhanced />;
       case 'email':
         return <EmailManager />;
       case 'blog':
@@ -314,7 +241,6 @@ export default function PainelPage() {
         unreadReminders={unreadReminders}
         hasActiveNotification={hasActiveNotification}
         newLeadsCount={newLeadsCount}
-        whatsappUnreadCount={whatsappUnreadCount}
       >
         {renderContent()}
       </Layout>

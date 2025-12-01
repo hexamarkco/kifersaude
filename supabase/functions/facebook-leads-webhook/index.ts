@@ -139,8 +139,7 @@ function buildLeadRecord(payload: FacebookLeadPayload, settings: IntegrationSett
       .trim();
 
   const telefone = normalizePhone(
-    getFieldValue(fieldData, ['phone_number', 'telefone', 'celular', 'whatsapp']) ||
-      getFieldValue(fieldData, ['phone'])
+    getFieldValue(fieldData, ['phone_number', 'telefone', 'celular']) || getFieldValue(fieldData, ['phone'])
   );
 
   if (!telefone) {

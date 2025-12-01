@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS interactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lead_id uuid REFERENCES leads(id) ON DELETE CASCADE,
   contract_id uuid REFERENCES contracts(id) ON DELETE CASCADE,
-  tipo text NOT NULL, -- Ligação, WhatsApp, E-mail, Reunião, Observação
+  tipo text NOT NULL, -- Ligação, Mensagem, E-mail, Reunião, Observação
   descricao text NOT NULL,
   responsavel text NOT NULL,
   data_interacao timestamptz DEFAULT now(),

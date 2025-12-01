@@ -745,7 +745,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     >
                       <option value="Ligação">Ligação</option>
-                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Mensagem">Mensagem</option>
                       <option value="E-mail">E-mail</option>
                       <option value="Reunião">Reunião</option>
                       <option value="Observação">Observação</option>

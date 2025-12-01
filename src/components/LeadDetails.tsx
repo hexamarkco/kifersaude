@@ -5,7 +5,6 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
-import WhatsappCampaignDrawer from './WhatsappCampaignDrawer';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -30,7 +29,6 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     descricao: '',
     responsavel: 'Luiza',
   });
-  const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -149,15 +147,6 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                 </span>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCampaignDrawer(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-600 transition hover:border-emerald-400 hover:bg-emerald-50"
-              >
-                Campanhas WhatsApp
-              </button>
-            </div>
           </div>
 
           <div className="mb-6">
@@ -198,7 +187,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="Ligação">Ligação</option>
-                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Mensagem">Mensagem</option>
                     <option value="E-mail">E-mail</option>
                     <option value="Reunião">Reunião</option>
                     <option value="Observação">Observação</option>
@@ -282,15 +271,6 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
         </div>
       </div>
 
-      <WhatsappCampaignDrawer
-        isOpen={showCampaignDrawer}
-        onClose={() => setShowCampaignDrawer(false)}
-        context={{
-          leadId: lead.id,
-          phone: lead.telefone ?? null,
-          displayName: lead.nome_completo,
-        }}
-      />
     </div>
   );
 }

@@ -167,13 +167,9 @@ export default function LandingPage() {
 
       if (error) {
         console.error('Erro ao salvar lead:', error);
-        alert('Ocorreu um erro ao enviar sua cotação. Por favor, tente novamente ou entre em contato via WhatsApp.');
+        alert('Ocorreu um erro ao enviar sua cotação. Por favor, tente novamente ou entre em contato pelo telefone.');
         return;
       }
-
-      const message = `*Nova Cotação - Landing Page*\n\nNome: ${formData.nome}\nTelefone: ${formData.telefone}\nCidade: ${formData.cidade}\nIdades: ${agesText}\nTipo: ${formData.tipoContratacao}`;
-      const encodedMessage = encodeURIComponent(message);
-      window.open(`https://wa.me/5521979302389?text=${encodedMessage}`, '_blank');
 
       setFormData({ nome: '', telefone: '', cidade: '', tipoContratacao: 'PF', numeroVidas: '', idadeTitular: '' });
       setAgeRangeCounts(createInitialAgeRangeCounts());
@@ -184,10 +180,6 @@ export default function LandingPage() {
       console.error('Erro ao processar formulário:', error);
       alert('Ocorreu um erro ao enviar sua cotação. Por favor, tente novamente.');
     }
-  };
-
-  const openWhatsApp = () => {
-    window.open('https://wa.me/5521979302389', '_blank');
   };
 
   const scrollToForm = () => {
@@ -291,11 +283,11 @@ export default function LandingPage() {
                 </button>
 
                 <button
-                  onClick={openWhatsApp}
-                  className="px-8 py-4 bg-green-600 text-white text-base md:text-lg rounded-xl font-bold hover:bg-green-700 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
+                  onClick={scrollToForm}
+                  className="px-8 py-4 bg-slate-900 text-white text-base md:text-lg rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
                 >
                   <MessageCircle className="inline-block mr-2 w-5 h-5" />
-                  Falar no WhatsApp
+                  Falar com um especialista
                 </button>
               </div>
             </div>
@@ -532,7 +524,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-slate-700 mb-6 italic">
-                "Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções."
+                "Atendimento super rápido. Em menos de 1 hora já tinha minha cotação com várias opções."
               </p>
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center mr-3">
@@ -615,7 +607,7 @@ export default function LandingPage() {
 
             <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
               <Zap className="w-12 h-12 text-orange-600 mb-4" />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Resposta rápida via WhatsApp</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Resposta rápida</h3>
               <p className="text-slate-600">Atendimento ágil e eficiente pelo canal que você prefere</p>
             </div>
 
@@ -823,7 +815,7 @@ export default function LandingPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Telefone (WhatsApp) *
+                  Telefone com DDD *
                 </label>
                 <input
                   type="tel"
@@ -966,7 +958,7 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">WhatsApp</h3>
+              <h3 className="text-xl font-bold text-white mb-2 text-center">Contato</h3>
               <p className="text-slate-300 text-center">Atendimento rápido</p>
             </a>
           </div>
@@ -1045,7 +1037,7 @@ export default function LandingPage() {
 
             <form onSubmit={handleSubmit} className="p-8">
               <p className="text-slate-600 mb-6 text-center">
-                Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp
+                Preencha os dados abaixo e receba sua cotação personalizada
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1065,7 +1057,7 @@ export default function LandingPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Telefone (WhatsApp) *
+                    Telefone com DDD *
                   </label>
                   <input
                     type="tel"
@@ -1165,7 +1157,7 @@ export default function LandingPage() {
                 type="submit"
                 className="w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
-                Enviar cotação via WhatsApp
+                Enviar cotação
                 <MessageCircle className="inline-block ml-2 w-5 h-5" />
               </button>
 
@@ -1284,7 +1276,7 @@ export default function LandingPage() {
                     age: 38,
                     rating: 5,
                     date: "Há 1 mês",
-                    review: "Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções. A Luiza é muito atenciosa e profissional!"
+                    review: "Atendimento super rápido. Em menos de 1 hora já tinha minha cotação com várias opções. A Luiza é muito atenciosa e profissional!"
                   },
                   {
                     name: "Ana Paula Ferreira",

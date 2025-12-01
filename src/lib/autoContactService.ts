@@ -86,18 +86,29 @@ export async function sendAutoContactMessage({
     message,
   };
 
-  const response = await fetch(buildEndpoint(settings.baseUrl, '/send-message'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  const endpoint = buildEndpoint(settings.baseUrl, '/send-message');
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || 'Falha ao enviar mensagem automática');
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const messageDetail = errorText?.trim()
+        ? `${response.status} ${response.statusText}: ${errorText}`
+        : `${response.status} ${response.statusText}`;
+      throw new Error(`Falha ao enviar mensagem automática (${messageDetail})`);
+    }
+  } catch (error) {
+    const details = error instanceof Error ? error.message : String(error);
+    console.error('Erro ao enviar mensagem automática para', endpoint, payload, error);
+    throw new Error(details);
   }
 }
 

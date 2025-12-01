@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseFunctionsUrl =
+export const supabaseFunctionsUrl =
   import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${supabaseUrl}/functions/v1`;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -300,4 +300,34 @@ export type ProfilePermission = {
   can_edit: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type WhatsAppChat = {
+  id: string;
+  name: string | null;
+  is_group: boolean;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WhatsAppMessage = {
+  id: string;
+  chat_id: string;
+  from_number: string | null;
+  to_number: string | null;
+  type: string | null;
+  body: string | null;
+  has_media: boolean;
+  timestamp: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
+export type WhatsAppWebhookEvent = {
+  id: string;
+  event: string | null;
+  payload: Record<string, unknown>;
+  headers: Record<string, unknown> | null;
+  created_at: string;
 };

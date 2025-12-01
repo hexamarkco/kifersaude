@@ -17,10 +17,8 @@ import {
   MapPin,
   Layers,
   UserCircle,
-  AlertTriangle,
   Tag,
   Share2,
-  Check,
   Trash2,
   Loader2,
   RefreshCcw,
@@ -39,7 +37,6 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import FilterDateRange from './FilterDateRange';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
-import { getOverdueLeads } from '../lib/analytics';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
 import { configService } from '../lib/configService';
@@ -192,8 +189,6 @@ export default function LeadsManager({
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [overdueLeads, setOverdueLeads] = useState<Lead[]>([]);
-  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [loadingAutoContact, setLoadingAutoContact] = useState(false);
   const [sendingAutoIds, setSendingAutoIds] = useState<Set<string>>(new Set());
@@ -280,14 +275,6 @@ export default function LeadsManager({
       .map((canal) => ({ value: canal, label: canal }));
   }, [leads]);
 
-  const syncOverdueLeads = useCallback(
-    (allLeads: Lead[]) => {
-      const updated = getOverdueLeads(allLeads);
-      setOverdueLeads(updated);
-    },
-    []
-  );
-
   const resetFilters = useCallback(() => {
     setSearchTerm('');
     setFilterStatus(initialStatusFilter ?? []);
@@ -351,13 +338,12 @@ export default function LeadsManager({
         : mappedLeads;
 
       setLeads(visibleLeads);
-      syncOverdueLeads(visibleLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions, syncOverdueLeads]);
+  }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions]);
 
   const loadAutoContactSettings = useCallback(async (): Promise<AutoContactSettings | null> => {
     setLoadingAutoContact(true);
@@ -456,7 +442,6 @@ export default function LeadsManager({
       leadStatuses,
       tipoContratacaoOptions,
       responsavelOptions,
-      syncOverdueLeads,
     ]
   );
 
@@ -526,21 +511,8 @@ export default function LeadsManager({
     });
   }, [tipoContratacaoOptions]);
 
-  useEffect(() => {
-    syncOverdueLeads(leads);
-  }, [leads, syncOverdueLeads]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      syncOverdueLeads(leads);
-    }, 60000);
-
-    return () => window.clearInterval(intervalId);
-  }, [leads, syncOverdueLeads]);
-
   const filteredLeads = useMemo(() => {
-    const baseList = showOverdueOnly ? overdueLeads : leads;
-    let filtered = baseList.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
+    let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
 
     const selectedStatusSet = new Set(filterStatus);
     const selectedResponsavelSet = new Set(filterResponsavel);
@@ -652,7 +624,6 @@ export default function LeadsManager({
     return sorted;
   }, [
     leads,
-    overdueLeads,
     searchTerm,
     filterStatus,
     filterResponsavel,
@@ -669,7 +640,6 @@ export default function LeadsManager({
     isObserver,
     isOriginVisibleToObserver,
     showArchived,
-    showOverdueOnly,
     sortDirection,
     sortField,
   ]);
@@ -1202,76 +1172,6 @@ export default function LeadsManager({
     };
   }, [handleRealtimeLeadChange, loadAutoContactSettings, loadLeads]);
 
-  const clearOverdueReturn = async (
-    lead: Lead,
-    action: 'delete' | 'complete'
-  ) => {
-    if (!lead.proximo_retorno) return;
-
-    try {
-      if (action === 'delete') {
-        const { error: deleteReminderError } = await supabase
-          .from('reminders')
-          .delete()
-          .eq('lead_id', lead.id)
-          .eq('data_lembrete', lead.proximo_retorno);
-
-        if (deleteReminderError) throw deleteReminderError;
-      } else {
-        const { error: completeReminderError } = await supabase
-          .from('reminders')
-          .update({
-            lido: true,
-            concluido_em: new Date().toISOString(),
-          })
-          .eq('lead_id', lead.id)
-          .eq('data_lembrete', lead.proximo_retorno);
-
-        if (completeReminderError) throw completeReminderError;
-      }
-
-      const { error: clearNextReturnError } = await supabase
-        .from('leads')
-        .update({ proximo_retorno: null })
-        .eq('id', lead.id)
-        .eq('proximo_retorno', lead.proximo_retorno);
-
-      if (clearNextReturnError) throw clearNextReturnError;
-
-      setLeads((current) =>
-        current.map((leadItem) =>
-          leadItem.id === lead.id ? { ...leadItem, proximo_retorno: null } : leadItem
-        )
-      );
-      setOverdueLeads((current) => current.filter((item) => item.id !== lead.id));
-    } catch (error) {
-      console.error('Erro ao limpar retorno vencido:', error);
-      alert('Não foi possível atualizar o retorno vencido. Tente novamente.');
-      throw error;
-    }
-  };
-
-  const handleRescheduleOverdue = async (lead: Lead) => {
-    try {
-      await clearOverdueReturn(lead, 'delete');
-      openReminderScheduler({ ...lead, proximo_retorno: null });
-    } catch (error) {
-      console.error('Erro ao reagendar retorno vencido:', error);
-    }
-  };
-
-  const handleCompleteOverdue = async (lead: Lead) => {
-    try {
-      await clearOverdueReturn(lead, 'complete');
-      openReminderScheduler(
-        { ...lead, proximo_retorno: null },
-        'Retorno concluído. Deseja marcar um próximo lembrete para este lead?'
-      );
-    } catch (error) {
-      console.error('Erro ao concluir retorno vencido:', error);
-    }
-  };
-
   useEffect(() => {
     if (viewMode !== 'list') {
       clearSelection();
@@ -1318,84 +1218,6 @@ export default function LeadsManager({
   return (
     <div>
       <ObserverBanner />
-      {overdueLeads.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-orange-100 p-2 text-orange-700">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-orange-800">
-                  {overdueLeads.length} lead{overdueLeads.length === 1 ? '' : 's'} com retorno vencido
-                </p>
-                <p className="text-sm text-orange-700">
-                  Ordenados pelo próximo retorno. Mantenha o contato ativo para evitar perda de interesse.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowOverdueOnly((current) => !current)}
-                className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-orange-700 transition-colors"
-              >
-                {showOverdueOnly ? 'Ver todos os leads' : 'Filtrar atrasados'}
-              </button>
-              <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="rounded-lg border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-800 hover:bg-orange-100 transition-colors"
-              >
-                Atualizar prioridade
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {overdueLeads.slice(0, 3).map((lead) => (
-              <div key={lead.id} className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{lead.nome_completo}</p>
-                    <p className="text-xs text-slate-600">Responsável: {lead.responsavel || 'Não atribuído'}</p>
-                  </div>
-                  <Calendar className="h-4 w-4 text-orange-500" />
-                </div>
-                {lead.proximo_retorno && (
-                  <p className="mt-2 text-xs font-medium text-orange-700">
-                    Próximo retorno: {formatDateTimeFullBR(lead.proximo_retorno)}
-                  </p>
-                )}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedLead(lead);
-                      setViewMode('list');
-                    }}
-                    className="flex-1 rounded-lg bg-orange-100 px-2 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-200 transition-colors"
-                  >
-                    Abrir lead
-                  </button>
-                  <button
-                    onClick={() => handleCompleteOverdue(lead)}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
-                    type="button"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span className="hidden sm:inline">Concluir retorno</span>
-                    <span className="sm:hidden">Concluir</span>
-                  </button>
-                  <button
-                    onClick={() => handleRescheduleOverdue(lead)}
-                    className="rounded-lg bg-orange-600 px-2 py-2 text-xs font-semibold text-white hover:bg-orange-700 transition-colors"
-                    type="button"
-                  >
-                    Reagendar retorno
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads</h2>

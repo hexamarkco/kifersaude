@@ -18,6 +18,7 @@ import {
   PiggyBank,
   DollarSign,
   Calendar,
+  PhoneCall,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -75,6 +76,7 @@ export default function Layout({
   const comunicacaoChildren = [
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
+    { id: 'whatsapp', label: 'WhatsApp', icon: PhoneCall },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 

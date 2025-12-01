@@ -5,7 +5,7 @@ export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 export type AutoContactStep = {
   id: string;
   message: string;
-  delayMinutes: number;
+  delaySeconds: number;
   active: boolean;
 };
 
@@ -20,13 +20,22 @@ export type AutoContactSettings = {
 const DEFAULT_STATUS = 'Contato Inicial';
 const DEFAULT_BASE_URL = 'http://localhost:3000';
 
+const getNormalizedDelaySeconds = (step: any) => {
+  const delaySeconds = Number.isFinite(step?.delaySeconds) ? Number(step.delaySeconds) : null;
+  const delayMinutes = Number.isFinite(step?.delayMinutes) ? Number(step.delayMinutes) : null;
+
+  const normalizedSeconds = delaySeconds ?? (delayMinutes !== null ? delayMinutes * 60 : null);
+
+  return normalizedSeconds !== null ? Math.max(0, normalizedSeconds) : 0;
+};
+
 export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | null | undefined): AutoContactSettings => {
   const settings = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
   const messageFlow = Array.isArray(settings.messageFlow)
     ? settings.messageFlow.map((step, index) => ({
         id: typeof step?.id === 'string' && step.id.trim() ? step.id : `step-${index}`,
         message: typeof step?.message === 'string' ? step.message : '',
-        delayMinutes: Number.isFinite(step?.delayMinutes) ? Number(step.delayMinutes) : 0,
+        delaySeconds: getNormalizedDelaySeconds(step),
         active: step?.active !== false,
       }))
     : [];
@@ -54,8 +63,7 @@ export const applyTemplateVariables = (template: string, lead: Lead) => {
     .replace(/{{\s*responsavel\s*}}/gi, lead.responsavel || '');
 };
 
-const waitMinutes = (minutes: number) =>
-  new Promise((resolve) => setTimeout(resolve, Math.max(0, minutes) * 60 * 1000));
+const waitSeconds = (seconds: number) => new Promise((resolve) => setTimeout(resolve, Math.max(0, seconds) * 1000));
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
@@ -106,7 +114,7 @@ export async function runAutoContactFlow({
 }): Promise<void> {
   const steps = settings.messageFlow
     .filter((step) => step.active && step.message.trim())
-    .sort((a, b) => a.delayMinutes - b.delayMinutes);
+    .sort((a, b) => a.delaySeconds - b.delaySeconds);
 
   if (steps.length === 0) return;
 
@@ -114,8 +122,8 @@ export async function runAutoContactFlow({
 
   for (const step of steps) {
     if (signal?.() === false) break;
-    if (step.delayMinutes > 0) {
-      await waitMinutes(step.delayMinutes);
+    if (step.delaySeconds > 0) {
+      await waitSeconds(step.delaySeconds);
     }
 
     if (signal?.() === false) break;

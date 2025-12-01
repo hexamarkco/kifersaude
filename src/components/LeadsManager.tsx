@@ -1126,7 +1126,11 @@ export default function LeadsManager({
         });
       } catch (error) {
         console.error('Erro ao enviar automação para o lead:', error);
-        alert('Falha ao enviar a automação. Verifique as credenciais na aba de Integrações.');
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Falha ao enviar a automação. Verifique as credenciais na aba de Integrações.';
+        alert(message);
       } finally {
         setSendingAutoIds((prev) => {
           const next = new Set(prev);

@@ -28,6 +28,20 @@ type LeadLookupMaps = {
   responsavelByLabel: Map<string, string>;
 };
 
+type AutoContactStep = {
+  message: string;
+  delaySeconds: number;
+  active: boolean;
+};
+
+type AutoContactSettings = {
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  statusOnSend: string;
+  messageFlow: AutoContactStep[];
+};
+
 type LookupTableRow = { id: string; nome?: string | null; label?: string | null; padrao?: boolean | null };
 
 function normalizeText(value: string): string {
@@ -444,6 +458,156 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
+const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null => {
+  if (!settings || typeof settings !== 'object') return null;
+
+  const messageFlow: AutoContactStep[] = Array.isArray(settings.messageFlow)
+    ? settings.messageFlow.map((step: any, index: number) => ({
+        message: typeof step?.message === 'string' ? step.message : '',
+        delaySeconds:
+          Number.isFinite(step?.delaySeconds)
+            ? Math.max(0, Number(step.delaySeconds))
+            : Number.isFinite(step?.delayMinutes)
+              ? Math.max(0, Number(step.delayMinutes) * 60)
+              : 0,
+        active: step?.active !== false,
+      }))
+    : [];
+
+  return {
+    enabled: settings.enabled !== false,
+    baseUrl:
+      typeof settings.baseUrl === 'string' && settings.baseUrl.trim()
+        ? settings.baseUrl.trim()
+        : 'http://localhost:3000',
+    apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
+    statusOnSend:
+      typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
+        ? settings.statusOnSend.trim()
+        : 'Contato Inicial',
+    messageFlow,
+  };
+};
+
+const applyTemplateVariables = (template: string, lead: any) => {
+  const firstName = lead?.nome_completo?.trim()?.split(/\s+/)?.[0] ?? '';
+
+  return template
+    .replace(/{{\s*nome\s*}}/gi, lead?.nome_completo || '')
+    .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
+    .replace(/{{\s*origem\s*}}/gi, lead?.origem || '')
+    .replace(/{{\s*cidade\s*}}/gi, lead?.cidade || '')
+    .replace(/{{\s*responsavel\s*}}/gi, lead?.responsavel || '');
+};
+
+async function loadAutoContactSettings(
+  supabase: ReturnType<typeof createClient>,
+): Promise<AutoContactSettings | null> {
+  const { data, error } = await supabase
+    .from('integration_settings')
+    .select('settings')
+    .eq('slug', 'whatsapp_auto_contact')
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Erro ao carregar integração de mensagens automáticas', error);
+    return null;
+  }
+
+  return normalizeAutoContactSettings(data?.settings) ?? null;
+}
+
+async function triggerAutoContactForLead({
+  supabase,
+  lead,
+  lookups,
+  logWithContext,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lead: any;
+  lookups: LeadLookupMaps;
+  logWithContext: (message: string, details?: Record<string, unknown>) => void;
+}): Promise<void> {
+  const settings = await loadAutoContactSettings(supabase);
+  if (!settings || !settings.enabled) {
+    logWithContext('Integração de auto contato desativada ou não configurada');
+    return;
+  }
+
+  const activeSteps = settings.messageFlow
+    .filter((step) => step.active && step.message.trim())
+    .sort((a, b) => a.delaySeconds - b.delaySeconds);
+
+  const firstStep = activeSteps[0];
+  if (!firstStep) {
+    logWithContext('Fluxo de mensagens automáticas sem etapas ativas');
+    return;
+  }
+
+  const normalizedPhone = normalizeTelefone(lead?.telefone || '');
+  if (!normalizedPhone) {
+    logWithContext('Lead sem telefone válido para automação', { leadId: lead?.id });
+    return;
+  }
+
+  const message = applyTemplateVariables(firstStep.message, lead);
+
+  try {
+    const response = await fetch(`${settings.baseUrl.replace(/\/+$/, '')}/send-message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+      },
+      body: JSON.stringify({
+        number: normalizedPhone,
+        message,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Falha ao enviar automação para o lead');
+    }
+
+    logWithContext('Mensagem automática enviada', { leadId: lead.id });
+
+    const targetStatusName = settings.statusOnSend?.trim();
+    const normalizedTarget = targetStatusName ? normalizeText(targetStatusName) : null;
+    const targetStatusId = normalizedTarget
+      ? lookups.statusByName.get(normalizedTarget) ?? lookups.defaultStatusId
+      : lookups.defaultStatusId;
+
+    const now = new Date().toISOString();
+
+    await supabase.from('interactions').insert([
+      {
+        lead_id: lead.id,
+        tipo: 'Mensagem Automática',
+        descricao: 'Fluxo automático disparado pela API de leads',
+        responsavel: lead.responsavel,
+      },
+    ]);
+
+    if (targetStatusId) {
+      await supabase
+        .from('leads')
+        .update({
+          status_id: targetStatusId,
+          ultimo_contato: now,
+        })
+        .eq('id', lead.id);
+    } else {
+      await supabase
+        .from('leads')
+        .update({ ultimo_contato: now })
+        .eq('id', lead.id);
+    }
+  } catch (error) {
+    console.error('Erro ao disparar automação para o lead', { leadId: lead?.id, error });
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
   const logWithContext = (message: string, details?: Record<string, unknown>) =>
@@ -537,6 +701,17 @@ Deno.serve(async (req: Request) => {
       }
 
       logWithContext('Lead created successfully', { leadId: data.id });
+
+      try {
+        await triggerAutoContactForLead({
+          supabase,
+          lead: data,
+          lookups,
+          logWithContext,
+        });
+      } catch (automationError) {
+        console.error('Falha ao processar automação após criação do lead', automationError);
+      }
 
       return new Response(
         JSON.stringify({

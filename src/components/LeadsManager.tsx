@@ -228,14 +228,16 @@ export default function LeadsManager({
     () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
     [options.lead_tipo_contratacao]
   );
-  const hasActiveAutoContact = useMemo(() => {
-    if (!autoContactSettings) return false;
+  const isAutoContactEnabled = useCallback((settings: AutoContactSettings | null | undefined) => {
+    if (!settings) return false;
 
-    return (
-      autoContactSettings.enabled &&
-      autoContactSettings.messageFlow.some((step) => step.active && step.message.trim())
-    );
-  }, [autoContactSettings]);
+    return settings.enabled && settings.messageFlow.some((step) => step.active && step.message.trim());
+  }, []);
+
+  const hasActiveAutoContact = useMemo(() => isAutoContactEnabled(autoContactSettings), [
+    autoContactSettings,
+    isAutoContactEnabled,
+  ]);
   const statusFilterOptions = useMemo(
     () => activeLeadStatuses.map((status) => ({ value: status.nome, label: status.nome })),
     [activeLeadStatuses]
@@ -357,19 +359,23 @@ export default function LeadsManager({
     }
   }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions, syncOverdueLeads]);
 
-  const loadAutoContactSettings = useCallback(async () => {
+  const loadAutoContactSettings = useCallback(async (): Promise<AutoContactSettings | null> => {
     setLoadingAutoContact(true);
     try {
       const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
 
       if (integration?.settings) {
-        setAutoContactSettings(normalizeAutoContactSettings(integration.settings));
+        const normalizedSettings = normalizeAutoContactSettings(integration.settings);
+        setAutoContactSettings(normalizedSettings);
+        return normalizedSettings;
       } else {
         setAutoContactSettings(null);
+        return null;
       }
     } catch (error) {
       console.error('Erro ao carregar integração de mensagens automáticas:', error);
       setAutoContactSettings(null);
+      return null;
     } finally {
       setLoadingAutoContact(false);
     }
@@ -1111,7 +1117,15 @@ export default function LeadsManager({
   const triggerAutoContact = useCallback(
     async (lead: Lead, options?: { force?: boolean }) => {
       if (autoContactAbortRef.current) return;
-      if (isObserver || !hasActiveAutoContact || !autoContactSettings) return;
+      if (isObserver) return;
+
+      let settings = autoContactSettings;
+
+      if (!settings) {
+        settings = await loadAutoContactSettings();
+      }
+
+      if (!settings || !isAutoContactEnabled(settings)) return;
 
       const normalizedPhone = lead.telefone?.replace(/\D/g, '');
       if (!normalizedPhone) return;
@@ -1123,12 +1137,12 @@ export default function LeadsManager({
       try {
         await runAutoContactFlow({
           lead: { ...lead, telefone: normalizedPhone },
-          settings: autoContactSettings,
+          settings,
           signal: () => !autoContactAbortRef.current,
           onFirstMessageSent: async () => {
             await registerContact(lead, 'Mensagem Automática');
 
-            const targetStatus = autoContactSettings.statusOnSend || 'Contato Inicial';
+            const targetStatus = settings.statusOnSend || 'Contato Inicial';
             if (targetStatus && lead.status?.toLowerCase() !== targetStatus.toLowerCase()) {
               await handleStatusChange(lead.id, targetStatus);
             }
@@ -1151,7 +1165,15 @@ export default function LeadsManager({
         });
       }
     },
-    [autoContactSettings, hasActiveAutoContact, isObserver, autoContactCache, registerContact, handleStatusChange]
+    [
+      autoContactSettings,
+      isObserver,
+      autoContactCache,
+      registerContact,
+      handleStatusChange,
+      loadAutoContactSettings,
+      isAutoContactEnabled,
+    ]
   );
 
   useEffect(() => {

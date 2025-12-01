@@ -9,7 +9,7 @@ const SUGGESTIONS: Record<string, { title: string; actions: string[] }> = {
   'Novo': {
     title: 'Primeiro Contato',
     actions: [
-      'Entrar em contato via WhatsApp para se apresentar',
+      'Entrar em contato para se apresentar e entender preferências de comunicação',
       'Perguntar sobre a urgência e necessidades do plano',
       'Agendar uma ligação ou reunião para entender melhor',
       'Enviar material institucional sobre sua empresa',

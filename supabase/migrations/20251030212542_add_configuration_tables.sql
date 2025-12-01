@@ -167,7 +167,6 @@ ON CONFLICT (nome) DO NOTHING;
 -- Insert default lead origins
 INSERT INTO lead_origens (nome) VALUES
   ('Site'),
-  ('WhatsApp'),
   ('Instagram'),
   ('Facebook'),
   ('Indicação'),

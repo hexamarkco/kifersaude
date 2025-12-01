@@ -465,9 +465,9 @@ export default function IntegrationsTab() {
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
                 <p className="font-semibold text-slate-700">Variáveis disponíveis:</p>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li><code>{{'{{primeiro_nome}}'}}</code> - primeiro nome do lead</li>
-                  <li><code>{{'{{nome}}'}}</code> - nome completo</li>
-                  <li><code>{{'{{origem}}'}}</code>, <code>{{'{{cidade}}'}}</code>, <code>{{'{{responsavel}}'}}</code></li>
+                  <li><code>{'{{primeiro_nome}}'}</code> - primeiro nome do lead</li>
+                  <li><code>{'{{nome}}'}</code> - nome completo</li>
+                  <li><code>{'{{origem}}'}</code>, <code>{'{{cidade}}'}</code>, <code>{'{{responsavel}}'}</code></li>
                 </ul>
                 <p>Use-as para personalizar cada mensagem enviada.</p>
               </div>

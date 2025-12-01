@@ -54,6 +54,13 @@ const isWithinDateRange = (
   return true;
 };
 
+const getWhatsappLink = (phone: string | null | undefined) => {
+  if (!phone) return null;
+
+  const normalized = phone.replace(/\D/g, '');
+  return normalized ? `https://wa.me/${normalized}` : null;
+};
+
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
   initialStatusFilter?: string[];
@@ -1622,6 +1629,17 @@ export default function LeadsManager({
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
                       <div className="flex items-center gap-2 break-words">
                         <span>{lead.telefone}</span>
+                        {lead.telefone && (
+                          <a
+                            href={getWhatsappLink(lead.telefone) || undefined}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-full bg-emerald-50 p-1 text-emerald-600 transition-colors hover:bg-emerald-100"
+                            aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </a>
+                        )}
                       </div>
                       {lead.email && (
                         <div className="flex items-center gap-2 truncate">

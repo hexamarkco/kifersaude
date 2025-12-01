@@ -286,7 +286,7 @@ export default function IntegrationsTab() {
               ? crypto.randomUUID()
               : `step-${Date.now()}`,
           message: 'Olá {{primeiro_nome}}, recebemos seu interesse. Posso ajudar com mais informações?',
-          delayMinutes: prev.messageFlow.length === 0 ? 0 : 15,
+          delaySeconds: prev.messageFlow.length === 0 ? 0 : 900,
           active: true,
         },
       ],
@@ -317,7 +317,7 @@ export default function IntegrationsTab() {
       messageFlow: autoFormState.messageFlow.map((step) => ({
         ...step,
         message: step.message.trim(),
-        delayMinutes: Number.isFinite(step.delayMinutes) ? Math.max(0, step.delayMinutes) : 0,
+        delaySeconds: Number.isFinite(step.delaySeconds) ? Math.max(0, step.delaySeconds) : 0,
       })),
     };
 
@@ -477,7 +477,7 @@ export default function IntegrationsTab() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-800">Fluxo de mensagens</p>
-                  <p className="text-xs text-slate-500">Adicione quantas mensagens quiser e defina os intervalos em minutos.</p>
+                  <p className="text-xs text-slate-500">Adicione quantas mensagens quiser e defina os intervalos em segundos.</p>
                 </div>
                 <button
                   type="button"
@@ -536,12 +536,12 @@ export default function IntegrationsTab() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Aguardar (minutos)</label>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Aguardar (segundos)</label>
                         <input
                           type="number"
                           min={0}
-                          value={step.delayMinutes}
-                          onChange={(event) => updateMessageStep(step.id, { delayMinutes: Number(event.target.value) })}
+                          value={step.delaySeconds}
+                          onChange={(event) => updateMessageStep(step.id, { delaySeconds: Number(event.target.value) })}
                           className="w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent px-3 py-2"
                         />
                         <p className="text-[11px] text-slate-500 mt-1">0 envia imediatamente; os demais seguem na sequência.</p>

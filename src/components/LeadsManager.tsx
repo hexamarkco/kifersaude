@@ -1,6 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Users, LayoutGrid, List, BookOpen, Mail, Bell, MapPin, Layers, UserCircle, AlertTriangle, Tag, Share2, Check, Trash2 } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Filter,
+  MessageCircle,
+  Archive,
+  FileText,
+  Calendar,
+  Users,
+  LayoutGrid,
+  List,
+  BookOpen,
+  Mail,
+  Bell,
+  MapPin,
+  Layers,
+  UserCircle,
+  AlertTriangle,
+  Tag,
+  Share2,
+  Check,
+  Trash2,
+  Loader2,
+  RefreshCcw,
+} from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -18,6 +42,13 @@ import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
+import { configService } from '../lib/configService';
+import {
+  AUTO_CONTACT_INTEGRATION_SLUG,
+  type AutoContactSettings,
+  normalizeAutoContactSettings,
+  runAutoContactFlow,
+} from '../lib/autoContactService';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -163,6 +194,12 @@ export default function LeadsManager({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [overdueLeads, setOverdueLeads] = useState<Lead[]>([]);
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
+  const [loadingAutoContact, setLoadingAutoContact] = useState(false);
+  const [sendingAutoIds, setSendingAutoIds] = useState<Set<string>>(new Set());
+  const [autoContactCache, setAutoContactCache] = useState<Set<string>>(new Set());
+  const autoContactAbortRef = useRef(false);
+  const triggerAutoContactRef = useRef<(lead: Lead, options?: { force?: boolean }) => void>(() => {});
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -191,6 +228,14 @@ export default function LeadsManager({
     () => (options.lead_tipo_contratacao || []).filter(option => option.ativo),
     [options.lead_tipo_contratacao]
   );
+  const hasActiveAutoContact = useMemo(() => {
+    if (!autoContactSettings) return false;
+
+    return (
+      autoContactSettings.enabled &&
+      autoContactSettings.messageFlow.some((step) => step.active && step.message.trim())
+    );
+  }, [autoContactSettings]);
   const statusFilterOptions = useMemo(
     () => activeLeadStatuses.map((status) => ({ value: status.nome, label: status.nome })),
     [activeLeadStatuses]
@@ -312,6 +357,24 @@ export default function LeadsManager({
     }
   }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions, syncOverdueLeads]);
 
+  const loadAutoContactSettings = useCallback(async () => {
+    setLoadingAutoContact(true);
+    try {
+      const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
+
+      if (integration?.settings) {
+        setAutoContactSettings(normalizeAutoContactSettings(integration.settings));
+      } else {
+        setAutoContactSettings(null);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar integração de mensagens automáticas:', error);
+      setAutoContactSettings(null);
+    } finally {
+      setLoadingAutoContact(false);
+    }
+  }, []);
+
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
       const { eventType } = payload;
@@ -360,6 +423,10 @@ export default function LeadsManager({
         );
       });
 
+      if (eventType === 'INSERT' && newLead) {
+        triggerAutoContactRef.current(newLead);
+      }
+
       if (eventType === 'DELETE' && oldLead) {
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
@@ -388,29 +455,14 @@ export default function LeadsManager({
   );
 
   useEffect(() => {
-    loadLeads();
-
-    const channel = supabase
-      .channel('leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-        },
-        handleRealtimeLeadChange
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [loadLeads, handleRealtimeLeadChange]);
-
-  useEffect(() => {
     void fetchContractsForLeads(leads.map((lead) => lead.id));
   }, [fetchContractsForLeads, leads]);
+
+  useEffect(() => {
+    return () => {
+      autoContactAbortRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -862,7 +914,7 @@ export default function LeadsManager({
     [activeLeadStatuses]
   );
 
-  const registerContact = async (lead: Lead, tipo: 'Email') => {
+  const registerContact = async (lead: Lead, tipo: 'Email' | 'Mensagem Automática') => {
     const timestamp = new Date().toISOString();
 
     setLeads((current) =>
@@ -1055,6 +1107,78 @@ export default function LeadsManager({
       throw error;
     }
   };
+
+  const triggerAutoContact = useCallback(
+    async (lead: Lead, options?: { force?: boolean }) => {
+      if (autoContactAbortRef.current) return;
+      if (isObserver || !hasActiveAutoContact || !autoContactSettings) return;
+
+      const normalizedPhone = lead.telefone?.replace(/\D/g, '');
+      if (!normalizedPhone) return;
+
+      if (!options?.force && autoContactCache.has(lead.id)) return;
+
+      setSendingAutoIds((prev) => new Set(prev).add(lead.id));
+
+      try {
+        await runAutoContactFlow({
+          lead: { ...lead, telefone: normalizedPhone },
+          settings: autoContactSettings,
+          signal: () => !autoContactAbortRef.current,
+          onFirstMessageSent: async () => {
+            await registerContact(lead, 'Mensagem Automática');
+
+            const targetStatus = autoContactSettings.statusOnSend || 'Contato Inicial';
+            if (targetStatus && lead.status?.toLowerCase() !== targetStatus.toLowerCase()) {
+              await handleStatusChange(lead.id, targetStatus);
+            }
+          },
+        });
+
+        setAutoContactCache((prev) => {
+          const next = new Set(prev);
+          next.add(lead.id);
+          return next;
+        });
+      } catch (error) {
+        console.error('Erro ao enviar automação para o lead:', error);
+        alert('Falha ao enviar a automação. Verifique as credenciais na aba de Integrações.');
+      } finally {
+        setSendingAutoIds((prev) => {
+          const next = new Set(prev);
+          next.delete(lead.id);
+          return next;
+        });
+      }
+    },
+    [autoContactSettings, hasActiveAutoContact, isObserver, autoContactCache, registerContact, handleStatusChange]
+  );
+
+  useEffect(() => {
+    triggerAutoContactRef.current = triggerAutoContact;
+  }, [triggerAutoContact]);
+
+  useEffect(() => {
+    loadLeads();
+    loadAutoContactSettings();
+
+    const channel = supabase
+      .channel('leads-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads',
+        },
+        handleRealtimeLeadChange
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [handleRealtimeLeadChange, loadAutoContactSettings, loadLeads]);
 
   const clearOverdueReturn = async (
     lead: Lead,
@@ -1703,6 +1827,24 @@ export default function LeadsManager({
                     <FileText className="w-4 h-4" />
                     <span>Converter em Contrato</span>
                   </button>
+                  {hasActiveAutoContact && (
+                    <button
+                      onClick={() => triggerAutoContact(lead, { force: true })}
+                      className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                      disabled={sendingAutoIds.has(lead.id) || loadingAutoContact}
+                      aria-label="Reenviar automação"
+                      type="button"
+                    >
+                      {sendingAutoIds.has(lead.id) ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCcw className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {sendingAutoIds.has(lead.id) ? 'Reenviando...' : 'Reenviar automação'}
+                      </span>
+                    </button>
+                  )}
                   <button
                     onClick={() => openReminderScheduler(lead)}
                     className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"

@@ -22,6 +22,13 @@ import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
+const getWhatsappLink = (phone: string | null | undefined) => {
+  if (!phone) return null;
+
+  const normalized = phone.replace(/\D/g, '');
+  return normalized ? `https://wa.me/${normalized}` : null;
+};
+
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [filter, setFilter] = useState<'todos' | 'nao-lidos' | 'lidos'>('nao-lidos');
@@ -654,6 +661,7 @@ export default function RemindersManagerEnhanced() {
       : contract?.lead_id
         ? leadsMap.get(contract.lead_id)
         : undefined;
+    const whatsappLink = getWhatsappLink(leadInfo?.telefone);
 
     return (
       <div
@@ -748,6 +756,17 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            {whatsappLink && (
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Abrir conversa no WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </a>
+            )}
             {!reminder.lido && (
               <div className="relative">
                 <button

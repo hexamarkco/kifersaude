@@ -187,17 +187,6 @@ export default function IntegrationsTab() {
     setAutoMessage(null);
 
     try {
-      const defaultSettings = normalizeAutoContactSettings(null);
-      const buildFallbackIntegration = (): IntegrationSetting => ({
-        id: `local-${AUTO_CONTACT_INTEGRATION_SLUG}`,
-        slug: AUTO_CONTACT_INTEGRATION_SLUG,
-        name: 'Mensagens automáticas (WhatsApp)',
-        description: 'Envio automático de mensagens e atualização do status "Contato Inicial"',
-        settings: defaultSettings,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-
       let data = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
 
       if (!data) {
@@ -205,9 +194,9 @@ export default function IntegrationsTab() {
           slug: AUTO_CONTACT_INTEGRATION_SLUG,
           name: 'Mensagens automáticas (WhatsApp)',
           description: 'Envio automático de mensagens e atualização do status "Contato Inicial"',
-          settings: defaultSettings,
+          settings: normalizeAutoContactSettings(null),
         });
-        data = created ?? buildFallbackIntegration();
+        data = created;
       }
 
       setAutoIntegration(data);
@@ -398,7 +387,7 @@ export default function IntegrationsTab() {
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start space-x-3">
             <Info className="w-4 h-4 text-orange-600 mt-1" />
             <div className="text-sm text-orange-800">
-              Nenhuma configuração encontrada ainda. Salve para criar uma configuração local e reabrir esta tela.
+              Nenhuma configuração encontrada. Confirme se as migrações foram executadas e tente novamente.
             </div>
           </div>
         )}
@@ -476,9 +465,9 @@ export default function IntegrationsTab() {
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
                 <p className="font-semibold text-slate-700">Variáveis disponíveis:</p>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li><code>{{'{{primeiro_nome}}'}}</code> - primeiro nome do lead</li>
-                  <li><code>{{'{{nome}}'}}</code> - nome completo</li>
-                  <li><code>{{'{{origem}}'}}</code>, <code>{{'{{cidade}}'}}</code>, <code>{{'{{responsavel}}'}}</code></li>
+                  <li><code>{'{{primeiro_nome}}'}</code> - primeiro nome do lead</li>
+                  <li><code>{'{{nome}}'}</code> - nome completo</li>
+                  <li><code>{'{{origem}}'}</code>, <code>{'{{cidade}}'}</code>, <code>{'{{responsavel}}'}</code></li>
                 </ul>
                 <p>Use-as para personalizar cada mensagem enviada.</p>
               </div>

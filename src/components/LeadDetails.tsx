@@ -5,7 +5,6 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
-import WhatsappCampaignDrawer from './WhatsappCampaignDrawer';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -30,7 +29,6 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     descricao: '',
     responsavel: 'Luiza',
   });
-  const [showCampaignDrawer, setShowCampaignDrawer] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -282,15 +280,6 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
         </div>
       </div>
 
-      <WhatsappCampaignDrawer
-        isOpen={showCampaignDrawer}
-        onClose={() => setShowCampaignDrawer(false)}
-        context={{
-          leadId: lead.id,
-          phone: lead.telefone ?? null,
-          displayName: lead.nome_completo,
-        }}
-      />
     </div>
   );
 }

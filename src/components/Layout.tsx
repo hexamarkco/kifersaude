@@ -1,12 +1,4 @@
-import {
-  type CSSProperties,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Users,
@@ -16,7 +8,6 @@ import {
   LogOut,
   Settings,
   MessageCircle,
-  MessageSquareText,
   ChevronDown,
   ChevronUp,
   Menu,
@@ -50,7 +41,6 @@ type LayoutProps = {
   unreadReminders: number;
   hasActiveNotification?: boolean;
   newLeadsCount?: number;
-  whatsappUnreadCount?: number;
 };
 
 export default function Layout({
@@ -60,7 +50,6 @@ export default function Layout({
   unreadReminders,
   hasActiveNotification,
   newLeadsCount = 0,
-  whatsappUnreadCount = 0,
 }: LayoutProps) {
   const { signOut, role } = useAuth();
   const { getRoleModulePermission } = useConfig();
@@ -74,8 +63,6 @@ export default function Layout({
   const collapsedMenuDragStartY = useRef<number | null>(null);
   const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
   const currentRole = role;
-  const isWhatsappActive = activeTab === 'whatsapp';
-  const [whatsappViewportHeight, setWhatsappViewportHeight] = useState<number | null>(null);
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
 
@@ -86,13 +73,6 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
-    {
-      id: 'whatsapp',
-      label: 'WhatsApp',
-      icon: MessageSquareText,
-      badge: whatsappUnreadCount,
-      badgeColor: 'bg-emerald-500',
-    },
     { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'blog', label: 'Blog', icon: BookOpen },
@@ -243,12 +223,6 @@ export default function Layout({
     setExpandedMobileParent(null);
   }, [activeTab]);
 
-  useEffect(() => {
-    if (!isWhatsappActive) {
-      setIsMenuCollapsed(false);
-    }
-  }, [isWhatsappActive]);
-
   const toggleMobileParent = (parentId: string) => {
     setExpandedMobileParent(current => (current === parentId ? null : parentId));
   };
@@ -296,8 +270,6 @@ export default function Layout({
     );
   };
 
-  const shouldHideHeader = isWhatsappActive && isMenuCollapsed;
-
   const handleCollapsedMenuPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     collapsedMenuDragStartY.current = event.clientY;
   }, []);
@@ -319,72 +291,11 @@ export default function Layout({
     collapsedMenuDragStartY.current = null;
   }, []);
 
-  useEffect(() => {
-    if (!isWhatsappActive) {
-      setWhatsappViewportHeight(null);
-      return;
-    }
-
-    const updateViewportHeight = () => {
-      const viewport = window.visualViewport;
-      const height = viewport?.height ?? window.innerHeight;
-
-      setWhatsappViewportHeight(previous => {
-        if (previous !== null && Math.abs(previous - height) < 0.5) {
-          return previous;
-        }
-        return height;
-      });
-    };
-
-    updateViewportHeight();
-
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', updateViewportHeight);
-    viewport?.addEventListener('scroll', updateViewportHeight);
-    window.addEventListener('resize', updateViewportHeight);
-
-    return () => {
-      viewport?.removeEventListener('resize', updateViewportHeight);
-      viewport?.removeEventListener('scroll', updateViewportHeight);
-      window.removeEventListener('resize', updateViewportHeight);
-    };
-  }, [isWhatsappActive]);
-
-  const whatsappViewportStyles: CSSProperties | undefined =
-    isWhatsappActive && whatsappViewportHeight
-      ? {
-          minHeight: whatsappViewportHeight,
-          height: whatsappViewportHeight,
-        }
-      : undefined;
-
   return (
     <div
-      className={`flex min-h-screen flex-col bg-slate-50 ${
-        isWhatsappActive ? 'overflow-hidden' : ''
-      }`}
-      style={whatsappViewportStyles}
+      className="flex min-h-screen flex-col bg-slate-50"
     >
-      {isWhatsappActive && isMenuCollapsed ? (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setIsMenuCollapsed(false)}
-            onPointerDown={handleCollapsedMenuPointerDown}
-            onPointerUp={handleCollapsedMenuPointerEnd}
-            onPointerLeave={handleCollapsedMenuPointerCancel}
-            onPointerCancel={handleCollapsedMenuPointerCancel}
-            className="pointer-events-auto inline-flex h-7 w-14 items-center justify-center rounded-b-2xl bg-white/95 text-slate-600 shadow-lg ring-1 ring-slate-200"
-            aria-label="Expandir menu principal"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </button>
-        </div>
-      ) : null}
-
-      {!shouldHideHeader && (
-        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
@@ -392,16 +303,6 @@ export default function Layout({
                 <span className="text-lg font-bold text-white">K</span>
               </div>
               <span className="sr-only">Kifer Saúde - Sistema de Gestão</span>
-              {isWhatsappActive ? (
-                <button
-                  type="button"
-                  onClick={() => setIsMenuCollapsed(true)}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-                >
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  Recolher menu
-                </button>
-              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -582,15 +483,9 @@ export default function Layout({
           )}
         </div>
         </header>
-      )}
-      <main className={`flex-1 ${isWhatsappActive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        <div
-          className={`mx-auto w-full ${
-            isWhatsappActive
-              ? 'h-full max-w-7xl px-2 py-4 sm:px-4 lg:px-6'
-              : 'max-w-7xl px-4 py-8 sm:px-6 lg:px-8'
-          }`}
-        >
+      </header>
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </div>
       </main>

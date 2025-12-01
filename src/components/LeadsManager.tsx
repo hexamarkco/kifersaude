@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Phone, Users, LayoutGrid, List, BookOpen, Mail, Bell, MapPin, Layers, UserCircle, AlertTriangle, Tag, Share2, Check, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MessageCircle, Archive, FileText, Calendar, Users, LayoutGrid, List, BookOpen, Mail, Bell, MapPin, Layers, UserCircle, AlertTriangle, Tag, Share2, Check, Trash2 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import StatusDropdown from './StatusDropdown';
@@ -14,7 +14,6 @@ import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import FilterDateRange from './FilterDateRange';
-import type { WhatsappLaunchParams } from '../types/whatsapp';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getOverdueLeads } from '../lib/analytics';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
@@ -57,7 +56,6 @@ const isWithinDateRange = (
 
 type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;
-  onOpenWhatsapp?: (params: WhatsappLaunchParams) => void;
   initialStatusFilter?: string[];
   initialLeadIdFilter?: string;
 };
@@ -99,7 +97,6 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 export default function LeadsManager({
   onConvertToContract,
-  onOpenWhatsapp,
   initialStatusFilter,
   initialLeadIdFilter,
 }: LeadsManagerProps) {
@@ -858,22 +855,7 @@ export default function LeadsManager({
     [activeLeadStatuses]
   );
 
-  const buildWhatsappLaunchParams = (lead: Lead): WhatsappLaunchParams | null => {
-    if (!lead.telefone) return null;
-
-    const phoneDigits = lead.telefone.replace(/\D/g, '');
-    if (!phoneDigits) return null;
-
-    const phoneWithCountry = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-
-    return {
-      phone: phoneWithCountry,
-      chatName: lead.nome_completo,
-      leadId: lead.id,
-    };
-  };
-
-  const registerContact = async (lead: Lead, tipo: 'WhatsApp' | 'Email') => {
+  const registerContact = async (lead: Lead, tipo: 'Email') => {
     const timestamp = new Date().toISOString();
 
     setLeads((current) =>
@@ -901,25 +883,6 @@ export default function LeadsManager({
       if (updateError) throw updateError;
     } catch (error) {
       console.error('Erro ao registrar contato:', error);
-    }
-  };
-
-  const handleWhatsAppContact = async (lead: Lead) => {
-    const launchParams = buildWhatsappLaunchParams(lead);
-    if (!launchParams) return;
-
-    await registerContact(lead, 'WhatsApp');
-
-    if (onOpenWhatsapp) {
-      onOpenWhatsapp(launchParams);
-      return;
-    }
-
-    if (typeof window !== 'undefined') {
-      const url = launchParams.message
-        ? `https://wa.me/${launchParams.phone}?text=${encodeURIComponent(launchParams.message)}`
-        : `https://wa.me/${launchParams.phone}`;
-      window.open(url, '_blank');
     }
   };
 
@@ -1658,17 +1621,6 @@ export default function LeadsManager({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
                       <div className="flex items-center gap-2 break-words">
-                        {lead.telefone && (
-                          <button
-                            type="button"
-                            onClick={() => handleWhatsAppContact(lead)}
-                            className="text-teal-600 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full p-1"
-                            title="Conversar no WhatsApp"
-                            aria-label={`Conversar com ${lead.nome_completo} no WhatsApp`}
-                          >
-                            <Phone className="w-4 h-4" />
-                          </button>
-                        )}
                         <span>{lead.telefone}</span>
                       </div>
                       {lead.email && (

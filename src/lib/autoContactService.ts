@@ -103,6 +103,18 @@ export async function sendAutoContactMessage({
 
   const endpoint = buildEndpoint(settings.baseUrl, `/client/sendMessage/${settings.sessionId}`);
 
+  console.info('[AutoContact] Enviando automação', {
+    endpoint,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': settings.apiKey,
+    },
+    payload,
+    leadId: lead.id,
+    normalizedPhone,
+  });
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',

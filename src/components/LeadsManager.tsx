@@ -936,6 +936,8 @@ export default function LeadsManager({
         return;
       }
 
+      const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
+
       const messages = [
         `Oi ${getLeadFirstName(lead.nome_completo)}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.`,
         'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
@@ -944,13 +946,23 @@ export default function LeadsManager({
       setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
 
       try {
-        const { data, error } = await supabase.functions.invoke('leads-api', {
-          headers: { 'x-action': 'manual-automation' },
-          body: {
-            chatId,
-            messages,
-          },
-        });
+        for (const content of messages) {
+          const response = await fetch(
+            endpoint,
+            {
+              method: 'POST',
+              headers: {
+                accept: '*/*',
+                'Content-Type': 'application/json',
+                ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+              },
+              body: JSON.stringify({
+                chatId,
+                contentType: 'string',
+                content,
+              }),
+            }
+          );
 
         if (error || data?.success === false) {
           throw new Error(data?.error || error?.message || 'Falha ao enviar mensagem automática.');

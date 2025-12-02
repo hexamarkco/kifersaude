@@ -927,89 +927,6 @@ export default function LeadsManager({
     }
   };
 
-  const sendManualAutomation = useCallback(
-    async (lead: Lead) => {
-      const chatId = buildWhatsappChatId(lead.telefone);
-
-      if (!chatId) {
-        alert('Telefone inválido ou ausente. Atualize o lead antes de enviar a automação.');
-        return;
-      }
-
-      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (!settings.sessionId || !settings.baseUrl) {
-        alert('Integração de mensagens automáticas não configurada.');
-        return;
-      }
-
-      const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
-
-      const messages = [
-        `Oi ${getLeadFirstName(lead.nome_completo)}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.`,
-        'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
-      ];
-
-      setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
-
-      try {
-        for (const content of messages) {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              accept: '*/*',
-              'Content-Type': 'application/json',
-              ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
-            },
-            body: JSON.stringify({
-              chatId,
-              contentType: 'string',
-              content,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            const detail = errorText?.trim()
-              ? `${response.status} ${response.statusText}: ${errorText}`
-              : `${response.status} ${response.statusText}`;
-            throw new Error(detail);
-          }
-        }
-
-        await registerContact(lead, 'Mensagem Automática');
-
-        const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
-        const normalizedDesiredStatus = desiredStatus.toLowerCase();
-        const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
-
-        if (normalizedCurrentStatus !== normalizedDesiredStatus) {
-          await handleStatusChange(lead.id, desiredStatus);
-        }
-
-        setAutomationSuccessInfo({
-          leadName: lead.nome_completo || 'Lead',
-          status: desiredStatus,
-        });
-      } catch (error) {
-        console.error('Erro ao enviar automação manual:', error);
-        alert('Não foi possível enviar a automação. Tente novamente.');
-      } finally {
-        setSendingAutomationIds((previous) => {
-          const next = new Set(previous);
-          next.delete(lead.id);
-          return next;
-        });
-      }
-    },
-    [autoContactSettings, handleStatusChange, registerContact]
-  );
-
-  const handleConvertToContract = (lead: Lead) => {
-    if (onConvertToContract) {
-      onConvertToContract(lead);
-    }
-  };
-
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
@@ -1142,6 +1059,89 @@ export default function LeadsManager({
       );
 
       throw error;
+    }
+  };
+
+  const sendManualAutomation = useCallback(
+    async (lead: Lead) => {
+      const chatId = buildWhatsappChatId(lead.telefone);
+
+      if (!chatId) {
+        alert('Telefone inválido ou ausente. Atualize o lead antes de enviar a automação.');
+        return;
+      }
+
+      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
+      if (!settings.sessionId || !settings.baseUrl) {
+        alert('Integração de mensagens automáticas não configurada.');
+        return;
+      }
+
+      const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
+
+      const messages = [
+        `Oi ${getLeadFirstName(lead.nome_completo)}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.`,
+        'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
+      ];
+
+      setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
+
+      try {
+        for (const content of messages) {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              accept: '*/*',
+              'Content-Type': 'application/json',
+              ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+            },
+            body: JSON.stringify({
+              chatId,
+              contentType: 'string',
+              content,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            const detail = errorText?.trim()
+              ? `${response.status} ${response.statusText}: ${errorText}`
+              : `${response.status} ${response.statusText}`;
+            throw new Error(detail);
+          }
+        }
+
+        await registerContact(lead, 'Mensagem Automática');
+
+        const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
+        const normalizedDesiredStatus = desiredStatus.toLowerCase();
+        const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
+
+        if (normalizedCurrentStatus !== normalizedDesiredStatus) {
+          await handleStatusChange(lead.id, desiredStatus);
+        }
+
+        setAutomationSuccessInfo({
+          leadName: lead.nome_completo || 'Lead',
+          status: desiredStatus,
+        });
+      } catch (error) {
+        console.error('Erro ao enviar automação manual:', error);
+        alert('Não foi possível enviar a automação. Tente novamente.');
+      } finally {
+        setSendingAutomationIds((previous) => {
+          const next = new Set(previous);
+          next.delete(lead.id);
+          return next;
+        });
+      }
+    },
+    [autoContactSettings, handleStatusChange, registerContact]
+  );
+
+  const handleConvertToContract = (lead: Lead) => {
+    if (onConvertToContract) {
+      onConvertToContract(lead);
     }
   };
 

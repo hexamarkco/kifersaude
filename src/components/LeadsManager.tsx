@@ -39,6 +39,9 @@ import FilterDateRange from './FilterDateRange';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
+import { AUTO_CONTACT_INTEGRATION_SLUG, normalizeAutoContactSettings } from '../lib/autoContactService';
+import type { AutoContactSettings } from '../lib/autoContactService';
+import { configService } from '../lib/configService';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -185,6 +188,23 @@ export default function LeadsManager({
     }
   }, [initialLeadIdFilter]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSettings = async () => {
+      const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
+      if (isMounted) {
+        setAutoContactSettings(normalizeAutoContactSettings(integration?.settings));
+      }
+    };
+
+    loadSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const closeReminderScheduler = () => {
     setReminderLead(null);
     setReminderPromptMessage(undefined);
@@ -198,6 +218,7 @@ export default function LeadsManager({
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkResponsavel, setBulkResponsavel] = useState('');
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
+  const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
@@ -909,6 +930,12 @@ export default function LeadsManager({
         return;
       }
 
+      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
+      if (!settings.sessionId || !settings.baseUrl) {
+        alert('Integração de mensagens automáticas não configurada.');
+        return;
+      }
+
       const messages = [
         `Oi ${getLeadFirstName(lead.nome_completo)}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.`,
         'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
@@ -917,27 +944,16 @@ export default function LeadsManager({
       setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
 
       try {
-        for (const content of messages) {
-          const response = await fetch(
-            'https://sanford-subcorneous-prepositionally.ngrok-free.dev/client/sendMessage/f8377d8d-a589-4242-9ba6-9486a04ef80c',
-            {
-              method: 'POST',
-              headers: {
-                accept: '*/*',
-                'Content-Type': 'application/json',
-                'x-api-key': '292926',
-              },
-              body: JSON.stringify({
-                chatId,
-                contentType: 'string',
-                content,
-              }),
-            }
-          );
+        const { data, error } = await supabase.functions.invoke('leads-api', {
+          headers: { 'x-action': 'manual-automation' },
+          body: {
+            chatId,
+            messages,
+          },
+        });
 
-          if (!response.ok) {
-            throw new Error('Falha ao enviar mensagem automática.');
-          }
+        if (error || data?.success === false) {
+          throw new Error(data?.error || error?.message || 'Falha ao enviar mensagem automática.');
         }
 
         await registerContact(lead, 'Mensagem Automática');
@@ -953,7 +969,7 @@ export default function LeadsManager({
         });
       }
     },
-    [registerContact]
+    [autoContactSettings, registerContact]
   );
 
   const handleConvertToContract = (lead: Lead) => {

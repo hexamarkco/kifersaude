@@ -459,6 +459,38 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
+async function sendWhatsappMessages({
+  endpoint,
+  apiKey,
+  chatId,
+  messages,
+}: {
+  endpoint: string;
+  apiKey: string;
+  chatId: string;
+  messages: string[];
+}): Promise<void> {
+  for (const content of messages) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        chatId,
+        contentType: 'string',
+        content,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Falha ao enviar mensagem automática');
+    }
+  }
+}
+
 const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null => {
   if (!settings || typeof settings !== 'object') return null;
 
@@ -637,6 +669,7 @@ Deno.serve(async (req: Request) => {
 
     const url = new URL(req.url);
     const path = url.pathname;
+    const action = url.searchParams.get('action') ?? req.headers.get('x-action');
 
     logWithContext('Request received', { method: req.method, path, search: url.search || undefined });
 
@@ -654,6 +687,60 @@ Deno.serve(async (req: Request) => {
       }
       return lookupMaps;
     };
+
+    if (action === 'manual-automation' && req.method === 'POST') {
+      const body = await req.json().catch(() => null);
+
+      if (!body || typeof body.chatId !== 'string' || !Array.isArray(body.messages)) {
+        return new Response(JSON.stringify({ success: false, error: 'Payload inválido' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const chatId = body.chatId.trim();
+      const messages = body.messages
+        .filter((msg: unknown) => typeof msg === 'string' && msg.trim())
+        .map((msg: string) => msg.trim());
+
+      if (!chatId || messages.length === 0) {
+        return new Response(JSON.stringify({ success: false, error: 'Dados incompletos para envio manual' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const settings = await loadAutoContactSettings(supabase);
+
+      if (!settings || !settings.baseUrl || !settings.sessionId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Integração de mensagens automáticas não configurada' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
+
+      const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
+
+      try {
+        await sendWhatsappMessages({ endpoint, apiKey: settings.apiKey, chatId, messages });
+        logWithContext('Envio manual de automação concluído', { chatId });
+
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Erro ao enviar automação manual', error);
+        const message = error instanceof Error ? error.message : 'Falha ao enviar automação manual';
+        return new Response(JSON.stringify({ success: false, error: message }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     if (path.endsWith('/health')) {
       return new Response(

@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   Info,
+  Hash,
   KeyRound,
   Loader2,
   Megaphone,
@@ -312,6 +313,7 @@ export default function IntegrationsTab() {
     const sanitizedSettings = {
       enabled: autoFormState.enabled,
       baseUrl: autoFormState.baseUrl.trim() || 'http://localhost:3000',
+      sessionId: autoFormState.sessionId.trim(),
       apiKey: autoFormState.apiKey.trim(),
       statusOnSend: autoFormState.statusOnSend.trim() || 'Contato Inicial',
       messageFlow: autoFormState.messageFlow.map((step) => ({
@@ -371,7 +373,8 @@ export default function IntegrationsTab() {
               chegar. O status será atualizado para "Contato Inicial" automaticamente.
             </p>
             <p className="text-xs text-slate-500 mt-2">
-              Todas as requisições usam o header <strong>x-api-key</strong> e a rota /send-message do endpoint configurado.
+              Use a Base URL, Session ID e o header <strong>x-api-key</strong> definidos no painel do provedor. O endpoint
+              final segue o formato <code>/client/sendMessage/SEU_SESSION_ID</code>.
             </p>
           </div>
         </div>
@@ -420,23 +423,39 @@ export default function IntegrationsTab() {
                 <p className="text-xs text-slate-500 mt-2">Certifique-se de usar a mesma URL utilizada pela API de mensagens.</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Status após primeiro envio</label>
-                <select
-                  value={autoFormState.statusOnSend}
-                  onChange={(event) => setAutoFormState((prev) => ({ ...prev, statusOnSend: event.target.value }))}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                >
-                  {(leadStatuses || []).map((status) => (
-                    <option key={status.id} value={status.nome}>
-                      {status.nome}
-                    </option>
-                  ))}
-                  {!leadStatuses.some((status) => status.nome === autoFormState.statusOnSend) && (
-                    <option value={autoFormState.statusOnSend}>{autoFormState.statusOnSend}</option>
-                  )}
-                </select>
-                <p className="text-xs text-slate-500 mt-2">Utilize o status "Contato Inicial" para marcar leads já abordados.</p>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Session ID</label>
+                <div className="relative">
+                  <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={autoFormState.sessionId}
+                    onChange={(event) => setAutoFormState((prev) => ({ ...prev, sessionId: event.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="SEU_SESSION_ID"
+                    disabled={!autoIntegration}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Copie o Session ID exatamente como fornecido pelo provedor.</p>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Status após primeiro envio</label>
+              <select
+                value={autoFormState.statusOnSend}
+                onChange={(event) => setAutoFormState((prev) => ({ ...prev, statusOnSend: event.target.value }))}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white lg:max-w-xs"
+              >
+                {(leadStatuses || []).map((status) => (
+                  <option key={status.id} value={status.nome}>
+                    {status.nome}
+                  </option>
+                ))}
+                {!leadStatuses.some((status) => status.nome === autoFormState.statusOnSend) && (
+                  <option value={autoFormState.statusOnSend}>{autoFormState.statusOnSend}</option>
+                )}
+              </select>
+              <p className="text-xs text-slate-500 mt-2">Utilize o status "Contato Inicial" para marcar leads já abordados.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

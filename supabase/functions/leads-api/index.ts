@@ -37,6 +37,7 @@ type AutoContactStep = {
 type AutoContactSettings = {
   enabled: boolean;
   baseUrl: string;
+  sessionId: string;
   apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
@@ -480,6 +481,8 @@ const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null
       typeof settings.baseUrl === 'string' && settings.baseUrl.trim()
         ? settings.baseUrl.trim()
         : 'http://localhost:3000',
+    sessionId:
+      typeof settings.sessionId === 'string' && settings.sessionId.trim() ? settings.sessionId.trim() : '',
     apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
@@ -550,18 +553,25 @@ async function triggerAutoContactForLead({
     return;
   }
 
+  if (!settings.sessionId) {
+    logWithContext('Integração de automação sem Session ID configurado');
+    return;
+  }
+
   const message = applyTemplateVariables(firstStep.message, lead);
 
   try {
-    const response = await fetch(`${settings.baseUrl.replace(/\/+$/, '')}/send-message`, {
+    const url = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+        'x-api-key': settings.apiKey,
       },
       body: JSON.stringify({
-        number: normalizedPhone,
-        message,
+        chatId: `${normalizedPhone}@c.us`,
+        contentType: 'string',
+        content: message,
       }),
     });
 

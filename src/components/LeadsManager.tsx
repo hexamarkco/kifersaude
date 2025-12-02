@@ -22,6 +22,8 @@ import {
   Trash2,
   Loader2,
   Send,
+  CheckCircle,
+  X,
 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
@@ -222,6 +224,10 @@ export default function LeadsManager({
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
+  const [automationSuccessInfo, setAutomationSuccessInfo] = useState<{
+    leadName: string;
+    status: string;
+  } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -947,29 +953,43 @@ export default function LeadsManager({
 
       try {
         for (const content of messages) {
-          const response = await fetch(
-            endpoint,
-            {
-              method: 'POST',
-              headers: {
-                accept: '*/*',
-                'Content-Type': 'application/json',
-                ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
-              },
-              body: JSON.stringify({
-                chatId,
-                contentType: 'string',
-                content,
-              }),
-            }
-          );
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              accept: '*/*',
+              'Content-Type': 'application/json',
+              ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+            },
+            body: JSON.stringify({
+              chatId,
+              contentType: 'string',
+              content,
+            }),
+          });
 
-        if (error || data?.success === false) {
-          throw new Error(data?.error || error?.message || 'Falha ao enviar mensagem automática.');
+          if (!response.ok) {
+            const errorText = await response.text();
+            const detail = errorText?.trim()
+              ? `${response.status} ${response.statusText}: ${errorText}`
+              : `${response.status} ${response.statusText}`;
+            throw new Error(detail);
+          }
         }
 
         await registerContact(lead, 'Mensagem Automática');
-        alert('Automação enviada com sucesso.');
+
+        const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
+        const normalizedDesiredStatus = desiredStatus.toLowerCase();
+        const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
+
+        if (normalizedCurrentStatus !== normalizedDesiredStatus) {
+          await handleStatusChange(lead.id, desiredStatus);
+        }
+
+        setAutomationSuccessInfo({
+          leadName: lead.nome_completo || 'Lead',
+          status: desiredStatus,
+        });
       } catch (error) {
         console.error('Erro ao enviar automação manual:', error);
         alert('Não foi possível enviar a automação. Tente novamente.');
@@ -981,7 +1001,7 @@ export default function LeadsManager({
         });
       }
     },
-    [autoContactSettings, registerContact]
+    [autoContactSettings, handleStatusChange, registerContact]
   );
 
   const handleConvertToContract = (lead: Lead) => {
@@ -1768,6 +1788,50 @@ export default function LeadsManager({
           }
           defaultType="Follow-up"
         />
+      )}
+      {automationSuccessInfo && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-slate-900/60"
+            aria-hidden="true"
+            onClick={() => setAutomationSuccessInfo(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6 relative">
+              <button
+                type="button"
+                className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={() => setAutomationSuccessInfo(null)}
+                aria-label="Fechar modal de confirmação de automação"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-start gap-3">
+                <span className="p-2 rounded-full bg-emerald-100 text-emerald-600" aria-hidden="true">
+                  <CheckCircle className="w-5 h-5" />
+                </span>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-slate-900">Automação enviada</h3>
+                  <p className="text-sm text-slate-600">
+                    As mensagens foram enviadas para {automationSuccessInfo.leadName}. O status foi
+                    atualizado para "{automationSuccessInfo.status}".
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-sm bg-emerald-600 hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                  onClick={() => setAutomationSuccessInfo(null)}
+                >
+                  Entendi
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
       {ConfirmationDialog}
     </div>

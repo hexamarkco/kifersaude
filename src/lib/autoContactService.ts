@@ -12,6 +12,7 @@ export type AutoContactStep = {
 export type AutoContactSettings = {
   enabled: boolean;
   baseUrl: string;
+  sessionId: string;
   apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
@@ -19,6 +20,7 @@ export type AutoContactSettings = {
 
 const DEFAULT_STATUS = 'Contato Inicial';
 const DEFAULT_BASE_URL = 'http://localhost:3000';
+const DEFAULT_SESSION_ID = '';
 
 const getNormalizedDelaySeconds = (step: any) => {
   const delaySeconds = Number.isFinite(step?.delaySeconds) ? Number(step.delaySeconds) : null;
@@ -43,6 +45,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   return {
     enabled: settings.enabled !== false,
     baseUrl: typeof settings.baseUrl === 'string' && settings.baseUrl.trim() ? settings.baseUrl.trim() : DEFAULT_BASE_URL,
+    sessionId:
+      typeof settings.sessionId === 'string' && settings.sessionId.trim() ? settings.sessionId.trim() : DEFAULT_SESSION_ID,
     apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
@@ -81,19 +85,30 @@ export async function sendAutoContactMessage({
   message: string;
   settings: AutoContactSettings;
 }): Promise<void> {
+  const normalizedPhone = normalizePhone(lead.telefone || '');
+  if (!normalizedPhone) {
+    throw new Error('Telefone inválido para envio automático.');
+  }
+
+  if (!settings.sessionId) {
+    throw new Error('Session ID não configurado na integração de mensagens automáticas.');
+  }
+
+  const chatId = `${normalizedPhone}@c.us`;
   const payload = {
-    number: normalizePhone(lead.telefone || ''),
-    message,
+    chatId,
+    contentType: 'string' as const,
+    content: message,
   };
 
-  const endpoint = buildEndpoint(settings.baseUrl, '/send-message');
+  const endpoint = buildEndpoint(settings.baseUrl, `/client/sendMessage/${settings.sessionId}`);
 
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(settings.apiKey ? { 'x-api-key': settings.apiKey } : {}),
+        'x-api-key': settings.apiKey,
       },
       body: JSON.stringify(payload),
     });

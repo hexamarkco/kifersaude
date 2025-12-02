@@ -80,6 +80,70 @@ const isWithinDateRange = (
   return true;
 };
 
+type AutomationSuccessInfo = {
+  leadName: string;
+  status: string;
+};
+
+function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo; onClose: () => void }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  useEffect(() => {
+    const showTimer = setTimeout(() => setIsVisible(true), 100);
+    const autoCloseTimer = setTimeout(() => handleClose(), 6000);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(autoCloseTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
+
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+        isVisible && !isExiting ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+      }`}
+    >
+      <div className="bg-white rounded-xl shadow-2xl border-2 border-emerald-500 max-w-md overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-white">
+            <CheckCircle className="w-5 h-5" />
+            <h3 className="font-bold text-lg">Automação enviada</h3>
+          </div>
+          <button onClick={handleClose} className="text-white hover:bg-emerald-700 rounded-full p-1 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-2 text-slate-700">
+          <p className="text-base text-slate-900 font-semibold">Mensagens enviadas para {info.leadName}</p>
+          <p className="text-sm">
+            O status foi atualizado para <span className="font-semibold text-emerald-700">"{info.status}"</span>.
+          </p>
+        </div>
+
+        <div className="px-4 pb-4">
+          <button
+            onClick={handleClose}
+            className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
 
@@ -523,8 +587,8 @@ export default function LeadsManager({
         lead.id?.includes(searchTerm) ||
         lead.telefone.includes(searchTerm) ||
         lead.email?.toLowerCase().includes(lowerSearch)
-  );
-}
+      );
+    }
 
     if (selectedStatusSet.size > 0) {
       filtered = filtered.filter((lead) => lead.status && selectedStatusSet.has(lead.status));
@@ -1790,48 +1854,7 @@ export default function LeadsManager({
         />
       )}
       {automationSuccessInfo && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-slate-900/60"
-            aria-hidden="true"
-            onClick={() => setAutomationSuccessInfo(null)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6 relative">
-              <button
-                type="button"
-                className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                onClick={() => setAutomationSuccessInfo(null)}
-                aria-label="Fechar modal de confirmação de automação"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-start gap-3">
-                <span className="p-2 rounded-full bg-emerald-100 text-emerald-600" aria-hidden="true">
-                  <CheckCircle className="w-5 h-5" />
-                </span>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-slate-900">Automação enviada</h3>
-                  <p className="text-sm text-slate-600">
-                    As mensagens foram enviadas para {automationSuccessInfo.leadName}. O status foi
-                    atualizado para "{automationSuccessInfo.status}".
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-sm bg-emerald-600 hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-                  onClick={() => setAutomationSuccessInfo(null)}
-                >
-                  Entendi
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+        <AutomationSuccessToast info={automationSuccessInfo} onClose={() => setAutomationSuccessInfo(null)} />
       )}
       {ConfirmationDialog}
     </div>

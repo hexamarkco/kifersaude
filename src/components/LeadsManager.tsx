@@ -964,9 +964,8 @@ export default function LeadsManager({
             }
           );
 
-          if (!response.ok) {
-            throw new Error('Falha ao enviar mensagem automática.');
-          }
+        if (error || data?.success === false) {
+          throw new Error(data?.error || error?.message || 'Falha ao enviar mensagem automática.');
         }
 
         await registerContact(lead, 'Mensagem Automática');

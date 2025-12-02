@@ -12,6 +12,30 @@ type StoredEvent = {
   headers: Record<string, string>;
 };
 
+type NormalizedMessage = {
+  chatId: string;
+  messageId: string;
+  direction: 'inbound' | 'outbound';
+  fromNumber: string | null;
+  toNumber: string | null;
+  type: string | null;
+  body: string | null;
+  hasMedia: boolean;
+  timestamp: string | null;
+  contactName: string | null;
+  isGroup: boolean;
+  payload: Record<string, unknown>;
+};
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error('Missing Supabase environment variables.');
+}
+
+const supabase = createClient(supabaseUrl, serviceRoleKey);
+
 function respond(body: Record<string, unknown>, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     status: init?.status ?? 200,
@@ -58,18 +82,127 @@ function extractHeaders(headers: Headers): Record<string, string> {
 }
 
 async function storeEvent(event: StoredEvent) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase environment variables.');
-  }
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
   const { error } = await supabase.from('whatsapp_webhook_events').insert(event);
 
   if (error) {
     throw new Error(`Erro ao salvar evento: ${error.message}`);
+  }
+}
+
+function toIsoString(timestamp: unknown): string | null {
+  if (typeof timestamp !== 'number' || Number.isNaN(timestamp)) {
+    return null;
+  }
+
+  return new Date(timestamp * 1000).toISOString();
+}
+
+function normalizePayload(value: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function resolveChatId(payload: Record<string, unknown>): string | null {
+  const candidates = [payload.chatId, payload.from, payload.to, payload?.id && (payload as any).id?.remote];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+}
+
+function resolveContactName(payload: Record<string, unknown>): string | null {
+  const sender = normalizeJson(payload.sender);
+  const senderId = normalizeJson(sender.id);
+
+  const candidates = [
+    sender.pushname,
+    sender.name,
+    sender.shortName,
+    sender.formattedName,
+    senderId.user,
+    payload.chat && normalizeJson((payload as any).chat).name,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+}
+
+function normalizeMessagePayload(payload: Record<string, unknown>): NormalizedMessage | null {
+  const messageId = (payload?.id as any)?._serialized || (payload?.id as any)?.id;
+  const chatId = resolveChatId(payload);
+
+  if (!messageId || !chatId) {
+    return null;
+  }
+
+  const direction: 'inbound' | 'outbound' = payload?.fromMe ? 'outbound' : 'inbound';
+  const timestamp = toIsoString(payload.timestamp);
+  const contactName = resolveContactName(payload);
+  const chatIdLower = chatId.toLowerCase();
+  const isGroup = chatIdLower.endsWith('@g.us') || Boolean((payload as any).isGroup);
+
+  return {
+    chatId,
+    messageId,
+    direction,
+    fromNumber: typeof payload.from === 'string' ? payload.from : null,
+    toNumber: typeof payload.to === 'string' ? payload.to : null,
+    type: typeof payload.type === 'string' ? payload.type : null,
+    body: typeof payload.body === 'string' ? payload.body : null,
+    hasMedia: Boolean(payload.hasMedia),
+    timestamp,
+    contactName,
+    isGroup,
+    payload: normalizePayload(payload),
+  };
+}
+
+async function upsertChat(message: NormalizedMessage) {
+  const lastMessageAt = message.timestamp ?? new Date().toISOString();
+
+  const { error } = await supabase.from('whatsapp_chats').upsert(
+    {
+      id: message.chatId,
+      name: message.contactName ?? message.chatId,
+      is_group: message.isGroup,
+      last_message_at: lastMessageAt,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
+
+  if (error) {
+    throw new Error(`Erro ao salvar chat: ${error.message}`);
+  }
+}
+
+async function upsertMessage(message: NormalizedMessage) {
+  const { error } = await supabase.from('whatsapp_messages').upsert(
+    {
+      id: message.messageId,
+      chat_id: message.chatId,
+      from_number: message.fromNumber,
+      to_number: message.toNumber,
+      type: message.type,
+      body: message.body,
+      has_media: message.hasMedia,
+      timestamp: message.timestamp,
+      payload: message.payload,
+      direction: message.direction,
+    },
+    { onConflict: 'id' },
+  );
+
+  if (error) {
+    throw new Error(`Erro ao salvar mensagem: ${error.message}`);
   }
 }
 
@@ -112,6 +245,25 @@ Deno.serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('whatsapp-webhook: erro ao salvar evento', message, { eventName, payload });
     return respond({ error: message }, { status: 500 });
+  }
+
+  const shouldHandleMessage = ['message', 'message_create', 'message_ack'].includes(eventName);
+
+  if (shouldHandleMessage) {
+    const normalized = normalizeMessagePayload(payload);
+
+    if (!normalized) {
+      console.warn('whatsapp-webhook: mensagem ignorada por falta de dados essenciais', { payload, eventName });
+    } else {
+      try {
+        await upsertChat(normalized);
+        await upsertMessage(normalized);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error('whatsapp-webhook: erro ao salvar mensagem', message, { eventName, payload });
+        return respond({ error: message }, { status: 500 });
+      }
+    }
   }
 
   return respond({ success: true, event: eventName });

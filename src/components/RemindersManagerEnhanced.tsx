@@ -152,7 +152,7 @@ export default function RemindersManagerEnhanced() {
       if (leadIds.length > 0) {
         const { data: leadsData } = await supabase
           .from('leads')
-          .select('id, nome_completo, telefone, responsavel_id, proximo_retorno')
+          .select('*')
           .in('id', leadIds);
 
         if (leadsData) {
@@ -183,7 +183,7 @@ export default function RemindersManagerEnhanced() {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, nome_completo, telefone, responsavel_id, proximo_retorno')
+        .select('*')
         .eq('id', leadId)
         .maybeSingle();
 
@@ -737,7 +737,7 @@ export default function RemindersManagerEnhanced() {
                 {overdue && !reminder.lido && (
                   <span className="text-red-600 font-medium">Atrasado </span>
                 )}
-                {reminder.snooze_count && reminder.snooze_count > 0 && (
+                {typeof reminder.snooze_count === 'number' && reminder.snooze_count > 0 && (
                   <span className="text-orange-600 text-xs">
                     Adiado {reminder.snooze_count}x
                   </span>

@@ -101,6 +101,50 @@ function normalizePayload(value: Record<string, unknown>): Record<string, unknow
   return JSON.parse(JSON.stringify(value));
 }
 
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function resolveTimestamp(payload: Record<string, unknown>): number | null {
+  const candidates = [
+    payload.timestamp,
+    (payload as any).t,
+    (payload as any).ts,
+    normalizeJson(payload._data)?.t,
+    normalizeJson(payload._data)?.timestamp,
+    normalizeJson(payload._data)?.ts,
+    (payload as any).clientReceivedTsMillis,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toNumber(candidate);
+    if (numeric === null) {
+      continue;
+    }
+
+    // Some providers send timestamps em milissegundos; se estiver muito grande,
+    // converte para segundos para manter consistência com o restante do código.
+    if (numeric > 1_000_000_000_000) {
+      return Math.floor(numeric / 1000);
+    }
+
+    return numeric;
+  }
+
+  return null;
+}
+
 function resolveChatId(payload: Record<string, unknown>): string | null {
   const candidates = [payload.chatId, payload.from, payload.to, payload?.id && (payload as any).id?.remote];
 
@@ -118,6 +162,7 @@ function resolveContactName(payload: Record<string, unknown>): string | null {
   const senderId = normalizeJson(sender.id);
 
   const candidates = [
+    payload.notifyName,
     sender.pushname,
     sender.name,
     sender.shortName,
@@ -144,7 +189,7 @@ function normalizeMessagePayload(payload: Record<string, unknown>): NormalizedMe
   }
 
   const direction: 'inbound' | 'outbound' = payload?.fromMe ? 'outbound' : 'inbound';
-  const timestamp = toIsoString(payload.timestamp);
+  const timestamp = toIsoString(resolveTimestamp(payload));
   const contactName = resolveContactName(payload);
   const chatIdLower = chatId.toLowerCase();
   const isGroup = chatIdLower.endsWith('@g.us') || Boolean((payload as any).isGroup);

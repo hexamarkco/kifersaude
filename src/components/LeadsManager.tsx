@@ -1095,10 +1095,16 @@ export default function LeadsManager({
         settings = await loadAutoContactSettings();
       }
 
-      if (!settings || !isAutoContactEnabled(settings)) return;
+      if (!settings || !isAutoContactEnabled(settings)) {
+        alert('Automação não configurada ou desativada. Verifique a aba de Integrações.');
+        return;
+      }
 
       const normalizedPhone = lead.telefone?.replace(/\D/g, '');
-      if (!normalizedPhone) return;
+      if (!normalizedPhone) {
+        alert('Telefone inválido ou ausente. Atualize o lead antes de reenviar a automação.');
+        return;
+      }
 
       if (!options?.force && autoContactCache.has(lead.id)) return;
 

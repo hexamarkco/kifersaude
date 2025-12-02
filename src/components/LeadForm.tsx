@@ -14,7 +14,7 @@ import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalizat
 type LeadFormProps = {
   lead: Lead | null;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (lead: Lead) => void;
 };
 
 type LeadFormState = {
@@ -194,21 +194,27 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
       let savedLeadId = lead?.id;
 
+      let savedLead: Lead | null = lead;
+
       if (lead) {
-        const { error } = await supabase
+        const { data: updatedLead, error } = await supabase
           .from('leads')
           .update(normalizedLeadData)
-          .eq('id', lead.id);
+          .eq('id', lead.id)
+          .select()
+          .single<Lead>();
 
         if (error) throw error;
+        savedLead = updatedLead as Lead;
       } else {
         const { data: insertedLead, error } = await supabase
           .from('leads')
           .insert([normalizedLeadData])
           .select()
-          .single();
+          .single<Lead>();
 
         if (error) throw error;
+        savedLead = insertedLead as Lead;
         savedLeadId = insertedLead.id;
       }
 
@@ -250,7 +256,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         }
       }
 
-      onSave();
+      if (savedLead) {
+        onSave(savedLead);
+      }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
       alert('Erro ao salvar lead');

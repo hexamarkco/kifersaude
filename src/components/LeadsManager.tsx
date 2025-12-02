@@ -1765,10 +1765,11 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={() => {
+          onSave={(savedLead) => {
             setShowForm(false);
             setEditingLead(null);
             loadLeads();
+            triggerAutoContact(savedLead, { force: true });
           }}
         />
       )}

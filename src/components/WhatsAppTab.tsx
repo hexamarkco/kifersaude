@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Copy, Loader2, MessageSquare, Phone, RefreshCw, Send } from 'lucide-react';
 import type { TabNavigationOptions } from '../types/navigation';
 import type { Lead, WhatsAppMessage, WhatsAppWebhookEvent } from '../lib/supabase';
-import configService from '../lib/configService';
+import { configService } from '../lib/configService';
 import { supabase } from '../lib/supabase';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,

@@ -55,11 +55,22 @@ export default function PainelPage() {
 
   const updateSearchParamsForTab = useCallback(
     (tabId: string) => {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set('tab', tabId);
-      setSearchParams(nextParams, { replace: true });
+      setSearchParams(
+        currentParams => {
+          const currentTab = currentParams.get('tab');
+
+          if (currentTab === tabId) {
+            return currentParams;
+          }
+
+          const nextParams = new URLSearchParams(currentParams);
+          nextParams.set('tab', tabId);
+          return nextParams;
+        },
+        { replace: true },
+      );
     },
-    [searchParams, setSearchParams],
+    [setSearchParams],
   );
 
   const restrictedOriginNamesForObservers = useMemo(

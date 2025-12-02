@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Loader2, MessageSquare, Phone, RefreshCw, Send } from 'lucide-react';
-import type { TabNavigationOptions } from '../types/navigation';
-import type { Lead, WhatsAppMessage, WhatsAppWebhookEvent } from '../lib/supabase';
+import { Copy, Loader2, MessageSquare, RefreshCw, Send } from 'lucide-react';
+import type { WhatsAppMessage, WhatsAppWebhookEvent } from '../lib/supabase';
 import { configService } from '../lib/configService';
-import { supabase } from '../lib/supabase';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   normalizeAutoContactSettings,
@@ -16,10 +14,6 @@ import {
   whatsappWebhookUrl,
   type WhatsAppChatSummary,
 } from '../lib/whatsappService';
-
-interface WhatsAppTabProps {
-  onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
-}
 
 type ChatTimelineItem = {
   id: string;
@@ -35,7 +29,7 @@ const bubbleTone: Record<ChatTimelineItem['type'], string> = {
   note: 'bg-slate-100 text-slate-700 border border-slate-200',
 };
 
-export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
+export default function WhatsAppTab() {
   const [selectedChatId, setSelectedChatId] = useState<string>('');
   const [chats, setChats] = useState<WhatsAppChatSummary[]>([]);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
@@ -46,11 +40,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
-  const [leadSearchTerm, setLeadSearchTerm] = useState('');
-  const [leadSearchResults, setLeadSearchResults] = useState<Lead[]>([]);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [leadSearchLoading, setLeadSearchLoading] = useState(false);
-  const [leadSearchError, setLeadSearchError] = useState<string | null>(null);
   const [outgoingMessage, setOutgoingMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
@@ -70,10 +59,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
       })),
     [messages],
   );
-
-  const handleNavigate = (tab: string, options?: TabNavigationOptions) => {
-    onNavigateToTab?.(tab, options);
-  };
 
   const loadChats = useCallback(async () => {
     setLoadingChats(true);
@@ -155,61 +140,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
     }
   }, [selectedChatId, chats, loadMessages]);
 
-  const searchLeads = useCallback(
-    async (term: string) => {
-      const normalizedTerm = term.trim();
-      if (!normalizedTerm) {
-        setLeadSearchResults([]);
-        setLeadSearchError(null);
-        return;
-      }
-
-      const phoneTerm = normalizedTerm.replace(/[^0-9+]/g, '') || normalizedTerm;
-
-      setLeadSearchLoading(true);
-      setLeadSearchError(null);
-
-      try {
-        const { data, error } = await supabase
-          .from('leads')
-          .select('id,nome_completo,telefone,status,origem,created_at,updated_at')
-          .or(
-            `nome_completo.ilike.%${normalizedTerm}%,telefone.ilike.%${phoneTerm}%`,
-          )
-          .order('updated_at', { ascending: false })
-          .limit(15);
-
-        if (error) {
-          throw error;
-        }
-
-        setLeadSearchResults(data ?? []);
-      } catch (error) {
-        console.error('Erro ao buscar leads para WhatsApp:', error);
-        setLeadSearchError('Não foi possível buscar leads. Tente novamente.');
-      } finally {
-        setLeadSearchLoading(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const debounce = setTimeout(() => {
-      void searchLeads(leadSearchTerm);
-    }, 400);
-
-    return () => clearTimeout(debounce);
-  }, [leadSearchTerm, searchLeads]);
-
-  const buildWhatsappChatId = (phone: string | null | undefined) => {
-    const normalized = phone?.replace(/\D/g, '') ?? '';
-    if (!normalized) return null;
-
-    const withCountryCode = normalized.startsWith('55') ? normalized : `55${normalized}`;
-    return `${withCountryCode}@c.us`;
-  };
-
   const sendMessageToChat = useCallback(
     async (chatId: string, content: string) => {
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
@@ -252,10 +182,10 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
       return;
     }
 
-    const chatId = selectedLead ? buildWhatsappChatId(selectedLead.telefone) : selectedChat?.id;
+    const chatId = selectedChat?.id;
 
     if (!chatId) {
-      setErrorMessage('Selecione um lead com telefone válido para iniciar a conversa.');
+      setErrorMessage('Selecione um chat para enviar a mensagem.');
       return;
     }
 
@@ -282,7 +212,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
     outgoingMessage,
     selectedChat?.id,
     selectedChatId,
-    selectedLead,
     sendMessageToChat,
   ]);
 
@@ -299,91 +228,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">CRM</p>
-            <h2 className="text-lg font-bold text-slate-900">Iniciar chat com lead</h2>
-            <p className="text-xs text-slate-500">Busque um lead do CRM e envie a primeira mensagem pelo WhatsApp.</p>
-          </div>
-          <button
-            onClick={() => handleNavigate('leads')}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            Abrir CRM de Leads
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-5">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Buscar lead</label>
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <input
-                type="text"
-                value={leadSearchTerm}
-                onChange={(event) => setLeadSearchTerm(event.target.value)}
-                placeholder="Nome ou telefone do lead"
-                className="w-full border-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-              />
-              {leadSearchLoading && <Loader2 className="h-4 w-4 animate-spin text-slate-500" />}
-            </div>
-            {leadSearchError && <p className="text-xs text-orange-700">{leadSearchError}</p>}
-
-            <div className="space-y-1">
-              {leadSearchResults.length === 0 && leadSearchTerm.trim() !== '' && !leadSearchLoading && (
-                <p className="text-xs text-slate-500">Nenhum lead encontrado para a busca.</p>
-              )}
-
-              {leadSearchResults.map((lead) => (
-                <button
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                  className={`flex w-full items-start justify-between rounded-2xl border px-3 py-2 text-left transition ${
-                    selectedLead?.id === lead.id
-                      ? 'border-orange-200 bg-orange-50 shadow-sm'
-                      : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{lead.nome_completo || 'Lead sem nome'}</p>
-                    <p className="text-xs text-slate-500">{lead.telefone || 'Telefone não informado'}</p>
-                  </div>
-                  {lead.status && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700">
-                      {lead.status}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mensagem inicial</label>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <Send className="h-4 w-4 text-slate-500" />
-              <input
-                type="text"
-                value={outgoingMessage}
-                onChange={(event) => setOutgoingMessage(event.target.value)}
-                placeholder={selectedLead ? `Enviar para ${selectedLead.nome_completo}` : 'Selecione um lead para enviar'}
-                className="w-full border-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                disabled={sendingMessage}
-              />
-              <button
-                onClick={() => void handleSendMessage()}
-                disabled={sendingMessage}
-                className="rounded-full bg-orange-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {sendingMessage ? 'Enviando...' : 'Enviar'}
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500">O envio usa a mesma integração configurada para as automações de mensagens.</p>
-          </div>
-        </div>
-      </div>
-
       <div className="h-[calc(100vh-8rem)] rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="flex h-full flex-col overflow-hidden lg:flex-row">
           <div className="w-full max-w-md border-b border-slate-200 bg-slate-50/80 p-4 lg:h-full lg:border-b-0 lg:border-r lg:p-6">
@@ -394,13 +238,6 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
                 <p className="text-xs text-slate-500">Mensagens reais do webhook e tabelas do Supabase</p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleNavigate('leads', { leadsStatusFilter: ['novo', 'contato'] })}
-                  className="hidden items-center gap-2 rounded-full bg-orange-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-700 lg:inline-flex"
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  Vincular lead
-                </button>
                 <button
                   onClick={() => void loadChats()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-orange-300 hover:text-orange-700"
@@ -465,20 +302,14 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
             </div>
           </div>
 
-          <div className="flex min-h-[320px] flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-slate-200 p-4 lg:p-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversa selecionada</p>
-                <h3 className="text-xl font-bold text-slate-900">{selectedChat?.name || 'Chat'}</h3>
-                <p className="text-sm text-slate-500">ID: {selectedChat?.id || 'Selecione um chat'}</p>
+            <div className="flex min-h-[320px] flex-1 flex-col">
+              <div className="flex items-center justify-between border-b border-slate-200 p-4 lg:p-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversa selecionada</p>
+                  <h3 className="text-xl font-bold text-slate-900">{selectedChat?.name || 'Chat'}</h3>
+                  <p className="text-sm text-slate-500">ID: {selectedChat?.id || 'Selecione um chat'}</p>
+                </div>
               </div>
-              <button
-                onClick={() => handleNavigate('reminders')}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
-              >
-                Registrar follow-up
-              </button>
-            </div>
 
             <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4 lg:p-6">
               {loadingMessages && (
@@ -520,11 +351,7 @@ export default function WhatsAppTab({ onNavigateToTab }: WhatsAppTabProps) {
                   type="text"
                   value={outgoingMessage}
                   onChange={(event) => setOutgoingMessage(event.target.value)}
-                  placeholder={
-                    selectedLead
-                      ? `Enviar para ${selectedLead.nome_completo}`
-                      : selectedChat?.name || 'Responder no WhatsApp conectado'
-                  }
+                  placeholder={selectedChat?.name || 'Responder no WhatsApp conectado'}
                   className="w-full border-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                   disabled={sendingMessage}
                 />

@@ -227,7 +227,7 @@ export default function PainelPage() {
       case 'email':
         return <EmailManager />;
       case 'whatsapp':
-        return <WhatsAppTab onNavigateToTab={handleTabChange} />;
+        return <WhatsAppTab />;
       case 'blog':
         return <BlogTab />;
       case 'config':

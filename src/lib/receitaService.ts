@@ -35,7 +35,7 @@ const normalizeDate = (value?: string): string | undefined => {
     return value;
   }
 
-  const match = value.match(/(\d{2})[\/.-](\d{2})[\/.-](\d{4})/);
+  const match = value.match(/(\d{2})[./-](\d{2})[./-](\d{4})/);
   if (match) {
     const [, day, month, year] = match;
     return `${year}-${month}-${day}`;

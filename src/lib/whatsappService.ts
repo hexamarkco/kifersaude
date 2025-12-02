@@ -16,7 +16,7 @@ export async function fetchChatSummaries(): Promise<WhatsAppChatSummary[]> {
   const { data, error } = await supabase
     .from('whatsapp_chats')
     .select(
-      'id,name,is_group,last_message_at,created_at,updated_at,whatsapp_messages(id,chat_id,from_number,to_number,type,body,has_media,timestamp,payload,created_at)',
+      'id,name,is_group,last_message_at,created_at,updated_at,whatsapp_messages(id,chat_id,from_number,to_number,type,body,has_media,direction,timestamp,payload,created_at)',
     )
     .order('timestamp', { foreignTable: 'whatsapp_messages', ascending: false })
     .limit(1, { foreignTable: 'whatsapp_messages' })
@@ -38,7 +38,7 @@ export async function fetchChatSummaries(): Promise<WhatsAppChatSummary[]> {
 export async function fetchMessagesByChat(chatId: string): Promise<WhatsAppMessage[]> {
   const { data, error } = await supabase
     .from('whatsapp_messages')
-    .select('id,chat_id,from_number,to_number,type,body,has_media,timestamp,payload,created_at')
+    .select('id,chat_id,from_number,to_number,type,body,has_media,direction,timestamp,payload,created_at')
     .eq('chat_id', chatId)
     .order('timestamp', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });

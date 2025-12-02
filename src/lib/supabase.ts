@@ -320,6 +320,7 @@ export type WhatsAppMessage = {
   body: string | null;
   has_media: boolean;
   timestamp: string | null;
+  direction: 'inbound' | 'outbound' | null;
   payload: Record<string, unknown>;
   created_at: string;
 };

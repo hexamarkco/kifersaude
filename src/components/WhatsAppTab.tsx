@@ -451,6 +451,14 @@ function resolveMessageTone(message: WhatsAppMessage): ChatTimelineItem['type'] 
     return 'note';
   }
 
+  if (message.direction === 'inbound') {
+    return 'incoming';
+  }
+
+  if (message.direction === 'outbound') {
+    return 'outgoing';
+  }
+
   if (message.from_number && !message.to_number) {
     return 'incoming';
   }

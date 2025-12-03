@@ -1654,7 +1654,6 @@ export default function LeadsManager({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
                       <div className="flex items-center gap-2 break-words">
-                        <span>{lead.telefone}</span>
                         {lead.telefone && (
                           <a
                             href={getWhatsappLink(lead.telefone) || undefined}
@@ -1665,6 +1664,22 @@ export default function LeadsManager({
                           >
                             <MessageCircle className="w-4 h-4" />
                           </a>
+                        )}
+                        <span>{lead.telefone}</span>
+                        {!isObserver && (
+                          <button
+                            onClick={() => sendManualAutomation(lead)}
+                            className="inline-flex items-center justify-center rounded-full bg-indigo-50 p-1 text-indigo-600 transition-colors hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={sendingAutomationIds.has(lead.id)}
+                            aria-label="Enviar automação"
+                            type="button"
+                          >
+                            {sendingAutomationIds.has(lead.id) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                          </button>
                         )}
                       </div>
                       {lead.email && (
@@ -1728,22 +1743,6 @@ export default function LeadsManager({
                   >
                     <FileText className="w-4 h-4" />
                     <span>Converter em Contrato</span>
-                  </button>
-                  <button
-                    onClick={() => sendManualAutomation(lead)}
-                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-                    disabled={sendingAutomationIds.has(lead.id)}
-                    aria-label="Enviar automação"
-                    type="button"
-                  >
-                    {sendingAutomationIds.has(lead.id) ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {sendingAutomationIds.has(lead.id) ? 'Enviando...' : 'Enviar automação'}
-                    </span>
                   </button>
                   <button
                     onClick={() => openReminderScheduler(lead)}

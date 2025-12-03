@@ -1259,7 +1259,7 @@ export default function RemindersManagerEnhanced() {
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-y-auto bg-slate-50 p-5 space-y-3">
+              <div className="modal-panel-content h-full overflow-y-auto bg-slate-50 p-5 space-y-3">
                 {historyLoading ? (
                   <div className="flex h-full items-center justify-center text-slate-600">
                     <Loader2 className="h-5 w-5 animate-spin text-teal-600" />

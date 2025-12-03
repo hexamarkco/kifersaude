@@ -4,7 +4,7 @@ import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
   ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2, MessageSquare,
-  RefreshCw,
+  RefreshCw, Sparkles, Copy,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
@@ -49,6 +49,8 @@ const formatHistoryTimestamp = (timestamp: number) => {
   });
 };
 
+const formatInteractionDate = formatDateTimeFullBR;
+
 export default function RemindersManagerEnhanced() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [filter, setFilter] = useState<'todos' | 'nao-lidos' | 'lidos'>('nao-lidos');
@@ -84,6 +86,7 @@ export default function RemindersManagerEnhanced() {
   const [historyModalData, setHistoryModalData] = useState<{
     phone: string;
     leadName?: string;
+    leadId?: string;
   } | null>(null);
   const [historyMessages, setHistoryMessages] = useState<{
     id: string;
@@ -93,6 +96,10 @@ export default function RemindersManagerEnhanced() {
   }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
+  const [generatedFollowUp, setGeneratedFollowUp] = useState<string | null>(null);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [followUpCopied, setFollowUpCopied] = useState(false);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -111,6 +118,10 @@ export default function RemindersManagerEnhanced() {
     setHistoryMessages([]);
     setHistoryError(null);
     setHistoryLoading(false);
+    setGeneratedFollowUp(null);
+    setFollowUpError(null);
+    setFollowUpCopied(false);
+    setGeneratingFollowUp(false);
   };
 
   const fetchHistoryMessages = async (phone: string) => {
@@ -185,11 +196,12 @@ export default function RemindersManagerEnhanced() {
     }
   };
 
-  const openHistoryModal = (leadName?: string, phone?: string | null) => {
+  const openHistoryModal = (leadName?: string, phone?: string | null, leadId?: string | null) => {
     const normalizedPhone = normalizeLeadPhone(phone);
     setHistoryModalData({
       phone: normalizedPhone,
       leadName,
+      leadId: leadId ?? undefined,
     });
     setHistoryMessages([]);
 
@@ -198,7 +210,94 @@ export default function RemindersManagerEnhanced() {
       return;
     }
 
+    setGeneratedFollowUp(null);
+    setFollowUpError(null);
+    setFollowUpCopied(false);
+    setGeneratingFollowUp(false);
+
     void fetchHistoryMessages(normalizedPhone);
+  };
+
+  const buildConversationHistory = () => {
+    if (historyMessages.length === 0) {
+      return 'Nenhuma mensagem encontrada no histórico recente.';
+    }
+
+    const participantName = historyModalData?.leadName ?? 'Lead';
+
+    return historyMessages
+      .map(message => {
+        const sender = message.fromMe ? 'Você' : participantName;
+        return `- [${formatHistoryTimestamp(message.timestamp)}] ${sender}: ${message.body}`;
+      })
+      .join('\n');
+  };
+
+  const buildLeadContext = () => {
+    if (!historyModalData?.leadId) return '';
+
+    const leadData = leadsMap.get(historyModalData.leadId);
+
+    if (!leadData) return '';
+
+    return [
+      `Telefone: ${leadData.telefone ?? 'Indisponível'}`,
+      leadData.email ? `E-mail: ${leadData.email}` : null,
+      `Status: ${leadData.status ?? leadData.status_nome ?? 'Sem status'}`,
+      leadData.responsavel ? `Responsável: ${leadData.responsavel}` : null,
+      leadData.ultimo_contato
+        ? `Último contato: ${formatInteractionDate(leadData.ultimo_contato)}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  const handleGenerateFollowUp = async () => {
+    if (!historyModalData) return;
+
+    setGeneratingFollowUp(true);
+    setFollowUpError(null);
+    setGeneratedFollowUp(null);
+    setFollowUpCopied(false);
+
+    try {
+      const conversationHistory = buildConversationHistory();
+      const leadContext = buildLeadContext();
+
+      const { data, error } = await supabase.functions.invoke<{ followUp?: string }>('generate-follow-up', {
+        body: {
+          leadName: historyModalData.leadName ?? 'Lead',
+          conversationHistory,
+          leadContext,
+        },
+      });
+
+      if (error) throw error;
+
+      if (!data?.followUp) {
+        throw new Error('Resposta vazia do gerador de follow-up.');
+      }
+
+      setGeneratedFollowUp(data.followUp.trim());
+    } catch (error) {
+      console.error('Erro ao gerar follow-up:', error);
+      setFollowUpError('Não foi possível gerar o follow-up automaticamente. Tente novamente em instantes.');
+    } finally {
+      setGeneratingFollowUp(false);
+    }
+  };
+
+  const handleCopyFollowUp = async () => {
+    if (!generatedFollowUp) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedFollowUp);
+      setFollowUpCopied(true);
+      setTimeout(() => setFollowUpCopied(false), 2000);
+    } catch (error) {
+      console.error('Erro ao copiar follow-up:', error);
+    }
   };
 
   useEffect(() => {
@@ -884,7 +983,7 @@ export default function RemindersManagerEnhanced() {
 
           <div className="flex items-center space-x-2 ml-4">
             <button
-              onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone)}
+              onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone, reminder.lead_id ?? contract?.lead_id ?? null)}
               disabled={!leadInfo?.telefone}
               className={`p-2 rounded-lg transition-colors ${
                 leadInfo?.telefone
@@ -1229,7 +1328,7 @@ export default function RemindersManagerEnhanced() {
 
       {historyModalData && (
         <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden min-h-0">
             <div className="flex items-start justify-between p-5 border-b border-slate-200">
               <div>
                 <h3 className="text-xl font-semibold text-slate-900">Histórico de mensagens</h3>
@@ -1258,8 +1357,8 @@ export default function RemindersManagerEnhanced() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <div className="modal-panel-content h-full overflow-y-auto bg-slate-50 p-5 space-y-3">
+            <div className="flex-1 overflow-hidden min-h-0">
+              <div className="modal-panel-content h-full overflow-y-auto bg-slate-50 p-5 space-y-3 min-h-0">
                 {historyLoading ? (
                   <div className="flex h-full items-center justify-center text-slate-600">
                     <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
@@ -1276,26 +1375,87 @@ export default function RemindersManagerEnhanced() {
                     <p className="text-xs">As últimas 50 mensagens enviadas e recebidas aparecerão aqui.</p>
                   </div>
                 ) : (
-                  historyMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
-                          message.fromMe
-                            ? 'bg-teal-50 border-teal-100 text-slate-800'
-                            : 'bg-white border-slate-200 text-slate-800'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
-                        <p className="mt-2 text-[11px] text-slate-500 text-right">
-                          {message.fromMe ? 'Você · ' : ''}
-                          {formatHistoryTimestamp(message.timestamp)}
-                        </p>
-                      </div>
+                  <>
+                    <div className="space-y-3">
+                      {historyMessages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
+                              message.fromMe
+                                ? 'bg-teal-50 border-teal-100 text-slate-800'
+                                : 'bg-white border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+                            <p className="mt-2 text-[11px] text-slate-500 text-right">
+                              {message.fromMe ? 'Você · ' : ''}
+                              {formatHistoryTimestamp(message.timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))
+
+                    <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 text-slate-900">
+                            <Sparkles className="h-5 w-5 text-teal-600" />
+                            <span className="font-semibold">Gerar follow-up com IA</span>
+                          </div>
+                          <p className="text-sm text-slate-600">
+                            Use o histórico acima para criar uma resposta rápida de retorno.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleGenerateFollowUp}
+                          disabled={generatingFollowUp}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-70 sm:w-auto"
+                        >
+                          {generatingFollowUp ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                          <span>{generatingFollowUp ? 'Gerando...' : 'Gerar follow-up'}</span>
+                        </button>
+                      </div>
+
+                      {followUpError && (
+                        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{followUpError}</p>
+                      )}
+
+                      {generatedFollowUp && (
+                        <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
+                            <button
+                              type="button"
+                              onClick={handleCopyFollowUp}
+                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                            >
+                              {followUpCopied ? (
+                                <>
+                                  <Check className="h-4 w-4 text-teal-600" />
+                                  <span>Copiado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  <span>Copiar</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

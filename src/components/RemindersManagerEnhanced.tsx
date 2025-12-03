@@ -3,7 +3,7 @@ import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2
+  ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2, MessageSquare
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
@@ -27,6 +27,25 @@ const getWhatsappLink = (phone: string | null | undefined) => {
 
   const normalized = phone.replace(/\D/g, '');
   return normalized ? `https://wa.me/${normalized}` : null;
+};
+
+const normalizeLeadPhone = (phone: string | null | undefined) => phone?.replace(/\D/g, '') ?? '';
+
+const formatHistoryTimestamp = (timestamp: number) => {
+  const parsedTimestamp = String(timestamp).length <= 10 ? timestamp * 1000 : timestamp;
+  const date = new Date(parsedTimestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Data indisponível';
+  }
+
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 export default function RemindersManagerEnhanced() {
@@ -61,6 +80,18 @@ export default function RemindersManagerEnhanced() {
   } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const [historyModalData, setHistoryModalData] = useState<{
+    phone: string;
+    leadName?: string;
+  } | null>(null);
+  const [historyMessages, setHistoryMessages] = useState<{
+    id: string;
+    body: string;
+    timestamp: number;
+    fromMe: boolean;
+  }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -72,6 +103,101 @@ export default function RemindersManagerEnhanced() {
     }
 
     return null;
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryModalData(null);
+    setHistoryMessages([]);
+    setHistoryError(null);
+    setHistoryLoading(false);
+  };
+
+  const fetchHistoryMessages = async (phone: string) => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    const chatId = `55${phone}@c.us`;
+    const endpoint = 'https://sanford-subcorneous-prepositionally.ngrok-free.dev/chat/fetchMessages/f8377d8d-a589-4242-9ba6-9486a04ef80c';
+    const headers = {
+      'Content-Type': 'application/json',
+      apikey: '292926',
+    };
+
+    try {
+      const buildRequest = (fromMe: boolean) =>
+        fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            chatId,
+            searchOptions: {
+              limit: 50,
+              fromMe,
+            },
+          }),
+        });
+
+      const [receivedResponse, sentResponse] = await Promise.all([
+        buildRequest(false),
+        buildRequest(true),
+      ]);
+
+      if (!receivedResponse.ok || !sentResponse.ok) {
+        const responses = [receivedResponse, sentResponse];
+        const errorDetails = await Promise.all(responses.map(async (res) => `${res.status} ${res.statusText}`));
+        throw new Error(errorDetails.join(' | '));
+      }
+
+      const parsePayload = async (response: Response) => {
+        const content = await response.json();
+        if (Array.isArray(content)) return content;
+        if (Array.isArray(content?.messages)) return content.messages;
+        if (Array.isArray(content?.data)) return content.data;
+        return [];
+      };
+
+      const receivedMessages = await parsePayload(receivedResponse);
+      const sentMessages = await parsePayload(sentResponse);
+
+      const normalizeMessage = (message: any, index: number, fromMe: boolean) => {
+        const timestampValue = Number(message?.timestamp ?? message?.t ?? message?.date ?? Date.now());
+        return {
+          id: String(message?.id ?? message?.key?.id ?? `${fromMe ? 'sent' : 'received'}-${index}`),
+          body: String(message?.body ?? message?.message ?? message?.text ?? 'Mensagem sem texto'),
+          timestamp: Number.isNaN(timestampValue) ? Date.now() : timestampValue,
+          fromMe: Boolean(message?.fromMe ?? message?.from_me ?? message?.sent ?? fromMe),
+        };
+      };
+
+      const normalizedMessages = [
+        ...receivedMessages.map((message: any, index: number) => normalizeMessage(message, index, false)),
+        ...sentMessages.map((message: any, index: number) => normalizeMessage(message, index, true)),
+      ].sort((a, b) => a.timestamp - b.timestamp);
+
+      setHistoryMessages(normalizedMessages);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de mensagens do lead:', error);
+      setHistoryMessages([]);
+      setHistoryError('Não foi possível carregar o histórico de mensagens.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const openHistoryModal = (leadName?: string, phone?: string | null) => {
+    const normalizedPhone = normalizeLeadPhone(phone);
+    setHistoryModalData({
+      phone: normalizedPhone,
+      leadName,
+    });
+    setHistoryMessages([]);
+
+    if (!normalizedPhone) {
+      setHistoryError('Telefone do lead não disponível para buscar o histórico.');
+      return;
+    }
+
+    void fetchHistoryMessages(normalizedPhone);
   };
 
   useEffect(() => {
@@ -756,6 +882,18 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone)}
+              disabled={!leadInfo?.telefone}
+              className={`p-2 rounded-lg transition-colors ${
+                leadInfo?.telefone
+                  ? 'text-slate-700 hover:bg-slate-100'
+                  : 'text-slate-400 cursor-not-allowed'
+              }`}
+              title={leadInfo?.telefone ? 'Ver histórico de mensagens' : 'Telefone não disponível'}
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
             {whatsappLink && (
               <a
                 href={whatsappLink}
@@ -1085,6 +1223,86 @@ export default function RemindersManagerEnhanced() {
       ) : (
         <div className="space-y-3">
           {filteredReminders.map(renderReminderCard)}
+        </div>
+      )}
+
+      {historyModalData && (
+        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full flex flex-col">
+            <div className="flex items-start justify-between p-5 border-b border-slate-200">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Histórico de mensagens</h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  {historyModalData.leadName ?? 'Lead sem nome'} · {historyModalData.phone || 'Telefone indisponível'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => historyModalData.phone && fetchHistoryMessages(historyModalData.phone)}
+                  disabled={!historyModalData.phone || historyLoading}
+                  className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </button>
+                <button
+                  type="button"
+                  onClick={closeHistoryModal}
+                  className="rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Fechar</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto bg-slate-50 p-5 space-y-3">
+                {historyLoading ? (
+                  <div className="flex h-full items-center justify-center text-slate-600">
+                    <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+                    <span className="ml-2 text-sm">Carregando histórico...</span>
+                  </div>
+                ) : historyError ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {historyError}
+                  </div>
+                ) : historyMessages.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
+                    <MessageSquare className="h-10 w-10 text-slate-300" />
+                    <p className="mt-2 text-sm font-semibold text-slate-700">Nenhuma mensagem encontrada.</p>
+                    <p className="text-xs">As últimas 50 mensagens enviadas e recebidas aparecerão aqui.</p>
+                  </div>
+                ) : (
+                  historyMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
+                          message.fromMe
+                            ? 'bg-teal-50 border-teal-100 text-slate-800'
+                            : 'bg-white border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+                        <p className="mt-2 text-[11px] text-slate-500 text-right">
+                          {message.fromMe ? 'Você · ' : ''}
+                          {formatHistoryTimestamp(message.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
+              Mensagens exibidas conforme retorno da integração externa.
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase, Lead, IntegrationSetting } from '../lib/supabase';
+import { supabase, Lead } from '../lib/supabase';
 import {
   Plus,
   Search,
@@ -21,7 +21,6 @@ import {
   Share2,
   Trash2,
   Loader2,
-  Save,
   Send,
   CheckCircle,
   X,
@@ -42,8 +41,13 @@ import FilterDateRange from './FilterDateRange';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations, resolveResponsavelIdByLabel, resolveStatusIdByName } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
-import { AUTO_CONTACT_INTEGRATION_SLUG, normalizeAutoContactSettings, runAutoContactFlow } from '../lib/autoContactService';
-import type { AutoContactSettings, AutoContactStep } from '../lib/autoContactService';
+import {
+  AUTO_CONTACT_INTEGRATION_SLUG,
+  DEFAULT_MESSAGE_FLOW,
+  normalizeAutoContactSettings,
+  runAutoContactFlow,
+} from '../lib/autoContactService';
+import type { AutoContactSettings } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
 
 const isWithinDateRange = (
@@ -85,23 +89,6 @@ type AutomationSuccessInfo = {
   leadName: string;
   status: string;
 };
-
-const DEFAULT_MESSAGE_FLOW: AutoContactStep[] = [
-  {
-    id: 'step-1',
-    message:
-      'Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
-    delaySeconds: 0,
-    active: true,
-  },
-  {
-    id: 'step-2',
-    message:
-      'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
-    delaySeconds: 120,
-    active: true,
-  },
-];
 
 function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo; onClose: () => void }) {
   const [isVisible, setIsVisible] = useState(false);
@@ -167,14 +154,6 @@ const getWhatsappLink = (phone: string | null | undefined) => {
 
   const normalized = phone.replace(/\D/g, '');
   return normalized ? `https://wa.me/${normalized}` : null;
-};
-
-const buildWhatsappChatId = (phone: string | null | undefined) => {
-  const normalized = phone?.replace(/\D/g, '') ?? '';
-  if (!normalized) return null;
-
-  const withCountryCode = normalized.startsWith('55') ? normalized : `55${normalized}`;
-  return `${withCountryCode}@c.us`;
 };
 
 const getLeadFirstName = (fullName: string | null | undefined) => {
@@ -279,13 +258,7 @@ export default function LeadsManager({
       const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
       if (isMounted) {
         const normalizedSettings = normalizeAutoContactSettings(integration?.settings);
-        setAutoContactIntegration(integration);
         setAutoContactSettings(normalizedSettings);
-        setMessageFlowDraft(
-          normalizedSettings.messageFlow.length > 0
-            ? normalizedSettings.messageFlow
-            : DEFAULT_MESSAGE_FLOW,
-        );
       }
     };
 
@@ -310,10 +283,6 @@ export default function LeadsManager({
   const [bulkResponsavel, setBulkResponsavel] = useState('');
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
-  const [autoContactIntegration, setAutoContactIntegration] = useState<IntegrationSetting | null>(null);
-  const [messageFlowDraft, setMessageFlowDraft] = useState<AutoContactStep[]>(DEFAULT_MESSAGE_FLOW);
-  const [savingAutomationFlow, setSavingAutomationFlow] = useState(false);
-  const [automationFlowMessage, setAutomationFlowMessage] = useState<string | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
@@ -594,82 +563,6 @@ export default function LeadsManager({
       return valid.length === current.length ? current : valid;
     });
   }, [tipoContratacaoOptions]);
-
-  useEffect(() => {
-    if (!autoContactSettings) return;
-
-    setMessageFlowDraft(
-      autoContactSettings.messageFlow.length > 0 ? autoContactSettings.messageFlow : DEFAULT_MESSAGE_FLOW,
-    );
-  }, [autoContactSettings]);
-
-  const handleAddFlowStep = () => {
-    setMessageFlowDraft((previous) => [
-      ...previous,
-      {
-        id: `step-${Date.now()}`,
-        message: '',
-        delaySeconds: 0,
-        active: true,
-      },
-    ]);
-  };
-
-  const handleUpdateFlowStep = (stepId: string, updates: Partial<AutoContactStep>) => {
-    setMessageFlowDraft((previous) =>
-      previous.map((step) =>
-        step.id === stepId
-          ? {
-              ...step,
-              ...updates,
-              delaySeconds:
-                updates.delaySeconds !== undefined && Number.isFinite(updates.delaySeconds)
-                  ? Math.max(0, Number(updates.delaySeconds))
-                  : step.delaySeconds,
-            }
-          : step,
-      ),
-    );
-  };
-
-  const handleRemoveFlowStep = (stepId: string) => {
-    setMessageFlowDraft((previous) => previous.filter((step) => step.id !== stepId));
-  };
-
-  const handleSaveAutomationFlow = async () => {
-    if (!autoContactIntegration) {
-      setAutomationFlowMessage('Integração de automação não configurada.');
-      return;
-    }
-
-    setSavingAutomationFlow(true);
-    setAutomationFlowMessage(null);
-
-    const sanitizedFlow = messageFlowDraft.map((step, index) => ({
-      id: step.id || `step-${index}`,
-      message: step.message || '',
-      delaySeconds: Number.isFinite(step.delaySeconds) ? Math.max(0, Math.round(step.delaySeconds)) : 0,
-      active: step.active !== false,
-    }));
-
-    const currentSettings = autoContactIntegration.settings ?? {};
-    const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
-      settings: { ...currentSettings, messageFlow: sanitizedFlow },
-    });
-
-    if (error) {
-      setAutomationFlowMessage('Erro ao salvar o fluxo de mensagens. Tente novamente.');
-    } else {
-      const updatedIntegration = data ?? autoContactIntegration;
-      setAutoContactIntegration(updatedIntegration);
-      const normalized = normalizeAutoContactSettings(updatedIntegration.settings);
-      setAutoContactSettings(normalized);
-      setMessageFlowDraft(normalized.messageFlow.length ? normalized.messageFlow : DEFAULT_MESSAGE_FLOW);
-      setAutomationFlowMessage('Fluxo salvo com sucesso.');
-    }
-
-    setSavingAutomationFlow(false);
-  };
 
   const filteredLeads = useMemo(() => {
     let filtered = leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado));
@@ -1572,129 +1465,6 @@ export default function LeadsManager({
           ))}
         </div>
       </div>
-
-      {!isObserver && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4 space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Fluxo de automação do WhatsApp</h3>
-              <p className="text-sm text-slate-600">
-                Edite a sequência de mensagens enviada pelo botão de automação. Utilize variáveis como
-                <span className="font-semibold"> {'{{primeiro_nome}}'} </span>
-                para personalizar o texto.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddFlowStep}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar mensagem
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {messageFlowDraft.map((step, index) => (
-              <div key={step.id} className="rounded-lg border border-slate-200 p-4 space-y-3 bg-slate-50">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-slate-800">Mensagem {index + 1}</span>
-                    <label className="inline-flex items-center gap-2 text-xs text-slate-600">
-                      <input
-                        type="checkbox"
-                        checked={step.active}
-                        onChange={(event) => handleUpdateFlowStep(step.id, { active: event.target.checked })}
-                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                      />
-                      Ativa
-                    </label>
-                  </div>
-                  {messageFlowDraft.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFlowStep(step.id)}
-                      className="inline-flex items-center gap-2 text-xs text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Remover
-                    </button>
-                  )}
-                </div>
-
-                <textarea
-                  value={step.message}
-                  onChange={(event) => handleUpdateFlowStep(step.id, { message: event.target.value })}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Digite a mensagem que será enviada"
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="text-sm text-slate-700 flex flex-col gap-1">
-                    Aguardar antes do envio (minutos)
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.5"
-                      value={Number(step.delaySeconds ?? 0) / 60}
-                      onChange={(event) =>
-                        handleUpdateFlowStep(step.id, { delaySeconds: Number(event.target.value) * 60 })
-                      }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </label>
-                  <div className="text-xs text-slate-600 bg-white rounded-lg border border-slate-200 p-3">
-                    <p className="font-semibold text-slate-700 mb-1">Variáveis disponíveis</p>
-                    <div className="space-y-1">
-                      <p><span className="font-semibold">{'{{nome}}'}</span>: nome completo</p>
-                      <p><span className="font-semibold">{'{{primeiro_nome}}'}</span>: primeiro nome</p>
-                      <p><span className="font-semibold">{'{{origem}}'}</span>: origem do lead</p>
-                      <p><span className="font-semibold">{'{{cidade}}'}</span>: cidade</p>
-                      <p><span className="font-semibold">{'{{responsavel}}'}</span>: responsável</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {automationFlowMessage && (
-              <span className="text-sm text-slate-700">{automationFlowMessage}</span>
-            )}
-            <div className="flex gap-3 sm:justify-end">
-              <button
-                type="button"
-                onClick={() =>
-                  setMessageFlowDraft(
-                    autoContactSettings?.messageFlow.length
-                      ? autoContactSettings.messageFlow
-                      : DEFAULT_MESSAGE_FLOW,
-                  )
-                }
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200"
-              >
-                <X className="w-4 h-4" />
-                Desfazer alterações
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveAutomationFlow}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60"
-                disabled={savingAutomationFlow}
-              >
-                {savingAutomationFlow ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                {savingAutomationFlow ? 'Salvando...' : 'Salvar fluxo'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {viewMode === 'kanban' ? (
         <LeadKanban

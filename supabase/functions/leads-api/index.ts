@@ -455,6 +455,31 @@ function mapLeadRelationsForResponse(lead: any, lookups: LeadLookupMaps) {
   };
 }
 
+function getDuplicateStatusId(lookups: LeadLookupMaps) {
+  return lookups.statusByName.get(normalizeText('Duplicado')) ?? null;
+}
+
+async function isDuplicateLead(
+  supabase: ReturnType<typeof createClient>,
+  telefone: string,
+  email?: string | null,
+): Promise<boolean> {
+  const filters = [telefone ? `telefone.eq.${telefone}` : null, email ? `email.ilike.${email.toLowerCase()}` : null].filter(
+    Boolean,
+  );
+
+  if (filters.length === 0) return false;
+
+  const { data, error } = await supabase.from('leads').select('id').or(filters.join(',')).limit(1);
+
+  if (error) {
+    console.error('Erro ao verificar duplicidade de lead', error);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
 function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
@@ -776,11 +801,24 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const { data, error } = await supabase
-        .from('leads')
-        .insert([validation.leadData])
-        .select()
-        .single();
+      const duplicateStatusId = getDuplicateStatusId(lookups);
+      const duplicateLead = await isDuplicateLead(
+        supabase,
+      validation.leadData.telefone,
+      validation.leadData.email ?? null,
+    );
+
+    if (duplicateLead) {
+      validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+    }
+
+    const leadToInsert: LeadData = { ...validation.leadData };
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([leadToInsert])
+      .select()
+      .single();
 
       if (error) {
         console.error('Erro ao inserir lead:', error);
@@ -1008,11 +1046,24 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const { data, error } = await supabase
-          .from('leads')
-          .insert([validation.leadData])
-          .select()
-          .single();
+        const duplicateStatusId = getDuplicateStatusId(lookups);
+        const duplicateLead = await isDuplicateLead(
+          supabase,
+          validation.leadData.telefone,
+      validation.leadData.email ?? null,
+    );
+
+    if (duplicateLead) {
+      validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+    }
+
+    const leadToInsert: LeadData = { ...validation.leadData };
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([leadToInsert])
+      .select()
+      .single();
 
         if (error) {
           results.failed.push({

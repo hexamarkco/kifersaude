@@ -48,6 +48,7 @@ type LeadRecord = {
   tipo_contratacao: string;
   operadora_atual?: string | null;
   status?: string;
+  status_id?: string | null;
   responsavel: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
@@ -69,6 +70,42 @@ function getErrorMessage(error: unknown): string {
 function normalizePhone(value?: string | null): string {
   if (!value || typeof value !== 'string') return '';
   return value.replace(/\D/g, '');
+}
+
+async function applyDuplicateStatus(
+  supabase: ReturnType<typeof createClient>,
+  lead: LeadRecord,
+): Promise<LeadRecord> {
+  const filters = [lead.telefone ? `telefone.eq.${lead.telefone}` : null, lead.email ? `email.ilike.${lead.email.toLowerCase()}` : null].filter(
+    Boolean,
+  );
+
+  if (filters.length === 0) return lead;
+
+  const { data: duplicates, error: duplicateError } = await supabase
+    .from('leads')
+    .select('id')
+    .or(filters.join(','))
+    .limit(1);
+
+  if (duplicateError) {
+    console.error('Erro ao verificar duplicidade de lead do Facebook', duplicateError);
+    return lead;
+  }
+
+  if (!duplicates?.length) return lead;
+
+  const { data: duplicateStatus, error: duplicateStatusError } = await supabase
+    .from('lead_status_config')
+    .select('id')
+    .eq('nome', 'Duplicado')
+    .maybeSingle();
+
+  if (duplicateStatusError) {
+    console.error('Erro ao buscar status Duplicado para lead do Facebook', duplicateStatusError);
+  }
+
+  return { ...lead, status_id: duplicateStatus?.id ?? lead.status_id ?? null };
 }
 
 function getFieldValue(fieldData: FacebookLeadField[] | undefined, keys: string[]): string | undefined {
@@ -182,7 +219,9 @@ function buildLeadRecord(payload: FacebookLeadPayload, settings: IntegrationSett
 async function storeLead(supabaseUrl: string, serviceRoleKey: string, lead: LeadRecord) {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data, error } = await supabase.from('leads').insert([lead]).select().single();
+  const leadWithDuplicateStatus = await applyDuplicateStatus(supabase, lead);
+
+  const { data, error } = await supabase.from('leads').insert([leadWithDuplicateStatus]).select().single();
   if (error) {
     throw new Error(`Erro ao salvar lead no CRM: ${error.message}`);
   }

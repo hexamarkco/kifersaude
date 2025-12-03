@@ -10,6 +10,7 @@ import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
+import { resolveStatusIdByName } from '../lib/leadRelations';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -35,6 +36,13 @@ type LeadFormState = {
   proximo_retorno: string;
   observacoes: string;
 };
+
+type LeadPayload = LeadFormState;
+
+const normalizePhoneNumber = (value: string) => value.replace(/\D/g, '');
+
+const normalizeEmail = (value: string | null | undefined) =>
+  (value || '').trim().toLowerCase();
 
 export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
@@ -173,7 +181,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           ? new Date(`${formData.data_criacao}T00:00:00-03:00`).toISOString()
           : nowIso);
 
-      const dataToSave = {
+      const dataToSave: LeadPayload = {
         ...formData,
         data_criacao: effectiveCreationDateIso,
         proximo_retorno: formData.proximo_retorno
@@ -182,8 +190,10 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         ultimo_contato: formData.data_criacao ? effectiveCreationDateIso : nowIso,
       };
 
-      const normalizedLeadData = {
+      const normalizedLeadData: LeadPayload = {
         ...dataToSave,
+        telefone: normalizePhoneNumber(dataToSave.telefone),
+        email: normalizeEmail(dataToSave.email) || null,
         nome_completo: normalizeTitleCase(dataToSave.nome_completo) ?? '',
         cidade: normalizeTitleCase(dataToSave.cidade),
         estado: normalizeSentenceCase(dataToSave.estado),
@@ -207,6 +217,29 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         if (error) throw error;
         savedLead = updatedLead as Lead;
       } else {
+        const duplicateFilters = [
+          normalizedLeadData.telefone ? `telefone.eq.${normalizedLeadData.telefone}` : null,
+          normalizedLeadData.email ? `email.ilike.${normalizedLeadData.email}` : null,
+        ].filter(Boolean);
+
+        if (duplicateFilters.length > 0) {
+          const { data: duplicateLead, error: duplicateCheckError } = await supabase
+            .from('leads')
+            .select('id')
+            .or(duplicateFilters.join(','))
+            .limit(1)
+            .maybeSingle();
+
+          if (duplicateCheckError) {
+            throw duplicateCheckError;
+          }
+
+          if (duplicateLead) {
+            const duplicateStatusId = resolveStatusIdByName(leadStatuses, 'Duplicado');
+            normalizedLeadData.status_id = duplicateStatusId ?? normalizedLeadData.status_id;
+          }
+        }
+
         const { data: insertedLead, error } = await supabase
           .from('leads')
           .insert([normalizedLeadData])

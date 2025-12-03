@@ -105,7 +105,7 @@ async function applyDuplicateStatus(
     console.error('Erro ao buscar status Duplicado para lead do Facebook', duplicateStatusError);
   }
 
-  return { ...lead, status_id: duplicateStatus?.id ?? lead.status_id ?? null };
+  return { ...lead, status: 'Duplicado', status_id: duplicateStatus?.id ?? lead.status_id ?? null };
 }
 
 function getFieldValue(fieldData: FacebookLeadField[] | undefined, keys: string[]): string | undefined {

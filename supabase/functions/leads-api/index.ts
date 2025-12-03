@@ -169,6 +169,7 @@ interface LeadData {
   tipo_contratacao_id: string;
   operadora_atual?: string | null;
   status_id: string;
+  status?: string | null;
   responsavel_id: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
@@ -804,21 +805,20 @@ Deno.serve(async (req: Request) => {
       const duplicateStatusId = getDuplicateStatusId(lookups);
       const duplicateLead = await isDuplicateLead(
         supabase,
-      validation.leadData.telefone,
-      validation.leadData.email ?? null,
-    );
+        validation.leadData.telefone,
+        validation.leadData.email ?? null,
+      );
 
-    if (duplicateLead) {
-      validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
-    }
+      if (duplicateLead) {
+        validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+        validation.leadData.status = 'Duplicado';
+      }
 
-    const leadToInsert: LeadData = { ...validation.leadData };
-
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([leadToInsert])
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([validation.leadData])
+        .select()
+        .single();
 
       if (error) {
         console.error('Erro ao inserir lead:', error);
@@ -1050,20 +1050,19 @@ Deno.serve(async (req: Request) => {
         const duplicateLead = await isDuplicateLead(
           supabase,
           validation.leadData.telefone,
-      validation.leadData.email ?? null,
-    );
+          validation.leadData.email ?? null,
+        );
 
-    if (duplicateLead) {
-      validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
-    }
+        if (duplicateLead) {
+          validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+          validation.leadData.status = 'Duplicado';
+        }
 
-    const leadToInsert: LeadData = { ...validation.leadData };
-
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([leadToInsert])
-      .select()
-      .single();
+        const { data, error } = await supabase
+          .from('leads')
+          .insert([validation.leadData])
+          .select()
+          .single();
 
         if (error) {
           results.failed.push({

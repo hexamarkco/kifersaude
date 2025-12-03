@@ -37,7 +37,7 @@ type LeadFormState = {
   observacoes: string;
 };
 
-type LeadPayload = LeadFormState;
+type LeadPayload = LeadFormState & { status?: string | null };
 
 const normalizePhoneNumber = (value: string) => value.replace(/\D/g, '');
 
@@ -237,6 +237,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           if (duplicateLead) {
             const duplicateStatusId = resolveStatusIdByName(leadStatuses, 'Duplicado');
             normalizedLeadData.status_id = duplicateStatusId ?? normalizedLeadData.status_id;
+            normalizedLeadData.status = 'Duplicado';
           }
         }
 

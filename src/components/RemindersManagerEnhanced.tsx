@@ -1229,7 +1229,7 @@ export default function RemindersManagerEnhanced() {
 
       {historyModalData && (
         <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full flex flex-col">
+          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-start justify-between p-5 border-b border-slate-200">
               <div>
                 <h3 className="text-xl font-semibold text-slate-900">Histórico de mensagens</h3>

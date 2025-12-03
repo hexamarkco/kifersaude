@@ -5,6 +5,7 @@ import {
   Info,
   KeyRound,
   Loader2,
+  Megaphone,
   Plug,
   Save,
   ShieldCheck,

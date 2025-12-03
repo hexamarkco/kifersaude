@@ -13,6 +13,7 @@ import {
 import { configService } from '../../lib/configService';
 import { useConfig } from '../../contexts/ConfigContext';
 import type { IntegrationSetting } from '../../lib/supabase';
+import AutoContactFlowSettings from './AutoContactFlowSettings';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
 
@@ -106,6 +107,8 @@ export default function IntegrationsTab() {
 
   return (
     <div className="space-y-6">
+      <AutoContactFlowSettings />
+
       {gptMessage && (
         <div
           className={`p-4 rounded-lg border flex items-center space-x-3 ${

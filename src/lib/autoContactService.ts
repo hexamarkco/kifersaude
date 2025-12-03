@@ -22,6 +22,23 @@ const DEFAULT_STATUS = 'Contato Inicial';
 const DEFAULT_BASE_URL = 'http://localhost:3000';
 const DEFAULT_SESSION_ID = '';
 
+export const DEFAULT_MESSAGE_FLOW: AutoContactStep[] = [
+  {
+    id: 'step-1',
+    message:
+      'Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
+    delaySeconds: 0,
+    active: true,
+  },
+  {
+    id: 'step-2',
+    message:
+      'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
+    delaySeconds: 120,
+    active: true,
+  },
+];
+
 const getNormalizedDelaySeconds = (step: any) => {
   const delaySeconds = Number.isFinite(step?.delaySeconds) ? Number(step.delaySeconds) : null;
   const delayMinutes = Number.isFinite(step?.delayMinutes) ? Number(step.delayMinutes) : null;

@@ -169,6 +169,7 @@ interface LeadData {
   tipo_contratacao_id: string;
   operadora_atual?: string | null;
   status_id: string;
+  status?: string | null;
   responsavel_id: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
@@ -453,6 +454,31 @@ function mapLeadRelationsForResponse(lead: any, lookups: LeadLookupMaps) {
     responsavel:
       lead.responsavel ?? (lead.responsavel_id ? lookups.responsavelById.get(lead.responsavel_id) ?? null : null),
   };
+}
+
+function getDuplicateStatusId(lookups: LeadLookupMaps) {
+  return lookups.statusByName.get(normalizeText('Duplicado')) ?? null;
+}
+
+async function isDuplicateLead(
+  supabase: ReturnType<typeof createClient>,
+  telefone: string,
+  email?: string | null,
+): Promise<boolean> {
+  const filters = [telefone ? `telefone.eq.${telefone}` : null, email ? `email.ilike.${email.toLowerCase()}` : null].filter(
+    Boolean,
+  );
+
+  if (filters.length === 0) return false;
+
+  const { data, error } = await supabase.from('leads').select('id').or(filters.join(',')).limit(1);
+
+  if (error) {
+    console.error('Erro ao verificar duplicidade de lead', error);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
 }
 
 function normalizeTelefone(telefone: string): string {
@@ -776,6 +802,18 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const duplicateStatusId = getDuplicateStatusId(lookups);
+      const duplicateLead = await isDuplicateLead(
+        supabase,
+        validation.leadData.telefone,
+        validation.leadData.email ?? null,
+      );
+
+      if (duplicateLead) {
+        validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+        validation.leadData.status = 'Duplicado';
+      }
+
       const { data, error } = await supabase
         .from('leads')
         .insert([validation.leadData])
@@ -1006,6 +1044,18 @@ Deno.serve(async (req: Request) => {
             errors: validation.errors,
           });
           continue;
+        }
+
+        const duplicateStatusId = getDuplicateStatusId(lookups);
+        const duplicateLead = await isDuplicateLead(
+          supabase,
+          validation.leadData.telefone,
+          validation.leadData.email ?? null,
+        );
+
+        if (duplicateLead) {
+          validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
+          validation.leadData.status = 'Duplicado';
         }
 
         const { data, error } = await supabase

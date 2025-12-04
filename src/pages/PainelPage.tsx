@@ -9,7 +9,7 @@ import ContractsManager from '../components/ContractsManager';
 import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
 import EmailManager from '../components/EmailManager';
 import BlogTab from '../components/config/BlogTab';
-import WhatsAppTab from '../components/WhatsAppTab';
+import WhatsAppFollowUpTab from '../components/WhatsAppFollowUpTab';
 import ConfigPage from './ConfigPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
@@ -210,7 +210,7 @@ export default function PainelPage() {
       case 'email':
         return <EmailManager />;
       case 'whatsapp':
-        return <WhatsAppTab />;
+        return <WhatsAppFollowUpTab />;
       case 'blog':
         return <BlogTab />;
       case 'config':

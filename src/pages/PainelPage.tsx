@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useSearchParams } from 'react-router-dom';
-import { supabase, Lead, Reminder } from '../lib/supabase';
+import { Lead, Reminder } from '../lib/supabase';
 import Layout from '../components/Layout';
 import Dashboard from '../components/Dashboard';
 import LeadsManager from '../components/LeadsManager';
@@ -95,39 +95,22 @@ export default function PainelPage() {
     setActiveTab(previous => (previous !== requestedTab ? requestedTab : previous));
   }, [searchParams, validTabIds]);
 
-  const loadUnreadReminders = useCallback(async () => {
-    try {
-      const { count, error } = await supabase
-        .from('reminders')
-        .select('*', { count: 'exact', head: true })
-        .eq('lido', false);
-
-      if (error) throw error;
-      setUnreadReminders(count || 0);
-    } catch (error) {
-      console.error('Erro ao carregar lembretes:', error);
-    }
-  }, []);
-
   useEffect(() => {
-    loadUnreadReminders();
-    const interval = setInterval(loadUnreadReminders, 60000);
-
+    const unsubscribeUnreadCount = notificationService.subscribeToUnreadCount(setUnreadReminders);
     notificationService.start(30000);
 
     const unsubscribe = notificationService.subscribe((reminder) => {
       setActiveNotifications((prev) => [...prev, reminder]);
       setHasActiveNotification(true);
       audioService.playNotificationSound();
-      loadUnreadReminders();
     });
 
     return () => {
-      clearInterval(interval);
       notificationService.stop();
       unsubscribe();
+      unsubscribeUnreadCount();
     };
-  }, [loadUnreadReminders]);
+  }, []);
 
   useEffect(() => {
     if (configLoading) {

@@ -100,6 +100,8 @@ export default function RemindersManagerEnhanced() {
   const [generatedFollowUp, setGeneratedFollowUp] = useState<string | null>(null);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [followUpCopied, setFollowUpCopied] = useState(false);
+  const [followUpApproved, setFollowUpApproved] = useState(false);
+  const [followUpBlocks, setFollowUpBlocks] = useState<string[]>([]);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -122,6 +124,8 @@ export default function RemindersManagerEnhanced() {
     setFollowUpError(null);
     setFollowUpCopied(false);
     setGeneratingFollowUp(false);
+    setFollowUpApproved(false);
+    setFollowUpBlocks([]);
   };
 
   const fetchHistoryMessages = async (phone: string) => {
@@ -260,6 +264,8 @@ export default function RemindersManagerEnhanced() {
     setFollowUpError(null);
     setGeneratedFollowUp(null);
     setFollowUpCopied(false);
+    setFollowUpApproved(false);
+    setFollowUpBlocks([]);
 
     try {
       const conversationHistory = buildConversationHistory();
@@ -286,6 +292,37 @@ export default function RemindersManagerEnhanced() {
     } finally {
       setGeneratingFollowUp(false);
     }
+  };
+
+  const splitFollowUpIntoBlocks = (text: string) => {
+    const normalized = text.trim().replace(/\r\n/g, '\n');
+    const paragraphBlocks = normalized
+      .split(/\n\s*\n/)
+      .map(block => block.trim())
+      .filter(Boolean);
+
+    if (paragraphBlocks.length > 0) return paragraphBlocks;
+
+    return normalized
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+  };
+
+  const handleApproveFollowUp = () => {
+    if (!generatedFollowUp) return;
+
+    const blocks = splitFollowUpIntoBlocks(generatedFollowUp);
+    setFollowUpBlocks(blocks);
+    setFollowUpApproved(true);
+  };
+
+  const handleUpdateBlock = (index: number, value: string) => {
+    setFollowUpBlocks(prev => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
   };
 
   const handleCopyFollowUp = async () => {
@@ -1430,28 +1467,98 @@ export default function RemindersManagerEnhanced() {
                       )}
 
                       {generatedFollowUp && (
-                        <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
-                          <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
-                            <button
-                              type="button"
-                              onClick={handleCopyFollowUp}
-                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
-                            >
-                              {followUpCopied ? (
-                                <>
-                                  <Check className="h-4 w-4 text-teal-600" />
-                                  <span>Copiado</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4" />
-                                  <span>Copiar</span>
-                                </>
-                              )}
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={handleGenerateFollowUp}
+                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                                <span>Gerar outro</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCopyFollowUp}
+                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                              >
+                                {followUpCopied ? (
+                                  <>
+                                    <Check className="h-4 w-4 text-teal-600" />
+                                    <span>Copiado</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-4 w-4" />
+                                    <span>Copiar</span>
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleApproveFollowUp}
+                                className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                              >
+                                <Check className="h-4 w-4" />
+                                <span>Aprovar e dividir em blocos</span>
+                              </button>
+                            </div>
                           </div>
+
                           <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
+
+                          {followUpApproved && followUpBlocks.length > 0 && (
+                            <div className="space-y-3 rounded-lg border border-teal-100 bg-white p-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">Enviar em blocos sequenciais</p>
+                                  <p className="text-xs text-slate-600">Revise os textos abaixo e envie no WhatsApp seguindo a ordem.</p>
+                                </div>
+                                {!historyModalData?.phone && (
+                                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">Telefone indisponível</span>
+                                )}
+                              </div>
+
+                              <div className="space-y-2">
+                                {followUpBlocks.map((block, index) => {
+                                  const whatsappBase = historyModalData?.phone ? getWhatsappLink(historyModalData.phone) : null;
+                                  const whatsappLink = whatsappBase
+                                    ? `${whatsappBase}?text=${encodeURIComponent(block)}`
+                                    : null;
+
+                                  return (
+                                    <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-semibold text-slate-800">Mensagem {index + 1}</span>
+                                        {whatsappLink ? (
+                                          <a
+                                            href={whatsappLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-green-700"
+                                          >
+                                            <MessageCircle className="h-4 w-4" />
+                                            <span>Enviar no WhatsApp</span>
+                                          </a>
+                                        ) : (
+                                          <span className="text-[11px] text-slate-500">Telefone não disponível</span>
+                                        )}
+                                      </div>
+
+                                      <textarea
+                                        value={block}
+                                        onChange={(event) => handleUpdateBlock(index, event.target.value)}
+                                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+                                        rows={3}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

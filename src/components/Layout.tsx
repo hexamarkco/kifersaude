@@ -71,10 +71,10 @@ export default function Layout({
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'financeiro-agenda', label: 'Tarefas', icon: Calendar },
+    { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
-    { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'whatsapp', label: 'WhatsApp', icon: PhoneCall },
     { id: 'blog', label: 'Blog', icon: BookOpen },
@@ -347,7 +347,7 @@ export default function Layout({
                             className={`absolute -top-1 -right-1 ${
                               tab.badgeColor || 'bg-orange-500'
                             } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
-                              hasActiveNotification && (tab.id === 'comunicacao' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                              hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
                             } ${
                               (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
                             }`}
@@ -459,7 +459,7 @@ export default function Layout({
                               className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs font-semibold text-white ${
                                 tab.badgeColor || 'bg-orange-500'
                               } ${
-                                hasActiveNotification && (tab.id === 'comunicacao' || activeTab === 'reminders')
+                                hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders')
                                   ? 'animate-pulse'
                                   : ''
                               } ${

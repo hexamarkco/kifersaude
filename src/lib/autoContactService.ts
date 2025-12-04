@@ -48,6 +48,31 @@ const getNormalizedDelaySeconds = (step: any) => {
   return normalizedSeconds !== null ? Math.max(0, normalizedSeconds) : 0;
 };
 
+const getBrazilianGreeting = () => {
+  const now = new Date();
+
+  const formatted = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(now);
+
+  const hourPart = formatted.find((part) => part.type === 'hour');
+  const hour = hourPart ? Number.parseInt(hourPart.value, 10) : now.getUTCHours();
+
+  const greeting =
+    hour >= 18 || hour < 5
+      ? 'boa noite'
+      : hour >= 12
+        ? 'boa tarde'
+        : 'bom dia';
+
+  return {
+    greeting,
+    greetingCapitalized: greeting.charAt(0).toUpperCase() + greeting.slice(1),
+  };
+};
+
 export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | null | undefined): AutoContactSettings => {
   const settings = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
   const messageFlow = Array.isArray(settings.messageFlow)
@@ -75,8 +100,11 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
 export const applyTemplateVariables = (template: string, lead: Lead) => {
   const firstName = lead.nome_completo?.trim().split(/\s+/)[0] ?? '';
+  const { greeting, greetingCapitalized } = getBrazilianGreeting();
 
   return template
+    .replace(/{{\s*Saudacao\s*}}/g, greetingCapitalized)
+    .replace(/{{\s*saudacao\s*}}/g, greeting)
     .replace(/{{\s*nome\s*}}/gi, lead.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
     .replace(/{{\s*origem\s*}}/gi, lead.origem || '')

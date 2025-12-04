@@ -237,6 +237,13 @@ export default function AutoContactFlowSettings() {
                 <div className="space-y-1">
                   <p><span className="font-semibold">{'{{nome}}'}</span>: nome completo</p>
                   <p><span className="font-semibold">{'{{primeiro_nome}}'}</span>: primeiro nome</p>
+                  <p>
+                    <span className="font-semibold">{'{{Saudacao}}'}</span>: saudação com inicial maiúscula (Bom dia/Boa tarde/Boa
+                    noite)
+                  </p>
+                  <p>
+                    <span className="font-semibold">{'{{saudacao}}'}</span>: saudação em minúsculas (bom dia/boa tarde/boa noite)
+                  </p>
                   <p><span className="font-semibold">{'{{origem}}'}</span>: origem do lead</p>
                   <p><span className="font-semibold">{'{{cidade}}'}</span>: cidade</p>
                   <p><span className="font-semibold">{'{{responsavel}}'}</span>: responsável</p>

@@ -26,6 +26,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const [showForm, setShowForm] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [generatedFollowUp, setGeneratedFollowUp] = useState<string | null>(null);
+  const [approvedFollowUp, setApprovedFollowUp] = useState<string | null>(null);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
@@ -75,6 +76,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     setGeneratingFollowUp(true);
     setFollowUpError(null);
     setGeneratedFollowUp(null);
+    setApprovedFollowUp(null);
     setCopied(false);
 
     const conversationHistory = buildConversationHistory();
@@ -121,6 +123,21 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     } catch (error) {
       console.error('Erro ao copiar follow-up:', error);
     }
+  };
+
+  const splitFollowUpIntoBlocks = (followUpText: string) =>
+    followUpText
+      .split(/\n\s*\n/)
+      .map((block) => block.trim())
+      .filter(Boolean);
+
+  const getWhatsappMessageLink = (phone: string | null | undefined, message: string) => {
+    if (!phone) return null;
+
+    const normalized = phone.replace(/\D/g, '');
+    if (!normalized) return null;
+
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   };
 
   const handleAddInteraction = async (e: React.FormEvent) => {
@@ -265,27 +282,82 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
             {generatedFollowUp && (
               <div className="mt-4 rounded-lg bg-slate-50 p-4">
-                <div className="mb-2 flex items-start justify-between gap-2">
+                <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</div>
-                  <button
-                    type="button"
-                    onClick={handleCopyFollowUp}
-                    className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-4 w-4 text-teal-600" />
-                        <span>Copiado</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4" />
-                        <span>Copiar</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setApprovedFollowUp(generatedFollowUp)}
+                      className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>Aprovar follow-up</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateFollowUp}
+                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-white"
+                      disabled={generatingFollowUp}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span>Gerar outro</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyFollowUp}
+                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-4 w-4 text-teal-600" />
+                          <span>Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
+              </div>
+            )}
+            {approvedFollowUp && (
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="mb-3 text-sm font-semibold text-emerald-800">Follow-up aprovado</div>
+                <p className="text-sm text-emerald-900">
+                  O texto foi dividido em blocos. Clique em cada bloco para abrir o WhatsApp do lead com a mensagem pronta para
+                  envio, seguindo a ordem sugerida.
+                </p>
+                <ol className="mt-3 space-y-3">
+                  {splitFollowUpIntoBlocks(approvedFollowUp).map((block, index) => {
+                    const whatsappLink = getWhatsappMessageLink(lead.telefone, block);
+
+                    return (
+                      <li key={`${index}-${block.slice(0, 10)}`} className="rounded-lg bg-white p-3 shadow-sm">
+                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-sm font-semibold text-slate-900">Mensagem {index + 1}</div>
+                          {whatsappLink ? (
+                            <a
+                              href={whatsappLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              <span>Enviar no WhatsApp</span>
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-500">Telefone do lead indisponível para envio.</span>
+                          )}
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm text-slate-800">{block}</p>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
             )}
           </div>

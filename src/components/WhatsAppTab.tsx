@@ -14,6 +14,7 @@ import {
   whatsappWebhookUrl,
   type WhatsAppChatSummary,
 } from '../lib/whatsappService';
+import WhatsAppFollowUpTab from './WhatsAppFollowUpTab';
 
 type ChatTimelineItem = {
   id: string;
@@ -42,6 +43,7 @@ export default function WhatsAppTab() {
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [outgoingMessage, setOutgoingMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [activeSection, setActiveSection] = useState<'inbox' | 'followups'>('inbox');
 
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? chats[0],
@@ -228,9 +230,44 @@ export default function WhatsAppTab() {
 
   return (
     <div className="space-y-6">
-      <div className="h-[calc(100vh-8rem)] rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex h-full flex-col overflow-hidden lg:flex-row">
-          <div className="w-full max-w-md border-b border-slate-200 bg-slate-50/80 p-4 lg:h-full lg:border-b-0 lg:border-r lg:p-6">
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">WhatsApp</p>
+          <h2 className="text-xl font-bold text-slate-900">Inbox e automações</h2>
+          <p className="text-sm text-slate-600">Responda conversas reais e configure sequências de follow-up.</p>
+        </div>
+        <div className="flex rounded-full border border-slate-200 bg-white p-1 text-sm font-semibold text-slate-600 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveSection('inbox')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 transition ${
+              activeSection === 'inbox'
+                ? 'bg-orange-600 text-white shadow-sm'
+                : 'hover:bg-slate-100'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" /> Inbox
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('followups')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 transition ${
+              activeSection === 'followups'
+                ? 'bg-orange-600 text-white shadow-sm'
+                : 'hover:bg-slate-100'
+            }`}
+          >
+            <RefreshCw className="h-4 w-4" /> Fluxos de follow-up
+          </button>
+        </div>
+      </div>
+
+      {activeSection === 'followups' && <WhatsAppFollowUpTab />}
+
+      {activeSection === 'inbox' && (
+        <div className="h-[calc(100vh-8rem)] rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex h-full flex-col overflow-hidden lg:flex-row">
+            <div className="w-full max-w-md border-b border-slate-200 bg-slate-50/80 p-4 lg:h-full lg:border-b-0 lg:border-r lg:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversas</p>
@@ -368,80 +405,83 @@ export default function WhatsAppTab() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Webhook</p>
-              <h3 className="text-lg font-bold text-slate-900">Endpoint conectado</h3>
-              <p className="text-xs text-slate-500">Configure esse URL no provedor de WhatsApp para popular as tabelas.</p>
+      {activeSection === 'inbox' && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Webhook</p>
+                <h3 className="text-lg font-bold text-slate-900">Endpoint conectado</h3>
+                <p className="text-xs text-slate-500">Configure esse URL no provedor de WhatsApp para popular as tabelas.</p>
+              </div>
+              <button
+                onClick={handleCopyWebhookUrl}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+              >
+                <Copy className="h-3.5 w-3.5" /> {copiedWebhookUrl ? 'Copiado!' : 'Copiar URL'}
+              </button>
             </div>
-            <button
-              onClick={handleCopyWebhookUrl}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
-            >
-              <Copy className="h-3.5 w-3.5" /> {copiedWebhookUrl ? 'Copiado!' : 'Copiar URL'}
-            </button>
-          </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800">
-            {whatsappWebhookUrl}
-          </div>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-slate-600">
-            <li>
-              A tabela <code className="rounded bg-slate-100 px-1">whatsapp_webhook_events</code> armazena o payload bruto.
-            </li>
-            <li>
-              As tabelas <code className="rounded bg-slate-100 px-1">whatsapp_chats</code> e{' '}
-              <code className="rounded bg-slate-100 px-1">whatsapp_messages</code> já aparecem na inbox.
-            </li>
-          </ul>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Eventos recentes</p>
-              <h3 className="text-lg font-bold text-slate-900">Log do webhook</h3>
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800">
+              {whatsappWebhookUrl}
             </div>
-            <button
-              onClick={() => void loadWebhookEvents()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-orange-300 hover:text-orange-700"
-              title="Atualizar log"
-            >
-              {loadingEvents ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            </button>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-slate-600">
+              <li>
+                A tabela <code className="rounded bg-slate-100 px-1">whatsapp_webhook_events</code> armazena o payload bruto.
+              </li>
+              <li>
+                As tabelas <code className="rounded bg-slate-100 px-1">whatsapp_chats</code> e{' '}
+                <code className="rounded bg-slate-100 px-1">whatsapp_messages</code> já aparecem na inbox.
+              </li>
+            </ul>
           </div>
 
-          {loadingEvents && (
-            <div className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" /> Buscando eventos...
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Eventos recentes</p>
+                <h3 className="text-lg font-bold text-slate-900">Log do webhook</h3>
+              </div>
+              <button
+                onClick={() => void loadWebhookEvents()}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-orange-300 hover:text-orange-700"
+                title="Atualizar log"
+              >
+                {loadingEvents ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              </button>
             </div>
-          )}
 
-          {!loadingEvents && webhookEvents.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-              Sem eventos registrados ainda. Envie um teste para o endpoint para validar a conexão.
-            </div>
-          )}
+            {loadingEvents && (
+              <div className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" /> Buscando eventos...
+              </div>
+            )}
 
-          {!loadingEvents && webhookEvents.length > 0 && (
-            <div className="space-y-2">
-              {webhookEvents.map((event) => (
-                <div key={event.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span className="font-semibold text-slate-800">{event.event || 'unknown'}</span>
-                    <span>{formatDateTime(event.created_at)}</span>
+            {!loadingEvents && webhookEvents.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+                Sem eventos registrados ainda. Envie um teste para o endpoint para validar a conexão.
+              </div>
+            )}
+
+            {!loadingEvents && webhookEvents.length > 0 && (
+              <div className="space-y-2">
+                {webhookEvents.map((event) => (
+                  <div key={event.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <span className="font-semibold text-slate-800">{event.event || 'unknown'}</span>
+                      <span>{formatDateTime(event.created_at)}</span>
+                    </div>
+                    <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-white px-2 py-1 text-[11px] text-slate-700">
+                      {JSON.stringify(event.payload, null, 2)}
+                    </pre>
                   </div>
-                  <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-white px-2 py-1 text-[11px] text-slate-700">
-                    {JSON.stringify(event.payload, null, 2)}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

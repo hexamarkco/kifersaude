@@ -301,7 +301,40 @@ export default function RemindersManagerEnhanced() {
       .map(block => block.trim())
       .filter(Boolean);
 
-    if (paragraphBlocks.length > 0) return paragraphBlocks;
+    if (paragraphBlocks.length > 1) return paragraphBlocks;
+
+    const numberedBlocks = normalized
+      .split(/\n(?=\s*(?:\d+\.\s|[-•]\s|Mensagem\s+\d+))/i)
+      .map(block => block.trim())
+      .filter(Boolean);
+
+    if (numberedBlocks.length > 1) return numberedBlocks;
+
+    const sentencePieces = normalized
+      .split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/)
+      .map(sentence => sentence.trim())
+      .filter(Boolean);
+
+    if (sentencePieces.length > 1) {
+      const MAX_BLOCK_LENGTH = 240;
+
+      const grouped = sentencePieces.reduce<string[]>((acc, sentence) => {
+        if (acc.length === 0) return [sentence];
+
+        const last = acc[acc.length - 1];
+        const candidate = `${last} ${sentence}`.trim();
+
+        if (candidate.length <= MAX_BLOCK_LENGTH) {
+          acc[acc.length - 1] = candidate;
+        } else {
+          acc.push(sentence);
+        }
+
+        return acc;
+      }, []);
+
+      if (grouped.length > 0) return grouped;
+    }
 
     return normalized
       .split('\n')

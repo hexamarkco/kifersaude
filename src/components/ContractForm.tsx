@@ -271,6 +271,13 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     return total;
   };
 
+  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
+
+  const adjustedMensalidade = useMemo(
+    () => calculateAdjustedValue(baseMensalidade),
+    [baseMensalidade, adjustments]
+  );
+
   const vidasNumber = parseFloat(formData.vidas || '1') || 1;
   const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
   const bonusLimiteMensalValor = parseFloat(formData.bonus_limite_mensal || '0') || 0;

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Kifer Saúde</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        .endpoint-card {
+            transition: all 0.3s ease;
+        }
+        .endpoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .method-get { background: #10b981; }
+        .method-post { background: #3b82f6; }
+        .method-put { background: #f59e0b; }
+        .method-delete { background: #ef4444; }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <h1 class="text-3xl font-bold">📚 Documentação da API</h1>
+                <p class="text-teal-100 mt-2">API de Gerenciamento de Leads - Kifer Saúde</p>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Configuration -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">⚙️ Configuração da API</h2>
+                        <p class="text-slate-600 mt-1">Informe a URL base e a API Key para testar os endpoints diretamente por aqui.</p>
+                    </div>
+                    <button onclick="saveConfig()"
+                            class="self-start md:self-auto bg-teal-600 text-white px-5 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                        💾 Salvar configurações
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="baseUrlInput" class="block text-sm font-medium text-slate-700 mb-1">Base URL</label>
+                        <input id="baseUrlInput" type="url" placeholder="https://seu-projeto.supabase.co/functions/v1/leads-api"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                    </div>
+                    <div class="relative">
+                        <label for="apiKeyInput" class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                        <input id="apiKeyInput" type="password" placeholder="SUPABASE_ANON_KEY"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg pr-12 focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                        <button type="button"
+                                onclick="toggleApiKeyVisibility()"
+                                class="absolute inset-y-0 right-3 mt-6 text-sm text-slate-500 hover:text-slate-700">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                <p id="configStatus" class="mt-4 text-sm text-slate-500 hidden"></p>
+            </div>
+
+            <!-- Quick Start -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">🚀 Começando</h2>
+                <p class="text-slate-600 mb-4">
+                    Esta API permite gerenciar leads através de requisições HTTP. Todos os endpoints requerem autenticação via API Key.
+                </p>
+                <p class="text-slate-600 mb-4 text-sm">A tabela de leads utiliza chaves estrangeiras para origem, tipo de contratação, status e responsável. Envie os campos <code>origem_id</code>, <code>tipo_contratacao_id</code>, <code>status_id</code> e <code>responsavel_id</code> com os IDs das tabelas de configuração, ou os nomes correspondentes nos campos textuais para compatibilidade.</p>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+                    <p class="text-sm font-medium text-blue-800">Base URL</p>
+                    <code class="text-blue-600 text-sm">https://seu-projeto.supabase.co/functions/v1/leads-api</code>
+                </div>
+            </div>
+
+            <!-- Authentication -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">🔐 Autenticação</h2>
+                <p class="text-slate-600 mb-4">Todas as requisições devem incluir os seguintes headers:</p>
+                <div class="code-block">
+                    <pre>Authorization: Bearer SEU_SUPABASE_ANON_KEY
+apikey: SEU_SUPABASE_ANON_KEY
+Content-Type: application/json</pre>
+                </div>
+            </div>
+
+            <!-- Endpoints -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">📍 Endpoints</h2>
+
+                <!-- GET /leads -->
+                <div class="endpoint-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-get text-white px-3 py-1 rounded font-semibold text-sm">GET</span>
+                        <code class="text-slate-700 font-mono text-lg">/leads</code>
+                    </div>
+                    <p class="text-slate-600 mb-4">Lista todos os leads não arquivados</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
+                    <div class="code-block mb-4">
+                        <pre>curl -X GET "https://seu-projeto.supabase.co/functions/v1/leads-api/leads" \
+  -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
+  -H "apikey: SEU_SUPABASE_ANON_KEY"</pre>
+                    </div>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso (200):</h4>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "nome_completo": "João Silva",
+      "telefone": "11999999999",
+      "email": "joao@email.com",
+      "origem_id": "origem-uuid",
+      "origem": "Instagram",
+      "tipo_contratacao_id": "tipo-uuid",
+      "tipo_contratacao": "Pessoa Física",
+      "status_id": "status-uuid",
+      "status": "Novo",
+      "responsavel_id": "responsavel-uuid",
+      "responsavel": "Luiza",
+      "data_criacao": "2024-01-01T10:00:00Z"
+    }
+  ]
+}</pre>
+                    </div>
+
+                    <button onclick="testEndpoint('GET', '/leads')"
+                            class="mt-4 bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                        🧪 Testar Endpoint
+                    </button>
+                </div>
+
+                <!-- GET /leads/:id -->
+                <div class="endpoint-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-get text-white px-3 py-1 rounded font-semibold text-sm">GET</span>
+                        <code class="text-slate-700 font-mono text-lg">/leads/:id</code>
+                    </div>
+                    <p class="text-slate-600 mb-4">Retorna um lead específico pelo ID</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
+                    <div class="code-block">
+                        <pre>curl -X GET "https://seu-projeto.supabase.co/functions/v1/leads-api/leads/{id}" \
+  -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
+  -H "apikey: SEU_SUPABASE_ANON_KEY"</pre>
+                    </div>
+
+                    <div class="mt-4">
+                        <input type="text" id="getLeadId" placeholder="Digite o ID do lead"
+                               class="px-4 py-2 border border-slate-300 rounded-lg mr-2 w-80">
+                        <button onclick="testEndpoint('GET', '/leads/' + document.getElementById('getLeadId').value)"
+                                class="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                            🧪 Testar Endpoint
+                        </button>
+                    </div>
+                </div>
+
+                <!-- POST /leads -->
+                <div class="endpoint-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-post text-white px-3 py-1 rounded font-semibold text-sm">POST</span>
+                        <code class="text-slate-700 font-mono text-lg">/leads</code>
+                    </div>
+                    <p class="text-slate-600 mb-4">Cria um novo lead</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Corpo da Requisição:</h4>
+                    <div class="code-block mb-4">
+                        <pre>{
+  "nome_completo": "Maria Santos",
+  "telefone": "11988888888",
+  "email": "maria@email.com",
+  "origem_id": "origem-uuid",
+  "tipo_contratacao_id": "tipo-uuid",
+  "status_id": "status-uuid",
+  "responsavel_id": "responsavel-uuid",
+  "observacoes": "Interessada em plano familiar",
+  "data_criacao": "2024-01-15"
+}</pre>
+                    </div>
+
+                    <p class="text-slate-600 mb-4 text-sm">Use os IDs das tabelas de configuração (<code>lead_origens</code>, <code>lead_tipos_contratacao</code>, <code>lead_status_config</code> e <code>lead_responsaveis</code>). Para compatibilidade, você também pode enviar os campos textuais <code>origem</code>, <code>tipo_contratacao</code>, <code>status</code> e <code>responsavel</code>, desde que correspondam exatamente aos rótulos existentes.</p>
+                    <p class="text-slate-600 mb-4 text-sm">O campo <code>data_criacao</code> é opcional e aceita valores no formato ISO 8601 ou <code>YYYY-MM-DD</code>. Quando não informado, a data atual é utilizada automaticamente.</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
+                    <div class="code-block mb-4">
+                        <pre>curl -X POST "https://seu-projeto.supabase.co/functions/v1/leads-api/leads" \
+  -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
+  -H "apikey: SEU_SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"nome_completo":"Maria Santos","telefone":"11988888888","origem_id":"origem-uuid","tipo_contratacao_id":"tipo-uuid","responsavel_id":"responsavel-uuid"}'</pre>
+                    </div>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Resposta de Sucesso (201):</h4>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": {
+    "id": "uuid-gerado",
+    "nome_completo": "Maria Santos",
+    "telefone": "11988888888",
+    "origem_id": "origem-uuid",
+    "origem": "Instagram",
+    "tipo_contratacao_id": "tipo-uuid",
+    "tipo_contratacao": "Pessoa Física",
+    "status_id": "status-uuid",
+    "status": "Novo",
+    "responsavel_id": "responsavel-uuid",
+    "responsavel": "Luiza"
+  }
+}</pre>
+                    </div>
+
+                    <div class="mt-4">
+                        <textarea id="createLeadBody" rows="8"
+                                  class="w-full px-4 py-2 border border-slate-300 rounded-lg font-mono text-sm"
+                                  placeholder='{"nome_completo":"Teste","telefone":"11999999999"}'></textarea>
+                        <button onclick="testEndpoint('POST', '/leads', document.getElementById('createLeadBody').value)"
+                                class="mt-2 bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                            🧪 Testar Endpoint
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PUT /leads/:id -->
+                <div class="endpoint-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-put text-white px-3 py-1 rounded font-semibold text-sm">PUT</span>
+                        <code class="text-slate-700 font-mono text-lg">/leads/:id</code>
+                    </div>
+                    <p class="text-slate-600 mb-4">Atualiza um lead existente</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Corpo da Requisição:</h4>
+                    <div class="code-block mb-4">
+                        <pre>{
+  "status_id": "status-uuid",
+  "observacoes": "Cliente solicitou cotação completa"
+}</pre>
+                    </div>
+
+                    <p class="text-slate-600 mb-4 text-sm">Assim como na criação, você pode usar <code>status</code>, <code>origem</code>, <code>tipo_contratacao</code> ou <code>responsavel</code> com os respectivos rótulos existentes, mas os IDs das tabelas dedicadas são preferíveis.</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
+                    <div class="code-block">
+                        <pre>curl -X PUT "https://seu-projeto.supabase.co/functions/v1/leads-api/leads/{id}" \
+  -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
+  -H "apikey: SEU_SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status_id":"status-uuid"}'</pre>
+                    </div>
+
+                    <div class="mt-4 grid gap-2">
+                        <input type="text" id="updateLeadId" placeholder="ID do lead"
+                               class="px-4 py-2 border border-slate-300 rounded-lg">
+                        <textarea id="updateLeadBody" rows="4"
+                                  class="px-4 py-2 border border-slate-300 rounded-lg font-mono text-sm"
+                                  placeholder='{"status_id":"status-uuid"}'></textarea>
+                        <button onclick="testEndpoint('PUT', '/leads/' + document.getElementById('updateLeadId').value, document.getElementById('updateLeadBody').value)"
+                                class="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                            🧪 Testar Endpoint
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DELETE /leads/:id -->
+                <div class="endpoint-card bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-delete text-white px-3 py-1 rounded font-semibold text-sm">DELETE</span>
+                        <code class="text-slate-700 font-mono text-lg">/leads/:id</code>
+                    </div>
+                    <p class="text-slate-600 mb-4">Arquiva um lead (soft delete)</p>
+
+                    <h4 class="font-semibold text-slate-800 mb-2">Exemplo de Requisição:</h4>
+                    <div class="code-block">
+                        <pre>curl -X DELETE "https://seu-projeto.supabase.co/functions/v1/leads-api/leads/{id}" \
+  -H "Authorization: Bearer SEU_SUPABASE_ANON_KEY" \
+  -H "apikey: SEU_SUPABASE_ANON_KEY"</pre>
+                    </div>
+
+                    <div class="mt-4">
+                        <input type="text" id="deleteLeadId" placeholder="Digite o ID do lead"
+                               class="px-4 py-2 border border-slate-300 rounded-lg mr-2 w-80">
+                        <button onclick="testEndpoint('DELETE', '/leads/' + document.getElementById('deleteLeadId').value)"
+                                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                            🧪 Testar Endpoint
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Area -->
+            <div id="responseArea" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-800">📤 Resposta da API</h3>
+                    <button onclick="document.getElementById('responseArea').classList.add('hidden')"
+                            class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+                <div id="responseStatus" class="mb-4"></div>
+                <div id="responseBody" class="code-block"></div>
+            </div>
+
+            <!-- Status Codes -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">📊 Códigos de Status</h2>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded font-semibold text-sm">200</span>
+                        <div>
+                            <p class="font-medium text-slate-800">OK</p>
+                            <p class="text-slate-600 text-sm">Requisição bem-sucedida</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded font-semibold text-sm">201</span>
+                        <div>
+                            <p class="font-medium text-slate-800">Created</p>
+                            <p class="text-slate-600 text-sm">Lead criado com sucesso</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold text-sm">400</span>
+                        <div>
+                            <p class="font-medium text-slate-800">Bad Request</p>
+                            <p class="text-slate-600 text-sm">Dados inválidos na requisição</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold text-sm">404</span>
+                        <div>
+                            <p class="font-medium text-slate-800">Not Found</p>
+                            <p class="text-slate-600 text-sm">Lead não encontrado</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold text-sm">500</span>
+                        <div>
+                            <p class="font-medium text-slate-800">Internal Server Error</p>
+                            <p class="text-slate-600 text-sm">Erro interno do servidor</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Model -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">📋 Modelo de Dados</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200">
+                                <th class="text-left py-3 px-4 font-semibold text-slate-800">Campo</th>
+                                <th class="text-left py-3 px-4 font-semibold text-slate-800">Tipo</th>
+                                <th class="text-left py-3 px-4 font-semibold text-slate-800">Obrigatório</th>
+                                <th class="text-left py-3 px-4 font-semibold text-slate-800">Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-600">
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">nome_completo</td>
+                                <td class="py-3 px-4">string</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Nome completo do lead</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">telefone</td>
+                                <td class="py-3 px-4">string</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Telefone de contato</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">email</td>
+                                <td class="py-3 px-4">string</td>
+                                <td class="py-3 px-4">❌ Não</td>
+                                <td class="py-3 px-4">E-mail do lead</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">status_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_status_config</code>. Você pode enviar <code>status</code> (texto) como alternativa.</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">origem_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_origens</code>. Campo <code>origem</code> (texto) é aceito para compatibilidade.</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">tipo_contratacao_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_tipos_contratacao</code>. Você pode enviar <code>tipo_contratacao</code> (texto) como alternativa.</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3 px-4 font-mono text-xs">responsavel_id</td>
+                                <td class="py-3 px-4">uuid</td>
+                                <td class="py-3 px-4">✅ Sim</td>
+                                <td class="py-3 px-4">Referência para <code>lead_responsaveis</code>. Campo <code>responsavel</code> (texto) é aceito para compatibilidade.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-mono text-xs">observacoes</td>
+                                <td class="py-3 px-4">string</td>
+                                <td class="py-3 px-4">❌ Não</td>
+                                <td class="py-3 px-4">Observações adicionais</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG_STORAGE_KEY = 'apiDocsConfig';
+        const baseUrlInput = document.getElementById('baseUrlInput');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const configStatus = document.getElementById('configStatus');
+        const responseArea = document.getElementById('responseArea');
+        const responseStatus = document.getElementById('responseStatus');
+        const responseBody = document.getElementById('responseBody');
+
+        function showConfigMessage(message, type = 'info') {
+            if (!configStatus) return;
+
+            const baseClasses = 'mt-4 text-sm';
+            const colorClasses = {
+                info: 'text-slate-600',
+                success: 'text-emerald-600',
+                error: 'text-red-600'
+            };
+
+            configStatus.className = `${baseClasses} ${colorClasses[type] || colorClasses.info}`;
+            configStatus.textContent = message;
+        }
+
+        function saveConfig() {
+            const baseUrl = baseUrlInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!baseUrl || !apiKey) {
+                showConfigMessage('Preencha a URL base e a API Key para salvar.', 'error');
+                return;
+            }
+
+            const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+            localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify({
+                baseUrl: normalizedBaseUrl,
+                apiKey
+            }));
+
+            showConfigMessage('Configurações salvas com sucesso!', 'success');
+        }
+
+        function loadConfig() {
+            const stored = localStorage.getItem(CONFIG_STORAGE_KEY);
+            if (!stored) {
+                showConfigMessage('Configure a URL base e a API Key para habilitar os testes.', 'info');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed.baseUrl) {
+                    baseUrlInput.value = parsed.baseUrl;
+                }
+                if (parsed.apiKey) {
+                    apiKeyInput.value = parsed.apiKey;
+                }
+                showConfigMessage('Configurações carregadas. Você já pode testar os endpoints.', 'success');
+            } catch (error) {
+                console.error('Erro ao carregar configurações da API:', error);
+                showConfigMessage('Não foi possível carregar as configurações salvas.', 'error');
+            }
+        }
+
+        function getConfig() {
+            return {
+                baseUrl: baseUrlInput.value.trim(),
+                apiKey: apiKeyInput.value.trim()
+            };
+        }
+
+        function toggleApiKeyVisibility() {
+            if (!apiKeyInput) return;
+            const isPassword = apiKeyInput.type === 'password';
+            apiKeyInput.type = isPassword ? 'text' : 'password';
+        }
+
+        function showResponse(statusHtml, bodyHtml) {
+            responseArea.classList.remove('hidden');
+            responseStatus.innerHTML = statusHtml;
+            responseBody.innerHTML = bodyHtml;
+        }
+
+        async function testEndpoint(method, path, body = null) {
+            const { baseUrl, apiKey } = getConfig();
+            if (!baseUrl || !apiKey) {
+                showConfigMessage('Configure a URL base e a API Key para testar os endpoints.', 'error');
+                showResponse(
+                    '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Configuração pendente</span>',
+                    '<pre>Informe a URL base e a API Key antes de continuar.</pre>'
+                );
+                return;
+            }
+
+            showResponse('<div class="animate-pulse text-slate-500">Carregando...</div>', '');
+
+            const headers = {
+                'Authorization': `Bearer ${apiKey}`,
+                'apikey': apiKey,
+                'Content-Type': 'application/json'
+            };
+
+            const options = {
+                method,
+                headers
+            };
+
+            if (body && (method === 'POST' || method === 'PUT')) {
+                const trimmedBody = body.trim();
+                if (trimmedBody.length > 0) {
+                    try {
+                        const parsedBody = JSON.parse(trimmedBody);
+                        options.body = JSON.stringify(parsedBody);
+                    } catch (error) {
+                        showResponse(
+                            '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Erro</span>',
+                            `<pre>Corpo da requisição inválido: ${error.message}</pre>`
+                        );
+                        return;
+                    }
+                }
+            }
+
+            const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+
+            try {
+                const response = await fetch(url, options);
+                const responseText = await response.text();
+                let responseContent = responseText;
+
+                try {
+                    const parsed = JSON.parse(responseText);
+                    responseContent = JSON.stringify(parsed, null, 2);
+                } catch (parseError) {
+                    // Mantém o texto bruto se não for JSON válido
+                }
+
+                const statusColor = response.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                showResponse(
+                    `<span class="${statusColor} px-3 py-1 rounded font-semibold">${response.status} ${response.statusText}</span>`,
+                    `<pre>${responseContent}</pre>`
+                );
+            } catch (error) {
+                console.error('Erro ao testar endpoint:', error);
+                showResponse(
+                    '<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-semibold">Erro</span>',
+                    `<pre>${error.message}</pre>`
+                );
+            }
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>

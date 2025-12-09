@@ -37,11 +37,6 @@ export default function LeadNotificationToast({
   const tipoContratacaoLabel = tipoContratacao?.label ?? 'Não definido';
   const responsavelLabel = responsavel?.label ?? 'Não definido';
 
-  const statusLabel = lead.status ?? 'Não definido';
-  const origemLabel = lead.origem ?? 'Não definida';
-  const tipoContratacaoLabel = lead.tipo_contratacao ?? 'Não definido';
-  const responsavelLabel = lead.responsavel ?? 'Não definido';
-
   useEffect(() => {
     const showTimer = setTimeout(() => setIsVisible(true), 100);
 

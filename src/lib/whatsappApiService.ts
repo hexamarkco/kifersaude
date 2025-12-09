@@ -263,3 +263,158 @@ export async function sendMediaMessage(
     quotedMessageId: options?.quotedMessageId,
   });
 }
+
+export interface WhapiMessageListParams {
+  chatId: string;
+  count?: number;
+  offset?: number;
+  timeFrom?: number;
+  timeTo?: number;
+  normalTypes?: boolean;
+  author?: string;
+  fromMe?: boolean;
+  sort?: 'asc' | 'desc';
+}
+
+export interface WhapiMessage {
+  id: string;
+  type: string;
+  subtype?: string;
+  chat_id: string;
+  chat_name?: string;
+  from?: string;
+  from_me: boolean;
+  from_name?: string;
+  source?: string;
+  timestamp: number;
+  device_id?: number;
+  status?: string;
+  text?: {
+    body: string;
+  };
+  image?: {
+    mime_type: string;
+    file_size: number;
+    link?: string;
+    caption?: string;
+  };
+  video?: {
+    mime_type: string;
+    file_size: number;
+    link?: string;
+    caption?: string;
+  };
+  audio?: {
+    mime_type: string;
+    file_size: number;
+    link?: string;
+  };
+  voice?: {
+    mime_type: string;
+    file_size: number;
+    link?: string;
+  };
+  document?: {
+    mime_type: string;
+    file_size: number;
+    link?: string;
+    filename?: string;
+    caption?: string;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  link_preview?: {
+    body: string;
+    url: string;
+    title?: string;
+    description?: string;
+  };
+  sticker?: {
+    mime_type: string;
+    link?: string;
+    animated?: boolean;
+  };
+  contact?: {
+    name: string;
+    vcard: string;
+  };
+  reactions?: Array<{
+    id: string;
+    emoji: string;
+    group_key?: string;
+    t?: number;
+    unread?: boolean;
+    count?: number;
+  }>;
+  context?: {
+    quoted_id?: string;
+    quoted_author?: string;
+    quoted_type?: string;
+  };
+}
+
+export interface WhapiMessageListResponse {
+  messages: WhapiMessage[];
+  count: number;
+  total: number;
+  offset: number;
+  first: number;
+  last: number;
+}
+
+export async function getWhatsAppMessageHistory(params: WhapiMessageListParams): Promise<WhapiMessageListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('chat_id', params.chatId);
+
+  if (params.count !== undefined) {
+    queryParams.append('count', params.count.toString());
+  }
+
+  if (params.offset !== undefined) {
+    queryParams.append('offset', params.offset.toString());
+  }
+
+  if (params.timeFrom !== undefined) {
+    queryParams.append('time_from', params.timeFrom.toString());
+  }
+
+  if (params.timeTo !== undefined) {
+    queryParams.append('time_to', params.timeTo.toString());
+  }
+
+  if (params.normalTypes !== undefined) {
+    queryParams.append('normal_types', params.normalTypes.toString());
+  }
+
+  if (params.author) {
+    queryParams.append('author', params.author);
+  }
+
+  if (params.fromMe !== undefined) {
+    queryParams.append('from_me', params.fromMe.toString());
+  }
+
+  if (params.sort) {
+    queryParams.append('sort', params.sort);
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/list?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(error.error || error.message || 'Erro ao buscar histórico de mensagens');
+  }
+
+  return response.json();
+}

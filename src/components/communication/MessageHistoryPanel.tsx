@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Edit3, Trash2, TrendingUp, Calendar, Filter } from 'lucide-react';
+import { Edit3, Trash2, TrendingUp, Calendar, Filter, History } from 'lucide-react';
 import {
   getMessageEditCount,
   getMessageDeleteCount,
@@ -8,17 +8,20 @@ import {
   getActionTypeColor,
   type MessageHistoryEntry,
 } from '../../lib/messageHistoryService';
+import { FullMessageHistoryModal } from './FullMessageHistoryModal';
 
 interface MessageHistoryPanelProps {
   chatId: string;
+  chatName?: string;
 }
 
-export function MessageHistoryPanel({ chatId }: MessageHistoryPanelProps) {
+export function MessageHistoryPanel({ chatId, chatName }: MessageHistoryPanelProps) {
   const [editCount, setEditCount] = useState<number>(0);
   const [deleteCount, setDeleteCount] = useState<number>(0);
   const [recentActivity, setRecentActivity] = useState<MessageHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
+  const [showFullHistoryModal, setShowFullHistoryModal] = useState(false);
 
   useEffect(() => {
     if (chatId) {
@@ -81,31 +84,32 @@ export function MessageHistoryPanel({ chatId }: MessageHistoryPanelProps) {
   }
 
   return (
-    <div className="bg-white border-t">
-      <button
-        onClick={() => setShowPanel(!showPanel)}
-        className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors"
-      >
-        <div className="flex items-center space-x-3">
-          <TrendingUp className="h-4 w-4 text-blue-600" />
-          <span className="text-sm font-medium text-gray-700">Atividade de Mensagens</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          {editCount > 0 && (
-            <div className="flex items-center space-x-1 text-xs text-blue-600">
-              <Edit3 className="h-3 w-3" />
-              <span>{editCount}</span>
-            </div>
-          )}
-          {deleteCount > 0 && (
-            <div className="flex items-center space-x-1 text-xs text-red-600">
-              <Trash2 className="h-3 w-3" />
-              <span>{deleteCount}</span>
-            </div>
-          )}
-          <Filter className={`h-4 w-4 text-gray-400 transition-transform ${showPanel ? 'rotate-180' : ''}`} />
-        </div>
-      </button>
+    <>
+      <div className="bg-white border-t">
+        <button
+          onClick={() => setShowPanel(!showPanel)}
+          className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-700">Atividade de Mensagens</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            {editCount > 0 && (
+              <div className="flex items-center space-x-1 text-xs text-blue-600">
+                <Edit3 className="h-3 w-3" />
+                <span>{editCount}</span>
+              </div>
+            )}
+            {deleteCount > 0 && (
+              <div className="flex items-center space-x-1 text-xs text-red-600">
+                <Trash2 className="h-3 w-3" />
+                <span>{deleteCount}</span>
+              </div>
+            )}
+            <Filter className={`h-4 w-4 text-gray-400 transition-transform ${showPanel ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
 
       {showPanel && (
         <div className="px-4 pb-4 space-y-3 border-t bg-gray-50">
@@ -158,8 +162,25 @@ export function MessageHistoryPanel({ chatId }: MessageHistoryPanelProps) {
               </div>
             </div>
           )}
+
+          <button
+            onClick={() => setShowFullHistoryModal(true)}
+            className="w-full mt-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+          >
+            <History className="h-4 w-4" />
+            <span className="text-sm font-medium">Ver Histórico Completo da API</span>
+          </button>
         </div>
       )}
-    </div>
+      </div>
+
+      {showFullHistoryModal && (
+        <FullMessageHistoryModal
+          chatId={chatId}
+          chatName={chatName || chatId}
+          onClose={() => setShowFullHistoryModal(false)}
+        />
+      )}
+    </>
   );
 }

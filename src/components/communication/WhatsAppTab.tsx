@@ -427,7 +427,7 @@ export default function WhatsAppTab() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <MessageHistoryPanel chatId={selectedChat.id} />
+              <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChat.name || selectedChat.id} />
 
               <MessageInput
                 chatId={selectedChat.id}

@@ -446,12 +446,38 @@ export async function getWhatsAppChats(count: number = 100, offset: number = 0):
   return response.json();
 }
 
-export async function getChatIdByPhone(phoneNumber: string): Promise<string | null> {
+export function buildChatIdFromPhone(phoneNumber: string): string {
   const cleanPhone = phoneNumber.replace(/\D/g, '');
+
+  let formattedPhone = cleanPhone;
+  if (!formattedPhone.startsWith('55')) {
+    formattedPhone = '55' + formattedPhone;
+  }
+
+  return `${formattedPhone}@s.whatsapp.net`;
+}
+
+export async function getChatIdByPhone(phoneNumber: string): Promise<string | null> {
+  const directChatId = buildChatIdFromPhone(phoneNumber);
+
+  try {
+    const testResponse = await getWhatsAppMessageHistory({
+      chatId: directChatId,
+      count: 1,
+      offset: 0,
+    });
+
+    if (testResponse.messages.length > 0 || testResponse.total >= 0) {
+      return directChatId;
+    }
+  } catch (err) {
+    console.log('Chat ID direto não funcionou, buscando em todos os chats...');
+  }
 
   let offset = 0;
   const limit = 100;
   let hasMore = true;
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
 
   while (hasMore) {
     const response = await getWhatsAppChats(limit, offset);
@@ -472,9 +498,12 @@ export async function getChatIdByPhone(phoneNumber: string): Promise<string | nu
   return null;
 }
 
-export async function getWhatsAppMessageHistory(params: WhapiMessageListParams): Promise<WhapiMessageListResponse> {
-  const settings = await getWhatsAppSettings();
-
+async function fetchMessagesBatch(
+  settings: WhatsAppSettings,
+  chatId: string,
+  params: Omit<WhapiMessageListParams, 'chatId'>,
+  fromMe: boolean
+): Promise<WhapiMessageListResponse> {
   const queryParams = new URLSearchParams();
 
   if (params.count !== undefined) {
@@ -501,15 +530,13 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
     queryParams.append('author', params.author);
   }
 
-  if (params.fromMe !== undefined) {
-    queryParams.append('from_me', params.fromMe.toString());
-  }
+  queryParams.append('from_me', fromMe.toString());
 
   if (params.sort) {
     queryParams.append('sort', params.sort);
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}?${queryParams.toString()}`, {
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(chatId)}?${queryParams.toString()}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${settings.token}`,
@@ -523,4 +550,82 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
   }
 
   return response.json();
+}
+
+export async function getWhatsAppMessageHistory(params: WhapiMessageListParams): Promise<WhapiMessageListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  if (params.fromMe !== undefined) {
+    const queryParams = new URLSearchParams();
+
+    if (params.count !== undefined) {
+      queryParams.append('count', params.count.toString());
+    }
+
+    if (params.offset !== undefined) {
+      queryParams.append('offset', params.offset.toString());
+    }
+
+    if (params.timeFrom !== undefined) {
+      queryParams.append('time_from', params.timeFrom.toString());
+    }
+
+    if (params.timeTo !== undefined) {
+      queryParams.append('time_to', params.timeTo.toString());
+    }
+
+    if (params.normalTypes !== undefined) {
+      queryParams.append('normal_types', params.normalTypes.toString());
+    }
+
+    if (params.author) {
+      queryParams.append('author', params.author);
+    }
+
+    queryParams.append('from_me', params.fromMe.toString());
+
+    if (params.sort) {
+      queryParams.append('sort', params.sort);
+    }
+
+    const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${settings.token}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+      throw new Error(formatApiError(error));
+    }
+
+    return response.json();
+  }
+
+  const [receivedResponse, sentResponse] = await Promise.all([
+    fetchMessagesBatch(settings, params.chatId, params, false),
+    fetchMessagesBatch(settings, params.chatId, params, true),
+  ]);
+
+  const allMessages = [...receivedResponse.messages, ...sentResponse.messages];
+
+  allMessages.sort((a, b) => {
+    if (params.sort === 'asc') {
+      return a.timestamp - b.timestamp;
+    }
+    return b.timestamp - a.timestamp;
+  });
+
+  const totalMessages = receivedResponse.total + sentResponse.total;
+
+  return {
+    messages: allMessages,
+    count: allMessages.length,
+    total: totalMessages,
+    offset: params.offset || 0,
+    first: allMessages.length > 0 ? allMessages[0].timestamp : 0,
+    last: allMessages.length > 0 ? allMessages[allMessages.length - 1].timestamp : 0,
+  };
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
-import { getWhatsAppMessageHistory, getChatIdByPhone, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, buildChatIdFromPhone, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface MessageHistoryModalProps {
   messageId: string;
@@ -33,29 +33,26 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     setError(null);
 
     try {
+      let finalChatId = chatId;
+
+      if (!chatId.includes('@')) {
+        finalChatId = buildChatIdFromPhone(chatId);
+      }
+
       const contextWindow = 10 * 60;
       const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;
       const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
 
       const response = await getWhatsAppMessageHistory({
-        chatId,
+        chatId: finalChatId,
         count: 1,
         timeFrom,
         timeTo,
       });
 
-      setResolvedChatId(chatId);
+      setResolvedChatId(finalChatId);
     } catch (err) {
-      try {
-        const foundChatId = await getChatIdByPhone(chatId);
-        if (foundChatId) {
-          setResolvedChatId(foundChatId);
-        } else {
-          setError('Chat não encontrado');
-        }
-      } catch (phoneErr) {
-        setError(phoneErr instanceof Error ? phoneErr.message : 'Erro ao buscar chat');
-      }
+      setError(err instanceof Error ? err.message : 'Erro ao buscar chat');
     } finally {
       setLoading(false);
     }

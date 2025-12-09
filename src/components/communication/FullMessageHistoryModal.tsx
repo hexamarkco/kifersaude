@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Calendar, Search } from 'lucide-react';
-import { getWhatsAppMessageHistory, getChatIdByPhone, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, buildChatIdFromPhone, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -39,30 +39,24 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     setError(null);
 
     try {
-      const response = await getWhatsAppMessageHistory({
-        chatId,
+      let finalChatId = chatId;
+
+      if (!chatId.includes('@')) {
+        finalChatId = buildChatIdFromPhone(chatId);
+        console.log('Chat ID construído:', finalChatId);
+      }
+
+      const testResponse = await getWhatsAppMessageHistory({
+        chatId: finalChatId,
         count: 1,
         offset: 0,
       });
 
-      setResolvedChatId(chatId);
+      setResolvedChatId(finalChatId);
     } catch (err) {
-      console.log('Tentando buscar chat ID pelo telefone...');
-
-      try {
-        const foundChatId = await getChatIdByPhone(chatId);
-
-        if (foundChatId) {
-          setResolvedChatId(foundChatId);
-          console.log('Chat ID encontrado:', foundChatId);
-        } else {
-          setError(`Não foi possível encontrar o chat para o número ${chatId}. Verifique se há conversas ativas com este contato.`);
-        }
-      } catch (phoneErr) {
-        const errorMessage = phoneErr instanceof Error ? phoneErr.message : 'Erro ao buscar chat';
-        setError(`Erro ao buscar chat: ${errorMessage}`);
-        console.error('Erro ao buscar chat ID:', phoneErr);
-      }
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar chat';
+      setError(`Erro ao buscar histórico: ${errorMessage}`);
+      console.error('Erro ao buscar chat ID:', err);
     } finally {
       setResolvingChatId(false);
     }

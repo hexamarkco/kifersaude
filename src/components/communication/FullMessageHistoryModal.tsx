@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Calendar, Search } from 'lucide-react';
-import { getWhatsAppMessageHistory, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, getChatIdByPhone, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -21,12 +21,56 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [resolvedChatId, setResolvedChatId] = useState<string | null>(null);
+  const [resolvingChatId, setResolvingChatId] = useState(true);
 
   useEffect(() => {
-    loadMessages();
-  }, [chatId, currentOffset, pageSize, filterFromMe, filterAuthor, filterDateFrom, filterDateTo, sortOrder]);
+    resolveChatId();
+  }, [chatId]);
+
+  useEffect(() => {
+    if (resolvedChatId) {
+      loadMessages();
+    }
+  }, [resolvedChatId, currentOffset, pageSize, filterFromMe, filterAuthor, filterDateFrom, filterDateTo, sortOrder]);
+
+  const resolveChatId = async () => {
+    setResolvingChatId(true);
+    setError(null);
+
+    try {
+      const response = await getWhatsAppMessageHistory({
+        chatId,
+        count: 1,
+        offset: 0,
+      });
+
+      setResolvedChatId(chatId);
+    } catch (err) {
+      console.log('Tentando buscar chat ID pelo telefone...');
+
+      try {
+        const foundChatId = await getChatIdByPhone(chatId);
+
+        if (foundChatId) {
+          setResolvedChatId(foundChatId);
+          console.log('Chat ID encontrado:', foundChatId);
+        } else {
+          setError(`Não foi possível encontrar o chat para o número ${chatId}. Verifique se há conversas ativas com este contato.`);
+        }
+      } catch (phoneErr) {
+        const errorMessage = phoneErr instanceof Error ? phoneErr.message : 'Erro ao buscar chat';
+        setError(`Erro ao buscar chat: ${errorMessage}`);
+        console.error('Erro ao buscar chat ID:', phoneErr);
+      }
+    } finally {
+      setResolvingChatId(false);
+    }
+  };
 
   const loadMessages = async () => {
+    if (!resolvedChatId) return;
+
     setLoading(true);
     setError(null);
 
@@ -35,7 +79,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
       const timeTo = filterDateTo ? new Date(filterDateTo).getTime() / 1000 : undefined;
 
       const response = await getWhatsAppMessageHistory({
-        chatId,
+        chatId: resolvedChatId,
         count: pageSize,
         offset: currentOffset,
         timeFrom,
@@ -234,7 +278,12 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
+          {resolvingChatId ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-slate-600">Buscando chat...</p>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
@@ -246,7 +295,13 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
               <p className="text-red-600 font-medium mb-2">Erro ao carregar histórico</p>
               <p className="text-slate-600 text-sm mb-4">{error}</p>
               <button
-                onClick={loadMessages}
+                onClick={() => {
+                  if (!resolvedChatId) {
+                    resolveChatId();
+                  } else {
+                    loadMessages();
+                  }
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Tentar novamente

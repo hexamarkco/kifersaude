@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
-import { getWhatsAppMessageHistory, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, getChatIdByPhone, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface MessageHistoryModalProps {
   messageId: string;
@@ -14,14 +14,56 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
   const [messages, setMessages] = useState<WhapiMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedChatId, setResolvedChatId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && chatId) {
+      resolveChatId();
+    }
+  }, [isOpen, chatId]);
+
+  useEffect(() => {
+    if (isOpen && resolvedChatId) {
       loadHistory();
     }
-  }, [isOpen, chatId, messageTimestamp]);
+  }, [isOpen, resolvedChatId, messageTimestamp]);
+
+  const resolveChatId = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const contextWindow = 10 * 60;
+      const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;
+      const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
+
+      const response = await getWhatsAppMessageHistory({
+        chatId,
+        count: 1,
+        timeFrom,
+        timeTo,
+      });
+
+      setResolvedChatId(chatId);
+    } catch (err) {
+      try {
+        const foundChatId = await getChatIdByPhone(chatId);
+        if (foundChatId) {
+          setResolvedChatId(foundChatId);
+        } else {
+          setError('Chat não encontrado');
+        }
+      } catch (phoneErr) {
+        setError(phoneErr instanceof Error ? phoneErr.message : 'Erro ao buscar chat');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadHistory = async () => {
+    if (!resolvedChatId) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -30,7 +72,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
       const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
 
       const response = await getWhatsAppMessageHistory({
-        chatId,
+        chatId: resolvedChatId,
         count: 50,
         timeFrom,
         timeTo,

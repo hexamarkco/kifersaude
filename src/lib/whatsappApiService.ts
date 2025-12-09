@@ -298,6 +298,30 @@ export async function sendMediaMessage(
   });
 }
 
+export interface WhapiChat {
+  id: string;
+  name?: string;
+  type?: string;
+  timestamp?: number;
+  last_message?: {
+    id: string;
+    type: string;
+    timestamp: number;
+    from_me: boolean;
+  };
+  unread_count?: number;
+  archived?: boolean;
+  pinned?: number;
+  mute_until?: number;
+}
+
+export interface WhapiChatListResponse {
+  chats: WhapiChat[];
+  count: number;
+  total: number;
+  offset: number;
+}
+
 export interface WhapiMessageListParams {
   chatId: string;
   count?: number;
@@ -399,11 +423,59 @@ export interface WhapiMessageListResponse {
   last: number;
 }
 
+export async function getWhatsAppChats(count: number = 100, offset: number = 0): Promise<WhapiChatListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', count.toString());
+  queryParams.append('offset', offset.toString());
+
+  const response = await fetch(`${WHAPI_BASE_URL}/chats?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
+export async function getChatIdByPhone(phoneNumber: string): Promise<string | null> {
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
+
+  let offset = 0;
+  const limit = 100;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await getWhatsAppChats(limit, offset);
+
+    const matchingChat = response.chats.find(chat => {
+      const chatPhone = chat.id.replace(/\D/g, '');
+      return chatPhone.includes(cleanPhone) || cleanPhone.includes(chatPhone);
+    });
+
+    if (matchingChat) {
+      return matchingChat.id;
+    }
+
+    offset += limit;
+    hasMore = response.chats.length === limit && offset < response.total;
+  }
+
+  return null;
+}
+
 export async function getWhatsAppMessageHistory(params: WhapiMessageListParams): Promise<WhapiMessageListResponse> {
   const settings = await getWhatsAppSettings();
 
   const queryParams = new URLSearchParams();
-  queryParams.append('chat_id', params.chatId);
 
   if (params.count !== undefined) {
     queryParams.append('count', params.count.toString());
@@ -437,7 +509,7 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
     queryParams.append('sort', params.sort);
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/list?${queryParams.toString()}`, {
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}?${queryParams.toString()}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${settings.token}`,

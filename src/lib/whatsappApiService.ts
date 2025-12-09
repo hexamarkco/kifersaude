@@ -560,9 +560,12 @@ async function fetchMessagesBatch(
   }
 
   const data = await response.json();
+  console.log(`[WhatsApp API] RESPOSTA COMPLETA DA API (from_me: ${fromMe}):`, data);
   console.log(`[WhatsApp API] Mensagens recebidas (from_me: ${fromMe}):`, data.count, 'mensagens');
   console.log(`[WhatsApp API] Total disponível: ${data.total}`);
-  console.log(`[WhatsApp API] Primeiras mensagens:`, data.messages?.slice(0, 3));
+  console.log(`[WhatsApp API] Array de mensagens:`, data.messages);
+  console.log(`[WhatsApp API] Tipo do array:`, typeof data.messages, Array.isArray(data.messages));
+  console.log(`[WhatsApp API] Tamanho do array:`, data.messages?.length);
 
   return data;
 }

@@ -117,8 +117,8 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <div className="flex items-center space-x-3">
             <MessageSquare className="h-6 w-6 text-blue-600" />
             <div>
@@ -134,7 +134,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -213,7 +213,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
           )}
         </div>
 
-        <div className="border-t p-4 bg-gray-50">
+        <div className="border-t p-4 bg-gray-50 flex-shrink-0">
           <button
             onClick={onClose}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"

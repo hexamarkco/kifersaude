@@ -1150,8 +1150,9 @@ export default function LeadsManager({
           },
         });
       } catch (error) {
-        console.error('Erro ao enviar automação manual:', error);
-        alert('Não foi possível enviar a automação. Tente novamente.');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Erro ao enviar automação manual:', errorMessage);
+        alert(`Não foi possível enviar a automação: ${errorMessage}`);
       } finally {
         setSendingAutomationIds((previous) => {
           const next = new Set(previous);

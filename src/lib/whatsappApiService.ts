@@ -7,6 +7,40 @@ interface WhatsAppSettings {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
+function formatApiError(errorObj: any): string {
+  if (typeof errorObj === 'string') {
+    return errorObj;
+  }
+
+  if (errorObj?.error) {
+    if (typeof errorObj.error === 'string') {
+      return errorObj.error;
+    }
+    if (errorObj.error.message) {
+      return errorObj.error.message;
+    }
+  }
+
+  if (errorObj?.message) {
+    return errorObj.message;
+  }
+
+  if (errorObj?.details) {
+    if (typeof errorObj.details === 'string') {
+      return errorObj.details;
+    }
+    if (Array.isArray(errorObj.details)) {
+      return errorObj.details.join(', ');
+    }
+  }
+
+  try {
+    return JSON.stringify(errorObj);
+  } catch {
+    return 'Erro ao processar resposta da API';
+  }
+}
+
 async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
   const { data, error } = await supabase
     .from('integration_settings')
@@ -159,7 +193,7 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(error.error || error.message || 'Erro ao enviar mensagem');
+    throw new Error(formatApiError(error));
   }
 
   return response.json();
@@ -413,7 +447,7 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(error.error || error.message || 'Erro ao buscar histórico de mensagens');
+    throw new Error(formatApiError(error));
   }
 
   return response.json();

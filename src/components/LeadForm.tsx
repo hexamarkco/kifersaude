@@ -10,6 +10,12 @@ import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
+import {
+  resolveStatusIdByName,
+  resolveOrigemIdByName,
+  resolveTipoContratacaoIdByLabel,
+  resolveResponsavelIdByLabel,
+} from '../lib/leadRelations';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -201,6 +207,19 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         endereco: normalizeTitleCase(dataToSave.endereco),
       };
 
+      const leadDataForDb: any = {
+        ...normalizedLeadData,
+        origem_id: resolveOrigemIdByName(leadOrigins, normalizedLeadData.origem),
+        status_id: resolveStatusIdByName(leadStatuses, normalizedLeadData.status),
+        tipo_contratacao_id: resolveTipoContratacaoIdByLabel(tipoContratacaoOptions, normalizedLeadData.tipo_contratacao),
+        responsavel_id: resolveResponsavelIdByLabel(responsavelOptions, normalizedLeadData.responsavel),
+      };
+
+      delete leadDataForDb.origem;
+      delete leadDataForDb.status;
+      delete leadDataForDb.tipo_contratacao;
+      delete leadDataForDb.responsavel;
+
       let savedLeadId = lead?.id;
 
       let savedLead: Lead | null = lead;
@@ -208,7 +227,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
       if (lead) {
         const { data: updatedLead, error } = await supabase
           .from('leads')
-          .update(normalizedLeadData)
+          .update(leadDataForDb)
           .eq('id', lead.id)
           .select()
           .single<Lead>();
@@ -236,14 +255,14 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           if (duplicateLead) {
             const duplicateStatus = leadStatuses.find((s) => s.nome === 'Duplicado');
             if (duplicateStatus) {
-              normalizedLeadData.status = duplicateStatus.nome;
+              leadDataForDb.status_id = duplicateStatus.id;
             }
           }
         }
 
         const { data: insertedLead, error } = await supabase
           .from('leads')
-          .insert([normalizedLeadData])
+          .insert([leadDataForDb])
           .select()
           .single<Lead>();
 

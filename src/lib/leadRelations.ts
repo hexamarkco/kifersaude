@@ -49,3 +49,15 @@ export const resolveResponsavelIdByLabel = (options: ConfigOption[], label: stri
   return match?.id ?? null;
 };
 
+export const resolveOrigemIdByName = (origins: LeadOrigem[], name: string | null | undefined) => {
+  if (!name) return null;
+  const match = origins.find((origin) => origin.nome === name);
+  return match?.id ?? null;
+};
+
+export const resolveTipoContratacaoIdByLabel = (options: ConfigOption[], label: string | null | undefined) => {
+  if (!label) return null;
+  const match = options.find((option) => option.label === label);
+  return match?.id ?? null;
+};
+

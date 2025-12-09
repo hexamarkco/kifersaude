@@ -165,11 +165,11 @@ interface LeadData {
   cep?: string | null;
   endereco?: string | null;
   estado?: string | null;
-  origem: string;
-  tipo_contratacao: string;
+  origem_id: string;
+  tipo_contratacao_id: string;
   operadora_atual?: string | null;
-  status: string;
-  responsavel: string;
+  status_id: string;
+  responsavel_id: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
   data_criacao: string;
@@ -314,11 +314,11 @@ function validateLeadData(
     cep: sanitizeOptionalString(data.cep),
     endereco: sanitizeOptionalString(data.endereco),
     estado: sanitizeOptionalString(data.estado),
-    origem: origemName!,
-    tipo_contratacao: tipoContratacaoLabel!,
+    origem_id: origemId!,
+    tipo_contratacao_id: tipoContratacaoId!,
     operadora_atual: sanitizeOptionalString(data.operadora_atual),
-    status: statusName!,
-    responsavel: responsavelLabel!,
+    status_id: statusId!,
+    responsavel_id: responsavelId!,
     proximo_retorno: proximoRetorno,
     observacoes: sanitizeOptionalString(data.observacoes),
     data_criacao: creationDateIsoValue,
@@ -384,10 +384,7 @@ function validateLeadUpdate(
     if (!origemId) {
       errors.push('Campo "origem" deve corresponder a uma origem válida');
     } else {
-      const origemName = lookups.originById.get(origemId);
-      if (origemName) {
-        updateData.origem = origemName;
-      }
+      updateData.origem_id = origemId;
     }
   }
 
@@ -401,10 +398,7 @@ function validateLeadUpdate(
     if (!tipoId) {
       errors.push('Campo "tipo_contratacao" deve corresponder a um tipo de contratação válido');
     } else {
-      const tipoLabel = lookups.tipoById.get(tipoId);
-      if (tipoLabel) {
-        updateData.tipo_contratacao = tipoLabel;
-      }
+      updateData.tipo_contratacao_id = tipoId;
     }
   }
 
@@ -418,10 +412,7 @@ function validateLeadUpdate(
     if (!responsavelId) {
       errors.push('Campo "responsavel" deve corresponder a um responsável válido');
     } else {
-      const responsavelLabel = lookups.responsavelById.get(responsavelId);
-      if (responsavelLabel) {
-        updateData.responsavel = responsavelLabel;
-      }
+      updateData.responsavel_id = responsavelId;
     }
   }
 
@@ -430,10 +421,7 @@ function validateLeadUpdate(
     if (!statusId) {
       errors.push('Campo "status" deve corresponder a um status válido');
     } else {
-      const statusName = lookups.statusById.get(statusId);
-      if (statusName) {
-        updateData.status = statusName;
-      }
+      updateData.status_id = statusId;
     }
   }
 
@@ -824,9 +812,8 @@ Deno.serve(async (req: Request) => {
         validation.leadData.email ?? null,
       );
 
-      if (duplicateLead) {
-        validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
-        validation.leadData.status = 'Duplicado';
+      if (duplicateLead && duplicateStatusId) {
+        validation.leadData.status_id = duplicateStatusId;
       }
 
       const { data, error } = await supabase
@@ -1068,9 +1055,8 @@ Deno.serve(async (req: Request) => {
           validation.leadData.email ?? null,
         );
 
-        if (duplicateLead) {
-          validation.leadData.status_id = duplicateStatusId ?? validation.leadData.status_id;
-          validation.leadData.status = 'Duplicado';
+        if (duplicateLead && duplicateStatusId) {
+          validation.leadData.status_id = duplicateStatusId;
         }
 
         const { data, error } = await supabase

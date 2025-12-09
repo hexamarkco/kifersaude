@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, LeadOrigem, LeadStatusConfig, ConfigOption } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
+import {
+  resolveStatusIdByName,
+  resolveOrigemIdByName,
+  resolveTipoContratacaoIdByLabel,
+  resolveResponsavelIdByLabel,
+} from '../lib/leadRelations';
 
 interface BlogPost {
   id: string;
@@ -45,6 +51,11 @@ export default function LandingPage() {
   const [loadingPosts, setLoadingPosts] = useState(true);
   const totalLives = parseInt(formData.numeroVidas, 10) || 0;
 
+  const [leadOrigins, setLeadOrigins] = useState<LeadOrigem[]>([]);
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
+  const [tipoContratacaoOptions, setTipoContratacaoOptions] = useState<ConfigOption[]>([]);
+  const [responsavelOptions, setResponsavelOptions] = useState<ConfigOption[]>([]);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -56,7 +67,22 @@ export default function LandingPage() {
 
   useEffect(() => {
     loadBlogPosts();
+    loadLeadConfigurations();
   }, []);
+
+  const loadLeadConfigurations = async () => {
+    const [originsRes, statusesRes, tipoContratacaoRes, responsaveisRes] = await Promise.all([
+      supabase.from('lead_origens').select('*').eq('ativo', true),
+      supabase.from('lead_status_config').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+      supabase.from('lead_tipos_contratacao').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+      supabase.from('lead_responsaveis').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+    ]);
+
+    if (originsRes.data) setLeadOrigins(originsRes.data);
+    if (statusesRes.data) setLeadStatuses(statusesRes.data);
+    if (tipoContratacaoRes.data) setTipoContratacaoOptions(tipoContratacaoRes.data);
+    if (responsaveisRes.data) setResponsavelOptions(responsaveisRes.data);
+  };
 
   const updateAgeRangeCount = (range: string, value: string) => {
     const numericValue = value.replace(/\D/g, '');
@@ -147,14 +173,20 @@ export default function LandingPage() {
         : `${totalLives} vidas - ${formattedAgeRanges.map(({ range, quantity }) => `${range}: ${quantity}`).join(', ')}`;
 
     try {
+      const origemId = resolveOrigemIdByName(leadOrigins, 'orgânico');
+      const statusId = resolveStatusIdByName(leadStatuses, 'Novo');
+      const tipoContratacaoLabel = formData.tipoContratacao === 'PF' ? 'Pessoa Física' : formData.tipoContratacao;
+      const tipoContratacaoId = resolveTipoContratacaoIdByLabel(tipoContratacaoOptions, tipoContratacaoLabel);
+      const responsavelId = resolveResponsavelIdByLabel(responsavelOptions, 'Luiza');
+
       const leadData = {
         nome_completo: formData.nome,
         telefone: formData.telefone,
         cidade: formData.cidade || null,
-        origem: 'orgânico',
-        tipo_contratacao: formData.tipoContratacao === 'PF' ? 'Pessoa Física' : formData.tipoContratacao,
-        status: 'Novo',
-        responsavel: 'Luiza',
+        origem_id: origemId,
+        tipo_contratacao_id: tipoContratacaoId,
+        status_id: statusId,
+        responsavel_id: responsavelId,
         observacoes: `Idade dos beneficiários: ${agesText}`,
         data_criacao: new Date().toISOString(),
         ultimo_contato: new Date().toISOString(),

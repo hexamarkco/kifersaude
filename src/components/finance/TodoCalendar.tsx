@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { supabase, Reminder } from '../../lib/supabase';
 import {
   AlertCircle,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -40,6 +41,7 @@ export default function TodoCalendar() {
   const [savingTask, setSavingTask] = useState(false);
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [reschedulingTaskId, setReschedulingTaskId] = useState<string | null>(null);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -138,6 +140,35 @@ export default function TodoCalendar() {
     }
   };
 
+  const handleRescheduleTask = async (taskId: string, newDate: Date) => {
+    try {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) return;
+
+      const taskDateTime = toDate(task.data_lembrete);
+      const newDateTime = new Date(newDate);
+
+      if (taskDateTime) {
+        newDateTime.setHours(taskDateTime.getHours(), taskDateTime.getMinutes(), 0, 0);
+      } else {
+        newDateTime.setHours(12, 0, 0, 0);
+      }
+
+      const { error: updateError } = await supabase
+        .from('reminders')
+        .update({ data_lembrete: newDateTime.toISOString() })
+        .eq('id', taskId);
+
+      if (updateError) throw updateError;
+
+      setReschedulingTaskId(null);
+      await loadTasks();
+    } catch (err) {
+      console.error('Erro ao reagendar tarefa:', err);
+      setError('Não foi possível reagendar a tarefa.');
+    }
+  };
+
   const goToPreviousMonth = () => {
     const previous = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
     setCurrentMonth(previous);
@@ -188,7 +219,12 @@ export default function TodoCalendar() {
   const pendingTasks = selectedDateTasks.filter((task) => !task.lido);
   const completedTasks = selectedDateTasks.filter((task) => task.lido);
 
-  const handleDayClick = (date: Date) => {
+  const handleDayClick = async (date: Date) => {
+    if (reschedulingTaskId) {
+      await handleRescheduleTask(reschedulingTaskId, date);
+      return;
+    }
+
     setSelectedDate(date);
     setIsDayModalOpen(true);
     setError(null);
@@ -199,6 +235,7 @@ export default function TodoCalendar() {
     setIsAddModalOpen(false);
     setNewTaskTitle('');
     setNewTaskDescription('');
+    setReschedulingTaskId(null);
   };
 
   const closeAddModal = () => {
@@ -236,6 +273,8 @@ export default function TodoCalendar() {
         ? 'bg-sky-50 text-sky-700 border-sky-300'
         : dayTasks.length > 0
         ? 'border-sky-200 bg-sky-50/70 hover:bg-sky-100'
+        : reschedulingTaskId
+        ? 'border-sky-300 hover:bg-sky-50'
         : 'border-slate-200 hover:bg-slate-50';
 
       cells.push(
@@ -287,7 +326,19 @@ export default function TodoCalendar() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">Agenda de Tarefas</h2>
-          <p className="text-sm text-slate-500">Clique em um dia para ver e gerenciar suas tarefas.</p>
+          <p className="text-sm text-slate-500">
+            {reschedulingTaskId
+              ? 'Selecione um dia no calendário para reagendar a tarefa'
+              : 'Clique em um dia para ver e gerenciar suas tarefas.'}
+          </p>
+          {reschedulingTaskId && (
+            <button
+              onClick={() => setReschedulingTaskId(null)}
+              className="text-xs text-red-600 hover:text-red-700 mt-1 underline"
+            >
+              Cancelar reagendamento
+            </button>
+          )}
         </div>
         <div className="flex items-center space-x-4 text-sm text-slate-500">
           <div className="flex items-center space-x-2">
@@ -344,8 +395,8 @@ export default function TodoCalendar() {
             }}
           />
           <div className="fixed inset-0 z-50 flex items-stretch justify-center px-0 sm:items-center sm:px-4">
-            <div className="modal-panel w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-              <div className="flex items-start justify-between gap-4">
+            <div className="modal-panel w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col" style={{ maxHeight: '90vh' }}>
+              <div className="flex items-start justify-between gap-4 p-6 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
                     Tarefas de{' '}
@@ -356,6 +407,11 @@ export default function TodoCalendar() {
                       ? `${pendingTasks.length + completedTasks.length} tarefa(s) ao todo · ${pendingTasks.length} pendente(s) · ${completedTasks.length} concluída(s)`
                       : 'Nenhuma tarefa cadastrada para este dia.'}
                   </p>
+                  {reschedulingTaskId && (
+                    <p className="text-sm text-sky-600 mt-1">
+                      Selecione um dia para reagendar a tarefa
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -377,8 +433,9 @@ export default function TodoCalendar() {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="border border-slate-200 rounded-xl p-4">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="border border-slate-200 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">A fazer</h4>
                     <span className="text-xs font-semibold text-sky-600">{pendingTasks.length}</span>
@@ -386,7 +443,14 @@ export default function TodoCalendar() {
                   {pendingTasks.length > 0 ? (
                     <div className="space-y-3">
                       {pendingTasks.map((task) => (
-                        <article key={task.id} className="border border-sky-200 bg-white rounded-lg p-3 shadow-sm">
+                        <article
+                          key={task.id}
+                          className={`border rounded-lg p-3 shadow-sm transition-all ${
+                            reschedulingTaskId === task.id
+                              ? 'border-sky-500 bg-sky-50'
+                              : 'border-sky-200 bg-white'
+                          }`}
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-semibold text-slate-800">{task.titulo}</p>
@@ -401,15 +465,24 @@ export default function TodoCalendar() {
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                            <span>Marcar como concluída</span>
-                            <button
-                              type="button"
-                              className="inline-flex items-center text-sky-600 hover:text-sky-700"
-                              onClick={() => updateTaskStatus(task.id, true)}
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
-                            </button>
+                          <div className="mt-3 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                                onClick={() => updateTaskStatus(task.id, true)}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                                onClick={() => setReschedulingTaskId(task.id)}
+                                title="Reagendar tarefa"
+                              >
+                                <Calendar className="w-4 h-4 mr-1" /> Reagendar
+                              </button>
+                            </div>
                           </div>
                         </article>
                       ))}
@@ -463,14 +536,15 @@ export default function TodoCalendar() {
                     <div className="text-sm text-slate-500 py-8 text-center">Nenhuma tarefa concluída neste dia.</div>
                   )}
                 </div>
-              </div>
-
-              {error && (
-                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{error}</span>
                 </div>
-              )}
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700 mt-4">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{error}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Fragment>

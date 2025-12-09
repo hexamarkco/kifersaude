@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase, LeadStatusHistory } from '../lib/supabase';
 import { History, Clock } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { useConfig } from '../contexts/ConfigContext';
+import { getBadgeStyle } from '../lib/colorUtils';
 
 type LeadStatusHistoryProps = {
   leadId: string;
@@ -10,6 +12,7 @@ type LeadStatusHistoryProps = {
 export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistoryProps) {
   const [history, setHistory] = useState<LeadStatusHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const { leadStatuses } = useConfig();
 
   useEffect(() => {
     loadHistory();
@@ -33,16 +36,9 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
     }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'Novo': 'bg-blue-100 text-blue-700',
-      'Em contato': 'bg-yellow-100 text-yellow-700',
-      'Cotando': 'bg-orange-100 text-orange-700',
-      'Proposta enviada': 'bg-teal-100 text-teal-700',
-      'Fechado': 'bg-green-100 text-green-700',
-      'Perdido': 'bg-red-100 text-red-700',
-    };
-    return colors[status] || 'bg-slate-100 text-slate-700';
+  const getStatusStyles = (status: string) => {
+    const match = leadStatuses.find(s => s.nome === status);
+    return getBadgeStyle(match?.cor || '#64748b', 1);
   };
 
   if (loading) {
@@ -78,11 +74,17 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
             <Clock className="w-4 h-4 text-slate-400 mt-1 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-1 flex-wrap">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(item.status_anterior)}`}>
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-medium border"
+                  style={getStatusStyles(item.status_anterior)}
+                >
                   {item.status_anterior}
                 </span>
                 <span className="text-slate-400">→</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(item.status_novo)}`}>
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-medium border"
+                  style={getStatusStyles(item.status_novo)}
+                >
                   {item.status_novo}
                 </span>
               </div>

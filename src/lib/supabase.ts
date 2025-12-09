@@ -1,9 +1,38 @@
 import { createClient } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const supabaseFunctionsUrl =
+  import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${supabaseUrl}/functions/v1`;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  functions: {
+    url: supabaseFunctionsUrl,
+  },
+});
+
+export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidates = [
+    user.user_metadata?.user_management_id,
+    user.user_metadata?.user_management_user_id,
+    user.user_metadata?.user_id,
+    user.app_metadata?.user_management_id,
+    user.app_metadata?.user_id,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+  }
+
+  return user.id ?? null;
+}
 
 export type Lead = {
   id: string;
@@ -12,18 +41,33 @@ export type Lead = {
   email?: string;
   cidade?: string;
   regiao?: string;
-  origem: string;
-  tipo_contratacao: string;
+  estado?: string;
+  origem?: string | null;
+  origem_id?: string | null;
+  tipo_contratacao?: string | null;
+  tipo_contratacao_id?: string | null;
   operadora_atual?: string;
-  status: string;
-  responsavel: string;
+  status?: string | null;
+  status_id?: string | null;
+  responsavel?: string | null;
+  responsavel_id?: string | null;
   data_criacao: string;
   ultimo_contato?: string;
   proximo_retorno?: string;
+  tags?: string[];
+  canal?: string | null;
   observacoes?: string;
   arquivado: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type QuickReply = {
+  id: string;
+  title: string | null;
+  text: string;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type Contract = {
@@ -38,13 +82,25 @@ export type Contract = {
   acomodacao?: string;
   data_inicio?: string;
   data_renovacao?: string;
+  mes_reajuste?: number | null;
   carencia?: string;
   mensalidade_total?: number;
   comissao_prevista?: number;
   comissao_multiplicador?: number;
+  comissao_recebimento_adiantado?: boolean;
+  comissao_parcelas?: { percentual: number; data_pagamento: string | null }[] | null;
   previsao_recebimento_comissao?: string;
+  previsao_pagamento_bonificacao?: string;
+  vidas?: number;
+  bonus_por_vida_valor?: number;
+  bonus_por_vida_aplicado?: boolean;
+  bonus_limite_mensal?: number | null;
   responsavel: string;
   observacoes_internas?: string;
+  cnpj?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  endereco_empresa?: string;
   created_at: string;
   updated_at: string;
 };
@@ -80,6 +136,7 @@ export type ContractHolder = {
 export type Dependent = {
   id: string;
   contract_id: string;
+  holder_id: string;
   nome_completo: string;
   cpf?: string;
   data_nascimento: string;
@@ -112,6 +169,7 @@ export type Reminder = {
   data_lembrete: string;
   lido: boolean;
   prioridade: string;
+  responsavel?: string;
   tags?: string[];
   recorrencia?: string;
   recorrencia_config?: any;
@@ -140,5 +198,137 @@ export type LeadStatusHistory = {
   status_novo: string;
   responsavel: string;
   observacao?: string;
+  created_at: string;
+};
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  username: string;
+  role: 'admin' | 'observer';
+  created_at: string;
+  created_by?: string;
+};
+
+export type SystemSettings = {
+  id: string;
+  company_name: string;
+  notification_sound_enabled: boolean;
+  notification_volume: number;
+  notification_interval_seconds: number;
+  session_timeout_minutes: number;
+  date_format: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IntegrationSetting = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  settings: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Operadora = {
+  id: string;
+  nome: string;
+  comissao_padrao: number;
+  prazo_recebimento_dias: number;
+  bonus_por_vida: boolean;
+  bonus_padrao: number;
+  ativo: boolean;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProdutoPlano = {
+  id: string;
+  operadora_id: string;
+  nome: string;
+  modalidade?: string;
+  abrangencia?: string;
+  acomodacao?: string;
+  comissao_sugerida?: number;
+  bonus_por_vida_valor?: number;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadStatusConfig = {
+  id: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  ativo: boolean;
+  padrao: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadOrigem = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  visivel_para_observadores: boolean;
+  created_at: string;
+};
+
+export type ConfigOption = {
+  id: string;
+  category: string;
+  label: string;
+  value: string;
+  description?: string | null;
+  ordem: number;
+  ativo: boolean;
+  active?: boolean;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProfilePermission = {
+  id: string;
+  role: string;
+  module: string;
+  can_view: boolean;
+  can_edit: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WhatsAppChat = {
+  id: string;
+  name: string | null;
+  is_group: boolean;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WhatsAppMessage = {
+  id: string;
+  chat_id: string;
+  from_number: string | null;
+  to_number: string | null;
+  type: string | null;
+  body: string | null;
+  has_media: boolean;
+  timestamp: string | null;
+  direction: 'inbound' | 'outbound' | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
+export type WhatsAppWebhookEvent = {
+  id: string;
+  event: string | null;
+  payload: Record<string, unknown>;
+  headers: Record<string, unknown> | null;
   created_at: string;
 };

@@ -14,6 +14,7 @@ type AnimatedStatCardProps = {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 };
 
 export default function AnimatedStatCard({
@@ -26,6 +27,7 @@ export default function AnimatedStatCard({
   suffix = '',
   subtitle,
   trend,
+  onClick,
 }: AnimatedStatCardProps) {
   const [displayValue, setDisplayValue] = useState<number | string>(0);
   const isNumeric = typeof value === 'number';
@@ -57,20 +59,19 @@ export default function AnimatedStatCard({
     return () => clearInterval(timer);
   }, [value, isNumeric]);
 
-  return (
-    <div
-      className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200
-        hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
-    >
+  const cardContent = (
+    <>
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
 
-      <div className="relative p-6">
-        <div className="flex items-start justify-between mb-4">
+      <div className="relative p-4 sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-600 mb-1">{label}</p>
-            <div className="flex items-baseline space-x-1">
-              {prefix && <span className="text-2xl font-bold text-slate-900">{prefix}</span>}
-              <p className="text-3xl font-bold text-slate-900">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 sm:text-sm sm:normal-case sm:tracking-normal">
+              {label}
+            </p>
+            <div className="flex items-baseline gap-1">
+              {prefix && <span className="text-xl font-bold text-slate-900 sm:text-2xl">{prefix}</span>}
+              <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
                 {isNumeric
                   ? displayValue.toLocaleString('pt-BR', {
                       minimumFractionDigits: prefix === 'R$' ? 2 : 0,
@@ -78,13 +79,13 @@ export default function AnimatedStatCard({
                     })
                   : displayValue}
               </p>
-              {suffix && <span className="text-lg font-semibold text-slate-600">{suffix}</span>}
+              {suffix && <span className="text-base font-semibold text-slate-600 sm:text-lg">{suffix}</span>}
             </div>
             {subtitle && (
-              <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
             )}
             {trend && (
-              <div className="mt-2 flex items-center space-x-1">
+              <div className="mt-2 flex items-center gap-1 text-xs sm:text-sm">
                 <span
                   className={`text-sm font-semibold ${
                     trend.isPositive ? 'text-green-600' : 'text-red-600'
@@ -97,14 +98,36 @@ export default function AnimatedStatCard({
             )}
           </div>
           <div
-            className={`${iconBg} p-4 rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-300`}
+            className={`${iconBg} rounded-xl p-3 shadow-sm transition-transform duration-300 group-hover:scale-110 sm:p-4`}
           >
-            <Icon className="w-6 h-6 text-white" />
+            <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
           </div>
         </div>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200 w-full text-left
+        hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500`}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200
+        hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
+    >
+      {cardContent}
     </div>
   );
 }

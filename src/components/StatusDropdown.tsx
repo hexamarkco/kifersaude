@@ -1,50 +1,90 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
+import { LeadStatusConfig } from '../lib/supabase';
+import { getBadgeStyle } from '../lib/colorUtils';
 
 type StatusDropdownProps = {
   currentStatus: string;
   leadId: string;
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>;
-  onProposalSent?: (leadId: string) => void;
   disabled?: boolean;
-};
-
-const STATUS_OPTIONS = [
-  'Novo',
-  'Em contato',
-  'Cotando',
-  'Proposta enviada',
-  'Fechado',
-  'Perdido',
-];
-
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    'Novo': 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-    'Em contato': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
-    'Cotando': 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-    'Proposta enviada': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
-    'Fechado': 'bg-green-100 text-green-700 hover:bg-green-200',
-    'Perdido': 'bg-red-100 text-red-700 hover:bg-red-200',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+  statusOptions: LeadStatusConfig[];
 };
 
 export default function StatusDropdown({
   currentStatus,
   leadId,
   onStatusChange,
-  onProposalSent,
   disabled = false,
+  statusOptions,
 }: StatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updateMenuPosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const minWidth = 160;
+    const desiredWidth = Math.max(rect.width, minWidth);
+    const rightBoundary = viewportWidth - 16;
+    let left = rect.left;
+
+    if (left + desiredWidth > rightBoundary) {
+      left = Math.max(16, rightBoundary - desiredWidth);
+    }
+
+    left = Math.max(16, left);
+
+    setMenuPosition({
+      top: rect.bottom + 4,
+      left,
+      width: desiredWidth,
+    });
+  };
+
+  const getStatusInfo = (statusName: string) => {
+    return statusOptions.find(option => option.nome === statusName) || null;
+  };
+
+  const getButtonStyles = (statusName: string) => {
+    const status = getStatusInfo(statusName);
+    if (!status) {
+      return {
+        backgroundColor: 'rgba(148, 163, 184, 0.15)',
+        color: '#475569',
+        borderColor: 'rgba(148, 163, 184, 0.35)'
+      };
+    }
+    const badge = getBadgeStyle(status.cor, 1);
+    return {
+      backgroundColor: badge.backgroundColor,
+      color: badge.color,
+      borderColor: badge.borderColor,
+    };
+  };
+
+  const getOptionIndicatorStyle = (statusName: string) => {
+    const status = getStatusInfo(statusName);
+    return {
+      backgroundColor: status ? status.cor : '#94a3b8',
+    };
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        !(menuRef.current && menuRef.current.contains(target))
+      ) {
         setIsOpen(false);
       }
     };
@@ -55,6 +95,19 @@ export default function StatusDropdown({
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
     };
   }, [isOpen]);
 
@@ -73,10 +126,6 @@ export default function StatusDropdown({
 
     try {
       await onStatusChange(leadId, newStatus);
-
-      if (newStatus === 'Proposta enviada' && onProposalSent) {
-        onProposalSent(leadId);
-      }
     } catch (error) {
       console.error('Error updating status:', error);
       setPendingStatus(null);
@@ -86,45 +135,64 @@ export default function StatusDropdown({
   };
 
   const displayStatus = isUpdating && pendingStatus ? pendingStatus : currentStatus;
+  const buttonStyles = getButtonStyles(displayStatus);
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>
       <button
+        ref={buttonRef}
+        type="button"
         onClick={() => !disabled && !isUpdating && setIsOpen(!isOpen)}
         disabled={disabled || isUpdating}
-        className={`
-          flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium
-          transition-all duration-200 cursor-pointer
-          ${getStatusColor(displayStatus)}
-          ${(disabled || isUpdating) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
-        `}
+        style={buttonStyles}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-busy={isUpdating}
+        title={isUpdating ? 'Atualizando status do lead' : 'Alterar status do lead'}
+        className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
+          disabled || isUpdating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md'
+        }`}
       >
         <span>{isUpdating ? 'Atualizando...' : displayStatus}</span>
         {!disabled && !isUpdating && (
           <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         )}
       </button>
-
-      {isOpen && !disabled && !isUpdating && (
-        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]">
-          {STATUS_OPTIONS.map((status) => (
-            <button
-              key={status}
-              onClick={() => handleStatusClick(status)}
-              className={`
-                w-full text-left px-3 py-2 text-sm transition-colors
-                ${status === currentStatus
-                  ? 'bg-slate-100 font-medium text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-50'
-                }
-              `}
+      {isOpen && !disabled && !isUpdating && menuPosition && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+              style={{
+                top: menuPosition.top,
+                left: menuPosition.left,
+                minWidth: menuPosition.width,
+              }}
             >
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${getStatusColor(status).split(' ')[0]}`} />
-              {status}
-            </button>
-          ))}
-        </div>
-      )}
+              {statusOptions.map((status) => (
+                <button
+                  type="button"
+                  key={status.id}
+                  onClick={() => handleStatusClick(status.nome)}
+                  className={`
+                    w-full text-left px-3 py-2 text-sm transition-colors
+                    ${status.nome === currentStatus
+                      ? 'bg-slate-100 font-medium text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50'
+                    }
+                  `}
+                >
+                  <span
+                    className="inline-block w-2 h-2 rounded-full mr-2"
+                    style={getOptionIndicatorStyle(status.nome)}
+                  />
+                  {status.nome}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

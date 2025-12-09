@@ -41,12 +41,16 @@ export type OperadoraDistribution = {
   revenue: number;
 };
 
-export function calculateConversionRate(leads: Lead[], contracts: Contract[]): number {
-  const totalLeads = leads.filter(l => !l.arquivado).length;
-  if (totalLeads === 0) return 0;
+export function calculateConversionRate(leads: Lead[], _contracts: Contract[]): number {
+  const activeLeads = leads.filter(l => !l.arquivado);
+  if (activeLeads.length === 0) return 0;
 
-  const convertedLeads = contracts.filter(c => c.lead_id).length;
-  return (convertedLeads / totalLeads) * 100;
+  const convertedStatuses = ['convertido', 'fechado'];
+  const convertedLeads = activeLeads.filter(lead =>
+    convertedStatuses.includes(lead.status?.toLowerCase() || '')
+  ).length;
+
+  return (convertedLeads / activeLeads.length) * 100;
 }
 
 export function calculateWinRate(leads: Lead[]): number {

@@ -75,8 +75,8 @@ export default function ValueAdjustmentForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-[60] p-0 sm:items-center sm:p-4">
+      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full flex flex-col">
         <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900 flex items-center">
             <DollarSign className="w-5 h-5 mr-2" />

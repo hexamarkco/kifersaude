@@ -3,15 +3,18 @@ import { isReminderDue } from './dateUtils';
 
 export type NotificationCallback = (reminder: Reminder) => void;
 export type LeadNotificationCallback = (lead: Lead) => void;
+export type UnreadCountCallback = (count: number) => void;
 
 class NotificationService {
   private callbacks: NotificationCallback[] = [];
   private leadCallbacks: LeadNotificationCallback[] = [];
+  private unreadCountCallbacks: UnreadCountCallback[] = [];
   private notifiedReminders: Set<string> = new Set();
   private notifiedLeads: Set<string> = new Set();
   private intervalId: number | null = null;
   private isChecking = false;
   private leadChannelSubscription: any = null;
+  private lastUnreadCount = 0;
 
   start(intervalMs: number = 30000) {
     if (this.intervalId !== null) {
@@ -42,6 +45,14 @@ class NotificationService {
     this.leadCallbacks.push(callback);
     return () => {
       this.leadCallbacks = this.leadCallbacks.filter(cb => cb !== callback);
+    };
+  }
+
+  subscribeToUnreadCount(callback: UnreadCountCallback) {
+    this.unreadCountCallbacks.push(callback);
+    callback(this.lastUnreadCount);
+    return () => {
+      this.unreadCountCallbacks = this.unreadCountCallbacks.filter(cb => cb !== callback);
     };
   }
 
@@ -92,6 +103,10 @@ class NotificationService {
       if (error) throw error;
 
       if (reminders) {
+        const unreadCount = reminders.length;
+        this.lastUnreadCount = unreadCount;
+        this.unreadCountCallbacks.forEach(callback => callback(unreadCount));
+
         for (const reminder of reminders) {
           if (
             !this.notifiedReminders.has(reminder.id) &&

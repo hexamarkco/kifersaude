@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase, ContractHolder } from '../lib/supabase';
 import { X, User } from 'lucide-react';
+import { formatDateForInput } from '../lib/dateUtils';
+import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 
 type HolderFormProps = {
   contractId: string;
@@ -15,7 +17,7 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
     nome_completo: holder?.nome_completo || '',
     cpf: holder?.cpf || '',
     rg: holder?.rg || '',
-    data_nascimento: holder?.data_nascimento || '',
+    data_nascimento: formatDateForInput(holder?.data_nascimento) || '',
     sexo: holder?.sexo || '',
     estado_civil: holder?.estado_civil || '',
     telefone: holder?.telefone || '',
@@ -32,11 +34,70 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
     razao_social: holder?.razao_social || '',
     nome_fantasia: holder?.nome_fantasia || '',
     percentual_societario: holder?.percentual_societario?.toString() || '',
-    data_abertura_cnpj: holder?.data_abertura_cnpj || '',
+    data_abertura_cnpj: formatDateForInput(holder?.data_abertura_cnpj) || '',
   });
   const [saving, setSaving] = useState(false);
+  const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
+  const [cpfLoading, setCpfLoading] = useState(false);
+  const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
 
   const isCNPJModalidade = ['MEI', 'CNPJ (PME)'].includes(modalidade);
+
+  const handleConsultarCPF = async () => {
+    setCpfLookupError(null);
+    setCpfLoading(true);
+
+    try {
+      const pessoa = await consultarPessoaPorCPF(formData.cpf);
+
+      setFormData(prev => ({
+        ...prev,
+        nome_completo: pessoa.nome || prev.nome_completo,
+        data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
+        sexo: pessoa.sexo || prev.sexo,
+        cep: pessoa.cep || prev.cep,
+        endereco: pessoa.endereco || prev.endereco,
+        numero: pessoa.numero || prev.numero,
+        complemento: pessoa.complemento ?? prev.complemento,
+        bairro: pessoa.bairro || prev.bairro,
+        cidade: pessoa.cidade || prev.cidade,
+        estado: pessoa.estado || prev.estado,
+      }));
+    } catch (error) {
+      console.error('Erro ao consultar CPF:', error);
+      setCpfLookupError(error instanceof Error ? error.message : 'Não foi possível consultar CPF');
+    } finally {
+      setCpfLoading(false);
+    }
+  };
+
+  const handleConsultarCNPJ = async () => {
+    setCnpjLookupError(null);
+    setCnpjLoading(true);
+
+    try {
+      const empresa = await consultarEmpresaPorCNPJ(formData.cnpj);
+
+      setFormData(prev => ({
+        ...prev,
+        razao_social: empresa.razao_social || prev.razao_social,
+        nome_fantasia: empresa.nome_fantasia || prev.nome_fantasia,
+        cep: empresa.cep || prev.cep,
+        endereco: empresa.endereco || prev.endereco,
+        numero: empresa.numero || prev.numero,
+        complemento: empresa.complemento ?? prev.complemento,
+        bairro: empresa.bairro || prev.bairro,
+        cidade: empresa.cidade || prev.cidade,
+        estado: empresa.estado || prev.estado,
+      }));
+    } catch (error) {
+      console.error('Erro ao consultar CNPJ:', error);
+      setCnpjLookupError(error instanceof Error ? error.message : 'Não foi possível consultar CNPJ');
+    } finally {
+      setCnpjLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,8 +154,8 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <User className="w-6 h-6 text-teal-600" />
@@ -131,13 +192,24 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   CPF *
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.cpf}
+                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleConsultarCPF}
+                    disabled={cpfLoading}
+                    className="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                  >
+                    {cpfLoading ? 'Buscando...' : 'Buscar na Receita'}
+                  </button>
+                </div>
+                {cpfLookupError && <p className="text-xs text-red-600 mt-1">{cpfLookupError}</p>}
               </div>
 
               <div>
@@ -335,12 +407,23 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     CNPJ
                   </label>
-                  <input
-                    type="text"
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={formData.cnpj}
+                      onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleConsultarCNPJ}
+                      disabled={cnpjLoading}
+                      className="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                    >
+                      {cnpjLoading ? 'Buscando...' : 'Buscar na Receita'}
+                    </button>
+                  </div>
+                  {cnpjLookupError && <p className="text-xs text-red-600 mt-1">{cnpjLookupError}</p>}
                 </div>
 
                 <div>

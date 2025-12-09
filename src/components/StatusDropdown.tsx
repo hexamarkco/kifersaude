@@ -31,6 +31,7 @@ export default function StatusDropdown({
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const minWidth = 160;
     const desiredWidth = Math.max(rect.width, minWidth);
     const rightBoundary = viewportWidth - 16;
@@ -42,8 +43,14 @@ export default function StatusDropdown({
 
     left = Math.max(16, left);
 
+    const estimatedMenuHeight = statusOptions.length * 36 + 8;
+    const spaceBelow = viewportHeight - rect.bottom - 4;
+    const spaceAbove = rect.top - 4;
+
+    const shouldOpenUpward = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
+
     setMenuPosition({
-      top: rect.bottom + 4,
+      top: shouldOpenUpward ? rect.top - estimatedMenuHeight - 4 : rect.bottom + 4,
       left,
       width: desiredWidth,
     });
@@ -162,11 +169,12 @@ export default function StatusDropdown({
         ? createPortal(
             <div
               ref={menuRef}
-              className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+              className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 overflow-y-auto"
               style={{
                 top: menuPosition.top,
                 left: menuPosition.left,
                 minWidth: menuPosition.width,
+                maxHeight: 'calc(100vh - 32px)',
               }}
             >
               {statusOptions.map((status) => (

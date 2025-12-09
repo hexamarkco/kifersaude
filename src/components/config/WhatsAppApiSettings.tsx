@@ -51,7 +51,7 @@ export default function WhatsAppApiSettings() {
       setAutoContactSettings(normalized);
 
       setEnabled(normalized.enabled);
-      setToken((normalized as any).token || '');
+      setToken(normalized.apiKey || '');
 
       const validStatusNames = leadStatuses.map(s => s.nome);
       const isValidStatus = normalized.statusOnSend && validStatusNames.includes(normalized.statusOnSend);
@@ -88,7 +88,7 @@ export default function WhatsAppApiSettings() {
 
     const newSettings = {
       enabled,
-      token: token.trim(),
+      apiKey: token.trim(),
       statusOnSend: statusOnSend,
       messageFlow: currentMessageFlow,
     };
@@ -106,7 +106,7 @@ export default function WhatsAppApiSettings() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setEnabled(normalized.enabled);
-      setToken((normalized as any).token || '');
+      setToken(normalized.apiKey || '');
 
       const validStatusNames = leadStatuses.map(s => s.nome);
       const isValidStatus = normalized.statusOnSend && validStatusNames.includes(normalized.statusOnSend);

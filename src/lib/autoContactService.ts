@@ -59,12 +59,14 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       }))
     : [];
 
+  const apiKeyValue = typeof settings.apiKey === 'string' ? settings.apiKey : (typeof settings.token === 'string' ? settings.token : '');
+
   return {
     enabled: settings.enabled !== false,
     baseUrl: typeof settings.baseUrl === 'string' && settings.baseUrl.trim() ? settings.baseUrl.trim() : DEFAULT_BASE_URL,
     sessionId:
       typeof settings.sessionId === 'string' && settings.sessionId.trim() ? settings.sessionId.trim() : DEFAULT_SESSION_ID,
-    apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
+    apiKey: apiKeyValue,
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
         ? settings.statusOnSend.trim()

@@ -15,16 +15,20 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
     .maybeSingle();
 
   if (error || !data?.settings) {
-    throw new Error('WhatsApp API não configurado');
+    throw new Error('Integração de mensagens automáticas não configurada.');
   }
 
-  const settings = data.settings as WhatsAppSettings;
+  const rawSettings = data.settings as any;
+  const token = rawSettings.apiKey || rawSettings.token || '';
 
-  if (!settings.token) {
+  if (!token) {
     throw new Error('Token da Whapi Cloud não configurado. Verifique as configurações em Automação do WhatsApp.');
   }
 
-  return settings;
+  return {
+    token,
+    enabled: rawSettings.enabled,
+  };
 }
 
 export interface MediaContent {

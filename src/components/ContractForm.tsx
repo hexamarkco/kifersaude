@@ -285,6 +285,23 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const bonusLimiteTotal = bonusLimiteMensalValor > 0 ? bonusLimiteMensalValor * vidasNumber : 0;
   const bonusParcelasEstimadas = bonusLimiteTotal > 0 ? Math.ceil(bonusTotal / bonusLimiteTotal) : 1;
 
+  const handleAddInstallment = () => {
+    setCommissionInstallments([
+      ...commissionInstallments,
+      { percentual: '', data_pagamento: '' },
+    ]);
+  };
+
+  const handleRemoveInstallment = (index: number) => {
+    setCommissionInstallments(commissionInstallments.filter((_, i) => i !== index));
+  };
+
+  const handleInstallmentChange = (index: number, field: keyof CommissionInstallment, value: string) => {
+    const updated = [...commissionInstallments];
+    updated[index] = { ...updated[index], [field]: value };
+    setCommissionInstallments(updated);
+  };
+
   const handleDeleteAdjustment = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Remover ajuste',

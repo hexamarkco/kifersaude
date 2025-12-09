@@ -7,8 +7,9 @@ import Dashboard from '../components/Dashboard';
 import LeadsManager from '../components/LeadsManager';
 import ContractsManager from '../components/ContractsManager';
 import RemindersManagerEnhanced from '../components/RemindersManagerEnhanced';
+import EmailManager from '../components/EmailManager';
 import BlogTab from '../components/config/BlogTab';
-import WhatsAppTab from '../components/communication/WhatsAppTab';
+import WhatsAppFollowUpTab from '../components/WhatsAppFollowUpTab';
 import ConfigPage from './ConfigPage';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
@@ -44,6 +45,7 @@ export default function PainelPage() {
         'financeiro-comissoes',
         'financeiro-agenda',
         'reminders',
+        'email',
         'whatsapp',
         'blog',
         'config',
@@ -205,8 +207,10 @@ export default function PainelPage() {
         return <FinanceiroAgendaTab />;
       case 'reminders':
         return <RemindersManagerEnhanced />;
+      case 'email':
+        return <EmailManager />;
       case 'whatsapp':
-        return <WhatsAppTab />;
+        return <WhatsAppFollowUpTab />;
       case 'blog':
         return <BlogTab />;
       case 'config':

@@ -13,10 +13,12 @@ import {
   Menu,
   X,
   Briefcase,
+  Mail,
   BookOpen,
   PiggyBank,
   DollarSign,
   Calendar,
+  RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,7 +75,8 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
-    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+    { id: 'email', label: 'Email', icon: Mail },
+    { id: 'whatsapp', label: 'Follow-up WhatsApp', icon: RefreshCw },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 

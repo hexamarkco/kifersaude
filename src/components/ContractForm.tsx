@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, Lead, ContractValueAdjustment, Operadora } from '../lib/supabase';
-import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search } from 'lucide-react';
+import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import { configService } from '../lib/configService';
@@ -154,25 +154,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     }
   }, [contract?.id, convertibleLeadStatuses]);
 
-  const calculateAdjustedValue = (baseValue: number): number => {
-    let total = baseValue;
-    adjustments.forEach(adj => {
-      if (adj.tipo === 'acrescimo') {
-        total += adj.valor;
-      } else {
-        total -= adj.valor;
-      }
-    });
-    return total;
-  };
-
-  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
-
-  const adjustedMensalidade = useMemo(
-    () => calculateAdjustedValue(baseMensalidade),
-    [baseMensalidade, adjustments]
-  );
-
   useEffect(() => {
     if (adjustedMensalidade > 0) {
       const multiplicador = parseFloat(formData.comissao_multiplicador || '0');
@@ -277,6 +258,25 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       console.error('Erro ao carregar ajustes:', error);
     }
   };
+
+  const calculateAdjustedValue = (baseValue: number): number => {
+    let total = baseValue;
+    adjustments.forEach(adj => {
+      if (adj.tipo === 'acrescimo') {
+        total += adj.valor;
+      } else {
+        total -= adj.valor;
+      }
+    });
+    return total;
+  };
+
+  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
+
+  const adjustedMensalidade = useMemo(
+    () => calculateAdjustedValue(baseMensalidade),
+    [baseMensalidade, adjustments]
+  );
 
   const vidasNumber = parseFloat(formData.vidas || '1') || 1;
   const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
@@ -565,21 +565,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       CNPJ (Receita)
                     </label>
-                    <div className="relative">
+                    <div className="flex space-x-2">
                       <input
                         type="text"
                         value={formData.cnpj}
                         onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                        className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       />
                       <button
                         type="button"
                         onClick={handleConsultarCNPJ}
                         disabled={cnpjLoading}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={cnpjLoading ? 'Buscando...' : 'Buscar na Receita'}
+                        className="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
                       >
-                        <Search className={`w-5 h-5 ${cnpjLoading ? 'animate-pulse' : ''}`} />
+                        {cnpjLoading ? 'Buscando...' : 'Buscar na Receita'}
                       </button>
                     </div>
                     {cnpjLookupError && <p className="text-xs text-red-600 mt-1">{cnpjLookupError}</p>}

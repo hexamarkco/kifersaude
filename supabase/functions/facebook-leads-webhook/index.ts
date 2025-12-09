@@ -48,6 +48,7 @@ type LeadRecord = {
   tipo_contratacao: string;
   operadora_atual?: string | null;
   status?: string;
+  status_id?: string | null;
   responsavel: string;
   proximo_retorno?: string | null;
   observacoes?: string | null;
@@ -104,7 +105,7 @@ async function applyDuplicateStatus(
     console.error('Erro ao buscar status Duplicado para lead do Facebook', duplicateStatusError);
   }
 
-  return { ...lead, status: 'Duplicado' };
+  return { ...lead, status: 'Duplicado', status_id: duplicateStatus?.id ?? lead.status_id ?? null };
 }
 
 function getFieldValue(fieldData: FacebookLeadField[] | undefined, keys: string[]): string | undefined {

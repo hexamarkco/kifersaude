@@ -21,16 +21,14 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
       leads.filter(
         (lead) =>
           !lead.arquivado &&
-          lead.status &&
-          stages.some((stage) => stage.nome === lead.status)
+          (lead as any).status_id &&
+          stages.some((stage) => stage.id === (lead as any).status_id)
       ),
     [leads, stages]
   );
 
   const getLeadsByStatus = (statusId: string) => {
-    const statusObj = stages.find((s) => s.id === statusId);
-    const statusName = statusObj?.nome;
-    return funnelLeads.filter((lead) => lead.status === statusName);
+    return funnelLeads.filter((lead) => (lead as any).status_id === statusId);
   };
 
   const calculateConversionRate = (index: number): number => {

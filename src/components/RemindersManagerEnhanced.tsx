@@ -22,6 +22,7 @@ import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { getWhatsAppMessageHistory, type WhapiMessage } from '../lib/whatsappApiService';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -132,63 +133,22 @@ export default function RemindersManagerEnhanced() {
     setHistoryLoading(true);
     setHistoryError(null);
 
-    const chatId = `55${phone}@c.us`;
-    const endpoint = 'https://sanford-subcorneous-prepositionally.ngrok-free.dev/chat/fetchMessages/f8377d8d-a589-4242-9ba6-9486a04ef80c';
-    const headers = {
-      'Content-Type': 'application/json',
-      apikey: '292926',
-    };
+    const normalizedPhone = phone.replace(/\D/g, '');
+    const chatId = `55${normalizedPhone}@s.whatsapp.net`;
 
     try {
-      const buildRequest = (fromMe: boolean) =>
-        fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            chatId,
-            searchOptions: {
-              limit: 50,
-              fromMe,
-            },
-          }),
-        });
+      const response = await getWhatsAppMessageHistory({
+        chatId,
+        count: 100,
+        sort: 'asc',
+      });
 
-      const [receivedResponse, sentResponse] = await Promise.all([
-        buildRequest(false),
-        buildRequest(true),
-      ]);
-
-      if (!receivedResponse.ok || !sentResponse.ok) {
-        const responses = [receivedResponse, sentResponse];
-        const errorDetails = await Promise.all(responses.map(async (res) => `${res.status} ${res.statusText}`));
-        throw new Error(errorDetails.join(' | '));
-      }
-
-      const parsePayload = async (response: Response) => {
-        const content = await response.json();
-        if (Array.isArray(content)) return content;
-        if (Array.isArray(content?.messages)) return content.messages;
-        if (Array.isArray(content?.data)) return content.data;
-        return [];
-      };
-
-      const receivedMessages = await parsePayload(receivedResponse);
-      const sentMessages = await parsePayload(sentResponse);
-
-      const normalizeMessage = (message: any, index: number, fromMe: boolean) => {
-        const timestampValue = Number(message?.timestamp ?? message?.t ?? message?.date ?? Date.now());
-        return {
-          id: String(message?.id ?? message?.key?.id ?? `${fromMe ? 'sent' : 'received'}-${index}`),
-          body: String(message?.body ?? message?.message ?? message?.text ?? 'Mensagem sem texto'),
-          timestamp: Number.isNaN(timestampValue) ? Date.now() : timestampValue,
-          fromMe: Boolean(message?.fromMe ?? message?.from_me ?? message?.sent ?? fromMe),
-        };
-      };
-
-      const normalizedMessages = [
-        ...receivedMessages.map((message: any, index: number) => normalizeMessage(message, index, false)),
-        ...sentMessages.map((message: any, index: number) => normalizeMessage(message, index, true)),
-      ].sort((a, b) => a.timestamp - b.timestamp);
+      const normalizedMessages = response.messages.map((message: WhapiMessage) => ({
+        id: message.id,
+        body: message.text?.body || '[Mídia]',
+        timestamp: message.timestamp * 1000,
+        fromMe: message.from_me,
+      }));
 
       setHistoryMessages(normalizedMessages);
     } catch (error) {

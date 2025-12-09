@@ -405,6 +405,7 @@ export default function WhatsAppTab() {
                         )}
                         <MessageBubble
                           id={message.id}
+                          chatId={selectedChat.id}
                           body={message.body}
                           type={message.type}
                           direction={message.direction || 'inbound'}

@@ -6,6 +6,7 @@ import { MessageHistoryModal } from './MessageHistoryModal';
 
 interface MessageBubbleProps {
   id: string;
+  chatId: string;
   body: string | null;
   type: string | null;
   direction: 'inbound' | 'outbound';
@@ -24,6 +25,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({
   id,
+  chatId,
   body,
   type,
   direction,
@@ -289,6 +291,8 @@ export function MessageBubble({
 
       <MessageHistoryModal
         messageId={id}
+        chatId={chatId}
+        messageTimestamp={timestamp ? new Date(timestamp).getTime() : Date.now()}
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
       />

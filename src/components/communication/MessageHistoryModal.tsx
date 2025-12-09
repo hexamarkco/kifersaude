@@ -1,114 +1,77 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Edit3, Trash2, RotateCcw, AlertCircle } from 'lucide-react';
-import {
-  getMessageHistory,
-  formatActionType,
-  getActionTypeColor,
-  type MessageHistoryEntry,
-} from '../../lib/messageHistoryService';
+import { X, Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
+import { getWhatsAppMessageHistory, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface MessageHistoryModalProps {
   messageId: string;
+  chatId: string;
+  messageTimestamp: number;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function MessageHistoryModal({ messageId, isOpen, onClose }: MessageHistoryModalProps) {
-  const [history, setHistory] = useState<MessageHistoryEntry[]>([]);
+export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpen, onClose }: MessageHistoryModalProps) {
+  const [messages, setMessages] = useState<WhapiMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && messageId) {
+    if (isOpen && chatId) {
       loadHistory();
     }
-  }, [isOpen, messageId]);
+  }, [isOpen, chatId, messageTimestamp]);
 
   const loadHistory = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMessageHistory(messageId);
-      setHistory(data);
+      const contextWindow = 10 * 60;
+      const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;
+      const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
+
+      const response = await getWhatsAppMessageHistory({
+        chatId,
+        count: 50,
+        timeFrom,
+        timeTo,
+        sort: 'asc',
+      });
+
+      setMessages(response.messages);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar histórico');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar contexto');
     } finally {
       setLoading(false);
     }
   };
 
-  const getActionIcon = (actionType: string) => {
-    switch (actionType) {
-      case 'edited':
-        return <Edit3 className="h-5 w-5" />;
-      case 'deleted':
-        return <Trash2 className="h-5 w-5" />;
-      case 'restored':
-        return <RotateCcw className="h-5 w-5" />;
-      default:
-        return <Clock className="h-5 w-5" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('pt-BR', {
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
-    }).format(date);
+    });
   };
 
-  const renderBodyDiff = (entry: MessageHistoryEntry) => {
-    if (entry.action_type === 'deleted') {
-      return (
-        <div className="space-y-2">
-          <div className="text-sm text-gray-600">Conteúdo deletado:</div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-sm text-gray-700 line-through">{entry.old_body || '[Sem conteúdo]'}</p>
-          </div>
-        </div>
-      );
-    }
+  const getMessageBody = (message: WhapiMessage): string => {
+    if (message.text?.body) return message.text.body;
+    if (message.image) return message.image.caption || '[Imagem]';
+    if (message.video) return message.video.caption || '[Vídeo]';
+    if (message.audio) return '[Áudio]';
+    if (message.voice) return '[Mensagem de voz]';
+    if (message.document) return `[Documento${message.document.filename ? ': ' + message.document.filename : ''}]`;
+    if (message.location) return `[Localização${message.location.address ? ': ' + message.location.address : ''}]`;
+    if (message.link_preview) return message.link_preview.body;
+    if (message.sticker) return '[Sticker]';
+    if (message.contact) return `[Contato: ${message.contact.name}]`;
+    return `[${message.type}]`;
+  };
 
-    if (entry.action_type === 'edited') {
-      return (
-        <div className="space-y-2">
-          {entry.old_body && (
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Antes:</div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700">{entry.old_body}</p>
-              </div>
-            </div>
-          )}
-          {entry.new_body && (
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Depois:</div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700">{entry.new_body}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (entry.action_type === 'restored') {
-      return (
-        <div className="space-y-2">
-          <div className="text-sm text-gray-600">Mensagem restaurada:</div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <p className="text-sm text-gray-700">{entry.new_body || '[Sem conteúdo]'}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
+  const isTargetMessage = (message: WhapiMessage) => {
+    return message.id === messageId;
   };
 
   if (!isOpen) return null;
@@ -118,8 +81,11 @@ export function MessageHistoryModal({ messageId, isOpen, onClose }: MessageHisto
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center space-x-3">
-            <Clock className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Histórico da Mensagem</h2>
+            <MessageSquare className="h-6 w-6 text-blue-600" />
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Contexto da Mensagem</h2>
+              <p className="text-sm text-gray-500 mt-1">Mensagens próximas (últimos 10 minutos)</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -140,48 +106,70 @@ export function MessageHistoryModal({ messageId, isOpen, onClose }: MessageHisto
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
               <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-medium text-red-800">Erro ao carregar histórico</h3>
+                <h3 className="text-sm font-medium text-red-800">Erro ao carregar contexto</h3>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
           )}
 
-          {!loading && !error && history.length === 0 && (
+          {!loading && !error && messages.length === 0 && (
             <div className="text-center py-12">
-              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Nenhum histórico encontrado para esta mensagem</p>
+              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">Nenhuma mensagem encontrada neste período</p>
             </div>
           )}
 
-          {!loading && !error && history.length > 0 && (
-            <div className="space-y-4">
-              {history.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-                >
-                  <div className="flex items-center space-x-3 mb-3">
-                    <div className={`${getActionTypeColor(entry.action_type)}`}>
-                      {getActionIcon(entry.action_type)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className={`font-medium ${getActionTypeColor(entry.action_type)}`}>
-                          {formatActionType(entry.action_type)}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(entry.changed_at)}
+          {!loading && !error && messages.length > 0 && (
+            <div className="space-y-3">
+              {messages.map((message) => {
+                const isTarget = isTargetMessage(message);
+                return (
+                  <div
+                    key={message.id}
+                    className={`rounded-lg p-4 transition-all ${
+                      isTarget
+                        ? 'bg-blue-100 border-2 border-blue-500 shadow-md scale-105'
+                        : message.from_me
+                        ? 'bg-teal-50 border border-teal-200 ml-8'
+                        : 'bg-slate-50 border border-slate-200 mr-8'
+                    }`}
+                  >
+                    {isTarget && (
+                      <div className="mb-2 text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                        Esta mensagem
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <User className={`w-4 h-4 ${
+                          isTarget ? 'text-blue-600' : message.from_me ? 'text-teal-600' : 'text-slate-600'
+                        }`} />
+                        <span className={`text-sm font-medium ${
+                          isTarget ? 'text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-900'
+                        }`}>
+                          {message.from_me ? 'Você' : message.from_name || message.from || 'Desconhecido'}
                         </span>
                       </div>
-                      {entry.changed_by && (
-                        <p className="text-sm text-gray-600 mt-1">Por: {entry.changed_by}</p>
-                      )}
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTimestamp(message.timestamp)}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {renderBodyDiff(entry)}
-                </div>
-              ))}
+                    <div className={`text-sm ${
+                      isTarget ? 'text-blue-900 font-medium' : message.from_me ? 'text-teal-900' : 'text-slate-700'
+                    }`}>
+                      {getMessageBody(message)}
+                    </div>
+
+                    {message.status && (
+                      <div className="mt-2 text-xs text-slate-500">
+                        Status: {message.status}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

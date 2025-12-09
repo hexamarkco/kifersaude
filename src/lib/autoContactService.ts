@@ -12,6 +12,7 @@ export type AutoContactStep = {
 
 export type AutoContactSettings = {
   enabled: boolean;
+  autoSend?: boolean;
   apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
@@ -60,6 +61,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
   return {
     enabled: settings.enabled !== false,
+    autoSend: settings.autoSend === true,
     apiKey: apiKeyValue,
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()

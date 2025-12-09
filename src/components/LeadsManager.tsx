@@ -1817,10 +1817,17 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={() => {
+          onSave={async (savedLead) => {
+            const isNewLead = !editingLead;
             setShowForm(false);
             setEditingLead(null);
-            loadLeads();
+            await loadLeads();
+
+            if (isNewLead && autoContactSettings?.autoSend && savedLead.telefone) {
+              setTimeout(() => {
+                sendManualAutomation(savedLead);
+              }, 500);
+            }
           }}
         />
       )}

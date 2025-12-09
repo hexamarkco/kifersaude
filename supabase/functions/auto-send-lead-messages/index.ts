@@ -53,7 +53,7 @@ async function sendWhatsAppMessage(
   chatId: string,
   message: string,
   token: string
-): Promise<void> {
+): Promise<any> {
   const response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
     headers: {
@@ -71,6 +71,8 @@ async function sendWhatsAppMessage(
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
     throw new Error(`Erro ao enviar mensagem: ${JSON.stringify(error)}`);
   }
+
+  return response.json();
 }
 
 async function waitSeconds(seconds: number): Promise<void> {
@@ -193,7 +195,18 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[AutoSend] Iniciando envio para lead ${lead.id}`);
 
+    const timestamp = new Date().toISOString();
     let firstMessageSent = false;
+
+    await supabase.from('whatsapp_chats').upsert(
+      {
+        id: chatId,
+        name: lead.nome_completo || lead.telefone || 'Sem nome',
+        is_group: false,
+        last_message_at: timestamp,
+      },
+      { onConflict: 'id' }
+    );
 
     for (const step of steps) {
       if (step.delaySeconds > 0) {
@@ -203,20 +216,41 @@ Deno.serve(async (req: Request) => {
       const finalMessage = applyTemplateVariables(step.message, lead);
 
       try {
-        await sendWhatsAppMessage(chatId, finalMessage, settings.apiKey);
-        console.log(`[AutoSend] Mensagem enviada: ${step.id}`);
+        const response = await sendWhatsAppMessage(chatId, finalMessage, settings.apiKey);
+        console.log(`[AutoSend] Mensagem enviada: ${step.id}`, response);
+
+        await supabase.from('whatsapp_messages').insert({
+          id: response.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          chat_id: chatId,
+          from_number: null,
+          to_number: normalizedPhone,
+          type: 'text',
+          body: finalMessage,
+          has_media: false,
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          payload: response,
+        });
 
         if (!firstMessageSent) {
           firstMessageSent = true;
 
-          if (settings.statusOnSend) {
-            await supabase
-              .from('leads')
-              .update({ status: settings.statusOnSend })
-              .eq('id', lead.id);
+          await supabase
+            .from('leads')
+            .update({
+              status: settings.statusOnSend || lead.status,
+              ultimo_contato: timestamp,
+            })
+            .eq('id', lead.id);
 
-            console.log(`[AutoSend] Status atualizado para: ${settings.statusOnSend}`);
-          }
+          await supabase.from('interactions').insert({
+            lead_id: lead.id,
+            tipo: 'Mensagem Automática',
+            descricao: 'Contato via Mensagem Automática',
+            responsavel: lead.responsavel || 'Sistema',
+          });
+
+          console.log(`[AutoSend] Status atualizado e interação registrada`);
         }
       } catch (error) {
         console.error(`[AutoSend] Erro ao enviar mensagem ${step.id}:`, error);

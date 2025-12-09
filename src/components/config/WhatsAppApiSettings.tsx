@@ -89,6 +89,7 @@ export default function WhatsAppApiSettings() {
     const newSettings = {
       enabled,
       apiKey: token.trim(),
+      token: token.trim(),
       statusOnSend: statusOnSend,
       messageFlow: currentMessageFlow,
     };

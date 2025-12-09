@@ -1118,8 +1118,8 @@ export default function LeadsManager({
   const sendManualAutomation = useCallback(
     async (lead: Lead) => {
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (!settings.sessionId || !settings.baseUrl) {
-        alert('Integração de mensagens automáticas não configurada.');
+      if (!settings.apiKey) {
+        alert('Token da Whapi Cloud não configurado. Configure em Configurações > Integrações > Automação do WhatsApp.');
         return;
       }
 

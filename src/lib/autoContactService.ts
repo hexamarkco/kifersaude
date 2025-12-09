@@ -1,4 +1,5 @@
 import { Lead } from './supabase';
+import { sendWhatsAppMessage } from './whatsappApiService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 
@@ -11,16 +12,12 @@ export type AutoContactStep = {
 
 export type AutoContactSettings = {
   enabled: boolean;
-  baseUrl: string;
-  sessionId: string;
   apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
-const DEFAULT_BASE_URL = 'http://localhost:3000';
-const DEFAULT_SESSION_ID = '';
 
 export const DEFAULT_MESSAGE_FLOW: AutoContactStep[] = [
   {
@@ -63,9 +60,6 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
   return {
     enabled: settings.enabled !== false,
-    baseUrl: typeof settings.baseUrl === 'string' && settings.baseUrl.trim() ? settings.baseUrl.trim() : DEFAULT_BASE_URL,
-    sessionId:
-      typeof settings.sessionId === 'string' && settings.sessionId.trim() ? settings.sessionId.trim() : DEFAULT_SESSION_ID,
     apiKey: apiKeyValue,
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
@@ -90,11 +84,6 @@ const waitSeconds = (seconds: number) => new Promise((resolve) => setTimeout(res
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
-const buildEndpoint = (baseUrl: string, path: string) => {
-  const sanitizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  return `${sanitizedBase}${path.startsWith('/') ? '' : '/'}${path}`;
-};
-
 export async function sendAutoContactMessage({
   lead,
   message,
@@ -109,52 +98,28 @@ export async function sendAutoContactMessage({
     throw new Error('Telefone inválido para envio automático.');
   }
 
-  if (!settings.sessionId) {
-    throw new Error('Session ID não configurado na integração de mensagens automáticas.');
+  if (!settings.apiKey) {
+    throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
   const chatId = `55${normalizedPhone}@c.us`;
-  const payload = {
-    chatId,
-    contentType: 'string' as const,
-    content: message,
-  };
 
-  const endpoint = buildEndpoint(settings.baseUrl, `/client/sendMessage/${settings.sessionId}`);
-
-  console.info('[AutoContact] Enviando automação', {
-    endpoint,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': settings.apiKey,
-    },
-    payload,
+  console.info('[AutoContact] Enviando automação via Whapi Cloud', {
     leadId: lead.id,
     normalizedPhone,
+    chatId,
   });
 
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
-      },
-      body: JSON.stringify(payload),
+    await sendWhatsAppMessage({
+      chatId,
+      contentType: 'string',
+      content: message,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      const messageDetail = errorText?.trim()
-        ? `${response.status} ${response.statusText}: ${errorText}`
-        : `${response.status} ${response.statusText}`;
-      throw new Error(`Falha ao enviar mensagem automática (${messageDetail})`);
-    }
   } catch (error) {
     const details = error instanceof Error ? error.message : String(error);
-    console.error('Erro ao enviar mensagem automática para', endpoint, payload, error);
-    throw new Error(details);
+    console.error('[AutoContact] Erro ao enviar mensagem automática:', details);
+    throw error;
   }
 }
 

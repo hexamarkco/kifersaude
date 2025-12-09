@@ -661,6 +661,37 @@ export default function RemindersManagerEnhanced() {
     }
   };
 
+  const handleRescheduleReminder = async (reminderId: string, newDate: Date) => {
+    try {
+      const reminder = reminders.find(r => r.id === reminderId);
+      if (!reminder) return;
+
+      const reminderDateTime = new Date(reminder.data_lembrete);
+      const newDateTime = new Date(newDate);
+      newDateTime.setHours(reminderDateTime.getHours(), reminderDateTime.getMinutes(), 0, 0);
+
+      const newDateISO = newDateTime.toISOString();
+
+      const { error } = await supabase
+        .from('reminders')
+        .update({
+          data_lembrete: newDateISO
+        })
+        .eq('id', reminderId);
+
+      if (error) throw error;
+
+      if (reminder.lead_id) {
+        await updateLeadNextReturnDate(reminder.lead_id, newDateISO);
+      }
+
+      loadReminders();
+    } catch (error) {
+      console.error('Erro ao reagendar lembrete:', error);
+      alert('Erro ao reagendar lembrete');
+    }
+  };
+
   const handleBatchMarkAsRead = async () => {
     if (selectedReminders.size === 0) return;
 
@@ -1620,6 +1651,7 @@ export default function RemindersManagerEnhanced() {
         <RemindersCalendar
           reminders={reminders}
           onClose={() => setShowCalendar(false)}
+          onRescheduleReminder={handleRescheduleReminder}
         />
       )}
 

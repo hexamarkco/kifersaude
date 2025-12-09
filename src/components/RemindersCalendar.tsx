@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Reminder } from '../lib/supabase';
-import { ChevronLeft, ChevronRight, X, Bell, Clock, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Bell, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR, getDateKey, SAO_PAULO_TIMEZONE } from '../lib/dateUtils';
 
 type RemindersCalendarProps = {
   reminders: Reminder[];
   onClose: () => void;
   onReminderClick?: (reminder: Reminder) => void;
+  onRescheduleReminder?: (reminderId: string, newDate: Date) => Promise<void>;
 };
 
-export default function RemindersCalendar({ reminders, onClose, onReminderClick }: RemindersCalendarProps) {
+export default function RemindersCalendar({ reminders, onClose, onReminderClick, onRescheduleReminder }: RemindersCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [reschedulingReminder, setReschedulingReminder] = useState<string | null>(null);
 
   const getMonthYear = () => {
     return currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -46,9 +48,27 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
     return reminders.filter(reminder => getDateKey(reminder.data_lembrete, SAO_PAULO_TIMEZONE) === dateKey);
   };
 
-  const handleDateClick = (day: number) => {
+  const handleDateClick = async (day: number) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+
+    if (reschedulingReminder && onRescheduleReminder) {
+      await onRescheduleReminder(reschedulingReminder, date);
+      setReschedulingReminder(null);
+      return;
+    }
+
     setSelectedDate(date);
+  };
+
+  const handleRescheduleClick = (reminderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReschedulingReminder(reminderId);
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
   };
 
   const getDayReminders = () => {
@@ -134,10 +154,20 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
   const dayReminders = getDayReminders();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4"
+      onClick={handleBackdropClick}
+    >
+      <div className="modal-panel bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-2xl font-bold text-slate-900">Calendário de Lembretes</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Calendário de Lembretes</h2>
+            {reschedulingReminder && (
+              <p className="text-sm text-teal-600 mt-1">
+                Selecione um dia para reagendar a tarefa
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -172,7 +202,7 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
             </div>
 
             <div>
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col" style={{ maxHeight: 'calc(90vh - 180px)' }}>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">
                   {selectedDate ? (
                     <>
@@ -188,46 +218,66 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick 
 
                 {selectedDate ? (
                   dayReminders.length > 0 ? (
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    <div className="space-y-3 overflow-y-auto flex-1 pr-2">
                       {dayReminders.map((reminder) => (
                         <div
                           key={reminder.id}
-                          onClick={() => onReminderClick?.(reminder)}
-                          className="p-4 border border-slate-200 rounded-lg hover:shadow-md transition-all cursor-pointer"
+                          className={`p-4 border rounded-lg transition-all ${
+                            reschedulingReminder === reminder.id
+                              ? 'border-teal-500 bg-teal-50'
+                              : 'border-slate-200 hover:shadow-md'
+                          }`}
                         >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h4 className="font-semibold text-slate-900">{reminder.titulo}</h4>
-                                {!reminder.lido && (
-                                  <Bell className="w-4 h-4 text-orange-500" />
-                                )}
+                          <div
+                            onClick={() => onReminderClick?.(reminder)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <h4 className="font-semibold text-slate-900">{reminder.titulo}</h4>
+                                  {!reminder.lido && (
+                                    <Bell className="w-4 h-4 text-orange-500" />
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm text-slate-600">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-2 text-sm text-slate-600">
-                                <Clock className="w-4 h-4" />
-                                <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
-                              </div>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(reminder.prioridade)}`}>
+                                {reminder.prioridade}
+                              </span>
                             </div>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(reminder.prioridade)}`}>
-                              {reminder.prioridade}
-                            </span>
-                          </div>
                           {reminder.descricao && (
                             <p className="text-sm text-slate-600 mt-2">{reminder.descricao}</p>
                           )}
-                          <div className="flex items-center space-x-2 mt-2">
-                            <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">
-                              {reminder.tipo}
-                            </span>
-                            {reminder.tags && reminder.tags.length > 0 && (
-                              <div className="flex space-x-1">
-                                {reminder.tags.slice(0, 2).map((tag, idx) => (
-                                  <span key={idx} className="px-2 py-1 bg-teal-100 text-teal-700 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">
+                                {reminder.tipo}
+                              </span>
+                              {reminder.tags && reminder.tags.length > 0 && (
+                                <div className="flex space-x-1">
+                                  {reminder.tags.slice(0, 2).map((tag, idx) => (
+                                    <span key={idx} className="px-2 py-1 bg-teal-100 text-teal-700 rounded text-xs">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {onRescheduleReminder && !reminder.lido && (
+                              <button
+                                onClick={(e) => handleRescheduleClick(reminder.id, e)}
+                                className="flex items-center space-x-1 px-2 py-1 text-xs text-teal-600 hover:bg-teal-50 rounded transition-colors"
+                                title="Reagendar tarefa"
+                              >
+                                <Calendar className="w-3 h-3" />
+                                <span>Reagendar</span>
+                              </button>
                             )}
+                          </div>
                           </div>
                         </div>
                       ))}

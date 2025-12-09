@@ -32,6 +32,7 @@ export default function WhatsAppApiSettings() {
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
+  const [autoSend, setAutoSend] = useState(false);
   const [token, setToken] = useState('');
   const [statusOnSend, setStatusOnSend] = useState('');
 
@@ -51,6 +52,7 @@ export default function WhatsAppApiSettings() {
       setAutoContactSettings(normalized);
 
       setEnabled(normalized.enabled);
+      setAutoSend((integration?.settings as any)?.autoSend ?? false);
       setToken(normalized.apiKey || '');
 
       const validStatusNames = leadStatuses.map(s => s.nome);
@@ -88,6 +90,7 @@ export default function WhatsAppApiSettings() {
 
     const newSettings = {
       enabled,
+      autoSend,
       apiKey: token.trim(),
       token: token.trim(),
       statusOnSend: statusOnSend,
@@ -107,6 +110,7 @@ export default function WhatsAppApiSettings() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setEnabled(normalized.enabled);
+      setAutoSend((updatedIntegration.settings as any)?.autoSend ?? false);
       setToken(normalized.apiKey || '');
 
       const validStatusNames = leadStatuses.map(s => s.nome);
@@ -232,17 +236,38 @@ export default function WhatsAppApiSettings() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="whatsapp-enabled"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-          />
-          <label htmlFor="whatsapp-enabled" className="text-sm text-slate-700">
-            Ativar automação de contato
-          </label>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="whatsapp-enabled"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+              className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+            />
+            <label htmlFor="whatsapp-enabled" className="text-sm text-slate-700">
+              Ativar automação de contato
+            </label>
+          </div>
+
+          <div className="flex items-start gap-2 p-3 bg-sky-50 border border-sky-200 rounded-lg">
+            <input
+              type="checkbox"
+              id="whatsapp-auto-send"
+              checked={autoSend}
+              onChange={(e) => setAutoSend(e.target.checked)}
+              disabled={!enabled}
+              className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:opacity-50 mt-0.5"
+            />
+            <div className="flex-1">
+              <label htmlFor="whatsapp-auto-send" className="text-sm font-medium text-slate-900 block">
+                Envio automático ao criar lead
+              </label>
+              <p className="text-xs text-slate-600 mt-1">
+                Quando ativado, as mensagens serão enviadas automaticamente assim que um novo lead for criado, sem precisar clicar em "Enviar automação". Funciona mesmo com o sistema fechado.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-end pt-4 border-t border-slate-200">

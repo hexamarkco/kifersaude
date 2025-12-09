@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
+import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info } from 'lucide-react';
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
+import { GroupInfoPanel } from './GroupInfoPanel';
 
 type WhatsAppChat = {
   id: string;
@@ -44,6 +45,7 @@ export default function WhatsAppTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<{
     id: string;
     body: string;
@@ -232,6 +234,14 @@ export default function WhatsAppTab() {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   };
 
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 13) {
+      return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+    }
+    return phone;
+  };
+
   const showChatList = !isMobileView || !selectedChat;
   const showMessageArea = !isMobileView || selectedChat;
 
@@ -276,14 +286,29 @@ export default function WhatsAppTab() {
                     selectedChat?.id === chat.id ? 'bg-teal-50' : ''
                   }`}
                 >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-semibold">
-                    {getInitials(chat.name)}
+                  <div className="relative flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                      chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                    }`}>
+                      {chat.is_group ? (
+                        <Users className="w-6 h-6" />
+                      ) : (
+                        getInitials(chat.name)
+                      )}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-medium text-slate-900 truncate">
-                        {chat.name || chat.id}
-                      </h3>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <h3 className="font-medium text-slate-900 truncate">
+                          {chat.name || chat.id}
+                        </h3>
+                        {chat.is_group && (
+                          <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                            Grupo
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
                         {formatTime(chat.last_message_at)}
                       </span>
@@ -300,7 +325,7 @@ export default function WhatsAppTab() {
       )}
 
       {showMessageArea && (
-        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex flex-col bg-slate-100`}>
+        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex flex-col bg-slate-100 relative`}>
           {selectedChat ? (
             <>
               <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
@@ -312,22 +337,49 @@ export default function WhatsAppTab() {
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </button>
                 )}
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-semibold">
-                  {getInitials(selectedChat.name)}
+                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                  selectedChat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                }`}>
+                  {selectedChat.is_group ? (
+                    <Users className="w-5 h-5" />
+                  ) : (
+                    getInitials(selectedChat.name)
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-slate-900 truncate">
-                    {selectedChat.name || selectedChat.id}
-                  </h2>
-                  <p className="text-xs text-slate-500">Online</p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-slate-900 truncate">
+                      {selectedChat.name || selectedChat.id}
+                    </h2>
+                    {selectedChat.is_group && (
+                      <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                        Grupo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {selectedChat.is_group ? 'Toque para ver info do grupo' : 'Online'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                    <Phone className="w-5 h-5 text-slate-600" />
-                  </button>
-                  <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                    <Video className="w-5 h-5 text-slate-600" />
-                  </button>
+                  {selectedChat.is_group ? (
+                    <button
+                      onClick={() => setShowGroupInfo(!showGroupInfo)}
+                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                      title="Informações do grupo"
+                    >
+                      <Info className="w-5 h-5 text-slate-600" />
+                    </button>
+                  ) : (
+                    <>
+                      <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <Phone className="w-5 h-5 text-slate-600" />
+                      </button>
+                      <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <Video className="w-5 h-5 text-slate-600" />
+                      </button>
+                    </>
+                  )}
                   <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                     <MoreVertical className="w-5 h-5 text-slate-600" />
                   </button>
@@ -340,26 +392,37 @@ export default function WhatsAppTab() {
                     <p>Nenhuma mensagem ainda</p>
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <MessageBubble
-                      key={message.id}
-                      id={message.id}
-                      body={message.body}
-                      type={message.type}
-                      direction={message.direction || 'inbound'}
-                      timestamp={message.timestamp}
-                      ackStatus={message.ack_status}
-                      hasMedia={message.has_media}
-                      fromName={message.author || selectedChat?.name || undefined}
-                      isDeleted={message.is_deleted}
-                      deletedAt={message.deleted_at}
-                      editCount={message.edit_count}
-                      editedAt={message.edited_at}
-                      originalBody={message.original_body}
-                      onReply={handleReply}
-                      onEdit={handleEdit}
-                    />
-                  ))
+                  messages.map((message) => {
+                    const showAuthor = selectedChat.is_group && message.direction === 'inbound' && message.author;
+                    const authorName = showAuthor ? formatPhone(message.author!) : undefined;
+
+                    return (
+                      <div key={message.id}>
+                        {showAuthor && (
+                          <div className="text-xs text-slate-500 mb-1 ml-2">
+                            {authorName}
+                          </div>
+                        )}
+                        <MessageBubble
+                          id={message.id}
+                          body={message.body}
+                          type={message.type}
+                          direction={message.direction || 'inbound'}
+                          timestamp={message.timestamp}
+                          ackStatus={message.ack_status}
+                          hasMedia={message.has_media}
+                          fromName={authorName}
+                          isDeleted={message.is_deleted}
+                          deletedAt={message.deleted_at}
+                          editCount={message.edit_count}
+                          editedAt={message.edited_at}
+                          originalBody={message.original_body}
+                          onReply={handleReply}
+                          onEdit={handleEdit}
+                        />
+                      </div>
+                    );
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -374,6 +437,13 @@ export default function WhatsAppTab() {
                 editMessage={editMessage}
                 onCancelEdit={handleCancelEdit}
               />
+
+              {showGroupInfo && selectedChat.is_group && (
+                <GroupInfoPanel
+                  groupId={selectedChat.id}
+                  onClose={() => setShowGroupInfo(false)}
+                />
+              )}
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-500">

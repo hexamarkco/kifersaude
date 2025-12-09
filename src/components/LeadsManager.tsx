@@ -153,7 +153,7 @@ const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
 
   const normalized = phone.replace(/\D/g, '');
-  return normalized ? `https://wa.me/${normalized}` : null;
+  return normalized ? `https://wa.me/55${normalized}` : null;
 };
 
 const getLeadFirstName = (fullName: string | null | undefined) => {

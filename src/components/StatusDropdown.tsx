@@ -32,8 +32,9 @@ export default function StatusDropdown({
     const rect = buttonRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const minWidth = 160;
-    const desiredWidth = Math.max(rect.width, minWidth);
+    const minWidth = 180;
+    const maxWidth = 280;
+    const desiredWidth = Math.min(Math.max(rect.width, minWidth), maxWidth);
     const rightBoundary = viewportWidth - 16;
     let left = rect.left;
 
@@ -173,7 +174,7 @@ export default function StatusDropdown({
               style={{
                 top: menuPosition.top,
                 left: menuPosition.left,
-                minWidth: menuPosition.width,
+                width: menuPosition.width,
                 maxHeight: 'calc(100vh - 32px)',
               }}
             >

@@ -644,8 +644,14 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
 
   console.log('[WhatsApp API] Recebidas mensagens recebidas:', receivedResponse.count);
   console.log('[WhatsApp API] Recebidas mensagens enviadas:', sentResponse.count);
+  console.log('[WhatsApp API] Array receivedResponse.messages:', receivedResponse.messages);
+  console.log('[WhatsApp API] Array sentResponse.messages:', sentResponse.messages);
+  console.log('[WhatsApp API] Tamanho arrays:', receivedResponse.messages?.length, sentResponse.messages?.length);
 
-  const allMessages = [...receivedResponse.messages, ...sentResponse.messages];
+  const allMessages = [
+    ...(receivedResponse.messages || []),
+    ...(sentResponse.messages || [])
+  ];
 
   console.log('[WhatsApp API] Total de mensagens combinadas:', allMessages.length);
 

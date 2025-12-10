@@ -176,6 +176,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const { data: existingLeads, error: duplicateCheckError } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('telefone', lead.telefone)
+      .neq('id', lead.id)
+      .limit(1);
+
+    if (duplicateCheckError) {
+      console.error('[AutoSend] Erro ao verificar duplicados:', duplicateCheckError);
+    }
+
+    if (existingLeads && existingLeads.length > 0) {
+      console.log('[AutoSend] Telefone duplicado detectado, marcando lead como Duplicado');
+
+      await supabase
+        .from('leads')
+        .update({ status: 'Duplicado' })
+        .eq('id', lead.id);
+
+      return new Response(
+        JSON.stringify({
+          message: 'Lead duplicado - telefone já existe no sistema',
+          action: 'status_updated_to_duplicado'
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const chatId = `55${normalizedPhone}@c.us`;
 
     const steps = settings.messageFlow

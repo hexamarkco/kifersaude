@@ -1818,16 +1818,9 @@ export default function LeadsManager({
             setEditingLead(null);
           }}
           onSave={async (savedLead) => {
-            const isNewLead = !editingLead;
             setShowForm(false);
             setEditingLead(null);
             await loadLeads();
-
-            if (isNewLead && autoContactSettings?.autoSend && savedLead.telefone) {
-              setTimeout(() => {
-                sendManualAutomation(savedLead);
-              }, 500);
-            }
           }}
         />
       )}

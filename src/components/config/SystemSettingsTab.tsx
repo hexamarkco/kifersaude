@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings, Volume2, VolumeX, Clock, Calendar, Save, CheckCircle, AlertCircle } from 'lucide-react';
-import { SystemSettings } from '../../lib/supabase';
+import { Settings, Volume2, VolumeX, Clock, Calendar, Save, CheckCircle, AlertCircle, Key, AlertTriangle } from 'lucide-react';
+import { SystemSettings, supabase } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
 import { useConfig } from '../../contexts/ConfigContext';
 import LeadStatusManager from './LeadStatusManager';
@@ -15,8 +15,14 @@ export default function SystemSettingsTab() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const { loading: configLoading } = useConfig();
 
+  const [serviceRoleKey, setServiceRoleKey] = useState<string>('');
+  const [serviceRoleKeyLoading, setServiceRoleKeyLoading] = useState(true);
+  const [serviceRoleKeySaving, setServiceRoleKeySaving] = useState(false);
+  const [showServiceKey, setShowServiceKey] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadServiceRoleKey();
   }, []);
 
   const loadSettings = async () => {
@@ -24,6 +30,61 @@ export default function SystemSettingsTab() {
     const data = await configService.getSystemSettings();
     setSettings(data);
     setLoading(false);
+  };
+
+  const loadServiceRoleKey = async () => {
+    setServiceRoleKeyLoading(true);
+    console.log('[SystemSettings] Carregando Service Role Key...');
+
+    try {
+      const { data, error } = await supabase
+        .from('system_configurations')
+        .select('config_value')
+        .eq('config_key', 'supabase_service_role_key')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SystemSettings] Erro ao carregar Service Role Key:', error);
+      } else if (data) {
+        const key = typeof data.config_value === 'string' ? data.config_value : data.config_value;
+        setServiceRoleKey(key || '');
+        console.log('[SystemSettings] Service Role Key carregada:', key === 'PLACEHOLDER_SERVICE_KEY' ? 'PLACEHOLDER' : 'Configurada');
+      }
+    } catch (error) {
+      console.error('[SystemSettings] Erro ao carregar Service Role Key:', error);
+    }
+
+    setServiceRoleKeyLoading(false);
+  };
+
+  const saveServiceRoleKey = async () => {
+    if (!serviceRoleKey || serviceRoleKey.trim() === '') {
+      showMessage('error', 'Service Role Key não pode estar vazia');
+      return;
+    }
+
+    setServiceRoleKeySaving(true);
+    console.log('[SystemSettings] Salvando Service Role Key...');
+
+    try {
+      const { error } = await supabase
+        .from('system_configurations')
+        .update({ config_value: serviceRoleKey })
+        .eq('config_key', 'supabase_service_role_key');
+
+      if (error) {
+        console.error('[SystemSettings] Erro ao salvar Service Role Key:', error);
+        showMessage('error', 'Erro ao salvar Service Role Key');
+      } else {
+        console.log('[SystemSettings] Service Role Key salva com sucesso');
+        showMessage('success', 'Service Role Key salva! Envio automático de mensagens ativado.');
+      }
+    } catch (error) {
+      console.error('[SystemSettings] Erro ao salvar Service Role Key:', error);
+      showMessage('error', 'Erro ao salvar Service Role Key');
+    }
+
+    setServiceRoleKeySaving(false);
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -199,6 +260,76 @@ export default function SystemSettingsTab() {
             <Save className="w-4 h-4" />
             <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
           </button>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-6">
+        <div className="flex items-start space-x-3 mb-4">
+          <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">
+              Configuração do Supabase Service Role Key
+            </h3>
+            <p className="text-sm text-amber-800 mb-4">
+              Para que o envio automático de mensagens funcione, você precisa configurar sua Service Role Key do Supabase.
+              Esta chave permite que o sistema envie mensagens automaticamente quando um novo lead é criado.
+            </p>
+            <div className="bg-white border border-amber-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-slate-900 mb-2">Como obter sua Service Role Key:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700">
+                <li>Acesse o dashboard do Supabase</li>
+                <li>Vá em Settings (Configurações) &gt; API</li>
+                <li>Copie a "service_role" key (não a "anon" key)</li>
+                <li>Cole aqui abaixo e clique em Salvar</li>
+              </ol>
+            </div>
+
+            {serviceRoleKeyLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-amber-500 border-t-transparent mx-auto"></div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center space-x-2">
+                    <Key className="w-4 h-4" />
+                    <span>Service Role Key</span>
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type={showServiceKey ? 'text' : 'password'}
+                      value={serviceRoleKey}
+                      onChange={(e) => setServiceRoleKey(e.target.value)}
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent font-mono text-sm"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowServiceKey(!showServiceKey)}
+                      className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+                    >
+                      {showServiceKey ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                  {serviceRoleKey === 'PLACEHOLDER_SERVICE_KEY' && (
+                    <p className="text-xs text-amber-700 mt-1 flex items-center space-x-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Chave não configurada - envio automático desativado</span>
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={saveServiceRoleKey}
+                  disabled={serviceRoleKeySaving || !serviceRoleKey || serviceRoleKey.trim() === ''}
+                  className="flex items-center space-x-2 px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{serviceRoleKeySaving ? 'Salvando...' : 'Salvar Service Role Key'}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

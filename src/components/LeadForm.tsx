@@ -235,10 +235,15 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         if (error) throw error;
         savedLead = updatedLead as Lead;
       } else {
+        console.log('[LeadForm] Criando novo lead...');
+        console.log('[LeadForm] Dados normalizados:', normalizedLeadData);
+
         const duplicateFilters = [
           normalizedLeadData.telefone ? `telefone.eq.${normalizedLeadData.telefone}` : null,
           normalizedLeadData.email ? `email.ilike.${normalizedLeadData.email}` : null,
         ].filter(Boolean);
+
+        console.log('[LeadForm] Filtros de duplicados:', duplicateFilters);
 
         if (duplicateFilters.length > 0) {
           const { data: duplicateLead, error: duplicateCheckError } = await supabase
@@ -249,16 +254,23 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
             .maybeSingle();
 
           if (duplicateCheckError) {
+            console.error('[LeadForm] Erro ao verificar duplicados:', duplicateCheckError);
             throw duplicateCheckError;
           }
 
+          console.log('[LeadForm] Lead duplicado encontrado?', !!duplicateLead);
+
           if (duplicateLead) {
             const duplicateStatus = leadStatuses.find((s) => s.nome === 'Duplicado');
+            console.log('[LeadForm] Status Duplicado encontrado?', !!duplicateStatus);
             if (duplicateStatus) {
               leadDataForDb.status_id = duplicateStatus.id;
+              console.log('[LeadForm] Marcando lead como Duplicado');
             }
           }
         }
+
+        console.log('[LeadForm] Dados para inserir no banco:', leadDataForDb);
 
         const { data: insertedLead, error } = await supabase
           .from('leads')
@@ -266,7 +278,15 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           .select()
           .single<Lead>();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[LeadForm] Erro ao inserir lead:', error);
+          throw error;
+        }
+
+        console.log('[LeadForm] Lead inserido com sucesso:', insertedLead);
+        console.log('[LeadForm] ID do lead inserido:', insertedLead.id);
+        console.log('[LeadForm] Trigger auto-send-lead-messages deve ser acionado agora...');
+
         savedLead = insertedLead as Lead;
         savedLeadId = insertedLead.id;
       }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, Lead, ContractValueAdjustment, Operadora } from '../lib/supabase';
+import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';

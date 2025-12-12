@@ -16,6 +16,7 @@
 
 BEGIN;
 
+-- Corrigir registros já salvos com o sufixo duplicado @s.whatsapp.net@s.whatsapp.net
 WITH duplicated_suffix AS (
   SELECT
     id AS old_id,

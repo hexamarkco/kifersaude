@@ -5,6 +5,7 @@ import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
+import { getWhatsAppContacts } from '../../lib/whatsappApiService';
 
 type WhatsAppChat = {
   id: string;
@@ -55,7 +56,23 @@ export default function WhatsAppTab() {
     id: string;
     body: string;
   } | null>(null);
+  const [leadNamesByPhone, setLeadNamesByPhone] = useState<Map<string, string>>(new Map());
+  const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  function normalizePhoneNumber(phone: string | null | undefined) {
+    if (!phone) return '';
+    const digits = phone.replace(/\D/g, '');
+
+    if (digits.length > 11) {
+      const trimmed = digits.replace(/^55/, '');
+      return trimmed.slice(-11);
+    }
+
+    return digits;
+  }
+
+  const extractPhoneFromChatId = (chatId: string) => normalizePhoneNumber(chatId);
 
   useEffect(() => {
     const checkMobileView = () => {
@@ -65,6 +82,48 @@ export default function WhatsAppTab() {
     checkMobileView();
     window.addEventListener('resize', checkMobileView);
     return () => window.removeEventListener('resize', checkMobileView);
+  }, []);
+
+  useEffect(() => {
+    const loadLeadNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .select('telefone, nome_completo');
+
+        if (error) throw error;
+
+        const phoneMap = new Map<string, string>();
+        (data || []).forEach((lead) => {
+          const normalizedPhone = normalizePhoneNumber(lead.telefone);
+          if (normalizedPhone && !phoneMap.has(normalizedPhone)) {
+            phoneMap.set(normalizedPhone, lead.nome_completo);
+          }
+        });
+
+        setLeadNamesByPhone(phoneMap);
+      } catch (err) {
+        console.error('Error loading lead names:', err);
+      }
+    };
+
+    const loadSavedContacts = async () => {
+      try {
+        const response = await getWhatsAppContacts();
+        const contactMap = new Map<string, { name: string; saved: boolean }>();
+
+        response.contacts.forEach((contact) => {
+          contactMap.set(contact.id, { name: contact.name, saved: contact.saved });
+        });
+
+        setContactsById(contactMap);
+      } catch (err) {
+        console.error('Error loading WhatsApp contacts:', err);
+      }
+    };
+
+    loadLeadNames();
+    loadSavedContacts();
   }, []);
 
   useEffect(() => {
@@ -204,12 +263,6 @@ export default function WhatsAppTab() {
     scrollToBottom();
   };
 
-  const filteredChats = chats.filter(
-    (chat) =>
-      chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.id.includes(searchQuery)
-  );
-
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -239,8 +292,41 @@ export default function WhatsAppTab() {
     if (cleaned.length === 13) {
       return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
     }
-    return phone;
+
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+
+    return cleaned || phone;
   };
+
+  function getChatDisplayName(chat: WhatsAppChat) {
+    if (chat.is_group) return chat.name || chat.id;
+
+    const phone = extractPhoneFromChatId(chat.id);
+
+    if (phone && leadNamesByPhone.has(phone)) {
+      return leadNamesByPhone.get(phone)!;
+    }
+
+    const contact = contactsById.get(chat.id);
+    if (contact?.saved && contact.name) {
+      return contact.name;
+    }
+
+    if (phone) {
+      return formatPhone(phone);
+    }
+
+    return chat.id;
+  }
+
+  const filteredChats = chats.filter((chat) => {
+    const displayName = getChatDisplayName(chat).toLowerCase();
+    return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
+  });
+
+  const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
 
   const showChatList = !isMobileView || !selectedChat;
   const showMessageArea = !isMobileView || selectedChat;
@@ -278,47 +364,51 @@ export default function WhatsAppTab() {
                 <p className="text-sm">As mensagens do WhatsApp aparecerão aqui</p>
               </div>
             ) : (
-              filteredChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => setSelectedChat(chat)}
-                  className={`w-full p-4 flex items-start gap-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                    selectedChat?.id === chat.id ? 'bg-teal-50' : ''
-                  }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
-                      chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
-                    }`}>
-                      {chat.is_group ? (
-                        <Users className="w-6 h-6" />
-                      ) : (
-                        getInitials(chat.name)
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <h3 className="font-medium text-slate-900 truncate">
-                          {chat.name || chat.id}
-                        </h3>
-                        {chat.is_group && (
-                          <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                            Grupo
-                          </span>
+              filteredChats.map((chat) => {
+                const chatDisplayName = getChatDisplayName(chat);
+
+                return (
+                  <button
+                    key={chat.id}
+                    onClick={() => setSelectedChat(chat)}
+                    className={`w-full p-4 flex items-start gap-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                      selectedChat?.id === chat.id ? 'bg-teal-50' : ''
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                        chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                      }`}>
+                        {chat.is_group ? (
+                          <Users className="w-6 h-6" />
+                        ) : (
+                          getInitials(chatDisplayName)
                         )}
                       </div>
-                      <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
-                        {formatTime(chat.last_message_at)}
-                      </span>
                     </div>
-                    <p className="text-sm text-slate-600 truncate">
-                      {chat.last_message || 'Sem mensagens'}
-                    </p>
-                  </div>
-                </button>
-              ))
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <h3 className="font-medium text-slate-900 truncate">
+                            {chatDisplayName}
+                          </h3>
+                          {chat.is_group && (
+                            <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                              Grupo
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
+                          {formatTime(chat.last_message_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 truncate">
+                        {chat.last_message || 'Sem mensagens'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -343,13 +433,13 @@ export default function WhatsAppTab() {
                   {selectedChat.is_group ? (
                     <Users className="w-5 h-5" />
                   ) : (
-                    getInitials(selectedChat.name)
+                    getInitials(selectedChatDisplayName)
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="font-semibold text-slate-900 truncate">
-                      {selectedChat.name || selectedChat.id}
+                      {selectedChatDisplayName || selectedChat.id}
                     </h2>
                     {selectedChat.is_group && (
                       <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
@@ -428,7 +518,7 @@ export default function WhatsAppTab() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChat.name || selectedChat.id} />
+              <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChatDisplayName || selectedChat.id} />
 
               <MessageInput
                 chatId={selectedChat.id}

@@ -7,6 +7,16 @@ interface WhatsAppSettings {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
+type WhapiContactStatus = 'valid' | 'invalid';
+
+type WhapiContactResponse = {
+  contacts?: Array<{
+    input?: string;
+    status?: WhapiContactStatus;
+    wa_id?: string;
+  }>;
+};
+
 function formatApiError(errorObj: any): string {
   if (typeof errorObj === 'string') {
     return errorObj;
@@ -65,6 +75,44 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
   };
 }
 
+function normalizePhoneFromChatId(chatId: string): string | null {
+  if (!chatId.endsWith('@s.whatsapp.net')) return null;
+
+  const phone = chatId.replace(/@.+$/, '').replace(/\D/g, '');
+
+  return phone || null;
+}
+
+async function validateWhatsAppRecipient(chatId: string, token: string): Promise<string> {
+  const phone = normalizePhoneFromChatId(chatId);
+
+  if (!phone) return chatId;
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ contacts: [phone] }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao validar contato' }));
+    throw new Error(formatApiError(error));
+  }
+
+  const data = (await response.json().catch(() => ({}))) as WhapiContactResponse;
+  const contactInfo = data.contacts?.[0];
+
+  if (!contactInfo || contactInfo.status !== 'valid' || !contactInfo.wa_id) {
+    throw new Error('Número não possui WhatsApp ou é inválido.');
+  }
+
+  return `${contactInfo.wa_id}@s.whatsapp.net`;
+}
+
 export interface MediaContent {
   mimetype?: string;
   data?: string;
@@ -98,8 +146,8 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
   const settings = await getWhatsAppSettings();
 
   let endpoint = '';
-  let body: Record<string, unknown> = {
-    to: params.chatId,
+  const body: Record<string, unknown> = {
+    to: await validateWhatsAppRecipient(params.chatId, settings.token),
   };
 
   if (params.quotedMessageId) {
@@ -322,6 +370,24 @@ export interface WhapiChatListResponse {
   offset: number;
 }
 
+export interface WhapiContact {
+  id: string;
+  name: string;
+  pushname: string;
+  is_business: boolean;
+  profile_pic?: string | null;
+  profile_pic_full?: string | null;
+  status?: string | null;
+  saved: boolean;
+}
+
+export interface WhapiContactListResponse {
+  contacts: WhapiContact[];
+  count: number;
+  total: number;
+  offset: number;
+}
+
 export interface WhapiMessageListParams {
   chatId: string;
   count?: number;
@@ -431,6 +497,29 @@ export async function getWhatsAppChats(count: number = 100, offset: number = 0):
   queryParams.append('offset', offset.toString());
 
   const response = await fetch(`${WHAPI_BASE_URL}/chats?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
+export async function getWhatsAppContacts(count: number = 500, offset: number = 0): Promise<WhapiContactListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', count.toString());
+  queryParams.append('offset', offset.toString());
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts?${queryParams.toString()}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${settings.token}`,

@@ -73,7 +73,7 @@ updated AS (
   ) meta
   WHERE c.id = meta.phone_number || '@s.whatsapp.net'
 )
-SELECT 'canonical chats ensured' AS status;
+SELECT 'canonical chats ensured';
 
 -- 2) Atualizar mensagens para apontarem para o chat_id canônico
 WITH mapping AS (

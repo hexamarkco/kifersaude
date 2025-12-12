@@ -16,7 +16,6 @@
 
 BEGIN;
 
--- Corrigir registros já salvos com o sufixo duplicado @s.whatsapp.net@s.whatsapp.net
 WITH duplicated_suffix AS (
   SELECT
     id AS old_id,
@@ -43,7 +42,7 @@ messages_repointed AS (
   SET chat_id = d.canonical_id
   FROM duplicated_suffix d
   WHERE m.chat_id = d.old_id
-  RETURNING d.old_id, d.canonical_id
+  RETURNING DISTINCT d.old_id, d.canonical_id
 ),
 updated_chats AS (
   -- Atualizar o ID quando ainda não existe o canônico para evitar conflito de PK

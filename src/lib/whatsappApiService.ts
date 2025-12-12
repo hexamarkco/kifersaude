@@ -98,7 +98,7 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
   const settings = await getWhatsAppSettings();
 
   let endpoint = '';
-  let body: Record<string, unknown> = {
+  const body: Record<string, unknown> = {
     to: params.chatId,
   };
 
@@ -322,6 +322,24 @@ export interface WhapiChatListResponse {
   offset: number;
 }
 
+export interface WhapiContact {
+  id: string;
+  name: string;
+  pushname: string;
+  is_business: boolean;
+  profile_pic?: string | null;
+  profile_pic_full?: string | null;
+  status?: string | null;
+  saved: boolean;
+}
+
+export interface WhapiContactListResponse {
+  contacts: WhapiContact[];
+  count: number;
+  total: number;
+  offset: number;
+}
+
 export interface WhapiMessageListParams {
   chatId: string;
   count?: number;
@@ -431,6 +449,29 @@ export async function getWhatsAppChats(count: number = 100, offset: number = 0):
   queryParams.append('offset', offset.toString());
 
   const response = await fetch(`${WHAPI_BASE_URL}/chats?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
+export async function getWhatsAppContacts(count: number = 500, offset: number = 0): Promise<WhapiContactListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', count.toString());
+  queryParams.append('offset', offset.toString());
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts?${queryParams.toString()}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${settings.token}`,

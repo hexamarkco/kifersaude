@@ -193,6 +193,7 @@ type WhapiWebhook = {
 
 type NormalizedMessage = {
   chatId: string;
+  phoneNumber?: string | null;
   messageId: string;
   direction: 'inbound' | 'outbound';
   fromNumber: string | null;
@@ -262,7 +263,10 @@ function toIsoString(timestamp: number): string {
 function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const messageId = message.id;
   const direction: 'inbound' | 'outbound' = message.from_me ? 'outbound' : 'inbound';
-  const chatId = message.chat_id;
+  const originalChatId = message.chat_id;
+  const chatType = getChatIdType(originalChatId);
+  const phoneNumber = chatType === 'phone' ? extractPhoneNumber(originalChatId) : null;
+  const chatId = chatType === 'phone' && phoneNumber ? `${phoneNumber}@s.whatsapp.net` : originalChatId;
   const isGroup = chatId.endsWith('@g.us');
 
   let body = '';
@@ -339,6 +343,7 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
 
   const normalized: NormalizedMessage = {
     chatId,
+    phoneNumber,
     messageId,
     direction,
     fromNumber,
@@ -357,6 +362,7 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   console.log('whatsapp-webhook: mensagem Whapi normalizada', {
     messageId: normalized.messageId,
     chatId: normalized.chatId,
+    originalChatId,
     direction: normalized.direction,
     contactName: normalized.contactName,
     body: normalized.body?.substring(0, 50),
@@ -379,12 +385,12 @@ function mapStatusToAck(status: string): number {
 }
 
 function extractPhoneNumber(chatId: string): string {
-  return chatId.replace(/@c\.us$|@g\.us$|@lid$/, '');
+  return chatId.replace(/@c\.us$|@s\.whatsapp\.net$|@g\.us$|@lid$/, '');
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'unknown' {
   if (chatId.endsWith('@g.us')) return 'group';
-  if (chatId.endsWith('@c.us')) return 'phone';
+  if (chatId.endsWith('@c.us') || chatId.endsWith('@s.whatsapp.net')) return 'phone';
   if (chatId.endsWith('@lid')) return 'lid';
   return 'unknown';
 }
@@ -496,7 +502,7 @@ async function upsertChat(message: NormalizedMessage) {
   const chatName = await resolveChatName(message);
   const chatIdType = getChatIdType(message.chatId);
 
-  const phoneNumber = !message.isGroup ? extractPhoneNumber(message.chatId) : null;
+  const phoneNumber = message.phoneNumber ?? (!message.isGroup ? extractPhoneNumber(message.chatId) : null);
   const lid = chatIdType === 'lid' ? message.chatId : null;
 
   console.log('whatsapp-webhook: upsert chat', {
@@ -519,38 +525,47 @@ async function upsertChat(message: NormalizedMessage) {
         phoneNumber,
       });
 
-      await mergeChatMessages(message.chatId, existingChatId);
-
       const { data: existingChat } = await supabase
         .from('whatsapp_chats')
         .select('lid')
         .eq('id', existingChatId)
         .maybeSingle();
 
+      const mergeTarget = message.chatId.endsWith('@s.whatsapp.net') ? message.chatId : existingChatId;
+      const mergeSource = mergeTarget === message.chatId ? existingChatId : message.chatId;
+
+      if (mergeSource !== mergeTarget) {
+        await mergeChatMessages(mergeSource, mergeTarget);
+      }
+
       const updateData: any = {
+        id: mergeTarget,
         name: chatName,
+        is_group: false,
+        phone_number: phoneNumber,
         last_message_at: lastMessageAt,
         updated_at: new Date().toISOString(),
       };
 
       if (lid && !existingChat?.lid) {
         updateData.lid = lid;
-        console.log('whatsapp-webhook: vinculando LID ao chat existente', {
-          chatId: existingChatId,
+        console.log('whatsapp-webhook: vinculando LID ao chat', {
+          chatId: mergeTarget,
           lid,
         });
+      } else if (existingChat?.lid) {
+        updateData.lid = existingChat.lid;
       }
 
       const { error: updateError } = await supabase
         .from('whatsapp_chats')
-        .update(updateData)
-        .eq('id', existingChatId);
+        .upsert(updateData, { onConflict: 'id' });
 
       if (updateError) {
         throw new Error(`Erro ao atualizar chat existente: ${updateError.message}`);
       }
 
-      message.chatId = existingChatId;
+      message.chatId = mergeTarget;
       return;
     }
   }

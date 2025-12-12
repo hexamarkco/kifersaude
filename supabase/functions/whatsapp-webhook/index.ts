@@ -379,12 +379,12 @@ function mapStatusToAck(status: string): number {
 }
 
 function extractPhoneNumber(chatId: string): string {
-  return chatId.replace(/@c\.us$|@g\.us$|@lid$/, '');
+  return chatId.replace(/@c\.us$|@s\.whatsapp\.net$|@g\.us$|@lid$/, '');
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'unknown' {
   if (chatId.endsWith('@g.us')) return 'group';
-  if (chatId.endsWith('@c.us')) return 'phone';
+  if (chatId.endsWith('@c.us') || chatId.endsWith('@s.whatsapp.net')) return 'phone';
   if (chatId.endsWith('@lid')) return 'lid';
   return 'unknown';
 }

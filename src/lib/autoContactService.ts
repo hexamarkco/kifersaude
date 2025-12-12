@@ -104,7 +104,7 @@ export async function sendAutoContactMessage({
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
-  const chatId = `55${normalizedPhone}@c.us`;
+  const chatId = `55${normalizedPhone}@s.whatsapp.net`;
 
   console.info('[AutoContact] Enviando automação via Whapi Cloud', {
     leadId: lead.id,

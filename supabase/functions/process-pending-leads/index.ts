@@ -185,7 +185,7 @@ async function processLead(
       return { success: true };
     }
 
-    const chatId = `55${normalizedPhone}@c.us`;
+    const chatId = `55${normalizedPhone}@s.whatsapp.net`;
 
     const steps = settings.messageFlow
       .filter((step) => step.active && step.message.trim())

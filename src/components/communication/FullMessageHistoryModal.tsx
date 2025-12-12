@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Calendar, Search } from 'lucide-react';
-import { getWhatsAppMessageHistory, buildChatIdFromPhone, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -42,11 +42,10 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     setError(null);
 
     try {
-      let finalChatId = chatId;
+      let finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
 
       if (!chatId.includes('@')) {
         console.log('[FullMessageHistoryModal] chatId não contém @, construindo...');
-        finalChatId = buildChatIdFromPhone(chatId);
         console.log('[FullMessageHistoryModal] Chat ID construído:', finalChatId);
       } else {
         console.log('[FullMessageHistoryModal] chatId já está no formato correto');

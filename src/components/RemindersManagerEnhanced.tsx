@@ -22,7 +22,7 @@ import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
-import { getWhatsAppMessageHistory, type WhapiMessage } from '../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '../lib/whatsappApiService';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -134,7 +134,7 @@ export default function RemindersManagerEnhanced() {
     setHistoryError(null);
 
     const normalizedPhone = phone.replace(/\D/g, '');
-    const chatId = `55${normalizedPhone}@s.whatsapp.net`;
+    const chatId = normalizeChatId(normalizedPhone);
 
     try {
       const response = await getWhatsAppMessageHistory({

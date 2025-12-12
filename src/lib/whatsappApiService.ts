@@ -75,10 +75,28 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
   };
 }
 
-function normalizePhoneFromChatId(chatId: string): string | null {
-  if (!chatId.endsWith('@s.whatsapp.net')) return null;
+export function normalizeChatId(chatIdOrPhone: string): string {
+  if (!chatIdOrPhone) return chatIdOrPhone;
 
-  const phone = chatId.replace(/@.+$/, '').replace(/\D/g, '');
+  const trimmed = chatIdOrPhone.trim();
+
+  const normalizedSuffix = trimmed
+    .replace(/@c\.us$/i, '@s.whatsapp.net')
+    .replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+
+  if (normalizedSuffix.endsWith('@s.whatsapp.net')) {
+    return normalizedSuffix;
+  }
+
+  return buildChatIdFromPhone(normalizedSuffix);
+}
+
+function normalizePhoneFromChatId(chatId: string): string | null {
+  const normalizedChatId = normalizeChatId(chatId);
+
+  if (!normalizedChatId.endsWith('@s.whatsapp.net')) return null;
+
+  const phone = normalizedChatId.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
 
   return phone || null;
 }
@@ -145,9 +163,11 @@ export interface SendMessageParams {
 export async function sendWhatsAppMessage(params: SendMessageParams) {
   const settings = await getWhatsAppSettings();
 
+  const normalizedChatId = normalizeChatId(params.chatId);
+
   let endpoint = '';
   const body: Record<string, unknown> = {
-    to: await validateWhatsAppRecipient(params.chatId, settings.token),
+    to: await validateWhatsAppRecipient(normalizedChatId, settings.token),
   };
 
   if (params.quotedMessageId) {

@@ -513,16 +513,6 @@ export default function RemindersManagerEnhanced() {
     try {
       const nowISO = new Date().toISOString();
 
-      const { error: markReminderError } = await supabase
-        .from('reminders')
-        .update({
-          lido: true,
-          concluido_em: nowISO,
-        })
-        .eq('id', reminder.id);
-
-      if (markReminderError) throw markReminderError;
-
       const { error: updateLeadError } = await supabase
         .from('leads')
         .update({
@@ -556,8 +546,7 @@ export default function RemindersManagerEnhanced() {
       const { error: deleteRemindersError } = await supabase
         .from('reminders')
         .delete()
-        .eq('lead_id', leadId)
-        .neq('id', reminder.id);
+        .eq('lead_id', leadId);
 
       if (deleteRemindersError) throw deleteRemindersError;
 
@@ -580,23 +569,14 @@ export default function RemindersManagerEnhanced() {
       setSelectedReminders(prev => {
         const next = new Set(prev);
         reminders.forEach(item => {
-          if (getLeadIdForReminder(item) === leadId && item.id !== reminder.id) {
+          if (getLeadIdForReminder(item) === leadId) {
             next.delete(item.id);
           }
         });
-        next.delete(reminder.id);
         return next;
       });
 
-      setReminders(current =>
-        current
-          .map(item =>
-            item.id === reminder.id
-              ? { ...item, lido: true, concluido_em: nowISO }
-              : item
-          )
-          .filter(item => getLeadIdForReminder(item) !== leadId || item.id === reminder.id)
-      );
+      setReminders(current => current.filter(item => getLeadIdForReminder(item) !== leadId));
       loadReminders();
     } catch (error) {
       console.error('Erro ao marcar lead como perdido:', error);

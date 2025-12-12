@@ -103,6 +103,7 @@ export default function RemindersManagerEnhanced() {
   const [followUpCopied, setFollowUpCopied] = useState(false);
   const [followUpApproved, setFollowUpApproved] = useState(false);
   const [followUpBlocks, setFollowUpBlocks] = useState<string[]>([]);
+  const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -482,6 +483,126 @@ export default function RemindersManagerEnhanced() {
       }
     } catch (error) {
       console.error('Erro ao sincronizar próximo retorno do lead:', error);
+    }
+  };
+
+  const handleMarkLeadAsLost = async (reminder: Reminder) => {
+    const leadId = getLeadIdForReminder(reminder);
+
+    if (!leadId) {
+      alert('Não foi possível identificar o lead deste lembrete.');
+      return;
+    }
+
+    const leadInfo = leadsMap.get(leadId) ?? await fetchLeadInfo(leadId);
+    const leadName = leadInfo?.nome_completo ?? 'este lead';
+    const previousStatus = leadInfo?.status ?? 'Sem status';
+
+    const confirmed = await requestConfirmation({
+      title: 'Marcar lead como perdido',
+      description: `Deseja marcar ${leadName} como perdido e remover os follow-ups pendentes?`,
+      confirmLabel: 'Marcar como perdido',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setMarkingLostLeadId(leadId);
+
+    try {
+      const nowISO = new Date().toISOString();
+
+      const { error: markReminderError } = await supabase
+        .from('reminders')
+        .update({
+          lido: true,
+          concluido_em: nowISO,
+        })
+        .eq('id', reminder.id);
+
+      if (markReminderError) throw markReminderError;
+
+      const { error: updateLeadError } = await supabase
+        .from('leads')
+        .update({
+          status: 'Perdido',
+          proximo_retorno: null,
+          ultimo_contato: nowISO,
+        })
+        .eq('id', leadId);
+
+      if (updateLeadError) throw updateLeadError;
+
+      if (leadInfo) {
+        const interactionPayload = {
+          lead_id: leadId,
+          tipo: 'Observação',
+          descricao: `Status alterado de "${previousStatus}" para "Perdido"`,
+          responsavel: leadInfo.responsavel,
+        };
+
+        const statusHistoryPayload = {
+          lead_id: leadId,
+          status_anterior: previousStatus,
+          status_novo: 'Perdido',
+          responsavel: leadInfo.responsavel,
+        };
+
+        await supabase.from('interactions').insert([interactionPayload]);
+        await supabase.from('lead_status_history').insert([statusHistoryPayload]);
+      }
+
+      const { error: deleteRemindersError } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('lead_id', leadId)
+        .neq('id', reminder.id);
+
+      if (deleteRemindersError) throw deleteRemindersError;
+
+      setLeadsMap(prev => {
+        const next = new Map(prev);
+        const existing = next.get(leadId);
+
+        if (existing) {
+          next.set(leadId, {
+            ...existing,
+            status: 'Perdido',
+            proximo_retorno: null,
+            ultimo_contato: nowISO,
+          });
+        }
+
+        return next;
+      });
+
+      setSelectedReminders(prev => {
+        const next = new Set(prev);
+        reminders.forEach(item => {
+          if (getLeadIdForReminder(item) === leadId && item.id !== reminder.id) {
+            next.delete(item.id);
+          }
+        });
+        next.delete(reminder.id);
+        return next;
+      });
+
+      setReminders(current =>
+        current
+          .map(item =>
+            item.id === reminder.id
+              ? { ...item, lido: true, concluido_em: nowISO }
+              : item
+          )
+          .filter(item => getLeadIdForReminder(item) !== leadId || item.id === reminder.id)
+      );
+      loadReminders();
+    } catch (error) {
+      console.error('Erro ao marcar lead como perdido:', error);
+      alert('Não foi possível marcar o lead como perdido.');
+    } finally {
+      setMarkingLostLeadId(null);
     }
   };
 
@@ -916,6 +1037,7 @@ export default function RemindersManagerEnhanced() {
         ? leadsMap.get(contract.lead_id)
         : undefined;
     const whatsappLink = getWhatsappLink(leadInfo?.telefone);
+    const leadIdForReminder = getLeadIdForReminder(reminder);
 
     return (
       <div
@@ -1032,6 +1154,20 @@ export default function RemindersManagerEnhanced() {
               >
                 <MessageCircle className="w-5 h-5" />
               </a>
+            )}
+            {leadIdForReminder && (
+              <button
+                onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
+                className="p-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-60"
+                title="Marcar lead como perdido e limpar follow-ups"
+                disabled={markingLostLeadId === leadIdForReminder}
+              >
+                {markingLostLeadId === leadIdForReminder ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <X className="w-5 h-5" />
+                )}
+              </button>
             )}
             {!reminder.lido && (
               <div className="relative">

@@ -263,11 +263,6 @@ export default function WhatsAppTab() {
     scrollToBottom();
   };
 
-  const filteredChats = chats.filter((chat) => {
-    const displayName = getChatDisplayName(chat).toLowerCase();
-    return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
-  });
-
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -305,7 +300,7 @@ export default function WhatsAppTab() {
     return cleaned || phone;
   };
 
-  const getChatDisplayName = (chat: WhatsAppChat) => {
+  function getChatDisplayName(chat: WhatsAppChat) {
     if (chat.is_group) return chat.name || chat.id;
 
     const phone = extractPhoneFromChatId(chat.id);
@@ -324,7 +319,12 @@ export default function WhatsAppTab() {
     }
 
     return chat.id;
-  };
+  }
+
+  const filteredChats = chats.filter((chat) => {
+    const displayName = getChatDisplayName(chat).toLowerCase();
+    return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
+  });
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
 

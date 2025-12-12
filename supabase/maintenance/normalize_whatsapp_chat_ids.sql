@@ -16,11 +16,38 @@
 
 BEGIN;
 
+-- 0) Corrigir IDs com sufixo duplicado diretamente
+WITH duplicated_suffix AS (
+  SELECT
+    id AS old_id,
+    regexp_replace(id, '(@s\\.whatsapp\\.net)+$', '@s.whatsapp.net') AS new_id
+  FROM whatsapp_chats
+  WHERE id LIKE '%@s.whatsapp.net@s.whatsapp.net%'
+)
+UPDATE whatsapp_chats c
+SET id = d.new_id
+FROM duplicated_suffix d
+WHERE c.id = d.old_id;
+
+UPDATE whatsapp_messages m
+SET chat_id = d.new_id
+FROM duplicated_suffix d
+WHERE m.chat_id = d.old_id;
+
 -- 1) Garantir que cada telefone tenha um chat canônico usando @s.whatsapp.net
 WITH chat_variations AS (
   SELECT
     id AS old_id,
-    COALESCE(phone_number, regexp_replace(id, '(@c\\.us|@s\\.whatsapp\\.net)$', '')) AS phone_number,
+    regexp_replace(
+      regexp_replace(
+        COALESCE(phone_number, id),
+        '(@c\\.us|@s\\.whatsapp\\.net)+$',
+        ''
+      ),
+      '\\D',
+      '',
+      'g'
+    ) AS phone_number,
     name,
     last_message_at,
     created_at,
@@ -83,7 +110,16 @@ WITH mapping AS (
   FROM (
     SELECT
       id AS old_id,
-      COALESCE(phone_number, regexp_replace(id, '(@c\\.us|@s\\.whatsapp\\.net)$', '')) AS phone_number
+      regexp_replace(
+        regexp_replace(
+          COALESCE(phone_number, id),
+          '(@c\\.us|@s\\.whatsapp\\.net)+$',
+          ''
+        ),
+        '\\D',
+        '',
+        'g'
+      ) AS phone_number
     FROM whatsapp_chats
     WHERE is_group = false
   ) v

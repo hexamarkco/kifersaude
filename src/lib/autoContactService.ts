@@ -1,5 +1,5 @@
 import { Lead } from './supabase';
-import { sendWhatsAppMessage } from './whatsappApiService';
+import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 
@@ -104,7 +104,7 @@ export async function sendAutoContactMessage({
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
-  const chatId = `55${normalizedPhone}@s.whatsapp.net`;
+  const chatId = normalizeChatId(normalizedPhone);
 
   console.info('[AutoContact] Enviando automação via Whapi Cloud', {
     leadId: lead.id,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
-import { getWhatsAppMessageHistory, buildChatIdFromPhone, type WhapiMessage } from '../../lib/whatsappApiService';
+import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
 
 interface MessageHistoryModalProps {
   messageId: string;
@@ -33,11 +33,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     setError(null);
 
     try {
-      let finalChatId = chatId;
-
-      if (!chatId.includes('@')) {
-        finalChatId = buildChatIdFromPhone(chatId);
-      }
+      let finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
 
       const contextWindow = 10 * 60;
       const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;

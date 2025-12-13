@@ -258,6 +258,11 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
     throw new Error('Tipo de conteúdo não suportado');
   }
 
+  console.info('[WhatsAppAPI] Enviando requisição para Whapi Cloud', {
+    endpoint: `${WHAPI_BASE_URL}${endpoint}`,
+    body,
+  });
+
   const response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {

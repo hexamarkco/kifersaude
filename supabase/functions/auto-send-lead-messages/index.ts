@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
+const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
+
 interface AutoContactStep {
   id: string;
   message: string;
@@ -119,6 +121,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const settings = integrationData.settings as AutoContactSettings;
+    const whapiToken = sanitizeWhapiToken(settings.apiKey);
 
     if (!settings.enabled) {
       console.log('[AutoSend] Automação desativada');
@@ -142,7 +145,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!settings.apiKey) {
+    if (!whapiToken) {
       console.log('[AutoSend] Token não configurado');
       return new Response(
         JSON.stringify({ message: 'Token não configurado' }),
@@ -247,7 +250,7 @@ Deno.serve(async (req: Request) => {
       const finalMessage = applyTemplateVariables(step.message, lead);
 
       try {
-        const response = await sendWhatsAppMessage(chatId, finalMessage, settings.apiKey);
+        const response = await sendWhatsAppMessage(chatId, finalMessage, whapiToken);
         console.log(`[AutoSend] Mensagem enviada: ${step.id}`, response);
 
         await supabase.from('whatsapp_messages').insert({

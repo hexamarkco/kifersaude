@@ -197,7 +197,7 @@ export default function WhatsAppApiSettings() {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm font-mono"
-                placeholder="Bearer token da Whapi Cloud"
+                placeholder="Token da Whapi Cloud (sem incluir 'Bearer')"
               />
               <button
                 type="button"

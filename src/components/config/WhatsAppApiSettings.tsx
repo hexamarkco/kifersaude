@@ -35,6 +35,7 @@ export default function WhatsAppApiSettings() {
   const [autoSend, setAutoSend] = useState(false);
   const [token, setToken] = useState('');
   const [statusOnSend, setStatusOnSend] = useState('');
+  const [statusOnInvalidNumber, setStatusOnInvalidNumber] = useState('');
 
   const loadSettings = useCallback(async () => {
     if (leadStatuses.length === 0) {
@@ -60,6 +61,11 @@ export default function WhatsAppApiSettings() {
       const finalStatus = isValidStatus ? normalized.statusOnSend : leadStatuses[0]?.nome || '';
 
       setStatusOnSend(finalStatus);
+
+      const isValidInvalidStatus = normalized.statusOnInvalidNumber && validStatusNames.includes(normalized.statusOnInvalidNumber);
+      const finalInvalidStatus = isValidInvalidStatus ? normalized.statusOnInvalidNumber : leadStatuses[0]?.nome || '';
+
+      setStatusOnInvalidNumber(finalInvalidStatus);
     } catch (error) {
       console.error('[WhatsAppApiSettings] Error loading settings:', error);
       setStatusMessage({ type: 'error', text: 'Erro ao carregar configurações.' });
@@ -83,6 +89,11 @@ export default function WhatsAppApiSettings() {
       return;
     }
 
+    if (!statusOnInvalidNumber) {
+      setStatusMessage({ type: 'error', text: 'Selecione o status para números inválidos.' });
+      return;
+    }
+
     setSaving(true);
     setStatusMessage(null);
 
@@ -94,6 +105,7 @@ export default function WhatsAppApiSettings() {
       apiKey: token.trim(),
       token: token.trim(),
       statusOnSend: statusOnSend,
+      statusOnInvalidNumber: statusOnInvalidNumber,
       messageFlow: currentMessageFlow,
     };
 
@@ -116,6 +128,9 @@ export default function WhatsAppApiSettings() {
       const validStatusNames = leadStatuses.map(s => s.nome);
       const isValidStatus = normalized.statusOnSend && validStatusNames.includes(normalized.statusOnSend);
       setStatusOnSend(isValidStatus ? normalized.statusOnSend : leadStatuses[0]?.nome || '');
+
+      const isValidInvalidStatus = normalized.statusOnInvalidNumber && validStatusNames.includes(normalized.statusOnInvalidNumber);
+      setStatusOnInvalidNumber(isValidInvalidStatus ? normalized.statusOnInvalidNumber : leadStatuses[0]?.nome || '');
 
       setStatusMessage({ type: 'success', text: 'Configuração salva com sucesso.' });
     }
@@ -232,6 +247,29 @@ export default function WhatsAppApiSettings() {
             </select>
             <p className="text-xs text-slate-500 mt-1">
               O lead será movido para este status ao receber a primeira mensagem automática
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Status quando o número não existe ou é inválido
+            </label>
+            <select
+              value={statusOnInvalidNumber}
+              onChange={(e) => setStatusOnInvalidNumber(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
+            >
+              {leadStatuses.length === 0 && (
+                <option value="">Carregando status...</option>
+              )}
+              {leadStatuses.map((status) => (
+                <option key={status.id} value={status.nome}>
+                  {status.nome}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              Se o envio falhar por número inexistente, o lead será movido para este status e você será avisado.
             </p>
           </div>
         </div>

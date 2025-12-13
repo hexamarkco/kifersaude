@@ -23,6 +23,7 @@ import {
   Loader2,
   Send,
   CheckCircle,
+  AlertTriangle,
   X,
 } from 'lucide-react';
 import LeadForm from './LeadForm';
@@ -90,6 +91,12 @@ type AutomationSuccessInfo = {
   status: string;
 };
 
+type AutomationErrorInfo = {
+  leadName: string;
+  message: string;
+  status?: string;
+};
+
 function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo; onClose: () => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -140,6 +147,37 @@ function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo
           <button
             onClick={handleClose}
             className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AutomationErrorModal({ info, onClose }: { info: AutomationErrorInfo; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl border border-red-200 max-w-lg w-full mx-4">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-red-100 bg-red-50 rounded-t-xl">
+          <AlertTriangle className="w-5 h-5 text-red-600" />
+          <h3 className="text-lg font-semibold text-red-900">Envio não realizado</h3>
+        </div>
+        <div className="p-5 space-y-3 text-slate-700">
+          <p className="text-base text-slate-900 font-medium">{info.message}</p>
+          <p className="text-sm">Lead: <span className="font-semibold">{info.leadName}</span></p>
+          {info.status && (
+            <p className="text-sm text-slate-600">
+              O status foi alterado automaticamente para <span className="font-semibold text-red-700">"{info.status}"</span>.
+            </p>
+          )}
+        </div>
+        <div className="px-5 pb-5">
+          <button
+            onClick={onClose}
+            className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium"
           >
             Entendi
           </button>
@@ -290,6 +328,7 @@ export default function LeadsManager({
     leadName: string;
     status: string;
   } | null>(null);
+  const [automationErrorInfo, setAutomationErrorInfo] = useState<AutomationErrorInfo | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -1152,7 +1191,39 @@ export default function LeadsManager({
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Erro ao enviar automação manual:', errorMessage);
-        alert(`Não foi possível enviar a automação: ${errorMessage}`);
+        const normalizedError = errorMessage.toLowerCase();
+        if (
+          normalizedError.includes('não possui whatsapp') ||
+          normalizedError.includes('nao possui whatsapp') ||
+          normalizedError.includes('inválido') ||
+          normalizedError.includes('invalido')
+        ) {
+          const fallbackStatus = (settings.statusOnInvalidNumber || '').trim();
+          let appliedStatus: string | undefined;
+
+          if (fallbackStatus) {
+            const normalizedDesiredStatus = fallbackStatus.toLowerCase();
+            const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
+
+            if (normalizedCurrentStatus !== normalizedDesiredStatus) {
+              try {
+                await handleStatusChange(lead.id, fallbackStatus);
+              } catch (statusError) {
+                console.error('Erro ao atualizar status após número inválido:', statusError);
+              }
+            }
+
+            appliedStatus = fallbackStatus;
+          }
+
+          setAutomationErrorInfo({
+            leadName: lead.nome_completo || 'Lead',
+            message: `Não foi possível enviar a automação: ${errorMessage}`,
+            status: appliedStatus,
+          });
+        } else {
+          alert(`Não foi possível enviar a automação: ${errorMessage}`);
+        }
       } finally {
         setSendingAutomationIds((previous) => {
           const next = new Set(previous);
@@ -1852,6 +1923,9 @@ export default function LeadsManager({
           }
           defaultType="Follow-up"
         />
+      )}
+      {automationErrorInfo && (
+        <AutomationErrorModal info={automationErrorInfo} onClose={() => setAutomationErrorInfo(null)} />
       )}
       {automationSuccessInfo && (
         <AutomationSuccessToast info={automationSuccessInfo} onClose={() => setAutomationSuccessInfo(null)} />

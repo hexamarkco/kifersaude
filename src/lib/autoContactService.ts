@@ -15,6 +15,7 @@ export type AutoContactSettings = {
   autoSend?: boolean;
   apiKey: string;
   statusOnSend: string;
+  statusOnInvalidNumber?: string;
   messageFlow: AutoContactStep[];
 };
 
@@ -67,6 +68,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
         ? settings.statusOnSend.trim()
         : DEFAULT_STATUS,
+    statusOnInvalidNumber:
+      typeof settings.statusOnInvalidNumber === 'string' && settings.statusOnInvalidNumber.trim()
+        ? settings.statusOnInvalidNumber.trim()
+        : '',
     messageFlow,
   };
 };

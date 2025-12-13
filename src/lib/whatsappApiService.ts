@@ -7,6 +7,12 @@ interface WhatsAppSettings {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
+function sanitizeWhapiToken(rawToken: string): string {
+  if (!rawToken) return '';
+
+  return rawToken.replace(/^Bearer\s+/i, '').trim();
+}
+
 type WhapiContactStatus = 'valid' | 'invalid';
 
 type WhapiContactResponse = {
@@ -63,7 +69,7 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
   }
 
   const rawSettings = data.settings as any;
-  const token = rawSettings.apiKey || rawSettings.token || '';
+  const token = sanitizeWhapiToken(rawSettings.apiKey || rawSettings.token || '');
 
   if (!token) {
     throw new Error('Token da Whapi Cloud não configurado. Verifique as configurações em Automação do WhatsApp.');

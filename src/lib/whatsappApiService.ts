@@ -119,7 +119,10 @@ async function validateWhatsAppRecipient(chatId: string, token: string): Promise
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ contacts: [phone] }),
+    body: JSON.stringify({
+      contacts: [phone],
+      force_check: false,
+    }),
   });
 
   if (!response.ok) {

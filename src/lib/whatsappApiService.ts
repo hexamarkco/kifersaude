@@ -112,6 +112,11 @@ async function validateWhatsAppRecipient(chatId: string, token: string): Promise
 
   if (!phone) return chatId;
 
+  console.info('[WhatsAppAPI] Validando destinatário com Check phones', {
+    endpoint: `${WHAPI_BASE_URL}/contacts`,
+    body: { contacts: [phone], force_check: false },
+  });
+
   const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
     method: 'POST',
     headers: {
@@ -137,7 +142,15 @@ async function validateWhatsAppRecipient(chatId: string, token: string): Promise
     throw new Error('Número não possui WhatsApp ou é inválido.');
   }
 
-  return `${contactInfo.wa_id}@s.whatsapp.net`;
+  const normalizedWaId = normalizeChatId(contactInfo.wa_id);
+
+  console.info('[WhatsAppAPI] Resultado do Check phones', {
+    contact: contactInfo.input,
+    status: contactInfo.status,
+    wa_id: normalizedWaId,
+  });
+
+  return normalizedWaId;
 }
 
 export interface MediaContent {

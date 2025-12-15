@@ -51,7 +51,7 @@ export default function ReminderSchedulerModal({
   const [title, setTitle] = useState(() => defaultTitle ?? `Follow-up: ${lead.nome_completo}`);
   const [description, setDescription] = useState(() => defaultDescription ?? '');
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>(defaultType);
-  const [priority, setPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>('alta');
+  const [priority, setPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>('normal');
   const [saving, setSaving] = useState(false);
 
   const formattedLeadPhone = useMemo(() => {

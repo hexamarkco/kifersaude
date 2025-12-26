@@ -25,6 +25,7 @@ import {
   CheckCircle,
   AlertTriangle,
   X,
+  Download,
 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
@@ -50,6 +51,7 @@ import {
 } from '../lib/autoContactService';
 import type { AutoContactSettings } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
+import { downloadXlsx } from '../lib/xlsxExport';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -809,6 +811,79 @@ export default function LeadsManager({
     setBulkProximoRetorno('');
     setBulkArchiveAction('none');
   }, []);
+
+  const normalizePhoneNumber = (phone: string | null | undefined) => {
+    if (!phone) return '';
+    return phone.replace(/\D/g, '');
+  };
+
+  const formatDateForExport = (value: string | null | undefined) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleString('pt-BR');
+  };
+
+  const handleExportSelectedLeads = useCallback(() => {
+    if (selectedLeadIds.length === 0) {
+      alert('Selecione ao menos um lead para exportar.');
+      return;
+    }
+
+    const selectedSet = new Set(selectedLeadIds);
+    const leadsToExport = leads.filter((lead) => selectedSet.has(lead.id));
+
+    if (leadsToExport.length === 0) {
+      alert('Nenhum lead válido encontrado para exportar.');
+      return;
+    }
+
+    const headers = [
+      'ID',
+      'Nome',
+      'Telefone',
+      'Telefone (WhatsApp)',
+      'E-mail',
+      'Status',
+      'Origem',
+      'Tipo de contratação',
+      'Responsável',
+      'Cidade',
+      'Próximo retorno',
+      'Último contato',
+      'Criado em',
+      'Tags',
+      'Canal',
+      'Observações',
+    ];
+
+    const rows = leadsToExport.map((lead) => {
+      const phoneDigits = normalizePhoneNumber(lead.telefone);
+      const whatsappNumber = phoneDigits ? `55${phoneDigits}` : '';
+
+      return [
+        lead.id || '',
+        lead.nome_completo || '',
+        lead.telefone || '',
+        whatsappNumber,
+        lead.email || '',
+        lead.status || '',
+        lead.origem || '',
+        lead.tipo_contratacao || '',
+        lead.responsavel || '',
+        lead.cidade || '',
+        formatDateForExport(lead.proximo_retorno),
+        formatDateForExport(lead.ultimo_contato),
+        formatDateForExport(lead.data_criacao ?? lead.created_at),
+        Array.isArray(lead.tags) ? lead.tags.join(', ') : '',
+        lead.canal || '',
+        lead.observacoes?.trim() || '',
+      ];
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    downloadXlsx(`leads-${today}.xlsx`, headers, rows, 'Leads');
+  }, [leads, selectedLeadIds]);
 
   const handleBulkDetailsApply = async () => {
     if (selectedLeadIds.length === 0) return;
@@ -1662,6 +1737,15 @@ export default function LeadsManager({
                         className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {isBulkUpdating ? 'Aplicando...' : 'Aplicar dados'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportSelectedLeads}
+                        disabled={isBulkUpdating}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Exportar XLSX</span>
                       </button>
                       <button
                         type="button"

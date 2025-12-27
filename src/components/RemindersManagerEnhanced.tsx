@@ -1501,177 +1501,175 @@ export default function RemindersManagerEnhanced() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden min-h-0">
-              <div className="modal-panel-content h-full overflow-y-auto bg-slate-50 p-5 space-y-3 min-h-0">
-                {historyLoading ? (
-                  <div className="flex h-full items-center justify-center text-slate-600">
-                    <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
-                    <span className="ml-2 text-sm">Carregando histórico...</span>
-                  </div>
-                ) : historyError ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    {historyError}
-                  </div>
-                ) : historyMessages.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
-                    <MessageSquare className="h-10 w-10 text-slate-300" />
-                    <p className="mt-2 text-sm font-semibold text-slate-700">Nenhuma mensagem encontrada.</p>
-                    <p className="text-xs">As últimas 50 mensagens enviadas e recebidas aparecerão aqui.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-3">
-                      {historyMessages.map((message) => (
+            <div className="modal-panel-content flex-1 min-h-0 overflow-y-auto bg-slate-50 p-5 space-y-3">
+              {historyLoading ? (
+                <div className="flex h-full items-center justify-center text-slate-600">
+                  <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+                  <span className="ml-2 text-sm">Carregando histórico...</span>
+                </div>
+              ) : historyError ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {historyError}
+                </div>
+              ) : historyMessages.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
+                  <MessageSquare className="h-10 w-10 text-slate-300" />
+                  <p className="mt-2 text-sm font-semibold text-slate-700">Nenhuma mensagem encontrada.</p>
+                  <p className="text-xs">As últimas 50 mensagens enviadas e recebidas aparecerão aqui.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {historyMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
+                      >
                         <div
-                          key={message.id}
-                          className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
+                          className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
+                            message.fromMe
+                              ? 'bg-teal-50 border-teal-100 text-slate-800'
+                              : 'bg-white border-slate-200 text-slate-800'
+                          }`}
                         >
-                          <div
-                            className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
-                              message.fromMe
-                                ? 'bg-teal-50 border-teal-100 text-slate-800'
-                                : 'bg-white border-slate-200 text-slate-800'
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
-                            <p className="mt-2 text-[11px] text-slate-500 text-right">
-                              {message.fromMe ? 'Você · ' : ''}
-                              {formatHistoryTimestamp(message.timestamp)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 text-slate-900">
-                            <Sparkles className="h-5 w-5 text-teal-600" />
-                            <span className="font-semibold">Gerar follow-up com IA</span>
-                          </div>
-                          <p className="text-sm text-slate-600">
-                            Use o histórico acima para criar uma resposta rápida de retorno.
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+                          <p className="mt-2 text-[11px] text-slate-500 text-right">
+                            {message.fromMe ? 'Você · ' : ''}
+                            {formatHistoryTimestamp(message.timestamp)}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleGenerateFollowUp}
-                          disabled={generatingFollowUp}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-70 sm:w-auto"
-                        >
-                          {generatingFollowUp ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-4 w-4" />
-                          )}
-                          <span>{generatingFollowUp ? 'Gerando...' : 'Gerar follow-up'}</span>
-                        </button>
                       </div>
+                    ))}
+                  </div>
 
-                      {followUpError && (
-                        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{followUpError}</p>
-                      )}
+                  <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 text-slate-900">
+                          <Sparkles className="h-5 w-5 text-teal-600" />
+                          <span className="font-semibold">Gerar follow-up com IA</span>
+                        </div>
+                        <p className="text-sm text-slate-600">
+                          Use o histórico acima para criar uma resposta rápida de retorno.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateFollowUp}
+                        disabled={generatingFollowUp}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-70 sm:w-auto"
+                      >
+                        {generatingFollowUp ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                        <span>{generatingFollowUp ? 'Gerando...' : 'Gerar follow-up'}</span>
+                      </button>
+                    </div>
 
-                      {generatedFollowUp && (
-                        <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-3">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={handleGenerateFollowUp}
-                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                                <span>Gerar outro</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleCopyFollowUp}
-                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
-                              >
-                                {followUpCopied ? (
-                                  <>
-                                    <Check className="h-4 w-4 text-teal-600" />
-                                    <span>Copiado</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="h-4 w-4" />
-                                    <span>Copiar</span>
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleApproveFollowUp}
-                                className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
-                              >
-                                <Check className="h-4 w-4" />
-                                <span>Aprovar e dividir em blocos</span>
-                              </button>
+                    {followUpError && (
+                      <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{followUpError}</p>
+                    )}
+
+                    {generatedFollowUp && (
+                      <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={handleGenerateFollowUp}
+                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              <span>Gerar outro</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCopyFollowUp}
+                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                            >
+                              {followUpCopied ? (
+                                <>
+                                  <Check className="h-4 w-4 text-teal-600" />
+                                  <span>Copiado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  <span>Copiar</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleApproveFollowUp}
+                              className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                            >
+                              <Check className="h-4 w-4" />
+                              <span>Aprovar e dividir em blocos</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
+
+                        {followUpApproved && followUpBlocks.length > 0 && (
+                          <div className="space-y-3 rounded-lg border border-teal-100 bg-white p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">Enviar em blocos sequenciais</p>
+                                <p className="text-xs text-slate-600">Revise os textos abaixo e envie no WhatsApp seguindo a ordem.</p>
+                              </div>
+                              {!historyModalData?.phone && (
+                                <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">Telefone indisponível</span>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {followUpBlocks.map((block, index) => {
+                                const whatsappBase = historyModalData?.phone ? getWhatsappLink(historyModalData.phone) : null;
+                                const whatsappLink = whatsappBase
+                                  ? `${whatsappBase}?text=${encodeURIComponent(block)}`
+                                  : null;
+
+                                return (
+                                  <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-semibold text-slate-800">Mensagem {index + 1}</span>
+                                      {whatsappLink ? (
+                                        <a
+                                          href={whatsappLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-green-700"
+                                        >
+                                          <MessageCircle className="h-4 w-4" />
+                                          <span>Enviar no WhatsApp</span>
+                                        </a>
+                                      ) : (
+                                        <span className="text-[11px] text-slate-500">Telefone não disponível</span>
+                                      )}
+                                    </div>
+
+                                    <textarea
+                                      value={block}
+                                      onChange={(event) => handleUpdateBlock(index, event.target.value)}
+                                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+                                      rows={3}
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-
-                          <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
-
-                          {followUpApproved && followUpBlocks.length > 0 && (
-                            <div className="space-y-3 rounded-lg border border-teal-100 bg-white p-3">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900">Enviar em blocos sequenciais</p>
-                                  <p className="text-xs text-slate-600">Revise os textos abaixo e envie no WhatsApp seguindo a ordem.</p>
-                                </div>
-                                {!historyModalData?.phone && (
-                                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">Telefone indisponível</span>
-                                )}
-                              </div>
-
-                              <div className="space-y-2">
-                                {followUpBlocks.map((block, index) => {
-                                  const whatsappBase = historyModalData?.phone ? getWhatsappLink(historyModalData.phone) : null;
-                                  const whatsappLink = whatsappBase
-                                    ? `${whatsappBase}?text=${encodeURIComponent(block)}`
-                                    : null;
-
-                                  return (
-                                    <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="text-xs font-semibold text-slate-800">Mensagem {index + 1}</span>
-                                        {whatsappLink ? (
-                                          <a
-                                            href={whatsappLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-green-700"
-                                          >
-                                            <MessageCircle className="h-4 w-4" />
-                                            <span>Enviar no WhatsApp</span>
-                                          </a>
-                                        ) : (
-                                          <span className="text-[11px] text-slate-500">Telefone não disponível</span>
-                                        )}
-                                      </div>
-
-                                      <textarea
-                                        value={block}
-                                        onChange={(event) => handleUpdateBlock(index, event.target.value)}
-                                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
-                                        rows={3}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">

@@ -10,6 +10,12 @@ export type AutoContactStep = {
   active: boolean;
 };
 
+export type AutoContactTemplate = {
+  id: string;
+  name: string;
+  message: string;
+};
+
 export type AutoContactSettings = {
   enabled: boolean;
   autoSend?: boolean;
@@ -17,6 +23,7 @@ export type AutoContactSettings = {
   statusOnSend: string;
   statusOnInvalidNumber?: string;
   messageFlow: AutoContactStep[];
+  messageTemplates: AutoContactTemplate[];
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
@@ -57,6 +64,13 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         active: step?.active !== false,
       }))
     : [];
+  const messageTemplates = Array.isArray(settings.messageTemplates)
+    ? settings.messageTemplates.map((template, index) => ({
+        id: typeof template?.id === 'string' && template.id.trim() ? template.id : `template-${index}`,
+        name: typeof template?.name === 'string' ? template.name : '',
+        message: typeof template?.message === 'string' ? template.message : '',
+      }))
+    : [];
 
   const apiKeyValue = typeof settings.apiKey === 'string' ? settings.apiKey : (typeof settings.token === 'string' ? settings.token : '');
 
@@ -73,6 +87,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         ? settings.statusOnInvalidNumber.trim()
         : '',
     messageFlow,
+    messageTemplates,
   };
 };
 

@@ -98,6 +98,7 @@ export default function WhatsAppApiSettings() {
     setStatusMessage(null);
 
     const currentMessageFlow = autoContactSettings?.messageFlow || [];
+    const currentMessageTemplates = autoContactSettings?.messageTemplates || [];
 
     const newSettings = {
       enabled,
@@ -107,6 +108,7 @@ export default function WhatsAppApiSettings() {
       statusOnSend: statusOnSend,
       statusOnInvalidNumber: statusOnInvalidNumber,
       messageFlow: currentMessageFlow,
+      messageTemplates: currentMessageTemplates,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {

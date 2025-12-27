@@ -25,12 +25,27 @@ const TEXT_MODEL_OPTIONS = [
 ];
 
 const DEFAULT_TEXT_MODEL = TEXT_MODEL_OPTIONS[0].value;
+const DEFAULT_FOLLOW_UP_PROMPT = `Você é um assistente de follow-up comercial em português do Brasil.
+Gere mensagens curtas, personalizadas, humanas e persuasivas.
+
+Sempre siga estas diretrizes:
+- Analise todo o histórico fornecido para entender perguntas, propostas e respostas (inclusive ausência delas).
+- Adapte o tom ao comportamento do cliente (engajado, frio, indeciso, com objeções, sumido, etc.).
+- Resolva objeções claras antes de avançar para a venda.
+- Espelhe a linguagem do cliente e use PNL, copywriting e gatilhos mentais com moderação.
+- Estrutura recomendada: Abertura com nome + contexto breve (quando necessário) + reforço de benefícios objetivos + CTA clara.
+- Seja respeitoso e direto; não use jargões técnicos nem textos longos.
+- Inclua chamadas à ação práticas como “Me responde por aqui” ou “Podemos retomar de onde paramos”.
+- Mantenha o foco em soluções e segurança do cliente, usando imagens mentais quando fizer sentido.
+- Se não houver histórico, sugira um primeiro contato leve e convidativo.
+`;
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
 type GptFormState = {
   apiKey: string;
   textModel: string;
+  followUpPrompt: string;
 };
 
 const normalizeGptSettings = (integration: IntegrationSetting | null): GptFormState => {
@@ -42,6 +57,7 @@ const normalizeGptSettings = (integration: IntegrationSetting | null): GptFormSt
   return {
     apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
     textModel: normalizedTextModel,
+    followUpPrompt: toTrimmedString(settings.followUpPrompt) || DEFAULT_FOLLOW_UP_PROMPT,
   };
 };
 
@@ -81,6 +97,7 @@ export default function IntegrationsTab() {
     const sanitizedSettings = {
       apiKey: gptFormState.apiKey.trim(),
       textModel: gptFormState.textModel.trim() || DEFAULT_TEXT_MODEL,
+      followUpPrompt: gptFormState.followUpPrompt.trim() || DEFAULT_FOLLOW_UP_PROMPT,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(gptIntegration.id, {
@@ -213,6 +230,20 @@ export default function IntegrationsTab() {
             <p className="text-xs text-slate-500 mt-2">
               Escolha o modelo disponível na sua conta para respostas e reescritas de texto. Os áudios continuarão usando o Whisper
               automaticamente.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Prompt do follow-up (ChatGPT)</label>
+            <textarea
+              value={gptFormState.followUpPrompt}
+              onChange={event => setGptFormState(prev => ({ ...prev, followUpPrompt: event.target.value }))}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent min-h-[180px]"
+              placeholder={DEFAULT_FOLLOW_UP_PROMPT}
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              Esse prompt é usado para gerar mensagens automáticas de follow-up. Ajuste o tom e as instruções conforme a sua
+              estratégia comercial.
             </p>
           </div>
         </div>

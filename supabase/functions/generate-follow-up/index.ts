@@ -12,7 +12,7 @@ type FollowUpRequest = {
   leadContext?: Record<string, unknown> | string;
 };
 
-const SYSTEM_PROMPT = `Você é um assistente de follow-up comercial em português do Brasil.
+const DEFAULT_SYSTEM_PROMPT = `Você é um assistente de follow-up comercial em português do Brasil.
 Gere mensagens curtas, personalizadas, humanas e persuasivas.
 
 Sempre siga estas diretrizes:
@@ -107,6 +107,9 @@ Deno.serve(async (req) => {
 
     const apiKey = integration?.settings?.apiKey;
     const model = integration?.settings?.textModel || 'gpt-4o-mini';
+    const customPrompt = integration?.settings?.followUpPrompt;
+    const systemPrompt =
+      typeof customPrompt === 'string' && customPrompt.trim() ? customPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
 
     if (!apiKey || typeof apiKey !== 'string') {
       return new Response(
@@ -128,7 +131,7 @@ Deno.serve(async (req) => {
         model,
         temperature: 0.7,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: buildUserPrompt({
             leadName,
             conversationHistory,

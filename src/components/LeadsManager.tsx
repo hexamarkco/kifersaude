@@ -45,10 +45,12 @@ import { getBadgeStyle } from '../lib/colorUtils';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   DEFAULT_MESSAGE_FLOW,
+  applyTemplateVariables,
   normalizeAutoContactSettings,
   runAutoContactFlow,
+  sendAutoContactMessage,
 } from '../lib/autoContactService';
-import type { AutoContactSettings } from '../lib/autoContactService';
+import type { AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
 
 const isWithinDateRange = (
@@ -180,6 +182,95 @@ function AutomationErrorModal({ info, onClose }: { info: AutomationErrorInfo; on
             className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium"
           >
             Entendi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type AutomationTemplateModalProps = {
+  leadName: string;
+  templates: AutoContactTemplate[];
+  selectedTemplateId: string;
+  onChangeTemplate: (templateId: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+  isSending: boolean;
+};
+
+function AutomationTemplateModal({
+  leadName,
+  templates,
+  selectedTemplateId,
+  onChangeTemplate,
+  onClose,
+  onConfirm,
+  isSending,
+}: AutomationTemplateModalProps) {
+  const selectedTemplate =
+    selectedTemplateId === 'flow'
+      ? null
+      : templates.find((template) => template.id === selectedTemplateId) || null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl border border-slate-200 max-w-lg w-full mx-4">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+          <MessageCircle className="w-5 h-5 text-slate-600" />
+          <h3 className="text-lg font-semibold text-slate-900">Enviar automação manual</h3>
+        </div>
+        <div className="p-5 space-y-4 text-slate-700">
+          <p className="text-sm text-slate-600">
+            Selecione o modelo desejado para enviar para <span className="font-semibold">{leadName}</span>.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Modelo de mensagem
+            </label>
+            <select
+              value={selectedTemplateId}
+              onChange={(event) => onChangeTemplate(event.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
+            >
+              <option value="flow">Fluxo automático padrão</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name || 'Modelo sem nome'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              Prévia
+            </label>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
+              {selectedTemplateId === 'flow' ? (
+                <p>O fluxo automático configurado será enviado.</p>
+              ) : selectedTemplate?.message ? (
+                <p className="whitespace-pre-wrap">{selectedTemplate.message}</p>
+              ) : (
+                <p>Nenhuma mensagem definida neste modelo.</p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="px-5 pb-5 flex flex-col sm:flex-row sm:justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
+            disabled={isSending}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-60"
+            disabled={isSending}
+          >
+            {isSending ? 'Enviando...' : 'Enviar agora'}
           </button>
         </div>
       </div>
@@ -324,6 +415,8 @@ export default function LeadsManager({
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
+  const [automationTemplateLead, setAutomationTemplateLead] = useState<Lead | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('flow');
   const [automationSuccessInfo, setAutomationSuccessInfo] = useState<{
     leadName: string;
     status: string;
@@ -1154,14 +1247,16 @@ export default function LeadsManager({
     }
   };
 
-  const sendManualAutomation = useCallback(
-    async (lead: Lead) => {
-      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (!settings.apiKey) {
-        alert('Token da Whapi Cloud não configurado. Configure em Configurações > Integrações > Automação do WhatsApp.');
-        return;
-      }
-
+  const executeAutomationSend = useCallback(
+    async ({
+      lead,
+      settings,
+      template,
+    }: {
+      lead: Lead;
+      settings: AutoContactSettings;
+      template: AutoContactTemplate | null;
+    }) => {
       const messageFlow =
         settings.messageFlow.length > 0 ? settings.messageFlow : DEFAULT_MESSAGE_FLOW;
 
@@ -1172,22 +1267,30 @@ export default function LeadsManager({
         const normalizedDesiredStatus = desiredStatus.toLowerCase();
         const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
 
-        await runAutoContactFlow({
-          lead,
-          settings: { ...settings, messageFlow },
-          onFirstMessageSent: async () => {
-            await registerContact(lead, 'Mensagem Automática');
+        const onFirstMessageSent = async () => {
+          await registerContact(lead, 'Mensagem Automática');
 
-            if (normalizedCurrentStatus !== normalizedDesiredStatus) {
-              await handleStatusChange(lead.id, desiredStatus);
-            }
+          if (normalizedCurrentStatus !== normalizedDesiredStatus) {
+            await handleStatusChange(lead.id, desiredStatus);
+          }
 
-            setAutomationSuccessInfo({
-              leadName: lead.nome_completo || 'Lead',
-              status: desiredStatus,
-            });
-          },
-        });
+          setAutomationSuccessInfo({
+            leadName: lead.nome_completo || 'Lead',
+            status: desiredStatus,
+          });
+        };
+
+        if (template) {
+          const finalMessage = applyTemplateVariables(template.message, lead);
+          await sendAutoContactMessage({ lead, message: finalMessage, settings });
+          await onFirstMessageSent();
+        } else {
+          await runAutoContactFlow({
+            lead,
+            settings: { ...settings, messageFlow },
+            onFirstMessageSent,
+          });
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Erro ao enviar automação manual:', errorMessage);
@@ -1232,8 +1335,47 @@ export default function LeadsManager({
         });
       }
     },
-    [autoContactSettings, handleStatusChange, registerContact]
+    [handleStatusChange, registerContact],
   );
+
+  const sendManualAutomation = useCallback(
+    async (lead: Lead) => {
+      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
+      if (!settings.apiKey) {
+        alert('Token da Whapi Cloud não configurado. Configure em Configurações > Integrações > Automação do WhatsApp.');
+        return;
+      }
+
+      if (settings.messageTemplates.length > 0) {
+        setAutomationTemplateLead(lead);
+        setSelectedTemplateId('flow');
+        return;
+      }
+
+      await executeAutomationSend({ lead, settings, template: null });
+    },
+    [autoContactSettings, executeAutomationSend]
+  );
+
+  const handleConfirmTemplateSend = useCallback(async () => {
+    if (!automationTemplateLead) return;
+
+    const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
+    const selectedTemplate =
+      selectedTemplateId === 'flow'
+        ? null
+        : settings.messageTemplates.find((template) => template.id === selectedTemplateId) || null;
+
+    if (selectedTemplate && !selectedTemplate.message.trim()) {
+      alert('O modelo selecionado está sem mensagem. Preencha o texto antes de enviar.');
+      return;
+    }
+
+    const lead = automationTemplateLead;
+    setAutomationTemplateLead(null);
+
+    await executeAutomationSend({ lead, settings, template: selectedTemplate });
+  }, [automationTemplateLead, autoContactSettings, executeAutomationSend, selectedTemplateId]);
 
   const handleConvertToContract = (lead: Lead) => {
     if (onConvertToContract) {
@@ -1922,6 +2064,17 @@ export default function LeadsManager({
             reminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta enviada?'
           }
           defaultType="Follow-up"
+        />
+      )}
+      {automationTemplateLead && (
+        <AutomationTemplateModal
+          leadName={automationTemplateLead.nome_completo || 'Lead'}
+          templates={autoContactSettings?.messageTemplates ?? []}
+          selectedTemplateId={selectedTemplateId}
+          onChangeTemplate={setSelectedTemplateId}
+          onClose={() => setAutomationTemplateLead(null)}
+          onConfirm={handleConfirmTemplateSend}
+          isSending={sendingAutomationIds.has(automationTemplateLead.id)}
         />
       )}
       {automationErrorInfo && (

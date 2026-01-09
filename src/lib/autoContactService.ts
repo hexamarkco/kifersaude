@@ -637,30 +637,6 @@ export async function runAutoContactFlow({
   }
 }
 
-const getTimeZoneOffset = (date: Date, timeZone: string): number => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(date);
-  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const asUTC = Date.UTC(
-    Number(map.year),
-    Number(map.month) - 1,
-    Number(map.day),
-    Number(map.hour),
-    Number(map.minute),
-    Number(map.second),
-  );
-  return asUTC - date.getTime();
-};
-
 const utcToZonedTime = (date: Date, timeZone: string): Date => {
   const offset = getTimeZoneOffset(date, timeZone);
   return new Date(date.getTime() + offset);
@@ -709,11 +685,6 @@ const buildHolidaySet = (holidays?: string[]) => {
     }
   });
   return { specificDates, recurringDates };
-};
-
-const getWeekdayNumber = (zonedDate: Date) => {
-  const day = zonedDate.getUTCDay();
-  return day === 0 ? 7 : day;
 };
 
 const isOutsideWindow = (zonedDate: Date, startMinutes: number, endMinutes: number) => {

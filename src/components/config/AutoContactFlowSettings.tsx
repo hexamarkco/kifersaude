@@ -1185,7 +1185,7 @@ export default function AutoContactFlowSettings() {
                       </div>
                       <h4 className="text-lg font-semibold text-slate-800">Detalhes do fluxo</h4>
                       <p className="text-sm text-slate-500 mt-1">
-                        Ajuste regras, sequência de mensagens e status final do fluxo selecionado.
+                        Ajuste regras, sequência de ações e status final do fluxo selecionado.
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1265,9 +1265,9 @@ export default function AutoContactFlowSettings() {
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-800">Condições dinâmicas</h4>
+                          <h4 className="text-sm font-semibold text-slate-800">Condições de entrada</h4>
                           <p className="text-xs text-slate-500 mt-1">
-                            Defina regras (status, origem, tags, datas e mais) para disparar o fluxo somente em cenários específicos.
+                            Estas condições são a primeira etapa do fluxo e determinam quando ele começa.
                           </p>
                         </div>
                         <button
@@ -1439,9 +1439,9 @@ export default function AutoContactFlowSettings() {
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-800">Sequência de mensagens</h4>
+                          <h4 className="text-sm font-semibold text-slate-800">Sequência de ações</h4>
                           <p className="text-xs text-slate-500 mt-1">
-                            Configure o intervalo em horas e o template que será enviado em cada etapa.
+                            Cada etapa representa uma ação. Configure o intervalo e, por enquanto, o template de mensagem a ser enviado.
                           </p>
                         </div>
                         <button

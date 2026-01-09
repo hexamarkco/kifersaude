@@ -24,6 +24,8 @@ export type AutoContactFlowActionType = 'send_message' | 'update_status' | 'arch
 
 export type AutoContactFlowMessageSource = 'template' | 'custom';
 
+export type AutoContactInvalidNumberAction = 'none' | 'update_status' | 'archive_lead' | 'delete_lead';
+
 export type AutoContactFlowCustomMessage = {
   type: TemplateMessageType;
   text?: string;
@@ -85,6 +87,8 @@ export type AutoContactFlow = {
   triggerStatus: string;
   steps: AutoContactFlowStep[];
   finalStatus?: string;
+  invalidNumberAction?: AutoContactInvalidNumberAction;
+  invalidNumberStatus?: string;
   conditionLogic?: 'all' | 'any';
   conditions?: AutoContactFlowCondition[];
   exitConditionLogic?: 'all' | 'any';
@@ -116,10 +120,7 @@ export type AutoContactSettings = {
   enabled: boolean;
   autoSend?: boolean;
   apiKey: string;
-  statusOnSend: string;
-  statusOnInvalidNumber?: string;
   messageTemplates: AutoContactTemplate[];
-  selectedTemplateId: string;
   flows: AutoContactFlow[];
   scheduling: AutoContactSchedulingSettings;
   monitoring: AutoContactMonitoringSettings;
@@ -311,15 +312,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       message: composedMessage || templateMessage,
     };
   });
-  const selectedTemplateId =
-    typeof settings.selectedTemplateId === 'string' && settings.selectedTemplateId.trim()
-      ? settings.selectedTemplateId
-      : messageTemplates[0]?.id ?? '';
-
   const apiKeyValue = typeof settings.apiKey === 'string' ? settings.apiKey : (typeof settings.token === 'string' ? settings.token : '');
-  const validSelectedTemplateId = messageTemplates.some((template) => template.id === selectedTemplateId)
-    ? selectedTemplateId
-    : messageTemplates[0]?.id ?? '';
   const rawFlows =
     Array.isArray(settings.flows) && settings.flows.length > 0 ? settings.flows : DEFAULT_AUTO_CONTACT_FLOWS;
   const fallbackTemplateId = messageTemplates[0]?.id ?? '';
@@ -377,6 +370,16 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   };
   const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
     value === 'custom' ? 'custom' : 'template';
+  const normalizeInvalidNumberAction = (value: unknown): AutoContactInvalidNumberAction => {
+    switch (value) {
+      case 'update_status':
+      case 'archive_lead':
+      case 'delete_lead':
+        return value;
+      default:
+        return 'none';
+    }
+  };
   const normalizeCustomMessage = (message: any): AutoContactFlowCustomMessage => {
     const type = normalizeMessageType(message?.type);
     return {
@@ -458,6 +461,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
+        invalidNumberAction: normalizeInvalidNumberAction(flow?.invalidNumberAction),
+        invalidNumberStatus: typeof flow?.invalidNumberStatus === 'string' ? flow.invalidNumberStatus : '',
         conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
         conditions: normalizedConditions,
         exitConditionLogic: flow?.exitConditionLogic === 'all' ? 'all' : 'any',
@@ -508,16 +513,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     enabled: settings.enabled !== false,
     autoSend: settings.autoSend === true,
     apiKey: apiKeyValue,
-    statusOnSend:
-      typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
-        ? settings.statusOnSend.trim()
-        : DEFAULT_STATUS,
-    statusOnInvalidNumber:
-      typeof settings.statusOnInvalidNumber === 'string' && settings.statusOnInvalidNumber.trim()
-        ? settings.statusOnInvalidNumber.trim()
-        : '',
     messageTemplates,
-    selectedTemplateId: validSelectedTemplateId,
     flows: normalizedFlows.length ? normalizedFlows : DEFAULT_AUTO_CONTACT_FLOWS,
     scheduling,
     monitoring,
@@ -808,6 +804,39 @@ const deleteLead = async (leadId: string): Promise<void> => {
   }
 };
 
+const isInvalidNumberError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('não possui whatsapp') ||
+    normalized.includes('nao possui whatsapp') ||
+    normalized.includes('inválido') ||
+    normalized.includes('invalido')
+  );
+};
+
+const applyInvalidNumberAction = async (flow: AutoContactFlow, lead: Lead): Promise<void> => {
+  const action = flow.invalidNumberAction ?? 'none';
+  switch (action) {
+    case 'update_status': {
+      const updatedStatus = await updateLeadStatus(lead.id, flow.invalidNumberStatus ?? '');
+      if (updatedStatus) {
+        lead.status = updatedStatus;
+      }
+      return;
+    }
+    case 'archive_lead':
+      await updateLeadArchive(lead.id, true);
+      lead.arquivado = true;
+      return;
+    case 'delete_lead':
+      await deleteLead(lead.id);
+      return;
+    default:
+      return;
+  }
+};
+
 export async function runAutoContactFlow({
   lead,
   settings,
@@ -850,59 +879,39 @@ export async function runAutoContactFlow({
     }
 
     if (step.actionType === 'send_message') {
-      if (step.messageSource === 'custom') {
-        const payload = buildCustomMessagePayload(step.customMessage, lead);
-        if (!payload) continue;
-        await sendAutoContactMessage({
-          lead,
-          contentType: payload.contentType,
-          content: payload.content,
-          settings,
-        });
+      try {
+        if (step.messageSource === 'custom') {
+          const payload = buildCustomMessagePayload(step.customMessage, lead);
+          if (!payload) continue;
+          await sendAutoContactMessage({
+            lead,
+            contentType: payload.contentType,
+            content: payload.content,
+            settings,
+          });
+        } else {
+          const template =
+            templates.find((item) => item.id === step.templateId) ??
+            templates[0] ??
+            null;
+          const message = getTemplateMessage(template);
+          if (!message.trim()) continue;
 
-        if (!firstMessageSent) {
-          await onFirstMessageSent?.();
-          firstMessageSent = true;
+          const finalMessage = applyTemplateVariables(message, lead);
+          await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
         }
-      } else {
-        const template =
-          templates.find((item) => item.id === step.templateId) ??
-          templates.find((item) => item.id === settings.selectedTemplateId) ??
-          templates[0] ??
-          null;
-        const templateMessages = getTemplateMessages(template);
-        let sentFromTemplate = false;
-
-        for (const message of templateMessages) {
-          if (message.type === 'text') {
-            const finalMessage = applyTemplateVariables(message.text ?? '', lead).trim();
-            if (!finalMessage) {
-              continue;
-            }
-            await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
-          } else {
-            const mediaUrl = applyTemplateVariables(message.mediaUrl ?? '', lead).trim();
-            if (!mediaUrl) {
-              throw new Error('Mensagem de automação com mídia sem URL configurada.');
-            }
-            const caption = message.caption ? applyTemplateVariables(message.caption, lead).trim() : undefined;
-            await sendAutoContactMessage({
-              lead,
-              contentType: message.type,
-              content: {
-                url: mediaUrl,
-                caption,
-              },
-              settings,
-            });
-          }
-
-          sentFromTemplate = true;
-          if (!firstMessageSent) {
-            await onFirstMessageSent?.();
-            firstMessageSent = true;
-          }
+      } catch (error) {
+        if (isInvalidNumberError(error)) {
+          console.warn('[AutoContact] Número inválido para envio automático.', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+          });
+          await applyInvalidNumberAction(matchingFlow, lead);
+          return;
         }
+        throw error;
+      }
 
         if (!sentFromTemplate) {
           continue;

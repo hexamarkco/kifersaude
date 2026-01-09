@@ -4,7 +4,6 @@ import {
   EyeOff,
   Info,
   Key,
-  Link,
   Loader2,
   Save,
   Settings,
@@ -18,12 +17,10 @@ import {
   type AutoContactSettings,
 } from '../../lib/autoContactService';
 import type { IntegrationSetting } from '../../lib/supabase';
-import { useConfig } from '../../contexts/ConfigContext';
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
 export default function WhatsAppApiSettings() {
-  const { leadStatuses } = useConfig();
   const [autoContactIntegration, setAutoContactIntegration] = useState<IntegrationSetting | null>(null);
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,14 +31,8 @@ export default function WhatsAppApiSettings() {
   const [enabled, setEnabled] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [token, setToken] = useState('');
-  const [statusOnSend, setStatusOnSend] = useState('');
-  const [statusOnInvalidNumber, setStatusOnInvalidNumber] = useState('');
 
   const loadSettings = useCallback(async () => {
-    if (leadStatuses.length === 0) {
-      return;
-    }
-
     setLoading(true);
     setStatusMessage(null);
 
@@ -55,24 +46,13 @@ export default function WhatsAppApiSettings() {
       setEnabled(normalized.enabled);
       setAutoSend((integration?.settings as any)?.autoSend ?? false);
       setToken(normalized.apiKey || '');
-
-      const validStatusNames = leadStatuses.map(s => s.nome);
-      const isValidStatus = normalized.statusOnSend && validStatusNames.includes(normalized.statusOnSend);
-      const finalStatus = isValidStatus ? normalized.statusOnSend : leadStatuses[0]?.nome || '';
-
-      setStatusOnSend(finalStatus);
-
-      const isValidInvalidStatus = normalized.statusOnInvalidNumber && validStatusNames.includes(normalized.statusOnInvalidNumber);
-      const finalInvalidStatus = isValidInvalidStatus ? normalized.statusOnInvalidNumber : leadStatuses[0]?.nome || '';
-
-      setStatusOnInvalidNumber(finalInvalidStatus);
     } catch (error) {
       console.error('[WhatsAppApiSettings] Error loading settings:', error);
       setStatusMessage({ type: 'error', text: 'Erro ao carregar configurações.' });
     } finally {
       setLoading(false);
     }
-  }, [leadStatuses]);
+  }, []);
 
   useEffect(() => {
     void loadSettings();
@@ -84,21 +64,10 @@ export default function WhatsAppApiSettings() {
       return;
     }
 
-    if (!statusOnSend) {
-      setStatusMessage({ type: 'error', text: 'Selecione um status válido.' });
-      return;
-    }
-
-    if (!statusOnInvalidNumber) {
-      setStatusMessage({ type: 'error', text: 'Selecione o status para números inválidos.' });
-      return;
-    }
-
     setSaving(true);
     setStatusMessage(null);
 
     const currentMessageTemplates = autoContactSettings?.messageTemplates || [];
-    const currentSelectedTemplateId = autoContactSettings?.selectedTemplateId || '';
     const fallbackSettings = normalizeAutoContactSettings(autoContactIntegration.settings);
     const currentFlows = autoContactSettings?.flows || fallbackSettings.flows;
     const currentScheduling = autoContactSettings?.scheduling || fallbackSettings.scheduling;
@@ -110,10 +79,7 @@ export default function WhatsAppApiSettings() {
       autoSend,
       apiKey: token.trim(),
       token: token.trim(),
-      statusOnSend: statusOnSend,
-      statusOnInvalidNumber: statusOnInvalidNumber,
       messageTemplates: currentMessageTemplates,
-      selectedTemplateId: currentSelectedTemplateId,
       flows: currentFlows,
       scheduling: currentScheduling,
       monitoring: currentMonitoring,
@@ -136,20 +102,13 @@ export default function WhatsAppApiSettings() {
       setAutoSend((updatedIntegration.settings as any)?.autoSend ?? false);
       setToken(normalized.apiKey || '');
 
-      const validStatusNames = leadStatuses.map(s => s.nome);
-      const isValidStatus = normalized.statusOnSend && validStatusNames.includes(normalized.statusOnSend);
-      setStatusOnSend(isValidStatus ? normalized.statusOnSend : leadStatuses[0]?.nome || '');
-
-      const isValidInvalidStatus = normalized.statusOnInvalidNumber && validStatusNames.includes(normalized.statusOnInvalidNumber);
-      setStatusOnInvalidNumber(isValidInvalidStatus ? normalized.statusOnInvalidNumber : leadStatuses[0]?.nome || '');
-
       setStatusMessage({ type: 'success', text: 'Configuração salva com sucesso.' });
     }
 
     setSaving(false);
   };
 
-  if (loading || leadStatuses.length === 0) {
+  if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-3 text-slate-600">
         <Loader2 className="w-5 h-5 animate-spin" />
@@ -235,52 +194,6 @@ export default function WhatsAppApiSettings() {
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Este token será usado para autenticação com a API da Whapi Cloud
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Status ao enviar primeira mensagem
-            </label>
-            <select
-              value={statusOnSend}
-              onChange={(e) => setStatusOnSend(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
-            >
-              {leadStatuses.length === 0 && (
-                <option value="">Carregando status...</option>
-              )}
-              {leadStatuses.map((status) => (
-                <option key={status.id} value={status.nome}>
-                  {status.nome}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              O lead será movido para este status ao receber a primeira mensagem automática
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Status quando o número não existe ou é inválido
-            </label>
-            <select
-              value={statusOnInvalidNumber}
-              onChange={(e) => setStatusOnInvalidNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
-            >
-              {leadStatuses.length === 0 && (
-                <option value="">Carregando status...</option>
-              )}
-              {leadStatuses.map((status) => (
-                <option key={status.id} value={status.nome}>
-                  {status.nome}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Se o envio falhar por número inexistente, o lead será movido para este status e você será avisado.
             </p>
           </div>
         </div>

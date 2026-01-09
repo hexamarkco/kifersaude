@@ -82,6 +82,14 @@ export type AutoContactSettings = {
   logging: AutoContactLoggingSettings;
 };
 
+export type AutoContactScheduleAdjustmentReason = 'outside_window' | 'weekend' | 'holiday';
+
+export type AutoContactSchedulePreviewItem = {
+  step: AutoContactFlowStep;
+  scheduledAt: Date;
+  adjustmentReasons: AutoContactScheduleAdjustmentReason[];
+};
+
 const DEFAULT_STATUS = 'Contato Inicial';
 const DEFAULT_SCHEDULING: AutoContactSchedulingSettings = {
   timezone: 'America/Sao_Paulo',
@@ -380,6 +388,159 @@ export const applyTemplateVariables = (template: string, lead: Lead) => {
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
+const parseHourMinute = (value: string): { hour: number; minute: number } => {
+  if (!value) return { hour: 0, minute: 0 };
+  const [rawHour, rawMinute] = value.split(':');
+  const hour = Number(rawHour);
+  const minute = Number(rawMinute);
+  return {
+    hour: Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 23) : 0,
+    minute: Number.isFinite(minute) ? Math.min(Math.max(minute, 0), 59) : 0,
+  };
+};
+
+const getTimeZoneOffset = (date: Date, timeZone: string): number => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const lookup: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      lookup[part.type] = part.value;
+    }
+  }
+  const year = Number(lookup.year);
+  const month = Number(lookup.month);
+  const day = Number(lookup.day);
+  const hour = Number(lookup.hour);
+  const minute = Number(lookup.minute);
+  const second = Number(lookup.second);
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  return asUtc - date.getTime();
+};
+
+const toZonedDate = (date: Date, timeZone: string): Date => {
+  const offset = getTimeZoneOffset(date, timeZone);
+  return new Date(date.getTime() + offset);
+};
+
+const getZonedParts = (date: Date, timeZone: string): DateParts => {
+  const zoned = toZonedDate(date, timeZone);
+  return {
+    year: zoned.getUTCFullYear(),
+    month: zoned.getUTCMonth(),
+    day: zoned.getUTCDate(),
+    hour: zoned.getUTCHours(),
+    minute: zoned.getUTCMinutes(),
+  };
+};
+
+const buildDateInTimeZone = (
+  { year, month, day, hour, minute }: DateParts,
+  timeZone: string,
+): Date => {
+  const utcDate = new Date(Date.UTC(year, month, day, hour, minute, 0));
+  const offset = getTimeZoneOffset(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offset);
+};
+
+const addDaysToZoned = (zoned: Date, days: number): Date => new Date(zoned.getTime() + days * 86400000);
+
+const getWeekdayNumber = (zoned: Date): number => {
+  const day = zoned.getUTCDay();
+  return day === 0 ? 7 : day;
+};
+
+const formatDateKey = (zoned: Date): string => {
+  const year = zoned.getUTCFullYear();
+  const month = String(zoned.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(zoned.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getHolidayCalendarForYear = (_year: number, _timeZone: string): string[] => {
+  // TODO: consultar calendário de feriados configurado (stub 2).
+  return [];
+};
+
+const isHolidayDate = (zoned: Date, timeZone: string): boolean => {
+  const calendar = getHolidayCalendarForYear(zoned.getUTCFullYear(), timeZone);
+  return calendar.includes(formatDateKey(zoned));
+};
+
+export const getNextAllowedSendAt = (
+  reference: Date,
+  scheduling: AutoContactSchedulingSettings,
+): Date => {
+  const allowedWeekdays = scheduling.allowedWeekdays?.length ? scheduling.allowedWeekdays : [1, 2, 3, 4, 5, 6, 7];
+  const start = parseHourMinute(scheduling.startHour);
+  const end = parseHourMinute(scheduling.endHour);
+  let candidate = new Date(reference.getTime());
+
+  for (let attempt = 0; attempt < 370; attempt += 1) {
+    const zoned = toZonedDate(candidate, scheduling.timezone);
+    const weekday = getWeekdayNumber(zoned);
+    const isAllowedWeekday = allowedWeekdays.includes(weekday);
+    const shouldSkipHoliday = scheduling.skipHolidays && isHolidayDate(zoned, scheduling.timezone);
+
+    if (!isAllowedWeekday || shouldSkipHoliday) {
+      const nextDay = addDaysToZoned(zoned, 1);
+      const parts = {
+        year: nextDay.getUTCFullYear(),
+        month: nextDay.getUTCMonth(),
+        day: nextDay.getUTCDate(),
+        hour: start.hour,
+        minute: start.minute,
+      };
+      candidate = buildDateInTimeZone(parts, scheduling.timezone);
+      continue;
+    }
+
+    const currentMinutes = zoned.getUTCHours() * 60 + zoned.getUTCMinutes();
+    const startMinutes = start.hour * 60 + start.minute;
+    const endMinutes = end.hour * 60 + end.minute;
+
+    if (currentMinutes < startMinutes) {
+      candidate = buildDateInTimeZone(
+        {
+          ...getZonedParts(candidate, scheduling.timezone),
+          hour: start.hour,
+          minute: start.minute,
+        },
+        scheduling.timezone,
+      );
+      return candidate;
+    }
+
+    if (currentMinutes > endMinutes) {
+      const nextDay = addDaysToZoned(zoned, 1);
+      candidate = buildDateInTimeZone(
+        {
+          year: nextDay.getUTCFullYear(),
+          month: nextDay.getUTCMonth(),
+          day: nextDay.getUTCDate(),
+          hour: start.hour,
+          minute: start.minute,
+        },
+        scheduling.timezone,
+      );
+      continue;
+    }
+
+    return candidate;
+  }
+
+  return candidate;
+};
+
 export async function sendAutoContactMessage({
   lead,
   message,
@@ -433,13 +594,209 @@ export async function runAutoContactFlow({
   if (signal?.() === false) return;
 
   const templates = settings.messageTemplates ?? [];
-  const selectedTemplate =
-    templates.find((template) => template.id === settings.selectedTemplateId) ?? templates[0] ?? null;
+  const flows = settings.flows ?? [];
+  const matchingFlow = flows.find((flow) => flow.triggerStatus === (lead.status ?? '')) ?? flows[0] ?? null;
+  if (!matchingFlow) return;
 
-  const message = getTemplateMessage(selectedTemplate);
-  if (!message.trim()) return;
+  let cumulativeDelayHours = 0;
+  let firstMessageSent = false;
 
-  const finalMessage = applyTemplateVariables(message, lead);
-  await sendAutoContactMessage({ lead, message: finalMessage, settings });
-  await onFirstMessageSent?.();
+  for (const step of matchingFlow.steps) {
+    if (signal?.() === false) return;
+    cumulativeDelayHours += step.delayHours;
+
+    const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
+    const scheduledAt = getNextAllowedSendAt(desiredAt, settings.scheduling);
+    const now = new Date();
+    const waitMs = scheduledAt.getTime() - now.getTime();
+
+    if (waitMs > 0) {
+      console.info('[AutoContact] Mensagem agendada para envio futuro', {
+        leadId: lead.id,
+        stepId: step.id,
+        scheduledAt: scheduledAt.toISOString(),
+      });
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      if (signal?.() === false) return;
+    }
+
+    const template =
+      templates.find((item) => item.id === step.templateId) ??
+      templates.find((item) => item.id === settings.selectedTemplateId) ??
+      templates[0] ??
+      null;
+    const message = getTemplateMessage(template);
+    if (!message.trim()) continue;
+
+    const finalMessage = applyTemplateVariables(message, lead);
+    await sendAutoContactMessage({ lead, message: finalMessage, settings });
+    if (!firstMessageSent) {
+      await onFirstMessageSent?.();
+      firstMessageSent = true;
+    }
+  }
 }
+
+const getTimeZoneOffset = (date: Date, timeZone: string): number => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUTC = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second),
+  );
+  return asUTC - date.getTime();
+};
+
+const utcToZonedTime = (date: Date, timeZone: string): Date => {
+  const offset = getTimeZoneOffset(date, timeZone);
+  return new Date(date.getTime() + offset);
+};
+
+const zonedTimeToUtc = (zonedDate: Date, timeZone: string): Date => {
+  const utcDate = new Date(
+    Date.UTC(
+      zonedDate.getUTCFullYear(),
+      zonedDate.getUTCMonth(),
+      zonedDate.getUTCDate(),
+      zonedDate.getUTCHours(),
+      zonedDate.getUTCMinutes(),
+      zonedDate.getUTCSeconds(),
+    ),
+  );
+  const offset = getTimeZoneOffset(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offset);
+};
+
+const parseTimeValue = (value: string) => {
+  const [hourRaw, minuteRaw] = value.split(':');
+  const hour = Number.parseInt(hourRaw ?? '', 10);
+  const minute = Number.parseInt(minuteRaw ?? '', 10);
+  return {
+    hour: Number.isFinite(hour) ? hour : 0,
+    minute: Number.isFinite(minute) ? minute : 0,
+  };
+};
+
+const toDateKey = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const toMonthDayKey = (month: number, day: number) =>
+  `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const buildHolidaySet = (holidays?: string[]) => {
+  const specificDates = new Set<string>();
+  const recurringDates = new Set<string>();
+  (holidays ?? []).forEach((holiday) => {
+    const trimmed = holiday.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      specificDates.add(trimmed);
+    } else if (/^\d{2}-\d{2}$/.test(trimmed)) {
+      recurringDates.add(trimmed);
+    }
+  });
+  return { specificDates, recurringDates };
+};
+
+const getWeekdayNumber = (zonedDate: Date) => {
+  const day = zonedDate.getUTCDay();
+  return day === 0 ? 7 : day;
+};
+
+const isOutsideWindow = (zonedDate: Date, startMinutes: number, endMinutes: number) => {
+  const minutes = zonedDate.getUTCHours() * 60 + zonedDate.getUTCMinutes();
+  return minutes < startMinutes || minutes > endMinutes;
+};
+
+const setZonedTime = (zonedDate: Date, hour: number, minute: number) =>
+  new Date(Date.UTC(zonedDate.getUTCFullYear(), zonedDate.getUTCMonth(), zonedDate.getUTCDate(), hour, minute, 0));
+
+const advanceToNextDayStart = (zonedDate: Date, startHour: number, startMinute: number) =>
+  new Date(Date.UTC(zonedDate.getUTCFullYear(), zonedDate.getUTCMonth(), zonedDate.getUTCDate() + 1, startHour, startMinute, 0));
+
+export const buildAutoContactScheduleTimeline = ({
+  startAt,
+  steps,
+  scheduling,
+}: {
+  startAt: Date;
+  steps: AutoContactFlowStep[];
+  scheduling: AutoContactSchedulingSettings;
+}): AutoContactSchedulePreviewItem[] => {
+  if (!steps.length) return [];
+  const timeZone = scheduling.timezone || DEFAULT_SCHEDULING.timezone;
+  const { hour: startHour, minute: startMinute } = parseTimeValue(scheduling.startHour || DEFAULT_SCHEDULING.startHour);
+  const { hour: endHour, minute: endMinute } = parseTimeValue(scheduling.endHour || DEFAULT_SCHEDULING.endHour);
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
+  const allowedWeekdays = scheduling.allowedWeekdays?.length
+    ? scheduling.allowedWeekdays
+    : DEFAULT_SCHEDULING.allowedWeekdays;
+  const holidays = buildHolidaySet(scheduling.holidays);
+
+  let cursor = utcToZonedTime(startAt, timeZone);
+  return steps.map((step) => {
+    const adjustmentReasons = new Set<AutoContactScheduleAdjustmentReason>();
+    let scheduled = new Date(cursor.getTime() + step.delayHours * 60 * 60 * 1000);
+
+    for (let guard = 0; guard < 366; guard += 1) {
+      const weekdayNumber = getWeekdayNumber(scheduled);
+      const isWeekend = weekdayNumber === 6 || weekdayNumber === 7;
+      const dateKey = toDateKey(
+        scheduled.getUTCFullYear(),
+        scheduled.getUTCMonth() + 1,
+        scheduled.getUTCDate(),
+      );
+      const monthDayKey = toMonthDayKey(scheduled.getUTCMonth() + 1, scheduled.getUTCDate());
+      const isHoliday =
+        scheduling.skipHolidays &&
+        (holidays.specificDates.has(dateKey) || holidays.recurringDates.has(monthDayKey));
+
+      if (isHoliday) {
+        adjustmentReasons.add('holiday');
+        scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        continue;
+      }
+
+      if (!allowedWeekdays.includes(weekdayNumber)) {
+        adjustmentReasons.add(isWeekend ? 'weekend' : 'outside_window');
+        scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        continue;
+      }
+
+      if (isOutsideWindow(scheduled, startMinutes, endMinutes)) {
+        adjustmentReasons.add('outside_window');
+        const minutes = scheduled.getUTCHours() * 60 + scheduled.getUTCMinutes();
+        if (minutes < startMinutes) {
+          scheduled = setZonedTime(scheduled, startHour, startMinute);
+        } else {
+          scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        }
+        continue;
+      }
+
+      break;
+    }
+
+    const scheduledUtc = zonedTimeToUtc(scheduled, timeZone);
+    cursor = scheduled;
+    return {
+      step,
+      scheduledAt: scheduledUtc,
+      adjustmentReasons: Array.from(adjustmentReasons),
+    };
+  });
+};

@@ -27,10 +27,12 @@ import { configService } from '../../lib/configService';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   composeTemplateMessage,
+  buildAutoContactScheduleTimeline,
   DEFAULT_MESSAGE_TEMPLATES,
   DEFAULT_AUTO_CONTACT_FLOWS,
   getTemplateMessages,
   normalizeAutoContactSettings,
+  type AutoContactScheduleAdjustmentReason,
   type AutoContactFlow,
   type AutoContactFlowCondition,
   type AutoContactFlowStep,
@@ -650,6 +652,11 @@ export default function AutoContactFlowSettings() {
     not_equals: 'Não é igual',
     not_contains: 'Não contém',
   };
+  const adjustmentReasonLabels: Record<AutoContactScheduleAdjustmentReason, string> = {
+    outside_window: 'fora da janela',
+    weekend: 'fim de semana',
+    holiday: 'feriado',
+  };
   const getLocalDateTimeValue = () => {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -658,18 +665,18 @@ export default function AutoContactFlowSettings() {
   const simulationTimeline = useMemo(() => {
     if (!activeFlow || !showSimulation) return [];
     const baseDate = simulationStart ? new Date(simulationStart) : new Date();
-    let cumulative = 0;
-    return activeFlow.steps.map((step, index) => {
-      cumulative += step.delayHours;
-      const scheduledAt = new Date(baseDate.getTime() + cumulative * 60 * 60 * 1000);
-      return {
-        index: index + 1,
-        step,
-        scheduledAt,
-        delayHours: step.delayHours,
-      };
-    });
-  }, [activeFlow, showSimulation, simulationStart]);
+    return buildAutoContactScheduleTimeline({
+      startAt: baseDate,
+      steps: activeFlow.steps,
+      scheduling: schedulingDraft,
+    }).map((item, index) => ({
+      index: index + 1,
+      step: item.step,
+      scheduledAt: item.scheduledAt,
+      delayHours: item.step.delayHours,
+      adjustmentReasons: item.adjustmentReasons,
+    }));
+  }, [activeFlow, schedulingDraft, showSimulation, simulationStart]);
 
   useEffect(() => {
     if (!activeFlowId) {
@@ -1506,12 +1513,20 @@ export default function AutoContactFlowSettings() {
                                 className="flex items-center justify-between rounded-lg bg-white border border-teal-100 px-3 py-2 text-xs text-teal-800"
                               >
                                 <div>
-                                  Etapa {item.index}: {item.delayHours}h após início
+                                  <div>
+                                    Etapa {item.index}: {item.delayHours}h após início
+                                  </div>
+                                  {item.adjustmentReasons.length > 0 && (
+                                    <div className="text-[11px] text-teal-600">
+                                      Ajuste: {item.adjustmentReasons.map((reason) => adjustmentReasonLabels[reason]).join(', ')}
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   {item.scheduledAt.toLocaleString('pt-BR', {
                                     dateStyle: 'short',
                                     timeStyle: 'short',
+                                    timeZone: schedulingDraft.timezone,
                                   })}
                                 </div>
                               </div>

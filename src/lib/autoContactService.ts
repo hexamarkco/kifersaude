@@ -20,6 +20,21 @@ export type AutoContactTemplate = {
   messages?: TemplateMessage[];
 };
 
+export type AutoContactFlowStep = {
+  id: string;
+  delayHours: number;
+  templateId: string;
+};
+
+export type AutoContactFlow = {
+  id: string;
+  name: string;
+  triggerStatus: string;
+  steps: AutoContactFlowStep[];
+  stopOnStatusChange: boolean;
+  finalStatus?: string;
+};
+
 export type AutoContactSettings = {
   enabled: boolean;
   autoSend?: boolean;
@@ -28,6 +43,7 @@ export type AutoContactSettings = {
   statusOnInvalidNumber?: string;
   messageTemplates: AutoContactTemplate[];
   selectedTemplateId: string;
+  flows: AutoContactFlow[];
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
@@ -61,10 +77,38 @@ export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
       },
     ],
   },
+  {
+    id: 'template-3',
+    name: 'Lembrete cordial',
+    message:
+      'Oi {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
+    messages: [
+      {
+        id: 'template-3-message-1',
+        type: 'text',
+        text: 'Oi {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
+      },
+    ],
+  },
 ];
 
 const normalizeMessageType = (type: unknown): TemplateMessageType =>
   type === 'image' || type === 'video' || type === 'audio' || type === 'document' ? type : 'text';
+
+export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
+  {
+    id: 'flow-1',
+    name: 'Follow-up automático',
+    triggerStatus: DEFAULT_STATUS,
+    stopOnStatusChange: true,
+    finalStatus: '',
+    steps: [
+      { id: 'flow-1-step-1', delayHours: 2, templateId: 'template-1' },
+      { id: 'flow-1-step-2', delayHours: 24, templateId: 'template-2' },
+      { id: 'flow-1-step-3', delayHours: 48, templateId: 'template-3' },
+    ],
+  },
+];
 
 export const getTemplateMessages = (template?: AutoContactTemplate | null): TemplateMessage[] => {
   if (!template) return [];
@@ -149,6 +193,38 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   const validSelectedTemplateId = messageTemplates.some((template) => template.id === selectedTemplateId)
     ? selectedTemplateId
     : messageTemplates[0]?.id ?? '';
+  const rawFlows =
+    Array.isArray(settings.flows) && settings.flows.length > 0 ? settings.flows : DEFAULT_AUTO_CONTACT_FLOWS;
+  const fallbackTemplateId = messageTemplates[0]?.id ?? '';
+  const normalizedFlows = rawFlows
+    .map((flow: any, flowIndex: number) => {
+      const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
+      const steps = Array.isArray(flow?.steps) ? flow.steps : [];
+      const normalizedSteps = steps
+        .map((step: any, stepIndex: number) => {
+          const delayHoursRaw = Number(step?.delayHours);
+          const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
+          const templateId = typeof step?.templateId === 'string' ? step.templateId : '';
+          const validTemplateId =
+            messageTemplates.some((template) => template.id === templateId) ? templateId : fallbackTemplateId;
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            templateId: validTemplateId,
+          };
+        })
+        .filter((step) => step.templateId);
+
+      return {
+        id: flowId,
+        name: typeof flow?.name === 'string' ? flow.name : '',
+        triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
+        steps: normalizedSteps,
+        stopOnStatusChange: flow?.stopOnStatusChange !== false,
+        finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
+      };
+    })
+    .filter((flow) => flow.triggerStatus.trim() && flow.steps.length > 0);
 
   return {
     enabled: settings.enabled !== false,
@@ -164,6 +240,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         : '',
     messageTemplates,
     selectedTemplateId: validSelectedTemplateId,
+    flows: normalizedFlows.length ? normalizedFlows : DEFAULT_AUTO_CONTACT_FLOWS,
   };
 };
 

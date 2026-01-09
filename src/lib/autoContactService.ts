@@ -859,23 +859,56 @@ export async function runAutoContactFlow({
           content: payload.content,
           settings,
         });
+
+        if (!firstMessageSent) {
+          await onFirstMessageSent?.();
+          firstMessageSent = true;
+        }
       } else {
         const template =
           templates.find((item) => item.id === step.templateId) ??
           templates.find((item) => item.id === settings.selectedTemplateId) ??
           templates[0] ??
           null;
-        const message = getTemplateMessage(template);
-        if (!message.trim()) continue;
+        const templateMessages = getTemplateMessages(template);
+        let sentFromTemplate = false;
 
-        const finalMessage = applyTemplateVariables(message, lead);
-        await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
+        for (const message of templateMessages) {
+          if (message.type === 'text') {
+            const finalMessage = applyTemplateVariables(message.text ?? '', lead).trim();
+            if (!finalMessage) {
+              continue;
+            }
+            await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
+          } else {
+            const mediaUrl = applyTemplateVariables(message.mediaUrl ?? '', lead).trim();
+            if (!mediaUrl) {
+              throw new Error('Mensagem de automação com mídia sem URL configurada.');
+            }
+            const caption = message.caption ? applyTemplateVariables(message.caption, lead).trim() : undefined;
+            await sendAutoContactMessage({
+              lead,
+              contentType: message.type,
+              content: {
+                url: mediaUrl,
+                caption,
+              },
+              settings,
+            });
+          }
+
+          sentFromTemplate = true;
+          if (!firstMessageSent) {
+            await onFirstMessageSent?.();
+            firstMessageSent = true;
+          }
+        }
+
+        if (!sentFromTemplate) {
+          continue;
+        }
       }
 
-      if (!firstMessageSent) {
-        await onFirstMessageSent?.();
-        firstMessageSent = true;
-      }
       continue;
     }
 

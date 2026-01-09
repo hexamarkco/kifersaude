@@ -26,6 +26,16 @@ export type AutoContactFlowStep = {
   templateId: string;
 };
 
+export type AutoContactFlowConditionField = 'origem' | 'cidade' | 'responsavel' | 'status' | 'tag';
+export type AutoContactFlowConditionOperator = 'equals' | 'contains' | 'not_equals' | 'not_contains';
+
+export type AutoContactFlowCondition = {
+  id: string;
+  field: AutoContactFlowConditionField;
+  operator: AutoContactFlowConditionOperator;
+  value: string;
+};
+
 export type AutoContactFlow = {
   id: string;
   name: string;
@@ -33,6 +43,28 @@ export type AutoContactFlow = {
   steps: AutoContactFlowStep[];
   stopOnStatusChange: boolean;
   finalStatus?: string;
+  conditionLogic?: 'all' | 'any';
+  conditions?: AutoContactFlowCondition[];
+  tags?: string[];
+};
+
+export type AutoContactSchedulingSettings = {
+  timezone: string;
+  startHour: string;
+  endHour: string;
+  allowedWeekdays: number[];
+  skipHolidays: boolean;
+};
+
+export type AutoContactMonitoringSettings = {
+  realtimeEnabled: boolean;
+  refreshSeconds: number;
+};
+
+export type AutoContactLoggingSettings = {
+  enabled: boolean;
+  retentionDays: number;
+  includePayloads: boolean;
 };
 
 export type AutoContactSettings = {
@@ -44,9 +76,28 @@ export type AutoContactSettings = {
   messageTemplates: AutoContactTemplate[];
   selectedTemplateId: string;
   flows: AutoContactFlow[];
+  scheduling: AutoContactSchedulingSettings;
+  monitoring: AutoContactMonitoringSettings;
+  logging: AutoContactLoggingSettings;
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
+const DEFAULT_SCHEDULING: AutoContactSchedulingSettings = {
+  timezone: 'America/Sao_Paulo',
+  startHour: '08:00',
+  endHour: '19:00',
+  allowedWeekdays: [1, 2, 3, 4, 5],
+  skipHolidays: true,
+};
+const DEFAULT_MONITORING: AutoContactMonitoringSettings = {
+  realtimeEnabled: true,
+  refreshSeconds: 30,
+};
+const DEFAULT_LOGGING: AutoContactLoggingSettings = {
+  enabled: true,
+  retentionDays: 30,
+  includePayloads: false,
+};
 
 export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
   {
@@ -107,6 +158,9 @@ export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
       { id: 'flow-1-step-2', delayHours: 24, templateId: 'template-2' },
       { id: 'flow-1-step-3', delayHours: 48, templateId: 'template-3' },
     ],
+    conditionLogic: 'all',
+    conditions: [],
+    tags: ['follow-up', 'automacao'],
   },
 ];
 
@@ -196,10 +250,34 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   const rawFlows =
     Array.isArray(settings.flows) && settings.flows.length > 0 ? settings.flows : DEFAULT_AUTO_CONTACT_FLOWS;
   const fallbackTemplateId = messageTemplates[0]?.id ?? '';
+  const normalizeConditionField = (field: unknown): AutoContactFlowConditionField => {
+    if (field === 'origem' || field === 'cidade' || field === 'responsavel' || field === 'status' || field === 'tag') {
+      return field;
+    }
+    return 'origem';
+  };
+  const normalizeConditionOperator = (operator: unknown): AutoContactFlowConditionOperator => {
+    if (operator === 'equals' || operator === 'contains' || operator === 'not_equals' || operator === 'not_contains') {
+      return operator;
+    }
+    return 'contains';
+  };
   const normalizedFlows = rawFlows
     .map((flow: any, flowIndex: number) => {
       const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
       const steps = Array.isArray(flow?.steps) ? flow.steps : [];
+      const rawConditions = Array.isArray(flow?.conditions) ? flow.conditions : [];
+      const normalizedConditions = rawConditions
+        .map((condition: any, conditionIndex: number) => ({
+          id:
+            typeof condition?.id === 'string' && condition.id.trim()
+              ? condition.id
+              : `flow-${flowId}-condition-${conditionIndex}`,
+          field: normalizeConditionField(condition?.field),
+          operator: normalizeConditionOperator(condition?.operator),
+          value: typeof condition?.value === 'string' ? condition.value : '',
+        }))
+        .filter((condition) => condition.value.trim());
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
           const delayHoursRaw = Number(step?.delayHours);
@@ -222,9 +300,44 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         steps: normalizedSteps,
         stopOnStatusChange: flow?.stopOnStatusChange !== false,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
+        conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
+        conditions: normalizedConditions,
+        tags: Array.isArray(flow?.tags)
+          ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
+          : [],
       };
     })
     .filter((flow) => flow.triggerStatus.trim() && flow.steps.length > 0);
+
+  const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
+  const scheduling: AutoContactSchedulingSettings = {
+    timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : DEFAULT_SCHEDULING.timezone,
+    startHour: typeof rawScheduling.startHour === 'string' ? rawScheduling.startHour : DEFAULT_SCHEDULING.startHour,
+    endHour: typeof rawScheduling.endHour === 'string' ? rawScheduling.endHour : DEFAULT_SCHEDULING.endHour,
+    allowedWeekdays: Array.isArray(rawScheduling.allowedWeekdays)
+      ? rawScheduling.allowedWeekdays
+          .map((value: unknown) => Number(value))
+          .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
+      : DEFAULT_SCHEDULING.allowedWeekdays,
+    skipHolidays: rawScheduling.skipHolidays !== false,
+  };
+  const rawMonitoring = settings.monitoring && typeof settings.monitoring === 'object' ? settings.monitoring : {};
+  const monitoring: AutoContactMonitoringSettings = {
+    realtimeEnabled: rawMonitoring.realtimeEnabled !== false,
+    refreshSeconds:
+      Number.isFinite(Number(rawMonitoring.refreshSeconds)) && Number(rawMonitoring.refreshSeconds) > 0
+        ? Number(rawMonitoring.refreshSeconds)
+        : DEFAULT_MONITORING.refreshSeconds,
+  };
+  const rawLogging = settings.logging && typeof settings.logging === 'object' ? settings.logging : {};
+  const logging: AutoContactLoggingSettings = {
+    enabled: rawLogging.enabled !== false,
+    retentionDays:
+      Number.isFinite(Number(rawLogging.retentionDays)) && Number(rawLogging.retentionDays) > 0
+        ? Number(rawLogging.retentionDays)
+        : DEFAULT_LOGGING.retentionDays,
+    includePayloads: rawLogging.includePayloads === true,
+  };
 
   return {
     enabled: settings.enabled !== false,
@@ -241,6 +354,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     messageTemplates,
     selectedTemplateId: validSelectedTemplateId,
     flows: normalizedFlows.length ? normalizedFlows : DEFAULT_AUTO_CONTACT_FLOWS,
+    scheduling,
+    monitoring,
+    logging,
   };
 };
 

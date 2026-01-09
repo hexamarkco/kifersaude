@@ -20,14 +20,17 @@ import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   composeTemplateMessage,
   DEFAULT_MESSAGE_TEMPLATES,
+  DEFAULT_AUTO_CONTACT_FLOWS,
   getTemplateMessages,
   normalizeAutoContactSettings,
+  type AutoContactFlow,
+  type AutoContactFlowStep,
   type AutoContactSettings,
   type AutoContactTemplate,
   type TemplateMessage,
   type TemplateMessageType,
 } from '../../lib/autoContactService';
-import type { IntegrationSetting } from '../../lib/supabase';
+import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 type TemplateDraft = {
@@ -40,6 +43,8 @@ export default function AutoContactFlowSettings() {
   const [autoContactIntegration, setAutoContactIntegration] = useState<IntegrationSetting | null>(null);
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [messageTemplatesDraft, setMessageTemplatesDraft] = useState<AutoContactTemplate[]>(DEFAULT_MESSAGE_TEMPLATES);
+  const [flowDrafts, setFlowDrafts] = useState<AutoContactFlow[]>(DEFAULT_AUTO_CONTACT_FLOWS);
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [loadingFlow, setLoadingFlow] = useState(true);
   const [savingFlow, setSavingFlow] = useState(false);
@@ -56,13 +61,18 @@ export default function AutoContactFlowSettings() {
     setLoadingFlow(true);
     setStatusMessage(null);
 
-    const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
+    const [integration, statusConfig] = await Promise.all([
+      configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
+      configService.getLeadStatusConfig(),
+    ]);
     const normalized = normalizeAutoContactSettings(integration?.settings);
 
     setAutoContactIntegration(integration);
     setAutoContactSettings(normalized);
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
     setSelectedTemplateId(normalized.selectedTemplateId);
+    setFlowDrafts(normalized.flows ?? []);
+    setLeadStatuses(statusConfig);
 
     setLoadingFlow(false);
   };
@@ -189,6 +199,7 @@ export default function AutoContactFlowSettings() {
 
     setMessageTemplatesDraft(savedTemplates);
     setSelectedTemplateId(autoContactSettings?.selectedTemplateId ?? savedTemplates[0]?.id ?? '');
+    setFlowDrafts(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS);
     setStatusMessage(null);
   };
 
@@ -228,6 +239,33 @@ export default function AutoContactFlowSettings() {
       })
       .filter((template) => template.message.trim() || template.hasContent)
       .map(({ hasContent: _hasContent, ...template }) => template);
+    const fallbackTemplateId = sanitizedTemplates[0]?.id ?? '';
+    const sanitizedFlows = flowDrafts
+      .map((flow, flowIndex) => {
+        const steps = flow.steps
+          .map((step, stepIndex) => {
+            const rawDelay = Number(step.delayHours);
+            const delayHours = Number.isFinite(rawDelay) && rawDelay >= 0 ? rawDelay : 0;
+            const templateId =
+              sanitizedTemplates.find((template) => template.id === step.templateId)?.id ?? fallbackTemplateId;
+            return {
+              id: step.id?.trim() ? step.id : `flow-${flow.id}-step-${stepIndex}`,
+              delayHours,
+              templateId,
+            };
+          })
+          .filter((step) => step.templateId);
+
+        return {
+          id: flow.id?.trim() ? flow.id : `flow-${flowIndex}`,
+          name: flow.name?.trim() || `Fluxo ${flowIndex + 1}`,
+          triggerStatus: flow.triggerStatus?.trim() || '',
+          steps,
+          stopOnStatusChange: flow.stopOnStatusChange !== false,
+          finalStatus: flow.finalStatus?.trim() || '',
+        };
+      })
+      .filter((flow) => flow.triggerStatus && flow.steps.length);
     const normalizedSelectedTemplateId =
       sanitizedTemplates.find((template) => template.id === selectedTemplateId)?.id ??
       sanitizedTemplates[0]?.id ??
@@ -238,6 +276,7 @@ export default function AutoContactFlowSettings() {
       ...currentSettings,
       messageTemplates: sanitizedTemplates,
       selectedTemplateId: normalizedSelectedTemplateId,
+      flows: sanitizedFlows,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
@@ -254,7 +293,8 @@ export default function AutoContactFlowSettings() {
       setAutoContactSettings(normalized);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setSelectedTemplateId(normalized.selectedTemplateId);
-      setStatusMessage({ type: 'success', text: 'Modelos de automação salvos com sucesso.' });
+      setFlowDrafts(normalized.flows ?? []);
+      setStatusMessage({ type: 'success', text: 'Fluxos e templates de automação salvos com sucesso.' });
     }
 
     setSavingFlow(false);
@@ -283,6 +323,61 @@ export default function AutoContactFlowSettings() {
     audio: Mic,
     document: File,
   };
+  const createFlowStep = (templateId = selectedTemplateId): AutoContactFlowStep => ({
+    id: `flow-step-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    delayHours: 2,
+    templateId: templateId || messageTemplatesDraft[0]?.id || '',
+  });
+  const createFlowDraft = (): AutoContactFlow => ({
+    id: `flow-${Date.now()}`,
+    name: '',
+    triggerStatus: leadStatuses[0]?.nome ?? '',
+    steps: [createFlowStep()],
+    stopOnStatusChange: true,
+    finalStatus: '',
+  });
+  const handleAddFlow = () => {
+    setFlowDrafts((previous) => [...previous, createFlowDraft()]);
+  };
+  const handleUpdateFlow = (flowId: string, updates: Partial<AutoContactFlow>) => {
+    setFlowDrafts((previous) => previous.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow)));
+  };
+  const handleRemoveFlow = (flowId: string) => {
+    setFlowDrafts((previous) => previous.filter((flow) => flow.id !== flowId));
+  };
+  const handleAddFlowStep = (flowId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId ? { ...flow, steps: [...flow.steps, createFlowStep()] } : flow,
+      ),
+    );
+  };
+  const handleUpdateFlowStep = (flowId: string, stepId: string, updates: Partial<AutoContactFlowStep>) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              steps: flow.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+            }
+          : flow,
+      ),
+    );
+  };
+  const handleRemoveFlowStep = (flowId: string, stepId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) => {
+        if (flow.id !== flowId) return flow;
+        const nextSteps = flow.steps.filter((step) => step.id !== stepId);
+        return {
+          ...flow,
+          steps: nextSteps.length ? nextSteps : [createFlowStep()],
+        };
+      }),
+    );
+  };
+  const statusOptions = leadStatuses.filter((status) => status.ativo !== false);
+  const showStatusSelect = statusOptions.length > 0;
 
   if (loadingFlow) {
     return (
@@ -335,6 +430,196 @@ export default function AutoContactFlowSettings() {
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{cidade}}'}</code> cidade</span>
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{responsavel}}'}</code> responsável</span>
             </div>
+          </div>
+
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Fluxos de automação</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Monte sequências com espera em horas, envio de templates e condição de encerramento.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddFlow}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Novo fluxo
+              </button>
+            </div>
+
+            {flowDrafts.length === 0 ? (
+              <div className="text-sm text-slate-500 bg-white border border-slate-200 rounded-lg p-4">
+                Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {flowDrafts.map((flow, index) => (
+                  <div key={flow.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-slate-400 uppercase">Fluxo {index + 1}</div>
+                        <input
+                          type="text"
+                          value={flow.name}
+                          onChange={(event) => handleUpdateFlow(flow.id, { name: event.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder="Ex.: Follow-up de contato inicial"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFlow(flow.id)}
+                        className="inline-flex items-center gap-2 text-xs text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remover fluxo
+                      </button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-2">
+                          Disparar quando o status virar
+                        </label>
+                        {showStatusSelect ? (
+                          <select
+                            value={flow.triggerStatus}
+                            onChange={(event) => handleUpdateFlow(flow.id, { triggerStatus: event.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                          >
+                            {statusOptions.map((status) => (
+                              <option key={status.id} value={status.nome}>
+                                {status.nome}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={flow.triggerStatus}
+                            onChange={(event) => handleUpdateFlow(flow.id, { triggerStatus: event.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            placeholder="Ex.: Contato inicial"
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-500">Encerrar se o status mudar</label>
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                          <input
+                            type="checkbox"
+                            checked={flow.stopOnStatusChange}
+                            onChange={(event) => handleUpdateFlow(flow.id, { stopOnStatusChange: event.target.checked })}
+                            className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          />
+                          Se o lead evoluir, este fluxo é encerrado automaticamente
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500">
+                        Status final se não houver resposta
+                      </label>
+                      {showStatusSelect ? (
+                        <select
+                          value={flow.finalStatus ?? ''}
+                          onChange={(event) => handleUpdateFlow(flow.id, { finalStatus: event.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                        >
+                          <option value="">Não alterar status</option>
+                          {statusOptions.map((status) => (
+                            <option key={status.id} value={status.nome}>
+                              {status.nome}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={flow.finalStatus ?? ''}
+                          onChange={(event) => handleUpdateFlow(flow.id, { finalStatus: event.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder="Ex.: Sem retorno"
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-800">Sequência de mensagens</h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Configure o intervalo em horas e o template que será enviado em cada etapa.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddFlowStep(flow.id)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Nova etapa
+                        </button>
+                      </div>
+
+                      {flow.steps.map((step, stepIndex) => (
+                        <div
+                          key={step.id}
+                          className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[140px_1fr_auto]"
+                        >
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1">Esperar (horas)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={step.delayHours}
+                              onChange={(event) =>
+                                handleUpdateFlowStep(flow.id, step.id, { delayHours: Number(event.target.value) })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1">
+                              Template da mensagem
+                            </label>
+                            <select
+                              value={step.templateId}
+                              onChange={(event) =>
+                                handleUpdateFlowStep(flow.id, step.id, { templateId: event.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                            >
+                              {messageTemplatesDraft.map((template) => (
+                                <option key={template.id} value={template.id}>
+                                  {template.name || 'Modelo sem nome'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFlowStep(flow.id, step.id)}
+                              className="text-xs text-red-600 hover:text-red-700"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                          <div className="md:col-span-3 text-[11px] text-slate-500">
+                            Etapa {stepIndex + 1} da sequência.
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
@@ -523,7 +808,7 @@ export default function AutoContactFlowSettings() {
                 disabled={savingFlow}
               >
                 {savingFlow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {savingFlow ? 'Salvando...' : 'Salvar templates'}
+                {savingFlow ? 'Salvando...' : 'Salvar automação'}
               </button>
             </div>
           </div>

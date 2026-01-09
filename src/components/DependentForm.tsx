@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { supabase, Dependent, ContractHolder } from '../lib/supabase';
-import { X, Users } from 'lucide-react';
+import { Search, X, Users } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 
@@ -44,11 +44,16 @@ export default function DependentForm({ contractId, holders, dependent, selected
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
 
   const handleConsultarCPF = async () => {
+    if (!formData.cpf || !formData.data_nascimento) {
+      setCpfLookupError('Informe CPF e data de nascimento para buscar.');
+      return;
+    }
+
     setCpfLookupError(null);
     setCpfLoading(true);
 
     try {
-      const pessoa = await consultarPessoaPorCPF(formData.cpf);
+      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento);
 
       setFormData(prev => ({
         ...prev,
@@ -164,20 +169,21 @@ export default function DependentForm({ contractId, holders, dependent, selected
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 CPF
               </label>
-              <div className="flex space-x-2">
+              <div className="relative">
                 <input
                   type="text"
                   value={formData.cpf}
                   onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
                 <button
                   type="button"
                   onClick={handleConsultarCPF}
-                  disabled={cpfLoading}
-                  className="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                  disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
+                  aria-label="Buscar na Receita"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-teal-600 transition-colors disabled:opacity-50"
                 >
-                  {cpfLoading ? 'Buscando...' : 'Buscar na Receita'}
+                  <Search className={`w-4 h-4 ${cpfLoading ? 'animate-pulse' : ''}`} />
                 </button>
               </div>
               {cpfLookupError && <p className="text-xs text-red-600 mt-1">{cpfLookupError}</p>}

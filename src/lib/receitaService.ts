@@ -55,14 +55,23 @@ const fetchFromReceita = async <T>(url: string, errorMessage: string): Promise<T
   return response.json();
 };
 
-export const consultarPessoaPorCPF = async (cpf: string): Promise<ReceitaPessoaData> => {
+export const consultarPessoaPorCPF = async (
+  cpf: string,
+  dataNascimento?: string,
+): Promise<ReceitaPessoaData> => {
   const cleanCpf = sanitizeDocument(cpf);
 
   if (cleanCpf.length !== 11) {
     throw new Error('CPF inválido');
   }
 
-  const url = `${RECEITA_API_BASE_URL}/cpf/v1/${cleanCpf}`;
+  const normalizedBirthDate = normalizeDate(dataNascimento);
+  const url = new URL(`${RECEITA_API_BASE_URL}/cpf/v1/${cleanCpf}`);
+
+  if (normalizedBirthDate) {
+    url.searchParams.set('data_nascimento', normalizedBirthDate);
+  }
+
   const data = await fetchFromReceita<any>(url, 'Não foi possível consultar CPF na Receita');
 
   return {

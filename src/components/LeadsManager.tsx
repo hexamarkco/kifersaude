@@ -49,6 +49,7 @@ import {
   getTemplateMessages,
   getTemplateMessage,
   normalizeAutoContactSettings,
+  runAutoContactFlow,
   sendAutoContactMessage,
 } from '../lib/autoContactService';
 import type { AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
@@ -1190,16 +1191,40 @@ export default function LeadsManager({
     }
   };
 
+  const triggerAutoContactFlow = useCallback(
+    (lead: Lead) => {
+      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
+
+      if (!settings.enabled || settings.flows.length === 0) {
+        return;
+      }
+
+      void runAutoContactFlow({
+        lead: { ...lead },
+        settings,
+        onFirstMessageSent: async () => {
+          await registerContact(lead, 'Mensagem Automática');
+        },
+      }).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Erro ao executar fluxo automático:', message);
+      });
+    },
+    [autoContactSettings, registerContact],
+  );
+
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
     const oldStatus = lead.status;
+    const timestamp = new Date().toISOString();
+    const updatedLead: Lead = { ...lead, status: newStatus, ultimo_contato: timestamp };
 
     setLeads((current) =>
       current.map((l) =>
         l.id === leadId
-          ? { ...l, status: newStatus, ultimo_contato: new Date().toISOString() }
+          ? { ...l, status: newStatus, ultimo_contato: timestamp }
           : l
       )
     );
@@ -1209,7 +1234,7 @@ export default function LeadsManager({
         .from('leads')
           .update({
             status: newStatus,
-            ultimo_contato: new Date().toISOString(),
+            ultimo_contato: timestamp,
           })
         .eq('id', leadId);
 
@@ -1273,6 +1298,7 @@ export default function LeadsManager({
           reminderDate.setMinutes(0, 0, 0);
 
           const reminderDateISO = reminderDate.toISOString();
+          updatedLead.proximo_retorno = reminderDateISO;
 
           const { error: insertReminderError } = await supabase
             .from('reminders')
@@ -1306,6 +1332,8 @@ export default function LeadsManager({
           );
         }
       }
+
+      triggerAutoContactFlow(updatedLead);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status do lead');

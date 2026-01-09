@@ -852,7 +852,7 @@ export async function runAutoContactFlow({
 
   const templates = settings.messageTemplates ?? [];
   const flows = settings.flows ?? [];
-  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead)) ?? flows[0] ?? null;
+  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead)) ?? null;
   if (!matchingFlow) return;
 
   let cumulativeDelayHours = 0;

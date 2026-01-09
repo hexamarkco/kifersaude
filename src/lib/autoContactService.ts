@@ -385,6 +385,159 @@ export const applyTemplateVariables = (template: string, lead: Lead) => {
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
+const parseHourMinute = (value: string): { hour: number; minute: number } => {
+  if (!value) return { hour: 0, minute: 0 };
+  const [rawHour, rawMinute] = value.split(':');
+  const hour = Number(rawHour);
+  const minute = Number(rawMinute);
+  return {
+    hour: Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 23) : 0,
+    minute: Number.isFinite(minute) ? Math.min(Math.max(minute, 0), 59) : 0,
+  };
+};
+
+const getTimeZoneOffset = (date: Date, timeZone: string): number => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const lookup: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      lookup[part.type] = part.value;
+    }
+  }
+  const year = Number(lookup.year);
+  const month = Number(lookup.month);
+  const day = Number(lookup.day);
+  const hour = Number(lookup.hour);
+  const minute = Number(lookup.minute);
+  const second = Number(lookup.second);
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  return asUtc - date.getTime();
+};
+
+const toZonedDate = (date: Date, timeZone: string): Date => {
+  const offset = getTimeZoneOffset(date, timeZone);
+  return new Date(date.getTime() + offset);
+};
+
+const getZonedParts = (date: Date, timeZone: string): DateParts => {
+  const zoned = toZonedDate(date, timeZone);
+  return {
+    year: zoned.getUTCFullYear(),
+    month: zoned.getUTCMonth(),
+    day: zoned.getUTCDate(),
+    hour: zoned.getUTCHours(),
+    minute: zoned.getUTCMinutes(),
+  };
+};
+
+const buildDateInTimeZone = (
+  { year, month, day, hour, minute }: DateParts,
+  timeZone: string,
+): Date => {
+  const utcDate = new Date(Date.UTC(year, month, day, hour, minute, 0));
+  const offset = getTimeZoneOffset(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offset);
+};
+
+const addDaysToZoned = (zoned: Date, days: number): Date => new Date(zoned.getTime() + days * 86400000);
+
+const getWeekdayNumber = (zoned: Date): number => {
+  const day = zoned.getUTCDay();
+  return day === 0 ? 7 : day;
+};
+
+const formatDateKey = (zoned: Date): string => {
+  const year = zoned.getUTCFullYear();
+  const month = String(zoned.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(zoned.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getHolidayCalendarForYear = (_year: number, _timeZone: string): string[] => {
+  // TODO: consultar calendário de feriados configurado (stub 2).
+  return [];
+};
+
+const isHolidayDate = (zoned: Date, timeZone: string): boolean => {
+  const calendar = getHolidayCalendarForYear(zoned.getUTCFullYear(), timeZone);
+  return calendar.includes(formatDateKey(zoned));
+};
+
+export const getNextAllowedSendAt = (
+  reference: Date,
+  scheduling: AutoContactSchedulingSettings,
+): Date => {
+  const allowedWeekdays = scheduling.allowedWeekdays?.length ? scheduling.allowedWeekdays : [1, 2, 3, 4, 5, 6, 7];
+  const start = parseHourMinute(scheduling.startHour);
+  const end = parseHourMinute(scheduling.endHour);
+  let candidate = new Date(reference.getTime());
+
+  for (let attempt = 0; attempt < 370; attempt += 1) {
+    const zoned = toZonedDate(candidate, scheduling.timezone);
+    const weekday = getWeekdayNumber(zoned);
+    const isAllowedWeekday = allowedWeekdays.includes(weekday);
+    const shouldSkipHoliday = scheduling.skipHolidays && isHolidayDate(zoned, scheduling.timezone);
+
+    if (!isAllowedWeekday || shouldSkipHoliday) {
+      const nextDay = addDaysToZoned(zoned, 1);
+      const parts = {
+        year: nextDay.getUTCFullYear(),
+        month: nextDay.getUTCMonth(),
+        day: nextDay.getUTCDate(),
+        hour: start.hour,
+        minute: start.minute,
+      };
+      candidate = buildDateInTimeZone(parts, scheduling.timezone);
+      continue;
+    }
+
+    const currentMinutes = zoned.getUTCHours() * 60 + zoned.getUTCMinutes();
+    const startMinutes = start.hour * 60 + start.minute;
+    const endMinutes = end.hour * 60 + end.minute;
+
+    if (currentMinutes < startMinutes) {
+      candidate = buildDateInTimeZone(
+        {
+          ...getZonedParts(candidate, scheduling.timezone),
+          hour: start.hour,
+          minute: start.minute,
+        },
+        scheduling.timezone,
+      );
+      return candidate;
+    }
+
+    if (currentMinutes > endMinutes) {
+      const nextDay = addDaysToZoned(zoned, 1);
+      candidate = buildDateInTimeZone(
+        {
+          year: nextDay.getUTCFullYear(),
+          month: nextDay.getUTCMonth(),
+          day: nextDay.getUTCDate(),
+          hour: start.hour,
+          minute: start.minute,
+        },
+        scheduling.timezone,
+      );
+      continue;
+    }
+
+    return candidate;
+  }
+
+  return candidate;
+};
+
 export async function sendAutoContactMessage({
   lead,
   message,
@@ -438,15 +591,47 @@ export async function runAutoContactFlow({
   if (signal?.() === false) return;
 
   const templates = settings.messageTemplates ?? [];
-  const selectedTemplate =
-    templates.find((template) => template.id === settings.selectedTemplateId) ?? templates[0] ?? null;
+  const flows = settings.flows ?? [];
+  const matchingFlow = flows.find((flow) => flow.triggerStatus === (lead.status ?? '')) ?? flows[0] ?? null;
+  if (!matchingFlow) return;
 
-  const message = getTemplateMessage(selectedTemplate);
-  if (!message.trim()) return;
+  let cumulativeDelayHours = 0;
+  let firstMessageSent = false;
 
-  const finalMessage = applyTemplateVariables(message, lead);
-  await sendAutoContactMessage({ lead, message: finalMessage, settings });
-  await onFirstMessageSent?.();
+  for (const step of matchingFlow.steps) {
+    if (signal?.() === false) return;
+    cumulativeDelayHours += step.delayHours;
+
+    const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
+    const scheduledAt = getNextAllowedSendAt(desiredAt, settings.scheduling);
+    const now = new Date();
+    const waitMs = scheduledAt.getTime() - now.getTime();
+
+    if (waitMs > 0) {
+      console.info('[AutoContact] Mensagem agendada para envio futuro', {
+        leadId: lead.id,
+        stepId: step.id,
+        scheduledAt: scheduledAt.toISOString(),
+      });
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      if (signal?.() === false) return;
+    }
+
+    const template =
+      templates.find((item) => item.id === step.templateId) ??
+      templates.find((item) => item.id === settings.selectedTemplateId) ??
+      templates[0] ??
+      null;
+    const message = getTemplateMessage(template);
+    if (!message.trim()) continue;
+
+    const finalMessage = applyTemplateVariables(message, lead);
+    await sendAutoContactMessage({ lead, message: finalMessage, settings });
+    if (!firstMessageSent) {
+      await onFirstMessageSent?.();
+      firstMessageSent = true;
+    }
+  }
 }
 
 const getTimeZoneOffset = (date: Date, timeZone: string): number => {

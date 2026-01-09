@@ -1159,6 +1159,19 @@ export default function AutoContactFlowSettings() {
                       </button>
                       <button
                         type="button"
+                        onClick={handleSaveFlow}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-60"
+                        disabled={savingFlow}
+                      >
+                        {savingFlow ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        {savingFlow ? 'Salvando...' : 'Salvar fluxo'}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleRemoveFlow(activeFlow.id)}
                         className="inline-flex items-center gap-2 text-xs text-red-600 hover:text-red-700"
                       >

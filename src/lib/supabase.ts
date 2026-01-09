@@ -57,6 +57,8 @@ export type Lead = {
   tags?: string[];
   canal?: string | null;
   observacoes?: string;
+  blackout_dates?: string[] | null;
+  daily_send_limit?: number | null;
   arquivado: boolean;
   created_at: string;
   updated_at: string;

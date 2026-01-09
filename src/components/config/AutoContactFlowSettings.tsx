@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlarmClock,
+  AlertCircle,
   BarChart3,
   ClipboardList,
   Edit3,
@@ -43,6 +44,7 @@ import {
   type TemplateMessage,
   type TemplateMessageType,
 } from '../../lib/autoContactService';
+import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
@@ -81,6 +83,9 @@ export default function AutoContactFlowSettings() {
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationStart, setSimulationStart] = useState('');
   const [lastRefreshAt, setLastRefreshAt] = useState(() => new Date());
+  const [dailyAutomationCount, setDailyAutomationCount] = useState<number | null>(null);
+  const [dailyAutomationLoading, setDailyAutomationLoading] = useState(false);
+  const [dailyAutomationError, setDailyAutomationError] = useState<string | null>(null);
 
   useEffect(() => {
     void loadAutoContactSettings();
@@ -108,6 +113,37 @@ export default function AutoContactFlowSettings() {
 
     setLoadingFlow(false);
   };
+
+  const loadDailyAutomationCount = useCallback(async () => {
+    setDailyAutomationLoading(true);
+    setDailyAutomationError(null);
+
+    try {
+      const now = new Date();
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      const startOfNextDay = new Date(startOfDay);
+      startOfNextDay.setDate(startOfNextDay.getDate() + 1);
+
+      const { count, error } = await supabase
+        .from('interactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('tipo', 'Mensagem Automática')
+        .gte('data_interacao', startOfDay.toISOString())
+        .lt('data_interacao', startOfNextDay.toISOString());
+
+      if (error) {
+        throw error;
+      }
+
+      setDailyAutomationCount(count ?? 0);
+    } catch (error) {
+      console.error('Erro ao carregar contador diário de automações:', error);
+      setDailyAutomationError('Não foi possível carregar o contador diário.');
+    } finally {
+      setDailyAutomationLoading(false);
+    }
+  }, []);
 
   const createMessageDraft = (type: TemplateMessageType = 'text'): TemplateMessage => ({
     id: `message-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -663,6 +699,10 @@ export default function AutoContactFlowSettings() {
     return () => window.clearInterval(intervalId);
   }, [monitoringDraft.realtimeEnabled, monitoringDraft.refreshSeconds]);
 
+  useEffect(() => {
+    void loadDailyAutomationCount();
+  }, [loadDailyAutomationCount, lastRefreshAt]);
+
   if (loadingFlow) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-3 text-slate-600">
@@ -687,8 +727,21 @@ export default function AutoContactFlowSettings() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="space-y-6">
+        {schedulingDraft.dailySendLimit && dailyAutomationCount !== null && dailyAutomationCount >= schedulingDraft.dailySendLimit ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 mt-0.5 text-amber-700" />
+            <div>
+              <p className="font-semibold">Limite diário atingido</p>
+              <p className="text-xs text-amber-800 mt-1">
+                O limite de {schedulingDraft.dailySendLimit} envios automáticos foi alcançado hoje. Novos envios serão
+                reagendados para o próximo dia disponível.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase text-slate-500">Fluxos ativos</div>
@@ -722,6 +775,22 @@ export default function AutoContactFlowSettings() {
                 {lastRefreshAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </div>
               <p className="text-xs text-slate-500 mt-1">Monitoramento em tempo real</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-slate-500">Envios hoje</div>
+                <AlarmClock className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-2xl font-semibold text-slate-800 mt-2">
+                {dailyAutomationLoading ? '...' : (dailyAutomationCount ?? 0)}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {dailyAutomationError
+                  ? dailyAutomationError
+                  : schedulingDraft.dailySendLimit
+                    ? `Limite diário: ${schedulingDraft.dailySendLimit}`
+                    : 'Sem limite diário configurado'}
+              </p>
             </div>
           </div>
 
@@ -765,6 +834,26 @@ export default function AutoContactFlowSettings() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Limite diário por tenant</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={schedulingDraft.dailySendLimit ?? ''}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      setSchedulingDraft((previous) => ({
+                        ...previous,
+                        dailySendLimit: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null,
+                      }));
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Sem limite"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Mantém a automação dentro do limite diário global.
+                  </p>
                 </div>
               </div>
               <div>

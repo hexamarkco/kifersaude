@@ -54,7 +54,7 @@ export type AutoContactSchedulingSettings = {
   endHour: string;
   allowedWeekdays: number[];
   skipHolidays: boolean;
-  holidays?: string[];
+  dailySendLimit: number | null;
 };
 
 export type AutoContactMonitoringSettings = {
@@ -97,6 +97,7 @@ const DEFAULT_SCHEDULING: AutoContactSchedulingSettings = {
   endHour: '19:00',
   allowedWeekdays: [1, 2, 3, 4, 5],
   skipHolidays: true,
+  dailySendLimit: null,
 };
 const DEFAULT_MONITORING: AutoContactMonitoringSettings = {
   realtimeEnabled: true,
@@ -319,6 +320,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     .filter((flow) => flow.triggerStatus.trim() && flow.steps.length > 0);
 
   const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
+  const rawDailySendLimit =
+    Number(rawScheduling.dailySendLimit ?? settings.dailySendLimit);
+  const dailySendLimit =
+    Number.isFinite(rawDailySendLimit) && rawDailySendLimit > 0 ? rawDailySendLimit : null;
   const scheduling: AutoContactSchedulingSettings = {
     timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : DEFAULT_SCHEDULING.timezone,
     startHour: typeof rawScheduling.startHour === 'string' ? rawScheduling.startHour : DEFAULT_SCHEDULING.startHour,
@@ -329,9 +334,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
       : DEFAULT_SCHEDULING.allowedWeekdays,
     skipHolidays: rawScheduling.skipHolidays !== false,
-    holidays: Array.isArray(rawScheduling.holidays)
-      ? rawScheduling.holidays.filter((holiday: unknown) => typeof holiday === 'string' && holiday.trim())
-      : undefined,
+    dailySendLimit,
   };
   const rawMonitoring = settings.monitoring && typeof settings.monitoring === 'object' ? settings.monitoring : {};
   const monitoring: AutoContactMonitoringSettings = {

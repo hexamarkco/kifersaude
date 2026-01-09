@@ -44,6 +44,7 @@ export default function AutoContactFlowSettings() {
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [messageTemplatesDraft, setMessageTemplatesDraft] = useState<AutoContactTemplate[]>(DEFAULT_MESSAGE_TEMPLATES);
   const [flowDrafts, setFlowDrafts] = useState<AutoContactFlow[]>(DEFAULT_AUTO_CONTACT_FLOWS);
+  const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [loadingFlow, setLoadingFlow] = useState(true);
@@ -312,6 +313,14 @@ export default function AutoContactFlowSettings() {
     () => getTemplateMessages(selectedTemplate),
     [selectedTemplate],
   );
+  const activeFlow = useMemo(
+    () => flowDrafts.find((flow) => flow.id === activeFlowId) ?? null,
+    [flowDrafts, activeFlowId],
+  );
+  const activeFlowIndex = useMemo(
+    () => (activeFlow ? flowDrafts.findIndex((flow) => flow.id === activeFlow.id) : -1),
+    [activeFlow, flowDrafts],
+  );
   const messageTypeLabels: Record<TemplateMessageType, string> = {
     text: 'Texto',
     image: 'Imagem',
@@ -341,13 +350,18 @@ export default function AutoContactFlowSettings() {
     finalStatus: '',
   });
   const handleAddFlow = () => {
-    setFlowDrafts((previous) => [...previous, createFlowDraft()]);
+    const newFlow = createFlowDraft();
+    setFlowDrafts((previous) => [...previous, newFlow]);
+    setActiveFlowId(newFlow.id);
   };
   const handleUpdateFlow = (flowId: string, updates: Partial<AutoContactFlow>) => {
     setFlowDrafts((previous) => previous.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow)));
   };
   const handleRemoveFlow = (flowId: string) => {
     setFlowDrafts((previous) => previous.filter((flow) => flow.id !== flowId));
+    if (activeFlowId === flowId) {
+      setActiveFlowId(null);
+    }
   };
   const handleAddFlowStep = (flowId: string) => {
     setFlowDrafts((previous) =>
@@ -465,28 +479,85 @@ export default function AutoContactFlowSettings() {
                 Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
                 {flowDrafts.map((flow, index) => (
-                  <div key={flow.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
+                  <button
+                    type="button"
+                    key={flow.id}
+                    onClick={() => setActiveFlowId(flow.id)}
+                    className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
                         <div className="text-xs font-semibold text-slate-400 uppercase">Fluxo {index + 1}</div>
-                        <input
-                          type="text"
-                          value={flow.name}
-                          onChange={(event) => handleUpdateFlow(flow.id, { name: event.target.value })}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          placeholder="Ex.: Follow-up de contato inicial"
-                        />
+                        <div className="text-sm font-semibold text-slate-800 mt-1">
+                          {flow.name || 'Fluxo sem nome'}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Dispara em: <span className="font-medium text-slate-700">{flow.triggerStatus || '—'}</span>
+                        </div>
                       </div>
+                      <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-500">
+                        {flow.steps.length} etapa{flow.steps.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="rounded-full border border-slate-200 px-2 py-0.5">
+                        {flow.stopOnStatusChange ? 'Interrompe ao mudar status' : 'Continua após status'}
+                      </span>
+                      <span className="rounded-full border border-slate-200 px-2 py-0.5">
+                        {flow.finalStatus ? `Finaliza em ${flow.finalStatus}` : 'Sem status final'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeFlow && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-400 uppercase">
+                        Fluxo {activeFlowIndex + 1}
+                      </div>
+                      <h4 className="text-lg font-semibold text-slate-800">Detalhes do fluxo</h4>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Ajuste regras, sequência de mensagens e status final do fluxo selecionado.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => handleRemoveFlow(flow.id)}
+                        onClick={() => handleRemoveFlow(activeFlow.id)}
                         className="inline-flex items-center gap-2 text-xs text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
                         Remover fluxo
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFlowId(null)}
+                        className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        Nome do fluxo
+                      </label>
+                      <input
+                        type="text"
+                        value={activeFlow.name}
+                        onChange={(event) => handleUpdateFlow(activeFlow.id, { name: event.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Ex.: Follow-up de contato inicial"
+                      />
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
@@ -496,8 +567,8 @@ export default function AutoContactFlowSettings() {
                         </label>
                         {showStatusSelect ? (
                           <select
-                            value={flow.triggerStatus}
-                            onChange={(event) => handleUpdateFlow(flow.id, { triggerStatus: event.target.value })}
+                            value={activeFlow.triggerStatus}
+                            onChange={(event) => handleUpdateFlow(activeFlow.id, { triggerStatus: event.target.value })}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                           >
                             {statusOptions.map((status) => (
@@ -509,8 +580,8 @@ export default function AutoContactFlowSettings() {
                         ) : (
                           <input
                             type="text"
-                            value={flow.triggerStatus}
-                            onChange={(event) => handleUpdateFlow(flow.id, { triggerStatus: event.target.value })}
+                            value={activeFlow.triggerStatus}
+                            onChange={(event) => handleUpdateFlow(activeFlow.id, { triggerStatus: event.target.value })}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             placeholder="Ex.: Contato inicial"
                           />
@@ -521,8 +592,10 @@ export default function AutoContactFlowSettings() {
                         <label className="inline-flex items-center gap-2 text-sm text-slate-600">
                           <input
                             type="checkbox"
-                            checked={flow.stopOnStatusChange}
-                            onChange={(event) => handleUpdateFlow(flow.id, { stopOnStatusChange: event.target.checked })}
+                            checked={activeFlow.stopOnStatusChange}
+                            onChange={(event) =>
+                              handleUpdateFlow(activeFlow.id, { stopOnStatusChange: event.target.checked })
+                            }
                             className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                           />
                           Se o lead evoluir, este fluxo é encerrado automaticamente
@@ -536,8 +609,8 @@ export default function AutoContactFlowSettings() {
                       </label>
                       {showStatusSelect ? (
                         <select
-                          value={flow.finalStatus ?? ''}
-                          onChange={(event) => handleUpdateFlow(flow.id, { finalStatus: event.target.value })}
+                          value={activeFlow.finalStatus ?? ''}
+                          onChange={(event) => handleUpdateFlow(activeFlow.id, { finalStatus: event.target.value })}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                         >
                           <option value="">Não alterar status</option>
@@ -550,8 +623,8 @@ export default function AutoContactFlowSettings() {
                       ) : (
                         <input
                           type="text"
-                          value={flow.finalStatus ?? ''}
-                          onChange={(event) => handleUpdateFlow(flow.id, { finalStatus: event.target.value })}
+                          value={activeFlow.finalStatus ?? ''}
+                          onChange={(event) => handleUpdateFlow(activeFlow.id, { finalStatus: event.target.value })}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           placeholder="Ex.: Sem retorno"
                         />
@@ -568,7 +641,7 @@ export default function AutoContactFlowSettings() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleAddFlowStep(flow.id)}
+                          onClick={() => handleAddFlowStep(activeFlow.id)}
                           className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -576,7 +649,7 @@ export default function AutoContactFlowSettings() {
                         </button>
                       </div>
 
-                      {flow.steps.map((step, stepIndex) => (
+                      {activeFlow.steps.map((step, stepIndex) => (
                         <div
                           key={step.id}
                           className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[140px_1fr_auto]"
@@ -588,7 +661,9 @@ export default function AutoContactFlowSettings() {
                               min={0}
                               value={step.delayHours}
                               onChange={(event) =>
-                                handleUpdateFlowStep(flow.id, step.id, { delayHours: Number(event.target.value) })
+                                handleUpdateFlowStep(activeFlow.id, step.id, {
+                                  delayHours: Number(event.target.value),
+                                })
                               }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             />
@@ -600,7 +675,7 @@ export default function AutoContactFlowSettings() {
                             <select
                               value={step.templateId}
                               onChange={(event) =>
-                                handleUpdateFlowStep(flow.id, step.id, { templateId: event.target.value })
+                                handleUpdateFlowStep(activeFlow.id, step.id, { templateId: event.target.value })
                               }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                             >
@@ -614,7 +689,7 @@ export default function AutoContactFlowSettings() {
                           <div className="flex items-end">
                             <button
                               type="button"
-                              onClick={() => handleRemoveFlowStep(flow.id, step.id)}
+                              onClick={() => handleRemoveFlowStep(activeFlow.id, step.id)}
                               className="text-xs text-red-600 hover:text-red-700"
                             >
                               Remover
@@ -627,7 +702,7 @@ export default function AutoContactFlowSettings() {
                       ))}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
             )}
           </div>

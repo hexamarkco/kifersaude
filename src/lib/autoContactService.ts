@@ -1,4 +1,4 @@
-import { Lead } from './supabase';
+import { Lead, supabase } from './supabase';
 import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
@@ -20,10 +20,26 @@ export type AutoContactTemplate = {
   messages?: TemplateMessage[];
 };
 
+export type AutoContactFlowActionType = 'send_message' | 'update_status' | 'archive_lead' | 'delete_lead';
+
+export type AutoContactFlowMessageSource = 'template' | 'custom';
+
+export type AutoContactFlowCustomMessage = {
+  type: TemplateMessageType;
+  text?: string;
+  mediaUrl?: string;
+  caption?: string;
+  filename?: string;
+};
+
 export type AutoContactFlowStep = {
   id: string;
   delayHours: number;
-  templateId: string;
+  actionType: AutoContactFlowActionType;
+  messageSource?: AutoContactFlowMessageSource;
+  templateId?: string;
+  customMessage?: AutoContactFlowCustomMessage;
+  statusToSet?: string;
 };
 
 export type AutoContactFlowConditionField =
@@ -68,10 +84,11 @@ export type AutoContactFlow = {
   name: string;
   triggerStatus: string;
   steps: AutoContactFlowStep[];
-  stopOnStatusChange: boolean;
   finalStatus?: string;
   conditionLogic?: 'all' | 'any';
   conditions?: AutoContactFlowCondition[];
+  exitConditionLogic?: 'all' | 'any';
+  exitConditions?: AutoContactFlowCondition[];
   tags?: string[];
 };
 
@@ -188,15 +205,34 @@ export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
     id: 'flow-1',
     name: 'Follow-up automático',
     triggerStatus: DEFAULT_STATUS,
-    stopOnStatusChange: true,
     finalStatus: '',
     steps: [
-      { id: 'flow-1-step-1', delayHours: 2, templateId: 'template-1' },
-      { id: 'flow-1-step-2', delayHours: 24, templateId: 'template-2' },
-      { id: 'flow-1-step-3', delayHours: 48, templateId: 'template-3' },
+      {
+        id: 'flow-1-step-1',
+        delayHours: 2,
+        actionType: 'send_message',
+        messageSource: 'template',
+        templateId: 'template-1',
+      },
+      {
+        id: 'flow-1-step-2',
+        delayHours: 24,
+        actionType: 'send_message',
+        messageSource: 'template',
+        templateId: 'template-2',
+      },
+      {
+        id: 'flow-1-step-3',
+        delayHours: 48,
+        actionType: 'send_message',
+        messageSource: 'template',
+        templateId: 'template-3',
+      },
     ],
     conditionLogic: 'all',
     conditions: [],
+    exitConditionLogic: 'any',
+    exitConditions: [],
     tags: ['follow-up', 'automacao'],
   },
 ];
@@ -328,11 +364,36 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         return 'contains';
     }
   };
+  const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
+    switch (value) {
+      case 'send_message':
+      case 'update_status':
+      case 'archive_lead':
+      case 'delete_lead':
+        return value;
+      default:
+        return 'send_message';
+    }
+  };
+  const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
+    value === 'custom' ? 'custom' : 'template';
+  const normalizeCustomMessage = (message: any): AutoContactFlowCustomMessage => {
+    const type = normalizeMessageType(message?.type);
+    return {
+      type,
+      text: typeof message?.text === 'string' ? message.text : '',
+      mediaUrl: typeof message?.mediaUrl === 'string' ? message.mediaUrl : '',
+      caption: typeof message?.caption === 'string' ? message.caption : '',
+      filename: typeof message?.filename === 'string' ? message.filename : '',
+    };
+  };
+
   const normalizedFlows = rawFlows
     .map((flow: any, flowIndex: number) => {
       const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
       const steps = Array.isArray(flow?.steps) ? flow.steps : [];
       const rawConditions = Array.isArray(flow?.conditions) ? flow.conditions : [];
+      const rawExitConditions = Array.isArray(flow?.exitConditions) ? flow.exitConditions : [];
       const normalizedConditions = rawConditions
         .map((condition: any, conditionIndex: number) => ({
           id:
@@ -344,30 +405,63 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           value: typeof condition?.value === 'string' ? condition.value : '',
         }))
         .filter((condition) => condition.value.trim());
+      const normalizedExitConditions = rawExitConditions
+        .map((condition: any, conditionIndex: number) => ({
+          id:
+            typeof condition?.id === 'string' && condition.id.trim()
+              ? condition.id
+              : `flow-${flowId}-exit-condition-${conditionIndex}`,
+          field: normalizeConditionField(condition?.field),
+          operator: normalizeConditionOperator(condition?.operator),
+          value: typeof condition?.value === 'string' ? condition.value : '',
+        }))
+        .filter((condition) => condition.value.trim());
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
           const delayHoursRaw = Number(step?.delayHours);
           const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
-          const templateId = typeof step?.templateId === 'string' ? step.templateId : '';
-          const validTemplateId =
-            messageTemplates.some((template) => template.id === templateId) ? templateId : fallbackTemplateId;
+          const actionType = normalizeActionType(step?.actionType);
+          if (actionType === 'send_message') {
+            const messageSource = normalizeMessageSource(step?.messageSource);
+            const templateId = typeof step?.templateId === 'string' ? step.templateId : '';
+            const validTemplateId =
+              messageTemplates.some((template) => template.id === templateId) ? templateId : fallbackTemplateId;
+            return {
+              id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+              delayHours,
+              actionType,
+              messageSource,
+              templateId: validTemplateId,
+              customMessage: normalizeCustomMessage(step?.customMessage),
+            };
+          }
+
+          if (actionType === 'update_status') {
+            return {
+              id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+              delayHours,
+              actionType,
+              statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
+            };
+          }
+
           return {
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
             delayHours,
-            templateId: validTemplateId,
+            actionType,
           };
-        })
-        .filter((step) => step.templateId);
+        });
 
       return {
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
         steps: normalizedSteps,
-        stopOnStatusChange: flow?.stopOnStatusChange !== false,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
         conditions: normalizedConditions,
+        exitConditionLogic: flow?.exitConditionLogic === 'all' ? 'all' : 'any',
+        exitConditions: normalizedExitConditions,
         tags: Array.isArray(flow?.tags)
           ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
           : [],
@@ -599,11 +693,13 @@ export const getNextAllowedSendAt = (
 
 export async function sendAutoContactMessage({
   lead,
-  message,
+  contentType,
+  content,
   settings,
 }: {
   lead: Lead;
-  message: string;
+  contentType: 'string' | 'image' | 'video' | 'audio' | 'document';
+  content: string | { url: string; caption?: string; filename?: string };
   settings: AutoContactSettings;
 }): Promise<void> {
   const normalizedPhone = normalizePhone(lead.telefone || '');
@@ -624,10 +720,24 @@ export async function sendAutoContactMessage({
   });
 
   try {
+    if (contentType === 'string') {
+      await sendWhatsAppMessage({
+        chatId,
+        contentType: 'string',
+        content: content as string,
+      });
+      return;
+    }
+
+    const media = content as { url: string; caption?: string; filename?: string };
     await sendWhatsAppMessage({
       chatId,
-      contentType: 'string',
-      content: message,
+      contentType,
+      content: {
+        url: media.url,
+        caption: media.caption,
+        filename: contentType === 'document' ? media.filename : undefined,
+      },
     });
   } catch (error) {
     const details = error instanceof Error ? error.message : String(error);
@@ -635,6 +745,68 @@ export async function sendAutoContactMessage({
     throw error;
   }
 }
+
+const shouldExitFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+  const exitConditions = flow.exitConditions ?? [];
+  if (exitConditions.length === 0) return false;
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
+};
+
+const buildCustomMessagePayload = (
+  customMessage: AutoContactFlowCustomMessage | undefined,
+  lead: Lead,
+): { contentType: 'string' | 'image' | 'video' | 'audio' | 'document'; content: string | { url: string; caption?: string; filename?: string } } | null => {
+  if (!customMessage) return null;
+  const type = customMessage.type ?? 'text';
+  const caption = applyTemplateVariables(customMessage.caption ?? '', lead).trim();
+  const text = applyTemplateVariables(customMessage.text ?? '', lead).trim();
+  const mediaUrl = customMessage.mediaUrl?.trim();
+
+  if (type === 'text') {
+    return text ? { contentType: 'string', content: text } : null;
+  }
+
+  if (!mediaUrl) {
+    return text ? { contentType: 'string', content: text } : null;
+  }
+
+  return {
+    contentType: type === 'image' || type === 'video' || type === 'audio' || type === 'document' ? type : 'document',
+    content: {
+      url: mediaUrl,
+      caption: caption || text || undefined,
+      filename: customMessage.filename?.trim() || undefined,
+    },
+  };
+};
+
+const updateLeadStatus = async (leadId: string, status: string): Promise<string> => {
+  const trimmedStatus = status.trim();
+  if (!trimmedStatus) return '';
+  const { error } = await supabase.from('leads').update({ status: trimmedStatus }).eq('id', leadId);
+  if (error) {
+    console.error('[AutoContact] Erro ao atualizar status do lead:', error);
+    throw error;
+  }
+  return trimmedStatus;
+};
+
+const updateLeadArchive = async (leadId: string, archive: boolean): Promise<void> => {
+  const { error } = await supabase.from('leads').update({ arquivado: archive }).eq('id', leadId);
+  if (error) {
+    console.error('[AutoContact] Erro ao atualizar arquivamento do lead:', error);
+    throw error;
+  }
+};
+
+const deleteLead = async (leadId: string): Promise<void> => {
+  const { error } = await supabase.from('leads').delete().eq('id', leadId);
+  if (error) {
+    console.error('[AutoContact] Erro ao excluir lead:', error);
+    throw error;
+  }
+};
 
 export async function runAutoContactFlow({
   lead,
@@ -659,6 +831,7 @@ export async function runAutoContactFlow({
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
+    if (shouldExitFlow(matchingFlow, lead)) return;
     cumulativeDelayHours += step.delayHours;
 
     const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
@@ -676,19 +849,53 @@ export async function runAutoContactFlow({
       if (signal?.() === false) return;
     }
 
-    const template =
-      templates.find((item) => item.id === step.templateId) ??
-      templates.find((item) => item.id === settings.selectedTemplateId) ??
-      templates[0] ??
-      null;
-    const message = getTemplateMessage(template);
-    if (!message.trim()) continue;
+    if (step.actionType === 'send_message') {
+      if (step.messageSource === 'custom') {
+        const payload = buildCustomMessagePayload(step.customMessage, lead);
+        if (!payload) continue;
+        await sendAutoContactMessage({
+          lead,
+          contentType: payload.contentType,
+          content: payload.content,
+          settings,
+        });
+      } else {
+        const template =
+          templates.find((item) => item.id === step.templateId) ??
+          templates.find((item) => item.id === settings.selectedTemplateId) ??
+          templates[0] ??
+          null;
+        const message = getTemplateMessage(template);
+        if (!message.trim()) continue;
 
-    const finalMessage = applyTemplateVariables(message, lead);
-    await sendAutoContactMessage({ lead, message: finalMessage, settings });
-    if (!firstMessageSent) {
-      await onFirstMessageSent?.();
-      firstMessageSent = true;
+        const finalMessage = applyTemplateVariables(message, lead);
+        await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
+      }
+
+      if (!firstMessageSent) {
+        await onFirstMessageSent?.();
+        firstMessageSent = true;
+      }
+      continue;
+    }
+
+    if (step.actionType === 'update_status') {
+      const updatedStatus = await updateLeadStatus(lead.id, step.statusToSet ?? '');
+      if (updatedStatus) {
+        lead.status = updatedStatus;
+      }
+      continue;
+    }
+
+    if (step.actionType === 'archive_lead') {
+      await updateLeadArchive(lead.id, true);
+      lead.arquivado = true;
+      continue;
+    }
+
+    if (step.actionType === 'delete_lead') {
+      await deleteLead(lead.id);
+      return;
     }
   }
 }

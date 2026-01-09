@@ -34,8 +34,11 @@ import {
   normalizeAutoContactSettings,
   type AutoContactScheduleAdjustmentReason,
   type AutoContactFlow,
+  type AutoContactFlowActionType,
   type AutoContactFlowCondition,
+  type AutoContactFlowMessageSource,
   type AutoContactFlowStep,
+  type AutoContactFlowCustomMessage,
   type AutoContactLoggingSettings,
   type AutoContactMonitoringSettings,
   type AutoContactSchedulingSettings,
@@ -364,18 +367,40 @@ export default function AutoContactFlowSettings() {
           .map((step, stepIndex) => {
             const rawDelay = Number(step.delayHours);
             const delayHours = Number.isFinite(rawDelay) && rawDelay >= 0 ? rawDelay : 0;
+            const actionType = (step.actionType ?? 'send_message') as AutoContactFlowActionType;
+            const messageSource = (step.messageSource ?? 'template') as AutoContactFlowMessageSource;
             const templateId =
               sanitizedTemplates.find((template) => template.id === step.templateId)?.id ?? fallbackTemplateId;
+            const customMessage: AutoContactFlowCustomMessage = {
+              type: step.customMessage?.type ?? 'text',
+              text: step.customMessage?.text ?? '',
+              mediaUrl: step.customMessage?.mediaUrl ?? '',
+              caption: step.customMessage?.caption ?? '',
+              filename: step.customMessage?.filename ?? '',
+            };
+
             return {
               id: step.id?.trim() ? step.id : `flow-${flow.id}-step-${stepIndex}`,
               delayHours,
+              actionType,
+              messageSource,
               templateId,
+              customMessage,
+              statusToSet: step.statusToSet?.trim() || '',
             };
           })
-          .filter((step) => step.templateId);
+          .filter((step) => step.delayHours >= 0);
         const conditions = (flow.conditions ?? [])
           .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-condition-${conditionIndex}`,
+            field: condition.field,
+            operator: condition.operator,
+            value: condition.value?.trim() || '',
+          }))
+          .filter((condition) => condition.value);
+        const exitConditions = (flow.exitConditions ?? [])
+          .map((condition, conditionIndex) => ({
+            id: condition.id?.trim() ? condition.id : `flow-${flow.id}-exit-condition-${conditionIndex}`,
             field: condition.field,
             operator: condition.operator,
             value: condition.value?.trim() || '',
@@ -388,10 +413,11 @@ export default function AutoContactFlowSettings() {
           name: flow.name?.trim() || `Fluxo ${flowIndex + 1}`,
           triggerStatus: flow.triggerStatus?.trim() || '',
           steps,
-          stopOnStatusChange: flow.stopOnStatusChange !== false,
           finalStatus: flow.finalStatus?.trim() || '',
           conditionLogic: flow.conditionLogic === 'any' ? 'any' : 'all',
           conditions,
+          exitConditionLogic: flow.exitConditionLogic === 'all' ? 'all' : 'any',
+          exitConditions,
           tags,
         };
       })
@@ -522,9 +548,9 @@ export default function AutoContactFlowSettings() {
       if (flowTagFilter !== 'all' && !tags.includes(flowTagFilter)) {
         return false;
       }
-    if (!search) return true;
-    return getFlowSearchText(flow).includes(search);
-  });
+      if (!search) return true;
+      return getFlowSearchText(flow).includes(search);
+    });
   }, [flowDrafts, flowSearch, flowTagFilter, getFlowSearchText]);
   const metrics = useMemo(() => {
     const totalSteps = flowDrafts.reduce((total, flow) => total + flow.steps.length, 0);
@@ -545,6 +571,16 @@ export default function AutoContactFlowSettings() {
     audio: 'Áudio',
     document: 'Documento',
   };
+  const flowActionLabels: Record<AutoContactFlowActionType, string> = {
+    send_message: 'Enviar mensagem',
+    update_status: 'Atualizar status do lead',
+    archive_lead: 'Arquivar lead',
+    delete_lead: 'Excluir lead',
+  };
+  const messageSourceLabels: Record<AutoContactFlowMessageSource, string> = {
+    template: 'Template',
+    custom: 'Personalizado',
+  };
 
   const messageTypeIcons: Record<TemplateMessageType, typeof MessageCircle> = {
     text: MessageCircle,
@@ -556,10 +592,25 @@ export default function AutoContactFlowSettings() {
   const createFlowStep = (templateId = selectedTemplateId): AutoContactFlowStep => ({
     id: `flow-step-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     delayHours: 2,
+    actionType: 'send_message',
+    messageSource: 'template',
     templateId: templateId || messageTemplatesDraft[0]?.id || '',
+    customMessage: {
+      type: 'text',
+      text: '',
+      mediaUrl: '',
+      caption: '',
+      filename: '',
+    },
   });
   const createFlowCondition = (): AutoContactFlowCondition => ({
     id: `flow-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    field: 'status',
+    operator: 'equals',
+    value: '',
+  });
+  const createFlowExitCondition = (): AutoContactFlowCondition => ({
+    id: `flow-exit-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     field: 'status',
     operator: 'equals',
     value: '',
@@ -569,10 +620,11 @@ export default function AutoContactFlowSettings() {
     name: '',
     triggerStatus: '',
     steps: [createFlowStep()],
-    stopOnStatusChange: true,
     finalStatus: '',
     conditionLogic: 'all',
     conditions: [],
+    exitConditionLogic: 'any',
+    exitConditions: [],
     tags: [],
   });
   const handleAddFlow = () => {
@@ -603,6 +655,45 @@ export default function AutoContactFlowSettings() {
           ? {
               ...flow,
               steps: flow.steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+            }
+          : flow,
+      ),
+    );
+  };
+  const handleAddFlowExitCondition = (flowId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? { ...flow, exitConditions: [...(flow.exitConditions ?? []), createFlowExitCondition()] }
+          : flow,
+      ),
+    );
+  };
+  const handleUpdateFlowExitCondition = (
+    flowId: string,
+    conditionId: string,
+    updates: Partial<AutoContactFlowCondition>,
+  ) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              exitConditions: (flow.exitConditions ?? []).map((condition) =>
+                condition.id === conditionId ? { ...condition, ...updates } : condition,
+              ),
+            }
+          : flow,
+      ),
+    );
+  };
+  const handleRemoveFlowExitCondition = (flowId: string, conditionId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              exitConditions: (flow.exitConditions ?? []).filter((condition) => condition.id !== conditionId),
             }
           : flow,
       ),
@@ -1149,7 +1240,8 @@ export default function AutoContactFlowSettings() {
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <span className="rounded-full border border-slate-200 px-2 py-0.5">
-                          {flow.stopOnStatusChange ? 'Interrompe ao mudar status' : 'Continua após status'}
+                          Saída: {(flow.exitConditions ?? []).length || 0} condição
+                          {(flow.exitConditions ?? []).length === 1 ? '' : 's'}
                         </span>
                         <span className="rounded-full border border-slate-200 px-2 py-0.5">
                           {flow.finalStatus ? `Finaliza em ${flow.finalStatus}` : 'Sem status final'}
@@ -1246,21 +1338,6 @@ export default function AutoContactFlowSettings() {
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="Ex.: Follow-up de contato inicial"
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-slate-500">Encerrar se o status mudar</label>
-                      <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                        <input
-                          type="checkbox"
-                          checked={activeFlow.stopOnStatusChange}
-                          onChange={(event) =>
-                            handleUpdateFlow(activeFlow.id, { stopOnStatusChange: event.target.checked })
-                          }
-                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                        />
-                        Se o lead evoluir, este fluxo é encerrado automaticamente
-                      </label>
                     </div>
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1363,6 +1440,105 @@ export default function AutoContactFlowSettings() {
                     </div>
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-800">Condições de saída</h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Defina quando este fluxo deve ser encerrado automaticamente.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddFlowExitCondition(activeFlow.id)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Nova condição
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span>Encerrar quando</span>
+                        <select
+                          value={activeFlow.exitConditionLogic ?? 'any'}
+                          onChange={(event) =>
+                            handleUpdateFlow(activeFlow.id, {
+                              exitConditionLogic: event.target.value as AutoContactFlow['exitConditionLogic'],
+                            })
+                          }
+                          className="px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                        >
+                          <option value="any">qualquer condição</option>
+                          <option value="all">todas as condições</option>
+                        </select>
+                        <span>forem atendidas</span>
+                      </div>
+
+                      {(activeFlow.exitConditions ?? []).length === 0 ? (
+                        <div className="text-xs text-slate-500 bg-white border border-dashed border-slate-200 rounded-lg p-3">
+                          Nenhuma condição de saída configurada. O fluxo seguirá até a última ação.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {(activeFlow.exitConditions ?? []).map((condition) => (
+                            <div
+                              key={condition.id}
+                              className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[160px_160px_1fr_auto]"
+                            >
+                              <select
+                                value={condition.field}
+                                onChange={(event) =>
+                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                    field: event.target.value as AutoContactFlowCondition['field'],
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(conditionFieldLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={condition.operator}
+                                onChange={(event) =>
+                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                    operator: event.target.value as AutoContactFlowCondition['operator'],
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(conditionOperatorLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={condition.value}
+                                onChange={(event) =>
+                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                    value: event.target.value,
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="Digite o valor"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlowExitCondition(activeFlow.id, condition.id)}
+                                className="text-xs text-red-600 hover:text-red-700"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div>
                         <h4 className="text-sm font-semibold text-slate-800">Tags e categorização</h4>
                         <p className="text-xs text-slate-500 mt-1">
@@ -1442,7 +1618,8 @@ export default function AutoContactFlowSettings() {
                         <div>
                           <h4 className="text-sm font-semibold text-slate-800">Sequência de ações</h4>
                           <p className="text-xs text-slate-500 mt-1">
-                            Cada etapa representa uma ação. Configure o intervalo e, por enquanto, o template de mensagem a ser enviado.
+                            Cada etapa representa uma ação. Configure o intervalo, o tipo de ação e, se necessário,
+                            o conteúdo da mensagem.
                           </p>
                         </div>
                         <button
@@ -1458,52 +1635,225 @@ export default function AutoContactFlowSettings() {
                       {activeFlow.steps.map((step, stepIndex) => (
                         <div
                           key={step.id}
-                          className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[140px_1fr_auto]"
+                          className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
                         >
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Esperar (horas)</label>
-                            <input
-                              type="number"
-                              min={0}
-                              value={step.delayHours}
-                              onChange={(event) =>
-                                handleUpdateFlowStep(activeFlow.id, step.id, {
-                                  delayHours: Number(event.target.value),
-                                })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            />
+                          <div className="grid gap-3 md:grid-cols-[140px_220px_1fr_auto]">
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">Esperar (horas)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={step.delayHours}
+                                onChange={(event) =>
+                                  handleUpdateFlowStep(activeFlow.id, step.id, {
+                                    delayHours: Number(event.target.value),
+                                  })
+                                }
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                Tipo de ação
+                              </label>
+                              <select
+                                value={step.actionType ?? 'send_message'}
+                                onChange={(event) =>
+                                  handleUpdateFlowStep(activeFlow.id, step.id, {
+                                    actionType: event.target.value as AutoContactFlowActionType,
+                                  })
+                                }
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(flowActionLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlowStep(activeFlow.id, step.id)}
+                                className="text-xs text-red-600 hover:text-red-700"
+                              >
+                                Remover
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">
-                              Template da mensagem
-                            </label>
-                            <select
-                              value={step.templateId}
-                              onChange={(event) =>
-                                handleUpdateFlowStep(activeFlow.id, step.id, { templateId: event.target.value })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                            >
-                              {messageTemplatesDraft.map((template) => (
-                                <option key={template.id} value={template.id}>
-                                  {template.name || 'Modelo sem nome'}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex items-end">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveFlowStep(activeFlow.id, step.id)}
-                              className="text-xs text-red-600 hover:text-red-700"
-                            >
-                              Remover
-                            </button>
-                          </div>
-                          <div className="md:col-span-3 text-[11px] text-slate-500">
-                            Etapa {stepIndex + 1} da sequência.
-                          </div>
+
+                          {step.actionType === 'send_message' && (
+                            <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                  Origem da mensagem
+                                </label>
+                                <select
+                                  value={step.messageSource ?? 'template'}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, {
+                                      messageSource: event.target.value as AutoContactFlowMessageSource,
+                                    })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  {Object.entries(messageSourceLabels).map(([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              {step.messageSource !== 'custom' ? (
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                    Template da mensagem
+                                  </label>
+                                  <select
+                                    value={step.templateId ?? ''}
+                                    onChange={(event) =>
+                                      handleUpdateFlowStep(activeFlow.id, step.id, { templateId: event.target.value })
+                                    }
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                  >
+                                    {messageTemplatesDraft.map((template) => (
+                                      <option key={template.id} value={template.id}>
+                                        {template.name || 'Modelo sem nome'}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                      Tipo de mensagem
+                                    </label>
+                                    <select
+                                      value={step.customMessage?.type ?? 'text'}
+                                      onChange={(event) =>
+                                        handleUpdateFlowStep(activeFlow.id, step.id, {
+                                          customMessage: {
+                                            ...(step.customMessage ?? {}),
+                                            type: event.target.value as TemplateMessageType,
+                                          } as AutoContactFlowCustomMessage,
+                                        })
+                                      }
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                    >
+                                      {Object.entries(messageTypeLabels).map(([value, label]) => (
+                                        <option key={value} value={value}>
+                                          {label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                      URL da mídia (opcional)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={step.customMessage?.mediaUrl ?? ''}
+                                      onChange={(event) =>
+                                        handleUpdateFlowStep(activeFlow.id, step.id, {
+                                          customMessage: {
+                                            ...(step.customMessage ?? {}),
+                                            mediaUrl: event.target.value,
+                                          } as AutoContactFlowCustomMessage,
+                                        })
+                                      }
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                  <div className="sm:col-span-2">
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                      Texto/legenda
+                                    </label>
+                                    <textarea
+                                      value={step.customMessage?.text ?? ''}
+                                      onChange={(event) =>
+                                        handleUpdateFlowStep(activeFlow.id, step.id, {
+                                          customMessage: {
+                                            ...(step.customMessage ?? {}),
+                                            text: event.target.value,
+                                          } as AutoContactFlowCustomMessage,
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                      placeholder="Digite a mensagem"
+                                    />
+                                  </div>
+                                  {step.customMessage?.type === 'document' && (
+                                    <div className="sm:col-span-2">
+                                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                        Nome do arquivo (opcional)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={step.customMessage?.filename ?? ''}
+                                        onChange={(event) =>
+                                          handleUpdateFlowStep(activeFlow.id, step.id, {
+                                            customMessage: {
+                                              ...(step.customMessage ?? {}),
+                                              filename: event.target.value,
+                                            } as AutoContactFlowCustomMessage,
+                                          })
+                                        }
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                        placeholder="Proposta-plano.pdf"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {step.actionType === 'update_status' && (
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                Novo status do lead
+                              </label>
+                              {showStatusSelect ? (
+                                <select
+                                  value={step.statusToSet ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { statusToSet: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  <option value="">Selecione um status</option>
+                                  {statusOptions.map((status) => (
+                                    <option key={status.id} value={status.nome}>
+                                      {status.nome}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={step.statusToSet ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { statusToSet: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="Ex.: Em negociação"
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {(step.actionType === 'archive_lead' || step.actionType === 'delete_lead') && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                              Esta ação será aplicada automaticamente ao lead ao chegar nesta etapa.
+                            </div>
+                          )}
+
+                          <div className="text-[11px] text-slate-500">Etapa {stepIndex + 1} da sequência.</div>
                         </div>
                       ))}
                     </div>

@@ -99,6 +99,11 @@ export default function WhatsAppApiSettings() {
 
     const currentMessageTemplates = autoContactSettings?.messageTemplates || [];
     const currentSelectedTemplateId = autoContactSettings?.selectedTemplateId || '';
+    const fallbackSettings = normalizeAutoContactSettings(autoContactIntegration.settings);
+    const currentFlows = autoContactSettings?.flows || fallbackSettings.flows;
+    const currentScheduling = autoContactSettings?.scheduling || fallbackSettings.scheduling;
+    const currentMonitoring = autoContactSettings?.monitoring || fallbackSettings.monitoring;
+    const currentLogging = autoContactSettings?.logging || fallbackSettings.logging;
 
     const newSettings = {
       enabled,
@@ -109,6 +114,10 @@ export default function WhatsAppApiSettings() {
       statusOnInvalidNumber: statusOnInvalidNumber,
       messageTemplates: currentMessageTemplates,
       selectedTemplateId: currentSelectedTemplateId,
+      flows: currentFlows,
+      scheduling: currentScheduling,
+      monitoring: currentMonitoring,
+      logging: currentLogging,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {

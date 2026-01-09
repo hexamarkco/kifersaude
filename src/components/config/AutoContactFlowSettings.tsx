@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
+  AlarmClock,
+  BarChart3,
+  ClipboardList,
   Edit3,
   File,
   Film,
@@ -9,8 +13,11 @@ import {
   MessageCircle,
   Mic,
   Plus,
+  Search,
   Save,
   ShieldCheck,
+  Tag,
+  Timer,
   Trash2,
   X,
 } from 'lucide-react';
@@ -24,7 +31,11 @@ import {
   getTemplateMessages,
   normalizeAutoContactSettings,
   type AutoContactFlow,
+  type AutoContactFlowCondition,
   type AutoContactFlowStep,
+  type AutoContactLoggingSettings,
+  type AutoContactMonitoringSettings,
+  type AutoContactSchedulingSettings,
   type AutoContactSettings,
   type AutoContactTemplate,
   type TemplateMessage,
@@ -45,6 +56,14 @@ export default function AutoContactFlowSettings() {
   const [messageTemplatesDraft, setMessageTemplatesDraft] = useState<AutoContactTemplate[]>(DEFAULT_MESSAGE_TEMPLATES);
   const [flowDrafts, setFlowDrafts] = useState<AutoContactFlow[]>(DEFAULT_AUTO_CONTACT_FLOWS);
   const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
+  const defaultSettings = useMemo(() => normalizeAutoContactSettings(null), []);
+  const [schedulingDraft, setSchedulingDraft] = useState<AutoContactSchedulingSettings>(
+    defaultSettings.scheduling,
+  );
+  const [monitoringDraft, setMonitoringDraft] = useState<AutoContactMonitoringSettings>(
+    defaultSettings.monitoring,
+  );
+  const [loggingDraft, setLoggingDraft] = useState<AutoContactLoggingSettings>(defaultSettings.logging);
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [loadingFlow, setLoadingFlow] = useState(true);
@@ -54,6 +73,12 @@ export default function AutoContactFlowSettings() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [templateModalMode, setTemplateModalMode] = useState<'create' | 'edit'>('create');
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft | null>(null);
+  const [flowSearch, setFlowSearch] = useState('');
+  const [flowTagFilter, setFlowTagFilter] = useState('all');
+  const [tagDraft, setTagDraft] = useState('');
+  const [showSimulation, setShowSimulation] = useState(false);
+  const [simulationStart, setSimulationStart] = useState('');
+  const [lastRefreshAt, setLastRefreshAt] = useState(() => new Date());
 
   useEffect(() => {
     void loadAutoContactSettings();
@@ -74,6 +99,9 @@ export default function AutoContactFlowSettings() {
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
     setSelectedTemplateId(normalized.selectedTemplateId);
     setFlowDrafts(normalized.flows ?? []);
+    setSchedulingDraft(normalized.scheduling);
+    setMonitoringDraft(normalized.monitoring);
+    setLoggingDraft(normalized.logging);
     setLeadStatuses(statusConfig);
 
     setLoadingFlow(false);
@@ -275,6 +303,9 @@ export default function AutoContactFlowSettings() {
     setMessageTemplatesDraft(savedTemplates);
     setSelectedTemplateId(autoContactSettings?.selectedTemplateId ?? savedTemplates[0]?.id ?? '');
     setFlowDrafts(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS);
+    setSchedulingDraft(autoContactSettings?.scheduling ?? defaultSettings.scheduling);
+    setMonitoringDraft(autoContactSettings?.monitoring ?? defaultSettings.monitoring);
+    setLoggingDraft(autoContactSettings?.logging ?? defaultSettings.logging);
     setStatusMessage(null);
   };
 
@@ -304,6 +335,15 @@ export default function AutoContactFlowSettings() {
             };
           })
           .filter((step) => step.templateId);
+        const conditions = (flow.conditions ?? [])
+          .map((condition, conditionIndex) => ({
+            id: condition.id?.trim() ? condition.id : `flow-${flow.id}-condition-${conditionIndex}`,
+            field: condition.field,
+            operator: condition.operator,
+            value: condition.value?.trim() || '',
+          }))
+          .filter((condition) => condition.value);
+        const tags = (flow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
 
         return {
           id: flow.id?.trim() ? flow.id : `flow-${flowIndex}`,
@@ -312,6 +352,9 @@ export default function AutoContactFlowSettings() {
           steps,
           stopOnStatusChange: flow.stopOnStatusChange !== false,
           finalStatus: flow.finalStatus?.trim() || '',
+          conditionLogic: flow.conditionLogic === 'any' ? 'any' : 'all',
+          conditions,
+          tags,
         };
       })
       .filter((flow) => flow.triggerStatus && flow.steps.length);
@@ -326,6 +369,9 @@ export default function AutoContactFlowSettings() {
       messageTemplates: sanitizedTemplates,
       selectedTemplateId: normalizedSelectedTemplateId,
       flows: sanitizedFlows,
+      scheduling: schedulingDraft,
+      monitoring: monitoringDraft,
+      logging: loggingDraft,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
@@ -343,6 +389,9 @@ export default function AutoContactFlowSettings() {
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setSelectedTemplateId(normalized.selectedTemplateId);
       setFlowDrafts(normalized.flows ?? []);
+      setSchedulingDraft(normalized.scheduling);
+      setMonitoringDraft(normalized.monitoring);
+      setLoggingDraft(normalized.logging);
       setStatusMessage({ type: 'success', text: 'Fluxos e templates de automação salvos com sucesso.' });
     }
 
@@ -365,6 +414,34 @@ export default function AutoContactFlowSettings() {
     () => (activeFlow ? flowDrafts.findIndex((flow) => flow.id === activeFlow.id) : -1),
     [activeFlow, flowDrafts],
   );
+  const availableTags = useMemo(() => {
+    const tags = flowDrafts.flatMap((flow) => flow.tags ?? []).filter(Boolean);
+    return Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+  }, [flowDrafts]);
+  const filteredFlows = useMemo(() => {
+    const search = flowSearch.trim().toLowerCase();
+    return flowDrafts.filter((flow) => {
+      const tags = flow.tags ?? [];
+      if (flowTagFilter !== 'all' && !tags.includes(flowTagFilter)) {
+        return false;
+      }
+      if (!search) return true;
+      const haystack = `${flow.name} ${flow.triggerStatus} ${tags.join(' ')}`.toLowerCase();
+      return haystack.includes(search);
+    });
+  }, [flowDrafts, flowSearch, flowTagFilter]);
+  const metrics = useMemo(() => {
+    const totalSteps = flowDrafts.reduce((total, flow) => total + flow.steps.length, 0);
+    const flowsWithConditions = flowDrafts.filter((flow) => (flow.conditions ?? []).length > 0).length;
+    const taggedFlows = flowDrafts.filter((flow) => (flow.tags ?? []).length > 0).length;
+    return {
+      totalFlows: flowDrafts.length,
+      totalSteps,
+      totalTemplates: messageTemplatesDraft.length,
+      flowsWithConditions,
+      taggedFlows,
+    };
+  }, [flowDrafts, messageTemplatesDraft]);
   const messageTypeLabels: Record<TemplateMessageType, string> = {
     text: 'Texto',
     image: 'Imagem',
@@ -385,6 +462,12 @@ export default function AutoContactFlowSettings() {
     delayHours: 2,
     templateId: templateId || messageTemplatesDraft[0]?.id || '',
   });
+  const createFlowCondition = (): AutoContactFlowCondition => ({
+    id: `flow-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    field: 'origem',
+    operator: 'contains',
+    value: '',
+  });
   const createFlowDraft = (): AutoContactFlow => ({
     id: `flow-${Date.now()}`,
     name: '',
@@ -392,6 +475,9 @@ export default function AutoContactFlowSettings() {
     steps: [createFlowStep()],
     stopOnStatusChange: true,
     finalStatus: '',
+    conditionLogic: 'all',
+    conditions: [],
+    tags: [],
   });
   const handleAddFlow = () => {
     const newFlow = createFlowDraft();
@@ -438,8 +524,137 @@ export default function AutoContactFlowSettings() {
       }),
     );
   };
+  const handleAddFlowCondition = (flowId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? { ...flow, conditions: [...(flow.conditions ?? []), createFlowCondition()] }
+          : flow,
+      ),
+    );
+  };
+  const handleUpdateFlowCondition = (
+    flowId: string,
+    conditionId: string,
+    updates: Partial<AutoContactFlowCondition>,
+  ) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              conditions: (flow.conditions ?? []).map((condition) =>
+                condition.id === conditionId ? { ...condition, ...updates } : condition,
+              ),
+            }
+          : flow,
+      ),
+    );
+  };
+  const handleRemoveFlowCondition = (flowId: string, conditionId: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              conditions: (flow.conditions ?? []).filter((condition) => condition.id !== conditionId),
+            }
+          : flow,
+      ),
+    );
+  };
+  const handleAddFlowTag = (flowId: string) => {
+    const trimmed = tagDraft.trim();
+    if (!trimmed) return;
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              tags: flow.tags?.includes(trimmed) ? flow.tags : [...(flow.tags ?? []), trimmed],
+            }
+          : flow,
+      ),
+    );
+    setTagDraft('');
+  };
+  const handleRemoveFlowTag = (flowId: string, tag: string) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) =>
+        flow.id === flowId
+          ? {
+              ...flow,
+              tags: (flow.tags ?? []).filter((item) => item !== tag),
+            }
+          : flow,
+      ),
+    );
+  };
   const statusOptions = leadStatuses.filter((status) => status.ativo !== false);
   const showStatusSelect = statusOptions.length > 0;
+  const weekdayLabels = [
+    { value: 1, label: 'Seg' },
+    { value: 2, label: 'Ter' },
+    { value: 3, label: 'Qua' },
+    { value: 4, label: 'Qui' },
+    { value: 5, label: 'Sex' },
+    { value: 6, label: 'Sáb' },
+    { value: 7, label: 'Dom' },
+  ];
+  const conditionFieldLabels: Record<AutoContactFlowCondition['field'], string> = {
+    origem: 'Origem do lead',
+    cidade: 'Cidade',
+    responsavel: 'Responsável',
+    status: 'Status atual',
+    tag: 'Tag do lead',
+  };
+  const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
+    equals: 'É igual a',
+    contains: 'Contém',
+    not_equals: 'Não é igual',
+    not_contains: 'Não contém',
+  };
+  const getLocalDateTimeValue = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offset).toISOString().slice(0, 16);
+  };
+  const simulationTimeline = useMemo(() => {
+    if (!activeFlow || !showSimulation) return [];
+    const baseDate = simulationStart ? new Date(simulationStart) : new Date();
+    let cumulative = 0;
+    return activeFlow.steps.map((step, index) => {
+      cumulative += step.delayHours;
+      const scheduledAt = new Date(baseDate.getTime() + cumulative * 60 * 60 * 1000);
+      return {
+        index: index + 1,
+        step,
+        scheduledAt,
+        delayHours: step.delayHours,
+      };
+    });
+  }, [activeFlow, showSimulation, simulationStart]);
+
+  useEffect(() => {
+    if (!activeFlowId) {
+      setShowSimulation(false);
+      setSimulationStart('');
+      setTagDraft('');
+      return;
+    }
+    setShowSimulation(false);
+    setSimulationStart('');
+    setTagDraft('');
+  }, [activeFlowId]);
+
+  useEffect(() => {
+    if (!monitoringDraft.realtimeEnabled) return;
+    setLastRefreshAt(new Date());
+    const intervalId = window.setInterval(() => {
+      setLastRefreshAt(new Date());
+    }, monitoringDraft.refreshSeconds * 1000);
+    return () => window.clearInterval(intervalId);
+  }, [monitoringDraft.realtimeEnabled, monitoringDraft.refreshSeconds]);
 
   if (loadingFlow) {
     return (
@@ -466,6 +681,220 @@ export default function AutoContactFlowSettings() {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="space-y-6">
         <div>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-slate-500">Fluxos ativos</div>
+                <BarChart3 className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-2xl font-semibold text-slate-800 mt-2">{metrics.totalFlows}</div>
+              <p className="text-xs text-slate-500 mt-1">Modelos: {metrics.totalTemplates}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-slate-500">Etapas totais</div>
+                <Timer className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-2xl font-semibold text-slate-800 mt-2">{metrics.totalSteps}</div>
+              <p className="text-xs text-slate-500 mt-1">Condições: {metrics.flowsWithConditions}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-slate-500">Fluxos tagueados</div>
+                <Tag className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-2xl font-semibold text-slate-800 mt-2">{metrics.taggedFlows}</div>
+              <p className="text-xs text-slate-500 mt-1">Tags ativas: {availableTags.length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-slate-500">Última atualização</div>
+                <Activity className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-sm font-semibold text-slate-800 mt-2">
+                {lastRefreshAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Monitoramento em tempo real</p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-medium">
+                <AlarmClock className="w-5 h-5" />
+                Agendamento avançado
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Fuso horário</label>
+                  <input
+                    type="text"
+                    value={schedulingDraft.timezone}
+                    onChange={(event) =>
+                      setSchedulingDraft((previous) => ({ ...previous, timezone: event.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="America/Sao_Paulo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Janela diária</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={schedulingDraft.startHour}
+                      onChange={(event) =>
+                        setSchedulingDraft((previous) => ({ ...previous, startHour: event.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                    <span className="text-xs text-slate-400">até</span>
+                    <input
+                      type="time"
+                      value={schedulingDraft.endHour}
+                      onChange={(event) =>
+                        setSchedulingDraft((previous) => ({ ...previous, endHour: event.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">Dias permitidos</label>
+                <div className="flex flex-wrap gap-2">
+                  {weekdayLabels.map((day) => {
+                    const isActive = schedulingDraft.allowedWeekdays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() =>
+                          setSchedulingDraft((previous) => ({
+                            ...previous,
+                            allowedWeekdays: isActive
+                              ? previous.allowedWeekdays.filter((value) => value !== day.value)
+                              : [...previous.allowedWeekdays, day.value].sort((a, b) => a - b),
+                          }))
+                        }
+                        className={`px-3 py-1 text-xs rounded-full border ${
+                          isActive
+                            ? 'bg-teal-50 border-teal-200 text-teal-700'
+                            : 'bg-white border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={schedulingDraft.skipHolidays}
+                  onChange={(event) =>
+                    setSchedulingDraft((previous) => ({ ...previous, skipHolidays: event.target.checked }))
+                  }
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                Pausar envios em feriados configurados
+              </label>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-medium">
+                <ClipboardList className="w-5 h-5" />
+                Observabilidade e auditoria
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800">Monitoramento em tempo real</div>
+                    <p className="text-xs text-slate-500">
+                      Atualiza o painel automaticamente com status das execuções.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={monitoringDraft.realtimeEnabled}
+                    onChange={(event) =>
+                      setMonitoringDraft((previous) => ({ ...previous, realtimeEnabled: event.target.checked }))
+                    }
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 mt-1"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Atualização (segundos)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      value={monitoringDraft.refreshSeconds}
+                      onChange={(event) =>
+                        setMonitoringDraft((previous) => ({
+                          ...previous,
+                          refreshSeconds: Number(event.target.value),
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Última atualização</label>
+                    <div className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 bg-slate-50">
+                      {lastRefreshAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 pt-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800">Logs estruturados e auditoria</div>
+                    <p className="text-xs text-slate-500">Registre eventos, payloads e ações por usuário.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={loggingDraft.enabled}
+                    onChange={(event) =>
+                      setLoggingDraft((previous) => ({ ...previous, enabled: event.target.checked }))
+                    }
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 mt-1"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Retenção (dias)</label>
+                    <input
+                      type="number"
+                      min={7}
+                      value={loggingDraft.retentionDays}
+                      onChange={(event) =>
+                        setLoggingDraft((previous) => ({
+                          ...previous,
+                          retentionDays: Number(event.target.value),
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-600 mt-6">
+                    <input
+                      type="checkbox"
+                      checked={loggingDraft.includePayloads}
+                      onChange={(event) =>
+                        setLoggingDraft((previous) => ({ ...previous, includePayloads: event.target.checked }))
+                      }
+                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    Salvar payloads completos
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 text-slate-900 font-medium mb-4">
             <MessageCircle className="w-5 h-5" />
             Templates da automação
@@ -523,38 +952,85 @@ export default function AutoContactFlowSettings() {
                 Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {flowDrafts.map((flow, index) => (
-                  <button
-                    type="button"
-                    key={flow.id}
-                    onClick={() => setActiveFlowId(flow.id)}
-                    className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xs font-semibold text-slate-400 uppercase">Fluxo {index + 1}</div>
-                        <div className="text-sm font-semibold text-slate-800 mt-1">
-                          {flow.name || 'Fluxo sem nome'}
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_auto]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={flowSearch}
+                      onChange={(event) => setFlowSearch(event.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      placeholder="Buscar fluxo por nome, status ou tag"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      value={flowTagFilter}
+                      onChange={(event) => setFlowTagFilter(event.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                    >
+                      <option value="all">Todas as tags</option>
+                      {availableTags.map((tagItem) => (
+                        <option key={tagItem} value={tagItem}>
+                          {tagItem}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="text-xs text-slate-500 flex items-center justify-end">
+                    {filteredFlows.length} fluxo{filteredFlows.length === 1 ? '' : 's'} encontrado
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filteredFlows.map((flow, index) => (
+                    <button
+                      type="button"
+                      key={flow.id}
+                      onClick={() => setActiveFlowId(flow.id)}
+                      className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-semibold text-slate-400 uppercase">Fluxo {index + 1}</div>
+                          <div className="text-sm font-semibold text-slate-800 mt-1">
+                            {flow.name || 'Fluxo sem nome'}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Dispara em: <span className="font-medium text-slate-700">{flow.triggerStatus || '—'}</span>
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          Dispara em: <span className="font-medium text-slate-700">{flow.triggerStatus || '—'}</span>
-                        </div>
+                        <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-500">
+                          {flow.steps.length} etapa{flow.steps.length === 1 ? '' : 's'}
+                        </span>
                       </div>
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-500">
-                        {flow.steps.length} etapa{flow.steps.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      <span className="rounded-full border border-slate-200 px-2 py-0.5">
-                        {flow.stopOnStatusChange ? 'Interrompe ao mudar status' : 'Continua após status'}
-                      </span>
-                      <span className="rounded-full border border-slate-200 px-2 py-0.5">
-                        {flow.finalStatus ? `Finaliza em ${flow.finalStatus}` : 'Sem status final'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span className="rounded-full border border-slate-200 px-2 py-0.5">
+                          {flow.stopOnStatusChange ? 'Interrompe ao mudar status' : 'Continua após status'}
+                        </span>
+                        <span className="rounded-full border border-slate-200 px-2 py-0.5">
+                          {flow.finalStatus ? `Finaliza em ${flow.finalStatus}` : 'Sem status final'}
+                        </span>
+                        <span className="rounded-full border border-slate-200 px-2 py-0.5">
+                          {(flow.conditions ?? []).length} condição{(flow.conditions ?? []).length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      {(flow.tags ?? []).length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                          {(flow.tags ?? []).map((tagItem) => (
+                            <span
+                              key={tagItem}
+                              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
+                            >
+                              #{tagItem}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -572,6 +1048,19 @@ export default function AutoContactFlowSettings() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSimulation((previous) => !previous);
+                          if (!simulationStart) {
+                            setSimulationStart(getLocalDateTimeValue());
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 text-xs text-slate-600 hover:text-slate-700"
+                      >
+                        <Timer className="w-4 h-4" />
+                        {showSimulation ? 'Ocultar simulação' : 'Simular fluxo'}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleRemoveFlow(activeFlow.id)}
@@ -644,6 +1133,152 @@ export default function AutoContactFlowSettings() {
                           />
                           Se o lead evoluir, este fluxo é encerrado automaticamente
                         </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-800">Condições dinâmicas</h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Defina regras para disparar o fluxo somente em determinados cenários.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddFlowCondition(activeFlow.id)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Nova condição
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span>Aplicar quando</span>
+                        <select
+                          value={activeFlow.conditionLogic ?? 'all'}
+                          onChange={(event) =>
+                            handleUpdateFlow(activeFlow.id, {
+                              conditionLogic: event.target.value as AutoContactFlow['conditionLogic'],
+                            })
+                          }
+                          className="px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                        >
+                          <option value="all">todas as condições</option>
+                          <option value="any">qualquer condição</option>
+                        </select>
+                        <span>forem atendidas</span>
+                      </div>
+
+                      {(activeFlow.conditions ?? []).length === 0 ? (
+                        <div className="text-xs text-slate-500 bg-white border border-dashed border-slate-200 rounded-lg p-3">
+                          Nenhuma condição configurada. O fluxo será disparado para todos os leads no status escolhido.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {(activeFlow.conditions ?? []).map((condition) => (
+                            <div
+                              key={condition.id}
+                              className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[160px_160px_1fr_auto]"
+                            >
+                              <select
+                                value={condition.field}
+                                onChange={(event) =>
+                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                    field: event.target.value as AutoContactFlowCondition['field'],
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(conditionFieldLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={condition.operator}
+                                onChange={(event) =>
+                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                    operator: event.target.value as AutoContactFlowCondition['operator'],
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(conditionOperatorLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={condition.value}
+                                onChange={(event) =>
+                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                    value: event.target.value,
+                                  })
+                                }
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="Digite o valor"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlowCondition(activeFlow.id, condition.id)}
+                                className="text-xs text-red-600 hover:text-red-700"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-800">Tags e categorização</h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Organize e encontre fluxos rapidamente com etiquetas personalizadas.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(activeFlow.tags ?? []).length > 0 ? (
+                          (activeFlow.tags ?? []).map((tagItem) => (
+                            <span
+                              key={tagItem}
+                              className="inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 px-2 py-1 text-xs text-slate-600"
+                            >
+                              #{tagItem}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlowTag(activeFlow.id, tagItem)}
+                                className="text-slate-400 hover:text-slate-600"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-500">Nenhuma tag adicionada.</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          type="text"
+                          value={tagDraft}
+                          onChange={(event) => setTagDraft(event.target.value)}
+                          className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder="Adicionar tag (ex.: premium, inbound)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddFlowTag(activeFlow.id)}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                          <Tag className="w-3.5 h-3.5" />
+                          Adicionar
+                        </button>
                       </div>
                     </div>
 
@@ -745,6 +1380,57 @@ export default function AutoContactFlowSettings() {
                         </div>
                       ))}
                     </div>
+
+                    {showSimulation && (
+                      <div className="space-y-3 rounded-lg border border-teal-200 bg-teal-50 p-4">
+                        <div className="flex items-center gap-2 text-teal-800 font-semibold text-sm">
+                          <Timer className="w-4 h-4" />
+                          Simulação (dry run)
+                        </div>
+                        <p className="text-xs text-teal-700">
+                          Esta simulação não envia mensagens. Ela apenas calcula os horários previstos para cada etapa.
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-teal-700 mb-1">
+                              Início da simulação
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={simulationStart || getLocalDateTimeValue()}
+                              onChange={(event) => setSimulationStart(event.target.value)}
+                              className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                            />
+                          </div>
+                          <div className="text-xs text-teal-700 flex items-end">
+                            Janela ativa: {schedulingDraft.startHour} até {schedulingDraft.endHour} (
+                            {schedulingDraft.timezone})
+                          </div>
+                        </div>
+                        {simulationTimeline.length === 0 ? (
+                          <div className="text-xs text-teal-700">Adicione etapas para visualizar a simulação.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {simulationTimeline.map((item) => (
+                              <div
+                                key={item.step.id}
+                                className="flex items-center justify-between rounded-lg bg-white border border-teal-100 px-3 py-2 text-xs text-teal-800"
+                              >
+                                <div>
+                                  Etapa {item.index}: {item.delayHours}h após início
+                                </div>
+                                <div>
+                                  {item.scheduledAt.toLocaleString('pt-BR', {
+                                    dateStyle: 'short',
+                                    timeStyle: 'short',
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

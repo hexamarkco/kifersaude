@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { configService } from '../../lib/configService';
+import { useConfig } from '../../contexts/ConfigContext';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   composeTemplateMessage,
@@ -58,6 +59,7 @@ type TemplateDraft = {
 };
 
 export default function AutoContactFlowSettings() {
+  const { leadOrigins, options } = useConfig();
   const [autoContactIntegration, setAutoContactIntegration] = useState<IntegrationSetting | null>(null);
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [messageTemplatesDraft, setMessageTemplatesDraft] = useState<AutoContactTemplate[]>(DEFAULT_MESSAGE_TEMPLATES);
@@ -779,6 +781,30 @@ export default function AutoContactFlowSettings() {
   };
   const statusOptions = leadStatuses.filter((status) => status.ativo !== false);
   const showStatusSelect = statusOptions.length > 0;
+  const activeOrigins = useMemo(() => leadOrigins.filter((origin) => origin.ativo), [leadOrigins]);
+  const tipoContratacaoOptions = useMemo(
+    () => (options.lead_tipo_contratacao || []).filter((option) => option.ativo),
+    [options.lead_tipo_contratacao],
+  );
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter((option) => option.ativo),
+    [options.lead_responsavel],
+  );
+  const conditionValueOptions = useMemo(
+    () => ({
+      status: statusOptions.map((status) => status.nome),
+      origem: activeOrigins.map((origin) => origin.nome),
+      tipo_contratacao: tipoContratacaoOptions.map((option) => option.label),
+      responsavel: responsavelOptions.map((option) => option.label),
+      tag: availableTags,
+    }),
+    [activeOrigins, availableTags, responsavelOptions, statusOptions, tipoContratacaoOptions],
+  );
+  const getConditionValueOptions = (field: AutoContactFlowCondition['field']) => {
+    const values = conditionValueOptions[field];
+    if (!values || values.length === 0) return null;
+    return Array.from(new Set(values)).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  };
   const weekdayLabels = [
     { value: 1, label: 'Seg' },
     { value: 2, label: 'Ter' },
@@ -1385,6 +1411,10 @@ export default function AutoContactFlowSettings() {
                               key={condition.id}
                               className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[160px_160px_1fr_auto]"
                             >
+                              {(() => {
+                                const valueOptions = getConditionValueOptions(condition.field);
+                                return (
+                                  <>
                               <select
                                 value={condition.field}
                                 onChange={(event) =>
@@ -1415,17 +1445,36 @@ export default function AutoContactFlowSettings() {
                                   </option>
                                 ))}
                               </select>
-                              <input
-                                type="text"
-                                value={condition.value}
-                                onChange={(event) =>
-                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                    value: event.target.value,
-                                  })
-                                }
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                placeholder="Digite o valor"
-                              />
+                              {valueOptions ? (
+                                <select
+                                  value={condition.value}
+                                  onChange={(event) =>
+                                    handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  <option value="">Selecione</option>
+                                  {valueOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={condition.value}
+                                  onChange={(event) =>
+                                    handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="Digite o valor"
+                                />
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFlowCondition(activeFlow.id, condition.id)}
@@ -1433,6 +1482,9 @@ export default function AutoContactFlowSettings() {
                               >
                                 Remover
                               </button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           ))}
                         </div>
@@ -1484,6 +1536,10 @@ export default function AutoContactFlowSettings() {
                               key={condition.id}
                               className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[160px_160px_1fr_auto]"
                             >
+                              {(() => {
+                                const valueOptions = getConditionValueOptions(condition.field);
+                                return (
+                                  <>
                               <select
                                 value={condition.field}
                                 onChange={(event) =>
@@ -1514,17 +1570,36 @@ export default function AutoContactFlowSettings() {
                                   </option>
                                 ))}
                               </select>
-                              <input
-                                type="text"
-                                value={condition.value}
-                                onChange={(event) =>
-                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                    value: event.target.value,
-                                  })
-                                }
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                placeholder="Digite o valor"
-                              />
+                              {valueOptions ? (
+                                <select
+                                  value={condition.value}
+                                  onChange={(event) =>
+                                    handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  <option value="">Selecione</option>
+                                  {valueOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={condition.value}
+                                  onChange={(event) =>
+                                    handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="Digite o valor"
+                                />
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFlowExitCondition(activeFlow.id, condition.id)}
@@ -1532,6 +1607,9 @@ export default function AutoContactFlowSettings() {
                               >
                                 Remover
                               </button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           ))}
                         </div>

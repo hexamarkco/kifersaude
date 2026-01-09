@@ -49,6 +49,7 @@ export default function AutoContactFlowSettings() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [loadingFlow, setLoadingFlow] = useState(true);
   const [savingFlow, setSavingFlow] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [templateModalMode, setTemplateModalMode] = useState<'create' | 'edit'>('create');
@@ -150,7 +151,41 @@ export default function AutoContactFlowSettings() {
     });
   };
 
-  const handleSaveTemplateDraft = () => {
+  const normalizeTemplatesForSettings = (templates: AutoContactTemplate[], filterEmpty = false) => {
+    const normalizedTemplates = templates.map((template, index) => {
+      const templateId = template.id || `template-${index}`;
+      const normalizedMessages = getTemplateMessages({ ...template, id: templateId }).map((message, messageIndex) => ({
+        id: message.id?.trim() ? message.id : `message-${templateId}-${messageIndex}`,
+        type: message.type,
+        text: message.text ?? '',
+        mediaUrl: message.mediaUrl ?? '',
+        caption: message.caption ?? '',
+      }));
+      const composedMessage = composeTemplateMessage(normalizedMessages);
+      const hasContent = normalizedMessages.some(
+        (message) =>
+          message.text?.trim() ||
+          message.caption?.trim() ||
+          message.mediaUrl?.trim(),
+      );
+
+      return {
+        id: templateId,
+        name: template.name?.trim() || `Modelo ${index + 1}`,
+        messages: normalizedMessages,
+        message: composedMessage,
+        hasContent,
+      };
+    });
+
+    const filteredTemplates = filterEmpty
+      ? normalizedTemplates.filter((template) => template.message.trim() || template.hasContent)
+      : normalizedTemplates;
+
+    return filteredTemplates.map(({ hasContent: _hasContent, ...template }) => template);
+  };
+
+  const handleSaveTemplateDraft = async () => {
     if (!templateDraft) return;
     const normalizedMessages = templateDraft.messages.map((message, index) => ({
       id: message.id?.trim() ? message.id : `message-${templateDraft.id}-${index}`,
@@ -167,20 +202,55 @@ export default function AutoContactFlowSettings() {
       message: composedMessage,
     };
 
-    setMessageTemplatesDraft((previous) => {
-      if (templateModalMode === 'edit') {
-        return previous.map((template) => (template.id === newTemplate.id ? newTemplate : template));
-      }
-      return [...previous, newTemplate];
-    });
+    const rawTemplates =
+      templateModalMode === 'edit'
+        ? messageTemplatesDraft.map((template) => (template.id === newTemplate.id ? newTemplate : template))
+        : [...messageTemplatesDraft, newTemplate];
+    const normalizedTemplates = normalizeTemplatesForSettings(rawTemplates);
+    const nextSelectedTemplateId = selectedTemplateId || newTemplate.id;
+    const normalizedSelectedTemplateId =
+      normalizedTemplates.find((template) => template.id === nextSelectedTemplateId)?.id ??
+      normalizedTemplates[0]?.id ??
+      '';
 
-    setSelectedTemplateId((current) => current || newTemplate.id);
-    setStatusMessage({
-      type: 'warning',
-      text: 'Template atualizado no rascunho. Clique em "Salvar automação" para gravar a configuração.',
-    });
+    setMessageTemplatesDraft(normalizedTemplates);
+    setSelectedTemplateId(normalizedSelectedTemplateId);
     setIsTemplateModalOpen(false);
     setTemplateDraft(null);
+
+    if (!autoContactIntegration) {
+      setStatusMessage({ type: 'error', text: 'Integração de automação não configurada.' });
+      return;
+    }
+
+    setSavingTemplate(true);
+    setStatusMessage(null);
+
+    const currentSettings = autoContactSettings || normalizeAutoContactSettings(null);
+    const newSettings = {
+      ...currentSettings,
+      messageTemplates: normalizedTemplates,
+      selectedTemplateId: normalizedSelectedTemplateId,
+    };
+
+    const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
+      settings: newSettings,
+    });
+
+    if (error) {
+      setStatusMessage({ type: 'error', text: 'Erro ao salvar o template. Tente novamente.' });
+    } else {
+      const updatedIntegration = data ?? autoContactIntegration;
+      const normalized = normalizeAutoContactSettings(updatedIntegration.settings);
+
+      setAutoContactIntegration(updatedIntegration);
+      setAutoContactSettings(normalized);
+      setMessageTemplatesDraft(normalized.messageTemplates ?? []);
+      setSelectedTemplateId(normalized.selectedTemplateId);
+      setStatusMessage({ type: 'success', text: 'Template salvo no banco de dados.' });
+    }
+
+    setSavingTemplate(false);
   };
 
   const handleCloseTemplateModal = () => {
@@ -217,33 +287,7 @@ export default function AutoContactFlowSettings() {
     setSavingFlow(true);
     setStatusMessage(null);
 
-    const sanitizedTemplates = messageTemplatesDraft
-      .map((template, index) => {
-        const normalizedMessages = getTemplateMessages(template).map((message, messageIndex) => ({
-          id: message.id?.trim() ? message.id : `message-${template.id}-${messageIndex}`,
-          type: message.type,
-          text: message.text ?? '',
-          mediaUrl: message.mediaUrl ?? '',
-          caption: message.caption ?? '',
-        }));
-        const composedMessage = composeTemplateMessage(normalizedMessages);
-        const hasContent = normalizedMessages.some(
-          (message) =>
-            message.text?.trim() ||
-            message.caption?.trim() ||
-            message.mediaUrl?.trim(),
-        );
-
-        return {
-          id: template.id || `template-${index}`,
-          name: template.name?.trim() || `Modelo ${index + 1}`,
-          messages: normalizedMessages,
-          message: composedMessage,
-          hasContent,
-        };
-      })
-      .filter((template) => template.message.trim() || template.hasContent)
-      .map(({ hasContent: _hasContent, ...template }) => template);
+    const sanitizedTemplates = normalizeTemplatesForSettings(messageTemplatesDraft, true);
     const fallbackTemplateId = sanitizedTemplates[0]?.id ?? '';
     const sanitizedFlows = flowDrafts
       .map((flow, flowIndex) => {
@@ -1074,7 +1118,8 @@ export default function AutoContactFlowSettings() {
                 </div>
               </div>
               <div className="px-5 pb-2 text-xs text-slate-500">
-                Este botão salva apenas no rascunho. Para aplicar nas automações, finalize com "Salvar automação".
+                Este botão salva o template na biblioteca e no banco de dados. Para aplicar mudanças nos fluxos, finalize
+                com "Salvar automação".
               </div>
               <div className="px-5 pb-5 flex flex-col sm:flex-row sm:justify-end gap-2">
                 <button
@@ -1087,9 +1132,17 @@ export default function AutoContactFlowSettings() {
                 <button
                   type="button"
                   onClick={handleSaveTemplateDraft}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-60"
+                  disabled={savingTemplate}
                 >
-                  Salvar template
+                  {savingTemplate ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </span>
+                  ) : (
+                    'Salvar template'
+                  )}
                 </button>
               </div>
             </div>

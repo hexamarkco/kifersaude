@@ -1150,7 +1150,7 @@ export default function AutoContactFlowSettings() {
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mt-4">
             <div className="font-semibold mb-2">Variáveis disponíveis:</div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{nome}}'}</code> nome completo</span>
@@ -1161,7 +1161,7 @@ export default function AutoContactFlowSettings() {
             </div>
           </div>
 
-          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4">
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4 mt-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Fluxos de automação</h3>
@@ -1922,7 +1922,7 @@ export default function AutoContactFlowSettings() {
             )}
           </div>
 
-          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 mt-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Template selecionado para a automação</h3>

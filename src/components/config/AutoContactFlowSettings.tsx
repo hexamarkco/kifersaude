@@ -32,7 +32,7 @@ import {
 } from '../../lib/autoContactService';
 import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
 
-type MessageState = { type: 'success' | 'error'; text: string } | null;
+type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
   id: string;
   name: string;
@@ -174,6 +174,10 @@ export default function AutoContactFlowSettings() {
     });
 
     setSelectedTemplateId((current) => current || newTemplate.id);
+    setStatusMessage({
+      type: 'warning',
+      text: 'Template atualizado no rascunho. Clique em "Salvar automação" para gravar a configuração.',
+    });
     setIsTemplateModalOpen(false);
     setTemplateDraft(null);
   };
@@ -413,10 +417,16 @@ export default function AutoContactFlowSettings() {
               className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${
                 statusMessage.type === 'success'
                   ? 'bg-green-50 border-green-200 text-green-800'
+                  : statusMessage.type === 'warning'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
                   : 'bg-red-50 border-red-200 text-red-800'
               }`}
             >
-              {statusMessage.type === 'success' ? <ShieldCheck className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+              {statusMessage.type === 'success' ? (
+                <ShieldCheck className="w-4 h-4" />
+              ) : (
+                <Info className="w-4 h-4" />
+              )}
               <span>{statusMessage.text}</span>
             </div>
           )}
@@ -987,6 +997,9 @@ export default function AutoContactFlowSettings() {
                     })}
                   </div>
                 </div>
+              </div>
+              <div className="px-5 pb-2 text-xs text-slate-500">
+                Este botão salva apenas no rascunho. Para aplicar nas automações, finalize com "Salvar automação".
               </div>
               <div className="px-5 pb-5 flex flex-col sm:flex-row sm:justify-end gap-2">
                 <button

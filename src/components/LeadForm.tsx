@@ -40,6 +40,8 @@ type LeadFormState = {
   responsavel: string;
   proximo_retorno: string;
   observacoes: string;
+  blackout_dates: string;
+  daily_send_limit: string;
 };
 
 type LeadPayload = LeadFormState;
@@ -48,6 +50,24 @@ const normalizePhoneNumber = (value: string) => value.replace(/\D/g, '');
 
 const normalizeEmail = (value: string | null | undefined) =>
   (value || '').trim().toLowerCase();
+
+const parseBlackoutDates = (value: string): string[] => {
+  if (!value.trim()) return [];
+  const dates = value
+    .split(/[\n,]+/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  const uniqueDates = new Set<string>();
+  dates.forEach((date) => {
+    const normalized = date.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+      uniqueDates.add(normalized);
+    }
+  });
+
+  return Array.from(uniqueDates);
+};
 
 export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
@@ -70,6 +90,9 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     responsavel: lead?.responsavel || '',
     proximo_retorno: formatDateTimeForInput(lead?.proximo_retorno),
     observacoes: lead?.observacoes || '',
+    blackout_dates: (lead?.blackout_dates || []).join(', '),
+    daily_send_limit:
+      typeof lead?.daily_send_limit === 'number' ? String(lead.daily_send_limit) : '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -193,6 +216,14 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           ? convertLocalToUTC(formData.proximo_retorno)
           : null,
         ultimo_contato: formData.data_criacao ? effectiveCreationDateIso : nowIso,
+        blackout_dates: (() => {
+          const parsed = parseBlackoutDates(formData.blackout_dates);
+          return parsed.length ? parsed : null;
+        })(),
+        daily_send_limit: (() => {
+          const parsed = Number(formData.daily_send_limit);
+          return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
+        })(),
       };
 
       const normalizedLeadData: LeadPayload = {
@@ -697,6 +728,49 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 }
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Limite diário de envios
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={formData.daily_send_limit}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    daily_send_limit: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Sem limite"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Defina um limite específico para este lead (deixe vazio para usar o limite do tenant).
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Datas bloqueadas para automação
+              </label>
+              <textarea
+                value={formData.blackout_dates}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    blackout_dates: e.target.value,
+                  }))
+                }
+                rows={2}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="2024-12-25, 2024-12-31"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Informe as datas em formato AAAA-MM-DD, separadas por vírgula ou linha.
+              </p>
             </div>
 
             <div className="md:col-span-2">

@@ -54,6 +54,7 @@ export type AutoContactSchedulingSettings = {
   endHour: string;
   allowedWeekdays: number[];
   skipHolidays: boolean;
+  holidays?: string[];
 };
 
 export type AutoContactMonitoringSettings = {
@@ -81,12 +82,12 @@ export type AutoContactSettings = {
   logging: AutoContactLoggingSettings;
 };
 
-type DateParts = {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
+export type AutoContactScheduleAdjustmentReason = 'outside_window' | 'weekend' | 'holiday';
+
+export type AutoContactSchedulePreviewItem = {
+  step: AutoContactFlowStep;
+  scheduledAt: Date;
+  adjustmentReasons: AutoContactScheduleAdjustmentReason[];
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
@@ -328,6 +329,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
       : DEFAULT_SCHEDULING.allowedWeekdays,
     skipHolidays: rawScheduling.skipHolidays !== false,
+    holidays: Array.isArray(rawScheduling.holidays)
+      ? rawScheduling.holidays.filter((holiday: unknown) => typeof holiday === 'string' && holiday.trim())
+      : undefined,
   };
   const rawMonitoring = settings.monitoring && typeof settings.monitoring === 'object' ? settings.monitoring : {};
   const monitoring: AutoContactMonitoringSettings = {
@@ -629,3 +633,167 @@ export async function runAutoContactFlow({
     }
   }
 }
+
+const getTimeZoneOffset = (date: Date, timeZone: string): number => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUTC = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second),
+  );
+  return asUTC - date.getTime();
+};
+
+const utcToZonedTime = (date: Date, timeZone: string): Date => {
+  const offset = getTimeZoneOffset(date, timeZone);
+  return new Date(date.getTime() + offset);
+};
+
+const zonedTimeToUtc = (zonedDate: Date, timeZone: string): Date => {
+  const utcDate = new Date(
+    Date.UTC(
+      zonedDate.getUTCFullYear(),
+      zonedDate.getUTCMonth(),
+      zonedDate.getUTCDate(),
+      zonedDate.getUTCHours(),
+      zonedDate.getUTCMinutes(),
+      zonedDate.getUTCSeconds(),
+    ),
+  );
+  const offset = getTimeZoneOffset(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offset);
+};
+
+const parseTimeValue = (value: string) => {
+  const [hourRaw, minuteRaw] = value.split(':');
+  const hour = Number.parseInt(hourRaw ?? '', 10);
+  const minute = Number.parseInt(minuteRaw ?? '', 10);
+  return {
+    hour: Number.isFinite(hour) ? hour : 0,
+    minute: Number.isFinite(minute) ? minute : 0,
+  };
+};
+
+const toDateKey = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const toMonthDayKey = (month: number, day: number) =>
+  `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const buildHolidaySet = (holidays?: string[]) => {
+  const specificDates = new Set<string>();
+  const recurringDates = new Set<string>();
+  (holidays ?? []).forEach((holiday) => {
+    const trimmed = holiday.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      specificDates.add(trimmed);
+    } else if (/^\d{2}-\d{2}$/.test(trimmed)) {
+      recurringDates.add(trimmed);
+    }
+  });
+  return { specificDates, recurringDates };
+};
+
+const getWeekdayNumber = (zonedDate: Date) => {
+  const day = zonedDate.getUTCDay();
+  return day === 0 ? 7 : day;
+};
+
+const isOutsideWindow = (zonedDate: Date, startMinutes: number, endMinutes: number) => {
+  const minutes = zonedDate.getUTCHours() * 60 + zonedDate.getUTCMinutes();
+  return minutes < startMinutes || minutes > endMinutes;
+};
+
+const setZonedTime = (zonedDate: Date, hour: number, minute: number) =>
+  new Date(Date.UTC(zonedDate.getUTCFullYear(), zonedDate.getUTCMonth(), zonedDate.getUTCDate(), hour, minute, 0));
+
+const advanceToNextDayStart = (zonedDate: Date, startHour: number, startMinute: number) =>
+  new Date(Date.UTC(zonedDate.getUTCFullYear(), zonedDate.getUTCMonth(), zonedDate.getUTCDate() + 1, startHour, startMinute, 0));
+
+export const buildAutoContactScheduleTimeline = ({
+  startAt,
+  steps,
+  scheduling,
+}: {
+  startAt: Date;
+  steps: AutoContactFlowStep[];
+  scheduling: AutoContactSchedulingSettings;
+}): AutoContactSchedulePreviewItem[] => {
+  if (!steps.length) return [];
+  const timeZone = scheduling.timezone || DEFAULT_SCHEDULING.timezone;
+  const { hour: startHour, minute: startMinute } = parseTimeValue(scheduling.startHour || DEFAULT_SCHEDULING.startHour);
+  const { hour: endHour, minute: endMinute } = parseTimeValue(scheduling.endHour || DEFAULT_SCHEDULING.endHour);
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
+  const allowedWeekdays = scheduling.allowedWeekdays?.length
+    ? scheduling.allowedWeekdays
+    : DEFAULT_SCHEDULING.allowedWeekdays;
+  const holidays = buildHolidaySet(scheduling.holidays);
+
+  let cursor = utcToZonedTime(startAt, timeZone);
+  return steps.map((step) => {
+    const adjustmentReasons = new Set<AutoContactScheduleAdjustmentReason>();
+    let scheduled = new Date(cursor.getTime() + step.delayHours * 60 * 60 * 1000);
+
+    for (let guard = 0; guard < 366; guard += 1) {
+      const weekdayNumber = getWeekdayNumber(scheduled);
+      const isWeekend = weekdayNumber === 6 || weekdayNumber === 7;
+      const dateKey = toDateKey(
+        scheduled.getUTCFullYear(),
+        scheduled.getUTCMonth() + 1,
+        scheduled.getUTCDate(),
+      );
+      const monthDayKey = toMonthDayKey(scheduled.getUTCMonth() + 1, scheduled.getUTCDate());
+      const isHoliday =
+        scheduling.skipHolidays &&
+        (holidays.specificDates.has(dateKey) || holidays.recurringDates.has(monthDayKey));
+
+      if (isHoliday) {
+        adjustmentReasons.add('holiday');
+        scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        continue;
+      }
+
+      if (!allowedWeekdays.includes(weekdayNumber)) {
+        adjustmentReasons.add(isWeekend ? 'weekend' : 'outside_window');
+        scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        continue;
+      }
+
+      if (isOutsideWindow(scheduled, startMinutes, endMinutes)) {
+        adjustmentReasons.add('outside_window');
+        const minutes = scheduled.getUTCHours() * 60 + scheduled.getUTCMinutes();
+        if (minutes < startMinutes) {
+          scheduled = setZonedTime(scheduled, startHour, startMinute);
+        } else {
+          scheduled = advanceToNextDayStart(scheduled, startHour, startMinute);
+        }
+        continue;
+      }
+
+      break;
+    }
+
+    const scheduledUtc = zonedTimeToUtc(scheduled, timeZone);
+    cursor = scheduled;
+    return {
+      step,
+      scheduledAt: scheduledUtc,
+      adjustmentReasons: Array.from(adjustmentReasons),
+    };
+  });
+};

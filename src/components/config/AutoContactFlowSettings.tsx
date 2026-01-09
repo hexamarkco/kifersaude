@@ -395,7 +395,7 @@ export default function AutoContactFlowSettings() {
           tags,
         };
       })
-      .filter((flow) => flow.triggerStatus && flow.steps.length);
+      .filter((flow) => flow.steps.length);
     const normalizedSelectedTemplateId =
       sanitizedTemplates.find((template) => template.id === selectedTemplateId)?.id ??
       sanitizedTemplates[0]?.id ??
@@ -463,11 +463,10 @@ export default function AutoContactFlowSettings() {
       if (flowTagFilter !== 'all' && !tags.includes(flowTagFilter)) {
         return false;
       }
-      if (!search) return true;
-      const haystack = `${flow.name} ${flow.triggerStatus} ${tags.join(' ')}`.toLowerCase();
-      return haystack.includes(search);
-    });
-  }, [flowDrafts, flowSearch, flowTagFilter]);
+    if (!search) return true;
+    return getFlowSearchText(flow).includes(search);
+  });
+  }, [flowDrafts, flowSearch, flowTagFilter, getFlowSearchText]);
   const metrics = useMemo(() => {
     const totalSteps = flowDrafts.reduce((total, flow) => total + flow.steps.length, 0);
     const flowsWithConditions = flowDrafts.filter((flow) => (flow.conditions ?? []).length > 0).length;
@@ -502,14 +501,14 @@ export default function AutoContactFlowSettings() {
   });
   const createFlowCondition = (): AutoContactFlowCondition => ({
     id: `flow-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    field: 'origem',
-    operator: 'contains',
+    field: 'status',
+    operator: 'equals',
     value: '',
   });
   const createFlowDraft = (): AutoContactFlow => ({
     id: `flow-${Date.now()}`,
     name: '',
-    triggerStatus: leadStatuses[0]?.nome ?? '',
+    triggerStatus: '',
     steps: [createFlowStep()],
     stopOnStatusChange: true,
     finalStatus: '',
@@ -645,12 +644,57 @@ export default function AutoContactFlowSettings() {
     responsavel: 'Responsável',
     status: 'Status atual',
     tag: 'Tag do lead',
+    canal: 'Canal de aquisição',
+    estado: 'Estado (UF)',
+    regiao: 'Região',
+    tipo_contratacao: 'Tipo de contratação',
+    operadora_atual: 'Operadora atual',
+    email: 'E-mail',
+    telefone: 'Telefone',
+    data_criacao: 'Data de criação',
+    ultimo_contato: 'Último contato',
+    proximo_retorno: 'Próximo retorno',
   };
   const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
     equals: 'É igual a',
     contains: 'Contém',
     not_equals: 'Não é igual',
     not_contains: 'Não contém',
+    starts_with: 'Começa com',
+    ends_with: 'Termina com',
+    in_list: 'Está em',
+    not_in_list: 'Não está em',
+    greater_than: 'Maior que',
+    greater_or_equal: 'Maior ou igual',
+    less_than: 'Menor que',
+    less_or_equal: 'Menor ou igual',
+  };
+  const getFlowConditionPreview = (flow: AutoContactFlow) => {
+    const conditions = flow.conditions ?? [];
+    if (conditions.length === 0) {
+      return flow.triggerStatus ? `Status: ${flow.triggerStatus}` : 'Sem condições';
+    }
+
+    const preview = conditions
+      .slice(0, 2)
+      .map((condition) => {
+        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
+        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
+        return `${fieldLabel} ${operatorLabel} ${condition.value}`.trim();
+      })
+      .join(' • ');
+    const extraCount = conditions.length - 2;
+    return extraCount > 0 ? `${preview} (+${extraCount})` : preview;
+  };
+  const getFlowSearchText = (flow: AutoContactFlow) => {
+    const conditionsText = (flow.conditions ?? [])
+      .map((condition) => {
+        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
+        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
+        return `${fieldLabel} ${operatorLabel} ${condition.value}`;
+      })
+      .join(' ');
+    return `${flow.name} ${conditionsText} ${flow.triggerStatus ?? ''} ${(flow.tags ?? []).join(' ')}`.toLowerCase();
   };
   const adjustmentReasonLabels: Record<AutoContactScheduleAdjustmentReason, string> = {
     outside_window: 'fora da janela',
@@ -1057,7 +1101,7 @@ export default function AutoContactFlowSettings() {
                       value={flowSearch}
                       onChange={(event) => setFlowSearch(event.target.value)}
                       className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                      placeholder="Buscar fluxo por nome, status ou tag"
+                      placeholder="Buscar fluxo por nome, condição ou tag"
                     />
                   </div>
                   <div>
@@ -1094,7 +1138,8 @@ export default function AutoContactFlowSettings() {
                             {flow.name || 'Fluxo sem nome'}
                           </div>
                           <div className="text-xs text-slate-500 mt-1">
-                            Dispara em: <span className="font-medium text-slate-700">{flow.triggerStatus || '—'}</span>
+                            Condições:{' '}
+                            <span className="font-medium text-slate-700">{getFlowConditionPreview(flow)}</span>
                           </div>
                         </div>
                         <span className="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-500">
@@ -1202,47 +1247,19 @@ export default function AutoContactFlowSettings() {
                       />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-2">
-                          Disparar quando o status virar
-                        </label>
-                        {showStatusSelect ? (
-                          <select
-                            value={activeFlow.triggerStatus}
-                            onChange={(event) => handleUpdateFlow(activeFlow.id, { triggerStatus: event.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                          >
-                            {statusOptions.map((status) => (
-                              <option key={status.id} value={status.nome}>
-                                {status.nome}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type="text"
-                            value={activeFlow.triggerStatus}
-                            onChange={(event) => handleUpdateFlow(activeFlow.id, { triggerStatus: event.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="Ex.: Contato inicial"
-                          />
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-xs font-semibold text-slate-500">Encerrar se o status mudar</label>
-                        <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                          <input
-                            type="checkbox"
-                            checked={activeFlow.stopOnStatusChange}
-                            onChange={(event) =>
-                              handleUpdateFlow(activeFlow.id, { stopOnStatusChange: event.target.checked })
-                            }
-                            className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                          />
-                          Se o lead evoluir, este fluxo é encerrado automaticamente
-                        </label>
-                      </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500">Encerrar se o status mudar</label>
+                      <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={activeFlow.stopOnStatusChange}
+                          onChange={(event) =>
+                            handleUpdateFlow(activeFlow.id, { stopOnStatusChange: event.target.checked })
+                          }
+                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                        Se o lead evoluir, este fluxo é encerrado automaticamente
+                      </label>
                     </div>
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1250,7 +1267,7 @@ export default function AutoContactFlowSettings() {
                         <div>
                           <h4 className="text-sm font-semibold text-slate-800">Condições dinâmicas</h4>
                           <p className="text-xs text-slate-500 mt-1">
-                            Defina regras para disparar o fluxo somente em determinados cenários.
+                            Defina regras (status, origem, tags, datas e mais) para disparar o fluxo somente em cenários específicos.
                           </p>
                         </div>
                         <button
@@ -1281,7 +1298,7 @@ export default function AutoContactFlowSettings() {
 
                       {(activeFlow.conditions ?? []).length === 0 ? (
                         <div className="text-xs text-slate-500 bg-white border border-dashed border-slate-200 rounded-lg p-3">
-                          Nenhuma condição configurada. O fluxo será disparado para todos os leads no status escolhido.
+                          Nenhuma condição configurada. O fluxo será disparado para todos os leads.
                         </div>
                       ) : (
                         <div className="space-y-3">

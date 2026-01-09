@@ -26,8 +26,35 @@ export type AutoContactFlowStep = {
   templateId: string;
 };
 
-export type AutoContactFlowConditionField = 'origem' | 'cidade' | 'responsavel' | 'status' | 'tag';
-export type AutoContactFlowConditionOperator = 'equals' | 'contains' | 'not_equals' | 'not_contains';
+export type AutoContactFlowConditionField =
+  | 'origem'
+  | 'cidade'
+  | 'responsavel'
+  | 'status'
+  | 'tag'
+  | 'canal'
+  | 'estado'
+  | 'regiao'
+  | 'tipo_contratacao'
+  | 'operadora_atual'
+  | 'email'
+  | 'telefone'
+  | 'data_criacao'
+  | 'ultimo_contato'
+  | 'proximo_retorno';
+export type AutoContactFlowConditionOperator =
+  | 'equals'
+  | 'contains'
+  | 'not_equals'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in_list'
+  | 'not_in_list'
+  | 'greater_than'
+  | 'greater_or_equal'
+  | 'less_than'
+  | 'less_or_equal';
 
 export type AutoContactFlowCondition = {
   id: string;
@@ -261,16 +288,45 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     Array.isArray(settings.flows) && settings.flows.length > 0 ? settings.flows : DEFAULT_AUTO_CONTACT_FLOWS;
   const fallbackTemplateId = messageTemplates[0]?.id ?? '';
   const normalizeConditionField = (field: unknown): AutoContactFlowConditionField => {
-    if (field === 'origem' || field === 'cidade' || field === 'responsavel' || field === 'status' || field === 'tag') {
-      return field;
+    switch (field) {
+      case 'origem':
+      case 'cidade':
+      case 'responsavel':
+      case 'status':
+      case 'tag':
+      case 'canal':
+      case 'estado':
+      case 'regiao':
+      case 'tipo_contratacao':
+      case 'operadora_atual':
+      case 'email':
+      case 'telefone':
+      case 'data_criacao':
+      case 'ultimo_contato':
+      case 'proximo_retorno':
+        return field;
+      default:
+        return 'origem';
     }
-    return 'origem';
   };
   const normalizeConditionOperator = (operator: unknown): AutoContactFlowConditionOperator => {
-    if (operator === 'equals' || operator === 'contains' || operator === 'not_equals' || operator === 'not_contains') {
-      return operator;
+    switch (operator) {
+      case 'equals':
+      case 'contains':
+      case 'not_equals':
+      case 'not_contains':
+      case 'starts_with':
+      case 'ends_with':
+      case 'in_list':
+      case 'not_in_list':
+      case 'greater_than':
+      case 'greater_or_equal':
+      case 'less_than':
+      case 'less_or_equal':
+        return operator;
+      default:
+        return 'contains';
     }
-    return 'contains';
   };
   const normalizedFlows = rawFlows
     .map((flow: any, flowIndex: number) => {
@@ -317,7 +373,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           : [],
       };
     })
-    .filter((flow) => flow.triggerStatus.trim() && flow.steps.length > 0);
+    .filter((flow) => flow.steps.length > 0);
 
   const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
   const rawDailySendLimit =
@@ -595,7 +651,7 @@ export async function runAutoContactFlow({
 
   const templates = settings.messageTemplates ?? [];
   const flows = settings.flows ?? [];
-  const matchingFlow = flows.find((flow) => flow.triggerStatus === (lead.status ?? '')) ?? flows[0] ?? null;
+  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead)) ?? flows[0] ?? null;
   if (!matchingFlow) return;
 
   let cumulativeDelayHours = 0;
@@ -636,6 +692,178 @@ export async function runAutoContactFlow({
     }
   }
 }
+
+const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+  const rawConditions = flow.conditions ?? [];
+  const conditions = [...rawConditions];
+  const triggerStatus = flow.triggerStatus?.trim();
+  if (triggerStatus && !rawConditions.some((condition) => condition.field === 'status')) {
+    conditions.push({
+      id: 'trigger-status',
+      field: 'status',
+      operator: 'equals',
+      value: triggerStatus,
+    });
+  }
+
+  if (conditions.length === 0) return true;
+
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
+};
+
+const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: Lead): boolean => {
+  const value = normalizeText(condition.value);
+  if (!value) return false;
+
+  if (condition.field === 'tag') {
+    const tags = (lead.tags ?? []).map((tag) => normalizeText(tag)).filter(Boolean);
+    return matchArrayCondition(tags, value, condition.operator);
+  }
+
+  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field));
+  if (!leadValue) return condition.operator === 'not_contains' || condition.operator === 'not_equals';
+  return matchTextCondition(leadValue, value, condition.operator);
+};
+
+const getLeadFieldValue = (lead: Lead, field: AutoContactFlowConditionField): string => {
+  switch (field) {
+    case 'origem':
+      return lead.origem ?? '';
+    case 'cidade':
+      return lead.cidade ?? '';
+    case 'responsavel':
+      return lead.responsavel ?? '';
+    case 'status':
+      return lead.status ?? '';
+    case 'canal':
+      return lead.canal ?? '';
+    case 'estado':
+      return lead.estado ?? '';
+    case 'regiao':
+      return lead.regiao ?? '';
+    case 'tipo_contratacao':
+      return lead.tipo_contratacao ?? '';
+    case 'operadora_atual':
+      return lead.operadora_atual ?? '';
+    case 'email':
+      return lead.email ?? '';
+    case 'telefone':
+      return lead.telefone ?? '';
+    case 'data_criacao':
+      return lead.data_criacao ?? '';
+    case 'ultimo_contato':
+      return lead.ultimo_contato ?? '';
+    case 'proximo_retorno':
+      return lead.proximo_retorno ?? '';
+    case 'tag':
+      return '';
+    default:
+      return '';
+  }
+};
+
+const normalizeText = (value: string | null | undefined): string => value?.toString().trim().toLowerCase() ?? '';
+
+const matchArrayCondition = (
+  values: string[],
+  expected: string,
+  operator: AutoContactFlowConditionOperator,
+): boolean => {
+  if (operator === 'in_list' || operator === 'not_in_list') {
+    const list = splitListValues(expected);
+    const hasMatch = values.some((tag) => list.includes(tag));
+    return operator === 'in_list' ? hasMatch : !hasMatch;
+  }
+
+  switch (operator) {
+    case 'equals':
+      return values.some((tag) => tag === expected);
+    case 'contains':
+      return values.some((tag) => tag.includes(expected));
+    case 'not_equals':
+      return !values.some((tag) => tag === expected);
+    case 'not_contains':
+      return !values.some((tag) => tag.includes(expected));
+    case 'starts_with':
+    case 'ends_with':
+      return values.some((tag) => matchTextCondition(tag, expected, operator));
+    default:
+      return false;
+  }
+};
+
+const matchTextCondition = (
+  source: string,
+  expected: string,
+  operator: AutoContactFlowConditionOperator,
+): boolean => {
+  switch (operator) {
+    case 'equals':
+      return source === expected;
+    case 'contains':
+      return source.includes(expected);
+    case 'not_equals':
+      return source !== expected;
+    case 'not_contains':
+      return !source.includes(expected);
+    case 'starts_with':
+      return source.startsWith(expected);
+    case 'ends_with':
+      return source.endsWith(expected);
+    case 'in_list': {
+      const list = splitListValues(expected);
+      return list.includes(source);
+    }
+    case 'not_in_list': {
+      const list = splitListValues(expected);
+      return !list.includes(source);
+    }
+    case 'greater_than':
+    case 'greater_or_equal':
+    case 'less_than':
+    case 'less_or_equal':
+      return compareComparableValues(source, expected, operator);
+    default:
+      return false;
+  }
+};
+
+const splitListValues = (value: string): string[] =>
+  value
+    .split(/[;,]/)
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+
+const compareComparableValues = (
+  source: string,
+  expected: string,
+  operator: 'greater_than' | 'greater_or_equal' | 'less_than' | 'less_or_equal',
+): boolean => {
+  const sourceComparable = parseComparableValue(source);
+  const expectedComparable = parseComparableValue(expected);
+  if (sourceComparable === null || expectedComparable === null) return false;
+
+  switch (operator) {
+    case 'greater_than':
+      return sourceComparable > expectedComparable;
+    case 'greater_or_equal':
+      return sourceComparable >= expectedComparable;
+    case 'less_than':
+      return sourceComparable < expectedComparable;
+    case 'less_or_equal':
+      return sourceComparable <= expectedComparable;
+    default:
+      return false;
+  }
+};
+
+const parseComparableValue = (value: string): number | null => {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) return numericValue;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
 
 const utcToZonedTime = (date: Date, timeZone: string): Date => {
   const offset = getTimeZoneOffset(date, timeZone);

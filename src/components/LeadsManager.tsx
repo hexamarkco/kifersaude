@@ -46,6 +46,7 @@ import { getBadgeStyle } from '../lib/colorUtils';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   applyTemplateVariables,
+  getTemplateMessage,
   normalizeAutoContactSettings,
   sendAutoContactMessage,
 } from '../lib/autoContactService';
@@ -209,6 +210,7 @@ function AutomationTemplateModal({
   isSending,
 }: AutomationTemplateModalProps) {
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || null;
+  const selectedTemplateMessage = getTemplateMessage(selectedTemplate);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -243,8 +245,8 @@ function AutomationTemplateModal({
               Prévia
             </label>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
-              {selectedTemplate?.message ? (
-                <p className="whitespace-pre-wrap">{selectedTemplate.message}</p>
+              {selectedTemplateMessage ? (
+                <p className="whitespace-pre-wrap">{selectedTemplateMessage}</p>
               ) : (
                 <p>Nenhuma mensagem definida neste modelo.</p>
               )}
@@ -1332,11 +1334,12 @@ export default function LeadsManager({
         settings.messageTemplates.find((item) => item.id === settings.selectedTemplateId) ??
         settings.messageTemplates[0] ??
         null;
+      const templateMessage = getTemplateMessage(resolvedTemplate);
 
       setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
 
       try {
-        if (!resolvedTemplate?.message.trim()) {
+        if (!templateMessage.trim()) {
           throw new Error('Nenhum template de automação válido configurado.');
         }
         const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
@@ -1356,7 +1359,7 @@ export default function LeadsManager({
           });
         };
 
-        const finalMessage = applyTemplateVariables(resolvedTemplate.message, lead);
+        const finalMessage = applyTemplateVariables(templateMessage, lead);
         await sendAutoContactMessage({ lead, message: finalMessage, settings });
         await onFirstMessageSent();
       } catch (error) {
@@ -1431,8 +1434,9 @@ export default function LeadsManager({
     const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
     const selectedTemplate =
       settings.messageTemplates.find((template) => template.id === selectedTemplateId) || null;
+    const selectedTemplateMessage = getTemplateMessage(selectedTemplate);
 
-    if (selectedTemplate && !selectedTemplate.message.trim()) {
+    if (selectedTemplate && !selectedTemplateMessage.trim()) {
       alert('O modelo selecionado está sem mensagem. Preencha o texto antes de enviar.');
       return;
     }

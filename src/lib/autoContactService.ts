@@ -913,11 +913,6 @@ export async function runAutoContactFlow({
         throw error;
       }
 
-        if (!sentFromTemplate) {
-          continue;
-        }
-      }
-
       continue;
     }
 

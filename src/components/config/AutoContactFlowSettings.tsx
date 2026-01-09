@@ -39,6 +39,7 @@ import {
   type AutoContactFlowMessageSource,
   type AutoContactFlowStep,
   type AutoContactFlowCustomMessage,
+  type AutoContactInvalidNumberAction,
   type AutoContactLoggingSettings,
   type AutoContactMonitoringSettings,
   type AutoContactSchedulingSettings,
@@ -72,7 +73,6 @@ export default function AutoContactFlowSettings() {
   );
   const [loggingDraft, setLoggingDraft] = useState<AutoContactLoggingSettings>(defaultSettings.logging);
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [loadingFlow, setLoadingFlow] = useState(true);
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -107,7 +107,6 @@ export default function AutoContactFlowSettings() {
     setAutoContactIntegration(integration);
     setAutoContactSettings(normalized);
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-    setSelectedTemplateId(normalized.selectedTemplateId);
     setFlowDrafts(normalized.flows ?? []);
     setSchedulingDraft(normalized.scheduling);
     setMonitoringDraft(normalized.monitoring);
@@ -276,14 +275,7 @@ export default function AutoContactFlowSettings() {
         ? messageTemplatesDraft.map((template) => (template.id === newTemplate.id ? newTemplate : template))
         : [...messageTemplatesDraft, newTemplate];
     const normalizedTemplates = normalizeTemplatesForSettings(rawTemplates);
-    const nextSelectedTemplateId = selectedTemplateId || newTemplate.id;
-    const normalizedSelectedTemplateId =
-      normalizedTemplates.find((template) => template.id === nextSelectedTemplateId)?.id ??
-      normalizedTemplates[0]?.id ??
-      '';
-
     setMessageTemplatesDraft(normalizedTemplates);
-    setSelectedTemplateId(normalizedSelectedTemplateId);
     setIsTemplateModalOpen(false);
     setTemplateDraft(null);
 
@@ -299,7 +291,6 @@ export default function AutoContactFlowSettings() {
     const newSettings = {
       ...currentSettings,
       messageTemplates: normalizedTemplates,
-      selectedTemplateId: normalizedSelectedTemplateId,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
@@ -315,7 +306,6 @@ export default function AutoContactFlowSettings() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-      setSelectedTemplateId(normalized.selectedTemplateId);
       setStatusMessage({ type: 'success', text: 'Template salvo no banco de dados.' });
     }
 
@@ -329,10 +319,7 @@ export default function AutoContactFlowSettings() {
 
   const handleRemoveTemplate = (templateId: string) => {
     setMessageTemplatesDraft((previous) => {
-      const nextTemplates = previous.filter((template) => template.id !== templateId);
-      const fallbackId = nextTemplates[0]?.id ?? '';
-      setSelectedTemplateId((current) => (current === templateId ? fallbackId : current));
-      return nextTemplates;
+      return previous.filter((template) => template.id !== templateId);
     });
   };
 
@@ -342,7 +329,6 @@ export default function AutoContactFlowSettings() {
       : DEFAULT_MESSAGE_TEMPLATES;
 
     setMessageTemplatesDraft(savedTemplates);
-    setSelectedTemplateId(autoContactSettings?.selectedTemplateId ?? savedTemplates[0]?.id ?? '');
     setFlowDrafts(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS);
     setSchedulingDraft(autoContactSettings?.scheduling ?? defaultSettings.scheduling);
     setMonitoringDraft(autoContactSettings?.monitoring ?? defaultSettings.monitoring);
@@ -414,6 +400,8 @@ export default function AutoContactFlowSettings() {
           triggerStatus: flow.triggerStatus?.trim() || '',
           steps,
           finalStatus: flow.finalStatus?.trim() || '',
+          invalidNumberAction: flow.invalidNumberAction ?? 'none',
+          invalidNumberStatus: flow.invalidNumberStatus?.trim() || '',
           conditionLogic: flow.conditionLogic === 'any' ? 'any' : 'all',
           conditions,
           exitConditionLogic: flow.exitConditionLogic === 'all' ? 'all' : 'any',
@@ -422,16 +410,11 @@ export default function AutoContactFlowSettings() {
         };
       })
       .filter((flow) => flow.steps.length);
-    const normalizedSelectedTemplateId =
-      sanitizedTemplates.find((template) => template.id === selectedTemplateId)?.id ??
-      sanitizedTemplates[0]?.id ??
-      '';
 
     const currentSettings = autoContactSettings || normalizeAutoContactSettings(null);
     const newSettings = {
       ...currentSettings,
       messageTemplates: sanitizedTemplates,
-      selectedTemplateId: normalizedSelectedTemplateId,
       flows: sanitizedFlows,
       scheduling: schedulingDraft,
       monitoring: monitoringDraft,
@@ -451,7 +434,6 @@ export default function AutoContactFlowSettings() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-      setSelectedTemplateId(normalized.selectedTemplateId);
       setFlowDrafts(normalized.flows ?? []);
       setSchedulingDraft(normalized.scheduling);
       setMonitoringDraft(normalized.monitoring);
@@ -521,14 +503,6 @@ export default function AutoContactFlowSettings() {
     return `${flow.name} ${conditionsText} ${flow.triggerStatus ?? ''} ${(flow.tags ?? []).join(' ')}`.toLowerCase();
   };
 
-  const selectedTemplate = useMemo(
-    () => messageTemplatesDraft.find((template) => template.id === selectedTemplateId) ?? null,
-    [messageTemplatesDraft, selectedTemplateId],
-  );
-  const selectedTemplateMessages = useMemo(
-    () => getTemplateMessages(selectedTemplate),
-    [selectedTemplate],
-  );
   const activeFlow = useMemo(
     () => flowDrafts.find((flow) => flow.id === activeFlowId) ?? null,
     [flowDrafts, activeFlowId],
@@ -577,6 +551,12 @@ export default function AutoContactFlowSettings() {
     archive_lead: 'Arquivar lead',
     delete_lead: 'Excluir lead',
   };
+  const invalidNumberActionLabels: Record<AutoContactInvalidNumberAction, string> = {
+    none: 'Não fazer nada',
+    update_status: 'Atualizar status do lead',
+    archive_lead: 'Arquivar lead',
+    delete_lead: 'Excluir lead',
+  };
   const messageSourceLabels: Record<AutoContactFlowMessageSource, string> = {
     template: 'Template',
     custom: 'Personalizado',
@@ -589,7 +569,7 @@ export default function AutoContactFlowSettings() {
     audio: Mic,
     document: File,
   };
-  const createFlowStep = (templateId = selectedTemplateId): AutoContactFlowStep => ({
+  const createFlowStep = (templateId = messageTemplatesDraft[0]?.id): AutoContactFlowStep => ({
     id: `flow-step-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     delayHours: 2,
     actionType: 'send_message',
@@ -621,6 +601,8 @@ export default function AutoContactFlowSettings() {
     triggerStatus: '',
     steps: [createFlowStep()],
     finalStatus: '',
+    invalidNumberAction: 'none',
+    invalidNumberStatus: '',
     conditionLogic: 'all',
     conditions: [],
     exitConditionLogic: 'any',
@@ -1613,6 +1595,60 @@ export default function AutoContactFlowSettings() {
                       )}
                     </div>
 
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500">
+                        Se o número do WhatsApp não existir
+                      </label>
+                      <select
+                        value={activeFlow.invalidNumberAction ?? 'none'}
+                        onChange={(event) =>
+                          handleUpdateFlow(activeFlow.id, {
+                            invalidNumberAction: event.target.value as AutoContactInvalidNumberAction,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      >
+                        {Object.entries(invalidNumberActionLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      {activeFlow.invalidNumberAction === 'update_status' && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">
+                            Status do lead após falha
+                          </label>
+                          {showStatusSelect ? (
+                            <select
+                              value={activeFlow.invalidNumberStatus ?? ''}
+                              onChange={(event) =>
+                                handleUpdateFlow(activeFlow.id, { invalidNumberStatus: event.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                            >
+                              <option value="">Selecione um status</option>
+                              {statusOptions.map((status) => (
+                                <option key={status.id} value={status.nome}>
+                                  {status.nome}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={activeFlow.invalidNumberStatus ?? ''}
+                              onChange={(event) =>
+                                handleUpdateFlow(activeFlow.id, { invalidNumberStatus: event.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                              placeholder="Ex.: Perdido"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
@@ -1922,71 +1958,6 @@ export default function AutoContactFlowSettings() {
             )}
           </div>
 
-          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 mt-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">Template selecionado para a automação</h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Este é o modelo que será enviado quando a automação for disparada automaticamente.
-                </p>
-              </div>
-            </div>
-
-            {messageTemplatesDraft.length === 0 ? (
-              <div className="text-sm text-slate-500">
-                Nenhum template cadastrado. Crie um novo modelo abaixo para ativar a automação.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Template de automação</label>
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(event) => setSelectedTemplateId(event.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
-                  >
-                    {messageTemplatesDraft.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name || 'Modelo sem nome'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                    Prévia
-                  </label>
-                  <div className="bg-white border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
-                    {selectedTemplateMessages.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedTemplateMessages.map((message, index) => {
-                          const Icon = messageTypeIcons[message.type];
-                          const content =
-                            message.type === 'text'
-                              ? message.text?.trim()
-                              : message.caption?.trim() || message.mediaUrl?.trim() || 'Conteúdo pendente';
-                          return (
-                            <div key={message.id} className="flex gap-2">
-                              <Icon className="w-4 h-4 text-slate-400 mt-0.5" />
-                              <div>
-                                <div className="text-xs font-semibold text-slate-500 uppercase">
-                                  {messageTypeLabels[message.type]} {index + 1}
-                                </div>
-                                <p className="whitespace-pre-wrap text-sm text-slate-700">{content || 'Sem conteúdo'}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p>Nenhuma mensagem definida neste template.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
           <div className="border-t border-slate-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -2024,11 +1995,6 @@ export default function AutoContactFlowSettings() {
                             <h4 className="text-sm font-semibold text-slate-800">
                               {template.name?.trim() || `Modelo ${index + 1}`}
                             </h4>
-                            {selectedTemplateId === template.id && (
-                              <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">
-                                Em uso
-                              </span>
-                            )}
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
                             {getTemplateMessages(template).length} mensagens configuradas

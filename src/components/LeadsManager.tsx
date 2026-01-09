@@ -93,7 +93,7 @@ const isWithinDateRange = (
 
 type AutomationSuccessInfo = {
   leadName: string;
-  status: string;
+  status?: string;
 };
 
 type AutomationErrorInfo = {
@@ -143,9 +143,11 @@ function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo
 
         <div className="p-4 space-y-2 text-slate-700">
           <p className="text-base text-slate-900 font-semibold">Mensagens enviadas para {info.leadName}</p>
-          <p className="text-sm">
-            O status foi atualizado para <span className="font-semibold text-emerald-700">"{info.status}"</span>.
-          </p>
+          {info.status && (
+            <p className="text-sm">
+              O status foi atualizado para <span className="font-semibold text-emerald-700">"{info.status}"</span>.
+            </p>
+          )}
         </div>
 
         <div className="px-4 pb-4">
@@ -386,9 +388,7 @@ export default function LeadsManager({
       if (isMounted) {
         const normalizedSettings = normalizeAutoContactSettings(integration?.settings);
         setAutoContactSettings(normalizedSettings);
-        setSelectedTemplateId(
-          normalizedSettings.selectedTemplateId || normalizedSettings.messageTemplates[0]?.id || ''
-        );
+        setSelectedTemplateId(normalizedSettings.messageTemplates[0]?.id || '');
       }
     };
 
@@ -418,10 +418,7 @@ export default function LeadsManager({
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
   const [automationTemplateLead, setAutomationTemplateLead] = useState<Lead | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [automationSuccessInfo, setAutomationSuccessInfo] = useState<{
-    leadName: string;
-    status: string;
-  } | null>(null);
+  const [automationSuccessInfo, setAutomationSuccessInfo] = useState<AutomationSuccessInfo | null>(null);
   const [automationErrorInfo, setAutomationErrorInfo] = useState<AutomationErrorInfo | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
@@ -1360,7 +1357,6 @@ export default function LeadsManager({
     }) => {
       const resolvedTemplate =
         template ??
-        settings.messageTemplates.find((item) => item.id === settings.selectedTemplateId) ??
         settings.messageTemplates[0] ??
         null;
       const templateMessage = getTemplateMessage(resolvedTemplate);
@@ -1372,21 +1368,8 @@ export default function LeadsManager({
         if (!templateMessage.trim()) {
           throw new Error('Nenhum template de automação válido configurado.');
         }
-        const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
-        const normalizedDesiredStatus = desiredStatus.toLowerCase();
-        const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
-
         const onFirstMessageSent = async () => {
           await registerContact(lead, 'Mensagem Automática');
-
-          if (normalizedCurrentStatus !== normalizedDesiredStatus) {
-            await handleStatusChange(lead.id, desiredStatus);
-          }
-
-          setAutomationSuccessInfo({
-            leadName: lead.nome_completo || 'Lead',
-            status: desiredStatus,
-          });
         };
 
         let firstMessageSent = false;
@@ -1433,6 +1416,10 @@ export default function LeadsManager({
         if (sentMessageCount === 0) {
           throw new Error('Nenhuma mensagem válida encontrada no template selecionado.');
         }
+
+        setAutomationSuccessInfo({
+          leadName: lead.nome_completo || 'Lead',
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Erro ao enviar automação manual:', errorMessage);
@@ -1443,28 +1430,9 @@ export default function LeadsManager({
           normalizedError.includes('inválido') ||
           normalizedError.includes('invalido')
         ) {
-          const fallbackStatus = (settings.statusOnInvalidNumber || '').trim();
-          let appliedStatus: string | undefined;
-
-          if (fallbackStatus) {
-            const normalizedDesiredStatus = fallbackStatus.toLowerCase();
-            const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
-
-            if (normalizedCurrentStatus !== normalizedDesiredStatus) {
-              try {
-                await handleStatusChange(lead.id, fallbackStatus);
-              } catch (statusError) {
-                console.error('Erro ao atualizar status após número inválido:', statusError);
-              }
-            }
-
-            appliedStatus = fallbackStatus;
-          }
-
           setAutomationErrorInfo({
             leadName: lead.nome_completo || 'Lead',
             message: `Não foi possível enviar a automação: ${errorMessage}`,
-            status: appliedStatus,
           });
         } else {
           alert(`Não foi possível enviar a automação: ${errorMessage}`);
@@ -1477,7 +1445,7 @@ export default function LeadsManager({
         });
       }
     },
-    [handleStatusChange, registerContact],
+    [registerContact],
   );
 
   const sendManualAutomation = useCallback(
@@ -1494,7 +1462,7 @@ export default function LeadsManager({
       }
 
       setAutomationTemplateLead(lead);
-      setSelectedTemplateId(settings.selectedTemplateId || settings.messageTemplates[0]?.id || '');
+      setSelectedTemplateId(settings.messageTemplates[0]?.id || '');
     },
     [autoContactSettings, executeAutomationSend]
   );

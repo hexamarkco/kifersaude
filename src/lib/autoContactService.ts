@@ -913,10 +913,11 @@ export async function runAutoContactFlow({
         throw error;
       }
 
-      if (!firstMessageSent) {
-        await onFirstMessageSent?.();
-        firstMessageSent = true;
+        if (!sentFromTemplate) {
+          continue;
+        }
       }
+
       continue;
     }
 

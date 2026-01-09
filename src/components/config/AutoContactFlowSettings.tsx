@@ -1127,7 +1127,7 @@ export default function AutoContactFlowSettings() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-slate-900 font-medium mb-4">
+          <div className="flex items-center gap-2 text-slate-900 font-medium mb-4 pt-4">
             <MessageCircle className="w-5 h-5" />
             Templates da automação
           </div>

@@ -46,6 +46,7 @@ import { getBadgeStyle } from '../lib/colorUtils';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   applyTemplateVariables,
+  getTemplateMessages,
   getTemplateMessage,
   normalizeAutoContactSettings,
   sendAutoContactMessage,
@@ -1335,6 +1336,7 @@ export default function LeadsManager({
         settings.messageTemplates[0] ??
         null;
       const templateMessage = getTemplateMessage(resolvedTemplate);
+      const templateMessages = getTemplateMessages(resolvedTemplate);
 
       setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
 
@@ -1359,9 +1361,50 @@ export default function LeadsManager({
           });
         };
 
-        const finalMessage = applyTemplateVariables(templateMessage, lead);
-        await sendAutoContactMessage({ lead, message: finalMessage, settings });
-        await onFirstMessageSent();
+        let firstMessageSent = false;
+        let sentMessageCount = 0;
+
+        for (const message of templateMessages) {
+          if (message.type === 'text') {
+            const finalMessage = applyTemplateVariables(message.text ?? '', lead).trim();
+            if (!finalMessage) {
+              continue;
+            }
+            await sendAutoContactMessage({
+              lead,
+              contentType: 'string',
+              content: finalMessage,
+              settings,
+            });
+          } else {
+            const mediaUrl = applyTemplateVariables(message.mediaUrl ?? '', lead).trim();
+            if (!mediaUrl) {
+              throw new Error('Mensagem de automação com mídia sem URL configurada.');
+            }
+            const caption = message.caption
+              ? applyTemplateVariables(message.caption, lead).trim()
+              : undefined;
+            await sendAutoContactMessage({
+              lead,
+              contentType: message.type,
+              content: {
+                url: mediaUrl,
+                caption,
+              },
+              settings,
+            });
+          }
+
+          sentMessageCount += 1;
+          if (!firstMessageSent) {
+            await onFirstMessageSent();
+            firstMessageSent = true;
+          }
+        }
+
+        if (sentMessageCount === 0) {
+          throw new Error('Nenhuma mensagem válida encontrada no template selecionado.');
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Erro ao enviar automação manual:', errorMessage);

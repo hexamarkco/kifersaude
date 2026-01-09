@@ -45,10 +45,8 @@ import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
-  DEFAULT_MESSAGE_FLOW,
   applyTemplateVariables,
   normalizeAutoContactSettings,
-  runAutoContactFlow,
   sendAutoContactMessage,
 } from '../lib/autoContactService';
 import type { AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
@@ -210,10 +208,7 @@ function AutomationTemplateModal({
   onConfirm,
   isSending,
 }: AutomationTemplateModalProps) {
-  const selectedTemplate =
-    selectedTemplateId === 'flow'
-      ? null
-      : templates.find((template) => template.id === selectedTemplateId) || null;
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -236,7 +231,6 @@ function AutomationTemplateModal({
               onChange={(event) => onChangeTemplate(event.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
             >
-              <option value="flow">Fluxo automático padrão</option>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name || 'Modelo sem nome'}
@@ -249,9 +243,7 @@ function AutomationTemplateModal({
               Prévia
             </label>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
-              {selectedTemplateId === 'flow' ? (
-                <p>O fluxo automático configurado será enviado.</p>
-              ) : selectedTemplate?.message ? (
+              {selectedTemplate?.message ? (
                 <p className="whitespace-pre-wrap">{selectedTemplate.message}</p>
               ) : (
                 <p>Nenhuma mensagem definida neste modelo.</p>
@@ -390,6 +382,9 @@ export default function LeadsManager({
       if (isMounted) {
         const normalizedSettings = normalizeAutoContactSettings(integration?.settings);
         setAutoContactSettings(normalizedSettings);
+        setSelectedTemplateId(
+          normalizedSettings.selectedTemplateId || normalizedSettings.messageTemplates[0]?.id || ''
+        );
       }
     };
 
@@ -418,7 +413,7 @@ export default function LeadsManager({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
   const [automationTemplateLead, setAutomationTemplateLead] = useState<Lead | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('flow');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [automationSuccessInfo, setAutomationSuccessInfo] = useState<{
     leadName: string;
     status: string;
@@ -1332,12 +1327,18 @@ export default function LeadsManager({
       settings: AutoContactSettings;
       template: AutoContactTemplate | null;
     }) => {
-      const messageFlow =
-        settings.messageFlow.length > 0 ? settings.messageFlow : DEFAULT_MESSAGE_FLOW;
+      const resolvedTemplate =
+        template ??
+        settings.messageTemplates.find((item) => item.id === settings.selectedTemplateId) ??
+        settings.messageTemplates[0] ??
+        null;
 
       setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
 
       try {
+        if (!resolvedTemplate?.message.trim()) {
+          throw new Error('Nenhum template de automação válido configurado.');
+        }
         const desiredStatus = (settings.statusOnSend || 'Contato Inicial').trim() || 'Contato Inicial';
         const normalizedDesiredStatus = desiredStatus.toLowerCase();
         const normalizedCurrentStatus = (lead.status || '').trim().toLowerCase();
@@ -1355,17 +1356,9 @@ export default function LeadsManager({
           });
         };
 
-        if (template) {
-          const finalMessage = applyTemplateVariables(template.message, lead);
-          await sendAutoContactMessage({ lead, message: finalMessage, settings });
-          await onFirstMessageSent();
-        } else {
-          await runAutoContactFlow({
-            lead,
-            settings: { ...settings, messageFlow },
-            onFirstMessageSent,
-          });
-        }
+        const finalMessage = applyTemplateVariables(resolvedTemplate.message, lead);
+        await sendAutoContactMessage({ lead, message: finalMessage, settings });
+        await onFirstMessageSent();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Erro ao enviar automação manual:', errorMessage);
@@ -1421,13 +1414,13 @@ export default function LeadsManager({
         return;
       }
 
-      if (settings.messageTemplates.length > 0) {
-        setAutomationTemplateLead(lead);
-        setSelectedTemplateId('flow');
+      if (settings.messageTemplates.length === 0) {
+        alert('Nenhum template de automação configurado. Cadastre um modelo em Configurações > Automação do WhatsApp.');
         return;
       }
 
-      await executeAutomationSend({ lead, settings, template: null });
+      setAutomationTemplateLead(lead);
+      setSelectedTemplateId(settings.selectedTemplateId || settings.messageTemplates[0]?.id || '');
     },
     [autoContactSettings, executeAutomationSend]
   );
@@ -1437,12 +1430,15 @@ export default function LeadsManager({
 
     const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
     const selectedTemplate =
-      selectedTemplateId === 'flow'
-        ? null
-        : settings.messageTemplates.find((template) => template.id === selectedTemplateId) || null;
+      settings.messageTemplates.find((template) => template.id === selectedTemplateId) || null;
 
     if (selectedTemplate && !selectedTemplate.message.trim()) {
       alert('O modelo selecionado está sem mensagem. Preencha o texto antes de enviar.');
+      return;
+    }
+
+    if (!selectedTemplate) {
+      alert('Selecione um template válido para enviar a automação.');
       return;
     }
 

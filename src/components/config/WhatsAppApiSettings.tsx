@@ -97,8 +97,8 @@ export default function WhatsAppApiSettings() {
     setSaving(true);
     setStatusMessage(null);
 
-    const currentMessageFlow = autoContactSettings?.messageFlow || [];
     const currentMessageTemplates = autoContactSettings?.messageTemplates || [];
+    const currentSelectedTemplateId = autoContactSettings?.selectedTemplateId || '';
 
     const newSettings = {
       enabled,
@@ -107,8 +107,8 @@ export default function WhatsAppApiSettings() {
       token: token.trim(),
       statusOnSend: statusOnSend,
       statusOnInvalidNumber: statusOnInvalidNumber,
-      messageFlow: currentMessageFlow,
       messageTemplates: currentMessageTemplates,
+      selectedTemplateId: currentSelectedTemplateId,
     };
 
     const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {

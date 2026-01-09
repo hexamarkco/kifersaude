@@ -3,13 +3,6 @@ import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 
-export type AutoContactStep = {
-  id: string;
-  message: string;
-  delaySeconds: number;
-  active: boolean;
-};
-
 export type AutoContactTemplate = {
   id: string;
   name: string;
@@ -22,57 +15,47 @@ export type AutoContactSettings = {
   apiKey: string;
   statusOnSend: string;
   statusOnInvalidNumber?: string;
-  messageFlow: AutoContactStep[];
   messageTemplates: AutoContactTemplate[];
+  selectedTemplateId: string;
 };
 
 const DEFAULT_STATUS = 'Contato Inicial';
 
-export const DEFAULT_MESSAGE_FLOW: AutoContactStep[] = [
+export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
   {
-    id: 'step-1',
+    id: 'template-1',
+    name: 'Contato inicial',
     message:
       'Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
-    delaySeconds: 0,
-    active: true,
   },
   {
-    id: 'step-2',
+    id: 'template-2',
+    name: 'Convite para conversar',
     message:
       'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
-    delaySeconds: 120,
-    active: true,
   },
 ];
 
-const getNormalizedDelaySeconds = (step: any) => {
-  const delaySeconds = Number.isFinite(step?.delaySeconds) ? Number(step.delaySeconds) : null;
-  const delayMinutes = Number.isFinite(step?.delayMinutes) ? Number(step.delayMinutes) : null;
-
-  const normalizedSeconds = delaySeconds ?? (delayMinutes !== null ? delayMinutes * 60 : null);
-
-  return normalizedSeconds !== null ? Math.max(0, normalizedSeconds) : 0;
-};
-
 export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | null | undefined): AutoContactSettings => {
   const settings = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
-  const messageFlow = Array.isArray(settings.messageFlow)
-    ? settings.messageFlow.map((step, index) => ({
-        id: typeof step?.id === 'string' && step.id.trim() ? step.id : `step-${index}`,
-        message: typeof step?.message === 'string' ? step.message : '',
-        delaySeconds: getNormalizedDelaySeconds(step),
-        active: step?.active !== false,
-      }))
-    : [];
-  const messageTemplates = Array.isArray(settings.messageTemplates)
-    ? settings.messageTemplates.map((template, index) => ({
-        id: typeof template?.id === 'string' && template.id.trim() ? template.id : `template-${index}`,
-        name: typeof template?.name === 'string' ? template.name : '',
-        message: typeof template?.message === 'string' ? template.message : '',
-      }))
-    : [];
+  const rawTemplates =
+    Array.isArray(settings.messageTemplates) && settings.messageTemplates.length > 0
+      ? settings.messageTemplates
+      : DEFAULT_MESSAGE_TEMPLATES;
+  const messageTemplates = rawTemplates.map((template, index) => ({
+    id: typeof template?.id === 'string' && template.id.trim() ? template.id : `template-${index}`,
+    name: typeof template?.name === 'string' ? template.name : '',
+    message: typeof template?.message === 'string' ? template.message : '',
+  }));
+  const selectedTemplateId =
+    typeof settings.selectedTemplateId === 'string' && settings.selectedTemplateId.trim()
+      ? settings.selectedTemplateId
+      : messageTemplates[0]?.id ?? '';
 
   const apiKeyValue = typeof settings.apiKey === 'string' ? settings.apiKey : (typeof settings.token === 'string' ? settings.token : '');
+  const validSelectedTemplateId = messageTemplates.some((template) => template.id === selectedTemplateId)
+    ? selectedTemplateId
+    : messageTemplates[0]?.id ?? '';
 
   return {
     enabled: settings.enabled !== false,
@@ -86,8 +69,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       typeof settings.statusOnInvalidNumber === 'string' && settings.statusOnInvalidNumber.trim()
         ? settings.statusOnInvalidNumber.trim()
         : '',
-    messageFlow,
     messageTemplates,
+    selectedTemplateId: validSelectedTemplateId,
   };
 };
 
@@ -101,8 +84,6 @@ export const applyTemplateVariables = (template: string, lead: Lead) => {
     .replace(/{{\s*cidade\s*}}/gi, lead.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead.responsavel || '');
 };
-
-const waitSeconds = (seconds: number) => new Promise((resolve) => setTimeout(resolve, Math.max(0, seconds) * 1000));
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
@@ -156,28 +137,15 @@ export async function runAutoContactFlow({
   signal?: () => boolean;
   onFirstMessageSent?: () => Promise<void> | void;
 }): Promise<void> {
-  const steps = settings.messageFlow
-    .filter((step) => step.active && step.message.trim())
-    .sort((a, b) => a.delaySeconds - b.delaySeconds);
+  if (signal?.() === false) return;
 
-  if (steps.length === 0) return;
+  const templates = settings.messageTemplates ?? [];
+  const selectedTemplate =
+    templates.find((template) => template.id === settings.selectedTemplateId) ?? templates[0] ?? null;
 
-  let firstMessageHandled = false;
+  if (!selectedTemplate?.message.trim()) return;
 
-  for (const step of steps) {
-    if (signal?.() === false) break;
-    if (step.delaySeconds > 0) {
-      await waitSeconds(step.delaySeconds);
-    }
-
-    if (signal?.() === false) break;
-
-    const finalMessage = applyTemplateVariables(step.message, lead);
-    await sendAutoContactMessage({ lead, message: finalMessage, settings });
-
-    if (!firstMessageHandled) {
-      firstMessageHandled = true;
-      await onFirstMessageSent?.();
-    }
-  }
+  const finalMessage = applyTemplateVariables(selectedTemplate.message, lead);
+  await sendAutoContactMessage({ lead, message: finalMessage, settings });
+  await onFirstMessageSent?.();
 }

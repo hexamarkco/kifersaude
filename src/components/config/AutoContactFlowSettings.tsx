@@ -436,6 +436,65 @@ export default function AutoContactFlowSettings() {
     setSavingFlow(false);
   };
 
+  const conditionFieldLabels: Record<AutoContactFlowCondition['field'], string> = {
+    origem: 'Origem do lead',
+    cidade: 'Cidade',
+    responsavel: 'Responsável',
+    status: 'Status atual',
+    tag: 'Tag do lead',
+    canal: 'Canal de aquisição',
+    estado: 'Estado (UF)',
+    regiao: 'Região',
+    tipo_contratacao: 'Tipo de contratação',
+    operadora_atual: 'Operadora atual',
+    email: 'E-mail',
+    telefone: 'Telefone',
+    data_criacao: 'Data de criação',
+    ultimo_contato: 'Último contato',
+    proximo_retorno: 'Próximo retorno',
+  };
+  const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
+    equals: 'É igual a',
+    contains: 'Contém',
+    not_equals: 'Não é igual',
+    not_contains: 'Não contém',
+    starts_with: 'Começa com',
+    ends_with: 'Termina com',
+    in_list: 'Está em',
+    not_in_list: 'Não está em',
+    greater_than: 'Maior que',
+    greater_or_equal: 'Maior ou igual',
+    less_than: 'Menor que',
+    less_or_equal: 'Menor ou igual',
+  };
+  const getFlowConditionPreview = (flow: AutoContactFlow) => {
+    const conditions = flow.conditions ?? [];
+    if (conditions.length === 0) {
+      return flow.triggerStatus ? `Status: ${flow.triggerStatus}` : 'Sem condições';
+    }
+
+    const preview = conditions
+      .slice(0, 2)
+      .map((condition) => {
+        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
+        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
+        return `${fieldLabel} ${operatorLabel} ${condition.value}`.trim();
+      })
+      .join(' • ');
+    const extraCount = conditions.length - 2;
+    return extraCount > 0 ? `${preview} (+${extraCount})` : preview;
+  };
+  const getFlowSearchText = (flow: AutoContactFlow) => {
+    const conditionsText = (flow.conditions ?? [])
+      .map((condition) => {
+        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
+        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
+        return `${fieldLabel} ${operatorLabel} ${condition.value}`;
+      })
+      .join(' ');
+    return `${flow.name} ${conditionsText} ${flow.triggerStatus ?? ''} ${(flow.tags ?? []).join(' ')}`.toLowerCase();
+  };
+
   const selectedTemplate = useMemo(
     () => messageTemplatesDraft.find((template) => template.id === selectedTemplateId) ?? null,
     [messageTemplatesDraft, selectedTemplateId],
@@ -638,64 +697,6 @@ export default function AutoContactFlowSettings() {
     { value: 6, label: 'Sáb' },
     { value: 7, label: 'Dom' },
   ];
-  const conditionFieldLabels: Record<AutoContactFlowCondition['field'], string> = {
-    origem: 'Origem do lead',
-    cidade: 'Cidade',
-    responsavel: 'Responsável',
-    status: 'Status atual',
-    tag: 'Tag do lead',
-    canal: 'Canal de aquisição',
-    estado: 'Estado (UF)',
-    regiao: 'Região',
-    tipo_contratacao: 'Tipo de contratação',
-    operadora_atual: 'Operadora atual',
-    email: 'E-mail',
-    telefone: 'Telefone',
-    data_criacao: 'Data de criação',
-    ultimo_contato: 'Último contato',
-    proximo_retorno: 'Próximo retorno',
-  };
-  const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
-    equals: 'É igual a',
-    contains: 'Contém',
-    not_equals: 'Não é igual',
-    not_contains: 'Não contém',
-    starts_with: 'Começa com',
-    ends_with: 'Termina com',
-    in_list: 'Está em',
-    not_in_list: 'Não está em',
-    greater_than: 'Maior que',
-    greater_or_equal: 'Maior ou igual',
-    less_than: 'Menor que',
-    less_or_equal: 'Menor ou igual',
-  };
-  const getFlowConditionPreview = (flow: AutoContactFlow) => {
-    const conditions = flow.conditions ?? [];
-    if (conditions.length === 0) {
-      return flow.triggerStatus ? `Status: ${flow.triggerStatus}` : 'Sem condições';
-    }
-
-    const preview = conditions
-      .slice(0, 2)
-      .map((condition) => {
-        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
-        return `${fieldLabel} ${operatorLabel} ${condition.value}`.trim();
-      })
-      .join(' • ');
-    const extraCount = conditions.length - 2;
-    return extraCount > 0 ? `${preview} (+${extraCount})` : preview;
-  };
-  const getFlowSearchText = (flow: AutoContactFlow) => {
-    const conditionsText = (flow.conditions ?? [])
-      .map((condition) => {
-        const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
-        return `${fieldLabel} ${operatorLabel} ${condition.value}`;
-      })
-      .join(' ');
-    return `${flow.name} ${conditionsText} ${flow.triggerStatus ?? ''} ${(flow.tags ?? []).join(' ')}`.toLowerCase();
-  };
   const adjustmentReasonLabels: Record<AutoContactScheduleAdjustmentReason, string> = {
     outside_window: 'fora da janela',
     weekend: 'fim de semana',

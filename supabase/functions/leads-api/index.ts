@@ -43,6 +43,105 @@ type AutoContactSettings = {
   messageFlow: AutoContactStep[];
 };
 
+type FlowMessageType = 'text' | 'image' | 'video' | 'audio' | 'document';
+
+type AutoContactTemplateMessage = {
+  id: string;
+  type: FlowMessageType;
+  text?: string;
+  mediaUrl?: string;
+  caption?: string;
+  filename?: string;
+};
+
+type AutoContactTemplate = {
+  id: string;
+  name: string;
+  message: string;
+  messages?: AutoContactTemplateMessage[];
+};
+
+type AutoContactFlowActionType = 'send_message' | 'update_status' | 'archive_lead' | 'delete_lead';
+
+type AutoContactFlowMessageSource = 'template' | 'custom';
+
+type AutoContactFlowCustomMessage = {
+  type: FlowMessageType;
+  text?: string;
+  mediaUrl?: string;
+  caption?: string;
+  filename?: string;
+};
+
+type AutoContactFlowStep = {
+  id: string;
+  delayHours: number;
+  actionType: AutoContactFlowActionType;
+  messageSource?: AutoContactFlowMessageSource;
+  templateId?: string;
+  customMessage?: AutoContactFlowCustomMessage;
+  statusToSet?: string;
+};
+
+type AutoContactFlowConditionField =
+  | 'origem'
+  | 'cidade'
+  | 'responsavel'
+  | 'status'
+  | 'tag'
+  | 'canal'
+  | 'estado'
+  | 'regiao'
+  | 'tipo_contratacao'
+  | 'operadora_atual'
+  | 'email'
+  | 'telefone'
+  | 'data_criacao'
+  | 'ultimo_contato'
+  | 'proximo_retorno';
+
+type AutoContactFlowConditionOperator =
+  | 'equals'
+  | 'contains'
+  | 'not_equals'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in_list'
+  | 'not_in_list'
+  | 'greater_than'
+  | 'greater_or_equal'
+  | 'less_than'
+  | 'less_or_equal';
+
+type AutoContactFlowCondition = {
+  id: string;
+  field: AutoContactFlowConditionField;
+  operator: AutoContactFlowConditionOperator;
+  value: string;
+};
+
+type AutoContactFlow = {
+  id: string;
+  name: string;
+  triggerStatus: string;
+  steps: AutoContactFlowStep[];
+  finalStatus?: string;
+  conditionLogic?: 'all' | 'any';
+  conditions?: AutoContactFlowCondition[];
+  exitConditionLogic?: 'all' | 'any';
+  exitConditions?: AutoContactFlowCondition[];
+  tags?: string[];
+};
+
+type AutoContactFlowSettings = {
+  enabled: boolean;
+  autoSend: boolean;
+  apiKey: string;
+  messageTemplates: AutoContactTemplate[];
+  flows: AutoContactFlow[];
+};
+
 type LookupTableRow = { id: string; nome?: string | null; label?: string | null; padrao?: boolean | null };
 
 function normalizeText(value: string): string {
@@ -564,6 +663,249 @@ const applyTemplateVariables = (template: string, lead: any) => {
     .replace(/{{\s*responsavel\s*}}/gi, lead?.responsavel || '');
 };
 
+const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
+
+const normalizeMessageType = (type: unknown): FlowMessageType =>
+  type === 'image' || type === 'video' || type === 'audio' || type === 'document' ? type : 'text';
+
+const getTemplateMessages = (template?: AutoContactTemplate | null): AutoContactTemplateMessage[] => {
+  if (!template) return [];
+  const rawMessages = Array.isArray(template.messages) ? template.messages : [];
+  if (rawMessages.length > 0) {
+    return rawMessages.map((message, index) => ({
+      id: typeof message?.id === 'string' && message.id.trim() ? message.id : `message-${template.id}-${index}`,
+      type: normalizeMessageType(message?.type),
+      text: typeof message?.text === 'string' ? message.text : '',
+      mediaUrl: typeof message?.mediaUrl === 'string' ? message.mediaUrl : '',
+      caption: typeof message?.caption === 'string' ? message.caption : '',
+      filename: typeof message?.filename === 'string' ? message.filename : '',
+    }));
+  }
+
+  if (template.message?.trim()) {
+    return [
+      {
+        id: `message-${template.id}-0`,
+        type: 'text',
+        text: template.message,
+      },
+    ];
+  }
+
+  return [];
+};
+
+const composeTemplateMessage = (messages: AutoContactTemplateMessage[]): string => {
+  const parts = messages
+    .map((message) => {
+      if (message.type === 'text') {
+        return message.text?.trim();
+      }
+      const caption = message.caption?.trim();
+      if (caption) return caption;
+      const mediaUrl = message.mediaUrl?.trim();
+      if (mediaUrl) return `Anexo: ${mediaUrl}`;
+      return '';
+    })
+    .filter((part): part is string => Boolean(part));
+
+  return parts.join('\n\n');
+};
+
+const getTemplateMessage = (template?: AutoContactTemplate | null): string => {
+  if (!template) return '';
+  const composed = composeTemplateMessage(getTemplateMessages(template));
+  return composed || template.message || '';
+};
+
+const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSettings | null => {
+  if (!settings || typeof settings !== 'object') return null;
+
+  const rawTemplates = Array.isArray(settings.messageTemplates) ? settings.messageTemplates : [];
+  const messageTemplates: AutoContactTemplate[] = rawTemplates.map((template: any, index: number) => {
+    const templateId = typeof template?.id === 'string' && template.id.trim() ? template.id : `template-${index}`;
+    const templateName = typeof template?.name === 'string' ? template.name : '';
+    const templateMessage = typeof template?.message === 'string' ? template.message : '';
+    const normalizedMessages = getTemplateMessages({
+      id: templateId,
+      name: templateName,
+      message: templateMessage,
+      messages: Array.isArray(template?.messages) ? template.messages : undefined,
+    });
+    const composedMessage = composeTemplateMessage(normalizedMessages);
+
+    return {
+      id: templateId,
+      name: templateName,
+      messages: normalizedMessages,
+      message: composedMessage || templateMessage,
+    };
+  });
+
+  const apiKeyValue =
+    typeof settings.apiKey === 'string'
+      ? settings.apiKey
+      : typeof settings.token === 'string'
+        ? settings.token
+        : '';
+
+  const rawFlows = Array.isArray(settings.flows) ? settings.flows : [];
+  const fallbackTemplateId = messageTemplates[0]?.id ?? '';
+  const normalizeConditionField = (field: unknown): AutoContactFlowConditionField => {
+    switch (field) {
+      case 'origem':
+      case 'cidade':
+      case 'responsavel':
+      case 'status':
+      case 'tag':
+      case 'canal':
+      case 'estado':
+      case 'regiao':
+      case 'tipo_contratacao':
+      case 'operadora_atual':
+      case 'email':
+      case 'telefone':
+      case 'data_criacao':
+      case 'ultimo_contato':
+      case 'proximo_retorno':
+        return field;
+      default:
+        return 'origem';
+    }
+  };
+
+  const normalizeConditionOperator = (operator: unknown): AutoContactFlowConditionOperator => {
+    switch (operator) {
+      case 'equals':
+      case 'contains':
+      case 'not_equals':
+      case 'not_contains':
+      case 'starts_with':
+      case 'ends_with':
+      case 'in_list':
+      case 'not_in_list':
+      case 'greater_than':
+      case 'greater_or_equal':
+      case 'less_than':
+      case 'less_or_equal':
+        return operator;
+      default:
+        return 'contains';
+    }
+  };
+
+  const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
+    switch (value) {
+      case 'send_message':
+      case 'update_status':
+      case 'archive_lead':
+      case 'delete_lead':
+        return value;
+      default:
+        return 'send_message';
+    }
+  };
+
+  const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
+    value === 'custom' ? 'custom' : 'template';
+
+  const normalizeCustomMessage = (message: any): AutoContactFlowCustomMessage => ({
+    type: normalizeMessageType(message?.type),
+    text: typeof message?.text === 'string' ? message.text : '',
+    mediaUrl: typeof message?.mediaUrl === 'string' ? message.mediaUrl : '',
+    caption: typeof message?.caption === 'string' ? message.caption : '',
+    filename: typeof message?.filename === 'string' ? message.filename : '',
+  });
+
+  const normalizedFlows: AutoContactFlow[] = rawFlows
+    .map((flow: any, flowIndex: number) => {
+      const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
+      const steps = Array.isArray(flow?.steps) ? flow.steps : [];
+      const rawConditions = Array.isArray(flow?.conditions) ? flow.conditions : [];
+      const rawExitConditions = Array.isArray(flow?.exitConditions) ? flow.exitConditions : [];
+      const normalizedConditions = rawConditions
+        .map((condition: any, conditionIndex: number) => ({
+          id:
+            typeof condition?.id === 'string' && condition.id.trim()
+              ? condition.id
+              : `flow-${flowId}-condition-${conditionIndex}`,
+          field: normalizeConditionField(condition?.field),
+          operator: normalizeConditionOperator(condition?.operator),
+          value: typeof condition?.value === 'string' ? condition.value : '',
+        }))
+        .filter((condition) => condition.value.trim());
+      const normalizedExitConditions = rawExitConditions
+        .map((condition: any, conditionIndex: number) => ({
+          id:
+            typeof condition?.id === 'string' && condition.id.trim()
+              ? condition.id
+              : `flow-${flowId}-exit-condition-${conditionIndex}`,
+          field: normalizeConditionField(condition?.field),
+          operator: normalizeConditionOperator(condition?.operator),
+          value: typeof condition?.value === 'string' ? condition.value : '',
+        }))
+        .filter((condition) => condition.value.trim());
+      const normalizedSteps = steps.map((step: any, stepIndex: number) => {
+        const delayHoursRaw = Number(step?.delayHours);
+        const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
+        const actionType = normalizeActionType(step?.actionType);
+        if (actionType === 'send_message') {
+          const messageSource = normalizeMessageSource(step?.messageSource);
+          const templateId = typeof step?.templateId === 'string' ? step.templateId : '';
+          const validTemplateId =
+            messageTemplates.some((template) => template.id === templateId) ? templateId : fallbackTemplateId;
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            actionType,
+            messageSource,
+            templateId: validTemplateId,
+            customMessage: normalizeCustomMessage(step?.customMessage),
+          };
+        }
+
+        if (actionType === 'update_status') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            actionType,
+            statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
+          };
+        }
+
+        return {
+          id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+          delayHours,
+          actionType,
+        };
+      });
+
+      return {
+        id: flowId,
+        name: typeof flow?.name === 'string' ? flow.name : '',
+        triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
+        steps: normalizedSteps,
+        finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
+        conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
+        conditions: normalizedConditions,
+        exitConditionLogic: flow?.exitConditionLogic === 'all' ? 'all' : 'any',
+        exitConditions: normalizedExitConditions,
+        tags: Array.isArray(flow?.tags)
+          ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
+          : [],
+      };
+    })
+    .filter((flow) => flow.steps.length > 0);
+
+  return {
+    enabled: settings.enabled !== false,
+    autoSend: settings.autoSend === true,
+    apiKey: apiKeyValue,
+    messageTemplates,
+    flows: normalizedFlows,
+  };
+};
+
 async function loadAutoContactSettings(
   supabase: ReturnType<typeof createClient>,
 ): Promise<AutoContactSettings | null> {
@@ -580,6 +922,275 @@ async function loadAutoContactSettings(
 
   return normalizeAutoContactSettings(data?.settings) ?? null;
 }
+
+async function loadAutoContactFlowSettings(
+  supabase: ReturnType<typeof createClient>,
+): Promise<AutoContactFlowSettings | null> {
+  const { data, error } = await supabase
+    .from('integration_settings')
+    .select('settings')
+    .eq('slug', 'whatsapp_auto_contact')
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Erro ao carregar fluxos de automação', error);
+    return null;
+  }
+
+  return normalizeAutoContactFlowSettings(data?.settings) ?? null;
+}
+
+const matchTextCondition = (
+  source: string,
+  expected: string,
+  operator: AutoContactFlowConditionOperator,
+): boolean => {
+  switch (operator) {
+    case 'equals':
+      return source === expected;
+    case 'contains':
+      return source.includes(expected);
+    case 'not_equals':
+      return source !== expected;
+    case 'not_contains':
+      return !source.includes(expected);
+    case 'starts_with':
+      return source.startsWith(expected);
+    case 'ends_with':
+      return source.endsWith(expected);
+    case 'in_list': {
+      const list = splitListValues(expected);
+      return list.includes(source);
+    }
+    case 'not_in_list': {
+      const list = splitListValues(expected);
+      return !list.includes(source);
+    }
+    case 'greater_than':
+    case 'greater_or_equal':
+    case 'less_than':
+    case 'less_or_equal':
+      return compareComparableValues(source, expected, operator);
+    default:
+      return false;
+  }
+};
+
+const matchArrayCondition = (
+  values: string[],
+  expected: string,
+  operator: AutoContactFlowConditionOperator,
+): boolean => {
+  if (operator === 'in_list' || operator === 'not_in_list') {
+    const list = splitListValues(expected);
+    const hasMatch = values.some((tag) => list.includes(tag));
+    return operator === 'in_list' ? hasMatch : !hasMatch;
+  }
+
+  switch (operator) {
+    case 'equals':
+      return values.some((tag) => tag === expected);
+    case 'contains':
+      return values.some((tag) => tag.includes(expected));
+    case 'not_equals':
+      return !values.some((tag) => tag === expected);
+    case 'not_contains':
+      return !values.some((tag) => tag.includes(expected));
+    case 'starts_with':
+    case 'ends_with':
+      return values.some((tag) => matchTextCondition(tag, expected, operator));
+    default:
+      return false;
+  }
+};
+
+const splitListValues = (value: string): string[] =>
+  value
+    .split(/[;,]/)
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+
+const parseComparableValue = (value: string): number | null => {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) return numericValue;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const compareComparableValues = (
+  source: string,
+  expected: string,
+  operator: 'greater_than' | 'greater_or_equal' | 'less_than' | 'less_or_equal',
+): boolean => {
+  const sourceComparable = parseComparableValue(source);
+  const expectedComparable = parseComparableValue(expected);
+  if (sourceComparable === null || expectedComparable === null) return false;
+
+  switch (operator) {
+    case 'greater_than':
+      return sourceComparable > expectedComparable;
+    case 'greater_or_equal':
+      return sourceComparable >= expectedComparable;
+    case 'less_than':
+      return sourceComparable < expectedComparable;
+    case 'less_or_equal':
+      return sourceComparable <= expectedComparable;
+    default:
+      return false;
+  }
+};
+
+const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField): string => {
+  switch (field) {
+    case 'origem':
+      return lead.origem ?? '';
+    case 'cidade':
+      return lead.cidade ?? '';
+    case 'responsavel':
+      return lead.responsavel ?? '';
+    case 'status':
+      return lead.status ?? '';
+    case 'canal':
+      return lead.canal ?? '';
+    case 'estado':
+      return lead.estado ?? '';
+    case 'regiao':
+      return lead.regiao ?? '';
+    case 'tipo_contratacao':
+      return lead.tipo_contratacao ?? '';
+    case 'operadora_atual':
+      return lead.operadora_atual ?? '';
+    case 'email':
+      return lead.email ?? '';
+    case 'telefone':
+      return lead.telefone ?? '';
+    case 'data_criacao':
+      return lead.data_criacao ?? '';
+    case 'ultimo_contato':
+      return lead.ultimo_contato ?? '';
+    case 'proximo_retorno':
+      return lead.proximo_retorno ?? '';
+    case 'tag':
+      return '';
+    default:
+      return '';
+  }
+};
+
+const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: any): boolean => {
+  const value = normalizeText(condition.value);
+  if (!value) return false;
+
+  if (condition.field === 'tag') {
+    const tags = Array.isArray(lead.tags) ? lead.tags : [];
+    const normalizedTags = tags.map((tag) => normalizeText(tag)).filter(Boolean);
+    return matchArrayCondition(normalizedTags, value, condition.operator);
+  }
+
+  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field));
+  if (!leadValue) return condition.operator === 'not_contains' || condition.operator === 'not_equals';
+  return matchTextCondition(leadValue, value, condition.operator);
+};
+
+const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any): boolean => {
+  const rawConditions = flow.conditions ?? [];
+  const conditions = [...rawConditions];
+  const triggerStatus = flow.triggerStatus?.trim();
+  if (triggerStatus && !rawConditions.some((condition) => condition.field === 'status')) {
+    conditions.push({
+      id: 'trigger-status',
+      field: 'status',
+      operator: 'equals',
+      value: triggerStatus,
+    });
+  }
+
+  if (conditions.length === 0) return true;
+
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
+};
+
+const shouldExitFlow = (flow: AutoContactFlow, lead: any): boolean => {
+  const exitConditions = flow.exitConditions ?? [];
+  if (exitConditions.length === 0) return false;
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
+};
+
+async function sendAutoContactMessage({
+  lead,
+  contentType,
+  content,
+  settings,
+}: {
+  lead: any;
+  contentType: FlowMessageType;
+  content: string | { url: string; caption?: string; filename?: string };
+  settings: AutoContactFlowSettings;
+}): Promise<void> {
+  const normalizedPhone = normalizeTelefone(lead?.telefone || '');
+  if (!normalizedPhone) {
+    throw new Error('Telefone inválido para envio automático.');
+  }
+
+  const apiKey = sanitizeWhapiToken(settings.apiKey);
+  if (!apiKey) {
+    throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
+  }
+
+  const chatId = `55${normalizedPhone}@s.whatsapp.net`;
+  let endpoint = '';
+  const body: Record<string, unknown> = { to: chatId };
+
+  if (contentType === 'text') {
+    endpoint = '/messages/text';
+    body.body = content as string;
+  } else {
+    endpoint = `/messages/${contentType}`;
+    const media = content as { url: string; caption?: string; filename?: string };
+    body.media = media.url;
+    if (media.caption) body.caption = media.caption;
+    if (media.filename && contentType === 'document') body.filename = media.filename;
+  }
+
+  const response = await fetch(`https://gate.whapi.cloud${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Falha ao enviar mensagem automática');
+  }
+}
+
+const buildCustomMessagePayload = (
+  customMessage: AutoContactFlowCustomMessage | undefined,
+  lead: any,
+): { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } } | null => {
+  if (!customMessage) return null;
+  if (customMessage.type === 'text') {
+    const message = applyTemplateVariables(customMessage.text ?? '', lead).trim();
+    if (!message) return null;
+    return { contentType: 'text', content: message };
+  }
+
+  if (!customMessage.mediaUrl?.trim()) return null;
+  return {
+    contentType: customMessage.type,
+    content: {
+      url: customMessage.mediaUrl,
+      caption: customMessage.caption ? applyTemplateVariables(customMessage.caption, lead) : undefined,
+      filename: customMessage.filename,
+    },
+  };
+};
 
 async function triggerAutoContactForLead({
   supabase,
@@ -675,7 +1286,214 @@ async function triggerAutoContactForLead({
         .eq('id', lead.id);
     }
   } catch (error) {
-    console.error('Erro ao disparar automação para o lead', { leadId: lead?.id, error });
+    logWithContext('Erro ao disparar automação para o lead', {
+      leadId: lead?.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function runAutoContactFlowEngine({
+  supabase,
+  lead,
+  lookups,
+  logWithContext,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lead: any;
+  lookups: LeadLookupMaps;
+  logWithContext: (message: string, details?: Record<string, unknown>) => void;
+}): Promise<void> {
+  try {
+    const settings = await loadAutoContactFlowSettings(supabase);
+    if (!settings || !settings.enabled) {
+      logWithContext('Fluxo automático desativado ou não configurado');
+      return;
+    }
+
+    if (!settings.autoSend) {
+      logWithContext('Fluxo automático configurado, mas envio automático está desativado');
+      return;
+    }
+
+    if (!settings.apiKey) {
+      logWithContext('Fluxo automático sem token configurado');
+      return;
+    }
+
+    if (settings.flows.length === 0) {
+      logWithContext('Nenhum fluxo automático disponível para execução');
+      return;
+    }
+
+    const leadWithRelations = mapLeadRelationsForResponse(lead, lookups);
+    if (!leadWithRelations.status) {
+      leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
+    }
+    leadWithRelations.status = leadWithRelations.status || 'Novo';
+
+    const matchingFlow = settings.flows.find((flow) => matchesAutoContactFlow(flow, leadWithRelations)) ?? null;
+    if (!matchingFlow) {
+      logWithContext('Nenhum fluxo automático corresponde ao lead recém-criado', { leadId: lead.id });
+      return;
+    }
+
+    logWithContext('Fluxo automático selecionado', {
+      leadId: lead.id,
+      flowId: matchingFlow.id,
+      flowName: matchingFlow.name,
+    });
+
+    let firstMessageSent = false;
+
+    for (const step of matchingFlow.steps) {
+      if (shouldExitFlow(matchingFlow, leadWithRelations)) {
+        logWithContext('Fluxo automático interrompido por condição de saída', {
+          leadId: lead.id,
+          flowId: matchingFlow.id,
+        });
+        break;
+      }
+
+      const delayMs = Math.max(0, step.delayHours) * 60 * 60 * 1000;
+      if (delayMs > 0) {
+        logWithContext('Aguardando atraso configurado para etapa do fluxo', {
+          leadId: lead.id,
+          flowId: matchingFlow.id,
+          stepId: step.id,
+          delayHours: step.delayHours,
+        });
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+
+      if (step.actionType === 'send_message') {
+        let payload:
+          | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
+          | null = null;
+
+        if (step.messageSource === 'custom') {
+          payload = buildCustomMessagePayload(step.customMessage, leadWithRelations);
+        } else {
+          const template =
+            settings.messageTemplates.find((item) => item.id === step.templateId) ??
+            settings.messageTemplates[0] ??
+            null;
+          const message = getTemplateMessage(template);
+          if (message.trim()) {
+            payload = {
+              contentType: 'text',
+              content: applyTemplateVariables(message, leadWithRelations),
+            };
+          }
+        }
+
+        if (!payload) {
+          logWithContext('Etapa de envio sem conteúdo válido, ignorando', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+          });
+          continue;
+        }
+
+        await sendAutoContactMessage({
+          lead: leadWithRelations,
+          contentType: payload.contentType,
+          content: payload.content,
+          settings,
+        });
+
+        logWithContext('Mensagem automática enviada via fluxo', {
+          leadId: lead.id,
+          flowId: matchingFlow.id,
+          stepId: step.id,
+        });
+
+        if (!firstMessageSent) {
+          firstMessageSent = true;
+          const now = new Date().toISOString();
+          await supabase.from('leads').update({ ultimo_contato: now }).eq('id', lead.id);
+          await supabase.from('interactions').insert({
+            lead_id: lead.id,
+            tipo: 'Mensagem Automática',
+            descricao: 'Fluxo automático disparado pela API de leads',
+            responsavel: leadWithRelations.responsavel ?? 'Sistema',
+          });
+        }
+
+        continue;
+      }
+
+      if (step.actionType === 'update_status') {
+        const statusName = step.statusToSet?.trim();
+        if (!statusName) {
+          logWithContext('Etapa de fluxo sem status configurado', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+          });
+          continue;
+        }
+
+        const statusId = lookups.statusByName.get(normalizeText(statusName)) ?? null;
+        if (!statusId) {
+          logWithContext('Status configurado não encontrado para etapa do fluxo', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+            status: statusName,
+          });
+          continue;
+        }
+
+        const { error } = await supabase.from('leads').update({ status_id: statusId }).eq('id', lead.id);
+        if (error) {
+          logWithContext('Erro ao atualizar status do lead pelo fluxo', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+            error: error.message,
+          });
+        } else {
+          leadWithRelations.status = statusName;
+        }
+
+        continue;
+      }
+
+      if (step.actionType === 'archive_lead') {
+        const { error } = await supabase.from('leads').update({ arquivado: true }).eq('id', lead.id);
+        if (error) {
+          logWithContext('Erro ao arquivar lead pelo fluxo', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+            error: error.message,
+          });
+        } else {
+          leadWithRelations.arquivado = true;
+        }
+        continue;
+      }
+
+      if (step.actionType === 'delete_lead') {
+        const { error } = await supabase.from('leads').delete().eq('id', lead.id);
+        if (error) {
+          logWithContext('Erro ao excluir lead pelo fluxo', {
+            leadId: lead.id,
+            flowId: matchingFlow.id,
+            stepId: step.id,
+            error: error.message,
+          });
+        }
+        return;
+      }
+    }
+  } catch (error) {
+    logWithContext('Erro ao executar fluxo automático', {
+      leadId: lead?.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -840,14 +1658,17 @@ Deno.serve(async (req: Request) => {
       logWithContext('Lead created successfully', { leadId: data.id });
 
       try {
-        await triggerAutoContactForLead({
+        await runAutoContactFlowEngine({
           supabase,
           lead: data,
           lookups,
           logWithContext,
         });
       } catch (automationError) {
-        console.error('Falha ao processar automação após criação do lead', automationError);
+        logWithContext('Falha ao processar automação após criação do lead', {
+          leadId: data.id,
+          error: automationError instanceof Error ? automationError.message : String(automationError),
+        });
       }
 
       return new Response(

@@ -817,7 +817,7 @@ export default function AutoContactFlowSettings() {
   };
   const statusOptions = leadStatuses.filter((status) => status.ativo !== false);
   const showStatusSelect = statusOptions.length > 0;
-  const activeOrigins = useMemo(() => leadOrigins.filter((origin) => origin.ativo), [leadOrigins]);
+  const originOptions = useMemo(() => leadOrigins.map((origin) => origin.nome), [leadOrigins]);
   const tipoContratacaoOptions = useMemo(
     () => (options.lead_tipo_contratacao || []).filter((option) => option.ativo),
     [options.lead_tipo_contratacao],
@@ -829,13 +829,13 @@ export default function AutoContactFlowSettings() {
   const conditionValueOptions = useMemo(
     () => ({
       status: statusOptions.map((status) => status.nome),
-      origem: activeOrigins.map((origin) => origin.nome),
+      origem: originOptions,
       tipo_contratacao: tipoContratacaoOptions.map((option) => option.label),
       responsavel: responsavelOptions.map((option) => option.label),
       tag: availableTags,
       event: ['lead_created'],
     }),
-    [activeOrigins, availableTags, responsavelOptions, statusOptions, tipoContratacaoOptions],
+    [availableTags, originOptions, responsavelOptions, statusOptions, tipoContratacaoOptions],
   );
   const getConditionValueOptions = (field: AutoContactFlowCondition['field']) => {
     const values = conditionValueOptions[field];

@@ -52,7 +52,7 @@ import {
   runAutoContactFlow,
   sendAutoContactMessage,
 } from '../lib/autoContactService';
-import type { AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
+import type { AutoContactFlowEvent, AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
 import { downloadXlsx } from '../lib/xlsxExport';
 
@@ -1189,7 +1189,7 @@ export default function LeadsManager({
   };
 
   const triggerAutoContactFlow = useCallback(
-    (lead: Lead) => {
+    (lead: Lead, event?: AutoContactFlowEvent) => {
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
 
       if (!settings.enabled || settings.flows.length === 0) {
@@ -1199,6 +1199,7 @@ export default function LeadsManager({
       void runAutoContactFlow({
         lead: { ...lead },
         settings,
+        event,
         onFirstMessageSent: async () => {
           await registerContact(lead, 'Mensagem Automática');
         },
@@ -2153,9 +2154,12 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={async (savedLead) => {
+          onSave={async (savedLead, context) => {
             setShowForm(false);
             setEditingLead(null);
+            if (context?.created) {
+              triggerAutoContactFlow(savedLead, 'lead_created');
+            }
             await loadLeads();
           }}
         />

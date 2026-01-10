@@ -478,6 +478,7 @@ export default function AutoContactFlowSettings() {
     data_criacao: 'Data de criação',
     ultimo_contato: 'Último contato',
     proximo_retorno: 'Próximo retorno',
+    lead_created: 'Lead criado',
   };
   const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
     equals: 'É igual a',
@@ -503,8 +504,12 @@ export default function AutoContactFlowSettings() {
       .slice(0, 2)
       .map((condition) => {
         const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
-        return `${fieldLabel} ${operatorLabel} ${condition.value}`.trim();
+        const operatorLabel =
+          condition.field === 'lead_created'
+            ? ''
+            : conditionOperatorLabels[condition.operator] ?? condition.operator;
+        const valueText = condition.field === 'lead_created' ? '' : condition.value;
+        return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' • ');
     const extraCount = conditions.length - 2;
@@ -514,8 +519,12 @@ export default function AutoContactFlowSettings() {
     const conditionsText = (flow.conditions ?? [])
       .map((condition) => {
         const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel = conditionOperatorLabels[condition.operator] ?? condition.operator;
-        return `${fieldLabel} ${operatorLabel} ${condition.value}`;
+        const operatorLabel =
+          condition.field === 'lead_created'
+            ? ''
+            : conditionOperatorLabels[condition.operator] ?? condition.operator;
+        const valueText = condition.field === 'lead_created' ? '' : condition.value;
+        return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' ');
     return `${flow.name} ${conditionsText} ${flow.triggerStatus ?? ''} ${(flow.tags ?? []).join(' ')}`.toLowerCase();

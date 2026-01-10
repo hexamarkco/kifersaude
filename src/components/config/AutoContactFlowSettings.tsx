@@ -476,6 +476,7 @@ export default function AutoContactFlowSettings() {
     email: 'E-mail',
     telefone: 'Telefone',
     data_criacao: 'Data de criação',
+    lead_criado: 'Lead criado',
     ultimo_contato: 'Último contato',
     proximo_retorno: 'Próximo retorno',
   };

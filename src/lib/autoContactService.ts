@@ -58,6 +58,7 @@ export type AutoContactFlowConditionField =
   | 'email'
   | 'telefone'
   | 'data_criacao'
+  | 'lead_criado'
   | 'ultimo_contato'
   | 'proximo_retorno';
 export type AutoContactFlowConditionOperator =
@@ -343,6 +344,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       case 'email':
       case 'telefone':
       case 'data_criacao':
+      case 'lead_criado':
       case 'ultimo_contato':
       case 'proximo_retorno':
         return field;
@@ -1022,6 +1024,8 @@ const getLeadFieldValue = (lead: Lead, field: AutoContactFlowConditionField): st
       return lead.telefone ?? '';
     case 'data_criacao':
       return lead.data_criacao ?? '';
+    case 'lead_criado':
+      return lead.created_at ?? '';
     case 'ultimo_contato':
       return lead.ultimo_contato ?? '';
     case 'proximo_retorno':

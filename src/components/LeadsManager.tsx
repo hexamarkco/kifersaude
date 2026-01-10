@@ -877,7 +877,7 @@ export default function LeadsManager({
     [activeLeadStatuses]
   );
 
-  const registerContact = async (lead: Lead, tipo: 'Email' | 'Mensagem Automática') => {
+  const registerContact = useCallback(async (lead: Lead, tipo: 'Email' | 'Mensagem Automática') => {
     const timestamp = new Date().toISOString();
 
     setLeads((current) =>
@@ -906,7 +906,7 @@ export default function LeadsManager({
     } catch (error) {
       console.error('Erro ao registrar contato:', error);
     }
-  };
+  }, []);
 
   const buildEmailUrl = (lead: Lead) => {
     if (!lead.email) return '';

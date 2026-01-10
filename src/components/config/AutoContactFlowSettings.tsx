@@ -480,6 +480,10 @@ export default function AutoContactFlowSettings() {
     lead_criado: 'Lead criado',
     ultimo_contato: 'Último contato',
     proximo_retorno: 'Próximo retorno',
+    lead_created: 'Evento',
+  };
+  const conditionFieldOptions = Object.entries(conditionFieldLabels).filter(([value]) => value !== 'lead_created');
+  const eventValueLabels: Record<string, string> = {
     lead_created: 'Lead criado',
   };
   const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
@@ -496,6 +500,9 @@ export default function AutoContactFlowSettings() {
     less_than: 'Menor que',
     less_or_equal: 'Menor ou igual',
   };
+  const isEventLeadCreated = (condition: AutoContactFlowCondition) =>
+    condition.field === 'lead_created' ||
+    (condition.field === 'event' && condition.value === 'lead_created');
   const getFlowConditionPreview = (flow: AutoContactFlow) => {
     const conditions = flow.conditions ?? [];
     if (conditions.length === 0) {
@@ -506,11 +513,10 @@ export default function AutoContactFlowSettings() {
       .slice(0, 2)
       .map((condition) => {
         const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel =
-          condition.field === 'lead_created'
-            ? ''
-            : conditionOperatorLabels[condition.operator] ?? condition.operator;
-        const valueText = condition.field === 'lead_created' ? '' : condition.value;
+        const operatorLabel = isEventLeadCreated(condition)
+          ? ''
+          : conditionOperatorLabels[condition.operator] ?? condition.operator;
+        const valueText = isEventLeadCreated(condition) ? '' : condition.value;
         return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' • ');
@@ -521,11 +527,10 @@ export default function AutoContactFlowSettings() {
     const conditionsText = (flow.conditions ?? [])
       .map((condition) => {
         const fieldLabel = conditionFieldLabels[condition.field] ?? condition.field;
-        const operatorLabel =
-          condition.field === 'lead_created'
-            ? ''
-            : conditionOperatorLabels[condition.operator] ?? condition.operator;
-        const valueText = condition.field === 'lead_created' ? '' : condition.value;
+        const operatorLabel = isEventLeadCreated(condition)
+          ? ''
+          : conditionOperatorLabels[condition.operator] ?? condition.operator;
+        const valueText = isEventLeadCreated(condition) ? '' : condition.value;
         return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' ');
@@ -1483,64 +1488,70 @@ export default function AutoContactFlowSettings() {
                                   <>
                               <select
                                 value={condition.field}
-                                onChange={(event) =>
-                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                    field: event.target.value as AutoContactFlowCondition['field'],
-                                  })
-                                }
+                                onChange={(event) => {
+                                  const nextField = event.target.value as AutoContactFlowCondition['field'];
+                                  const nextUpdates =
+                                    nextField === 'event'
+                                      ? { field: nextField, operator: 'equals', value: 'lead_created' }
+                                      : { field: nextField, value: '' };
+                                  handleUpdateFlowCondition(activeFlow.id, condition.id, nextUpdates);
+                                }}
                                 className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                               >
-                                {Object.entries(conditionFieldLabels).map(([value, label]) => (
+                                {conditionFieldOptions.map(([value, label]) => (
                                   <option key={value} value={value}>
                                     {label}
                                   </option>
                                 ))}
                               </select>
-                              <select
-                                value={condition.operator}
-                                onChange={(event) =>
-                                  handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                    operator: event.target.value as AutoContactFlowCondition['operator'],
-                                  })
-                                }
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {Object.entries(conditionOperatorLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                              {valueOptions ? (
+                              {!isEventLeadCreated(condition) && (
                                 <select
-                                  value={condition.value}
+                                  value={condition.operator}
                                   onChange={(event) =>
                                     handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                      value: event.target.value,
+                                      operator: event.target.value as AutoContactFlowCondition['operator'],
                                     })
                                   }
                                   className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                                 >
-                                  <option value="">Selecione</option>
-                                  {valueOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                      {option}
+                                  {Object.entries(conditionOperatorLabels).map(([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
                                     </option>
                                   ))}
                                 </select>
-                              ) : (
-                                <input
-                                  type="text"
-                                  value={condition.value}
-                                  onChange={(event) =>
-                                    handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                      value: event.target.value,
-                                    })
-                                  }
-                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                  placeholder="Digite o valor"
-                                />
                               )}
+                              {!isEventLeadCreated(condition) &&
+                                (valueOptions ? (
+                                  <select
+                                    value={condition.value}
+                                    onChange={(event) =>
+                                      handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                  >
+                                    <option value="">Selecione</option>
+                                    {valueOptions.map((option) => (
+                                      <option key={option} value={option}>
+                                        {condition.field === 'event' ? eventValueLabels[option] ?? option : option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={condition.value}
+                                    onChange={(event) =>
+                                      handleUpdateFlowCondition(activeFlow.id, condition.id, {
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    placeholder="Digite o valor"
+                                  />
+                                ))}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFlowCondition(activeFlow.id, condition.id)}
@@ -1608,64 +1619,70 @@ export default function AutoContactFlowSettings() {
                                   <>
                               <select
                                 value={condition.field}
-                                onChange={(event) =>
-                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                    field: event.target.value as AutoContactFlowCondition['field'],
-                                  })
-                                }
+                                onChange={(event) => {
+                                  const nextField = event.target.value as AutoContactFlowCondition['field'];
+                                  const nextUpdates =
+                                    nextField === 'event'
+                                      ? { field: nextField, operator: 'equals', value: 'lead_created' }
+                                      : { field: nextField, value: '' };
+                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, nextUpdates);
+                                }}
                                 className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                               >
-                                {Object.entries(conditionFieldLabels).map(([value, label]) => (
+                                {conditionFieldOptions.map(([value, label]) => (
                                   <option key={value} value={value}>
                                     {label}
                                   </option>
                                 ))}
                               </select>
-                              <select
-                                value={condition.operator}
-                                onChange={(event) =>
-                                  handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                    operator: event.target.value as AutoContactFlowCondition['operator'],
-                                  })
-                                }
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {Object.entries(conditionOperatorLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                              {valueOptions ? (
+                              {!isEventLeadCreated(condition) && (
                                 <select
-                                  value={condition.value}
+                                  value={condition.operator}
                                   onChange={(event) =>
                                     handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                      value: event.target.value,
+                                      operator: event.target.value as AutoContactFlowCondition['operator'],
                                     })
                                   }
                                   className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                                 >
-                                  <option value="">Selecione</option>
-                                  {valueOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                      {option}
+                                  {Object.entries(conditionOperatorLabels).map(([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
                                     </option>
                                   ))}
                                 </select>
-                              ) : (
-                                <input
-                                  type="text"
-                                  value={condition.value}
-                                  onChange={(event) =>
-                                    handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                      value: event.target.value,
-                                    })
-                                  }
-                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                  placeholder="Digite o valor"
-                                />
                               )}
+                              {!isEventLeadCreated(condition) &&
+                                (valueOptions ? (
+                                  <select
+                                    value={condition.value}
+                                    onChange={(event) =>
+                                      handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                  >
+                                    <option value="">Selecione</option>
+                                    {valueOptions.map((option) => (
+                                      <option key={option} value={option}>
+                                        {condition.field === 'event' ? eventValueLabels[option] ?? option : option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={condition.value}
+                                    onChange={(event) =>
+                                      handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    placeholder="Digite o valor"
+                                  />
+                                ))}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFlowExitCondition(activeFlow.id, condition.id)}

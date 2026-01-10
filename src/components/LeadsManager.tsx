@@ -192,7 +192,6 @@ export default function LeadsManager({
       if (isMounted) {
         const normalizedSettings = normalizeAutoContactSettings(integration?.settings);
         setAutoContactSettings(normalizedSettings);
-        setSelectedTemplateId(normalizedSettings.messageTemplates[0]?.id || '');
       }
     };
 

@@ -395,6 +395,17 @@ export default function AutoContactFlowSettings() {
           }))
           .filter((condition) => condition.value);
         const tags = (flow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
+        const fallbackScheduling = {
+          startHour: schedulingDraft.startHour,
+          endHour: schedulingDraft.endHour,
+          allowedWeekdays: schedulingDraft.allowedWeekdays,
+        };
+        const flowScheduling = flow.scheduling ?? fallbackScheduling;
+        const allowedWeekdays = Array.isArray(flowScheduling.allowedWeekdays)
+          ? flowScheduling.allowedWeekdays
+              .map((value) => Number(value))
+              .filter((value) => Number.isFinite(value) && value >= 1 && value <= 7)
+          : fallbackScheduling.allowedWeekdays;
 
         return {
           id: flow.id?.trim() ? flow.id : `flow-${flowIndex}`,
@@ -409,6 +420,11 @@ export default function AutoContactFlowSettings() {
           exitConditionLogic: flow.exitConditionLogic === 'all' ? 'all' : 'any',
           exitConditions,
           tags,
+          scheduling: {
+            startHour: flowScheduling.startHour || fallbackScheduling.startHour,
+            endHour: flowScheduling.endHour || fallbackScheduling.endHour,
+            allowedWeekdays,
+          },
         };
       })
       .filter((flow) => flow.steps.length);
@@ -603,6 +619,11 @@ export default function AutoContactFlowSettings() {
     triggerStatus: '',
     steps: [createFlowStep()],
     finalStatus: '',
+    scheduling: {
+      startHour: schedulingDraft.startHour,
+      endHour: schedulingDraft.endHour,
+      allowedWeekdays: schedulingDraft.allowedWeekdays,
+    },
     invalidNumberAction: 'none',
     invalidNumberStatus: '',
     conditionLogic: 'all',
@@ -618,6 +639,28 @@ export default function AutoContactFlowSettings() {
   };
   const handleUpdateFlow = (flowId: string, updates: Partial<AutoContactFlow>) => {
     setFlowDrafts((previous) => previous.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow)));
+  };
+  const handleUpdateFlowScheduling = (
+    flowId: string,
+    updates: Partial<NonNullable<AutoContactFlow['scheduling']>>,
+  ) => {
+    setFlowDrafts((previous) =>
+      previous.map((flow) => {
+        if (flow.id !== flowId) return flow;
+        const currentScheduling = flow.scheduling ?? {
+          startHour: schedulingDraft.startHour,
+          endHour: schedulingDraft.endHour,
+          allowedWeekdays: schedulingDraft.allowedWeekdays,
+        };
+        return {
+          ...flow,
+          scheduling: {
+            ...currentScheduling,
+            ...updates,
+          },
+        };
+      }),
+    );
   };
   const handleRemoveFlow = (flowId: string) => {
     setFlowDrafts((previous) => previous.filter((flow) => flow.id !== flowId));
@@ -796,6 +839,17 @@ export default function AutoContactFlowSettings() {
     { value: 6, label: 'Sáb' },
     { value: 7, label: 'Dom' },
   ];
+  const getFlowScheduling = useCallback(
+    (flow?: AutoContactFlow | null): AutoContactSchedulingSettings => ({
+      ...schedulingDraft,
+      startHour: flow?.scheduling?.startHour ?? schedulingDraft.startHour,
+      endHour: flow?.scheduling?.endHour ?? schedulingDraft.endHour,
+      allowedWeekdays: flow?.scheduling?.allowedWeekdays?.length
+        ? flow.scheduling.allowedWeekdays
+        : schedulingDraft.allowedWeekdays,
+    }),
+    [schedulingDraft],
+  );
   const adjustmentReasonLabels: Record<AutoContactScheduleAdjustmentReason, string> = {
     outside_window: 'fora da janela',
     weekend: 'fim de semana',
@@ -812,7 +866,7 @@ export default function AutoContactFlowSettings() {
     return buildAutoContactScheduleTimeline({
       startAt: baseDate,
       steps: activeFlow.steps,
-      scheduling: schedulingDraft,
+      scheduling: getFlowScheduling(activeFlow),
     }).map((item, index) => ({
       index: index + 1,
       step: item.step,
@@ -820,7 +874,12 @@ export default function AutoContactFlowSettings() {
       delayHours: item.step.delayHours,
       adjustmentReasons: item.adjustmentReasons,
     }));
-  }, [activeFlow, schedulingDraft, showSimulation, simulationStart]);
+  }, [activeFlow, getFlowScheduling, showSimulation, simulationStart]);
+
+  const activeFlowScheduling = useMemo(
+    () => (activeFlow ? getFlowScheduling(activeFlow) : schedulingDraft),
+    [activeFlow, getFlowScheduling, schedulingDraft],
+  );
 
   useEffect(() => {
     if (!activeFlowId) {
@@ -958,28 +1017,6 @@ export default function AutoContactFlowSettings() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Janela diária</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="time"
-                      value={schedulingDraft.startHour}
-                      onChange={(event) =>
-                        setSchedulingDraft((previous) => ({ ...previous, startHour: event.target.value }))
-                      }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                    <span className="text-xs text-slate-400">até</span>
-                    <input
-                      type="time"
-                      value={schedulingDraft.endHour}
-                      onChange={(event) =>
-                        setSchedulingDraft((previous) => ({ ...previous, endHour: event.target.value }))
-                      }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Limite diário por tenant</label>
                   <input
                     type="number"
@@ -1000,35 +1037,9 @@ export default function AutoContactFlowSettings() {
                   </p>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2">Dias permitidos</label>
-                <div className="flex flex-wrap gap-2">
-                  {weekdayLabels.map((day) => {
-                    const isActive = schedulingDraft.allowedWeekdays.includes(day.value);
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        onClick={() =>
-                          setSchedulingDraft((previous) => ({
-                            ...previous,
-                            allowedWeekdays: isActive
-                              ? previous.allowedWeekdays.filter((value) => value !== day.value)
-                              : [...previous.allowedWeekdays, day.value].sort((a, b) => a - b),
-                          }))
-                        }
-                        className={`px-3 py-1 text-xs rounded-full border ${
-                          isActive
-                            ? 'bg-teal-50 border-teal-200 text-teal-700'
-                            : 'bg-white border-slate-200 text-slate-500'
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <p className="text-[11px] text-slate-400">
+                A janela diária e os dias permitidos são definidos em cada fluxo.
+              </p>
               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
                 <input
                   type="checkbox"
@@ -1346,6 +1357,67 @@ export default function AutoContactFlowSettings() {
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="Ex.: Follow-up de contato inicial"
                       />
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-800">Agendamento do fluxo</h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Defina a janela diária e os dias permitidos para este fluxo.
+                        </p>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Janela diária</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={activeFlowScheduling.startHour}
+                              onChange={(event) =>
+                                handleUpdateFlowScheduling(activeFlow.id, { startHour: event.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            />
+                            <span className="text-xs text-slate-400">até</span>
+                            <input
+                              type="time"
+                              value={activeFlowScheduling.endHour}
+                              onChange={(event) =>
+                                handleUpdateFlowScheduling(activeFlow.id, { endHour: event.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-2">Dias permitidos</label>
+                          <div className="flex flex-wrap gap-2">
+                            {weekdayLabels.map((day) => {
+                              const isActive = activeFlowScheduling.allowedWeekdays.includes(day.value);
+                              return (
+                                <button
+                                  key={day.value}
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateFlowScheduling(activeFlow.id, {
+                                      allowedWeekdays: isActive
+                                        ? activeFlowScheduling.allowedWeekdays.filter((value) => value !== day.value)
+                                        : [...activeFlowScheduling.allowedWeekdays, day.value].sort((a, b) => a - b),
+                                    })
+                                  }
+                                  className={`px-3 py-1 text-xs rounded-full border ${
+                                    isActive
+                                      ? 'bg-teal-50 border-teal-200 text-teal-700'
+                                      : 'bg-white border-slate-200 text-slate-500'
+                                  }`}
+                                >
+                                  {day.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1994,8 +2066,8 @@ export default function AutoContactFlowSettings() {
                             />
                           </div>
                           <div className="text-xs text-teal-700 flex items-end">
-                            Janela ativa: {schedulingDraft.startHour} até {schedulingDraft.endHour} (
-                            {schedulingDraft.timezone})
+                            Janela ativa: {activeFlowScheduling.startHour} até {activeFlowScheduling.endHour} (
+                            {activeFlowScheduling.timezone})
                           </div>
                         </div>
                         {simulationTimeline.length === 0 ? (
@@ -2021,7 +2093,7 @@ export default function AutoContactFlowSettings() {
                                   {item.scheduledAt.toLocaleString('pt-BR', {
                                     dateStyle: 'short',
                                     timeStyle: 'short',
-                                    timeZone: schedulingDraft.timezone,
+                                    timeZone: activeFlowScheduling.timezone,
                                   })}
                                 </div>
                               </div>

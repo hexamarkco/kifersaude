@@ -81,6 +81,12 @@ export type AutoContactFlowCondition = {
   value: string;
 };
 
+export type AutoContactFlowScheduling = {
+  startHour: string;
+  endHour: string;
+  allowedWeekdays: number[];
+};
+
 export type AutoContactFlow = {
   id: string;
   name: string;
@@ -94,6 +100,7 @@ export type AutoContactFlow = {
   exitConditionLogic?: 'all' | 'any';
   exitConditions?: AutoContactFlowCondition[];
   tags?: string[];
+  scheduling?: AutoContactFlowScheduling;
 };
 
 export type AutoContactSchedulingSettings = {
@@ -207,6 +214,11 @@ export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
     name: 'Follow-up automático',
     triggerStatus: DEFAULT_STATUS,
     finalStatus: '',
+    scheduling: {
+      startHour: DEFAULT_SCHEDULING.startHour,
+      endHour: DEFAULT_SCHEDULING.endHour,
+      allowedWeekdays: DEFAULT_SCHEDULING.allowedWeekdays,
+    },
     steps: [
       {
         id: 'flow-1-step-1',
@@ -391,6 +403,24 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     };
   };
 
+  const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
+  const rawDailySendLimit =
+    Number(rawScheduling.dailySendLimit ?? settings.dailySendLimit);
+  const dailySendLimit =
+    Number.isFinite(rawDailySendLimit) && rawDailySendLimit > 0 ? rawDailySendLimit : null;
+  const scheduling: AutoContactSchedulingSettings = {
+    timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : DEFAULT_SCHEDULING.timezone,
+    startHour: typeof rawScheduling.startHour === 'string' ? rawScheduling.startHour : DEFAULT_SCHEDULING.startHour,
+    endHour: typeof rawScheduling.endHour === 'string' ? rawScheduling.endHour : DEFAULT_SCHEDULING.endHour,
+    allowedWeekdays: Array.isArray(rawScheduling.allowedWeekdays)
+      ? rawScheduling.allowedWeekdays
+          .map((value: unknown) => Number(value))
+          .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
+      : DEFAULT_SCHEDULING.allowedWeekdays,
+    skipHolidays: rawScheduling.skipHolidays !== false,
+    dailySendLimit,
+  };
+
   const normalizedFlows = rawFlows
     .map((flow: any, flowIndex: number) => {
       const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
@@ -455,6 +485,19 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           };
         });
 
+      const rawFlowScheduling =
+        flow?.scheduling && typeof flow.scheduling === 'object' ? flow.scheduling : {};
+      const flowScheduling: AutoContactFlowScheduling = {
+        startHour:
+          typeof rawFlowScheduling.startHour === 'string' ? rawFlowScheduling.startHour : scheduling.startHour,
+        endHour: typeof rawFlowScheduling.endHour === 'string' ? rawFlowScheduling.endHour : scheduling.endHour,
+        allowedWeekdays: Array.isArray(rawFlowScheduling.allowedWeekdays)
+          ? rawFlowScheduling.allowedWeekdays
+              .map((value: unknown) => Number(value))
+              .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
+          : scheduling.allowedWeekdays,
+      };
+
       return {
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
@@ -470,27 +513,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         tags: Array.isArray(flow?.tags)
           ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
           : [],
+        scheduling: flowScheduling,
       };
     })
     .filter((flow) => flow.steps.length > 0);
-
-  const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
-  const rawDailySendLimit =
-    Number(rawScheduling.dailySendLimit ?? settings.dailySendLimit);
-  const dailySendLimit =
-    Number.isFinite(rawDailySendLimit) && rawDailySendLimit > 0 ? rawDailySendLimit : null;
-  const scheduling: AutoContactSchedulingSettings = {
-    timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : DEFAULT_SCHEDULING.timezone,
-    startHour: typeof rawScheduling.startHour === 'string' ? rawScheduling.startHour : DEFAULT_SCHEDULING.startHour,
-    endHour: typeof rawScheduling.endHour === 'string' ? rawScheduling.endHour : DEFAULT_SCHEDULING.endHour,
-    allowedWeekdays: Array.isArray(rawScheduling.allowedWeekdays)
-      ? rawScheduling.allowedWeekdays
-          .map((value: unknown) => Number(value))
-          .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
-      : DEFAULT_SCHEDULING.allowedWeekdays,
-    skipHolidays: rawScheduling.skipHolidays !== false,
-    dailySendLimit,
-  };
   const rawMonitoring = settings.monitoring && typeof settings.monitoring === 'object' ? settings.monitoring : {};
   const monitoring: AutoContactMonitoringSettings = {
     realtimeEnabled: rawMonitoring.realtimeEnabled !== false,

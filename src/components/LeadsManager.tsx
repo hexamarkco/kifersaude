@@ -306,6 +306,15 @@ export default function LeadsManager({
     setFilterProximoRetornoTo('');
   }, [initialStatusFilter]);
 
+  const chunkArray = useCallback(<T,>(items: T[], chunkSize: number): T[][] => {
+    if (chunkSize <= 0) return [items];
+    const chunks: T[][] = [];
+    for (let index = 0; index < items.length; index += chunkSize) {
+      chunks.push(items.slice(index, index + chunkSize));
+    }
+    return chunks;
+  }, []);
+
   const fetchContractsForLeads = useCallback(async (leadIds: string[]) => {
     if (leadIds.length === 0) {
       setLeadContractIds(new Set());
@@ -313,14 +322,22 @@ export default function LeadsManager({
     }
 
     try {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('lead_id')
-        .in('lead_id', leadIds);
+      const uniqueLeadIds = Array.from(new Set(leadIds));
+      const leadIdChunks = chunkArray(uniqueLeadIds, 100);
+      const results = await Promise.all(
+        leadIdChunks.map(async (chunk) => {
+          const { data, error } = await supabase
+            .from('contracts')
+            .select('lead_id')
+            .in('lead_id', chunk);
 
-      if (error) throw error;
+          if (error) throw error;
+          return data || [];
+        }),
+      );
 
-      const ids = (data || [])
+      const ids = results
+        .flat()
         .map((contract) => contract.lead_id)
         .filter((leadId): leadId is string => Boolean(leadId));
 
@@ -328,7 +345,7 @@ export default function LeadsManager({
     } catch (error) {
       console.error('Erro ao carregar contratos dos leads:', error);
     }
-  }, []);
+  }, [chunkArray]);
 
   const loadLeads = useCallback(async () => {
     setLoading(true);

@@ -447,7 +447,7 @@ export default function RemindersManagerEnhanced() {
     setEditingLead(leadData);
   };
 
-  const handleLeadSaved = () => {
+  const handleLeadSaved = (_lead?: Lead, _context?: { created: boolean }) => {
     setEditingLead(null);
     loadReminders();
   };

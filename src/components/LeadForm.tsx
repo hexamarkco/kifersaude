@@ -20,7 +20,7 @@ import {
 type LeadFormProps = {
   lead: Lead | null;
   onClose: () => void;
-  onSave: (lead: Lead) => void;
+  onSave: (lead: Lead, context?: { created: boolean }) => void;
 };
 
 type LeadFormState = {
@@ -97,6 +97,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const isNewLead = !lead;
 
   const activeLeadStatuses = leadStatuses.filter((status) => status.ativo);
   const defaultStatus = activeLeadStatuses.find((status) => status.padrao) || activeLeadStatuses[0];
@@ -361,7 +362,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
       }
 
       if (savedLead) {
-        onSave(savedLead);
+        onSave(savedLead, { created: isNewLead });
       }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);

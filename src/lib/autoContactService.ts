@@ -59,7 +59,8 @@ export type AutoContactFlowConditionField =
   | 'telefone'
   | 'data_criacao'
   | 'ultimo_contato'
-  | 'proximo_retorno';
+  | 'proximo_retorno'
+  | 'lead_created';
 export type AutoContactFlowConditionOperator =
   | 'equals'
   | 'contains'
@@ -80,6 +81,8 @@ export type AutoContactFlowCondition = {
   operator: AutoContactFlowConditionOperator;
   value: string;
 };
+
+export type AutoContactFlowEvent = 'lead_created';
 
 export type AutoContactFlowScheduling = {
   startHour: string;
@@ -345,6 +348,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       case 'data_criacao':
       case 'ultimo_contato':
       case 'proximo_retorno':
+      case 'lead_created':
         return field;
       default:
         return 'origem';
@@ -428,27 +432,33 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       const rawConditions = Array.isArray(flow?.conditions) ? flow.conditions : [];
       const rawExitConditions = Array.isArray(flow?.exitConditions) ? flow.exitConditions : [];
       const normalizedConditions = rawConditions
-        .map((condition: any, conditionIndex: number) => ({
+        .map((condition: any, conditionIndex: number) => {
+          const field = normalizeConditionField(condition?.field);
+          return {
           id:
             typeof condition?.id === 'string' && condition.id.trim()
               ? condition.id
               : `flow-${flowId}-condition-${conditionIndex}`,
-          field: normalizeConditionField(condition?.field),
+          field,
           operator: normalizeConditionOperator(condition?.operator),
           value: typeof condition?.value === 'string' ? condition.value : '',
-        }))
-        .filter((condition) => condition.value.trim());
+        };
+        })
+        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedExitConditions = rawExitConditions
-        .map((condition: any, conditionIndex: number) => ({
+        .map((condition: any, conditionIndex: number) => {
+          const field = normalizeConditionField(condition?.field);
+          return {
           id:
             typeof condition?.id === 'string' && condition.id.trim()
               ? condition.id
               : `flow-${flowId}-exit-condition-${conditionIndex}`,
-          field: normalizeConditionField(condition?.field),
+          field,
           operator: normalizeConditionOperator(condition?.operator),
           value: typeof condition?.value === 'string' ? condition.value : '',
-        }))
-        .filter((condition) => condition.value.trim());
+        };
+        })
+        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
           const delayHoursRaw = Number(step?.delayHours);
@@ -768,10 +778,10 @@ export async function sendAutoContactMessage({
   }
 }
 
-const shouldExitFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+const shouldExitFlow = (flow: AutoContactFlow, lead: Lead, event?: AutoContactFlowEvent): boolean => {
   const exitConditions = flow.exitConditions ?? [];
   if (exitConditions.length === 0) return false;
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
 };
 
@@ -868,17 +878,19 @@ export async function runAutoContactFlow({
   settings,
   signal,
   onFirstMessageSent,
+  event,
 }: {
   lead: Lead;
   settings: AutoContactSettings;
   signal?: () => boolean;
   onFirstMessageSent?: () => Promise<void> | void;
+  event?: AutoContactFlowEvent;
 }): Promise<void> {
   if (signal?.() === false) return;
 
   const templates = settings.messageTemplates ?? [];
   const flows = settings.flows ?? [];
-  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead)) ?? null;
+  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead, event)) ?? null;
   if (!matchingFlow) return;
 
   let cumulativeDelayHours = 0;
@@ -886,7 +898,7 @@ export async function runAutoContactFlow({
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
-    if (shouldExitFlow(matchingFlow, lead)) return;
+    if (shouldExitFlow(matchingFlow, lead, event)) return;
     cumulativeDelayHours += step.delayHours;
 
     const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
@@ -963,7 +975,7 @@ export async function runAutoContactFlow({
   }
 }
 
-const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead, event?: AutoContactFlowEvent): boolean => {
   const rawConditions = flow.conditions ?? [];
   const conditions = [...rawConditions];
   const triggerStatus = flow.triggerStatus?.trim();
@@ -978,11 +990,19 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
 
   if (conditions.length === 0) return true;
 
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
-const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: Lead): boolean => {
+const matchesFlowCondition = (
+  condition: AutoContactFlowCondition,
+  lead: Lead,
+  event?: AutoContactFlowEvent,
+): boolean => {
+  if (condition.field === 'lead_created') {
+    return event === 'lead_created';
+  }
+
   const value = normalizeText(condition.value);
   if (!value) return false;
 

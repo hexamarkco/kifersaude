@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import {
   Plus,
@@ -219,6 +219,7 @@ export default function LeadsManager({
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const recentlyTriggeredLeadIds = useRef<Set<string>>(new Set());
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -407,6 +408,14 @@ export default function LeadsManager({
         );
       });
 
+      if (eventType === 'INSERT' && newLead) {
+        if (recentlyTriggeredLeadIds.current.has(newLead.id)) {
+          recentlyTriggeredLeadIds.current.delete(newLead.id);
+        } else {
+          triggerAutoContactFlow(newLead, 'lead_created');
+        }
+      }
+
       if (eventType === 'DELETE' && oldLead) {
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
@@ -430,6 +439,7 @@ export default function LeadsManager({
       leadStatuses,
       tipoContratacaoOptions,
       responsavelOptions,
+      triggerAutoContactFlow,
     ]
   );
 
@@ -1793,13 +1803,10 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={async (savedLead) => {
-            const isNewLead = !editingLead;
+          onSave={async (savedLead, context) => {
+            const isNewLead = context?.created ?? !editingLead;
             setShowForm(false);
             setEditingLead(null);
-            if (context?.created) {
-              triggerAutoContactFlow(savedLead, 'lead_created');
-            }
             await loadLeads();
             if (isNewLead) {
               const mappedLead = mapLeadRelations(savedLead, {
@@ -1808,6 +1815,7 @@ export default function LeadsManager({
                 tipoContratacao: tipoContratacaoOptions,
                 responsaveis: responsavelOptions,
               });
+              recentlyTriggeredLeadIds.current.add(mappedLead.id);
               triggerAutoContactFlow(mappedLead, 'lead_created');
             }
           }}

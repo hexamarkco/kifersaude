@@ -198,37 +198,22 @@ export default function WhatsAppApiSettings() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="whatsapp-enabled"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
-              className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-            />
-            <label htmlFor="whatsapp-enabled" className="text-sm text-slate-700">
-              Ativar automação de contato
+        <div className="flex items-start gap-2 p-3 bg-sky-50 border border-sky-200 rounded-lg">
+          <input
+            type="checkbox"
+            id="whatsapp-auto-send"
+            checked={autoSend}
+            onChange={(e) => setAutoSend(e.target.checked)}
+            disabled={!enabled}
+            className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:opacity-50 mt-0.5"
+          />
+          <div className="flex-1">
+            <label htmlFor="whatsapp-auto-send" className="text-sm font-medium text-slate-900 block">
+              Envio automático ao criar lead
             </label>
-          </div>
-
-          <div className="flex items-start gap-2 p-3 bg-sky-50 border border-sky-200 rounded-lg">
-            <input
-              type="checkbox"
-              id="whatsapp-auto-send"
-              checked={autoSend}
-              onChange={(e) => setAutoSend(e.target.checked)}
-              disabled={!enabled}
-              className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:opacity-50 mt-0.5"
-            />
-            <div className="flex-1">
-              <label htmlFor="whatsapp-auto-send" className="text-sm font-medium text-slate-900 block">
-                Envio automático ao criar lead
-              </label>
-              <p className="text-xs text-slate-600 mt-1">
-                Quando ativado, as mensagens serão enviadas automaticamente assim que um novo lead for criado, sem precisar clicar em "Enviar automação". Funciona mesmo com o sistema fechado.
-              </p>
-            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Quando ativado, as mensagens serão enviadas automaticamente assim que um novo lead for criado, sem precisar de disparo manual. Funciona mesmo com o sistema fechado.
+            </p>
           </div>
         </div>
 

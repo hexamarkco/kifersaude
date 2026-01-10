@@ -20,11 +20,6 @@ import {
   Tag,
   Share2,
   Trash2,
-  Loader2,
-  Send,
-  CheckCircle,
-  AlertTriangle,
-  X,
   Download,
 } from 'lucide-react';
 import LeadForm from './LeadForm';
@@ -45,14 +40,10 @@ import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
-  applyTemplateVariables,
-  getTemplateMessages,
-  getTemplateMessage,
   normalizeAutoContactSettings,
   runAutoContactFlow,
-  sendAutoContactMessage,
 } from '../lib/autoContactService';
-import type { AutoContactFlowEvent, AutoContactSettings, AutoContactTemplate } from '../lib/autoContactService';
+import type { AutoContactFlowEvent, AutoContactSettings } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
 import { downloadXlsx } from '../lib/xlsxExport';
 
@@ -90,193 +81,6 @@ const isWithinDateRange = (
 
   return true;
 };
-
-type AutomationSuccessInfo = {
-  leadName: string;
-  status?: string;
-};
-
-type AutomationErrorInfo = {
-  leadName: string;
-  message: string;
-  status?: string;
-};
-
-function AutomationSuccessToast({ info, onClose }: { info: AutomationSuccessInfo; onClose: () => void }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
-
-  useEffect(() => {
-    const showTimer = setTimeout(() => setIsVisible(true), 100);
-    const autoCloseTimer = setTimeout(() => handleClose(), 6000);
-
-    return () => {
-      clearTimeout(showTimer);
-      clearTimeout(autoCloseTimer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onClose();
-    }, 300);
-  };
-
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
-        isVisible && !isExiting ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-      }`}
-    >
-      <div className="bg-white rounded-xl shadow-2xl border-2 border-emerald-500 max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-white">
-            <CheckCircle className="w-5 h-5" />
-            <h3 className="font-bold text-lg">Automação enviada</h3>
-          </div>
-          <button onClick={handleClose} className="text-white hover:bg-emerald-700 rounded-full p-1 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-2 text-slate-700">
-          <p className="text-base text-slate-900 font-semibold">Mensagens enviadas para {info.leadName}</p>
-          {info.status && (
-            <p className="text-sm">
-              O status foi atualizado para <span className="font-semibold text-emerald-700">"{info.status}"</span>.
-            </p>
-          )}
-        </div>
-
-        <div className="px-4 pb-4">
-          <button
-            onClick={handleClose}
-            className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-          >
-            Entendi
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AutomationErrorModal({ info, onClose }: { info: AutomationErrorInfo; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl border border-red-200 max-w-lg w-full mx-4">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-red-100 bg-red-50 rounded-t-xl">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
-          <h3 className="text-lg font-semibold text-red-900">Envio não realizado</h3>
-        </div>
-        <div className="p-5 space-y-3 text-slate-700">
-          <p className="text-base text-slate-900 font-medium">{info.message}</p>
-          <p className="text-sm">Lead: <span className="font-semibold">{info.leadName}</span></p>
-          {info.status && (
-            <p className="text-sm text-slate-600">
-              O status foi alterado automaticamente para <span className="font-semibold text-red-700">"{info.status}"</span>.
-            </p>
-          )}
-        </div>
-        <div className="px-5 pb-5">
-          <button
-            onClick={onClose}
-            className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium"
-          >
-            Entendi
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type AutomationTemplateModalProps = {
-  leadName: string;
-  templates: AutoContactTemplate[];
-  selectedTemplateId: string;
-  onChangeTemplate: (templateId: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-  isSending: boolean;
-};
-
-function AutomationTemplateModal({
-  leadName,
-  templates,
-  selectedTemplateId,
-  onChangeTemplate,
-  onClose,
-  onConfirm,
-  isSending,
-}: AutomationTemplateModalProps) {
-  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || null;
-  const selectedTemplateMessage = getTemplateMessage(selectedTemplate);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl border border-slate-200 max-w-lg w-full mx-4">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
-          <MessageCircle className="w-5 h-5 text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900">Enviar automação manual</h3>
-        </div>
-        <div className="p-5 space-y-4 text-slate-700">
-          <p className="text-sm text-slate-600">
-            Selecione o modelo desejado para enviar para <span className="font-semibold">{leadName}</span>.
-          </p>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Modelo de mensagem
-            </label>
-            <select
-              value={selectedTemplateId}
-              onChange={(event) => onChangeTemplate(event.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-white"
-            >
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name || 'Modelo sem nome'}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Prévia
-            </label>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
-              {selectedTemplateMessage ? (
-                <p className="whitespace-pre-wrap">{selectedTemplateMessage}</p>
-              ) : (
-                <p>Nenhuma mensagem definida neste modelo.</p>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="px-5 pb-5 flex flex-col sm:flex-row sm:justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
-            disabled={isSending}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-60"
-            disabled={isSending}
-          >
-            {isSending ? 'Enviando...' : 'Enviar agora'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -415,11 +219,6 @@ export default function LeadsManager({
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [sendingAutomationIds, setSendingAutomationIds] = useState<Set<string>>(new Set());
-  const [automationTemplateLead, setAutomationTemplateLead] = useState<Lead | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [automationSuccessInfo, setAutomationSuccessInfo] = useState<AutomationSuccessInfo | null>(null);
-  const [automationErrorInfo, setAutomationErrorInfo] = useState<AutomationErrorInfo | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -1347,152 +1146,6 @@ export default function LeadsManager({
     }
   };
 
-  const executeAutomationSend = useCallback(
-    async ({
-      lead,
-      settings,
-      template,
-    }: {
-      lead: Lead;
-      settings: AutoContactSettings;
-      template: AutoContactTemplate | null;
-    }) => {
-      const resolvedTemplate =
-        template ??
-        settings.messageTemplates[0] ??
-        null;
-      const templateMessage = getTemplateMessage(resolvedTemplate);
-      const templateMessages = getTemplateMessages(resolvedTemplate);
-
-      setSendingAutomationIds((previous) => new Set(previous).add(lead.id));
-
-      try {
-        if (!templateMessage.trim()) {
-          throw new Error('Nenhum template de automação válido configurado.');
-        }
-        const onFirstMessageSent = async () => {
-          await registerContact(lead, 'Mensagem Automática');
-        };
-
-        let firstMessageSent = false;
-        let sentMessageCount = 0;
-
-        for (const message of templateMessages) {
-          if (message.type === 'text') {
-            const finalMessage = applyTemplateVariables(message.text ?? '', lead).trim();
-            if (!finalMessage) {
-              continue;
-            }
-            await sendAutoContactMessage({
-              lead,
-              contentType: 'string',
-              content: finalMessage,
-              settings,
-            });
-          } else {
-            const mediaUrl = applyTemplateVariables(message.mediaUrl ?? '', lead).trim();
-            if (!mediaUrl) {
-              throw new Error('Mensagem de automação com mídia sem URL configurada.');
-            }
-            const caption = message.caption
-              ? applyTemplateVariables(message.caption, lead).trim()
-              : undefined;
-            await sendAutoContactMessage({
-              lead,
-              contentType: message.type,
-              content: {
-                url: mediaUrl,
-                caption,
-              },
-              settings,
-            });
-          }
-
-          sentMessageCount += 1;
-          if (!firstMessageSent) {
-            await onFirstMessageSent();
-            firstMessageSent = true;
-          }
-        }
-
-        if (sentMessageCount === 0) {
-          throw new Error('Nenhuma mensagem válida encontrada no template selecionado.');
-        }
-
-        setAutomationSuccessInfo({
-          leadName: lead.nome_completo || 'Lead',
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Erro ao enviar automação manual:', errorMessage);
-        const normalizedError = errorMessage.toLowerCase();
-        if (
-          normalizedError.includes('não possui whatsapp') ||
-          normalizedError.includes('nao possui whatsapp') ||
-          normalizedError.includes('inválido') ||
-          normalizedError.includes('invalido')
-        ) {
-          setAutomationErrorInfo({
-            leadName: lead.nome_completo || 'Lead',
-            message: `Não foi possível enviar a automação: ${errorMessage}`,
-          });
-        } else {
-          alert(`Não foi possível enviar a automação: ${errorMessage}`);
-        }
-      } finally {
-        setSendingAutomationIds((previous) => {
-          const next = new Set(previous);
-          next.delete(lead.id);
-          return next;
-        });
-      }
-    },
-    [registerContact],
-  );
-
-  const sendManualAutomation = useCallback(
-    async (lead: Lead) => {
-      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (!settings.apiKey) {
-        alert('Token da Whapi Cloud não configurado. Configure em Configurações > Integrações > Automação do WhatsApp.');
-        return;
-      }
-
-      if (settings.messageTemplates.length === 0) {
-        alert('Nenhum template de automação configurado. Cadastre um modelo em Configurações > Automação do WhatsApp.');
-        return;
-      }
-
-      setAutomationTemplateLead(lead);
-      setSelectedTemplateId(settings.messageTemplates[0]?.id || '');
-    },
-    [autoContactSettings, executeAutomationSend]
-  );
-
-  const handleConfirmTemplateSend = useCallback(async () => {
-    if (!automationTemplateLead) return;
-
-    const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-    const selectedTemplate =
-      settings.messageTemplates.find((template) => template.id === selectedTemplateId) || null;
-    const selectedTemplateMessage = getTemplateMessage(selectedTemplate);
-
-    if (selectedTemplate && !selectedTemplateMessage.trim()) {
-      alert('O modelo selecionado está sem mensagem. Preencha o texto antes de enviar.');
-      return;
-    }
-
-    if (!selectedTemplate) {
-      alert('Selecione um template válido para enviar a automação.');
-      return;
-    }
-
-    const lead = automationTemplateLead;
-    setAutomationTemplateLead(null);
-
-    await executeAutomationSend({ lead, settings, template: selectedTemplate });
-  }, [automationTemplateLead, autoContactSettings, executeAutomationSend, selectedTemplateId]);
-
   const handleConvertToContract = (lead: Lead) => {
     if (onConvertToContract) {
       onConvertToContract(lead);
@@ -2005,21 +1658,6 @@ export default function LeadsManager({
                           </a>
                         )}
                         <span>{lead.telefone}</span>
-                        {!isObserver && (
-                          <button
-                            onClick={() => sendManualAutomation(lead)}
-                            className="inline-flex items-center justify-center rounded-full bg-indigo-50 p-1 text-indigo-600 transition-colors hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={sendingAutomationIds.has(lead.id)}
-                            aria-label="Enviar automação"
-                            type="button"
-                          >
-                            {sendingAutomationIds.has(lead.id) ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Send className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
                       </div>
                       {lead.email && (
                         <div className="flex items-center gap-2 truncate">
@@ -2203,23 +1841,6 @@ export default function LeadsManager({
           }
           defaultType="Follow-up"
         />
-      )}
-      {automationTemplateLead && (
-        <AutomationTemplateModal
-          leadName={automationTemplateLead.nome_completo || 'Lead'}
-          templates={autoContactSettings?.messageTemplates ?? []}
-          selectedTemplateId={selectedTemplateId}
-          onChangeTemplate={setSelectedTemplateId}
-          onClose={() => setAutomationTemplateLead(null)}
-          onConfirm={handleConfirmTemplateSend}
-          isSending={sendingAutomationIds.has(automationTemplateLead.id)}
-        />
-      )}
-      {automationErrorInfo && (
-        <AutomationErrorModal info={automationErrorInfo} onClose={() => setAutomationErrorInfo(null)} />
-      )}
-      {automationSuccessInfo && (
-        <AutomationSuccessToast info={automationSuccessInfo} onClose={() => setAutomationSuccessInfo(null)} />
       )}
       {ConfirmationDialog}
     </div>

@@ -1189,7 +1189,7 @@ export default function LeadsManager({
   };
 
   const triggerAutoContactFlow = useCallback(
-    (lead: Lead, event?: AutoContactFlowEvent) => {
+    (lead: Lead, event?: string) => {
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
 
       if (!settings.enabled || settings.flows.length === 0) {
@@ -1198,6 +1198,7 @@ export default function LeadsManager({
 
       void runAutoContactFlow({
         lead: { ...lead },
+        event,
         settings,
         event,
         onFirstMessageSent: async () => {
@@ -2154,13 +2155,23 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={async (savedLead, context) => {
+          onSave={async (savedLead) => {
+            const isNewLead = !editingLead;
             setShowForm(false);
             setEditingLead(null);
             if (context?.created) {
               triggerAutoContactFlow(savedLead, 'lead_created');
             }
             await loadLeads();
+            if (isNewLead) {
+              const mappedLead = mapLeadRelations(savedLead, {
+                origins: leadOrigins,
+                statuses: leadStatuses,
+                tipoContratacao: tipoContratacaoOptions,
+                responsaveis: responsavelOptions,
+              });
+              triggerAutoContactFlow(mappedLead, 'lead_created');
+            }
           }}
         />
       )}

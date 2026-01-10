@@ -469,6 +469,7 @@ export default function AutoContactFlowSettings() {
     status: 'Status atual',
     tag: 'Tag do lead',
     canal: 'Canal de aquisição',
+    event: 'Evento',
     estado: 'Estado (UF)',
     regiao: 'Região',
     tipo_contratacao: 'Tipo de contratação',
@@ -832,6 +833,7 @@ export default function AutoContactFlowSettings() {
       tipo_contratacao: tipoContratacaoOptions.map((option) => option.label),
       responsavel: responsavelOptions.map((option) => option.label),
       tag: availableTags,
+      event: ['lead_created'],
     }),
     [activeOrigins, availableTags, responsavelOptions, statusOptions, tipoContratacaoOptions],
   );

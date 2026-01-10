@@ -448,6 +448,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           value: typeof condition?.value === 'string' ? condition.value : '',
         };
         })
+        // "lead_created" is treated as an event boolean and does not require a value.
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedExitConditions = rawExitConditions
         .map((condition: any, conditionIndex: number) => {
@@ -462,6 +463,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           value: typeof condition?.value === 'string' ? condition.value : '',
         };
         })
+        // "lead_created" is treated as an event boolean and does not require a value.
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
@@ -1003,6 +1005,9 @@ const matchesFlowCondition = (
   lead: Lead,
   event?: string,
 ): boolean => {
+  if (condition.field === 'lead_created') {
+    return event === 'lead_created';
+  }
   const value = normalizeText(condition.value);
   if (!value) return false;
 
@@ -1022,6 +1027,8 @@ const getLeadFieldValue = (
   event?: string,
 ): string => {
   switch (field) {
+    case 'lead_created':
+      return event ?? '';
     case 'event':
       return event ?? '';
     case 'origem':

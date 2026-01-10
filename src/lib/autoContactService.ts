@@ -879,14 +879,12 @@ const applyInvalidNumberAction = async (flow: AutoContactFlow, lead: Lead): Prom
 
 export async function runAutoContactFlow({
   lead,
-  event,
   settings,
   signal,
   onFirstMessageSent,
   event,
 }: {
   lead: Lead;
-  event?: string;
   settings: AutoContactSettings;
   signal?: () => boolean;
   onFirstMessageSent?: () => Promise<void> | void;

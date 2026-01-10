@@ -51,6 +51,7 @@ export type AutoContactFlowConditionField =
   | 'status'
   | 'tag'
   | 'canal'
+  | 'event'
   | 'estado'
   | 'regiao'
   | 'tipo_contratacao'
@@ -336,6 +337,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       case 'status':
       case 'tag':
       case 'canal':
+      case 'event':
       case 'estado':
       case 'regiao':
       case 'tipo_contratacao':
@@ -768,10 +770,10 @@ export async function sendAutoContactMessage({
   }
 }
 
-const shouldExitFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+const shouldExitFlow = (flow: AutoContactFlow, lead: Lead, event?: string): boolean => {
   const exitConditions = flow.exitConditions ?? [];
   if (exitConditions.length === 0) return false;
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
 };
 
@@ -865,11 +867,13 @@ const applyInvalidNumberAction = async (flow: AutoContactFlow, lead: Lead): Prom
 
 export async function runAutoContactFlow({
   lead,
+  event,
   settings,
   signal,
   onFirstMessageSent,
 }: {
   lead: Lead;
+  event?: string;
   settings: AutoContactSettings;
   signal?: () => boolean;
   onFirstMessageSent?: () => Promise<void> | void;
@@ -878,7 +882,7 @@ export async function runAutoContactFlow({
 
   const templates = settings.messageTemplates ?? [];
   const flows = settings.flows ?? [];
-  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead)) ?? null;
+  const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead, event)) ?? null;
   if (!matchingFlow) return;
 
   let cumulativeDelayHours = 0;
@@ -886,7 +890,7 @@ export async function runAutoContactFlow({
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
-    if (shouldExitFlow(matchingFlow, lead)) return;
+    if (shouldExitFlow(matchingFlow, lead, event)) return;
     cumulativeDelayHours += step.delayHours;
 
     const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
@@ -963,7 +967,7 @@ export async function runAutoContactFlow({
   }
 }
 
-const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
+const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead, event?: string): boolean => {
   const rawConditions = flow.conditions ?? [];
   const conditions = [...rawConditions];
   const triggerStatus = flow.triggerStatus?.trim();
@@ -978,11 +982,15 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead): boolean => {
 
   if (conditions.length === 0) return true;
 
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
-const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: Lead): boolean => {
+const matchesFlowCondition = (
+  condition: AutoContactFlowCondition,
+  lead: Lead,
+  event?: string,
+): boolean => {
   const value = normalizeText(condition.value);
   if (!value) return false;
 
@@ -991,13 +999,19 @@ const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: Lead): 
     return matchArrayCondition(tags, value, condition.operator);
   }
 
-  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field));
+  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field, event));
   if (!leadValue) return condition.operator === 'not_contains' || condition.operator === 'not_equals';
   return matchTextCondition(leadValue, value, condition.operator);
 };
 
-const getLeadFieldValue = (lead: Lead, field: AutoContactFlowConditionField): string => {
+const getLeadFieldValue = (
+  lead: Lead,
+  field: AutoContactFlowConditionField,
+  event?: string,
+): string => {
   switch (field) {
+    case 'event':
+      return event ?? '';
     case 'origem':
       return lead.origem ?? '';
     case 'cidade':

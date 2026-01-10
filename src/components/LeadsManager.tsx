@@ -360,89 +360,6 @@ export default function LeadsManager({
     }
   }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions]);
 
-  const handleRealtimeLeadChange = useCallback(
-    (payload: RealtimePostgresChangesPayload<Lead>) => {
-      const { eventType } = payload;
-      const newLead = payload.new
-        ? mapLeadRelations(payload.new as Lead, {
-            origins: leadOrigins,
-            statuses: leadStatuses,
-            tipoContratacao: tipoContratacaoOptions,
-            responsaveis: responsavelOptions,
-          })
-        : null;
-      const oldLead = payload.old as Lead | null;
-
-      setLeads((current) => {
-        let updatedLeads = current;
-
-        switch (eventType) {
-          case 'INSERT':
-            if (!newLead) return current;
-            if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
-              return current.filter((lead) => lead.id !== newLead.id);
-            }
-            updatedLeads = [newLead, ...current.filter((lead) => lead.id !== newLead.id)];
-            break;
-          case 'UPDATE':
-            if (!newLead) return current;
-            {
-              const otherLeads = current.filter((lead) => lead.id !== newLead.id);
-              if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
-                updatedLeads = otherLeads;
-              } else {
-                updatedLeads = [newLead, ...otherLeads];
-              }
-            }
-            break;
-          case 'DELETE':
-            if (!oldLead) return current;
-            updatedLeads = current.filter((lead) => lead.id !== oldLead.id);
-            break;
-          default:
-            return current;
-        }
-
-        return updatedLeads.sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      });
-
-      if (eventType === 'INSERT' && newLead) {
-        if (recentlyTriggeredLeadIds.current.has(newLead.id)) {
-          recentlyTriggeredLeadIds.current.delete(newLead.id);
-        } else {
-          triggerAutoContactFlow(newLead, 'lead_created');
-        }
-      }
-
-      if (eventType === 'DELETE' && oldLead) {
-        setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
-        setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
-        return;
-      }
-
-      if (newLead) {
-        if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
-          setSelectedLead((current) => (current && current.id === newLead.id ? null : current));
-          setEditingLead((current) => (current && current.id === newLead.id ? null : current));
-        } else {
-          setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
-          setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
-        }
-      }
-    },
-    [
-      isObserver,
-      isOriginVisibleToObserver,
-      leadOrigins,
-      leadStatuses,
-      tipoContratacaoOptions,
-      responsavelOptions,
-      triggerAutoContactFlow,
-    ]
-  );
-
   useEffect(() => {
     void fetchContractsForLeads(leads.map((lead) => lead.id));
   }, [fetchContractsForLeads, leads]);
@@ -1019,6 +936,89 @@ export default function LeadsManager({
       });
     },
     [autoContactSettings, registerContact],
+  );
+
+  const handleRealtimeLeadChange = useCallback(
+    (payload: RealtimePostgresChangesPayload<Lead>) => {
+      const { eventType } = payload;
+      const newLead = payload.new
+        ? mapLeadRelations(payload.new as Lead, {
+            origins: leadOrigins,
+            statuses: leadStatuses,
+            tipoContratacao: tipoContratacaoOptions,
+            responsaveis: responsavelOptions,
+          })
+        : null;
+      const oldLead = payload.old as Lead | null;
+
+      setLeads((current) => {
+        let updatedLeads = current;
+
+        switch (eventType) {
+          case 'INSERT':
+            if (!newLead) return current;
+            if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+              return current.filter((lead) => lead.id !== newLead.id);
+            }
+            updatedLeads = [newLead, ...current.filter((lead) => lead.id !== newLead.id)];
+            break;
+          case 'UPDATE':
+            if (!newLead) return current;
+            {
+              const otherLeads = current.filter((lead) => lead.id !== newLead.id);
+              if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+                updatedLeads = otherLeads;
+              } else {
+                updatedLeads = [newLead, ...otherLeads];
+              }
+            }
+            break;
+          case 'DELETE':
+            if (!oldLead) return current;
+            updatedLeads = current.filter((lead) => lead.id !== oldLead.id);
+            break;
+          default:
+            return current;
+        }
+
+        return updatedLeads.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      });
+
+      if (eventType === 'INSERT' && newLead) {
+        if (recentlyTriggeredLeadIds.current.has(newLead.id)) {
+          recentlyTriggeredLeadIds.current.delete(newLead.id);
+        } else {
+          triggerAutoContactFlow(newLead, 'lead_created');
+        }
+      }
+
+      if (eventType === 'DELETE' && oldLead) {
+        setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
+        setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
+        return;
+      }
+
+      if (newLead) {
+        if (isObserver && !isOriginVisibleToObserver(newLead.origem)) {
+          setSelectedLead((current) => (current && current.id === newLead.id ? null : current));
+          setEditingLead((current) => (current && current.id === newLead.id ? null : current));
+        } else {
+          setSelectedLead((current) => (current && current.id === newLead.id ? newLead : current));
+          setEditingLead((current) => (current && current.id === newLead.id ? newLead : current));
+        }
+      }
+    },
+    [
+      isObserver,
+      isOriginVisibleToObserver,
+      leadOrigins,
+      leadStatuses,
+      tipoContratacaoOptions,
+      responsavelOptions,
+      triggerAutoContactFlow,
+    ]
   );
 
   const handleStatusChange = async (leadId: string, newStatus: string) => {

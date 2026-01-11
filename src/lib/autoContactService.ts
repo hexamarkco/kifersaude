@@ -899,6 +899,15 @@ export async function runAutoContactFlow({
   const matchingFlow = flows.find((flow) => matchesAutoContactFlow(flow, lead, event)) ?? null;
   if (!matchingFlow) return;
 
+  const flowScheduling = matchingFlow.scheduling;
+  const effectiveScheduling: AutoContactSchedulingSettings = {
+    ...settings.scheduling,
+    startHour: flowScheduling?.startHour ?? settings.scheduling.startHour,
+    endHour: flowScheduling?.endHour ?? settings.scheduling.endHour,
+    allowedWeekdays:
+      flowScheduling?.allowedWeekdays?.length ? flowScheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
+  };
+
   let cumulativeDelayHours = 0;
   let firstMessageSent = false;
 
@@ -908,7 +917,7 @@ export async function runAutoContactFlow({
     cumulativeDelayHours += step.delayHours;
 
     const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
-    const scheduledAt = getNextAllowedSendAt(desiredAt, settings.scheduling);
+    const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
     const now = new Date();
     const waitMs = scheduledAt.getTime() - now.getTime();
 

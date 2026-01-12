@@ -7,10 +7,9 @@
 */
 
 -- Disable the legacy cron job if it exists
-SELECT cron.unschedule('process-pending-leads-every-minute')
-WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'process-pending-leads-every-minute'
-);
+UPDATE cron.job
+SET active = false
+WHERE jobname = 'process-pending-leads-every-minute';
 
 -- Optional: keep a note for operators
 DO $$

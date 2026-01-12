@@ -1010,10 +1010,6 @@ export default function LeadsManager({
         );
       });
 
-      if (eventType === 'INSERT' && newLead) {
-        triggerAutoContactFlow(newLead, 'lead_created');
-      }
-
       if (eventType === 'DELETE' && oldLead) {
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));

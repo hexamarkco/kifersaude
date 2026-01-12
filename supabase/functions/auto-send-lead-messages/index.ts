@@ -8,6 +8,8 @@ const corsHeaders = {
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const DEPRECATION_NOTICE =
+  '[AutoSendLeadMessages] Deprecated: use leads-api auto-contact automation instead of this legacy edge function.';
 
 const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
 
@@ -202,6 +204,8 @@ Deno.serve(async (req: Request) => {
       headers: corsHeaders,
     });
   }
+
+  console.warn(DEPRECATION_NOTICE);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

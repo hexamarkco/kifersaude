@@ -933,7 +933,11 @@ export default function LeadsManager({
 
   const triggerAutoContactFlow = useCallback(
     (lead: Lead, event?: string) => {
+      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
       if (event === 'lead_created') {
+        if (settings.autoSend) {
+          return;
+        }
         const leadStatus = lead.status?.trim().toLowerCase();
         if (leadStatus !== 'novo') {
           return;
@@ -945,8 +949,6 @@ export default function LeadsManager({
         }
         recentlyTriggeredLeadIds.current.set(lead.id, now);
       }
-      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-
       if (!settings.enabled || settings.flows.length === 0) {
         return;
       }

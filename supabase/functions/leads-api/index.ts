@@ -89,6 +89,8 @@ type AutoContactFlowConditionField =
   | 'responsavel'
   | 'status'
   | 'tag'
+  | 'event'
+  | 'lead_created'
   | 'canal'
   | 'estado'
   | 'regiao'
@@ -141,6 +143,8 @@ type AutoContactFlowSettings = {
   messageTemplates: AutoContactTemplate[];
   flows: AutoContactFlow[];
 };
+
+type AutoContactFlowEvent = 'lead_created';
 
 type LookupTableRow = { id: string; nome?: string | null; label?: string | null; padrao?: boolean | null };
 
@@ -758,6 +762,8 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
       case 'responsavel':
       case 'status':
       case 'tag':
+      case 'event':
+      case 'lead_created':
       case 'canal':
       case 'estado':
       case 'regiao':
@@ -833,7 +839,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           operator: normalizeConditionOperator(condition?.operator),
           value: typeof condition?.value === 'string' ? condition.value : '',
         }))
-        .filter((condition) => condition.value.trim());
+        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedExitConditions = rawExitConditions
         .map((condition: any, conditionIndex: number) => ({
           id:
@@ -844,7 +850,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           operator: normalizeConditionOperator(condition?.operator),
           value: typeof condition?.value === 'string' ? condition.value : '',
         }))
-        .filter((condition) => condition.value.trim());
+        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps.map((step: any, stepIndex: number) => {
         const delayHoursRaw = Number(step?.delayHours);
         const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
@@ -1040,8 +1046,11 @@ const compareComparableValues = (
   }
 };
 
-const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField): string => {
+const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, event?: AutoContactFlowEvent): string => {
   switch (field) {
+    case 'lead_created':
+    case 'event':
+      return event ?? '';
     case 'origem':
       return lead.origem ?? '';
     case 'cidade':
@@ -1077,7 +1086,15 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField): str
   }
 };
 
-const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: any): boolean => {
+const matchesFlowCondition = (
+  condition: AutoContactFlowCondition,
+  lead: any,
+  event?: AutoContactFlowEvent,
+): boolean => {
+  if (condition.field === 'lead_created') {
+    return event === 'lead_created';
+  }
+
   const value = normalizeText(condition.value);
   if (!value) return false;
 
@@ -1087,12 +1104,12 @@ const matchesFlowCondition = (condition: AutoContactFlowCondition, lead: any): b
     return matchArrayCondition(normalizedTags, value, condition.operator);
   }
 
-  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field));
+  const leadValue = normalizeText(getLeadFieldValue(lead, condition.field, event));
   if (!leadValue) return condition.operator === 'not_contains' || condition.operator === 'not_equals';
   return matchTextCondition(leadValue, value, condition.operator);
 };
 
-const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any): boolean => {
+const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlowEvent): boolean => {
   const rawConditions = flow.conditions ?? [];
   const conditions = [...rawConditions];
   const triggerStatus = flow.triggerStatus?.trim();
@@ -1107,14 +1124,14 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any): boolean => {
 
   if (conditions.length === 0) return true;
 
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
-const shouldExitFlow = (flow: AutoContactFlow, lead: any): boolean => {
+const shouldExitFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlowEvent): boolean => {
   const exitConditions = flow.exitConditions ?? [];
   if (exitConditions.length === 0) return false;
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead);
+  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
   return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
 };
 
@@ -1299,12 +1316,14 @@ async function runAutoContactFlowEngine({
   lookups,
   logWithContext,
   settings: providedSettings,
+  event,
 }: {
   supabase: ReturnType<typeof createClient>;
   lead: any;
   lookups: LeadLookupMaps;
   logWithContext: (message: string, details?: Record<string, unknown>) => void;
   settings?: AutoContactFlowSettings | null;
+  event?: AutoContactFlowEvent;
 }): Promise<void> {
   try {
     const settings = providedSettings ?? await loadAutoContactFlowSettings(supabase);
@@ -1334,7 +1353,8 @@ async function runAutoContactFlowEngine({
     }
     leadWithRelations.status = leadWithRelations.status || 'Novo';
 
-    const matchingFlow = settings.flows.find((flow) => matchesAutoContactFlow(flow, leadWithRelations)) ?? null;
+    const matchingFlow =
+      settings.flows.find((flow) => matchesAutoContactFlow(flow, leadWithRelations, event)) ?? null;
     if (!matchingFlow) {
       logWithContext('Nenhum fluxo automático corresponde ao lead recém-criado', { leadId: lead.id });
       return;
@@ -1349,7 +1369,7 @@ async function runAutoContactFlowEngine({
     let firstMessageSent = false;
 
     for (const step of matchingFlow.steps) {
-      if (shouldExitFlow(matchingFlow, leadWithRelations)) {
+      if (shouldExitFlow(matchingFlow, leadWithRelations, event)) {
         logWithContext('Fluxo automático interrompido por condição de saída', {
           leadId: lead.id,
           flowId: matchingFlow.id,
@@ -1541,6 +1561,8 @@ Deno.serve(async (req: Request) => {
       const payload = await req.json().catch(() => null);
       const record = payload?.record ?? null;
       const oldRecord = payload?.old_record ?? null;
+      const event: AutoContactFlowEvent | undefined =
+        payload?.type === 'INSERT' || !oldRecord ? 'lead_created' : undefined;
 
       if (!record || typeof record !== 'object' || !record.id) {
         return new Response(JSON.stringify({ success: false, error: 'Payload inválido para automação' }), {
@@ -1570,7 +1592,7 @@ Deno.serve(async (req: Request) => {
 
       const mappedLead = mapLeadForMatch(record);
       const newMatchingFlow =
-        settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead)) ?? null;
+        settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, event)) ?? null;
 
       if (!newMatchingFlow) {
         return new Response(JSON.stringify({ success: true, skipped: true }), {
@@ -1599,6 +1621,7 @@ Deno.serve(async (req: Request) => {
           lookups,
           logWithContext,
           settings,
+          event,
         });
       } catch (automationError) {
         logWithContext('Erro ao executar automação automática via trigger', {

@@ -130,7 +130,6 @@ export type AutoContactLoggingSettings = {
 
 export type AutoContactSettings = {
   enabled: boolean;
-  autoSend?: boolean;
   apiKey: string;
   messageTemplates: AutoContactTemplate[];
   flows: AutoContactFlow[];
@@ -553,7 +552,6 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
   return {
     enabled: settings.enabled !== false,
-    autoSend: settings.autoSend === true,
     apiKey: apiKeyValue,
     messageTemplates,
     flows: normalizedFlows.length ? normalizedFlows : DEFAULT_AUTO_CONTACT_FLOWS,

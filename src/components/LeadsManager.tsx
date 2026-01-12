@@ -943,9 +943,6 @@ export default function LeadsManager({
       }
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
       if (event === 'lead_created') {
-        if (settings.autoSend) {
-          return;
-        }
         const leadStatus = lead.status?.trim().toLowerCase();
         if (leadStatus !== 'novo') {
           return;

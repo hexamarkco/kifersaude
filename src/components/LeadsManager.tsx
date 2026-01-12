@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
 import {
   Plus,
@@ -38,12 +38,6 @@ import FilterDateRange from './FilterDateRange';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
-import {
-  AUTO_CONTACT_INTEGRATION_SLUG,
-  normalizeAutoContactSettings,
-  runAutoContactFlow,
-} from '../lib/autoContactService';
-import type { AutoContactFlowEvent, AutoContactSettings } from '../lib/autoContactService';
 import { configService } from '../lib/configService';
 import { downloadXlsx } from '../lib/xlsxExport';
 
@@ -184,24 +178,6 @@ export default function LeadsManager({
     }
   }, [initialLeadIdFilter]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadSettings = async () => {
-      const integration = await configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG);
-      if (isMounted) {
-        const normalizedSettings = normalizeAutoContactSettings(integration?.settings);
-        setAutoContactSettings(normalizedSettings);
-      }
-    };
-
-    loadSettings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const closeReminderScheduler = () => {
     setReminderLead(null);
     setReminderPromptMessage(undefined);
@@ -215,11 +191,8 @@ export default function LeadsManager({
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkResponsavel, setBulkResponsavel] = useState('');
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState('');
-  const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const recentlyTriggeredLeadIds = useRef<Map<string, number>>(new Map());
-  const autoContactTriggerCooldownMs = 15000;
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -931,37 +904,6 @@ export default function LeadsManager({
     }
   };
 
-  const triggerAutoContactFlow = useCallback(
-    (lead: Lead, event?: string) => {
-      const normalizedStatus = lead.status?.trim().toLowerCase() ?? '';
-      const triggerKey = `${lead.id}:${normalizedStatus}`;
-      const now = Date.now();
-      const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(triggerKey);
-      if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
-        return;
-      }
-      recentlyTriggeredLeadIds.current.set(triggerKey, now);
-
-      const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (!settings.enabled || settings.flows.length === 0) {
-        return;
-      }
-
-      void runAutoContactFlow({
-        lead: { ...lead },
-        settings,
-        event,
-        onFirstMessageSent: async () => {
-          await registerContact(lead, 'Mensagem Automática');
-        },
-      }).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error('Erro ao executar fluxo automático:', message);
-      });
-    },
-    [autoContactSettings, registerContact],
-  );
-
   const handleRealtimeLeadChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Lead>) => {
       const { eventType } = payload;
@@ -1010,22 +952,10 @@ export default function LeadsManager({
         );
       });
 
-      if (eventType === 'INSERT' && newLead) {
-        triggerAutoContactFlow(newLead, 'lead_created');
-      }
-
       if (eventType === 'DELETE' && oldLead) {
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
         return;
-      }
-
-      if (eventType === 'UPDATE' && newLead && oldLead) {
-        const previousStatus = oldLead.status?.trim() ?? '';
-        const currentStatus = newLead.status?.trim() ?? '';
-        if (previousStatus !== currentStatus) {
-          triggerAutoContactFlow(newLead);
-        }
       }
 
       if (newLead) {
@@ -1045,7 +975,6 @@ export default function LeadsManager({
       leadStatuses,
       tipoContratacaoOptions,
       responsavelOptions,
-      triggerAutoContactFlow,
     ]
   );
 
@@ -1169,7 +1098,6 @@ export default function LeadsManager({
         }
       }
 
-      triggerAutoContactFlow(updatedLead);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status do lead');

@@ -71,9 +71,11 @@ export default function WhatsAppApiSettings() {
     const currentScheduling = autoContactSettings?.scheduling || fallbackSettings.scheduling;
     const currentMonitoring = autoContactSettings?.monitoring || fallbackSettings.monitoring;
     const currentLogging = autoContactSettings?.logging || fallbackSettings.logging;
+    const currentAutoSend = autoContactSettings?.autoSend ?? fallbackSettings.autoSend;
 
     const newSettings = {
       enabled,
+      autoSend: currentAutoSend,
       apiKey: token.trim(),
       token: token.trim(),
       messageTemplates: currentMessageTemplates,

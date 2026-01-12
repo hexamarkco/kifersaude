@@ -1298,14 +1298,16 @@ async function runAutoContactFlowEngine({
   lead,
   lookups,
   logWithContext,
+  settings: providedSettings,
 }: {
   supabase: ReturnType<typeof createClient>;
   lead: any;
   lookups: LeadLookupMaps;
   logWithContext: (message: string, details?: Record<string, unknown>) => void;
+  settings?: AutoContactFlowSettings | null;
 }): Promise<void> {
   try {
-    const settings = await loadAutoContactFlowSettings(supabase);
+    const settings = providedSettings ?? await loadAutoContactFlowSettings(supabase);
     if (!settings || !settings.enabled) {
       logWithContext('Fluxo automático desativado ou não configurado');
       return;
@@ -1538,6 +1540,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'auto-contact' && req.method === 'POST') {
       const payload = await req.json().catch(() => null);
       const record = payload?.record ?? null;
+      const oldRecord = payload?.old_record ?? null;
 
       if (!record || typeof record !== 'object' || !record.id) {
         return new Response(JSON.stringify({ success: false, error: 'Payload inválido para automação' }), {
@@ -1547,6 +1550,47 @@ Deno.serve(async (req: Request) => {
       }
 
       const lookups = await getLookups();
+      const settings = await loadAutoContactFlowSettings(supabase);
+
+      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const mapLeadForMatch = (lead: any) => {
+        const mapped = mapLeadRelationsForResponse(lead, lookups);
+        if (!mapped.status) {
+          mapped.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
+        }
+        mapped.status = mapped.status || 'Novo';
+        return mapped;
+      };
+
+      const mappedLead = mapLeadForMatch(record);
+      const newMatchingFlow =
+        settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead)) ?? null;
+
+      if (!newMatchingFlow) {
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (oldRecord && typeof oldRecord === 'object') {
+        const mappedOldLead = mapLeadForMatch(oldRecord);
+        const oldMatchingFlow =
+          settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedOldLead)) ?? null;
+
+        if (oldMatchingFlow?.id === newMatchingFlow.id) {
+          return new Response(JSON.stringify({ success: true, skipped: true }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
 
       try {
         await runAutoContactFlowEngine({
@@ -1554,6 +1598,7 @@ Deno.serve(async (req: Request) => {
           lead: record,
           lookups,
           logWithContext,
+          settings,
         });
       } catch (automationError) {
         logWithContext('Erro ao executar automação automática via trigger', {

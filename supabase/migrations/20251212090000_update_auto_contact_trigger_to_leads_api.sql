@@ -44,9 +44,10 @@ BEGIN
       'Authorization', 'Bearer ' || service_role_key
     ),
     body := jsonb_build_object(
-      'type', 'INSERT',
+      'type', TG_OP,
       'table', 'leads',
-      'record', row_to_json(NEW)
+      'record', row_to_json(NEW),
+      'old_record', CASE WHEN TG_OP = 'UPDATE' THEN row_to_json(OLD) ELSE NULL END
     )
   );
 
@@ -59,3 +60,11 @@ EXCEPTION
     RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trigger_auto_send_on_lead_insert ON leads;
+DROP TRIGGER IF EXISTS trigger_auto_send_on_lead_change ON leads;
+
+CREATE TRIGGER trigger_auto_send_on_lead_change
+  AFTER INSERT OR UPDATE ON leads
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_auto_send_lead_messages();

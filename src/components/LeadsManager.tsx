@@ -218,7 +218,8 @@ export default function LeadsManager({
   const [autoContactSettings, setAutoContactSettings] = useState<AutoContactSettings | null>(null);
   const [bulkArchiveAction, setBulkArchiveAction] = useState<'none' | 'archive' | 'unarchive'>('none');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const recentlyTriggeredLeadIds = useRef<Set<string>>(new Set());
+  const recentlyTriggeredLeadIds = useRef<Map<string, number>>(new Map());
+  const autoContactTriggerCooldownMs = 15000;
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -932,6 +933,18 @@ export default function LeadsManager({
 
   const triggerAutoContactFlow = useCallback(
     (lead: Lead, event?: string) => {
+      if (event === 'lead_created') {
+        const leadStatus = lead.status?.trim().toLowerCase();
+        if (leadStatus !== 'novo') {
+          return;
+        }
+        const now = Date.now();
+        const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(lead.id);
+        if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
+          return;
+        }
+        recentlyTriggeredLeadIds.current.set(lead.id, now);
+      }
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
 
       if (!settings.enabled || settings.flows.length === 0) {
@@ -1003,11 +1016,7 @@ export default function LeadsManager({
       });
 
       if (eventType === 'INSERT' && newLead) {
-        if (recentlyTriggeredLeadIds.current.has(newLead.id)) {
-          recentlyTriggeredLeadIds.current.delete(newLead.id);
-        } else {
-          triggerAutoContactFlow(newLead, 'lead_created');
-        }
+        triggerAutoContactFlow(newLead, 'lead_created');
       }
 
       if (eventType === 'DELETE' && oldLead) {
@@ -1831,7 +1840,6 @@ export default function LeadsManager({
                 tipoContratacao: tipoContratacaoOptions,
                 responsaveis: responsavelOptions,
               });
-              recentlyTriggeredLeadIds.current.add(mappedLead.id);
               triggerAutoContactFlow(mappedLead, 'lead_created');
             }
           }}

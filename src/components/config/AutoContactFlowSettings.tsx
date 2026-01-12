@@ -67,6 +67,7 @@ export default function AutoContactFlowSettings() {
   const [flowDrafts, setFlowDrafts] = useState<AutoContactFlow[]>(DEFAULT_AUTO_CONTACT_FLOWS);
   const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
   const defaultSettings = useMemo(() => normalizeAutoContactSettings(null), []);
+  const [autoSendEnabled, setAutoSendEnabled] = useState(defaultSettings.autoSend);
   const [schedulingDraft, setSchedulingDraft] = useState<AutoContactSchedulingSettings>(
     defaultSettings.scheduling,
   );
@@ -108,6 +109,7 @@ export default function AutoContactFlowSettings() {
 
     setAutoContactIntegration(integration);
     setAutoContactSettings(normalized);
+    setAutoSendEnabled(normalized.autoSend);
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
     setFlowDrafts(normalized.flows ?? []);
     setSchedulingDraft(normalized.scheduling);
@@ -292,6 +294,7 @@ export default function AutoContactFlowSettings() {
     const currentSettings = autoContactSettings || normalizeAutoContactSettings(null);
     const newSettings = {
       ...currentSettings,
+      autoSend: autoSendEnabled,
       messageTemplates: normalizedTemplates,
     };
 
@@ -307,6 +310,7 @@ export default function AutoContactFlowSettings() {
 
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
+      setAutoSendEnabled(normalized.autoSend);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setStatusMessage({ type: 'success', text: 'Template salvo no banco de dados.' });
     }
@@ -332,6 +336,7 @@ export default function AutoContactFlowSettings() {
 
     setMessageTemplatesDraft(savedTemplates);
     setFlowDrafts(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS);
+    setAutoSendEnabled(autoContactSettings?.autoSend ?? defaultSettings.autoSend);
     setSchedulingDraft(autoContactSettings?.scheduling ?? defaultSettings.scheduling);
     setMonitoringDraft(autoContactSettings?.monitoring ?? defaultSettings.monitoring);
     setLoggingDraft(autoContactSettings?.logging ?? defaultSettings.logging);
@@ -432,6 +437,7 @@ export default function AutoContactFlowSettings() {
     const currentSettings = autoContactSettings || normalizeAutoContactSettings(null);
     const newSettings = {
       ...currentSettings,
+      autoSend: autoSendEnabled,
       messageTemplates: sanitizedTemplates,
       flows: sanitizedFlows,
       scheduling: schedulingDraft,
@@ -451,6 +457,7 @@ export default function AutoContactFlowSettings() {
 
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
+      setAutoSendEnabled(normalized.autoSend);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setFlowDrafts(normalized.flows ?? []);
       setSchedulingDraft(normalized.scheduling);
@@ -1015,6 +1022,28 @@ export default function AutoContactFlowSettings() {
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-medium">
+                <ShieldCheck className="w-5 h-5" />
+                Automação
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Ativar automação</p>
+                  <p className="text-xs text-slate-500">
+                    Controla o envio automático dos fluxos configurados.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={autoSendEnabled}
+                    onChange={(event) => setAutoSendEnabled(event.target.checked)}
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                </label>
+              </div>
+            </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
               <div className="flex items-center gap-2 text-slate-900 font-medium">
                 <AlarmClock className="w-5 h-5" />

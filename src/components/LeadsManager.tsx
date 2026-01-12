@@ -933,6 +933,14 @@ export default function LeadsManager({
 
   const triggerAutoContactFlow = useCallback(
     (lead: Lead, event?: string) => {
+      if (event === 'lead_created') {
+        const now = Date.now();
+        const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(lead.id);
+        if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
+          return;
+        }
+        recentlyTriggeredLeadIds.current.set(lead.id, now);
+      }
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
       if (event === 'lead_created') {
         if (settings.autoSend) {

@@ -1535,6 +1535,39 @@ Deno.serve(async (req: Request) => {
       return lookupMaps;
     };
 
+    if (action === 'auto-contact' && req.method === 'POST') {
+      const payload = await req.json().catch(() => null);
+      const record = payload?.record ?? null;
+
+      if (!record || typeof record !== 'object' || !record.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Payload inválido para automação' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const lookups = await getLookups();
+
+      try {
+        await runAutoContactFlowEngine({
+          supabase,
+          lead: record,
+          lookups,
+          logWithContext,
+        });
+      } catch (automationError) {
+        logWithContext('Erro ao executar automação automática via trigger', {
+          leadId: record.id,
+          error: automationError instanceof Error ? automationError.message : String(automationError),
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'manual-automation' && req.method === 'POST') {
       const body = await req.json().catch(() => null);
 

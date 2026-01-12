@@ -905,7 +905,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
 
   return {
     enabled: settings.enabled !== false,
-    autoSend: settings.autoSend === true,
+    autoSend: settings.autoSend !== false,
     apiKey: apiKeyValue,
     messageTemplates,
     flows: normalizedFlows,

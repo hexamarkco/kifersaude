@@ -1758,20 +1758,6 @@ Deno.serve(async (req: Request) => {
 
       logWithContext('Lead created successfully', { leadId: data.id });
 
-      try {
-        await runAutoContactFlowEngine({
-          supabase,
-          lead: data,
-          lookups,
-          logWithContext,
-        });
-      } catch (automationError) {
-        logWithContext('Falha ao processar automação após criação do lead', {
-          leadId: data.id,
-          error: automationError instanceof Error ? automationError.message : String(automationError),
-        });
-      }
-
       return new Response(
         JSON.stringify({
           success: true,

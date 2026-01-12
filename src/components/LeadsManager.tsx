@@ -1829,19 +1829,9 @@ export default function LeadsManager({
             setEditingLead(null);
           }}
           onSave={async (savedLead, context) => {
-            const isNewLead = context?.created ?? !editingLead;
             setShowForm(false);
             setEditingLead(null);
             await loadLeads();
-            if (isNewLead) {
-              const mappedLead = mapLeadRelations(savedLead, {
-                origins: leadOrigins,
-                statuses: leadStatuses,
-                tipoContratacao: tipoContratacaoOptions,
-                responsaveis: responsavelOptions,
-              });
-              triggerAutoContactFlow(mappedLead, 'lead_created');
-            }
           }}
         />
       )}

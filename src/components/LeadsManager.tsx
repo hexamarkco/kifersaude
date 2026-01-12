@@ -942,7 +942,21 @@ export default function LeadsManager({
         recentlyTriggeredLeadIds.current.set(lead.id, now);
       }
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-
+      if (event === 'lead_created') {
+        if (settings.autoSend) {
+          return;
+        }
+        const leadStatus = lead.status?.trim().toLowerCase();
+        if (leadStatus !== 'novo') {
+          return;
+        }
+        const now = Date.now();
+        const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(lead.id);
+        if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
+          return;
+        }
+        recentlyTriggeredLeadIds.current.set(lead.id, now);
+      }
       if (!settings.enabled || settings.flows.length === 0) {
         return;
       }
@@ -1825,19 +1839,9 @@ export default function LeadsManager({
             setEditingLead(null);
           }}
           onSave={async (savedLead, context) => {
-            const isNewLead = context?.created ?? !editingLead;
             setShowForm(false);
             setEditingLead(null);
             await loadLeads();
-            if (isNewLead) {
-              const mappedLead = mapLeadRelations(savedLead, {
-                origins: leadOrigins,
-                statuses: leadStatuses,
-                tipoContratacao: tipoContratacaoOptions,
-                responsaveis: responsavelOptions,
-              });
-              triggerAutoContactFlow(mappedLead, 'lead_created');
-            }
           }}
         />
       )}

@@ -933,34 +933,22 @@ export default function LeadsManager({
 
   const triggerAutoContactFlow = useCallback(
     (lead: Lead, event?: string) => {
-      if (event === 'lead_created') {
-        const now = Date.now();
-        const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(lead.id);
-        if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
-          return;
-        }
-        recentlyTriggeredLeadIds.current.set(lead.id, now);
+      const normalizedStatus = lead.status?.trim().toLowerCase() ?? '';
+      const triggerKey = `${lead.id}:${normalizedStatus}`;
+      const now = Date.now();
+      const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(triggerKey);
+      if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
+        return;
       }
+      recentlyTriggeredLeadIds.current.set(triggerKey, now);
+
       const settings = autoContactSettings ?? normalizeAutoContactSettings(null);
-      if (event === 'lead_created') {
-        const leadStatus = lead.status?.trim().toLowerCase();
-        if (leadStatus !== 'novo') {
-          return;
-        }
-        const now = Date.now();
-        const lastTriggeredAt = recentlyTriggeredLeadIds.current.get(lead.id);
-        if (lastTriggeredAt && now - lastTriggeredAt < autoContactTriggerCooldownMs) {
-          return;
-        }
-        recentlyTriggeredLeadIds.current.set(lead.id, now);
-      }
       if (!settings.enabled || settings.flows.length === 0) {
         return;
       }
 
       void runAutoContactFlow({
         lead: { ...lead },
-        event,
         settings,
         event,
         onFirstMessageSent: async () => {
@@ -1030,6 +1018,14 @@ export default function LeadsManager({
         setSelectedLead((current) => (current && current.id === oldLead.id ? null : current));
         setEditingLead((current) => (current && current.id === oldLead.id ? null : current));
         return;
+      }
+
+      if (eventType === 'UPDATE' && newLead && oldLead) {
+        const previousStatus = oldLead.status?.trim() ?? '';
+        const currentStatus = newLead.status?.trim() ?? '';
+        if (previousStatus !== currentStatus) {
+          triggerAutoContactFlow(newLead);
+        }
       }
 
       if (newLead) {

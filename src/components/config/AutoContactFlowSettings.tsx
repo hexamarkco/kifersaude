@@ -33,6 +33,7 @@ import {
   DEFAULT_AUTO_CONTACT_FLOWS,
   getTemplateMessages,
   normalizeAutoContactSettings,
+  type AutoContactDelayUnit,
   type AutoContactScheduleAdjustmentReason,
   type AutoContactFlow,
   type AutoContactFlowActionType,
@@ -358,8 +359,10 @@ export default function AutoContactFlowSettings() {
       .map((flow, flowIndex) => {
         const steps = flow.steps
           .map((step, stepIndex) => {
-            const rawDelay = Number(step.delayHours);
-            const delayHours = Number.isFinite(rawDelay) && rawDelay >= 0 ? rawDelay : 0;
+            const stepWithLegacyDelay = step as AutoContactFlowStep & { delayHours?: number };
+            const rawDelay = Number(stepWithLegacyDelay.delayValue ?? stepWithLegacyDelay.delayHours);
+            const delayValue = Number.isFinite(rawDelay) && rawDelay >= 0 ? rawDelay : 0;
+            const delayUnit: AutoContactDelayUnit = step.delayUnit ?? 'hours';
             const actionType = (step.actionType ?? 'send_message') as AutoContactFlowActionType;
             const messageSource = (step.messageSource ?? 'template') as AutoContactFlowMessageSource;
             const templateId =
@@ -374,7 +377,8 @@ export default function AutoContactFlowSettings() {
 
             return {
               id: step.id?.trim() ? step.id : `flow-${flow.id}-step-${stepIndex}`,
-              delayHours,
+              delayValue,
+              delayUnit,
               actionType,
               messageSource,
               templateId,
@@ -382,7 +386,7 @@ export default function AutoContactFlowSettings() {
               statusToSet: step.statusToSet?.trim() || '',
             };
           })
-          .filter((step) => step.delayHours >= 0);
+          .filter((step) => step.delayValue >= 0);
         const conditions = (flow.conditions ?? [])
           .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-condition-${conditionIndex}`,
@@ -602,6 +606,12 @@ export default function AutoContactFlowSettings() {
     template: 'Template',
     custom: 'Personalizado',
   };
+  const delayUnitLabels: Record<AutoContactDelayUnit, { singular: string; plural: string }> = {
+    seconds: { singular: 'segundo', plural: 'segundos' },
+    minutes: { singular: 'minuto', plural: 'minutos' },
+    hours: { singular: 'hora', plural: 'horas' },
+    days: { singular: 'dia', plural: 'dias' },
+  };
 
   const messageTypeIcons: Record<TemplateMessageType, typeof MessageCircle> = {
     text: MessageCircle,
@@ -612,7 +622,8 @@ export default function AutoContactFlowSettings() {
   };
   const createFlowStep = (templateId = messageTemplatesDraft[0]?.id): AutoContactFlowStep => ({
     id: `flow-step-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    delayHours: 2,
+    delayValue: 2,
+    delayUnit: 'hours',
     actionType: 'send_message',
     messageSource: 'template',
     templateId: templateId || messageTemplatesDraft[0]?.id || '',
@@ -879,6 +890,11 @@ export default function AutoContactFlowSettings() {
     weekend: 'fim de semana',
     holiday: 'feriado',
   };
+  const formatDelayLabel = (delayValue: number, delayUnit: AutoContactDelayUnit) => {
+    const labels = delayUnitLabels[delayUnit] ?? delayUnitLabels.hours;
+    const label = delayValue === 1 ? labels.singular : labels.plural;
+    return `${delayValue} ${label}`;
+  };
   const getLocalDateTimeValue = () => {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -895,7 +911,8 @@ export default function AutoContactFlowSettings() {
       index: index + 1,
       step: item.step,
       scheduledAt: item.scheduledAt,
-      delayHours: item.step.delayHours,
+      delayValue: item.step.delayValue,
+      delayUnit: item.step.delayUnit,
       adjustmentReasons: item.adjustmentReasons,
     }));
   }, [activeFlow, getFlowScheduling, showSimulation, simulationStart]);
@@ -1231,7 +1248,8 @@ export default function AutoContactFlowSettings() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Fluxos de automação</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Monte sequências com espera em horas, envio de templates e condição de encerramento.
+                  Monte sequências com espera configurável (segundos, minutos, horas ou dias), envio de templates e
+                  condição de encerramento.
                 </p>
               </div>
               <button
@@ -1881,20 +1899,40 @@ export default function AutoContactFlowSettings() {
                           key={step.id}
                           className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
                         >
-                          <div className="grid gap-3 md:grid-cols-[140px_220px_1fr_auto]">
+                          <div className="grid gap-3 md:grid-cols-[160px_160px_1fr_auto]">
                             <div>
-                              <label className="block text-xs font-semibold text-slate-500 mb-1">Esperar (horas)</label>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">Esperar</label>
                               <input
                                 type="number"
                                 min={0}
-                                value={step.delayHours}
+                                value={step.delayValue}
                                 onChange={(event) =>
                                   handleUpdateFlowStep(activeFlow.id, step.id, {
-                                    delayHours: Number(event.target.value),
+                                    delayValue: Number(event.target.value),
                                   })
                                 }
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                               />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                Unidade
+                              </label>
+                              <select
+                                value={step.delayUnit ?? 'hours'}
+                                onChange={(event) =>
+                                  handleUpdateFlowStep(activeFlow.id, step.id, {
+                                    delayUnit: event.target.value as AutoContactDelayUnit,
+                                  })
+                                }
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              >
+                                {Object.entries(delayUnitLabels).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label.plural}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">
@@ -2139,7 +2177,7 @@ export default function AutoContactFlowSettings() {
                               >
                                 <div>
                                   <div>
-                                    Etapa {item.index}: {item.delayHours}h após início
+                                    Etapa {item.index}: {formatDelayLabel(item.delayValue, item.delayUnit)} após início
                                   </div>
                                   {item.adjustmentReasons.length > 0 && (
                                     <div className="text-[11px] text-teal-600">

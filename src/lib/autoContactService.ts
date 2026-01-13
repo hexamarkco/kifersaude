@@ -940,15 +940,14 @@ export async function runAutoContactFlow({
       flowScheduling?.allowedWeekdays?.length ? flowScheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
   };
 
-  let cumulativeDelayMs = 0;
+  let previousStepAt = new Date();
   let firstMessageSent = false;
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
     if (shouldExitFlow(matchingFlow, lead, event)) return;
-    cumulativeDelayMs += getAutoContactStepDelayMs(step);
-
-    const desiredAt = new Date(Date.now() + cumulativeDelayMs);
+    const stepDelayMs = getAutoContactStepDelayMs(step);
+    const desiredAt = new Date(previousStepAt.getTime() + stepDelayMs);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
     const now = new Date();
     const waitMs = scheduledAt.getTime() - now.getTime();
@@ -998,6 +997,7 @@ export async function runAutoContactFlow({
         throw error;
       }
 
+      previousStepAt = new Date();
       continue;
     }
 
@@ -1006,12 +1006,14 @@ export async function runAutoContactFlow({
       if (updatedStatus) {
         lead.status = updatedStatus;
       }
+      previousStepAt = new Date();
       continue;
     }
 
     if (step.actionType === 'archive_lead') {
       await updateLeadArchive(lead.id, true);
       lead.arquivado = true;
+      previousStepAt = new Date();
       continue;
     }
 
@@ -1019,6 +1021,8 @@ export async function runAutoContactFlow({
       await deleteLead(lead.id);
       return;
     }
+
+    previousStepAt = new Date();
   }
 }
 

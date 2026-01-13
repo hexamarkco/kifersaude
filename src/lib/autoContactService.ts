@@ -34,9 +34,12 @@ export type AutoContactFlowCustomMessage = {
   filename?: string;
 };
 
+export type AutoContactDelayUnit = 'seconds' | 'minutes' | 'hours' | 'days';
+
 export type AutoContactFlowStep = {
   id: string;
-  delayHours: number;
+  delayValue: number;
+  delayUnit: AutoContactDelayUnit;
   actionType: AutoContactFlowActionType;
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
@@ -213,6 +216,28 @@ export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
 const normalizeMessageType = (type: unknown): TemplateMessageType =>
   type === 'image' || type === 'video' || type === 'audio' || type === 'document' ? type : 'text';
 
+const DELAY_UNIT_TO_MS: Record<AutoContactDelayUnit, number> = {
+  seconds: 1000,
+  minutes: 60_000,
+  hours: 3_600_000,
+  days: 86_400_000,
+};
+
+const normalizeDelayUnit = (unit: unknown): AutoContactDelayUnit => {
+  switch (unit) {
+    case 'seconds':
+    case 'minutes':
+    case 'hours':
+    case 'days':
+      return unit;
+    default:
+      return 'hours';
+  }
+};
+
+export const getAutoContactStepDelayMs = (step: AutoContactFlowStep): number =>
+  (step.delayValue ?? 0) * (DELAY_UNIT_TO_MS[step.delayUnit] ?? DELAY_UNIT_TO_MS.hours);
+
 export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
   {
     id: 'flow-1',
@@ -227,21 +252,24 @@ export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
     steps: [
       {
         id: 'flow-1-step-1',
-        delayHours: 2,
+        delayValue: 2,
+        delayUnit: 'hours',
         actionType: 'send_message',
         messageSource: 'template',
         templateId: 'template-1',
       },
       {
         id: 'flow-1-step-2',
-        delayHours: 24,
+        delayValue: 24,
+        delayUnit: 'hours',
         actionType: 'send_message',
         messageSource: 'template',
         templateId: 'template-2',
       },
       {
         id: 'flow-1-step-3',
-        delayHours: 48,
+        delayValue: 48,
+        delayUnit: 'hours',
         actionType: 'send_message',
         messageSource: 'template',
         templateId: 'template-3',
@@ -467,8 +495,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
-          const delayHoursRaw = Number(step?.delayHours);
-          const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
+          const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
+          const delayValue = Number.isFinite(delayValueRaw) && delayValueRaw >= 0 ? delayValueRaw : 0;
+          const delayUnit = normalizeDelayUnit(step?.delayUnit ?? (step?.delayHours != null ? 'hours' : undefined));
           const actionType = normalizeActionType(step?.actionType);
           if (actionType === 'send_message') {
             const messageSource = normalizeMessageSource(step?.messageSource);
@@ -477,7 +506,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               messageTemplates.some((template) => template.id === templateId) ? templateId : fallbackTemplateId;
             return {
               id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
-              delayHours,
+              delayValue,
+              delayUnit,
               actionType,
               messageSource,
               templateId: validTemplateId,
@@ -488,7 +518,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           if (actionType === 'update_status') {
             return {
               id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
-              delayHours,
+              delayValue,
+              delayUnit,
               actionType,
               statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
             };
@@ -496,7 +527,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
           return {
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
-            delayHours,
+            delayValue,
+            delayUnit,
             actionType,
           };
         });
@@ -908,15 +940,15 @@ export async function runAutoContactFlow({
       flowScheduling?.allowedWeekdays?.length ? flowScheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
   };
 
-  let cumulativeDelayHours = 0;
+  let cumulativeDelayMs = 0;
   let firstMessageSent = false;
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
     if (shouldExitFlow(matchingFlow, lead, event)) return;
-    cumulativeDelayHours += step.delayHours;
+    cumulativeDelayMs += getAutoContactStepDelayMs(step);
 
-    const desiredAt = new Date(Date.now() + cumulativeDelayHours * 60 * 60 * 1000);
+    const desiredAt = new Date(Date.now() + cumulativeDelayMs);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
     const now = new Date();
     const waitMs = scheduledAt.getTime() - now.getTime();
@@ -1263,7 +1295,7 @@ export const buildAutoContactScheduleTimeline = ({
   let cursor = utcToZonedTime(startAt, timeZone);
   return steps.map((step) => {
     const adjustmentReasons = new Set<AutoContactScheduleAdjustmentReason>();
-    let scheduled = new Date(cursor.getTime() + step.delayHours * 60 * 60 * 1000);
+    let scheduled = new Date(cursor.getTime() + getAutoContactStepDelayMs(step));
 
     for (let guard = 0; guard < 366; guard += 1) {
       const weekdayNumber = getWeekdayNumber(scheduled);

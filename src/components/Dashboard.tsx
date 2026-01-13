@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useSearchParams } from 'react-router-dom';
-import { supabase, Lead, Contract } from '../lib/supabase';
+import { supabase, Lead, Contract, fetchAllPages } from '../lib/supabase';
 import { parseDateWithoutTimezone, parseDateWithoutTimezoneAsDate } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import type { TabNavigationOptions } from '../types/navigation';
@@ -380,14 +380,22 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     setLoading(true);
     setError(null);
     try {
-      const [leadsRes, contractsRes, holdersRes, dependentsRes] = await Promise.all([
-        supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.from('contracts').select('*').order('created_at', { ascending: false }),
-        supabase.from('contract_holders').select('*'),
-        supabase.from('dependents').select('*'),
+      const [leadsData, contractsData, holdersData, dependentsData] = await Promise.all([
+        fetchAllPages<Lead>((from, to) =>
+          supabase.from('leads').select('*').order('created_at', { ascending: false }).range(from, to),
+        ),
+        fetchAllPages<Contract>((from, to) =>
+          supabase.from('contracts').select('*').order('created_at', { ascending: false }).range(from, to),
+        ),
+        fetchAllPages<Holder>((from, to) =>
+          supabase.from('contract_holders').select('*').range(from, to),
+        ),
+        fetchAllPages<Dependent>((from, to) =>
+          supabase.from('dependents').select('*').range(from, to),
+        ),
       ]);
 
-      const mappedLeads = (leadsRes.data || [])
+      const mappedLeads = (leadsData || [])
         .map((lead) => mapLeadWithRelations(lead))
         .filter((lead): lead is Lead => Boolean(lead));
 
@@ -407,9 +415,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         setLeads(mappedLeads);
       }
 
-      setContracts(contractsRes.data || []);
-      setHolders(holdersRes.data || []);
-      setDependents(dependentsRes.data || []);
+      setContracts(contractsData || []);
+      setHolders(holdersData || []);
+      setDependents(dependentsData || []);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Erro ao carregar dados:', error);

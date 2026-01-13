@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase, Contract, Lead, ContractValueAdjustment, Operadora } from '../lib/supabase';
+import { supabase, Contract, Lead, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search } from 'lucide-react';
 import HolderForm from './HolderForm';
@@ -197,18 +197,19 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   const loadLeads = async () => {
     try {
-      let query = supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false);
+      const data = await fetchAllPages<Lead>((from, to) => {
+        let query = supabase
+          .from('leads')
+          .select('*')
+          .eq('arquivado', false);
 
-      if (convertibleLeadStatuses.length > 0) {
-        query = query.in('status', convertibleLeadStatuses);
-      }
+        if (convertibleLeadStatuses.length > 0) {
+          query = query.in('status', convertibleLeadStatuses);
+        }
 
-      const { data, error } = await query.order('nome_completo');
+        return query.order('nome_completo').range(from, to);
+      });
 
-      if (error) throw error;
       setLeads(data || []);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);

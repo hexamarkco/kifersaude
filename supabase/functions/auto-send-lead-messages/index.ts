@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@^2.57.4';
+import { formatGreetingTitle, getGreetingForDate } from '../../../src/lib/greeting.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +30,7 @@ interface AutoContactSettings {
   dailySendLimit?: number;
   scheduling?: {
     dailySendLimit?: number;
+    timezone?: string;
   };
 }
 
@@ -44,12 +46,16 @@ interface Lead {
   daily_send_limit?: number | null;
 }
 
-function applyTemplateVariables(template: string, lead: Lead): string {
+function applyTemplateVariables(template: string, lead: Lead, timeZone?: string): string {
   const firstName = lead.nome_completo?.trim().split(/\s+/)[0] ?? '';
+  const greeting = getGreetingForDate(new Date(), timeZone);
+  const greetingTitle = formatGreetingTitle(greeting);
 
   return template
     .replace(/{{\s*nome\s*}}/gi, lead.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
+    .replace(/{{\s*saudacao\s*}}/gi, greeting)
+    .replace(/{{\s*saudacao_(?:capitalizada|titulo)\s*}}/gi, greetingTitle)
     .replace(/{{\s*origem\s*}}/gi, lead.origem || '')
     .replace(/{{\s*cidade\s*}}/gi, lead.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead.responsavel || '');
@@ -376,7 +382,7 @@ Deno.serve(async (req: Request) => {
         await waitSeconds(waitMs / 1000);
       }
 
-      const finalMessage = applyTemplateVariables(step.message, lead);
+      const finalMessage = applyTemplateVariables(step.message, lead, settings.scheduling?.timezone);
 
       try {
         const response = await sendWhatsAppMessage(chatId, finalMessage, whapiToken);

@@ -1,4 +1,5 @@
 import { Lead, supabase } from './supabase';
+import { formatGreetingTitle, getGreetingForDate } from './greeting';
 import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
@@ -595,12 +596,20 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   };
 };
 
-export const applyTemplateVariables = (template: string, lead: Lead) => {
+export const applyTemplateVariables = (
+  template: string,
+  lead: Lead,
+  timeZone: string = DEFAULT_SCHEDULING.timezone,
+) => {
   const firstName = lead.nome_completo?.trim().split(/\s+/)[0] ?? '';
+  const greeting = getGreetingForDate(new Date(), timeZone);
+  const greetingTitle = formatGreetingTitle(greeting);
 
   return template
     .replace(/{{\s*nome\s*}}/gi, lead.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
+    .replace(/{{\s*saudacao\s*}}/gi, greeting)
+    .replace(/{{\s*saudacao_(?:capitalizada|titulo)\s*}}/gi, greetingTitle)
     .replace(/{{\s*origem\s*}}/gi, lead.origem || '')
     .replace(/{{\s*cidade\s*}}/gi, lead.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead.responsavel || '');
@@ -826,11 +835,12 @@ const shouldExitFlow = (flow: AutoContactFlow, lead: Lead, event?: string): bool
 const buildCustomMessagePayload = (
   customMessage: AutoContactFlowCustomMessage | undefined,
   lead: Lead,
+  timeZone: string,
 ): { contentType: 'string' | 'image' | 'video' | 'audio' | 'document'; content: string | { url: string; caption?: string; filename?: string } } | null => {
   if (!customMessage) return null;
   const type = customMessage.type ?? 'text';
-  const caption = applyTemplateVariables(customMessage.caption ?? '', lead).trim();
-  const text = applyTemplateVariables(customMessage.text ?? '', lead).trim();
+  const caption = applyTemplateVariables(customMessage.caption ?? '', lead, timeZone).trim();
+  const text = applyTemplateVariables(customMessage.text ?? '', lead, timeZone).trim();
   const mediaUrl = customMessage.mediaUrl?.trim();
 
   if (type === 'text') {
@@ -966,7 +976,7 @@ export async function runAutoContactFlow({
     if (step.actionType === 'send_message') {
       try {
         if (step.messageSource === 'custom') {
-          const payload = buildCustomMessagePayload(step.customMessage, lead);
+          const payload = buildCustomMessagePayload(step.customMessage, lead, effectiveScheduling.timezone);
           if (!payload) continue;
           await sendAutoContactMessage({
             lead,
@@ -982,7 +992,7 @@ export async function runAutoContactFlow({
           const message = getTemplateMessage(template);
           if (!message.trim()) continue;
 
-          const finalMessage = applyTemplateVariables(message, lead);
+          const finalMessage = applyTemplateVariables(message, lead, effectiveScheduling.timezone);
           await sendAutoContactMessage({ lead, contentType: 'string', content: finalMessage, settings });
         }
       } catch (error) {

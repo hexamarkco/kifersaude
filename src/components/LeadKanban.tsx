@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase, Lead } from '../lib/supabase';
+import { supabase, Lead, fetchAllPages } from '../lib/supabase';
 import { Users, Phone, Mail, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
@@ -71,17 +71,18 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
         return;
       }
 
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('arquivado', false)
-        .in(
-          'status',
-          statusColumns.map((column) => column.nome),
-        )
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await fetchAllPages<Lead>((from, to) =>
+        supabase
+          .from('leads')
+          .select('*')
+          .eq('arquivado', false)
+          .in(
+            'status',
+            statusColumns.map((column) => column.nome),
+          )
+          .order('created_at', { ascending: false })
+          .range(from, to),
+      );
 
       let fetchedLeads: Lead[] = (data as Lead[]) || [];
 

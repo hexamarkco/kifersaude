@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, fetchAllPages } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info } from 'lucide-react';
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
@@ -87,11 +87,9 @@ export default function WhatsAppTab() {
   useEffect(() => {
     const loadLeadNames = async () => {
       try {
-        const { data, error } = await supabase
-          .from('leads')
-          .select('telefone, nome_completo');
-
-        if (error) throw error;
+        const data = await fetchAllPages<{ telefone: string; nome_completo: string }>((from, to) =>
+          supabase.from('leads').select('telefone, nome_completo').range(from, to),
+        );
 
         const phoneMap = new Map<string, string>();
         (data || []).forEach((lead) => {

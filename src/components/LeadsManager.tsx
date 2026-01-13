@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase, Lead } from '../lib/supabase';
+import { supabase, Lead, fetchAllPages } from '../lib/supabase';
 import {
   Plus,
   Search,
@@ -323,12 +323,9 @@ export default function LeadsManager({
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await fetchAllPages<Lead>((from, to) =>
+        supabase.from('leads').select('*').order('created_at', { ascending: false }).range(from, to),
+      );
       const mappedLeads = (data || []).map((lead) =>
         mapLeadRelations(lead, {
           origins: leadOrigins,

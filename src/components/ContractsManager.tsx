@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase, Contract, Lead } from '../lib/supabase';
+import { supabase, Contract, Lead, fetchAllPages } from '../lib/supabase';
 import { Plus, Search, Filter, FileText, Eye, AlertCircle, Trash2, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -128,18 +128,17 @@ export default function ContractsManager({
   const loadContracts = async () => {
     setLoading(true);
     try {
-      const { data: contractsData, error: contractsError } = await supabase
-        .from('contracts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (contractsError) throw contractsError;
-
-      const { data: holdersData, error: holdersError } = await supabase
-        .from('contract_holders')
-        .select('id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj');
-
-      if (holdersError) throw holdersError;
+      const [contractsData, holdersData] = await Promise.all([
+        fetchAllPages<Contract>((from, to) =>
+          supabase.from('contracts').select('*').order('created_at', { ascending: false }).range(from, to),
+        ),
+        fetchAllPages<ContractHolder>((from, to) =>
+          supabase
+            .from('contract_holders')
+            .select('id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj')
+            .range(from, to),
+        ),
+      ]);
 
       const holdersMap: Record<string, ContractHolder[]> = {};
       holdersData?.forEach(holder => {

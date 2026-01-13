@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { formatGreetingTitle, getGreetingForDate } from '../../../src/lib/greeting.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,9 @@ type AutoContactSettings = {
   apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
+  scheduling?: {
+    timezone?: string;
+  };
 };
 
 type FlowMessageType = 'text' | 'image' | 'video' | 'audio' | 'document';
@@ -142,6 +146,9 @@ type AutoContactFlowSettings = {
   apiKey: string;
   messageTemplates: AutoContactTemplate[];
   flows: AutoContactFlow[];
+  scheduling?: {
+    timezone?: string;
+  };
 };
 
 type AutoContactFlowEvent = 'lead_created';
@@ -626,6 +633,8 @@ async function sendWhatsappMessages({
 const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null => {
   if (!settings || typeof settings !== 'object') return null;
 
+  const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
+
   const messageFlow: AutoContactStep[] = Array.isArray(settings.messageFlow)
     ? settings.messageFlow.map((step: any, index: number) => ({
         message: typeof step?.message === 'string' ? step.message : '',
@@ -653,15 +662,22 @@ const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null
         ? settings.statusOnSend.trim()
         : 'Contato Inicial',
     messageFlow,
+    scheduling: {
+      timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : undefined,
+    },
   };
 };
 
-const applyTemplateVariables = (template: string, lead: any) => {
+const applyTemplateVariables = (template: string, lead: any, timeZone?: string) => {
   const firstName = lead?.nome_completo?.trim()?.split(/\s+/)?.[0] ?? '';
+  const greeting = getGreetingForDate(new Date(), timeZone);
+  const greetingTitle = formatGreetingTitle(greeting);
 
   return template
     .replace(/{{\s*nome\s*}}/gi, lead?.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
+    .replace(/{{\s*saudacao\s*}}/gi, greeting)
+    .replace(/{{\s*saudacao_(?:capitalizada|titulo)\s*}}/gi, greetingTitle)
     .replace(/{{\s*origem\s*}}/gi, lead?.origem || '')
     .replace(/{{\s*cidade\s*}}/gi, lead?.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead?.responsavel || '');
@@ -903,12 +919,18 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
     })
     .filter((flow) => flow.steps.length > 0);
 
+  const rawScheduling =
+    settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
+
   return {
     enabled: settings.enabled !== false,
     autoSend: settings.autoSend !== false,
     apiKey: apiKeyValue,
     messageTemplates,
     flows: normalizedFlows,
+    scheduling: {
+      timezone: typeof rawScheduling.timezone === 'string' ? rawScheduling.timezone : undefined,
+    },
   };
 };
 
@@ -1190,10 +1212,11 @@ async function sendAutoContactMessage({
 const buildCustomMessagePayload = (
   customMessage: AutoContactFlowCustomMessage | undefined,
   lead: any,
+  timeZone?: string,
 ): { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } } | null => {
   if (!customMessage) return null;
   if (customMessage.type === 'text') {
-    const message = applyTemplateVariables(customMessage.text ?? '', lead).trim();
+    const message = applyTemplateVariables(customMessage.text ?? '', lead, timeZone).trim();
     if (!message) return null;
     return { contentType: 'text', content: message };
   }
@@ -1203,7 +1226,7 @@ const buildCustomMessagePayload = (
     contentType: customMessage.type,
     content: {
       url: customMessage.mediaUrl,
-      caption: customMessage.caption ? applyTemplateVariables(customMessage.caption, lead) : undefined,
+      caption: customMessage.caption ? applyTemplateVariables(customMessage.caption, lead, timeZone) : undefined,
       filename: customMessage.filename,
     },
   };
@@ -1247,7 +1270,7 @@ async function triggerAutoContactForLead({
     return;
   }
 
-  const message = applyTemplateVariables(firstStep.message, lead);
+  const message = applyTemplateVariables(firstStep.message, lead, settings.scheduling?.timezone);
 
   try {
     const url = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
@@ -1394,7 +1417,7 @@ async function runAutoContactFlowEngine({
           | null = null;
 
         if (step.messageSource === 'custom') {
-          payload = buildCustomMessagePayload(step.customMessage, leadWithRelations);
+          payload = buildCustomMessagePayload(step.customMessage, leadWithRelations, settings.scheduling?.timezone);
         } else {
           const template =
             settings.messageTemplates.find((item) => item.id === step.templateId) ??
@@ -1404,7 +1427,7 @@ async function runAutoContactFlowEngine({
           if (message.trim()) {
             payload = {
               contentType: 'text',
-              content: applyTemplateVariables(message, leadWithRelations),
+              content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
             };
           }
         }

@@ -175,13 +175,13 @@ export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
     id: 'template-1',
     name: 'Contato inicial',
     message:
-      'Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
+      '{{saudacao_capitalizada}} {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
     messages: [
       {
         id: 'template-1-message-1',
         type: 'text',
         text:
-          'Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
+          '{{saudacao_capitalizada}} {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação.',
       },
     ],
   },
@@ -189,13 +189,13 @@ export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
     id: 'template-2',
     name: 'Convite para conversar',
     message:
-      'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
+      '{{saudacao}} {{primeiro_nome}}! Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
     messages: [
       {
         id: 'template-2-message-1',
         type: 'text',
         text:
-          'Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
+          '{{saudacao}} {{primeiro_nome}}! Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊',
       },
     ],
   },
@@ -203,12 +203,12 @@ export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
     id: 'template-3',
     name: 'Lembrete cordial',
     message:
-      'Oi {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
+      '{{saudacao_capitalizada}} {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
     messages: [
       {
         id: 'template-3-message-1',
         type: 'text',
-        text: 'Oi {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
+        text: '{{saudacao_capitalizada}} {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?',
       },
     ],
   },

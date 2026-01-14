@@ -1237,9 +1237,18 @@ export default function AutoContactFlowSettings() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{nome}}'}</code> nome completo</span>
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{primeiro_nome}}'}</code> primeiro nome</span>
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{saudacao}}'}</code> saudação por horário</span>
+              <span>
+                <code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{saudacao_capitalizada}}'}</code>{' '}
+                saudação por horário (capitalizada)
+              </span>
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{origem}}'}</code> origem do lead</span>
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{cidade}}'}</code> cidade</span>
               <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{responsavel}}'}</code> responsável</span>
+            </div>
+            <div className="text-[11px] text-blue-700 mt-2">
+              A variável de saudação muda automaticamente de acordo com o horário configurado (ex.: bom dia, boa tarde,
+              boa noite).
             </div>
           </div>
 
@@ -2361,7 +2370,9 @@ export default function AutoContactFlowSettings() {
                     <div>
                       <h4 className="text-sm font-semibold text-slate-800">Mensagens do template</h4>
                       <p className="text-xs text-slate-500 mt-1">
-                        Combine textos, mídias, áudios e documentos em uma sequência completa.
+                        Combine textos, mídias, áudios e documentos em uma sequência completa. Use variáveis como
+                        <span className="font-semibold"> {'{{saudacao}}'}</span> para ajustar a saudação conforme o
+                        horário.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

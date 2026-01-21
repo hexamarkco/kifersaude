@@ -48,7 +48,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     vidas: contract?.vidas?.toString() || '1',
     bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
-    bonus_limite_mensal: contract?.bonus_limite_mensal?.toString() || '',
     responsavel: contract?.responsavel || leadToConvert?.responsavel || '',
     observacoes_internas: contract?.observacoes_internas || '',
     cnpj: contract?.cnpj || '',
@@ -294,10 +293,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   const vidasNumber = parseFloat(formData.vidas || '1') || 1;
   const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
-  const bonusLimiteMensalValor = parseFloat(formData.bonus_limite_mensal || '0') || 0;
   const bonusTotal = bonusPorVidaValor * vidasNumber;
-  const bonusLimiteTotal = bonusLimiteMensalValor > 0 ? bonusLimiteMensalValor * vidasNumber : 0;
-  const bonusParcelasEstimadas = bonusLimiteTotal > 0 ? Math.ceil(bonusTotal / bonusLimiteTotal) : 1;
 
   const handleAddInstallment = () => {
     setCommissionInstallments([
@@ -406,7 +402,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         vidas: formData.vidas ? parseInt(formData.vidas) : 1,
         bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFloat(formData.bonus_por_vida_valor) : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
-        bonus_limite_mensal: formData.bonus_limite_mensal ? parseFloat(formData.bonus_limite_mensal) : null,
         responsavel: formData.responsavel,
         observacoes_internas: formData.observacoes_internas || null,
         cnpj: formData.cnpj || null,
@@ -1176,29 +1171,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     />
                     <p className="text-xs text-slate-500 mt-1">
                       Total: R$ {bonusTotal.toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Limite mensal do bônus por vida (R$)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.bonus_limite_mensal}
-                      onChange={(e) => setFormData({ ...formData, bonus_limite_mensal: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      placeholder="Use 0 para sem limite"
-                    />
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Use quando a operadora limitar o pagamento mensal ao valor da vida (ex.: bônus maior que a mensalidade).
-                      {bonusLimiteTotal > 0 && (
-                        <span className="block text-[11px] text-slate-600 mt-1">
-                          Estimativa mensal: R$ {bonusLimiteTotal.toFixed(2)} por {bonusParcelasEstimadas} mês(es) até quitar.
-                        </span>
-                      )}
                     </p>
                   </div>
                 </div>

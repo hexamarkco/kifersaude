@@ -165,57 +165,13 @@ export default function CommissionCalendar() {
         const totalBonus = contract.bonus_por_vida_aplicado
           ? contract.bonus_por_vida_valor * vidas
           : contract.bonus_por_vida_valor;
-        const monthlyCap = contract.bonus_limite_mensal
-          ? (contract.bonus_por_vida_aplicado ? contract.bonus_limite_mensal * vidas : contract.bonus_limite_mensal)
-          : null;
-
-        if (monthlyCap && monthlyCap > 0 && monthlyCap < totalBonus) {
-          const installments: { value: number; date: Date }[] = [];
-          let remaining = roundCurrency(totalBonus);
-          let installmentIndex = 0;
-          const MAX_INSTALLMENTS = 60;
-
-          while (remaining > 0.009 && installmentIndex < MAX_INSTALLMENTS) {
-            const value = roundCurrency(Math.min(monthlyCap, remaining));
-            const installmentDate = new Date(bonusDate);
-            installmentDate.setMonth(installmentDate.getMonth() + installmentIndex);
-
-            installments.push({ value, date: installmentDate });
-
-            remaining = roundCurrency(remaining - value);
-            installmentIndex += 1;
-          }
-
-          if (installments.length === 0) {
-            mappedEvents.push({
-              id: `${contract.id}-bonus`,
-              date: getDateKey(bonusDate),
-              type: 'bonificacao',
-              value: totalBonus,
-              contract,
-            });
-          } else {
-            installments.forEach((installment, index) => {
-              mappedEvents.push({
-                id: `${contract.id}-bonus-${index + 1}`,
-                date: getDateKey(installment.date),
-                type: 'bonificacao',
-                value: installment.value,
-                contract,
-                installmentIndex: index + 1,
-                installmentCount: installments.length,
-              });
-            });
-          }
-        } else {
-          mappedEvents.push({
-            id: `${contract.id}-bonus`,
-            date: getDateKey(bonusDate),
-            type: 'bonificacao',
-            value: totalBonus,
-            contract,
-          });
-        }
+        mappedEvents.push({
+          id: `${contract.id}-bonus`,
+          date: getDateKey(bonusDate),
+          type: 'bonificacao',
+          value: totalBonus,
+          contract,
+        });
       }
     });
 

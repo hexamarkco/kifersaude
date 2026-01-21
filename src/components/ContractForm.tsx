@@ -174,6 +174,18 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     [baseMensalidade, adjustments]
   );
 
+  const totalCommissionFromInstallments = useMemo(
+    () =>
+      commissionInstallments.reduce((sum, parcel) => {
+        const percentual = parseFloat(parcel.percentual || '0');
+        if (isNaN(percentual)) {
+          return sum;
+        }
+        return sum + (adjustedMensalidade * percentual) / 100;
+      }, 0),
+    [adjustedMensalidade, commissionInstallments]
+  );
+
   useEffect(() => {
     if (adjustedMensalidade > 0) {
       const multiplicador = parseFloat(formData.comissao_multiplicador || '0');

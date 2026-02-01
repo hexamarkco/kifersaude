@@ -347,7 +347,7 @@ export default function ContractsManager({
   const getBonusValue = (contract: Contract) => {
     if (!contract.bonus_por_vida_valor) return null;
 
-    const vidas = contract.vidas || 1;
+    const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
     return contract.bonus_por_vida_aplicado
       ? contract.bonus_por_vida_valor * vidas
       : contract.bonus_por_vida_valor;
@@ -356,7 +356,7 @@ export default function ContractsManager({
   const getBonusMonthlyCap = (contract: Contract) => {
     if (!contract.bonus_limite_mensal || contract.bonus_limite_mensal <= 0) return null;
 
-    const vidas = contract.vidas || 1;
+    const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
     return contract.bonus_por_vida_aplicado
       ? contract.bonus_limite_mensal * vidas
       : contract.bonus_limite_mensal;

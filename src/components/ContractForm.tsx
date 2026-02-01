@@ -46,6 +46,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     previsao_recebimento_comissao: contract?.previsao_recebimento_comissao || '',
     previsao_pagamento_bonificacao: contract?.previsao_pagamento_bonificacao || '',
     vidas: contract?.vidas?.toString() || '1',
+    vidas_elegiveis_bonus: contract?.vidas_elegiveis_bonus?.toString() || '',
     bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
     bonus_limite_mensal: contract?.bonus_limite_mensal?.toString() || '',
@@ -293,10 +294,13 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   };
 
   const vidasNumber = parseFloat(formData.vidas || '1') || 1;
+  const eligibleLivesNumber = formData.vidas_elegiveis_bonus
+    ? Math.max(0, parseFloat(formData.vidas_elegiveis_bonus || '0') || 0)
+    : vidasNumber;
   const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
   const bonusLimiteMensalValor = parseFloat(formData.bonus_limite_mensal || '0') || 0;
-  const bonusTotal = bonusPorVidaValor * vidasNumber;
-  const bonusLimiteTotal = bonusLimiteMensalValor > 0 ? bonusLimiteMensalValor * vidasNumber : 0;
+  const bonusTotal = bonusPorVidaValor * eligibleLivesNumber;
+  const bonusLimiteTotal = bonusLimiteMensalValor > 0 ? bonusLimiteMensalValor * eligibleLivesNumber : 0;
   const bonusParcelasEstimadas = bonusLimiteTotal > 0 ? Math.ceil(bonusTotal / bonusLimiteTotal) : 1;
 
   const handleAddInstallment = () => {
@@ -403,7 +407,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         comissao_parcelas: formData.comissao_recebimento_adiantado ? [] : installmentsPayload,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
         previsao_pagamento_bonificacao: formData.previsao_pagamento_bonificacao || null,
-        vidas: formData.vidas ? parseInt(formData.vidas) : 1,
+        vidas: formData.vidas ? parseInt(formData.vidas, 10) : 1,
+        vidas_elegiveis_bonus: formData.vidas_elegiveis_bonus
+          ? parseInt(formData.vidas_elegiveis_bonus, 10)
+          : null,
         bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFloat(formData.bonus_por_vida_valor) : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         bonus_limite_mensal: formData.bonus_limite_mensal ? parseFloat(formData.bonus_limite_mensal) : null,
@@ -944,6 +951,21 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     }
                     className="w-full h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
                   />
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <span className="text-xs text-slate-500">Digite o multiplicador</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={formData.comissao_multiplicador}
+                      onChange={(e) =>
+                        setFormData({ ...formData, comissao_multiplicador: e.target.value })
+                      }
+                      className="w-full sm:w-28 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                    />
+                  </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
                     <span>0x</span>
                     <span className="text-teal-600 font-medium">2.8x (padrão)</span>
@@ -1160,7 +1182,26 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
               </div>
 
               {formData.bonus_por_vida_aplicado && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Vidas elegíveis para bônus
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={vidasNumber}
+                      value={formData.vidas_elegiveis_bonus || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, vidas_elegiveis_bonus: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      placeholder={`Até ${vidasNumber}`}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Informe quantas vidas são elegíveis ao bônus.
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Bônus por Vida (R$)

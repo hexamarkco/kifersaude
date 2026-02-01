@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase, Contract, Lead, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
+import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search } from 'lucide-react';
 import HolderForm from './HolderForm';
@@ -411,10 +411,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
         observacoes_internas: formData.observacoes_internas || null,
-        cnpj: formData.cnpj || null,
-        razao_social: formData.razao_social || null,
-        nome_fantasia: formData.nome_fantasia || null,
-        endereco_empresa: formData.endereco_empresa || null,
       };
 
       const normalizedContractData = {
@@ -465,10 +461,18 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   };
 
   if (showHolderForm && contractId) {
+    const initialHolderData: Partial<ContractHolder> = {
+      cnpj: formData.cnpj || undefined,
+      razao_social: formData.razao_social || undefined,
+      nome_fantasia: formData.nome_fantasia || undefined,
+      endereco: formData.endereco_empresa || undefined,
+    };
+
     return (
       <HolderForm
         contractId={contractId}
         modalidade={formData.modalidade}
+        initialData={initialHolderData}
         onClose={onClose}
         onSave={onSave}
       />

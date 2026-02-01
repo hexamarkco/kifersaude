@@ -8,6 +8,7 @@ type HolderFormProps = {
   contractId: string;
   modalidade: string;
   holder?: ContractHolder;
+  initialData?: Partial<ContractHolder>;
   bonusPorVidaDefault?: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -17,33 +18,35 @@ export default function HolderForm({
   contractId,
   modalidade,
   holder,
+  initialData,
   bonusPorVidaDefault,
   onClose,
   onSave,
 }: HolderFormProps) {
   const [formData, setFormData] = useState({
-    nome_completo: holder?.nome_completo || '',
-    cpf: holder?.cpf || '',
-    rg: holder?.rg || '',
-    data_nascimento: formatDateForInput(holder?.data_nascimento) || '',
-    sexo: holder?.sexo || '',
-    estado_civil: holder?.estado_civil || '',
-    telefone: holder?.telefone || '',
-    email: holder?.email || '',
-    cep: holder?.cep || '',
-    endereco: holder?.endereco || '',
-    numero: holder?.numero || '',
-    complemento: holder?.complemento || '',
-    bairro: holder?.bairro || '',
-    cidade: holder?.cidade || '',
-    estado: holder?.estado || '',
-    cns: holder?.cns || '',
-    cnpj: holder?.cnpj || '',
-    razao_social: holder?.razao_social || '',
-    nome_fantasia: holder?.nome_fantasia || '',
-    percentual_societario: holder?.percentual_societario?.toString() || '',
-    data_abertura_cnpj: formatDateForInput(holder?.data_abertura_cnpj) || '',
-    bonus_por_vida_aplicado: holder?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
+    nome_completo: holder?.nome_completo || initialData?.nome_completo || '',
+    cpf: holder?.cpf || initialData?.cpf || '',
+    rg: holder?.rg || initialData?.rg || '',
+    data_nascimento: formatDateForInput(holder?.data_nascimento || initialData?.data_nascimento) || '',
+    sexo: holder?.sexo || initialData?.sexo || '',
+    estado_civil: holder?.estado_civil || initialData?.estado_civil || '',
+    telefone: holder?.telefone || initialData?.telefone || '',
+    email: holder?.email || initialData?.email || '',
+    cep: holder?.cep || initialData?.cep || '',
+    endereco: holder?.endereco || initialData?.endereco || '',
+    numero: holder?.numero || initialData?.numero || '',
+    complemento: holder?.complemento || initialData?.complemento || '',
+    bairro: holder?.bairro || initialData?.bairro || '',
+    cidade: holder?.cidade || initialData?.cidade || '',
+    estado: holder?.estado || initialData?.estado || '',
+    cns: holder?.cns || initialData?.cns || '',
+    cnpj: holder?.cnpj || initialData?.cnpj || '',
+    razao_social: holder?.razao_social || initialData?.razao_social || '',
+    nome_fantasia: holder?.nome_fantasia || initialData?.nome_fantasia || '',
+    percentual_societario: holder?.percentual_societario?.toString() || initialData?.percentual_societario?.toString() || '',
+    data_abertura_cnpj: formatDateForInput(holder?.data_abertura_cnpj || initialData?.data_abertura_cnpj) || '',
+    bonus_por_vida_aplicado:
+      holder?.bonus_por_vida_aplicado ?? initialData?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
   });
   const [saving, setSaving] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);

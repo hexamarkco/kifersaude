@@ -1139,7 +1139,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             tipo: 'Titular',
             contract_id: holder.contract_id,
             contract: contractsMap.get(holder.contract_id),
-            isPJ: Boolean(contractsMap.get(holder.contract_id)?.cnpj),
+            isPJ: Boolean(holder?.cnpj),
           });
         }
       });

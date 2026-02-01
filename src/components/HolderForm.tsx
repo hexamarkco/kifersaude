@@ -8,11 +8,19 @@ type HolderFormProps = {
   contractId: string;
   modalidade: string;
   holder?: ContractHolder;
+  bonusPorVidaDefault?: boolean;
   onClose: () => void;
   onSave: () => void;
 };
 
-export default function HolderForm({ contractId, modalidade, holder, onClose, onSave }: HolderFormProps) {
+export default function HolderForm({
+  contractId,
+  modalidade,
+  holder,
+  bonusPorVidaDefault,
+  onClose,
+  onSave,
+}: HolderFormProps) {
   const [formData, setFormData] = useState({
     nome_completo: holder?.nome_completo || '',
     cpf: holder?.cpf || '',
@@ -35,6 +43,7 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
     nome_fantasia: holder?.nome_fantasia || '',
     percentual_societario: holder?.percentual_societario?.toString() || '',
     data_abertura_cnpj: formatDateForInput(holder?.data_abertura_cnpj) || '',
+    bonus_por_vida_aplicado: holder?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
   });
   const [saving, setSaving] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
@@ -132,6 +141,7 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
         nome_fantasia: formData.nome_fantasia || null,
         percentual_societario: formData.percentual_societario ? parseFloat(formData.percentual_societario) : null,
         data_abertura_cnpj: formData.data_abertura_cnpj || null,
+        bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
       };
 
       if (holder) {
@@ -241,6 +251,23 @@ export default function HolderForm({ contractId, modalidade, holder, onClose, on
                   onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
+              </div>
+
+              <div className="md:col-span-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.bonus_por_vida_aplicado}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })
+                    }
+                    className="w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Aplicar bônus por vida</span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1">
+                  Marque se este titular é elegível ao bônus por vida deste contrato.
+                </p>
               </div>
 
               <div>

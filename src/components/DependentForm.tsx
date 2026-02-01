@@ -9,11 +9,20 @@ type DependentFormProps = {
   holders: ContractHolder[];
   dependent: Dependent | null;
   selectedHolderId?: string | null;
+  bonusPorVidaDefault?: boolean;
   onClose: () => void;
   onSave: () => void;
 };
 
-export default function DependentForm({ contractId, holders, dependent, selectedHolderId, onClose, onSave }: DependentFormProps) {
+export default function DependentForm({
+  contractId,
+  holders,
+  dependent,
+  selectedHolderId,
+  bonusPorVidaDefault,
+  onClose,
+  onSave,
+}: DependentFormProps) {
   const holderOptions = useMemo(() => holders.map(holder => ({ value: holder.id, label: holder.nome_completo })), [holders]);
   const defaultHolderId = dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '';
   const [formData, setFormData] = useState({
@@ -25,6 +34,7 @@ export default function DependentForm({ contractId, holders, dependent, selected
     elegibilidade: dependent?.elegibilidade || '',
     valor_individual: dependent?.valor_individual?.toString() || '',
     carencia_individual: dependent?.carencia_individual || '',
+    bonus_por_vida_aplicado: dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
   });
   useEffect(() => {
     setFormData((current) => ({
@@ -37,8 +47,9 @@ export default function DependentForm({ contractId, holders, dependent, selected
       elegibilidade: dependent?.elegibilidade || '',
       valor_individual: dependent?.valor_individual?.toString() || '',
       carencia_individual: dependent?.carencia_individual || '',
+      bonus_por_vida_aplicado: dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
     }));
-  }, [dependent, holderOptions, selectedHolderId]);
+  }, [dependent, holderOptions, selectedHolderId, bonusPorVidaDefault]);
   const [saving, setSaving] = useState(false);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
@@ -87,6 +98,7 @@ export default function DependentForm({ contractId, holders, dependent, selected
         elegibilidade: formData.elegibilidade || null,
         valor_individual: formData.valor_individual ? parseFloat(formData.valor_individual) : null,
         carencia_individual: formData.carencia_individual || null,
+        bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
       };
 
       if (dependent) {
@@ -200,6 +212,23 @@ export default function DependentForm({ contractId, holders, dependent, selected
                 onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.bonus_por_vida_aplicado}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })
+                  }
+                  className="w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
+                />
+                <span className="text-sm font-medium text-slate-700">Aplicar bônus por vida</span>
+              </label>
+              <p className="text-xs text-slate-500 mt-1">
+                Marque se este dependente é elegível ao bônus por vida deste contrato.
+              </p>
             </div>
 
             <div>

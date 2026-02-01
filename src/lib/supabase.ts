@@ -121,6 +121,7 @@ export type Contract = {
   previsao_recebimento_comissao?: string;
   previsao_pagamento_bonificacao?: string;
   vidas?: number;
+  vidas_elegiveis_bonus?: number | null;
   bonus_por_vida_valor?: number;
   bonus_por_vida_aplicado?: boolean;
   responsavel: string;
@@ -157,6 +158,7 @@ export type ContractHolder = {
   nome_fantasia?: string;
   percentual_societario?: number;
   data_abertura_cnpj?: string;
+  bonus_por_vida_aplicado?: boolean | null;
   created_at: string;
   updated_at: string;
 };
@@ -172,6 +174,7 @@ export type Dependent = {
   elegibilidade?: string;
   valor_individual?: number;
   carencia_individual?: string;
+  bonus_por_vida_aplicado?: boolean | null;
   created_at: string;
   updated_at: string;
 };

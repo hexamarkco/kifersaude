@@ -200,10 +200,46 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     return total;
   };
 
-  const vidasNumber = contract.vidas || 1;
+  const totalLivesInRecords = holders.length + dependents.length;
+  const bonusEligibleLivesFromRecords = totalLivesInRecords > 0
+    ? holders.filter(holder => (holder.bonus_por_vida_aplicado ?? contract.bonus_por_vida_aplicado ?? true)).length
+      + dependents.filter(dependent => (dependent.bonus_por_vida_aplicado ?? contract.bonus_por_vida_aplicado ?? true)).length
+    : 0;
+  const defaultBonusLives = totalLivesInRecords > 0
+    ? bonusEligibleLivesFromRecords
+    : (contract.vidas || 1);
+  const bonusEligibleLives = contract.vidas_elegiveis_bonus ?? defaultBonusLives;
   const bonusTotal = contract.bonus_por_vida_valor
-    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * vidasNumber : contract.bonus_por_vida_valor)
+    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * bonusEligibleLives : contract.bonus_por_vida_valor)
     : null;
+
+  useEffect(() => {
+    if (!contract.bonus_por_vida_aplicado) return;
+    if (totalLivesInRecords === 0) return;
+    if (contract.vidas_elegiveis_bonus === bonusEligibleLivesFromRecords) return;
+
+    const updateEligibleLives = async () => {
+      try {
+        const { error } = await supabase
+          .from('contracts')
+          .update({ vidas_elegiveis_bonus: bonusEligibleLivesFromRecords })
+          .eq('id', contract.id);
+        if (error) throw error;
+        onUpdate();
+      } catch (error) {
+        console.error('Erro ao atualizar vidas elegíveis para bônus:', error);
+      }
+    };
+
+    updateEligibleLives();
+  }, [
+    bonusEligibleLivesFromRecords,
+    contract.bonus_por_vida_aplicado,
+    contract.id,
+    contract.vidas_elegiveis_bonus,
+    onUpdate,
+    totalLivesInRecords,
+  ]);
 
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
@@ -499,8 +535,12 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-green-700">Quantidade de Vidas:</span>
-                    <span className="text-sm font-semibold text-green-800">{contract.vidas || 1}</span>
+                    <span className="text-xs text-green-700">Vidas elegíveis:</span>
+                    <span className="text-sm font-semibold text-green-800">{bonusEligibleLives}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-green-600">Vidas no contrato:</span>
+                    <span className="text-xs font-semibold text-green-700">{contract.vidas || 1}</span>
                   </div>
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
                     <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
@@ -841,6 +881,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
           contractId={contract.id}
           modalidade={contract.modalidade}
           holder={editingHolder || undefined}
+          bonusPorVidaDefault={contract.bonus_por_vida_aplicado ?? true}
           onClose={() => {
             setShowHolderForm(false);
             setEditingHolder(null);
@@ -860,6 +901,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
           holders={holders}
           dependent={editingDependent}
           selectedHolderId={selectedHolderId}
+          bonusPorVidaDefault={contract.bonus_por_vida_aplicado ?? true}
           onClose={() => {
             setShowDependentForm(false);
             setEditingDependent(null);

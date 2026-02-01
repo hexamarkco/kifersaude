@@ -161,7 +161,7 @@ export default function CommissionCalendar() {
 
       const bonusDate = toDate(contract.previsao_pagamento_bonificacao);
       if (bonusDate && contract.bonus_por_vida_valor) {
-        const vidas = contract.vidas || 1;
+        const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
         const totalBonus = contract.bonus_por_vida_aplicado
           ? contract.bonus_por_vida_valor * vidas
           : contract.bonus_por_vida_valor;

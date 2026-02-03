@@ -89,13 +89,10 @@ BEGIN
   PERFORM cron.schedule(
     'process-auto-contact-flow-jobs',
     '* * * * *',
-    $$SELECT net.http_post(
-      url := $${function_url}$$,
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer $${service_role_key}$$'
-      ),
-      body := jsonb_build_object('source', 'cron')
-    );$$
+    format(
+      'SELECT net.http_post(url := %L, headers := jsonb_build_object(''Content-Type'', ''application/json'', ''Authorization'', ''Bearer %s''), body := jsonb_build_object(''source'', ''cron''));',
+      function_url,
+      service_role_key
+    )
   );
 END $$;

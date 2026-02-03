@@ -4,19 +4,20 @@ import { Users, Phone, Mail, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getContrastTextColor } from '../lib/colorUtils';
 
 type LeadKanbanProps = {
   onLeadClick?: (lead: Lead) => void;
   onConvertToContract?: (lead: Lead) => void;
+  leads?: Lead[];
 };
 
-export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKanbanProps) {
-  const { leadStatuses, leadOrigins, options } = useConfig();
+export default function LeadKanban({ onLeadClick, onConvertToContract, leads }: LeadKanbanProps) {
+  const { leadStatuses, leadOrigins } = useConfig();
   const { isObserver } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [localLeads, setLocalLeads] = useState<Lead[]>(leads ?? []);
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
+  const [wipLimits, setWipLimits] = useState<Record<string, number>>({});
 
   const statusColumns = useMemo(
     () => leadStatuses.filter((status) => status.ativo).sort((a, b) => a.ordem - b.ordem),
@@ -30,21 +31,6 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
         .map((origin) => origin.id),
     [leadOrigins],
   );
-
-  const responsavelOptions = useMemo(
-    () => (options.lead_responsavel || []).filter((option) => option.ativo),
-    [options],
-  );
-
-  const responsavelLabelById = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const option of responsavelOptions) {
-      if (option.id) {
-        map[option.id] = option.label;
-      }
-    }
-    return map;
-  }, [responsavelOptions]);
 
   const getResponsavelLabel = (lead: Lead): string => {
     return lead.responsavel || 'Não definido';
@@ -63,16 +49,20 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
   );
 
   const loadLeads = useCallback(async () => {
+    if (leads) {
+      setLocalLeads(leads);
+      return;
+    }
     setLoading(true);
     try {
       if (statusColumns.length === 0) {
-        setLeads([]);
+        setLocalLeads([]);
         setLoading(false);
         return;
       }
 
       const data = await fetchAllPages<Lead>((from, to) =>
-        supabase
+        (supabase
           .from('leads')
           .select('*')
           .eq('arquivado', false)
@@ -81,7 +71,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
             statusColumns.map((column) => column.nome),
           )
           .order('created_at', { ascending: false })
-          .range(from, to),
+          .range(from, to) as unknown as Promise<{ data: Lead[] | null; error: unknown }>),
       );
 
       let fetchedLeads: Lead[] = (data as Lead[]) || [];
@@ -92,16 +82,20 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
         );
       }
 
-      setLeads(fetchedLeads);
+      setLocalLeads(fetchedLeads);
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver, statusColumns, leadOrigins]);
+  }, [isObserver, isOriginVisibleToObserver, leads, statusColumns]);
 
   useEffect(() => {
     loadLeads();
+
+    if (leads) {
+      return;
+    }
 
     const channel = supabase
       .channel('kanban-leads-changes')
@@ -123,6 +117,28 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
       supabase.removeChannel(channel);
     };
   }, [loadLeads]);
+
+  useEffect(() => {
+    if (leads) {
+      setLocalLeads(leads);
+      setLoading(false);
+    }
+  }, [leads]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('leads.kanban.wip.v1');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as Record<string, number>;
+      setWipLimits(parsed || {});
+    } catch (error) {
+      console.error('Erro ao carregar limites do Kanban:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('leads.kanban.wip.v1', JSON.stringify(wipLimits));
+  }, [wipLimits]);
 
   const handleDragStart = (lead: Lead) => {
     setDraggedLead(lead);
@@ -150,7 +166,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     const nowIso = new Date().toISOString();
     const responsavelLabel = getResponsavelLabel(draggedLead);
 
-    setLeads((current) =>
+    setLocalLeads((current) =>
       current.map((lead) =>
         lead.id === draggedLead.id
           ? { ...lead, status: newStatusName, ultimo_contato: nowIso }
@@ -189,7 +205,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status do lead');
-      setLeads((current) =>
+      setLocalLeads((current) =>
         current.map((lead) =>
           lead.id === draggedLead.id
             ? { ...lead, status: oldStatusName }
@@ -204,9 +220,18 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
   const getLeadsByStatus = (statusId: string) => {
     const statusObj = statusColumns.find((s) => s.id === statusId);
     const statusName = statusObj?.nome;
-    return leads.filter(
+    return localLeads.filter(
       (lead) => lead.status === statusName && !lead.arquivado,
     );
+  };
+
+  const getWipLimit = (statusId: string) => wipLimits[statusId] ?? 0;
+
+  const updateWipLimit = (statusId: string, value: number) => {
+    setWipLimits((current) => ({
+      ...current,
+      [statusId]: Math.max(0, value),
+    }));
   };
 
   if (loading) {
@@ -231,12 +256,14 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
         {statusColumns.map((column) => {
           const columnLeads = getLeadsByStatus(column.id);
           const chipColor = column.cor || '#2563eb';
-          const chipText = getContrastTextColor(chipColor);
-
+          const wipLimit = getWipLimit(column.id);
+          const isOverLimit = wipLimit > 0 && columnLeads.length > wipLimit;
           return (
             <div
               key={column.id}
-              className="flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4 snap-start"
+              className={`flex-shrink-0 w-80 bg-slate-50 rounded-xl p-4 snap-start ${
+                isOverLimit ? 'ring-2 ring-red-300' : ''
+              }`}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.id)}
             >
@@ -248,9 +275,35 @@ export default function LeadKanban({ onLeadClick, onConvertToContract }: LeadKan
                   ></div>
                   <h3 className="font-semibold text-slate-900">{column.nome}</h3>
                 </div>
-                <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
-                  {columnLeads.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {wipLimit > 0 && (
+                    <span
+                      className={`text-[11px] font-semibold ${
+                        isOverLimit ? 'text-red-600' : 'text-slate-500'
+                      }`}
+                    >
+                      Limite {wipLimit}
+                    </span>
+                  )}
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      isOverLimit ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {columnLeads.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+                <span>Limite WIP</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={wipLimit}
+                  onChange={(event) => updateWipLimit(column.id, Number(event.target.value))}
+                  className="w-16 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+                />
               </div>
 
               <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">

@@ -38,7 +38,6 @@ import FilterDateRange from './FilterDateRange';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
-import { configService } from '../lib/configService';
 import { downloadXlsx } from '../lib/xlsxExport';
 
 const isWithinDateRange = (
@@ -101,6 +100,29 @@ type LeadsManagerProps = {
 
 type SortField = 'created_at' | 'nome' | 'origem' | 'tipo_contratacao' | 'telefone';
 
+type SavedLeadView = {
+  id: string;
+  name: string;
+  filters: {
+    searchTerm: string;
+    filterStatus: string[];
+    filterResponsavel: string[];
+    filterOrigem: string[];
+    filterTipoContratacao: string[];
+    filterTags: string[];
+    filterCanais: string[];
+    filterCreatedFrom: string;
+    filterCreatedTo: string;
+    filterUltimoContatoFrom: string;
+    filterUltimoContatoTo: string;
+    filterProximoRetornoFrom: string;
+    filterProximoRetornoTo: string;
+    sortField: SortField;
+    sortDirection: 'asc' | 'desc';
+    showArchived: boolean;
+  };
+};
+
 type StatusReminderRule = {
   hoursFromNow: number;
   title: string;
@@ -158,6 +180,10 @@ export default function LeadsManager({
   const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState('');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [savedViews, setSavedViews] = useState<SavedLeadView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [isSavingView, setIsSavingView] = useState(false);
+  const [newViewName, setNewViewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -279,6 +305,105 @@ export default function LeadsManager({
     setFilterProximoRetornoTo('');
   }, [initialStatusFilter]);
 
+  const buildCurrentFilters = useCallback(() => ({
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+    sortField,
+    sortDirection,
+    showArchived,
+  }), [
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+    sortField,
+    sortDirection,
+    showArchived,
+  ]);
+
+  const applySavedView = useCallback((view: SavedLeadView) => {
+    const filters = view.filters;
+    setSearchTerm(filters.searchTerm);
+    setFilterStatus(filters.filterStatus);
+    setFilterResponsavel(filters.filterResponsavel);
+    setFilterOrigem(filters.filterOrigem);
+    setFilterTipoContratacao(filters.filterTipoContratacao);
+    setFilterTags(filters.filterTags);
+    setFilterCanais(filters.filterCanais);
+    setFilterCreatedFrom(filters.filterCreatedFrom);
+    setFilterCreatedTo(filters.filterCreatedTo);
+    setFilterUltimoContatoFrom(filters.filterUltimoContatoFrom);
+    setFilterUltimoContatoTo(filters.filterUltimoContatoTo);
+    setFilterProximoRetornoFrom(filters.filterProximoRetornoFrom);
+    setFilterProximoRetornoTo(filters.filterProximoRetornoTo);
+    setSortField(filters.sortField);
+    setSortDirection(filters.sortDirection);
+    setShowArchived(filters.showArchived);
+    setActiveViewId(view.id);
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('leads.savedViews.v1');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as SavedLeadView[];
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar views salvas:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('leads.savedViews.v1', JSON.stringify(savedViews));
+  }, [savedViews]);
+
+  const handleSaveView = () => {
+    if (!newViewName.trim()) {
+      alert('Informe um nome para a view.');
+      return;
+    }
+
+    const newView: SavedLeadView = {
+      id: `${Date.now()}`,
+      name: newViewName.trim(),
+      filters: buildCurrentFilters(),
+    };
+
+    setSavedViews((current) => [newView, ...current]);
+    setActiveViewId(newView.id);
+    setNewViewName('');
+    setIsSavingView(false);
+  };
+
+  const handleRemoveView = (viewId: string) => {
+    setSavedViews((current) => current.filter((view) => view.id !== viewId));
+    if (activeViewId === viewId) {
+      setActiveViewId(null);
+    }
+  };
+
   const chunkArray = useCallback(<T,>(items: T[], chunkSize: number): T[][] => {
     if (chunkSize <= 0) return [items];
     const chunks: T[][] = [];
@@ -286,6 +411,29 @@ export default function LeadsManager({
       chunks.push(items.slice(index, index + chunkSize));
     }
     return chunks;
+  }, []);
+
+  const parseSearchQuery = useCallback((value: string) => {
+    const tokens: Record<string, string[]> = {};
+    const regex = /(\w+):"([^"]+)"|(\w+):(\S+)/g;
+    let cleaned = value;
+    let match = regex.exec(value);
+
+    while (match) {
+      const key = (match[1] || match[3] || '').toLowerCase();
+      const tokenValue = (match[2] || match[4] || '').trim();
+      if (key && tokenValue) {
+        if (!tokens[key]) tokens[key] = [];
+        tokens[key].push(tokenValue);
+        cleaned = cleaned.replace(match[0], '').trim();
+      }
+      match = regex.exec(value);
+    }
+
+    return {
+      freeText: cleaned,
+      tokens,
+    };
   }, []);
 
   const fetchContractsForLeads = useCallback(async (leadIds: string[]) => {
@@ -324,7 +472,11 @@ export default function LeadsManager({
     setLoading(true);
     try {
       const data = await fetchAllPages<Lead>((from, to) =>
-        supabase.from('leads').select('*').order('created_at', { ascending: false }).range(from, to),
+        (supabase
+          .from('leads')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, to) as unknown as Promise<{ data: Lead[] | null; error: unknown }>),
       );
       const mappedLeads = (data || []).map((lead) =>
         mapLeadRelations(lead, {
@@ -421,14 +573,57 @@ export default function LeadsManager({
       filtered = filtered.filter((lead) => isOriginVisibleToObserver(lead.origem));
     }
 
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
+    const { freeText, tokens } = parseSearchQuery(searchTerm);
+
+    if (freeText) {
+      const lowerSearch = freeText.toLowerCase();
       filtered = filtered.filter((lead) =>
         lead.nome_completo.toLowerCase().includes(lowerSearch) ||
-        lead.id?.includes(searchTerm) ||
-        lead.telefone.includes(searchTerm) ||
-        lead.email?.toLowerCase().includes(lowerSearch)
+        lead.id?.includes(freeText) ||
+        lead.telefone.includes(freeText) ||
+        lead.email?.toLowerCase().includes(lowerSearch) ||
+        lead.cidade?.toLowerCase().includes(lowerSearch) ||
+        lead.observacoes?.toLowerCase().includes(lowerSearch)
       );
+    }
+
+    if (Object.keys(tokens).length > 0) {
+      const normalizePhone = (phone: string | null | undefined) => (phone ? phone.replace(/\D/g, '') : '');
+      filtered = filtered.filter((lead) => {
+        const matchValues = (key: string, value: string) => {
+          const lowerValue = value.toLowerCase();
+          switch (key) {
+            case 'status':
+              return lead.status?.toLowerCase().includes(lowerValue);
+            case 'origem':
+              return lead.origem?.toLowerCase().includes(lowerValue);
+            case 'responsavel':
+              return lead.responsavel?.toLowerCase().includes(lowerValue);
+            case 'tipo':
+              return lead.tipo_contratacao?.toLowerCase().includes(lowerValue);
+            case 'canal':
+              return lead.canal?.toLowerCase().includes(lowerValue);
+            case 'tag':
+              return Array.isArray(lead.tags)
+                ? lead.tags.some((tag) => tag.toLowerCase().includes(lowerValue))
+                : false;
+            case 'telefone':
+              return normalizePhone(lead.telefone).includes(normalizePhone(value));
+            case 'email':
+              return lead.email?.toLowerCase().includes(lowerValue);
+            case 'nome':
+              return lead.nome_completo.toLowerCase().includes(lowerValue);
+            case 'id':
+              return lead.id?.includes(value) ?? false;
+            default:
+              return true;
+          }
+        };
+
+        return Object.entries(tokens).every(([key, values]) =>
+          values.some((value) => matchValues(key, value))
+        );
+      });
     }
 
     if (selectedStatusSet.size > 0) {
@@ -626,17 +821,9 @@ export default function LeadsManager({
     return parsed.toLocaleString('pt-BR');
   };
 
-  const handleExportSelectedLeads = useCallback(() => {
-    if (selectedLeadIds.length === 0) {
-      alert('Selecione ao menos um lead para exportar.');
-      return;
-    }
-
-    const selectedSet = new Set(selectedLeadIds);
-    const leadsToExport = leads.filter((lead) => selectedSet.has(lead.id));
-
+  const exportLeadsList = useCallback((leadsToExport: Lead[], fileLabel: string) => {
     if (leadsToExport.length === 0) {
-      alert('Nenhum lead válido encontrado para exportar.');
+      alert('Nenhum lead encontrado para exportar.');
       return;
     }
 
@@ -684,8 +871,27 @@ export default function LeadsManager({
     });
 
     const today = new Date().toISOString().slice(0, 10);
-    downloadXlsx(`leads-${today}.xlsx`, headers, rows, 'Leads');
-  }, [leads, selectedLeadIds]);
+    downloadXlsx(`leads-${fileLabel}-${today}.xlsx`, headers, rows, 'Leads');
+  }, [formatDateForExport, normalizePhoneNumber]);
+
+  const handleExportSelectedLeads = useCallback(() => {
+    if (selectedLeadIds.length === 0) {
+      alert('Selecione ao menos um lead para exportar.');
+      return;
+    }
+
+    const selectedSet = new Set(selectedLeadIds);
+    const leadsToExport = leads.filter((lead) => selectedSet.has(lead.id));
+    exportLeadsList(leadsToExport, 'selecionados');
+  }, [leads, selectedLeadIds, exportLeadsList]);
+
+  const handleExportFilteredLeads = useCallback(() => {
+    exportLeadsList(filteredLeads, 'filtrados');
+  }, [exportLeadsList, filteredLeads]);
+
+  const handleExportCurrentPage = useCallback(() => {
+    exportLeadsList(paginatedLeads, 'pagina');
+  }, [exportLeadsList, paginatedLeads]);
 
   const handleBulkDetailsApply = async () => {
     if (selectedLeadIds.length === 0) return;
@@ -1260,7 +1466,7 @@ export default function LeadsManager({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por nome, telefone ou e-mail..."
+              placeholder="Buscar por nome, telefone, e-mail ou use status:origem:responsavel:tag:canal..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -1275,11 +1481,88 @@ export default function LeadsManager({
               <Filter className="w-4 h-4" />
               Limpar filtros
             </button>
+            <button
+              type="button"
+              onClick={handleExportFilteredLeads}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Exportar filtrados
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCurrentPage}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Exportar página
+            </button>
             <div className="px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
               <span className="font-semibold text-teal-700">{filteredLeads.length}</span>
               <span>lead(s) encontrado(s)</span>
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={activeViewId ?? ''}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (!value) {
+                  setActiveViewId(null);
+                  return;
+                }
+                const view = savedViews.find((item) => item.id === value);
+                if (view) {
+                  applySavedView(view);
+                }
+              }}
+              className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            >
+              <option value="">Views salvas</option>
+              {savedViews.map((view) => (
+                <option key={view.id} value={view.id}>
+                  {view.name}
+                </option>
+              ))}
+            </select>
+            {activeViewId && (
+              <button
+                type="button"
+                onClick={() => handleRemoveView(activeViewId)}
+                className="h-10 px-3 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+              >
+                Remover view
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsSavingView((current) => !current)}
+              className="h-10 px-3 text-sm border border-teal-200 rounded-lg text-teal-700 hover:bg-teal-50"
+            >
+              Salvar view
+            </button>
+          </div>
+          {isSavingView && (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={newViewName}
+                onChange={(event) => setNewViewName(event.target.value)}
+                placeholder="Nome da view"
+                className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={handleSaveView}
+                className="h-10 px-3 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+              >
+                Salvar
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -1288,7 +1571,7 @@ export default function LeadsManager({
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               {[
                 {
-                  key: 'status',
+                  id: 'status',
                   icon: Filter,
                   options: statusFilterOptions,
                   placeholder: 'Todos os status',
@@ -1296,7 +1579,7 @@ export default function LeadsManager({
                   onChange: setFilterStatus,
                 },
                 {
-                  key: 'responsavel',
+                  id: 'responsavel',
                   icon: UserCircle,
                   options: responsavelFilterOptions,
                   placeholder: 'Todos os responsáveis',
@@ -1304,7 +1587,7 @@ export default function LeadsManager({
                   onChange: setFilterResponsavel,
                 },
                 {
-                  key: 'origem',
+                  id: 'origem',
                   icon: MapPin,
                   options: origemFilterOptions,
                   placeholder: 'Todas as origens',
@@ -1312,16 +1595,17 @@ export default function LeadsManager({
                   onChange: setFilterOrigem,
                 },
                 {
-                  key: 'tipo-contratacao',
+                  id: 'tipo-contratacao',
                   icon: Layers,
                   options: tipoContratacaoFilterOptions,
                   placeholder: 'Todos os tipos',
                   values: filterTipoContratacao,
                   onChange: setFilterTipoContratacao,
                 },
-              ].map((filter) => (
-                <FilterMultiSelect key={filter.key} {...filter} />
-              ))}
+              ].map((filter) => {
+                const { id, ...props } = filter;
+                return <FilterMultiSelect key={id} {...props} />;
+              })}
             </div>
           </div>
 
@@ -1341,7 +1625,7 @@ export default function LeadsManager({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     {
-                      key: 'tags',
+                      id: 'tags',
                       icon: Tag,
                       options: tagFilterOptions,
                       placeholder: 'Todas as tags',
@@ -1349,16 +1633,17 @@ export default function LeadsManager({
                       onChange: setFilterTags,
                     },
                     {
-                      key: 'canais',
+                      id: 'canais',
                       icon: Share2,
                       options: canalFilterOptions,
                       placeholder: 'Todos os canais',
                       values: filterCanais,
                       onChange: setFilterCanais,
                     },
-                  ].map((filter) => (
-                    <FilterMultiSelect key={filter.key} {...filter} />
-                  ))}
+                  ].map((filter) => {
+                    const { id, ...props } = filter;
+                    return <FilterMultiSelect key={id} {...props} />;
+                  })}
                 </div>
               </div>
 
@@ -1367,7 +1652,7 @@ export default function LeadsManager({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                   {[
                     {
-                      key: 'criacao',
+                      id: 'criacao',
                       icon: Calendar,
                       label: 'Criação',
                       fromValue: filterCreatedFrom,
@@ -1377,7 +1662,7 @@ export default function LeadsManager({
                       type: 'date' as const,
                     },
                     {
-                      key: 'ultimo-contato',
+                      id: 'ultimo-contato',
                       icon: MessageCircle,
                       label: 'Último contato',
                       fromValue: filterUltimoContatoFrom,
@@ -1387,7 +1672,7 @@ export default function LeadsManager({
                       type: 'datetime-local' as const,
                     },
                     {
-                      key: 'proximo-retorno',
+                      id: 'proximo-retorno',
                       icon: Bell,
                       label: 'Próximo retorno',
                       fromValue: filterProximoRetornoFrom,
@@ -1396,9 +1681,10 @@ export default function LeadsManager({
                       onToChange: setFilterProximoRetornoTo,
                       type: 'datetime-local' as const,
                     },
-                  ].map((dateFilter) => (
-                    <FilterDateRange key={dateFilter.key} {...dateFilter} />
-                  ))}
+                  ].map((dateFilter) => {
+                    const { id, ...props } = dateFilter;
+                    return <FilterDateRange key={id} {...props} />;
+                  })}
                 </div>
               </div>
             </div>
@@ -1445,6 +1731,7 @@ export default function LeadsManager({
 
       {viewMode === 'kanban' ? (
         <LeadKanban
+          leads={filteredLeads}
           onLeadClick={setSelectedLead}
           onConvertToContract={handleConvertToContract}
         />
@@ -1592,7 +1879,7 @@ export default function LeadsManager({
                       )}
                       {!isObserver ? (
                         <StatusDropdown
-                          currentStatus={lead.status}
+                          currentStatus={lead.status ?? ''}
                           leadId={lead.id}
                           onStatusChange={handleStatusChange}
                           disabled={isBulkUpdating}
@@ -1603,7 +1890,7 @@ export default function LeadsManager({
                           className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold"
                           style={getStatusBadgeStyles(lead.status)}
                         >
-                          {lead.status}
+                          {lead.status ?? 'Sem status'}
                         </span>
                       )}
                     </div>
@@ -1756,7 +2043,7 @@ export default function LeadsManager({
             setShowForm(false);
             setEditingLead(null);
           }}
-          onSave={async (savedLead, context) => {
+          onSave={async () => {
             setShowForm(false);
             setEditingLead(null);
             await loadLeads();

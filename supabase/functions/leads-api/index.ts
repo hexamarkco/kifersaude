@@ -80,6 +80,8 @@ type AutoContactFlowCustomMessage = {
 type AutoContactFlowStep = {
   id: string;
   delayHours: number;
+  delayValue?: number;
+  delayUnit?: 'minutes' | 'hours' | 'days';
   actionType: AutoContactFlowActionType;
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
@@ -560,12 +562,16 @@ function resolveFilterId(
 function mapLeadRelationsForResponse(lead: any, lookups: LeadLookupMaps) {
   return {
     ...lead,
-    origem: lead.origem ?? (lead.origem_id ? lookups.originById.get(lead.origem_id) ?? null : null),
-    tipo_contratacao:
-      lead.tipo_contratacao ?? (lead.tipo_contratacao_id ? lookups.tipoById.get(lead.tipo_contratacao_id) ?? null : null),
-    status: lead.status ?? (lead.status_id ? lookups.statusById.get(lead.status_id) ?? null : null),
-    responsavel:
-      lead.responsavel ?? (lead.responsavel_id ? lookups.responsavelById.get(lead.responsavel_id) ?? null : null),
+    origem: lead.origem_id ? lookups.originById.get(lead.origem_id) ?? lead.origem ?? null : lead.origem ?? null,
+    tipo_contratacao: lead.tipo_contratacao_id
+      ? lookups.tipoById.get(lead.tipo_contratacao_id) ?? lead.tipo_contratacao ?? null
+      : lead.tipo_contratacao ?? null,
+    status: lead.status_id
+      ? lookups.statusById.get(lead.status_id) ?? lead.status ?? null
+      : lead.status ?? null,
+    responsavel: lead.responsavel_id
+      ? lookups.responsavelById.get(lead.responsavel_id) ?? lead.responsavel ?? null
+      : lead.responsavel ?? null,
   };
 }
 
@@ -831,6 +837,17 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
   const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
     value === 'custom' ? 'custom' : 'template';
 
+  const normalizeDelayUnit = (value: unknown): 'minutes' | 'hours' | 'days' => {
+    switch (value) {
+      case 'minutes':
+      case 'hours':
+      case 'days':
+        return value;
+      default:
+        return 'hours';
+    }
+  };
+
   const normalizeCustomMessage = (message: any): AutoContactFlowCustomMessage => ({
     type: normalizeMessageType(message?.type),
     text: typeof message?.text === 'string' ? message.text : '',
@@ -868,8 +885,14 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
         }))
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps.map((step: any, stepIndex: number) => {
-        const delayHoursRaw = Number(step?.delayHours);
-        const delayHours = Number.isFinite(delayHoursRaw) && delayHoursRaw >= 0 ? delayHoursRaw : 0;
+        const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
+        const delayValue = Number.isFinite(delayValueRaw) && delayValueRaw >= 0 ? delayValueRaw : 0;
+        const delayUnit = normalizeDelayUnit(step?.delayUnit ?? (step?.delayHours != null ? 'hours' : undefined));
+        const delayHours = delayUnit === 'minutes'
+          ? delayValue / 60
+          : delayUnit === 'days'
+            ? delayValue * 24
+            : delayValue;
         const actionType = normalizeActionType(step?.actionType);
         if (actionType === 'send_message') {
           const messageSource = normalizeMessageSource(step?.messageSource);
@@ -879,6 +902,8 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           return {
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
             delayHours,
+            delayValue,
+            delayUnit,
             actionType,
             messageSource,
             templateId: validTemplateId,
@@ -890,6 +915,8 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           return {
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
             delayHours,
+            delayValue,
+            delayUnit,
             actionType,
             statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
           };
@@ -898,6 +925,8 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
         return {
           id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
           delayHours,
+          delayValue,
+          delayUnit,
           actionType,
         };
       });
@@ -1157,6 +1186,233 @@ const shouldExitFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlo
   return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
 };
 
+const getDelaySeconds = (step: AutoContactFlowStep): number => {
+  if (typeof step.delayValue === 'number' && step.delayUnit) {
+    if (step.delayUnit === 'minutes') return Math.max(0, step.delayValue) * 60;
+    if (step.delayUnit === 'days') return Math.max(0, step.delayValue) * 24 * 60 * 60;
+    return Math.max(0, step.delayValue) * 60 * 60;
+  }
+  return Math.max(0, step.delayHours) * 60 * 60;
+};
+
+async function scheduleFlowJobs({
+  supabase,
+  leadId,
+  flow,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  leadId: string;
+  flow: AutoContactFlow;
+}): Promise<void> {
+  const now = new Date();
+  const jobs = flow.steps.map((step) => {
+    const delaySeconds = getDelaySeconds(step);
+    const scheduledAt = new Date(now.getTime() + delaySeconds * 1000);
+    return {
+      lead_id: leadId,
+      flow_id: flow.id,
+      step_id: step.id,
+      action_type: step.actionType,
+      message_source: step.messageSource ?? null,
+      template_id: step.templateId ?? null,
+      custom_message: step.customMessage ?? null,
+      status_to_set: step.statusToSet ?? null,
+      scheduled_at: scheduledAt.toISOString(),
+      status: 'pending',
+    };
+  });
+
+  await supabase
+    .from('auto_contact_flow_jobs')
+    .delete()
+    .eq('lead_id', leadId)
+    .eq('flow_id', flow.id)
+    .eq('status', 'pending');
+
+  if (jobs.length > 0) {
+    await supabase.from('auto_contact_flow_jobs').insert(jobs);
+  }
+}
+
+async function cancelFlowJobs({
+  supabase,
+  leadId,
+  flowId,
+  reason,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  leadId: string;
+  flowId?: string | null;
+  reason?: string;
+}): Promise<void> {
+  let query = supabase
+    .from('auto_contact_flow_jobs')
+    .update({ status: 'skipped', last_error: reason ?? 'Fluxo cancelado' })
+    .eq('lead_id', leadId)
+    .eq('status', 'pending');
+
+  if (flowId) {
+    query = query.eq('flow_id', flowId);
+  }
+
+  await query;
+}
+
+async function processFlowJobs({
+  supabase,
+  lookups,
+  settings,
+  logWithContext,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lookups: LeadLookupMaps;
+  settings: AutoContactFlowSettings;
+  logWithContext: (message: string, details?: Record<string, unknown>) => void;
+}): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const { data: jobs, error: jobsError } = await supabase
+    .from('auto_contact_flow_jobs')
+    .select('*')
+    .eq('status', 'pending')
+    .lte('scheduled_at', nowIso)
+    .order('scheduled_at', { ascending: true })
+    .limit(25);
+
+  if (jobsError) {
+    logWithContext('Erro ao buscar jobs pendentes', { error: jobsError.message });
+    return;
+  }
+
+  if (!jobs || jobs.length === 0) {
+    return;
+  }
+
+  for (const job of jobs) {
+    const { data: updatedJob } = await supabase
+      .from('auto_contact_flow_jobs')
+      .update({ status: 'processing', attempts: (job.attempts ?? 0) + 1 })
+      .eq('id', job.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
+
+    if (!updatedJob) {
+      continue;
+    }
+
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', job.lead_id)
+      .maybeSingle();
+
+    if (leadError || !lead) {
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'failed', last_error: leadError?.message ?? 'Lead não encontrado' })
+        .eq('id', job.id);
+      continue;
+    }
+
+    const flow = settings.flows.find((item) => item.id === job.flow_id);
+    if (!flow) {
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'skipped', last_error: 'Fluxo não encontrado' })
+        .eq('id', job.id);
+      continue;
+    }
+
+    const leadWithRelations = mapLeadRelationsForResponse(lead, lookups);
+    if (!leadWithRelations.status) {
+      leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
+    }
+
+    if (shouldExitFlow(flow, leadWithRelations) || !matchesAutoContactFlow(flow, leadWithRelations)) {
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'skipped', last_error: 'Condições não atendidas' })
+        .eq('id', job.id);
+      continue;
+    }
+
+    try {
+      if (job.action_type === 'send_message') {
+        let payload:
+          | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
+          | null = null;
+
+        if (job.message_source === 'custom') {
+          payload = buildCustomMessagePayload(job.custom_message, leadWithRelations, settings.scheduling?.timezone);
+        } else {
+          const template =
+            settings.messageTemplates.find((item) => item.id === job.template_id) ??
+            settings.messageTemplates[0] ??
+            null;
+          const message = getTemplateMessage(template);
+          if (message.trim()) {
+            payload = {
+              contentType: 'text',
+              content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
+            };
+          }
+        }
+
+        if (!payload) {
+          throw new Error('Conteúdo inválido para envio automático.');
+        }
+
+        await sendAutoContactMessage({
+          lead: leadWithRelations,
+          contentType: payload.contentType,
+          content: payload.content,
+          settings,
+        });
+
+        const now = new Date().toISOString();
+        await supabase.from('leads').update({ ultimo_contato: now }).eq('id', lead.id);
+        await supabase.from('interactions').insert({
+          lead_id: lead.id,
+          tipo: 'Mensagem Automática',
+          descricao: 'Fluxo automático executado via fila',
+          responsavel: leadWithRelations.responsavel ?? 'Sistema',
+        });
+      }
+
+      if (job.action_type === 'update_status') {
+        const statusName = job.status_to_set?.trim();
+        if (!statusName) {
+          throw new Error('Status alvo não configurado para a etapa.');
+        }
+        const statusId = lookups.statusByName.get(normalizeText(statusName)) ?? null;
+        if (!statusId) {
+          throw new Error('Status alvo não encontrado.');
+        }
+        await supabase.from('leads').update({ status_id: statusId }).eq('id', lead.id);
+      }
+
+      if (job.action_type === 'archive_lead') {
+        await supabase.from('leads').update({ arquivado: true }).eq('id', lead.id);
+      }
+
+      if (job.action_type === 'delete_lead') {
+        await supabase.from('leads').delete().eq('id', lead.id);
+      }
+
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'completed', last_error: null })
+        .eq('id', job.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'failed', last_error: message })
+        .eq('id', job.id);
+    }
+  }
+}
+
 async function sendAutoContactMessage({
   lead,
   contentType,
@@ -1389,151 +1645,25 @@ async function runAutoContactFlowEngine({
       flowName: matchingFlow.name,
     });
 
-    let firstMessageSent = false;
-
-    for (const step of matchingFlow.steps) {
-      if (shouldExitFlow(matchingFlow, leadWithRelations, event)) {
-        logWithContext('Fluxo automático interrompido por condição de saída', {
-          leadId: lead.id,
-          flowId: matchingFlow.id,
-        });
-        break;
-      }
-
-      const delayMs = Math.max(0, step.delayHours) * 60 * 60 * 1000;
-      if (delayMs > 0) {
-        logWithContext('Aguardando atraso configurado para etapa do fluxo', {
-          leadId: lead.id,
-          flowId: matchingFlow.id,
-          stepId: step.id,
-          delayHours: step.delayHours,
-        });
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-
-      if (step.actionType === 'send_message') {
-        let payload:
-          | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
-          | null = null;
-
-        if (step.messageSource === 'custom') {
-          payload = buildCustomMessagePayload(step.customMessage, leadWithRelations, settings.scheduling?.timezone);
-        } else {
-          const template =
-            settings.messageTemplates.find((item) => item.id === step.templateId) ??
-            settings.messageTemplates[0] ??
-            null;
-          const message = getTemplateMessage(template);
-          if (message.trim()) {
-            payload = {
-              contentType: 'text',
-              content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
-            };
-          }
-        }
-
-        if (!payload) {
-          logWithContext('Etapa de envio sem conteúdo válido, ignorando', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-          });
-          continue;
-        }
-
-        await sendAutoContactMessage({
-          lead: leadWithRelations,
-          contentType: payload.contentType,
-          content: payload.content,
-          settings,
-        });
-
-        logWithContext('Mensagem automática enviada via fluxo', {
-          leadId: lead.id,
-          flowId: matchingFlow.id,
-          stepId: step.id,
-        });
-
-        if (!firstMessageSent) {
-          firstMessageSent = true;
-          const now = new Date().toISOString();
-          await supabase.from('leads').update({ ultimo_contato: now }).eq('id', lead.id);
-          await supabase.from('interactions').insert({
-            lead_id: lead.id,
-            tipo: 'Mensagem Automática',
-            descricao: 'Fluxo automático disparado pela API de leads',
-            responsavel: leadWithRelations.responsavel ?? 'Sistema',
-          });
-        }
-
-        continue;
-      }
-
-      if (step.actionType === 'update_status') {
-        const statusName = step.statusToSet?.trim();
-        if (!statusName) {
-          logWithContext('Etapa de fluxo sem status configurado', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-          });
-          continue;
-        }
-
-        const statusId = lookups.statusByName.get(normalizeText(statusName)) ?? null;
-        if (!statusId) {
-          logWithContext('Status configurado não encontrado para etapa do fluxo', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-            status: statusName,
-          });
-          continue;
-        }
-
-        const { error } = await supabase.from('leads').update({ status_id: statusId }).eq('id', lead.id);
-        if (error) {
-          logWithContext('Erro ao atualizar status do lead pelo fluxo', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-            error: error.message,
-          });
-        } else {
-          leadWithRelations.status = statusName;
-        }
-
-        continue;
-      }
-
-      if (step.actionType === 'archive_lead') {
-        const { error } = await supabase.from('leads').update({ arquivado: true }).eq('id', lead.id);
-        if (error) {
-          logWithContext('Erro ao arquivar lead pelo fluxo', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-            error: error.message,
-          });
-        } else {
-          leadWithRelations.arquivado = true;
-        }
-        continue;
-      }
-
-      if (step.actionType === 'delete_lead') {
-        const { error } = await supabase.from('leads').delete().eq('id', lead.id);
-        if (error) {
-          logWithContext('Erro ao excluir lead pelo fluxo', {
-            leadId: lead.id,
-            flowId: matchingFlow.id,
-            stepId: step.id,
-            error: error.message,
-          });
-        }
-        return;
-      }
+    if (shouldExitFlow(matchingFlow, leadWithRelations, event)) {
+      logWithContext('Fluxo automático interrompido por condição de saída', {
+        leadId: lead.id,
+        flowId: matchingFlow.id,
+      });
+      return;
     }
+
+    await scheduleFlowJobs({
+      supabase,
+      leadId: lead.id,
+      flow: matchingFlow,
+    });
+
+    logWithContext('Etapas do fluxo agendadas', {
+      leadId: lead.id,
+      flowId: matchingFlow.id,
+      totalSteps: matchingFlow.steps.length,
+    });
   } catch (error) {
     logWithContext('Erro ao executar fluxo automático', {
       leadId: lead?.id,
@@ -1618,6 +1748,12 @@ Deno.serve(async (req: Request) => {
         settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, event)) ?? null;
 
       if (!newMatchingFlow) {
+        await cancelFlowJobs({
+          supabase,
+          leadId: record.id,
+          reason: 'Lead não atende mais as condições do fluxo',
+        });
+
         return new Response(JSON.stringify({ success: true, skipped: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1637,6 +1773,12 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      await cancelFlowJobs({
+        supabase,
+        leadId: record.id,
+        reason: 'Fluxo atualizado, removendo jobs pendentes anteriores',
+      });
+
       try {
         await runAutoContactFlowEngine({
           supabase,
@@ -1652,6 +1794,30 @@ Deno.serve(async (req: Request) => {
           error: automationError instanceof Error ? automationError.message : String(automationError),
         });
       }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'process-flow-jobs' && req.method === 'POST') {
+      const lookups = await getLookups();
+      const settings = await loadAutoContactFlowSettings(supabase);
+
+      if (!settings || !settings.enabled || !settings.autoSend) {
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await processFlowJobs({
+        supabase,
+        lookups,
+        settings,
+        logWithContext,
+      });
 
       return new Response(JSON.stringify({ success: true }), {
         status: 200,

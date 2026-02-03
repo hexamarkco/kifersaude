@@ -577,7 +577,6 @@ export default function RemindersManagerEnhanced() {
       });
 
       setReminders(current => current.filter(item => getLeadIdForReminder(item) !== leadId));
-      loadReminders();
     } catch (error) {
       console.error('Erro ao marcar lead como perdido:', error);
       alert('Não foi possível marcar o lead como perdido.');
@@ -722,7 +721,17 @@ export default function RemindersManagerEnhanced() {
         await updateLeadNextReturnDate(reminder.lead_id, newDate);
       }
       setOpenSnoozeMenu(null);
-      loadReminders();
+      setReminders(current =>
+        current.map(item =>
+          item.id === reminder.id
+            ? {
+                ...item,
+                data_lembrete: newDate,
+                snooze_count: currentSnoozeCount + 1,
+              }
+            : item
+        )
+      );
     } catch (error) {
       console.error('Erro ao adiar lembrete:', error);
       alert('Erro ao adiar lembrete');
@@ -755,7 +764,17 @@ export default function RemindersManagerEnhanced() {
       setCustomSnoozeReminder(null);
       setCustomSnoozeDateTime('');
       setOpenSnoozeMenu(null);
-      loadReminders();
+      setReminders(current =>
+        current.map(item =>
+          item.id === reminder.id
+            ? {
+                ...item,
+                data_lembrete: newDate,
+                snooze_count: currentSnoozeCount + 1,
+              }
+            : item
+        )
+      );
     } catch (error) {
       console.error('Erro ao adiar lembrete:', error);
       alert('Erro ao adiar lembrete');
@@ -785,8 +804,16 @@ export default function RemindersManagerEnhanced() {
       if (reminder.lead_id) {
         await updateLeadNextReturnDate(reminder.lead_id, newDateISO);
       }
-
-      loadReminders();
+      setReminders(current =>
+        current.map(item =>
+          item.id === reminderId
+            ? {
+                ...item,
+                data_lembrete: newDateISO,
+              }
+            : item
+        )
+      );
     } catch (error) {
       console.error('Erro ao reagendar lembrete:', error);
       alert('Erro ao reagendar lembrete');
@@ -859,7 +886,17 @@ export default function RemindersManagerEnhanced() {
       }
 
       setSelectedReminders(new Set());
-      loadReminders();
+      setReminders(current =>
+        current.map(item =>
+          selectedReminders.has(item.id)
+            ? {
+                ...item,
+                lido: true,
+                concluido_em: completionDate,
+              }
+            : item
+        )
+      );
     } catch (error) {
       console.error('Erro ao atualizar lembretes:', error);
       alert('Erro ao atualizar lembretes');
@@ -894,7 +931,7 @@ export default function RemindersManagerEnhanced() {
           updateLeadNextReturnDate(reminder.lead_id!, null, { onlyIfMatches: reminder.data_lembrete })
         );
       await Promise.all(leadUpdates);
-      loadReminders();
+      setReminders(current => current.filter(reminder => !reminderIds.includes(reminder.id)));
     } catch (error) {
       console.error('Erro ao remover lembretes:', error);
       alert('Erro ao remover lembretes');
@@ -920,7 +957,18 @@ export default function RemindersManagerEnhanced() {
         .eq('lido', false);
 
       if (error) throw error;
-      loadReminders();
+      const completionDate = new Date().toISOString();
+      setReminders(current =>
+        current.map(item =>
+          item.lido
+            ? item
+            : {
+                ...item,
+                lido: true,
+                concluido_em: completionDate,
+              }
+        )
+      );
     } catch (error) {
       console.error('Erro ao atualizar lembretes:', error);
       alert('Erro ao atualizar lembretes');

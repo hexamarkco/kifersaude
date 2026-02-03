@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, ContractHolder, Dependent, Interaction, ContractValueAdjustment } from '../lib/supabase';
 import { X, User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
+import ContractForm from './ContractForm';
 import DependentForm from './DependentForm';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
@@ -16,15 +17,27 @@ type ContractDetailsProps = {
   onDelete?: (contract: Contract) => void;
 };
 
+type ContractDocument = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  tipo_documento: string;
+  nome_arquivo: string;
+  url_arquivo: string;
+  created_at: string;
+};
+
 export default function ContractDetails({ contract, onClose, onUpdate, onDelete }: ContractDetailsProps) {
   const { isObserver } = useAuth();
   const [holders, setHolders] = useState<ContractHolder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
+  const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [showDependentForm, setShowDependentForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [editingDependent, setEditingDependent] = useState<Dependent | null>(null);
   const [editingHolder, setEditingHolder] = useState<ContractHolder | null>(null);
   const [selectedHolderId, setSelectedHolderId] = useState<string | null>(null);
@@ -61,6 +74,13 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     return isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const getContractStartDate = () => {
+    const start = parseDate(contract.data_inicio) || parseDate(contract.created_at);
+    if (!start) return null;
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+
   const getFidelityEndDate = (monthValue?: string | null) => {
     if (!monthValue) return null;
     const [year, month] = monthValue.split('-').map(Number);
@@ -75,13 +95,17 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const contractStart = getContractStartDate();
     const currentYear = today.getFullYear();
     const adjustmentMonthIndex = monthNumber - 1;
     let nextDate = new Date(currentYear, adjustmentMonthIndex, 1);
     nextDate.setHours(0, 0, 0, 0);
 
-    if (nextDate.getTime() < today.getTime()) {
-      nextDate = new Date(currentYear + 1, adjustmentMonthIndex, 1);
+    while (
+      nextDate.getTime() <= today.getTime() ||
+      (contractStart && nextDate.getTime() <= contractStart.getTime())
+    ) {
+      nextDate = new Date(nextDate.getFullYear() + 1, adjustmentMonthIndex, 1);
       nextDate.setHours(0, 0, 0, 0);
     }
 
@@ -161,6 +185,63 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
   const ageAdjustmentAlerts = getAgeAdjustmentAlerts();
 
+  const upcomingAgeAdjustments = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const windowEnd = new Date(today);
+    windowEnd.setDate(windowEnd.getDate() + 120);
+
+    const contractStart = getContractStartDate();
+
+    const getNextMilestone = (birthDate: Date) => {
+      for (const age of AGE_ADJUSTMENT_MILESTONES) {
+        const targetDate = new Date(birthDate);
+        targetDate.setFullYear(birthDate.getFullYear() + age);
+        targetDate.setHours(0, 0, 0, 0);
+        if (targetDate > today && (!contractStart || targetDate > contractStart)) {
+          return { age, date: targetDate };
+        }
+      }
+      return null;
+    };
+
+    const results: Array<{ id: string; name: string; role: string; age: number; date: Date }> = [];
+
+    holders.forEach((holder) => {
+      const birthDate = parseDate(holder.data_nascimento);
+      if (!birthDate) return;
+      const milestone = getNextMilestone(birthDate);
+      if (!milestone) return;
+      if (milestone.date <= windowEnd) {
+        results.push({
+          id: holder.id,
+          name: holder.nome_completo,
+          role: 'Titular',
+          age: milestone.age,
+          date: milestone.date,
+        });
+      }
+    });
+
+    dependents.forEach((dependent) => {
+      const birthDate = parseDate(dependent.data_nascimento);
+      if (!birthDate) return;
+      const milestone = getNextMilestone(birthDate);
+      if (!milestone) return;
+      if (milestone.date <= windowEnd) {
+        results.push({
+          id: dependent.id,
+          name: dependent.nome_completo,
+          role: dependent.relacao,
+          age: milestone.age,
+          date: milestone.date,
+        });
+      }
+    });
+
+    return results.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [dependents, holders, parseDate]);
+
   useEffect(() => {
     loadData();
   }, [contract.id]);
@@ -181,6 +262,26 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       setDependents(dependentsRes.data || []);
       setInteractions(interactionsRes.data || []);
       setAdjustments(adjustmentsRes.data || []);
+
+      const entityIds = [
+        ...holdersData.map((holder) => holder.id),
+        ...dependentsRes.data?.map((dependent) => dependent.id) || [],
+      ];
+
+      if (entityIds.length > 0) {
+        const { data: docsData, error: docsError } = await supabase
+          .from('documents')
+          .select('*')
+          .in('entity_id', entityIds);
+
+        if (docsError) {
+          console.error('Erro ao carregar documentos:', docsError);
+        } else {
+          setDocuments(docsData || []);
+        }
+      } else {
+        setDocuments([]);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -212,6 +313,119 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const bonusTotal = contract.bonus_por_vida_valor
     ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * bonusEligibleLives : contract.bonus_por_vida_valor)
     : null;
+
+  const documentsByEntity = useMemo(() => {
+    const map = new Map<string, ContractDocument[]>();
+    documents.forEach((doc) => {
+      const list = map.get(doc.entity_id) || [];
+      list.push(doc);
+      map.set(doc.entity_id, list);
+    });
+    return map;
+  }, [documents]);
+
+  const renderDocumentList = (entityId: string) => {
+    const docs = documentsByEntity.get(entityId) || [];
+    if (docs.length === 0) {
+      return <p className="text-sm text-slate-500">Sem documentos enviados.</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        {docs.map((doc) => (
+          <div key={doc.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-800 truncate">{doc.tipo_documento}</p>
+              <p className="text-xs text-slate-500 truncate">{doc.nome_arquivo}</p>
+            </div>
+            <a
+              href={doc.url_arquivo}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+            >
+              Abrir
+            </a>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const formatDateTimeShort = (value: string | null | undefined) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const contractTimeline = useMemo(() => {
+    const events: Array<{ id: string; label: string; date: Date; description?: string }> = [];
+    const createdAt = parseDate(contract.created_at);
+    if (createdAt) {
+      events.push({ id: 'created', label: 'Contrato criado', date: createdAt });
+    }
+
+    const startDate = parseDate(contract.data_inicio);
+    if (startDate) {
+      events.push({ id: 'start', label: 'Início de vigência', date: startDate });
+    }
+
+    const fidelityEnd = getFidelityEndDate(contract.data_renovacao);
+    if (fidelityEnd) {
+      events.push({ id: 'fidelity', label: 'Fim da fidelidade', date: fidelityEnd });
+    }
+
+    const adjustmentDate = getNextAdjustmentDate(contract.mes_reajuste);
+    if (adjustmentDate) {
+      events.push({ id: 'adjustment', label: 'Próximo reajuste anual', date: adjustmentDate });
+    }
+
+    const commissionDate = parseDate(contract.previsao_recebimento_comissao);
+    if (commissionDate) {
+      events.push({ id: 'commission', label: 'Recebimento comissão', date: commissionDate });
+    }
+
+    const bonusDate = parseDate(contract.previsao_pagamento_bonificacao);
+    if (bonusDate) {
+      events.push({ id: 'bonus', label: 'Pagamento bonificação', date: bonusDate });
+    }
+
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [contract, getNextAdjustmentDate]);
+
+  const auditEvents = useMemo(() => {
+    const events: Array<{ id: string; label: string; date: string; description?: string }> = [];
+    if (contract.created_at) {
+      events.push({ id: 'audit-created', label: 'Contrato criado', date: contract.created_at });
+    }
+    if (contract.updated_at) {
+      events.push({ id: 'audit-updated', label: 'Contrato atualizado', date: contract.updated_at });
+    }
+    adjustments.forEach((adjustment) => {
+      events.push({
+        id: `audit-adjustment-${adjustment.id}`,
+        label: `Ajuste de valor (${adjustment.tipo})`,
+        date: adjustment.created_at,
+        description: adjustment.motivo,
+      });
+    });
+    interactions.forEach((interaction) => {
+      events.push({
+        id: `audit-interaction-${interaction.id}`,
+        label: `Interação: ${interaction.tipo}`,
+        date: interaction.data_interacao,
+        description: interaction.descricao,
+      });
+    });
+    return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [adjustments, contract.created_at, contract.updated_at, interactions]);
 
   useEffect(() => {
     if (!contract.bonus_por_vida_aplicado) return;
@@ -341,6 +555,14 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             <p className="text-sm text-slate-600">{contract.operadora} - {contract.produto_plano}</p>
           </div>
           <div className="flex items-center gap-2">
+            {!isObserver && (
+              <button
+                onClick={() => setShowEditForm(true)}
+                className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                Editar
+              </button>
+            )}
             {!isObserver && onDelete && (
               <button
                 onClick={() => onDelete(contract)}
@@ -383,6 +605,46 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               )}
             </div>
 
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">Comissão prevista</p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {contract.comissao_prevista
+                    ? `R$ ${contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    : 'Não informado'}
+                </p>
+                {contract.previsao_recebimento_comissao && (
+                  <p className="text-xs text-slate-500">
+                    Previsto: {new Date(contract.previsao_recebimento_comissao).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">Bônus total</p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {bonusTotal
+                    ? `R$ ${bonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    : 'Não aplicado'}
+                </p>
+                {contract.previsao_pagamento_bonificacao && (
+                  <p className="text-xs text-slate-500">
+                    Previsto: {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">Reajuste anual</p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {getNextAdjustmentDate(contract.mes_reajuste)
+                    ? getNextAdjustmentDate(contract.mes_reajuste)?.toLocaleDateString('pt-BR')
+                    : 'Não definido'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Mês de reajuste: {contract.mes_reajuste ? String(contract.mes_reajuste).padStart(2, '0') : '--'}
+                </p>
+              </div>
+            </div>
+
             {(contract.data_renovacao || contract.previsao_recebimento_comissao || contract.previsao_pagamento_bonificacao) && (
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
@@ -395,22 +657,45 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               </div>
             )}
 
-            {ageAdjustmentAlerts.length > 0 && (
+            {contractTimeline.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="text-sm font-medium text-slate-700 mb-2">Linha do tempo do contrato</div>
+                <div className="space-y-2">
+                  {contractTimeline.map((event) => (
+                    <div key={event.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                      <div className="text-slate-700 font-medium">{event.label}</div>
+                      <div className="text-slate-500 text-xs">{event.date.toLocaleDateString('pt-BR')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(ageAdjustmentAlerts.length > 0 || upcomingAgeAdjustments.length > 0) && (
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
                   <AlertCircle className="w-4 h-4" />
-                  <span>Reajuste por idade previsto este mês</span>
+                  <span>Gestão de reajuste por idade</span>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {ageAdjustmentAlerts.map((person) => (
-                    <span
-                      key={person.id}
-                      className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200"
-                    >
-                      {person.name} • {person.role}
-                    </span>
-                  ))}
-                </div>
+                {upcomingAgeAdjustments.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {upcomingAgeAdjustments.map((person) => (
+                      <div
+                        key={`age-${person.id}`}
+                        className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs"
+                      >
+                        <span className="font-semibold text-amber-800">
+                          {person.name} • {person.role} • {person.age} anos
+                        </span>
+                        <span className="text-amber-700">
+                          {person.date.toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-600">Nenhum reajuste por idade previsto nos próximos 120 dias.</p>
+                )}
                 <p className="text-xs text-amber-600 mt-2">
                   Os planos reajustam por idade quando um titular ou dependente completa 19, 24, 29, 34, 39, 44, 49, 54 ou 59 anos.
                 </p>
@@ -740,6 +1025,60 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               </div>
             )}
           </div>
+
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-slate-900">Documentos</h4>
+              <span className="text-xs text-slate-500">{documents.length} arquivo(s)</span>
+            </div>
+            <div className="space-y-4">
+              {holders.map((holderItem) => (
+                <div key={`docs-holder-${holderItem.id}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Titular: {holderItem.nome_completo}</p>
+                  {renderDocumentList(holderItem.id)}
+                </div>
+              ))}
+              {dependents.map((dependent) => (
+                <div key={`docs-dependent-${dependent.id}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Dependente: {dependent.nome_completo}</p>
+                  {renderDocumentList(dependent.id)}
+                </div>
+              ))}
+              {holders.length === 0 && dependents.length === 0 && (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+                  Cadastre um titular para começar a anexar documentos.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-slate-900">Auditoria</h4>
+              <span className="text-xs text-slate-500">{auditEvents.length} evento(s)</span>
+            </div>
+            {auditEvents.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                Nenhum evento de auditoria disponível.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {auditEvents.map((event) => (
+                  <div key={event.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800">{event.label}</p>
+                      {event.description && (
+                        <p className="text-xs text-slate-500 truncate">{event.description}</p>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      {formatDateTimeShort(event.date) ?? ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
@@ -912,6 +1251,16 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             setEditingDependent(null);
             setSelectedHolderId(null);
             loadData();
+          }}
+        />
+      )}
+      {showEditForm && (
+        <ContractForm
+          contract={contract}
+          onClose={() => setShowEditForm(false)}
+          onSave={() => {
+            setShowEditForm(false);
+            onUpdate();
           }}
         />
       )}

@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
-import { supabase, Lead, Interaction } from '../lib/supabase';
-import { X, MessageCircle, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { supabase, Lead, Interaction, Reminder, LeadStatusHistory } from '../lib/supabase';
+import { X, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
-import LeadStatusHistoryComponent from './LeadStatusHistory';
 import NextStepSuggestion from './NextStepSuggestion';
 
 type LeadWithRelations = Lead & {
@@ -22,6 +21,8 @@ type LeadDetailsProps = {
 export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete }: LeadDetailsProps) {
   const { isObserver } = useAuth();
   const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [statusHistory, setStatusHistory] = useState<LeadStatusHistory[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,21 +31,84 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     responsavel: 'Luiza',
   });
 
+  const timelineEvents = useMemo(() => {
+    const events: Array<{
+      id: string;
+      type: 'interaction' | 'status' | 'reminder';
+      date: string;
+      title: string;
+      description?: string | null;
+      meta?: string | null;
+    }> = [];
+
+    interactions.forEach((interaction) => {
+      events.push({
+        id: `interaction-${interaction.id}`,
+        type: 'interaction',
+        date: interaction.data_interacao,
+        title: interaction.tipo,
+        description: interaction.descricao,
+        meta: interaction.responsavel,
+      });
+    });
+
+    statusHistory.forEach((item) => {
+      events.push({
+        id: `status-${item.id}`,
+        type: 'status',
+        date: item.created_at,
+        title: `Status: ${item.status_anterior} -> ${item.status_novo}`,
+        description: item.observacao ?? null,
+        meta: item.responsavel,
+      });
+    });
+
+    reminders.forEach((reminder) => {
+      events.push({
+        id: `reminder-${reminder.id}`,
+        type: 'reminder',
+        date: reminder.data_lembrete,
+        title: `Lembrete: ${reminder.titulo}`,
+        description: reminder.descricao ?? null,
+        meta: reminder.lido ? 'Concluído' : 'Pendente',
+      });
+    });
+
+    return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [interactions, reminders, statusHistory]);
+
   useEffect(() => {
-    loadInteractions();
+    loadLeadTimeline();
   }, [lead.id]);
 
-  const loadInteractions = async () => {
+  const loadLeadTimeline = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('interactions')
-        .select('*')
-        .eq('lead_id', lead.id)
-        .order('data_interacao', { ascending: false });
+      const [interactionsRes, statusRes, remindersRes] = await Promise.all([
+        supabase
+          .from('interactions')
+          .select('*')
+          .eq('lead_id', lead.id)
+          .order('data_interacao', { ascending: false }),
+        supabase
+          .from('lead_status_history')
+          .select('*')
+          .eq('lead_id', lead.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('reminders')
+          .select('*')
+          .eq('lead_id', lead.id)
+          .order('data_lembrete', { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setInteractions(data || []);
+      if (interactionsRes.error) throw interactionsRes.error;
+      if (statusRes.error) throw statusRes.error;
+      if (remindersRes.error) throw remindersRes.error;
+
+      setInteractions(interactionsRes.data || []);
+      setStatusHistory(statusRes.data || []);
+      setReminders(remindersRes.data || []);
     } catch (error) {
       console.error('Erro ao carregar interações:', error);
     } finally {
@@ -74,7 +138,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
       setFormData({ tipo: 'Observação', descricao: '', responsavel: 'Luiza' });
       setShowForm(false);
-      loadInteractions();
+      loadLeadTimeline();
       onUpdate();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
@@ -151,13 +215,51 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
           <div className="mb-6">
             <NextStepSuggestion
-              leadStatus={lead.status_nome ?? null}
-              lastContact={lead.ultimo_contato}
+              leadStatus={lead.status_nome ?? lead.status ?? 'Novo'}
+              lastContact={lead.ultimo_contato ?? undefined}
             />
           </div>
 
           <div className="mb-6">
-            <LeadStatusHistoryComponent leadId={lead.id} />
+            <div className="flex items-center gap-2 mb-4">
+              <History className="h-5 w-5 text-slate-600" />
+              <h4 className="text-lg font-semibold text-slate-900">Linha do tempo</h4>
+            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
+              </div>
+            ) : timelineEvents.length === 0 ? (
+              <div className="rounded-lg bg-slate-50 py-8 text-center text-slate-500">
+                Nenhum evento registrado.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {timelineEvents.map((event) => (
+                  <div key={event.id} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="mt-1 rounded-full bg-slate-100 p-2 text-slate-600">
+                      {event.type === 'interaction' && <MessageCircle className="h-4 w-4" />}
+                      {event.type === 'reminder' && <Bell className="h-4 w-4" />}
+                      {event.type === 'status' && <Clock className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+                        {event.meta && (
+                          <span className="text-xs text-slate-500">{event.meta}</span>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p className="mt-1 text-sm text-slate-600">{event.description}</p>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      {formatDateTimeFullBR(event.date)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

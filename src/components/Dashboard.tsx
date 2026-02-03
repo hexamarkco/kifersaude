@@ -23,6 +23,9 @@ import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
 import LineChart from './charts/LineChart';
 import LeadFunnel from './LeadFunnel';
+import ContractDetails from './ContractDetails';
+import LeadDetails from './LeadDetails';
+import LeadForm from './LeadForm';
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -77,6 +80,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
   const isInitialLoadRef = useRef(true);
   const lastBirthdayReminderSync = useRef<string | null>(null);
+  const lastAdjustmentReminderSync = useRef<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
     const urlValue = searchParams.get('periodFilter');
     const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
@@ -129,6 +133,10 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [daysAhead, setDaysAhead] = useState(30);
   const [timelineDirection, setTimelineDirection] = useState<'future' | 'past'>('future');
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [showLeadForm, setShowLeadForm] = useState(false);
   const [dashboardOriginFilter, setDashboardOriginFilter] = useState(
     () => searchParams.get('dashboardOrigin') || '',
   );
@@ -257,6 +265,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [leadOrigins, leadStatuses, options.lead_responsavel, options.lead_tipo_contratacao],
   );
 
+  const selectedLeadWithRelations = useMemo(
+    () => mapLeadWithRelations(selectedLead) ?? selectedLead,
+    [mapLeadWithRelations, selectedLead],
+  );
+
   const areSetsEqual = useCallback((a: Set<string>, b: Set<string>) => {
     if (a.size !== b.size) {
       return false;
@@ -334,6 +347,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     });
   }, [contracts, hiddenLeadIdsForObserver, isObserver, visibleLeadIdsForObserver]);
 
+  const activeContractsForReminders = useMemo(
+    () => contractsVisibleToUser.filter((contract) => contract.status === 'Ativo'),
+    [contractsVisibleToUser],
+  );
+
   const leadsById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
 
   const visibleContractIds = useMemo(() => new Set(contractsVisibleToUser.map((contract) => contract.id)), [
@@ -355,6 +373,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     return dependents.filter((dependent) => visibleContractIds.has(dependent.contract_id));
   }, [dependents, isObserver, visibleContractIds]);
+
 
   const sortByCreatedAtDesc = <T extends { created_at?: string | null }>(items: T[]) => {
     return [...items].sort((a, b) => {
@@ -668,6 +687,22 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
 
   useEffect(() => {
+    if (!selectedContract) return;
+    const refreshed = contracts.find((contract) => contract.id === selectedContract.id);
+    if (refreshed) {
+      setSelectedContract(refreshed);
+    }
+  }, [contracts, selectedContract]);
+
+  useEffect(() => {
+    if (!selectedLead) return;
+    const refreshed = leads.find((lead) => lead.id === selectedLead.id);
+    if (refreshed) {
+      setSelectedLead(refreshed);
+    }
+  }, [leads, selectedLead]);
+
+  useEffect(() => {
     const storedPeriod = resolvePeriodFilter();
     const storedStart = resolveCustomDate('customStartDate');
     const storedEnd = resolveCustomDate('customEndDate');
@@ -950,6 +985,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     return dependentsVisibleToUser.filter((dependent) => filteredContractIds.has(dependent.contract_id));
   }, [dependentsVisibleToUser, filteredContractIds]);
 
+  const holderByContractId = useMemo(
+    () => new Map(holdersVisibleWithFilters.map((holder) => [holder.contract_id, holder])),
+    [holdersVisibleWithFilters],
+  );
+
   const totalLeads = activeLeads.length;
   const leadsAtivos = activeLeads.filter(
     (lead) => !['Fechado', 'Perdido'].includes(lead.status)
@@ -1057,8 +1097,30 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status)),
   );
   const operadoraData = getOperadoraDistribution(filteredContracts);
+  const getContractStartDate = useCallback((contract?: Contract | null) => {
+    if (!contract) return null;
+
+    if (contract.data_inicio) {
+      const parsed = parseDateWithoutTimezoneAsDate(contract.data_inicio);
+      if (parsed) {
+        parsed.setHours(0, 0, 0, 0);
+        return parsed;
+      }
+    }
+
+    if (contract.created_at) {
+      const parsed = new Date(contract.created_at);
+      if (!isNaN(parsed.getTime())) {
+        parsed.setHours(0, 0, 0, 0);
+        return parsed;
+      }
+    }
+
+    return null;
+  }, []);
+
   const getAdjustmentDateForDirection = useCallback(
-    (monthNumber: number, direction: 'future' | 'past') => {
+    (monthNumber: number, direction: 'future' | 'past', contract?: Contract | null) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -1075,9 +1137,20 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         targetDate = new Date(currentYear - 1, monthIndex, 1);
       }
 
+      const contractStartDate = getContractStartDate(contract);
+      if (contractStartDate) {
+        if (direction === 'future') {
+          while (targetDate <= contractStartDate) {
+            targetDate = new Date(targetDate.getFullYear() + 1, monthIndex, 1);
+          }
+        } else if (targetDate <= contractStartDate) {
+          return null;
+        }
+      }
+
       return targetDate;
     },
-    [],
+    [getContractStartDate],
   );
 
   const getBirthdaysWithinRange = useCallback(
@@ -1215,6 +1288,21 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   );
 
   const ageAdjustmentMilestones = useMemo(() => [19, 24, 29, 34, 39, 44, 49, 54, 59], []);
+  const ageBands = useMemo(
+    () => [
+      { min: 0, max: 18 },
+      { min: 19, max: 23 },
+      { min: 24, max: 28 },
+      { min: 29, max: 33 },
+      { min: 34, max: 38 },
+      { min: 39, max: 43 },
+      { min: 44, max: 48 },
+      { min: 49, max: 53 },
+      { min: 54, max: 58 },
+      { min: 59, max: null },
+    ],
+    [],
+  );
 
   const adjustmentsInRange = useMemo(() => {
     const today = new Date();
@@ -1253,6 +1341,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       const contract = contractsMap.get(person.contract_id);
       if (!contract) return;
 
+      const contractStartDate = getContractStartDate(contract);
+
       const birthDate = parseDateWithoutTimezoneAsDate(person.data_nascimento);
       if (!birthDate) return;
 
@@ -1263,7 +1353,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           targetDate.setHours(0, 0, 0, 0);
           return { age, date: targetDate };
         })
-        .filter(({ date }) => date <= windowEnd && date >= windowStart);
+        .filter(({ date }) => {
+          if (date > windowEnd || date < windowStart) return false;
+          if (contractStartDate && date <= contractStartDate) return false;
+          return true;
+        });
 
       if (candidateDates.length === 0) return;
 
@@ -1291,7 +1385,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     activeContracts.forEach((contract) => {
       if (!contract.mes_reajuste) return;
 
-      const adjustmentDate = getAdjustmentDateForDirection(contract.mes_reajuste, timelineDirection);
+      const adjustmentDate = getAdjustmentDateForDirection(contract.mes_reajuste, timelineDirection, contract);
+
+      if (!adjustmentDate) {
+        return;
+      }
 
       if (adjustmentDate >= windowStart && adjustmentDate <= windowEnd) {
         adjustments.push({
@@ -1309,6 +1407,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   }, [
     activeContracts,
     daysAhead,
+    getContractStartDate,
     getAdjustmentDateForDirection,
     holdersVisibleWithFilters,
     dependentsVisibleWithFilters,
@@ -1316,14 +1415,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     ageAdjustmentMilestones,
   ]);
 
-  const ensureBirthdayRemindersForToday = useCallback(async () => {
+  const ensureBirthdayRemindersForToday = useCallback(async (): Promise<boolean> => {
     const today = new Date();
     const todayMonth = today.getMonth() + 1;
     const todayDay = today.getDate();
 
-    const activeContractMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
+    const activeContractMap = new Map(activeContractsForReminders.map((contract) => [contract.id, contract]));
     if (activeContractMap.size === 0) {
-      return;
+      return false;
     }
 
     const birthdaysToday: Array<{
@@ -1334,7 +1433,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       holder?: Holder;
     }> = [];
 
-    holdersVisibleWithFilters.forEach((holder) => {
+    holdersVisibleToUser.forEach((holder) => {
       if (!activeContractMap.has(holder.contract_id)) return;
 
       const { month, day } = parseDateWithoutTimezone(holder.data_nascimento);
@@ -1349,7 +1448,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       }
     });
 
-    dependentsVisibleWithFilters.forEach((dependent) => {
+    dependentsVisibleToUser.forEach((dependent) => {
       if (!activeContractMap.has(dependent.contract_id)) return;
 
       const { month, day } = parseDateWithoutTimezone(dependent.data_nascimento);
@@ -1359,13 +1458,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           tipo: 'Dependente',
           contract_id: dependent.contract_id,
           contract: activeContractMap.get(dependent.contract_id),
-          holder: holdersVisibleWithFilters.find((holder) => holder.contract_id === dependent.contract_id),
+          holder: holdersVisibleToUser.find((holder) => holder.contract_id === dependent.contract_id),
         });
       }
     });
 
     if (birthdaysToday.length === 0) {
-      return;
+      return true;
     }
 
     const startOfToday = new Date();
@@ -1382,7 +1481,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     if (remindersFetchError) {
       console.error('Erro ao verificar lembretes de aniversário existentes:', remindersFetchError);
-      return;
+      return false;
     }
 
     const existingKeys = new Set(
@@ -1410,14 +1509,95 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       }));
 
     if (remindersToInsert.length === 0) {
-      return;
+      return true;
     }
 
     const { error: insertError } = await supabase.from('reminders').insert(remindersToInsert);
     if (insertError) {
       console.error('Erro ao criar lembretes de aniversário:', insertError);
+      return false;
     }
-  }, [activeContracts, dependentsVisibleWithFilters, holdersVisibleWithFilters]);
+
+    return true;
+  }, [activeContractsForReminders, dependentsVisibleToUser, holdersVisibleToUser]);
+
+  const ensureAdjustmentReminders = useCallback(async (): Promise<boolean> => {
+    if (activeContractsForReminders.length === 0) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const remindersToSchedule = activeContractsForReminders
+      .filter((contract) => contract.mes_reajuste)
+      .map((contract) => {
+        const adjustmentDate = getAdjustmentDateForDirection(contract.mes_reajuste!, 'future', contract);
+        if (!adjustmentDate) return null;
+
+        const reminderDate = new Date(adjustmentDate);
+        reminderDate.setDate(reminderDate.getDate() - 60);
+        reminderDate.setHours(9, 0, 0, 0);
+
+        if (reminderDate < today) return null;
+
+        const month = String(adjustmentDate.getMonth() + 1).padStart(2, '0');
+        const year = adjustmentDate.getFullYear();
+
+        return {
+          contract,
+          adjustmentDate,
+          reminderDate,
+          titulo: `Reajuste anual ${month}/${year} - ${contract.codigo_contrato}`,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    if (remindersToSchedule.length === 0) return true;
+
+    const reminderDates = remindersToSchedule.map((item) => item.reminderDate.getTime());
+    const minDate = new Date(Math.min(...reminderDates)).toISOString();
+    const maxDate = new Date(Math.max(...reminderDates)).toISOString();
+    const contractIds = Array.from(new Set(remindersToSchedule.map((item) => item.contract.id)));
+
+    const { data: existingReminders, error: fetchError } = await supabase
+      .from('reminders')
+      .select('id, contract_id, data_lembrete, tipo')
+      .eq('tipo', 'Reajuste')
+      .in('contract_id', contractIds)
+      .gte('data_lembrete', minDate)
+      .lte('data_lembrete', maxDate);
+
+    if (fetchError) {
+      console.error('Erro ao verificar lembretes de reajuste existentes:', fetchError);
+      return false;
+    }
+
+    const existingKeys = new Set(
+      (existingReminders || []).map((reminder) => `${reminder.contract_id ?? ''}|${reminder.data_lembrete}`),
+    );
+
+    const remindersToInsert = remindersToSchedule
+      .filter((item) => !existingKeys.has(`${item.contract.id}|${item.reminderDate.toISOString()}`))
+      .map((item) => ({
+        contract_id: item.contract.id,
+        lead_id: item.contract.lead_id ?? null,
+        tipo: 'Reajuste',
+        titulo: item.titulo,
+        descricao: `Reajuste anual previsto para ${item.adjustmentDate.toLocaleDateString('pt-BR')}.`,
+        data_lembrete: item.reminderDate.toISOString(),
+        lido: false,
+        prioridade: 'normal',
+      }));
+
+    if (remindersToInsert.length === 0) return true;
+
+    const { error: insertError } = await supabase.from('reminders').insert(remindersToInsert);
+    if (insertError) {
+      console.error('Erro ao criar lembretes de reajuste:', insertError);
+      return false;
+    }
+
+    return true;
+  }, [activeContractsForReminders, getAdjustmentDateForDirection]);
 
   const upcomingBirthdays = useMemo(
     () => getBirthdaysWithinRange(daysAhead, timelineDirection),
@@ -1432,13 +1612,33 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     }
 
     ensureBirthdayRemindersForToday()
-      .then(() => {
-        lastBirthdayReminderSync.current = todayKey;
+      .then((didRun) => {
+        if (didRun) {
+          lastBirthdayReminderSync.current = todayKey;
+        }
       })
       .catch((error) => {
         console.error('Erro ao processar lembretes de aniversário:', error);
       });
   }, [ensureBirthdayRemindersForToday]);
+
+  useEffect(() => {
+    const todayKey = new Date().toISOString().split('T')[0];
+
+    if (lastAdjustmentReminderSync.current === todayKey) {
+      return;
+    }
+
+    ensureAdjustmentReminders()
+      .then((didRun) => {
+        if (didRun) {
+          lastAdjustmentReminderSync.current = todayKey;
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao processar lembretes de reajuste:', error);
+      });
+  }, [ensureAdjustmentReminders]);
 
   const donutChartData = leadStatusData.map((item) => ({
     label: item.status,
@@ -1534,24 +1734,52 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
   const handleNavigateToContract = (contract?: Contract | null) => {
     if (!contract) return;
-
-    const options = contract.operadora ? { contractOperadoraFilter: contract.operadora } : undefined;
-    onNavigateToTab?.('contracts', options);
+    setSelectedContract(contract);
   };
 
   const handleNavigateToLead = (leadId?: string | null) => {
     if (!leadId) return;
-
-    onNavigateToTab?.('leads', { leadIdFilter: leadId });
+    const lead = leads.find((item) => item.id === leadId) || null;
+    setSelectedLead(lead);
   };
 
-  const handleCreateReminderRequest = (options: ReminderRequest) => {
+  const handleCreateReminderRequest = async (options: ReminderRequest) => {
     if (onCreateReminder) {
       onCreateReminder(options);
       return;
     }
 
+    const title = options.title?.trim() || 'Lembrete';
+    const normalizedTitle = title.toLowerCase();
+    const tipo = normalizedTitle.startsWith('aniversário')
+      ? 'Aniversário'
+      : normalizedTitle.startsWith('reajuste')
+        ? 'Reajuste'
+        : 'Outro';
+
+    const reminderDate = new Date();
+    reminderDate.setSeconds(0, 0);
+
+    const { error } = await supabase.from('reminders').insert([
+      {
+        contract_id: options.contractId ?? null,
+        lead_id: options.leadId ?? null,
+        tipo,
+        titulo: title,
+        descricao: options.description ?? null,
+        data_lembrete: reminderDate.toISOString(),
+        lido: false,
+        prioridade: 'normal',
+      },
+    ]);
+
+    if (error) {
+      console.error('Erro ao criar lembrete:', error);
+      alert('Erro ao criar lembrete');
+      return;
+    }
     onNavigateToTab?.('reminders');
+    alert('Lembrete criado');
   };
 
   return (
@@ -1987,6 +2215,21 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                   {adjustmentsInRange.map((adjustment) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
+                    const holder = adjustment.contract
+                      ? holderByContractId.get(adjustment.contract.id) ?? null
+                      : null;
+                    const holderName = holder
+                      ? holder.nome_fantasia || holder.razao_social || holder.nome_completo
+                      : null;
+                    const ageBandIndex = adjustment.age
+                      ? ageBands.findIndex(
+                          (band) => adjustment.age! >= band.min && (band.max === null || adjustment.age! <= band.max),
+                        )
+                      : -1;
+                    const currentAgeBand = ageBandIndex >= 0 ? ageBands[ageBandIndex] : null;
+                    const previousAgeBand = ageBandIndex > 0 ? ageBands[ageBandIndex - 1] : null;
+                    const formatBandLabel = (band: { min: number; max: number | null }) =>
+                      band.max === null ? `${band.min}+` : `${band.min}-${band.max}`;
                     const diasRestantes = Math.ceil(
                       (adjustment.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
                     );
@@ -2024,9 +2267,25 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                                   {adjustment.age && ` • ${adjustment.age} anos`}
                                 </p>
                                 <p className="text-xs text-slate-600">{adjustment.role}</p>
+                                {currentAgeBand && previousAgeBand && (
+                                  <p className="text-xs text-slate-600">
+                                    Faixa: {formatBandLabel(previousAgeBand)} {'->'} {formatBandLabel(currentAgeBand)}
+                                  </p>
+                                )}
                               </div>
                             ) : (
                               <p className="text-sm font-semibold text-slate-900">Reajuste contratual</p>
+                            )}
+                            {(adjustment.contract || holderName) && (
+                              <div className="text-xs text-slate-600">
+                                {holderName && <p>Titular: {holderName}</p>}
+                                {adjustment.contract?.modalidade && (
+                                  <p>Modalidade: {adjustment.contract.modalidade}</p>
+                                )}
+                                {adjustment.contract?.responsavel && (
+                                  <p>Responsável: {adjustment.contract.responsavel}</p>
+                                )}
+                              </div>
                             )}
                           </div>
                           <div className="text-right text-xs text-slate-500">
@@ -2205,6 +2464,41 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           </div>
         </div>
       </div>
+
+      {selectedContract && (
+        <ContractDetails
+          contract={selectedContract}
+          onClose={() => setSelectedContract(null)}
+          onUpdate={loadData}
+        />
+      )}
+
+      {selectedLeadWithRelations && (
+        <LeadDetails
+          lead={selectedLeadWithRelations}
+          onClose={() => setSelectedLead(null)}
+          onUpdate={loadData}
+          onEdit={(lead) => {
+            setEditingLead(lead);
+            setShowLeadForm(true);
+          }}
+        />
+      )}
+
+      {showLeadForm && (
+        <LeadForm
+          lead={editingLead}
+          onClose={() => {
+            setShowLeadForm(false);
+            setEditingLead(null);
+          }}
+          onSave={(_lead) => {
+            setShowLeadForm(false);
+            setEditingLead(null);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }

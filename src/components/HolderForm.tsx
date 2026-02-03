@@ -3,6 +3,8 @@ import { supabase, ContractHolder } from '../lib/supabase';
 import { Search, X, User } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
+import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import DependentForm from './DependentForm';
 
 type HolderFormProps = {
   contractId: string;
@@ -49,10 +51,14 @@ export default function HolderForm({
       holder?.bonus_por_vida_aplicado ?? initialData?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
   });
   const [saving, setSaving] = useState(false);
+  const [holders, setHolders] = useState<ContractHolder[]>([]);
+  const [selectedHolderId, setSelectedHolderId] = useState<string | null>(holder?.id || null);
+  const [showDependentForm, setShowDependentForm] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const isCNPJModalidade = ['MEI', 'CNPJ (PME)'].includes(modalidade);
 
@@ -116,6 +122,19 @@ export default function HolderForm({
     }
   };
 
+  const loadHolders = async () => {
+    const { data, error } = await supabase
+      .from('contract_holders')
+      .select('*')
+      .eq('contract_id', contractId)
+      .order('created_at');
+
+    if (error) throw error;
+    const holdersData = data || [];
+    setHolders(holdersData);
+    return holdersData;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -154,12 +173,31 @@ export default function HolderForm({
           .eq('id', holder.id);
 
         if (error) throw error;
+        setSelectedHolderId(holder.id);
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('contract_holders')
-          .insert([dataToSave]);
+          .insert([dataToSave])
+          .select('*')
+          .single();
 
         if (error) throw error;
+        setSelectedHolderId(data.id);
+      }
+
+      if (!holder) {
+        await loadHolders();
+        const confirmed = await requestConfirmation({
+          title: 'Adicionar dependentes?',
+          description: 'Deseja cadastrar dependentes para este contrato agora?',
+          confirmLabel: 'Sim, adicionar',
+          cancelLabel: 'Agora não',
+        });
+
+        if (confirmed) {
+          setShowDependentForm(true);
+          return;
+        }
       }
 
       onSave();
@@ -172,24 +210,25 @@ export default function HolderForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <User className="w-6 h-6 text-teal-600" />
-            <h3 className="text-xl font-bold text-slate-900">
-              {holder ? 'Editar Titular' : 'Dados do Titular'}
-            </h3>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
+        <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <User className="w-6 h-6 text-teal-600" />
+              <h3 className="text-xl font-bold text-slate-900">
+                {holder ? 'Editar Titular' : 'Dados do Titular'}
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
             <h4 className="font-semibold text-slate-900 mb-4">Informações Pessoais</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -531,8 +570,27 @@ export default function HolderForm({
               {saving ? 'Salvando...' : 'Salvar Titular'}
             </button>
           </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {showDependentForm && (
+        <DependentForm
+          contractId={contractId}
+          holders={holders}
+          dependent={null}
+          selectedHolderId={selectedHolderId}
+          bonusPorVidaDefault={formData.bonus_por_vida_aplicado}
+          onClose={() => {
+            setShowDependentForm(false);
+          }}
+          onSave={() => {
+            setShowDependentForm(false);
+            onSave();
+          }}
+        />
+      )}
+      {ConfirmationDialog}
+    </>
   );
 }

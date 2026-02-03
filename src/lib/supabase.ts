@@ -79,8 +79,8 @@ export type Lead = {
   responsavel?: string | null;
   responsavel_id?: string | null;
   data_criacao: string;
-  ultimo_contato?: string;
-  proximo_retorno?: string;
+  ultimo_contato?: string | null;
+  proximo_retorno?: string | null;
   tags?: string[];
   canal?: string | null;
   observacoes?: string;

@@ -23,6 +23,18 @@ type ContractHolder = {
   cnpj?: string;
 };
 
+type SavedContractView = {
+  id: string;
+  name: string;
+  filters: {
+    searchTerm: string;
+    filterStatus: string;
+    filterResponsavel: string;
+    filterOperadora: string;
+    dateProximityFilter: 'todos' | 'proximos-30';
+  };
+};
+
 export default function ContractsManager({
   leadToConvert,
   onConvertComplete,
@@ -39,6 +51,10 @@ export default function ContractsManager({
   const [filterResponsavel, setFilterResponsavel] = useState('todos');
   const [filterOperadora, setFilterOperadora] = useState('todas');
   const [dateProximityFilter, setDateProximityFilter] = useState<'todos' | 'proximos-30'>('todos');
+  const [savedViews, setSavedViews] = useState<SavedContractView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [isSavingView, setIsSavingView] = useState(false);
+  const [newViewName, setNewViewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
@@ -125,18 +141,79 @@ export default function ContractsManager({
     }
   }, [initialOperadoraFilter]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem('contracts.savedViews.v1');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as SavedContractView[];
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar views salvas:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('contracts.savedViews.v1', JSON.stringify(savedViews));
+  }, [savedViews]);
+
+  const applySavedView = (view: SavedContractView) => {
+    setSearchTerm(view.filters.searchTerm);
+    setFilterStatus(view.filters.filterStatus);
+    setFilterResponsavel(view.filters.filterResponsavel);
+    setFilterOperadora(view.filters.filterOperadora);
+    setDateProximityFilter(view.filters.dateProximityFilter);
+    setActiveViewId(view.id);
+  };
+
+  const handleSaveView = () => {
+    if (!newViewName.trim()) {
+      alert('Informe um nome para a view.');
+      return;
+    }
+
+    const newView: SavedContractView = {
+      id: `${Date.now()}`,
+      name: newViewName.trim(),
+      filters: {
+        searchTerm,
+        filterStatus,
+        filterResponsavel,
+        filterOperadora,
+        dateProximityFilter,
+      },
+    };
+
+    setSavedViews((current) => [newView, ...current]);
+    setActiveViewId(newView.id);
+    setNewViewName('');
+    setIsSavingView(false);
+  };
+
+  const handleRemoveView = (viewId: string) => {
+    setSavedViews((current) => current.filter((view) => view.id !== viewId));
+    if (activeViewId === viewId) {
+      setActiveViewId(null);
+    }
+  };
+
   const loadContracts = async () => {
     setLoading(true);
     try {
       const [contractsData, holdersData] = await Promise.all([
         fetchAllPages<Contract>((from, to) =>
-          supabase.from('contracts').select('*').order('created_at', { ascending: false }).range(from, to),
+          (supabase
+            .from('contracts')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(from, to) as unknown as Promise<{ data: Contract[] | null; error: unknown }>),
         ),
         fetchAllPages<ContractHolder>((from, to) =>
-          supabase
+          (supabase
             .from('contract_holders')
             .select('id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj')
-            .range(from, to),
+            .range(from, to) as unknown as Promise<{ data: ContractHolder[] | null; error: unknown }>),
         ),
       ]);
 
@@ -150,11 +227,20 @@ export default function ContractsManager({
 
       setContracts(contractsData || []);
       setHolders(holdersMap);
+      return contractsData || [];
     } catch (error) {
       console.error('Erro ao carregar contratos:', error);
+      return null;
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleContractsUpdated = async () => {
+    const updatedContracts = await loadContracts();
+    if (!updatedContracts || !selectedContract) return;
+    const refreshed = updatedContracts.find(contractItem => contractItem.id === selectedContract.id) || null;
+    setSelectedContract(refreshed);
   };
 
   const filterContracts = () => {
@@ -428,6 +514,67 @@ export default function ContractsManager({
           </div>
         </div>
 
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={activeViewId ?? ''}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (!value) {
+                  setActiveViewId(null);
+                  return;
+                }
+                const view = savedViews.find((item) => item.id === value);
+                if (view) {
+                  applySavedView(view);
+                }
+              }}
+              className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            >
+              <option value="">Views salvas</option>
+              {savedViews.map((view) => (
+                <option key={view.id} value={view.id}>
+                  {view.name}
+                </option>
+              ))}
+            </select>
+            {activeViewId && (
+              <button
+                type="button"
+                onClick={() => handleRemoveView(activeViewId)}
+                className="h-10 px-3 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+              >
+                Remover view
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsSavingView((current) => !current)}
+              className="h-10 px-3 text-sm border border-teal-200 rounded-lg text-teal-700 hover:bg-teal-50"
+            >
+              Salvar view
+            </button>
+          </div>
+          {isSavingView && (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={newViewName}
+                onChange={(event) => setNewViewName(event.target.value)}
+                placeholder="Nome da view"
+                className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={handleSaveView}
+                className="h-10 px-3 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+              >
+                Salvar
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-4">
           <div>
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Filtros</h4>
@@ -615,28 +762,17 @@ export default function ContractsManager({
                     className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
                   >
                     <Eye className="w-4 h-4" />
-                    <span>Ver Detalhes</span>
+                    <span>Abrir</span>
                   </button>
                   {!isObserver && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingContract(contract);
-                          setShowForm(true);
-                        }}
-                        className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDeleteContract(contract)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                        type="button"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Excluir</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleDeleteContract(contract)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                      type="button"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Excluir</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -686,7 +822,7 @@ export default function ContractsManager({
         <ContractDetails
           contract={selectedContract}
           onClose={() => setSelectedContract(null)}
-          onUpdate={loadContracts}
+          onUpdate={handleContractsUpdated}
           onDelete={handleDeleteContract}
         />
       )}

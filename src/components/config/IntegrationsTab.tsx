@@ -11,9 +11,7 @@ import {
 } from 'lucide-react';
 
 import { configService } from '../../lib/configService';
-import { useConfig } from '../../contexts/ConfigContext';
 import type { IntegrationSetting } from '../../lib/supabase';
-import AutoContactFlowSettings from './AutoContactFlowSettings';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
@@ -46,7 +44,6 @@ const normalizeGptSettings = (integration: IntegrationSetting | null): GptFormSt
 };
 
 export default function IntegrationsTab() {
-  const { leadStatuses } = useConfig();
   const [gptIntegration, setGptIntegration] = useState<IntegrationSetting | null>(null);
   const [gptFormState, setGptFormState] = useState<GptFormState>(() => normalizeGptSettings(null));
   const [loadingGpt, setLoadingGpt] = useState(true);
@@ -236,14 +233,13 @@ export default function IntegrationsTab() {
 
       <div>
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-slate-900">Automação do WhatsApp</h2>
+          <h2 className="text-xl font-semibold text-slate-900">WhatsApp (Whapi)</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Configure as credenciais da API e o fluxo automático de mensagens
+            Conecte o canal de WhatsApp para uso em fluxos e conversas.
           </p>
         </div>
         <div className="space-y-6">
           <WhatsAppApiSettings />
-          <AutoContactFlowSettings />
         </div>
       </div>
     </div>

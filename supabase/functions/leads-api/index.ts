@@ -98,6 +98,7 @@ type AutoContactFlowConditionField =
   | 'event'
   | 'lead_created'
   | 'canal'
+  | 'whatsapp_valid'
   | 'estado'
   | 'regiao'
   | 'tipo_contratacao'
@@ -759,6 +760,11 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
+function isValidWhatsappNumber(telefone?: string | null): boolean {
+  const digits = normalizeTelefone(telefone ?? '');
+  return digits.length >= 10;
+}
+
 async function sendWhatsappMessages({
   endpoint,
   apiKey,
@@ -942,6 +948,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
       case 'event':
       case 'lead_created':
       case 'canal':
+      case 'whatsapp_valid':
       case 'estado':
       case 'regiao':
       case 'tipo_contratacao':
@@ -1313,6 +1320,8 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, even
       return lead.email ?? '';
     case 'telefone':
       return lead.telefone ?? '';
+    case 'whatsapp_valid':
+      return isValidWhatsappNumber(lead.telefone) ? 'true' : 'false';
     case 'data_criacao':
       return lead.data_criacao ?? '';
     case 'ultimo_contato':

@@ -42,7 +42,6 @@ import {
   type AutoContactFlowMessageSource,
   type AutoContactFlowStep,
   type AutoContactFlowCustomMessage,
-  type AutoContactInvalidNumberAction,
   type AutoContactLoggingSettings,
   type AutoContactMonitoringSettings,
   type AutoContactSchedulingSettings,
@@ -51,7 +50,7 @@ import {
   type TemplateMessage,
   type TemplateMessageType,
 } from '../../lib/autoContactService';
-import { applyFlowGraphToFlow, buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
+import { applyFlowGraphToFlow, buildFlowGraphFromFlow, expandFlowGraphToFlows } from '../../lib/autoContactFlowGraph';
 import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
 import FlowBuilder from './FlowBuilder';
@@ -366,9 +365,15 @@ export default function AutoContactFlowSettings() {
     const sanitizedTemplates = normalizeTemplatesForSettings(messageTemplatesDraft, true);
     const fallbackTemplateId = sanitizedTemplates[0]?.id ?? '';
     const sanitizedFlows = flowDrafts
-      .map((flow, flowIndex) => {
-        const effectiveFlow = flow.flowGraph ? applyFlowGraphToFlow(flow, flow.flowGraph) : flow;
-        const steps = effectiveFlow.steps
+      .flatMap((flow, flowIndex) => {
+        const expandedFlows = flow.flowGraph ? expandFlowGraphToFlows(flow) : [flow];
+
+        return expandedFlows.map((expandedFlow, expandedIndex) => {
+          const flowKey = expandedIndex > 0 ? `${flowIndex}-${expandedIndex}` : `${flowIndex}`;
+          const effectiveFlow = expandedFlow.flowGraph
+            ? applyFlowGraphToFlow(expandedFlow, expandedFlow.flowGraph)
+            : expandedFlow;
+          const steps = effectiveFlow.steps
           .map((step, stepIndex) => {
             const stepWithLegacyDelay = step as AutoContactFlowStep & { delayHours?: number };
             const rawDelay = Number(stepWithLegacyDelay.delayValue ?? stepWithLegacyDelay.delayHours);
@@ -398,55 +403,56 @@ export default function AutoContactFlowSettings() {
             };
           })
           .filter((step) => step.delayValue >= 0);
-        const conditions = (effectiveFlow.conditions ?? [])
-          .map((condition, conditionIndex) => ({
+          const conditions = (effectiveFlow.conditions ?? [])
+            .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-condition-${conditionIndex}`,
             field: condition.field,
             operator: condition.operator,
             value: condition.value?.trim() || '',
           }))
           .filter((condition) => condition.value);
-        const exitConditions = (effectiveFlow.exitConditions ?? [])
-          .map((condition, conditionIndex) => ({
+          const exitConditions = (effectiveFlow.exitConditions ?? [])
+            .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-exit-condition-${conditionIndex}`,
             field: condition.field,
             operator: condition.operator,
             value: condition.value?.trim() || '',
           }))
           .filter((condition) => condition.value);
-        const tags = (effectiveFlow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
-        const fallbackScheduling = {
-          startHour: schedulingDraft.startHour,
-          endHour: schedulingDraft.endHour,
-          allowedWeekdays: schedulingDraft.allowedWeekdays,
-        };
-        const flowScheduling = effectiveFlow.scheduling ?? fallbackScheduling;
-        const allowedWeekdays = Array.isArray(flowScheduling.allowedWeekdays)
-          ? flowScheduling.allowedWeekdays
-              .map((value) => Number(value))
-              .filter((value) => Number.isFinite(value) && value >= 1 && value <= 7)
-          : fallbackScheduling.allowedWeekdays;
+          const tags = (effectiveFlow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
+          const fallbackScheduling = {
+            startHour: schedulingDraft.startHour,
+            endHour: schedulingDraft.endHour,
+            allowedWeekdays: schedulingDraft.allowedWeekdays,
+          };
+          const flowScheduling = effectiveFlow.scheduling ?? fallbackScheduling;
+          const allowedWeekdays = Array.isArray(flowScheduling.allowedWeekdays)
+            ? flowScheduling.allowedWeekdays
+                .map((value) => Number(value))
+                .filter((value) => Number.isFinite(value) && value >= 1 && value <= 7)
+            : fallbackScheduling.allowedWeekdays;
 
-        return {
-          id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowIndex}`,
-          name: effectiveFlow.name?.trim() || `Fluxo ${flowIndex + 1}`,
-          triggerStatus: effectiveFlow.triggerStatus?.trim() || '',
-          steps,
-          finalStatus: effectiveFlow.finalStatus?.trim() || '',
-          invalidNumberAction: effectiveFlow.invalidNumberAction ?? 'none',
-          invalidNumberStatus: effectiveFlow.invalidNumberStatus?.trim() || '',
-          conditionLogic: effectiveFlow.conditionLogic === 'any' ? 'any' : 'all',
-          conditions,
-          exitConditionLogic: effectiveFlow.exitConditionLogic === 'all' ? 'all' : 'any',
-          exitConditions,
-          tags,
-          scheduling: {
-            startHour: flowScheduling.startHour || fallbackScheduling.startHour,
-            endHour: flowScheduling.endHour || fallbackScheduling.endHour,
-            allowedWeekdays,
-          },
-          flowGraph: effectiveFlow.flowGraph,
-        };
+          return {
+            id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowKey}`,
+            name: effectiveFlow.name?.trim() || `Fluxo ${flowIndex + 1}`,
+            triggerStatus: effectiveFlow.triggerStatus?.trim() || '',
+            steps,
+            finalStatus: effectiveFlow.finalStatus?.trim() || '',
+            invalidNumberAction: effectiveFlow.invalidNumberAction ?? 'none',
+            invalidNumberStatus: effectiveFlow.invalidNumberStatus?.trim() || '',
+            conditionLogic: effectiveFlow.conditionLogic === 'any' ? 'any' : 'all',
+            conditions,
+            exitConditionLogic: effectiveFlow.exitConditionLogic === 'all' ? 'all' : 'any',
+            exitConditions,
+            tags,
+            scheduling: {
+              startHour: flowScheduling.startHour || fallbackScheduling.startHour,
+              endHour: flowScheduling.endHour || fallbackScheduling.endHour,
+              allowedWeekdays,
+            },
+            flowGraph: effectiveFlow.flowGraph,
+          };
+        });
       })
       .filter((flow) => flow.steps.length);
 
@@ -492,6 +498,7 @@ export default function AutoContactFlowSettings() {
     status: 'Status atual',
     tag: 'Tag do lead',
     canal: 'Canal de aquisição',
+    whatsapp_valid: 'WhatsApp válido?',
     event: 'Evento',
     estado: 'Estado (UF)',
     regiao: 'Região',
@@ -508,6 +515,10 @@ export default function AutoContactFlowSettings() {
   const conditionFieldOptions = Object.entries(conditionFieldLabels).filter(([value]) => value !== 'lead_created');
   const eventValueLabels: Record<string, string> = {
     lead_created: 'Lead criado',
+  };
+  const booleanValueLabels: Record<string, string> = {
+    true: 'Sim',
+    false: 'Não',
   };
   const conditionOperatorLabels: Record<AutoContactFlowCondition['operator'], string> = {
     equals: 'É igual a',
@@ -526,6 +537,24 @@ export default function AutoContactFlowSettings() {
   const isEventLeadCreated = (condition: AutoContactFlowCondition) =>
     condition.field === 'lead_created' ||
     (condition.field === 'event' && condition.value === 'lead_created');
+  const getConditionValueLabel = (condition: AutoContactFlowCondition) => {
+    if (condition.field === 'event') {
+      return eventValueLabels[condition.value] ?? condition.value;
+    }
+    if (condition.field === 'whatsapp_valid') {
+      return booleanValueLabels[condition.value] ?? condition.value;
+    }
+    return condition.value;
+  };
+  const getConditionOptionLabel = (field: AutoContactFlowCondition['field'], value: string) => {
+    if (field === 'event') {
+      return eventValueLabels[value] ?? value;
+    }
+    if (field === 'whatsapp_valid') {
+      return booleanValueLabels[value] ?? value;
+    }
+    return value;
+  };
   const getFlowConditionPreview = (flow: AutoContactFlow) => {
     const conditions = flow.conditions ?? [];
     if (conditions.length === 0) {
@@ -539,7 +568,7 @@ export default function AutoContactFlowSettings() {
         const operatorLabel = isEventLeadCreated(condition)
           ? ''
           : conditionOperatorLabels[condition.operator] ?? condition.operator;
-        const valueText = isEventLeadCreated(condition) ? '' : condition.value;
+        const valueText = isEventLeadCreated(condition) ? '' : getConditionValueLabel(condition);
         return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' • ');
@@ -553,7 +582,7 @@ export default function AutoContactFlowSettings() {
         const operatorLabel = isEventLeadCreated(condition)
           ? ''
           : conditionOperatorLabels[condition.operator] ?? condition.operator;
-        const valueText = isEventLeadCreated(condition) ? '' : condition.value;
+        const valueText = isEventLeadCreated(condition) ? '' : getConditionValueLabel(condition);
         return `${fieldLabel} ${operatorLabel} ${valueText}`.trim();
       })
       .join(' ');
@@ -609,13 +638,7 @@ export default function AutoContactFlowSettings() {
     document: 'Documento',
   };
   const flowActionLabels: Record<AutoContactFlowActionType, string> = {
-    send_message: 'Enviar mensagem',
-    update_status: 'Atualizar status do lead',
-    archive_lead: 'Arquivar lead',
-    delete_lead: 'Excluir lead',
-  };
-  const invalidNumberActionLabels: Record<AutoContactInvalidNumberAction, string> = {
-    none: 'Não fazer nada',
+    send_message: 'Enviar mensagem (canal)',
     update_status: 'Atualizar status do lead',
     archive_lead: 'Arquivar lead',
     delete_lead: 'Excluir lead',
@@ -877,6 +900,7 @@ export default function AutoContactFlowSettings() {
       tipo_contratacao: tipoContratacaoOptions.map((option) => option.label),
       responsavel: responsavelOptions.map((option) => option.label),
       tag: availableTags,
+      whatsapp_valid: ['true', 'false'],
       event: ['lead_created'],
     }),
     [availableTags, originOptions, responsavelOptions, statusOptions, tipoContratacaoOptions],
@@ -926,10 +950,13 @@ export default function AutoContactFlowSettings() {
   const simulationTimeline = useMemo(() => {
     if (!activeFlow || !showSimulation) return [];
     const baseDate = simulationStart ? new Date(simulationStart) : new Date();
+    const effectiveFlow = activeFlow.flowGraph
+      ? applyFlowGraphToFlow(activeFlow, activeFlow.flowGraph)
+      : activeFlow;
     return buildAutoContactScheduleTimeline({
       startAt: baseDate,
-      steps: activeFlow.steps,
-      scheduling: getFlowScheduling(activeFlow),
+      steps: effectiveFlow.steps,
+      scheduling: getFlowScheduling(effectiveFlow),
     }).map((item, index) => ({
       index: index + 1,
       step: item.step,
@@ -1555,7 +1582,7 @@ export default function AutoContactFlowSettings() {
                         messageTemplates={messageTemplatesDraft}
                         conditionFieldOptions={conditionFieldOptions}
                         conditionOperatorLabels={conditionOperatorLabels}
-                        eventValueLabels={eventValueLabels}
+                        getConditionOptionLabel={getConditionOptionLabel}
                         delayUnitLabels={delayUnitLabels}
                         flowActionLabels={flowActionLabels}
                         getConditionValueOptions={getConditionValueOptions}
@@ -1624,6 +1651,12 @@ export default function AutoContactFlowSettings() {
                                           operator: 'equals' as AutoContactFlowCondition['operator'],
                                           value: 'lead_created',
                                         }
+                                      : nextField === 'whatsapp_valid'
+                                        ? {
+                                            field: nextField,
+                                            operator: 'equals' as AutoContactFlowCondition['operator'],
+                                            value: 'true',
+                                          }
                                       : { field: nextField, value: '' };
                                   handleUpdateFlowCondition(activeFlow.id, condition.id, nextUpdates);
                                 }}
@@ -1664,11 +1697,11 @@ export default function AutoContactFlowSettings() {
                                     className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                                   >
                                     <option value="">Selecione</option>
-                                    {valueOptions.map((option) => (
-                                      <option key={option} value={option}>
-                                        {condition.field === 'event' ? eventValueLabels[option] ?? option : option}
-                                      </option>
-                                    ))}
+                                     {valueOptions.map((option) => (
+                                       <option key={option} value={option}>
+                                         {getConditionOptionLabel(condition.field, option)}
+                                       </option>
+                                     ))}
                                   </select>
                                 ) : (
                                   <input
@@ -1760,6 +1793,12 @@ export default function AutoContactFlowSettings() {
                                           operator: 'equals' as AutoContactFlowCondition['operator'],
                                           value: 'lead_created',
                                         }
+                                      : nextField === 'whatsapp_valid'
+                                        ? {
+                                            field: nextField,
+                                            operator: 'equals' as AutoContactFlowCondition['operator'],
+                                            value: 'true',
+                                          }
                                       : { field: nextField, value: '' };
                                   handleUpdateFlowExitCondition(activeFlow.id, condition.id, nextUpdates);
                                 }}
@@ -1800,11 +1839,11 @@ export default function AutoContactFlowSettings() {
                                     className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                                   >
                                     <option value="">Selecione</option>
-                                    {valueOptions.map((option) => (
-                                      <option key={option} value={option}>
-                                        {condition.field === 'event' ? eventValueLabels[option] ?? option : option}
-                                      </option>
-                                    ))}
+                                     {valueOptions.map((option) => (
+                                       <option key={option} value={option}>
+                                         {getConditionOptionLabel(condition.field, option)}
+                                       </option>
+                                     ))}
                                   </select>
                                 ) : (
                                   <input
@@ -1910,60 +1949,6 @@ export default function AutoContactFlowSettings() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-slate-500">
-                        Se o número do WhatsApp não existir
-                      </label>
-                      <select
-                        value={activeFlow.invalidNumberAction ?? 'none'}
-                        onChange={(event) =>
-                          handleUpdateFlow(activeFlow.id, {
-                            invalidNumberAction: event.target.value as AutoContactInvalidNumberAction,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                      >
-                        {Object.entries(invalidNumberActionLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      {activeFlow.invalidNumberAction === 'update_status' && (
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-500 mb-1">
-                            Status do lead após falha
-                          </label>
-                          {showStatusSelect ? (
-                            <select
-                              value={activeFlow.invalidNumberStatus ?? ''}
-                              onChange={(event) =>
-                                handleUpdateFlow(activeFlow.id, { invalidNumberStatus: event.target.value })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                            >
-                              <option value="">Selecione um status</option>
-                              {statusOptions.map((status) => (
-                                <option key={status.id} value={status.nome}>
-                                  {status.nome}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              value={activeFlow.invalidNumberStatus ?? ''}
-                              onChange={(event) =>
-                                handleUpdateFlow(activeFlow.id, { invalidNumberStatus: event.target.value })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                              placeholder="Ex.: Perdido"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-
                     {flowEditorMode === 'basic' && (
                       <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2057,6 +2042,9 @@ export default function AutoContactFlowSettings() {
 
                           {step.actionType === 'send_message' && (
                             <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+                              <div className="md:col-span-2 text-xs text-slate-500">
+                                Canal ativo: WhatsApp (configurado em Integrações).
+                              </div>
                               <div>
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                                   Origem da mensagem

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings, Users, Building2, AlertCircle, Plug } from 'lucide-react';
+import { Settings, Users, Building2, AlertCircle, Plug, GitBranch } from 'lucide-react';
 import SystemSettingsTab from '../components/config/SystemSettingsTab';
 import OperadorasTab from '../components/config/OperadorasTab';
 import UsersTab from '../components/config/UsersTab';
 import IntegrationsTab from '../components/config/IntegrationsTab';
+import AutomationFlowsTab from '../components/config/AutomationFlowsTab';
 
-type TabType = 'system' | 'operadoras' | 'users' | 'integrations';
+type TabType = 'system' | 'operadoras' | 'users' | 'integrations' | 'automation';
 
 export default function ConfigPage() {
   const { isAdmin } = useAuth();
@@ -28,6 +29,7 @@ export default function ConfigPage() {
     { id: 'system' as TabType, label: 'Sistema', icon: Settings },
     { id: 'operadoras' as TabType, label: 'Operadoras', icon: Building2 },
     { id: 'users' as TabType, label: 'Usuários', icon: Users },
+    { id: 'automation' as TabType, label: 'Automações', icon: GitBranch },
     { id: 'integrations' as TabType, label: 'Integrações', icon: Plug },
   ];
 
@@ -63,6 +65,7 @@ export default function ConfigPage() {
           {activeTab === 'system' && <SystemSettingsTab />}
           {activeTab === 'operadoras' && <OperadorasTab />}
           {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'automation' && <AutomationFlowsTab />}
           {activeTab === 'integrations' && <IntegrationsTab />}
         </div>
       </div>

@@ -55,6 +55,7 @@ export type AutoContactFlowConditionField =
   | 'status'
   | 'tag'
   | 'canal'
+  | 'whatsapp_valid'
   | 'event'
   | 'estado'
   | 'regiao'
@@ -400,6 +401,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       case 'status':
       case 'tag':
       case 'canal':
+      case 'whatsapp_valid':
       case 'event':
       case 'estado':
       case 'regiao':
@@ -701,6 +703,11 @@ export const applyTemplateVariables = (
 };
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
+const isValidWhatsappNumber = (lead: Lead): boolean => {
+  const digits = normalizePhone(lead.telefone ?? '');
+  return digits.length >= 10;
+};
 
 type DateParts = {
   year: number;
@@ -1201,6 +1208,8 @@ const getLeadFieldValue = (
       return lead.email ?? '';
     case 'telefone':
       return lead.telefone ?? '';
+    case 'whatsapp_valid':
+      return isValidWhatsappNumber(lead) ? 'true' : 'false';
     case 'data_criacao':
       return lead.data_criacao ?? '';
     case 'lead_criado':

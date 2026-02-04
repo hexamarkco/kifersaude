@@ -34,7 +34,7 @@ type FlowBuilderProps = {
   messageTemplates: AutoContactTemplate[];
   conditionFieldOptions: [string, string][];
   conditionOperatorLabels: Record<AutoContactFlowConditionOperator, string>;
-  eventValueLabels: Record<string, string>;
+  getConditionOptionLabel: (field: AutoContactFlowCondition['field'], value: string) => string;
   delayUnitLabels: Record<AutoContactDelayUnit, { singular: string; plural: string }>;
   flowActionLabels: Record<AutoContactFlowActionType, string>;
   getConditionValueOptions: (field: AutoContactFlowCondition['field']) => string[] | null;
@@ -83,8 +83,25 @@ const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
     <div className="text-xs text-amber-700 mt-1">
       {data.conditions?.length ? `${data.conditions.length} condição(ões)` : 'Sem condições'}
     </div>
+    <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-700">
+      <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5">Sim</span>
+      <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5">Nao</span>
+    </div>
     <Handle type="target" position={Position.Left} className="w-2 h-2 bg-amber-500" />
-    <Handle type="source" position={Position.Right} className="w-2 h-2 bg-amber-500" />
+    <Handle
+      id="yes"
+      type="source"
+      position={Position.Right}
+      className="w-2 h-2 bg-amber-500"
+      style={{ top: '35%' }}
+    />
+    <Handle
+      id="no"
+      type="source"
+      position={Position.Right}
+      className="w-2 h-2 bg-amber-500"
+      style={{ top: '70%' }}
+    />
   </div>
 );
 
@@ -113,7 +130,7 @@ export default function FlowBuilder({
   messageTemplates,
   conditionFieldOptions,
   conditionOperatorLabels,
-  eventValueLabels,
+  getConditionOptionLabel,
   delayUnitLabels,
   flowActionLabels,
   getConditionValueOptions,
@@ -147,7 +164,16 @@ export default function FlowBuilder({
   }, [nodes, edges, onChangeGraph]);
 
   const handleConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge({ ...connection, animated: false }, eds)),
+    (connection: Connection) =>
+      setEdges((eds) => {
+        const label =
+          connection.sourceHandle === 'no'
+            ? 'Nao'
+            : connection.sourceHandle === 'yes'
+              ? 'Sim'
+              : undefined;
+        return addEdge({ ...connection, animated: false, label }, eds);
+      }),
     [setEdges],
   );
 
@@ -310,6 +336,12 @@ export default function FlowBuilder({
                           const nextField = event.target.value as AutoContactFlowCondition['field'];
                           const next = nextField === 'event'
                             ? { field: nextField, operator: 'equals' as AutoContactFlowConditionOperator, value: 'lead_created' }
+                            : nextField === 'whatsapp_valid'
+                              ? {
+                                  field: nextField,
+                                  operator: 'equals' as AutoContactFlowConditionOperator,
+                                  value: 'true',
+                                }
                             : { field: nextField, value: '' };
                           const nextConditions = [...(selectedNode.data.conditions ?? [])];
                           nextConditions[index] = { ...condition, ...next };
@@ -354,7 +386,7 @@ export default function FlowBuilder({
                           <option value="">Selecione</option>
                           {valueOptions.map((option) => (
                             <option key={option} value={option}>
-                              {condition.field === 'event' ? eventValueLabels[option] ?? option : option}
+                              {getConditionOptionLabel(condition.field, option)}
                             </option>
                           ))}
                         </select>
@@ -441,6 +473,9 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === 'send_message' && (
                   <div className="space-y-2">
+                    <div className="text-[11px] text-slate-500">
+                      Canal ativo: WhatsApp (configurado em Integracoes).
+                    </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Origem da mensagem</label>
                       <select

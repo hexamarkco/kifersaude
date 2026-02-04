@@ -352,6 +352,7 @@ export default function FlowBuilder({
           <div>
             <div className="text-xs uppercase text-slate-400 font-semibold">Builder avancado</div>
             <div className="text-sm text-slate-700">Arraste e conecte as etapas do seu fluxo.</div>
+            <div className="text-[11px] text-slate-500 mt-1">Clique em uma linha para remover.</div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -368,6 +369,15 @@ export default function FlowBuilder({
             >
               + Acao
             </button>
+            <button
+              type="button"
+              onClick={reorganizeLayout}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-100"
+              title="Reorganizar"
+              aria-label="Reorganizar"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </button>
           </div>
         </div>
         <ReactFlow
@@ -382,18 +392,6 @@ export default function FlowBuilder({
           fitView
           className="bg-slate-50"
         >
-          <div className="absolute bottom-20 left-4 z-10 flex flex-col items-start gap-2">
-            <button
-              type="button"
-              onClick={reorganizeLayout}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-100"
-              title="Reorganizar"
-              aria-label="Reorganizar"
-            >
-              <RefreshCcw className="h-4 w-4" />
-            </button>
-            <div className="text-[11px] text-slate-500">Clique em uma linha para remover</div>
-          </div>
           <MiniMap nodeColor="#e2e8f0" maskColor="rgba(15,23,42,0.1)" />
           <Controls />
           <Background gap={18} size={1} color="#e2e8f0" />

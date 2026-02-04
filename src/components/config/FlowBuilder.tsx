@@ -264,6 +264,34 @@ export default function FlowBuilder({
     ]);
   };
 
+  const addConditionAfterSelected = () => {
+    if (!selectedNode) return;
+    const newId = createId('condition');
+    const position = { x: selectedNode.position.x + 220, y: selectedNode.position.y + 20 };
+    setNodes((current) => [
+      ...current,
+      {
+        id: newId,
+        type: 'condition',
+        position,
+        data: {
+          label: 'Condição',
+          conditions: [],
+          conditionLogic: 'all',
+        },
+      },
+    ]);
+    setEdges((current) => [
+      ...current,
+      {
+        id: createId('edge'),
+        source: selectedNode.id,
+        target: newId,
+        label: selectedNode.type === 'condition' ? 'Sim' : undefined,
+      },
+    ]);
+  };
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="rounded-2xl border border-slate-200 bg-slate-50 h-[560px]">
@@ -438,6 +466,13 @@ export default function FlowBuilder({
                   className="w-full px-3 py-2 text-xs border border-dashed border-slate-200 rounded-lg text-slate-500"
                 >
                   + Adicionar condicao
+                </button>
+                <button
+                  type="button"
+                  onClick={addConditionAfterSelected}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg text-slate-600"
+                >
+                  + Condicao abaixo
                 </button>
                 <button
                   type="button"

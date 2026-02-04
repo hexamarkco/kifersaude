@@ -118,7 +118,14 @@ type AutoContactTemplate = {
   messages?: AutoContactTemplateMessage[];
 };
 
-type AutoContactFlowActionType = 'send_message' | 'update_status' | 'archive_lead' | 'delete_lead';
+type AutoContactFlowActionType =
+  | 'send_message'
+  | 'update_status'
+  | 'archive_lead'
+  | 'delete_lead'
+  | 'webhook'
+  | 'create_task'
+  | 'send_email';
 
 type AutoContactFlowMessageSource = 'template' | 'custom';
 
@@ -141,6 +148,19 @@ type AutoContactFlowStep = {
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
   statusToSet?: string;
+  webhookUrl?: string;
+  webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
+  webhookHeaders?: string;
+  webhookBody?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  taskDueHours?: number;
+  taskPriority?: 'baixa' | 'normal' | 'alta';
+  emailTo?: string;
+  emailCc?: string;
+  emailBcc?: string;
+  emailSubject?: string;
+  emailBody?: string;
 };
 
 type AutoContactFlowConditionField =
@@ -957,6 +977,34 @@ const applyFormulaTokens = (value: string, context: FormulaContext): string =>
     return result == null ? '' : String(result);
   });
 
+const parseRecipientList = (value?: string): { email: string }[] =>
+  (value ?? '')
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((email) => ({ email }));
+
+const parseHeaderValue = (value: unknown): Record<string, string> => {
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, val]) => [key, String(val ?? '')]),
+    );
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object') {
+        return Object.fromEntries(
+          Object.entries(parsed as Record<string, unknown>).map(([key, val]) => [key, String(val ?? '')]),
+        );
+      }
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
 const applyTemplateVariables = (template: string, lead: any, timeZone?: string) => {
   const firstName = lead?.nome_completo?.trim()?.split(/\s+/)?.[0] ?? '';
   const greeting = getGreetingForDate(new Date(), timeZone);
@@ -1110,15 +1158,18 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
   };
 
   const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
-    switch (value) {
-      case 'send_message':
-      case 'update_status':
-      case 'archive_lead':
-      case 'delete_lead':
-        return value;
-      default:
-        return 'send_message';
-    }
+  switch (value) {
+    case 'send_message':
+    case 'update_status':
+    case 'archive_lead':
+    case 'delete_lead':
+    case 'webhook':
+    case 'create_task':
+    case 'send_email':
+      return value;
+    default:
+      return 'send_message';
+  }
   };
 
   const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
@@ -1233,6 +1284,53 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
             delayExpression: delayExpression || undefined,
             actionType,
             statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
+          };
+        }
+
+        if (actionType === 'webhook') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            webhookUrl: typeof step?.webhookUrl === 'string' ? step.webhookUrl : '',
+            webhookMethod: typeof step?.webhookMethod === 'string' ? step.webhookMethod : 'POST',
+            webhookHeaders: typeof step?.webhookHeaders === 'string' ? step.webhookHeaders : '',
+            webhookBody: typeof step?.webhookBody === 'string' ? step.webhookBody : '',
+          };
+        }
+
+        if (actionType === 'create_task') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            taskTitle: typeof step?.taskTitle === 'string' ? step.taskTitle : '',
+            taskDescription: typeof step?.taskDescription === 'string' ? step.taskDescription : '',
+            taskDueHours: Number.isFinite(Number(step?.taskDueHours)) ? Number(step.taskDueHours) : undefined,
+            taskPriority:
+              step?.taskPriority === 'alta' || step?.taskPriority === 'baixa' ? step.taskPriority : 'normal',
+          };
+        }
+
+        if (actionType === 'send_email') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayHours,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            emailTo: typeof step?.emailTo === 'string' ? step.emailTo : '',
+            emailCc: typeof step?.emailCc === 'string' ? step.emailCc : '',
+            emailBcc: typeof step?.emailBcc === 'string' ? step.emailBcc : '',
+            emailSubject: typeof step?.emailSubject === 'string' ? step.emailSubject : '',
+            emailBody: typeof step?.emailBody === 'string' ? step.emailBody : '',
           };
         }
 
@@ -1562,6 +1660,34 @@ async function scheduleFlowJobs({
     const delaySeconds = getDelaySeconds(step, lead);
     const desiredAt = new Date(now.getTime() + delaySeconds * 1000);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
+    const actionPayload = (() => {
+      switch (step.actionType) {
+        case 'webhook':
+          return {
+            url: step.webhookUrl ?? '',
+            method: step.webhookMethod ?? 'POST',
+            headers: step.webhookHeaders ?? '',
+            body: step.webhookBody ?? '',
+          };
+        case 'create_task':
+          return {
+            title: step.taskTitle ?? '',
+            description: step.taskDescription ?? '',
+            dueHours: step.taskDueHours ?? null,
+            priority: step.taskPriority ?? 'normal',
+          };
+        case 'send_email':
+          return {
+            to: step.emailTo ?? '',
+            cc: step.emailCc ?? '',
+            bcc: step.emailBcc ?? '',
+            subject: step.emailSubject ?? '',
+            body: step.emailBody ?? '',
+          };
+        default:
+          return null;
+      }
+    })();
     return {
       lead_id: leadId,
       flow_id: flow.id,
@@ -1571,6 +1697,7 @@ async function scheduleFlowJobs({
       template_id: step.templateId ?? null,
       custom_message: step.customMessage ?? null,
       status_to_set: step.statusToSet ?? null,
+      action_payload: actionPayload,
       scheduled_at: scheduledAt.toISOString(),
       status: 'pending',
     };
@@ -1756,6 +1883,49 @@ async function processFlowJobs({
         });
       }
 
+      if (job.action_type === 'webhook') {
+        const payload = job.action_payload ?? {};
+        const urlTemplate = typeof payload.url === 'string' ? payload.url : '';
+        const url = applyTemplateVariables(urlTemplate, leadWithRelations, settings.scheduling?.timezone).trim();
+        if (!url) {
+          throw new Error('Webhook sem URL configurada.');
+        }
+        const method = typeof payload.method === 'string' ? payload.method : 'POST';
+        const rawHeaders = payload.headers;
+        const headers = parseHeaderValue(rawHeaders);
+        const bodyTemplate = typeof payload.body === 'string' ? payload.body : '';
+        const resolvedBody = bodyTemplate
+          ? applyTemplateVariables(bodyTemplate, leadWithRelations, settings.scheduling?.timezone)
+          : JSON.stringify({ lead: leadWithRelations, flowId: job.flow_id, stepId: job.step_id });
+
+        const contentTypeHeader = headers['Content-Type'] ?? headers['content-type'];
+        const finalHeaders = {
+          'Content-Type': contentTypeHeader ?? 'application/json',
+          ...headers,
+        };
+
+        let bodyToSend: string | undefined = resolvedBody;
+        if (finalHeaders['Content-Type']?.includes('application/json')) {
+          try {
+            const parsed = JSON.parse(resolvedBody);
+            bodyToSend = JSON.stringify(parsed);
+          } catch {
+            bodyToSend = JSON.stringify({ payload: resolvedBody });
+          }
+        }
+
+        const response = await fetch(url, {
+          method,
+          headers: finalHeaders,
+          body: method === 'GET' ? undefined : bodyToSend,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Falha ao executar webhook.');
+        }
+      }
+
       if (job.action_type === 'update_status') {
         const statusName = job.status_to_set?.trim();
         if (!statusName) {
@@ -1766,6 +1936,102 @@ async function processFlowJobs({
           throw new Error('Status alvo não encontrado.');
         }
         await supabase.from('leads').update({ status_id: statusId }).eq('id', lead.id);
+      }
+
+      if (job.action_type === 'create_task') {
+        const payload = job.action_payload ?? {};
+        const title = applyTemplateVariables(String(payload.title ?? ''), leadWithRelations, settings.scheduling?.timezone).trim();
+        if (!title) {
+          throw new Error('Tarefa sem título configurado.');
+        }
+        const description = applyTemplateVariables(
+          String(payload.description ?? ''),
+          leadWithRelations,
+          settings.scheduling?.timezone,
+        ).trim();
+        const dueHours = Number(payload.dueHours);
+        const baseDate = new Date(job.scheduled_at);
+        const dueAt = Number.isFinite(dueHours)
+          ? new Date(baseDate.getTime() + dueHours * 3600000)
+          : baseDate;
+        const priority = typeof payload.priority === 'string' ? payload.priority : 'normal';
+
+        await supabase.from('reminders').insert({
+          lead_id: lead.id,
+          tipo: 'Automacao',
+          titulo: title,
+          descricao: description || undefined,
+          data_lembrete: dueAt.toISOString(),
+          lido: false,
+          prioridade: priority,
+          responsavel: leadWithRelations.responsavel ?? null,
+        });
+      }
+
+      if (job.action_type === 'send_email') {
+        const payload = job.action_payload ?? {};
+        const toList = parseRecipientList(String(payload.to ?? ''));
+        if (toList.length === 0) {
+          throw new Error('E-mail sem destinatário.');
+        }
+        const ccList = parseRecipientList(String(payload.cc ?? ''));
+        const bccList = parseRecipientList(String(payload.bcc ?? ''));
+        const subject = applyTemplateVariables(
+          String(payload.subject ?? ''),
+          leadWithRelations,
+          settings.scheduling?.timezone,
+        ).trim();
+        const body = applyTemplateVariables(
+          String(payload.body ?? ''),
+          leadWithRelations,
+          settings.scheduling?.timezone,
+        ).trim();
+
+        const { data: primaryAccount } = await supabase
+          .from('email_accounts')
+          .select('id, email_address, display_name, is_primary')
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!primaryAccount) {
+          throw new Error('Nenhuma conta de e-mail configurada.');
+        }
+
+        const { data: thread, error: threadError } = await supabase
+          .from('email_threads')
+          .insert({
+            account_id: primaryAccount.id,
+            subject,
+            preview: body.slice(0, 120),
+            folder: 'sent',
+            participants: toList,
+            unread: false,
+          })
+          .select('id')
+          .single();
+
+        if (threadError || !thread) {
+          throw new Error('Erro ao criar thread de e-mail.');
+        }
+
+        await supabase.from('email_messages').insert({
+          thread_id: thread.id,
+          account_id: primaryAccount.id,
+          direction: 'outbound',
+          from_participant: {
+            email: primaryAccount.email_address,
+            name: primaryAccount.display_name,
+          },
+          to_participants: toList,
+          cc_participants: ccList.length ? ccList : null,
+          bcc_participants: bccList.length ? bccList : null,
+          subject,
+          body,
+          folder: 'sent',
+          unread: false,
+          sent_at: new Date().toISOString(),
+        });
       }
 
       if (job.action_type === 'archive_lead') {

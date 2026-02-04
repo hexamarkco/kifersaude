@@ -52,7 +52,7 @@ import {
 } from '../../lib/autoContactService';
 import { applyFlowGraphToFlow, buildFlowGraphFromFlow, expandFlowGraphToFlows } from '../../lib/autoContactFlowGraph';
 import { supabase } from '../../lib/supabase';
-import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
+import type { IntegrationSetting, LeadStatusConfig, Lead } from '../../lib/supabase';
 import FlowBuilder from './FlowBuilder';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
@@ -401,6 +401,19 @@ export default function AutoContactFlowSettings() {
               templateId,
               customMessage,
               statusToSet: step.statusToSet?.trim() || '',
+              webhookUrl: step.webhookUrl?.trim() || '',
+              webhookMethod: step.webhookMethod ?? 'POST',
+              webhookHeaders: step.webhookHeaders?.trim() || '',
+              webhookBody: step.webhookBody?.trim() || '',
+              taskTitle: step.taskTitle?.trim() || '',
+              taskDescription: step.taskDescription?.trim() || '',
+              taskDueHours: Number.isFinite(Number(step.taskDueHours)) ? Number(step.taskDueHours) : undefined,
+              taskPriority: step.taskPriority ?? 'normal',
+              emailTo: step.emailTo?.trim() || '',
+              emailCc: step.emailCc?.trim() || '',
+              emailBcc: step.emailBcc?.trim() || '',
+              emailSubject: step.emailSubject?.trim() || '',
+              emailBody: step.emailBody?.trim() || '',
             };
           })
           .filter((step) => step.delayValue >= 0);
@@ -641,6 +654,9 @@ export default function AutoContactFlowSettings() {
   const flowActionLabels: Record<AutoContactFlowActionType, string> = {
     send_message: 'Enviar mensagem (canal)',
     update_status: 'Atualizar status do lead',
+    create_task: 'Criar tarefa',
+    send_email: 'Enviar e-mail',
+    webhook: 'Disparar webhook',
     archive_lead: 'Arquivar lead',
     delete_lead: 'Excluir lead',
   };
@@ -948,6 +964,24 @@ export default function AutoContactFlowSettings() {
     const offset = now.getTimezoneOffset() * 60000;
     return new Date(now.getTime() - offset).toISOString().slice(0, 16);
   };
+  const simulationLead = useMemo<Lead>(
+    () => ({
+      id: 'preview-lead',
+      nome_completo: 'Lead Exemplo',
+      telefone: '11999999999',
+      email: 'lead@exemplo.com',
+      cidade: 'São Paulo',
+      regiao: 'Sudeste',
+      estado: 'SP',
+      origem: 'Manual',
+      status: activeFlow?.triggerStatus || 'Novo',
+      data_criacao: new Date().toISOString(),
+      arquivado: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }),
+    [activeFlow?.triggerStatus],
+  );
   const simulationTimeline = useMemo(() => {
     if (!activeFlow || !showSimulation) return [];
     const baseDate = simulationStart ? new Date(simulationStart) : new Date();
@@ -958,6 +992,7 @@ export default function AutoContactFlowSettings() {
       startAt: baseDate,
       steps: effectiveFlow.steps,
       scheduling: getFlowScheduling(effectiveFlow),
+      lead: simulationLead,
     }).map((item, index) => ({
       index: index + 1,
       step: item.step,
@@ -2174,6 +2209,200 @@ export default function AutoContactFlowSettings() {
                             </div>
                           )}
 
+                          {step.actionType === 'create_task' && (
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                  Título da tarefa
+                                </label>
+                                <input
+                                  type="text"
+                                  value={step.taskTitle ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { taskTitle: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="Ex.: Retornar contato"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                  Descrição
+                                </label>
+                                <textarea
+                                  rows={3}
+                                  value={step.taskDescription ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { taskDescription: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="Detalhes da tarefa"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                  Vencimento (horas)
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={step.taskDueHours ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, {
+                                      taskDueHours: Number(event.target.value),
+                                    })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="24"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Prioridade</label>
+                                <select
+                                  value={step.taskPriority ?? 'normal'}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, {
+                                      taskPriority: event.target.value as AutoContactFlowStep['taskPriority'],
+                                    })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  <option value="baixa">Baixa</option>
+                                  <option value="normal">Normal</option>
+                                  <option value="alta">Alta</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          {step.actionType === 'send_email' && (
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div className="md:col-span-2 text-xs text-slate-500">
+                                Envio depende de conta configurada em Integrações de e-mail.
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Para</label>
+                                <input
+                                  type="text"
+                                  value={step.emailTo ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailTo: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="email@exemplo.com"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">CC</label>
+                                <input
+                                  type="text"
+                                  value={step.emailCc ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailCc: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">BCC</label>
+                                <input
+                                  type="text"
+                                  value={step.emailBcc ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailBcc: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Assunto</label>
+                                <input
+                                  type="text"
+                                  value={step.emailSubject ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailSubject: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Corpo do e-mail</label>
+                                <textarea
+                                  rows={4}
+                                  value={step.emailBody ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailBody: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                />
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                  Use {'{{= ... }}'} para formulas.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {step.actionType === 'webhook' && (
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">URL</label>
+                                <input
+                                  type="text"
+                                  value={step.webhookUrl ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { webhookUrl: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder="https://api.exemplo.com/webhook"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Metodo</label>
+                                <select
+                                  value={step.webhookMethod ?? 'POST'}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, {
+                                      webhookMethod: event.target.value as AutoContactFlowStep['webhookMethod'],
+                                    })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                                >
+                                  <option value="POST">POST</option>
+                                  <option value="PUT">PUT</option>
+                                  <option value="PATCH">PATCH</option>
+                                  <option value="GET">GET</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Headers (JSON)</label>
+                                <input
+                                  type="text"
+                                  value={step.webhookHeaders ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { webhookHeaders: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder='{"Authorization":"Bearer ..."}'
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Body</label>
+                                <textarea
+                                  rows={4}
+                                  value={step.webhookBody ?? ''}
+                                  onChange={(event) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { webhookBody: event.target.value })
+                                  }
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  placeholder='{"lead_id":"{{= lead.id }}"}'
+                                />
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                  Se vazio, envia JSON padrao com dados do lead.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                           {step.actionType === 'update_status' && (
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">
@@ -2574,6 +2803,9 @@ export default function AutoContactFlowSettings() {
                               </div>
                             </div>
                           )}
+
+
+
                         </div>
                       );
                     })}

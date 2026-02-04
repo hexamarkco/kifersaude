@@ -56,7 +56,16 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
       type: 'action',
       position: { x: (index + 1) * ACTION_NODE_WIDTH + (index + 1) * 40, y: index * ACTION_NODE_GAP },
       data: {
-        label: step.actionType === 'update_status' ? 'Atualizar status' : 'Enviar mensagem',
+        label:
+          step.actionType === 'update_status'
+            ? 'Atualizar status'
+            : step.actionType === 'create_task'
+              ? 'Criar tarefa'
+              : step.actionType === 'send_email'
+                ? 'Enviar e-mail'
+                : step.actionType === 'webhook'
+                  ? 'Disparar webhook'
+                  : 'Enviar mensagem',
         step,
       },
     });

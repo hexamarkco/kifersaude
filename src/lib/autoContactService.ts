@@ -1180,13 +1180,11 @@ export async function runAutoContactFlow({
   lead,
   settings,
   signal,
-  onFirstMessageSent,
   event,
 }: {
   lead: Lead;
   settings: AutoContactSettings;
   signal?: () => boolean;
-  onFirstMessageSent?: () => Promise<void> | void;
   event?: AutoContactFlowEvent;
 }): Promise<void> {
   if (signal?.() === false) return;
@@ -1206,7 +1204,6 @@ export async function runAutoContactFlow({
   };
 
   let previousStepAt = new Date();
-  let firstMessageSent = false;
 
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
@@ -1285,6 +1282,16 @@ export async function runAutoContactFlow({
     if (step.actionType === 'delete_lead') {
       await deleteLead(lead.id);
       return;
+    }
+
+    if (step.actionType === 'create_task' || step.actionType === 'send_email' || step.actionType === 'webhook') {
+      console.info('[AutoContact] Ação não executada no cliente, use o processamento em fila.', {
+        leadId: lead.id,
+        stepId: step.id,
+        actionType: step.actionType,
+      });
+      previousStepAt = new Date();
+      continue;
     }
 
     previousStepAt = new Date();
@@ -1551,10 +1558,12 @@ export const buildAutoContactScheduleTimeline = ({
   startAt,
   steps,
   scheduling,
+  lead,
 }: {
   startAt: Date;
   steps: AutoContactFlowStep[];
   scheduling: AutoContactSchedulingSettings;
+  lead?: Lead;
 }): AutoContactSchedulePreviewItem[] => {
   if (!steps.length) return [];
   const timeZone = scheduling.timezone || DEFAULT_SCHEDULING.timezone;
@@ -1570,7 +1579,7 @@ export const buildAutoContactScheduleTimeline = ({
   let cursor = utcToZonedTime(startAt, timeZone);
   return steps.map((step) => {
     const adjustmentReasons = new Set<AutoContactScheduleAdjustmentReason>();
-    let scheduled = new Date(cursor.getTime() + getAutoContactStepDelayMs(step));
+    let scheduled = new Date(cursor.getTime() + getAutoContactStepDelayMs(step, lead));
 
     for (let guard = 0; guard < 366; guard += 1) {
       const weekdayNumber = getWeekdayNumber(scheduled);

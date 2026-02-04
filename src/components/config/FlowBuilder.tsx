@@ -44,6 +44,83 @@ type FlowBuilderProps = {
 
 const createId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const buildPreviewContext = () => {
+  const lead = {
+    nome_completo: 'Lead Exemplo',
+    telefone: '11999999999',
+    email: 'lead@exemplo.com',
+    status: 'Novo',
+    origem: 'Manual',
+    cidade: 'São Paulo',
+    responsavel: 'Luiza',
+  };
+  const firstName = lead.nome_completo.split(/\s+/)[0];
+  return {
+    lead,
+    now: new Date(),
+    nome: lead.nome_completo,
+    primeiro_nome: firstName,
+    telefone: lead.telefone,
+    email: lead.email,
+    status: lead.status,
+    origem: lead.origem,
+    cidade: lead.cidade,
+    responsavel: lead.responsavel,
+  };
+};
+
+const formulaUtils = {
+  if: (condition: boolean, truthy: unknown, falsy: unknown) => (condition ? truthy : falsy),
+  concat: (...args: unknown[]) => args.map((item) => String(item ?? '')).join(''),
+  lower: (value: unknown) => String(value ?? '').toLowerCase(),
+  upper: (value: unknown) => String(value ?? '').toUpperCase(),
+  len: (value: unknown) => String(value ?? '').length,
+  number: (value: unknown) => Number(value),
+  now: () => new Date(),
+  dateAdd: (date: unknown, amount: number, unit: 'minutes' | 'hours' | 'days') => {
+    const base = date instanceof Date ? date : new Date(String(date));
+    const delta = unit === 'days' ? 86400000 : unit === 'hours' ? 3600000 : 60000;
+    return new Date(base.getTime() + amount * delta);
+  },
+  formatDate: (date: unknown) => {
+    const parsed = date instanceof Date ? date : new Date(String(date));
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('pt-BR');
+  },
+};
+
+const evaluateExpression = (expression: string, context: Record<string, unknown>): unknown => {
+  const trimmed = expression.trim().replace(/^=+\s*/, '');
+  if (!trimmed) return null;
+  try {
+    const fn = new Function('ctx', 'utils', `with(ctx){with(utils){return (${trimmed});}}`);
+    return fn(context, formulaUtils);
+  } catch {
+    return null;
+  }
+};
+
+const applyFormulaTokens = (value: string, context: Record<string, unknown>): string =>
+  value.replace(/{{=\s*([^}]+)\s*}}/g, (_match, expr) => {
+    const result = evaluateExpression(expr, context);
+    return result == null ? '' : String(result);
+  });
+
+const applyPreviewVariables = (template: string, context: ReturnType<typeof buildPreviewContext>) => {
+  const firstName = context.primeiro_nome || '';
+  return applyFormulaTokens(
+    template
+      .replace(/{{\s*nome\s*}}/gi, context.nome)
+      .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
+      .replace(/{{\s*saudacao\s*}}/gi, 'bom dia')
+      .replace(/{{\s*saudacao_(?:capitalizada|titulo)\s*}}/gi, 'Bom dia')
+      .replace(/{{\s*origem\s*}}/gi, context.origem)
+      .replace(/{{\s*cidade\s*}}/gi, context.cidade)
+      .replace(/{{\s*responsavel\s*}}/gi, context.responsavel),
+    context,
+  );
+};
+
 const createDefaultStep = (templateId?: string): AutoContactFlowStep => ({
   id: createId('step'),
   delayValue: 0,
@@ -186,6 +263,16 @@ export default function FlowBuilder({
   );
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
+  const previewContext = useMemo(() => buildPreviewContext(), []);
+  const delayPreview = useMemo(() => {
+    if (!selectedNode?.data.step?.delayExpression) return null;
+    const result = evaluateExpression(selectedNode.data.step.delayExpression, previewContext);
+    return result == null ? null : String(result);
+  }, [previewContext, selectedNode?.data.step?.delayExpression]);
+  const messagePreview = useMemo(() => {
+    if (!selectedNode?.data.step?.customMessage?.text) return null;
+    return applyPreviewVariables(selectedNode.data.step.customMessage.text, previewContext);
+  }, [previewContext, selectedNode?.data.step?.customMessage?.text]);
 
   const nodeIssues = useMemo(() => {
     const bySource = new Map<string, Edge[]>();
@@ -243,6 +330,12 @@ export default function FlowBuilder({
     const label =
       nextStep.actionType === 'update_status'
         ? 'Atualizar status'
+        : nextStep.actionType === 'create_task'
+          ? 'Criar tarefa'
+          : nextStep.actionType === 'send_email'
+            ? 'Enviar e-mail'
+            : nextStep.actionType === 'webhook'
+              ? 'Disparar webhook'
         : nextStep.actionType === 'archive_lead'
           ? 'Arquivar lead'
           : nextStep.actionType === 'delete_lead'
@@ -345,43 +438,38 @@ export default function FlowBuilder({
   const reorganizeLayout = () => {
     const trigger = nodes.find((node) => node.type === 'trigger');
     if (!trigger) return;
-    const edgesBySource = new Map<string, Edge[]>();
-    edges.forEach((edge) => {
-      const list = edgesBySource.get(edge.source) ?? [];
-      list.push(edge);
-      edgesBySource.set(edge.source, list);
-    });
-
-    const visited = new Set<string>();
-    const ordered: Node[] = [];
-    const queue: Node[] = [trigger];
-
-    while (queue.length) {
-      const current = queue.shift();
-      if (!current || visited.has(current.id)) continue;
-      visited.add(current.id);
-      ordered.push(current);
-      const outgoing = edgesBySource.get(current.id) ?? [];
-      outgoing.forEach((edge) => {
-        const target = nodes.find((node) => node.id === edge.target);
-        if (target && !visited.has(target.id)) {
-          queue.push(target);
-        }
+    const levels = new Map<string, number>();
+    levels.set(trigger.id, 0);
+    for (let i = 0; i < nodes.length; i += 1) {
+      edges.forEach((edge) => {
+        const sourceLevel = levels.get(edge.source);
+        if (sourceLevel == null) return;
+        const targetLevel = Math.max(levels.get(edge.target) ?? 0, sourceLevel + 1);
+        levels.set(edge.target, targetLevel);
       });
     }
 
-    const remaining = nodes.filter((node) => !visited.has(node.id));
-    const allNodes = [...ordered, ...remaining];
+    const levelGroups = new Map<number, Node[]>();
+    nodes
+      .slice()
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .forEach((node) => {
+        const level = levels.get(node.id) ?? 0;
+        const list = levelGroups.get(level) ?? [];
+        list.push(node);
+        levelGroups.set(level, list);
+      });
 
     setNodes((current) =>
       current.map((node) => {
-        const index = allNodes.findIndex((item) => item.id === node.id);
-        if (index === -1) return node;
-        const x = 60 + index * 220;
-        const y = node.type === 'condition' ? 40 : node.type === 'trigger' ? 0 : 120;
+        const level = levels.get(node.id) ?? 0;
+        const group = levelGroups.get(level) ?? [node];
+        const index = group.findIndex((item) => item.id === node.id);
+        const x = 80 + level * 280;
+        const y = 80 + index * 160;
         return {
           ...node,
-          position: { x, y: y + (index % 3) * 80 },
+          position: { x, y },
         };
       }),
     );
@@ -665,6 +753,11 @@ export default function FlowBuilder({
                   <div className="text-[11px] text-slate-400 mt-1">
                     Ex.: =if(len(lead.telefone)&gt;10, 2, 6)
                   </div>
+                  {delayPreview && (
+                    <div className="text-[11px] text-slate-500 mt-1">
+                      Preview: {delayPreview}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">Tipo de acao</label>
@@ -735,6 +828,11 @@ export default function FlowBuilder({
                         <div className="text-[11px] text-slate-400 mt-1">
                           Use formulas com {'{{= ... }}'}.
                         </div>
+                        {messagePreview && (
+                          <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-600">
+                            Preview: {messagePreview}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -750,6 +848,141 @@ export default function FlowBuilder({
                       className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
                       placeholder="Ex.: Contato Inicial"
                     />
+                  </div>
+                )}
+
+                {selectedNode.data.step?.actionType === 'create_task' && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Título</label>
+                      <input
+                        type="text"
+                        value={selectedNode.data.step?.taskTitle ?? ''}
+                        onChange={(event) => updateSelectedStep({ taskTitle: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Descrição</label>
+                      <textarea
+                        rows={3}
+                        value={selectedNode.data.step?.taskDescription ?? ''}
+                        onChange={(event) => updateSelectedStep({ taskDescription: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Vencimento (h)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={selectedNode.data.step?.taskDueHours ?? ''}
+                          onChange={(event) => updateSelectedStep({ taskDueHours: Number(event.target.value) })}
+                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Prioridade</label>
+                        <select
+                          value={selectedNode.data.step?.taskPriority ?? 'normal'}
+                          onChange={(event) =>
+                            updateSelectedStep({ taskPriority: event.target.value as AutoContactFlowStep['taskPriority'] })
+                          }
+                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        >
+                          <option value="baixa">Baixa</option>
+                          <option value="normal">Normal</option>
+                          <option value="alta">Alta</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedNode.data.step?.actionType === 'send_email' && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] text-slate-500">
+                      Envio depende de conta configurada em Integracoes de e-mail.
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Para</label>
+                      <input
+                        type="text"
+                        value={selectedNode.data.step?.emailTo ?? ''}
+                        onChange={(event) => updateSelectedStep({ emailTo: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Assunto</label>
+                      <input
+                        type="text"
+                        value={selectedNode.data.step?.emailSubject ?? ''}
+                        onChange={(event) => updateSelectedStep({ emailSubject: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Corpo</label>
+                      <textarea
+                        rows={3}
+                        value={selectedNode.data.step?.emailBody ?? ''}
+                        onChange={(event) => updateSelectedStep({ emailBody: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedNode.data.step?.actionType === 'webhook' && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">URL</label>
+                      <input
+                        type="text"
+                        value={selectedNode.data.step?.webhookUrl ?? ''}
+                        onChange={(event) => updateSelectedStep({ webhookUrl: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Método</label>
+                        <select
+                          value={selectedNode.data.step?.webhookMethod ?? 'POST'}
+                          onChange={(event) =>
+                            updateSelectedStep({
+                              webhookMethod: event.target.value as AutoContactFlowStep['webhookMethod'],
+                            })
+                          }
+                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        >
+                          <option value="POST">POST</option>
+                          <option value="PUT">PUT</option>
+                          <option value="PATCH">PATCH</option>
+                          <option value="GET">GET</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Headers (JSON)</label>
+                        <input
+                          type="text"
+                          value={selectedNode.data.step?.webhookHeaders ?? ''}
+                          onChange={(event) => updateSelectedStep({ webhookHeaders: event.target.value })}
+                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-1">Body</label>
+                      <textarea
+                        rows={3}
+                        value={selectedNode.data.step?.webhookBody ?? ''}
+                        onChange={(event) => updateSelectedStep({ webhookBody: event.target.value })}
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

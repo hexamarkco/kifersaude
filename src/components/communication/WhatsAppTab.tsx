@@ -5,12 +5,14 @@ import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
-import { getWhatsAppContacts } from '../../lib/whatsappApiService';
+import { buildChatIdFromPhone, getWhatsAppContacts, normalizeChatId } from '../../lib/whatsappApiService';
 
 type WhatsAppChat = {
   id: string;
   name: string | null;
   is_group: boolean;
+  phone_number?: string | null;
+  lid?: string | null;
   last_message_at: string | null;
   created_at: string;
   updated_at: string;
@@ -73,6 +75,20 @@ export default function WhatsAppTab() {
   }
 
   const extractPhoneFromChatId = (chatId: string) => normalizePhoneNumber(chatId);
+
+  const getChatIdVariants = (chat: WhatsAppChat) => {
+    const variants = new Set<string>();
+    if (chat.id) variants.add(chat.id);
+    if (!chat.id.endsWith('@g.us')) {
+      const normalized = normalizeChatId(chat.id);
+      if (normalized) variants.add(normalized);
+      if (chat.phone_number) {
+        variants.add(buildChatIdFromPhone(chat.phone_number));
+      }
+    }
+    if (chat.lid) variants.add(chat.lid);
+    return Array.from(variants);
+  };
 
   useEffect(() => {
     const checkMobileView = () => {
@@ -149,29 +165,22 @@ export default function WhatsAppTab() {
 
   useEffect(() => {
     if (selectedChat) {
-      loadMessages(selectedChat.id);
+      loadMessages(selectedChat);
+      const variants = getChatIdVariants(selectedChat);
 
       const messagesSubscription = supabase
         .channel(`messages_${selectedChat.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'whatsapp_messages', filter: `chat_id=eq.${selectedChat.id}` },
-          (payload) => {
-            setMessages((prev) => [...prev, payload.new as WhatsAppMessage]);
-            scrollToBottom();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'whatsapp_messages', filter: `chat_id=eq.${selectedChat.id}` },
-          (payload) => {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === payload.new.id ? (payload.new as WhatsAppMessage) : msg
-              )
-            );
-          }
-        )
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
+          const message = payload.new as WhatsAppMessage;
+          if (!variants.includes(message.chat_id)) return;
+          setMessages((prev) => [...prev, message]);
+          scrollToBottom();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
+          const message = payload.new as WhatsAppMessage;
+          if (!variants.includes(message.chat_id)) return;
+          setMessages((prev) => prev.map((msg) => (msg.id === message.id ? message : msg)));
+        })
         .subscribe();
 
       return () => {
@@ -200,10 +209,11 @@ export default function WhatsAppTab() {
 
       const chatsWithLastMessage = await Promise.all(
         (data || []).map(async (chat) => {
+          const variants = getChatIdVariants(chat as WhatsAppChat);
           const { data: lastMsg } = await supabase
             .from('whatsapp_messages')
             .select('body')
-            .eq('chat_id', chat.id)
+            .in('chat_id', variants)
             .order('timestamp', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -223,12 +233,13 @@ export default function WhatsAppTab() {
     }
   };
 
-  const loadMessages = async (chatId: string) => {
+  const loadMessages = async (chat: WhatsAppChat) => {
     try {
+      const variants = getChatIdVariants(chat);
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('*')
-        .eq('chat_id', chatId)
+        .in('chat_id', variants)
         .order('timestamp', { ascending: true });
 
       if (error) throw error;
@@ -257,7 +268,7 @@ export default function WhatsAppTab() {
   };
 
   const handleMessageSent = () => {
-    loadMessages(selectedChat!.id);
+    loadMessages(selectedChat!);
     scrollToBottom();
   };
 

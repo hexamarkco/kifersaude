@@ -909,7 +909,7 @@ const applyTemplateVariables = (template: string, lead: any, timeZone?: string) 
   const greeting = getGreetingForDate(new Date(), timeZone);
   const greetingTitle = formatGreetingTitle(greeting);
 
-  return template
+  const withVariables = template
     .replace(/{{\s*nome\s*}}/gi, lead?.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
     .replace(/{{\s*saudacao\s*}}/gi, greeting)
@@ -917,6 +917,9 @@ const applyTemplateVariables = (template: string, lead: any, timeZone?: string) 
     .replace(/{{\s*origem\s*}}/gi, lead?.origem || '')
     .replace(/{{\s*cidade\s*}}/gi, lead?.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead?.responsavel || '');
+
+  const context = buildFormulaContext(lead, timeZone);
+  return applyFormulaTokens(withVariables, context);
 };
 
 const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
@@ -1143,6 +1146,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
         const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
         const delayValue = Number.isFinite(delayValueRaw) && delayValueRaw >= 0 ? delayValueRaw : 0;
         const delayUnit = normalizeDelayUnit(step?.delayUnit ?? (step?.delayHours != null ? 'hours' : undefined));
+        const delayExpression = typeof step?.delayExpression === 'string' ? step.delayExpression.trim() : '';
         const delayHours = delayUnit === 'minutes'
           ? delayValue / 60
           : delayUnit === 'days'
@@ -1159,6 +1163,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
             delayHours,
             delayValue,
             delayUnit,
+            delayExpression: delayExpression || undefined,
             actionType,
             messageSource,
             templateId: validTemplateId,
@@ -1172,6 +1177,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
             delayHours,
             delayValue,
             delayUnit,
+            delayExpression: delayExpression || undefined,
             actionType,
             statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
           };
@@ -1182,6 +1188,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           delayHours,
           delayValue,
           delayUnit,
+          delayExpression: delayExpression || undefined,
           actionType,
         };
       });
@@ -1413,7 +1420,11 @@ const matchesFlowCondition = (
     return event === 'lead_created';
   }
 
-  const value = normalizeText(condition.value);
+  const context = buildFormulaContext(lead);
+  const resolvedValue = condition.value.trim().startsWith('=')
+    ? String(evaluateExpression(condition.value, context) ?? '')
+    : condition.value;
+  const value = normalizeText(resolvedValue);
   if (!value) return false;
 
   if (condition.field === 'tag') {
@@ -2531,13 +2542,6 @@ Deno.serve(async (req: Request) => {
         details: error.message,
       }),
       {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
-});
-     {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }

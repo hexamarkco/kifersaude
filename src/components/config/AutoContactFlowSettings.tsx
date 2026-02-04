@@ -395,6 +395,7 @@ export default function AutoContactFlowSettings() {
               id: step.id?.trim() ? step.id : `flow-${flow.id}-step-${stepIndex}`,
               delayValue,
               delayUnit,
+              delayExpression: step.delayExpression?.trim() || undefined,
               actionType,
               messageSource,
               templateId,

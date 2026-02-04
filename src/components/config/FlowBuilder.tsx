@@ -584,6 +584,9 @@ export default function FlowBuilder({
                 >
                   + Adicionar condicao
                 </button>
+                <div className="text-[11px] text-slate-400">
+                  Use formulas iniciando com '=' (ex.: =len(lead.telefone)&gt;10).
+                </div>
                 <button
                   type="button"
                   onClick={addConditionAfterSelected}

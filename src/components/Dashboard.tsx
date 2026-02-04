@@ -1512,7 +1512,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       return true;
     }
 
-    const { error: insertError } = await supabase.from('reminders').insert(remindersToInsert);
+    const { error: insertError } = await supabase
+      .from('reminders')
+      .upsert(remindersToInsert, { onConflict: 'contract_id', ignoreDuplicates: true });
     if (insertError) {
       console.error('Erro ao criar lembretes de aniversário:', insertError);
       return false;

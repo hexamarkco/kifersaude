@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info } from 'lucide-react';
+import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History } from 'lucide-react';
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import {
   buildChatIdFromPhone,
+  getWhatsAppChats,
   getWhatsAppContacts,
   getWhatsAppMessageHistory,
   normalizeChatId,
+  type WhapiChat,
   type WhapiMessage,
 } from '../../lib/whatsappApiService';
 
@@ -292,6 +294,29 @@ export default function WhatsAppTab() {
 
       if (error) throw error;
 
+      if (!data || data.length === 0) {
+        const response = await getWhatsAppChats(200, 0);
+        const mappedChats: WhatsAppChat[] = response.chats.map((chat: WhapiChat) => {
+          const isGroup = chat.id.endsWith('@g.us');
+          const lastMessageAt = chat.last_message?.timestamp
+            ? new Date(chat.last_message.timestamp * 1000).toISOString()
+            : null;
+          return {
+            id: chat.id,
+            name: chat.name ?? null,
+            is_group: isGroup,
+            last_message_at: lastMessageAt,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_message: undefined,
+            unread_count: chat.unread_count ?? 0,
+          };
+        });
+
+        setChats(mappedChats);
+        return;
+      }
+
       const chatsWithLastMessage = await Promise.all(
         (data || []).map(async (chat) => {
           const variants = getChatIdVariants(chat as WhatsAppChat);
@@ -371,6 +396,18 @@ export default function WhatsAppTab() {
   const handleMessageSent = () => {
     loadMessages(selectedChat!);
     scrollToBottom();
+  };
+
+  const handleSyncFromWhapi = async () => {
+    if (!selectedChat) return;
+    try {
+      await supabase.functions.invoke('whatsapp-sync', {
+        body: { chatId: selectedChat.id, count: 200 },
+      });
+      await loadMessages(selectedChat);
+    } catch (error) {
+      console.error('Error syncing from Whapi:', error);
+    }
   };
 
   const formatTime = (timestamp: string | null) => {
@@ -580,6 +617,13 @@ export default function WhatsAppTab() {
                       </button>
                     </>
                   )}
+                  <button
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                    title="Sincronizar mensagens"
+                    onClick={handleSyncFromWhapi}
+                  >
+                    <History className="w-5 h-5 text-slate-600" />
+                  </button>
                   <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                     <MoreVertical className="w-5 h-5 text-slate-600" />
                   </button>

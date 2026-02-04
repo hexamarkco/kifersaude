@@ -177,6 +177,13 @@ export default function FlowBuilder({
     [setEdges],
   );
 
+  const handleEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      setEdges((current) => current.filter((item) => item.id !== edge.id));
+    },
+    [setEdges],
+  );
+
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
 
   const updateSelectedNode = (updates: Partial<AutoContactFlowGraphNodeData>) => {
@@ -292,6 +299,51 @@ export default function FlowBuilder({
     ]);
   };
 
+  const reorganizeLayout = () => {
+    const trigger = nodes.find((node) => node.type === 'trigger');
+    if (!trigger) return;
+    const edgesBySource = new Map<string, Edge[]>();
+    edges.forEach((edge) => {
+      const list = edgesBySource.get(edge.source) ?? [];
+      list.push(edge);
+      edgesBySource.set(edge.source, list);
+    });
+
+    const visited = new Set<string>();
+    const ordered: Node[] = [];
+    const queue: Node[] = [trigger];
+
+    while (queue.length) {
+      const current = queue.shift();
+      if (!current || visited.has(current.id)) continue;
+      visited.add(current.id);
+      ordered.push(current);
+      const outgoing = edgesBySource.get(current.id) ?? [];
+      outgoing.forEach((edge) => {
+        const target = nodes.find((node) => node.id === edge.target);
+        if (target && !visited.has(target.id)) {
+          queue.push(target);
+        }
+      });
+    }
+
+    const remaining = nodes.filter((node) => !visited.has(node.id));
+    const allNodes = [...ordered, ...remaining];
+
+    setNodes((current) =>
+      current.map((node) => {
+        const index = allNodes.findIndex((item) => item.id === node.id);
+        if (index === -1) return node;
+        const x = 60 + index * 220;
+        const y = node.type === 'condition' ? 40 : node.type === 'trigger' ? 0 : 120;
+        return {
+          ...node,
+          position: { x, y: y + (index % 3) * 80 },
+        };
+      }),
+    );
+  };
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="rounded-2xl border border-slate-200 bg-slate-50 h-[560px]">
@@ -323,11 +375,22 @@ export default function FlowBuilder({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
+          onEdgeClick={handleEdgeClick}
           onNodeClick={(_, node) => setSelectedNodeId(node.id)}
           nodeTypes={nodeTypes}
           fitView
           className="bg-slate-50"
         >
+          <div className="absolute bottom-20 left-4 z-10 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={reorganizeLayout}
+              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100"
+            >
+              Reorganizar
+            </button>
+            <div className="text-[11px] text-slate-500">Clique em uma linha para remover</div>
+          </div>
           <MiniMap nodeColor="#e2e8f0" maskColor="rgba(15,23,42,0.1)" />
           <Controls />
           <Background gap={18} size={1} color="#e2e8f0" />

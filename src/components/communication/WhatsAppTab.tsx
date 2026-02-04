@@ -145,12 +145,33 @@ export default function WhatsAppTab() {
     if (!chat.id.endsWith('@g.us')) {
       const normalized = normalizeChatId(chat.id);
       if (normalized) variants.add(normalized);
+      if (normalized?.endsWith('@s.whatsapp.net')) {
+        variants.add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
+      }
+      if (chat.id.endsWith('@c.us')) {
+        variants.add(chat.id.replace(/@c\.us$/i, '@s.whatsapp.net'));
+      }
       if (chat.phone_number) {
         variants.add(buildChatIdFromPhone(chat.phone_number));
       }
     }
     if (chat.lid) variants.add(chat.lid);
     return Array.from(variants);
+  };
+
+  const fetchWhapiMessages = async (chat: WhatsAppChat) => {
+    const variants = getChatIdVariants(chat);
+    for (const candidate of variants) {
+      try {
+        const response = await getWhatsAppMessageHistory({ chatId: candidate, count: 200, offset: 0 });
+        if (response.messages?.length) {
+          return response.messages;
+        }
+      } catch (error) {
+        console.warn('[WhatsApp] Falha ao buscar mensagens do Whapi', { candidate, error });
+      }
+    }
+    return [] as WhapiMessage[];
   };
 
   useEffect(() => {
@@ -310,10 +331,8 @@ export default function WhatsAppTab() {
       const baseMessages = data || [];
       setMessages(baseMessages);
 
-      const chatIdForWhapi = chat.is_group ? chat.id : normalizeChatId(chat.id);
-      const whapiChatId = chatIdForWhapi || (chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : chat.id);
-      const whapiResponse = await getWhatsAppMessageHistory({ chatId: whapiChatId, count: 200, offset: 0 });
-      const whapiMessages = whapiResponse.messages.map(whapiToUiMessage);
+      const whapiRaw = await fetchWhapiMessages(chat);
+      const whapiMessages = whapiRaw.map(whapiToUiMessage);
 
       const merged = new Map<string, WhatsAppMessage>();
       baseMessages.forEach((message) => merged.set(message.id, message));

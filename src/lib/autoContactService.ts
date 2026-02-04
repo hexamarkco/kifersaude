@@ -96,6 +96,34 @@ export type AutoContactFlowScheduling = {
   allowedWeekdays: number[];
 };
 
+export type AutoContactFlowGraphNodeType = 'trigger' | 'condition' | 'action';
+
+export type AutoContactFlowGraphNodeData = {
+  label: string;
+  step?: AutoContactFlowStep;
+  conditions?: AutoContactFlowCondition[];
+  conditionLogic?: 'all' | 'any';
+};
+
+export type AutoContactFlowGraphNode = {
+  id: string;
+  type: AutoContactFlowGraphNodeType;
+  position: { x: number; y: number };
+  data: AutoContactFlowGraphNodeData;
+};
+
+export type AutoContactFlowGraphEdge = {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+};
+
+export type AutoContactFlowGraph = {
+  nodes: AutoContactFlowGraphNode[];
+  edges: AutoContactFlowGraphEdge[];
+};
+
 export type AutoContactFlow = {
   id: string;
   name: string;
@@ -110,6 +138,7 @@ export type AutoContactFlow = {
   exitConditions?: AutoContactFlowCondition[];
   tags?: string[];
   scheduling?: AutoContactFlowScheduling;
+  flowGraph?: AutoContactFlowGraph;
 };
 
 export type AutoContactSchedulingSettings = {
@@ -119,6 +148,7 @@ export type AutoContactSchedulingSettings = {
   allowedWeekdays: number[];
   skipHolidays: boolean;
   dailySendLimit: number | null;
+  holidays?: string[];
 };
 
 export type AutoContactMonitoringSettings = {
@@ -440,6 +470,49 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
     };
   };
 
+  const normalizeFlowGraph = (graph: any): AutoContactFlowGraph | undefined => {
+    if (!graph || typeof graph !== 'object') return undefined;
+    const nodes = Array.isArray(graph.nodes)
+      ? graph.nodes
+          .map((node: any) => {
+            const nodeId = typeof node?.id === 'string' ? node.id : '';
+            const type = node?.type as AutoContactFlowGraphNodeType;
+            if (!nodeId || !type) return null;
+            return {
+              id: nodeId,
+              type,
+              position: {
+                x: Number.isFinite(Number(node?.position?.x)) ? Number(node.position.x) : 0,
+                y: Number.isFinite(Number(node?.position?.y)) ? Number(node.position.y) : 0,
+              },
+              data: {
+                label: typeof node?.data?.label === 'string' ? node.data.label : '',
+                step: node?.data?.step as AutoContactFlowStep | undefined,
+                conditions: Array.isArray(node?.data?.conditions) ? node.data.conditions : undefined,
+                conditionLogic: node?.data?.conditionLogic === 'any' ? 'any' : 'all',
+              },
+            } as AutoContactFlowGraphNode;
+          })
+          .filter(Boolean)
+      : [];
+    const edges = Array.isArray(graph.edges)
+      ? graph.edges
+          .map((edge: any) => {
+            const edgeId = typeof edge?.id === 'string' ? edge.id : '';
+            if (!edgeId || typeof edge?.source !== 'string' || typeof edge?.target !== 'string') return null;
+            return {
+              id: edgeId,
+              source: edge.source,
+              target: edge.target,
+              label: typeof edge?.label === 'string' ? edge.label : undefined,
+            } as AutoContactFlowGraphEdge;
+          })
+          .filter(Boolean)
+      : [];
+    if (nodes.length === 0) return undefined;
+    return { nodes, edges };
+  };
+
   const rawScheduling = settings.scheduling && typeof settings.scheduling === 'object' ? settings.scheduling : {};
   const rawDailySendLimit =
     Number(rawScheduling.dailySendLimit ?? settings.dailySendLimit);
@@ -456,9 +529,12 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       : DEFAULT_SCHEDULING.allowedWeekdays,
     skipHolidays: rawScheduling.skipHolidays !== false,
     dailySendLimit,
+    holidays: Array.isArray(rawScheduling.holidays)
+      ? rawScheduling.holidays.filter((value: unknown) => typeof value === 'string')
+      : [],
   };
 
-  const normalizedFlows = rawFlows
+  const normalizedFlows: AutoContactFlow[] = rawFlows
     .map((flow: any, flowIndex: number) => {
       const flowId = typeof flow?.id === 'string' && flow.id.trim() ? flow.id : `flow-${flowIndex}`;
       const steps = Array.isArray(flow?.steps) ? flow.steps : [];
@@ -478,7 +554,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         };
         })
         // "lead_created" is treated as an event boolean and does not require a value.
-        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
+        .filter((condition: AutoContactFlowCondition) =>
+          condition.field === 'lead_created' || condition.value.trim(),
+        );
       const normalizedExitConditions = rawExitConditions
         .map((condition: any, conditionIndex: number) => {
           const field = normalizeConditionField(condition?.field);
@@ -493,7 +571,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         };
         })
         // "lead_created" is treated as an event boolean and does not require a value.
-        .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
+        .filter((condition: AutoContactFlowCondition) =>
+          condition.field === 'lead_created' || condition.value.trim(),
+        );
       const normalizedSteps = steps
         .map((step: any, stepIndex: number) => {
           const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
@@ -547,6 +627,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           : scheduling.allowedWeekdays,
       };
 
+      const conditionLogic: AutoContactFlow['conditionLogic'] = flow?.conditionLogic === 'any' ? 'any' : 'all';
+      const exitConditionLogic: AutoContactFlow['exitConditionLogic'] =
+        flow?.exitConditionLogic === 'all' ? 'all' : 'any';
+
       return {
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
@@ -555,14 +639,15 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         invalidNumberAction: normalizeInvalidNumberAction(flow?.invalidNumberAction),
         invalidNumberStatus: typeof flow?.invalidNumberStatus === 'string' ? flow.invalidNumberStatus : '',
-        conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
+        conditionLogic,
         conditions: normalizedConditions,
-        exitConditionLogic: flow?.exitConditionLogic === 'all' ? 'all' : 'any',
+        exitConditionLogic,
         exitConditions: normalizedExitConditions,
         tags: Array.isArray(flow?.tags)
           ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
           : [],
         scheduling: flowScheduling,
+        flowGraph: normalizeFlowGraph(flow?.flowGraph),
       };
     })
     .filter((flow) => flow.steps.length > 0);
@@ -616,6 +701,14 @@ export const applyTemplateVariables = (
 };
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
+type DateParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+};
 
 const parseHourMinute = (value: string): { hour: number; minute: number } => {
   if (!value) return { hour: 0, minute: 0 };

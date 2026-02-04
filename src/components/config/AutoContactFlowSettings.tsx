@@ -38,6 +38,7 @@ import {
   type AutoContactFlow,
   type AutoContactFlowActionType,
   type AutoContactFlowCondition,
+  type AutoContactFlowGraph,
   type AutoContactFlowMessageSource,
   type AutoContactFlowStep,
   type AutoContactFlowCustomMessage,
@@ -50,8 +51,10 @@ import {
   type TemplateMessage,
   type TemplateMessageType,
 } from '../../lib/autoContactService';
+import { applyFlowGraphToFlow, buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig } from '../../lib/supabase';
+import FlowBuilder from './FlowBuilder';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
@@ -93,10 +96,17 @@ export default function AutoContactFlowSettings() {
   const [dailyAutomationCount, setDailyAutomationCount] = useState<number | null>(null);
   const [dailyAutomationLoading, setDailyAutomationLoading] = useState(false);
   const [dailyAutomationError, setDailyAutomationError] = useState<string | null>(null);
+  const [flowEditorMode, setFlowEditorMode] = useState<'basic' | 'advanced'>('basic');
 
   useEffect(() => {
     void loadAutoContactSettings();
   }, []);
+
+  useEffect(() => {
+    if (activeFlowId) {
+      setFlowEditorMode('basic');
+    }
+  }, [activeFlowId]);
 
   const loadAutoContactSettings = async () => {
     setLoadingFlow(true);
@@ -357,7 +367,8 @@ export default function AutoContactFlowSettings() {
     const fallbackTemplateId = sanitizedTemplates[0]?.id ?? '';
     const sanitizedFlows = flowDrafts
       .map((flow, flowIndex) => {
-        const steps = flow.steps
+        const effectiveFlow = flow.flowGraph ? applyFlowGraphToFlow(flow, flow.flowGraph) : flow;
+        const steps = effectiveFlow.steps
           .map((step, stepIndex) => {
             const stepWithLegacyDelay = step as AutoContactFlowStep & { delayHours?: number };
             const rawDelay = Number(stepWithLegacyDelay.delayValue ?? stepWithLegacyDelay.delayHours);
@@ -387,7 +398,7 @@ export default function AutoContactFlowSettings() {
             };
           })
           .filter((step) => step.delayValue >= 0);
-        const conditions = (flow.conditions ?? [])
+        const conditions = (effectiveFlow.conditions ?? [])
           .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-condition-${conditionIndex}`,
             field: condition.field,
@@ -395,7 +406,7 @@ export default function AutoContactFlowSettings() {
             value: condition.value?.trim() || '',
           }))
           .filter((condition) => condition.value);
-        const exitConditions = (flow.exitConditions ?? [])
+        const exitConditions = (effectiveFlow.exitConditions ?? [])
           .map((condition, conditionIndex) => ({
             id: condition.id?.trim() ? condition.id : `flow-${flow.id}-exit-condition-${conditionIndex}`,
             field: condition.field,
@@ -403,13 +414,13 @@ export default function AutoContactFlowSettings() {
             value: condition.value?.trim() || '',
           }))
           .filter((condition) => condition.value);
-        const tags = (flow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
+        const tags = (effectiveFlow.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
         const fallbackScheduling = {
           startHour: schedulingDraft.startHour,
           endHour: schedulingDraft.endHour,
           allowedWeekdays: schedulingDraft.allowedWeekdays,
         };
-        const flowScheduling = flow.scheduling ?? fallbackScheduling;
+        const flowScheduling = effectiveFlow.scheduling ?? fallbackScheduling;
         const allowedWeekdays = Array.isArray(flowScheduling.allowedWeekdays)
           ? flowScheduling.allowedWeekdays
               .map((value) => Number(value))
@@ -417,16 +428,16 @@ export default function AutoContactFlowSettings() {
           : fallbackScheduling.allowedWeekdays;
 
         return {
-          id: flow.id?.trim() ? flow.id : `flow-${flowIndex}`,
-          name: flow.name?.trim() || `Fluxo ${flowIndex + 1}`,
-          triggerStatus: flow.triggerStatus?.trim() || '',
+          id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowIndex}`,
+          name: effectiveFlow.name?.trim() || `Fluxo ${flowIndex + 1}`,
+          triggerStatus: effectiveFlow.triggerStatus?.trim() || '',
           steps,
-          finalStatus: flow.finalStatus?.trim() || '',
-          invalidNumberAction: flow.invalidNumberAction ?? 'none',
-          invalidNumberStatus: flow.invalidNumberStatus?.trim() || '',
-          conditionLogic: flow.conditionLogic === 'any' ? 'any' : 'all',
+          finalStatus: effectiveFlow.finalStatus?.trim() || '',
+          invalidNumberAction: effectiveFlow.invalidNumberAction ?? 'none',
+          invalidNumberStatus: effectiveFlow.invalidNumberStatus?.trim() || '',
+          conditionLogic: effectiveFlow.conditionLogic === 'any' ? 'any' : 'all',
           conditions,
-          exitConditionLogic: flow.exitConditionLogic === 'all' ? 'all' : 'any',
+          exitConditionLogic: effectiveFlow.exitConditionLogic === 'all' ? 'all' : 'any',
           exitConditions,
           tags,
           scheduling: {
@@ -434,6 +445,7 @@ export default function AutoContactFlowSettings() {
             endHour: flowScheduling.endHour || fallbackScheduling.endHour,
             allowedWeekdays,
           },
+          flowGraph: effectiveFlow.flowGraph,
         };
       })
       .filter((flow) => flow.steps.length);
@@ -556,6 +568,12 @@ export default function AutoContactFlowSettings() {
     () => (activeFlow ? flowDrafts.findIndex((flow) => flow.id === activeFlow.id) : -1),
     [activeFlow, flowDrafts],
   );
+  const handleSetFlowEditorMode = (mode: 'basic' | 'advanced') => {
+    setFlowEditorMode(mode);
+    if (mode === 'advanced' && activeFlow && !activeFlow.flowGraph) {
+      handleUpdateFlowGraph(activeFlow.id, buildFlowGraphFromFlow(activeFlow));
+    }
+  };
   const availableTags = useMemo(() => {
     const tags = flowDrafts.flatMap((flow) => flow.tags ?? []).filter(Boolean);
     return Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -673,6 +691,9 @@ export default function AutoContactFlowSettings() {
   };
   const handleUpdateFlow = (flowId: string, updates: Partial<AutoContactFlow>) => {
     setFlowDrafts((previous) => previous.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow)));
+  };
+  const handleUpdateFlowGraph = (flowId: string, flowGraph: AutoContactFlowGraph) => {
+    handleUpdateFlow(flowId, { flowGraph });
   };
   const handleUpdateFlowScheduling = (
     flowId: string,
@@ -849,7 +870,7 @@ export default function AutoContactFlowSettings() {
     () => (options.lead_responsavel || []).filter((option) => option.ativo),
     [options.lead_responsavel],
   );
-  const conditionValueOptions = useMemo(
+  const conditionValueOptions = useMemo<Partial<Record<AutoContactFlowCondition['field'], string[]>>>(
     () => ({
       status: statusOptions.map((status) => status.nome),
       origem: originOptions,
@@ -863,7 +884,9 @@ export default function AutoContactFlowSettings() {
   const getConditionValueOptions = (field: AutoContactFlowCondition['field']) => {
     const values = conditionValueOptions[field];
     if (!values || values.length === 0) return null;
-    return Array.from(new Set(values)).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(values))
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => a.localeCompare(b));
   };
   const weekdayLabels = [
     { value: 1, label: 'Seg' },
@@ -1364,7 +1387,31 @@ export default function AutoContactFlowSettings() {
                         Ajuste regras, sequência de ações e status final do fluxo selecionado.
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSetFlowEditorMode('basic')}
+                          className={`px-3 py-1 text-xs rounded-full ${
+                            flowEditorMode === 'basic'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Basico
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetFlowEditorMode('advanced')}
+                          className={`px-3 py-1 text-xs rounded-full ${
+                            flowEditorMode === 'advanced'
+                              ? 'bg-slate-900 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Avancado
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1421,6 +1468,24 @@ export default function AutoContactFlowSettings() {
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="Ex.: Follow-up de contato inicial"
                       />
+                    </div>
+
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-xs font-semibold text-slate-500 uppercase">Resumo do fluxo</div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                          {activeFlow.triggerStatus ? `Status: ${activeFlow.triggerStatus}` : 'Disparo por condicoes'}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                          Janela {activeFlowScheduling.startHour} - {activeFlowScheduling.endHour}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                          {activeFlow.steps.length} etapa{activeFlow.steps.length === 1 ? '' : 's'}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                          {getFlowConditionPreview(activeFlow)}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1484,7 +1549,22 @@ export default function AutoContactFlowSettings() {
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    {flowEditorMode === 'advanced' && (
+                      <FlowBuilder
+                        flow={activeFlow}
+                        messageTemplates={messageTemplatesDraft}
+                        conditionFieldOptions={conditionFieldOptions}
+                        conditionOperatorLabels={conditionOperatorLabels}
+                        eventValueLabels={eventValueLabels}
+                        delayUnitLabels={delayUnitLabels}
+                        flowActionLabels={flowActionLabels}
+                        getConditionValueOptions={getConditionValueOptions}
+                        onChangeGraph={(graph) => handleUpdateFlowGraph(activeFlow.id, graph)}
+                      />
+                    )}
+
+                    {flowEditorMode === 'basic' && (
+                      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-sm font-semibold text-slate-800">Condições de entrada</h4>
@@ -1539,7 +1619,11 @@ export default function AutoContactFlowSettings() {
                                   const nextField = event.target.value as AutoContactFlowCondition['field'];
                                   const nextUpdates =
                                     nextField === 'event'
-                                      ? { field: nextField, operator: 'equals', value: 'lead_created' }
+                                      ? {
+                                          field: nextField,
+                                          operator: 'equals' as AutoContactFlowCondition['operator'],
+                                          value: 'lead_created',
+                                        }
                                       : { field: nextField, value: '' };
                                   handleUpdateFlowCondition(activeFlow.id, condition.id, nextUpdates);
                                 }}
@@ -1614,6 +1698,7 @@ export default function AutoContactFlowSettings() {
                         </div>
                       )}
                     </div>
+                    )}
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-center justify-between">
@@ -1670,7 +1755,11 @@ export default function AutoContactFlowSettings() {
                                   const nextField = event.target.value as AutoContactFlowCondition['field'];
                                   const nextUpdates =
                                     nextField === 'event'
-                                      ? { field: nextField, operator: 'equals', value: 'lead_created' }
+                                      ? {
+                                          field: nextField,
+                                          operator: 'equals' as AutoContactFlowCondition['operator'],
+                                          value: 'lead_created',
+                                        }
                                       : { field: nextField, value: '' };
                                   handleUpdateFlowExitCondition(activeFlow.id, condition.id, nextUpdates);
                                 }}
@@ -1875,7 +1964,8 @@ export default function AutoContactFlowSettings() {
                       )}
                     </div>
 
-                    <div className="space-y-3">
+                    {flowEditorMode === 'basic' && (
+                      <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <h4 className="text-sm font-semibold text-slate-800">Sequência de ações</h4>
@@ -2139,6 +2229,7 @@ export default function AutoContactFlowSettings() {
                         </div>
                       ))}
                     </div>
+                    )}
 
                     {showSimulation && (
                       <div className="space-y-3 rounded-lg border border-teal-200 bg-teal-50 p-4">

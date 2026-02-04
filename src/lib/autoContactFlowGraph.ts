@@ -74,19 +74,48 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
 
 const getNodeById = (nodes: AutoContactFlowGraphNode[], id: string) => nodes.find((node) => node.id === id) ?? null;
 
-const getOrderedActionNodes = (graph: AutoContactFlowGraph): AutoContactFlowGraphNode[] => {
-  const trigger = graph.nodes.find((node) => node.type === 'trigger');
-  if (!trigger) return [];
+const getBranchConditionNode = (graph: AutoContactFlowGraph): AutoContactFlowGraphNode | null => {
+  const conditionNodes = graph.nodes.filter((node) => node.type === 'condition');
+  if (conditionNodes.length === 0) return null;
+  for (const node of conditionNodes) {
+    const edges = getOutgoingEdges(graph, node.id);
+    const hasBranch = edges.length > 1 || edges.some((edge) => ['sim', 'nao'].includes((edge.label ?? '').toLowerCase()));
+    if (hasBranch) return node;
+  }
+  return conditionNodes[0];
+};
 
-  const edgesBySource = new Map<string, AutoContactFlowGraphEdge[]>();
+const getEdgesBySource = (graph: AutoContactFlowGraph): Map<string, AutoContactFlowGraphEdge[]> => {
+  const map = new Map<string, AutoContactFlowGraphEdge[]>();
   graph.edges.forEach((edge) => {
-    const list = edgesBySource.get(edge.source) ?? [];
+    const list = map.get(edge.source) ?? [];
     list.push(edge);
-    edgesBySource.set(edge.source, list);
+    map.set(edge.source, list);
   });
+  return map;
+};
 
+const mergeConditionLogic = (
+  current: AutoContactFlow['conditionLogic'],
+  next: AutoContactFlow['conditionLogic'],
+): AutoContactFlow['conditionLogic'] => {
+  if (!current) return next ?? 'all';
+  if (!next) return current;
+  if (current === next) return current;
+  return 'all';
+};
+
+const collectLinearPath = (
+  graph: AutoContactFlowGraph,
+): { steps: AutoContactFlowStep[]; conditions: AutoContactFlowCondition[]; conditionLogic: AutoContactFlow['conditionLogic'] } => {
+  const trigger = graph.nodes.find((node) => node.type === 'trigger');
+  if (!trigger) return { steps: [], conditions: [], conditionLogic: 'all' as AutoContactFlow['conditionLogic'] };
+
+  const edgesBySource = getEdgesBySource(graph);
   const visited = new Set<string>();
-  const ordered: AutoContactFlowGraphNode[] = [];
+  const conditions: AutoContactFlowCondition[] = [];
+  let conditionLogic: AutoContactFlow['conditionLogic'] = 'all';
+  const steps: AutoContactFlowStep[] = [];
   let currentId: string | null = trigger.id;
 
   while (currentId) {
@@ -97,36 +126,32 @@ const getOrderedActionNodes = (graph: AutoContactFlowGraph): AutoContactFlowGrap
     if (!nextEdge) break;
     const nextNode = getNodeById(graph.nodes, nextEdge.target);
     if (!nextNode) break;
-    if (nextNode.type === 'action') {
-      ordered.push(nextNode);
+    if (nextNode.type === 'condition') {
+      const nodeConditions = Array.isArray(nextNode.data.conditions)
+        ? (nextNode.data.conditions as AutoContactFlowCondition[])
+        : [];
+      conditions.push(...nodeConditions);
+      conditionLogic = mergeConditionLogic(conditionLogic, nextNode.data.conditionLogic ?? 'all');
+    }
+    if (nextNode.type === 'action' && nextNode.data.step) {
+      steps.push(nextNode.data.step);
     }
     currentId = nextNode.id;
   }
 
-  return ordered;
+  return { steps, conditions, conditionLogic };
 };
 
-const getConditionNode = (graph: AutoContactFlowGraph): AutoContactFlowGraphNode | null =>
-  graph.nodes.find((node) => node.type === 'condition') ?? null;
-
 export const applyFlowGraphToFlow = (flow: AutoContactFlow, graph: AutoContactFlowGraph): AutoContactFlow => {
-  const actionNodes = getOrderedActionNodes(graph);
-  const steps: AutoContactFlowStep[] = actionNodes
-    .map((node, index) => {
-      const step = node.data.step;
-      if (!step) return null;
-      return {
-        ...step,
-        id: step.id?.trim() ? step.id : `${flow.id}-step-${index}`,
-      };
-    })
-    .filter(Boolean) as AutoContactFlowStep[];
-
-  const conditionNode = getConditionNode(graph);
-  const conditions = Array.isArray(conditionNode?.data.conditions)
-    ? (conditionNode?.data.conditions as AutoContactFlowCondition[])
-    : flow.conditions ?? [];
-  const conditionLogic = conditionNode?.data.conditionLogic ?? flow.conditionLogic ?? 'all';
+  const collected = collectLinearPath(graph);
+  const steps = collected.steps.map((step, index) => ({
+    ...step,
+    id: step.id?.trim() ? step.id : `${flow.id}-step-${index}`,
+  }));
+  const conditions = collected.conditions.length ? collected.conditions : flow.conditions ?? [];
+  const conditionLogic = collected.conditions.length
+    ? collected.conditionLogic
+    : flow.conditionLogic ?? 'all';
 
   return {
     ...flow,
@@ -177,81 +202,102 @@ const invertConditions = (conditions: AutoContactFlowCondition[]): AutoContactFl
 const getOutgoingEdges = (graph: AutoContactFlowGraph, sourceId: string): AutoContactFlowGraphEdge[] =>
   graph.edges.filter((edge) => edge.source === sourceId);
 
-const getActionPathFromEdge = (
+const collectPathFromEdge = (
   graph: AutoContactFlowGraph,
   edge: AutoContactFlowGraphEdge,
-): AutoContactFlowGraphNode[] => {
-  const path: AutoContactFlowGraphNode[] = [];
+  options?: { invertFirstCondition?: boolean },
+): { steps: AutoContactFlowStep[]; conditions: AutoContactFlowCondition[]; conditionLogic: AutoContactFlow['conditionLogic'] } => {
   const visited = new Set<string>();
   let currentId: string | null = edge.target;
+  const steps: AutoContactFlowStep[] = [];
+  const conditions: AutoContactFlowCondition[] = [];
+  let conditionLogic: AutoContactFlow['conditionLogic'] = 'all';
+  let invertedApplied = false;
 
   while (currentId) {
     if (visited.has(currentId)) break;
     visited.add(currentId);
     const node = getNodeById(graph.nodes, currentId);
     if (!node) break;
-    if (node.type === 'action') {
-      path.push(node);
+    if (node.type === 'condition') {
+      const nodeConditions = Array.isArray(node.data.conditions)
+        ? (node.data.conditions as AutoContactFlowCondition[])
+        : [];
+      if (options?.invertFirstCondition && !invertedApplied) {
+        conditions.push(...invertConditions(nodeConditions));
+        invertedApplied = true;
+        conditionLogic = mergeConditionLogic(conditionLogic, node.data.conditionLogic ?? 'all');
+      } else {
+        conditions.push(...nodeConditions);
+        conditionLogic = mergeConditionLogic(conditionLogic, node.data.conditionLogic ?? 'all');
+      }
+    }
+    if (node.type === 'action' && node.data.step) {
+      steps.push(node.data.step);
     }
     const nextEdge = getOutgoingEdges(graph, node.id)[0];
     currentId = nextEdge ? nextEdge.target : null;
   }
 
-  return path;
+  return { steps, conditions, conditionLogic };
 };
 
 export const expandFlowGraphToFlows = (flow: AutoContactFlow): AutoContactFlow[] => {
   if (!flow.flowGraph) return [flow];
 
   const graph = flow.flowGraph;
-  const conditionNode = getConditionNode(graph);
+  const conditionNode = getBranchConditionNode(graph);
 
   if (!conditionNode) {
     return [applyFlowGraphToFlow(flow, graph)];
   }
 
-  const conditions = Array.isArray(conditionNode.data.conditions)
-    ? (conditionNode.data.conditions as AutoContactFlowCondition[])
-    : flow.conditions ?? [];
-  const conditionLogic = conditionNode.data.conditionLogic ?? flow.conditionLogic ?? 'all';
   const edges = getOutgoingEdges(graph, conditionNode.id);
   const yesEdge = edges.find((edge) => (edge.label ?? '').toLowerCase() === 'sim') ?? edges[0];
   const noEdge = edges.find((edge) => (edge.label ?? '').toLowerCase() === 'nao') ?? null;
 
-  const buildSteps = (nodes: AutoContactFlowGraphNode[]) =>
-    nodes
-      .map((node, index) => {
-        const step = node.data.step;
-        if (!step) return null;
-        return {
-          ...step,
-          id: step.id?.trim() ? step.id : `${flow.id}-step-${index}`,
-        };
-      })
-      .filter(Boolean) as AutoContactFlowStep[];
-
-  const yesSteps = yesEdge ? buildSteps(getActionPathFromEdge(graph, yesEdge)) : [];
+  const yesPath = yesEdge ? collectPathFromEdge(graph, yesEdge) : { steps: [], conditions: [], conditionLogic: 'all' };
+  const yesSteps = yesPath.steps.map((step, index) => ({
+    ...step,
+    id: step.id?.trim() ? step.id : `${flow.id}-step-${index}`,
+  }));
+  const yesConditions = yesPath.conditions.length
+    ? yesPath.conditions
+    : Array.isArray(conditionNode.data.conditions)
+      ? (conditionNode.data.conditions as AutoContactFlowCondition[])
+      : flow.conditions ?? [];
+  const yesConditionLogic = (yesPath.conditions.length
+    ? yesPath.conditionLogic
+    : conditionNode.data.conditionLogic === 'any'
+      ? 'any'
+      : flow.conditionLogic ?? 'all') as AutoContactFlow['conditionLogic'];
   const yesFlow: AutoContactFlow = {
     ...flow,
     steps: yesSteps.length ? yesSteps : flow.steps,
-    conditions,
-    conditionLogic,
+    conditions: yesConditions,
+    conditionLogic: yesConditionLogic,
     flowGraph: graph,
   };
 
-  if (!noEdge || conditions.length === 0) {
+  if (!noEdge || yesConditions.length === 0) {
     return [yesFlow];
   }
 
-  const noSteps = buildSteps(getActionPathFromEdge(graph, noEdge));
-  const invertedLogic = conditionLogic === 'all' ? 'any' : 'all';
+  const noPath = collectPathFromEdge(graph, noEdge, { invertFirstCondition: true });
+  const noSteps = noPath.steps.map((step, index) => ({
+    ...step,
+    id: step.id?.trim() ? step.id : `${flow.id}-nao-step-${index}`,
+  }));
+  const noConditions = noPath.conditions.length ? noPath.conditions : invertConditions(yesConditions);
+  const noConditionLogic: AutoContactFlow['conditionLogic'] =
+    noPath.conditions.length > 1 ? 'all' : (yesConditionLogic === 'all' ? 'any' : 'all');
   const noFlow: AutoContactFlow = {
     ...flow,
     id: `${flow.id}-nao`,
     name: flow.name ? `${flow.name} (Nao)` : 'Fluxo (Nao)',
     steps: noSteps.length ? noSteps : flow.steps,
-    conditions: invertConditions(conditions),
-    conditionLogic: invertedLogic,
+    conditions: noConditions,
+    conditionLogic: noConditionLogic,
     flowGraph: graph,
   };
 

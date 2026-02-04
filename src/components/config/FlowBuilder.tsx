@@ -227,26 +227,30 @@ export default function FlowBuilder({
           id: createId('edge'),
           source: lastNode.id,
           target: newId,
+          label: lastNode.type === 'condition' ? 'Sim' : undefined,
         },
       ]);
     }
   };
 
   const addConditionNode = () => {
-    if (nodes.some((node) => node.type === 'condition')) return;
-    const trigger = nodes.find((node) => node.type === 'trigger');
-    if (!trigger) return;
+    const lastNode = nodes
+      .filter((node) => !edges.some((edge) => edge.source === node.id))
+      .sort((a, b) => b.position.y - a.position.y)[0];
+    const anchor = lastNode ?? nodes.find((node) => node.type === 'trigger');
+    if (!anchor) return;
     const newId = createId('condition');
+    const position = { x: anchor.position.x + 220, y: anchor.position.y + 20 };
     setNodes((current) => [
       ...current,
       {
         id: newId,
         type: 'condition',
-        position: { x: trigger.position.x + 260, y: trigger.position.y },
+        position,
         data: {
           label: 'Condição',
-          conditions: flow.conditions ?? [],
-          conditionLogic: flow.conditionLogic ?? 'all',
+          conditions: [],
+          conditionLogic: 'all',
         },
       },
     ]);
@@ -254,7 +258,7 @@ export default function FlowBuilder({
       ...current,
       {
         id: createId('edge'),
-        source: trigger.id,
+        source: anchor.id,
         target: newId,
       },
     ]);
@@ -402,6 +406,20 @@ export default function FlowBuilder({
                           className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
                         />
                       )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">Condicao {index + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextConditions = [...(selectedNode.data.conditions ?? [])];
+                            nextConditions.splice(index, 1);
+                            updateSelectedNode({ conditions: nextConditions });
+                          }}
+                          className="text-[11px] text-red-500 hover:text-red-600"
+                        >
+                          Remover
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -420,6 +438,17 @@ export default function FlowBuilder({
                   className="w-full px-3 py-2 text-xs border border-dashed border-slate-200 rounded-lg text-slate-500"
                 >
                   + Adicionar condicao
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEdges((current) => current.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
+                    setNodes((current) => current.filter((node) => node.id !== selectedNode.id));
+                    setSelectedNodeId(null);
+                  }}
+                  className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg text-red-600"
+                >
+                  Remover bloco de condicao
                 </button>
               </div>
             )}

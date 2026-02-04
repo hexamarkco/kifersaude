@@ -187,6 +187,48 @@ export default function FlowBuilder({
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
 
+  const nodeIssues = useMemo(() => {
+    const bySource = new Map<string, Edge[]>();
+    const byTarget = new Map<string, Edge[]>();
+    edges.forEach((edge) => {
+      const sourceList = bySource.get(edge.source) ?? [];
+      sourceList.push(edge);
+      bySource.set(edge.source, sourceList);
+      const targetList = byTarget.get(edge.target) ?? [];
+      targetList.push(edge);
+      byTarget.set(edge.target, targetList);
+    });
+
+    const issues = new Map<string, string[]>();
+    nodes.forEach((node) => {
+      const warnings: string[] = [];
+      const outgoing = bySource.get(node.id) ?? [];
+      const incoming = byTarget.get(node.id) ?? [];
+
+      if (node.type !== 'trigger' && incoming.length === 0) {
+        warnings.push('Sem entrada conectada');
+      }
+
+      if (node.type === 'condition') {
+        const hasYes = outgoing.some((edge) => String(edge.label ?? '').toLowerCase() === 'sim');
+        const hasNo = outgoing.some((edge) => String(edge.label ?? '').toLowerCase() === 'nao');
+        if (!hasYes) warnings.push('Sem caminho Sim');
+        if (!hasNo) warnings.push('Sem caminho Nao');
+      } else if (node.type !== 'action' && outgoing.length === 0) {
+        warnings.push('Sem saida conectada');
+      }
+
+      if (warnings.length > 0) {
+        issues.set(node.id, warnings);
+      }
+    });
+
+    return issues;
+  }, [edges, nodes]);
+
+  const selectedNodeIssues = selectedNode ? nodeIssues.get(selectedNode.id) ?? [] : [];
+  const totalIssueCount = Array.from(nodeIssues.values()).reduce((sum, list) => sum + list.length, 0);
+
   const updateSelectedNode = (updates: Partial<AutoContactFlowGraphNodeData>) => {
     if (!selectedNode) return;
     setNodes((current) =>
@@ -380,6 +422,11 @@ export default function FlowBuilder({
             </button>
           </div>
         </div>
+        {totalIssueCount > 0 && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+            Existem {totalIssueCount} alerta(s) de conexao no fluxo.
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -400,12 +447,18 @@ export default function FlowBuilder({
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 h-[560px] overflow-y-auto">
         <div className="text-xs uppercase text-slate-400 font-semibold">Inspector</div>
-        {selectedNode ? (
+            {selectedNode ? (
           <div className="mt-3 space-y-4">
             <div>
               <div className="text-sm font-semibold text-slate-800">{selectedNode.data.label || 'No'}</div>
               <div className="text-xs text-slate-500">Tipo: {selectedNode.type}</div>
             </div>
+
+            {selectedNodeIssues.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                {selectedNodeIssues.join(' • ')}
+              </div>
+            )}
 
             {selectedNode.type === 'condition' && (
               <div className="space-y-3">
@@ -583,6 +636,34 @@ export default function FlowBuilder({
                   </div>
                 </div>
                 <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] text-slate-500">Formula de delay (opcional)</label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateSelectedStep({
+                          delayExpression: selectedNode.data.step?.delayExpression ? '' : '=1',
+                        })
+                      }
+                      className="text-[11px] text-slate-500 hover:text-slate-700"
+                    >
+                      {selectedNode.data.step?.delayExpression ? 'Remover formula' : 'Usar formula'}
+                    </button>
+                  </div>
+                  {selectedNode.data.step?.delayExpression && (
+                    <input
+                      type="text"
+                      value={selectedNode.data.step.delayExpression}
+                      onChange={(event) => updateSelectedStep({ delayExpression: event.target.value })}
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      placeholder="=if(len(lead.telefone)>10, 2, 6)"
+                    />
+                  )}
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Ex.: =if(len(lead.telefone)&gt;10, 2, 6)
+                  </div>
+                </div>
+                <div>
                   <label className="block text-[11px] text-slate-500 mb-1">Tipo de acao</label>
                   <select
                     value={selectedNode.data.step?.actionType ?? 'send_message'}
@@ -648,6 +729,9 @@ export default function FlowBuilder({
                           }
                           className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
                         />
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          Use formulas com {'{{= ... }}'}.
+                        </div>
                       </div>
                     )}
                   </div>

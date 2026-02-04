@@ -41,6 +41,7 @@ export type AutoContactFlowStep = {
   id: string;
   delayValue: number;
   delayUnit: AutoContactDelayUnit;
+  delayExpression?: string;
   actionType: AutoContactFlowActionType;
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
@@ -267,8 +268,91 @@ const normalizeDelayUnit = (unit: unknown): AutoContactDelayUnit => {
   }
 };
 
-export const getAutoContactStepDelayMs = (step: AutoContactFlowStep): number =>
-  (step.delayValue ?? 0) * (DELAY_UNIT_TO_MS[step.delayUnit] ?? DELAY_UNIT_TO_MS.hours);
+const safeNumber = (value: unknown): number | null => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+type FormulaContext = {
+  lead: Lead;
+  now: Date;
+  nome: string;
+  primeiro_nome: string;
+  telefone: string;
+  email: string;
+  status: string;
+  origem: string;
+  cidade: string;
+  responsavel: string;
+};
+
+const buildFormulaContext = (lead: Lead, _timeZone: string): FormulaContext => {
+  const firstName = lead.nome_completo?.trim().split(/\s+/)[0] ?? '';
+  return {
+    lead,
+    now: new Date(),
+    nome: lead.nome_completo ?? '',
+    primeiro_nome: firstName,
+    telefone: lead.telefone ?? '',
+    email: lead.email ?? '',
+    status: lead.status ?? '',
+    origem: lead.origem ?? '',
+    cidade: lead.cidade ?? '',
+    responsavel: lead.responsavel ?? '',
+  };
+};
+
+const formulaUtils = {
+  if: (condition: boolean, truthy: unknown, falsy: unknown) => (condition ? truthy : falsy),
+  concat: (...args: unknown[]) => args.map((item) => String(item ?? '')).join(''),
+  lower: (value: unknown) => String(value ?? '').toLowerCase(),
+  upper: (value: unknown) => String(value ?? '').toUpperCase(),
+  len: (value: unknown) => String(value ?? '').length,
+  number: (value: unknown) => Number(value),
+  now: () => new Date(),
+  dateAdd: (date: unknown, amount: number, unit: 'minutes' | 'hours' | 'days') => {
+    const base = date instanceof Date ? date : new Date(String(date));
+    const delta = unit === 'days' ? 86400000 : unit === 'hours' ? 3600000 : 60000;
+    return new Date(base.getTime() + amount * delta);
+  },
+  formatDate: (date: unknown, format: 'date' | 'datetime' = 'date') => {
+    const parsed = date instanceof Date ? date : new Date(String(date));
+    if (Number.isNaN(parsed.getTime())) return '';
+    return format === 'datetime'
+      ? parsed.toLocaleString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone })
+      : parsed.toLocaleDateString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone });
+  },
+};
+
+const evaluateExpression = (expression: string, context: FormulaContext): unknown => {
+  const trimmed = expression.trim().replace(/^=+\s*/, '');
+  if (!trimmed) return null;
+  try {
+    const fn = new Function('ctx', 'utils', `with(ctx){with(utils){return (${trimmed});}}`);
+    return fn(context, formulaUtils);
+  } catch {
+    return null;
+  }
+};
+
+const applyFormulaTokens = (value: string, context: FormulaContext): string =>
+  value.replace(/{{=\s*([^}]+)\s*}}/g, (_match, expr) => {
+    const result = evaluateExpression(expr, context);
+    return result == null ? '' : String(result);
+  });
+
+export const getAutoContactStepDelayMs = (step: AutoContactFlowStep, lead?: Lead): number => {
+  if (step.delayExpression && lead) {
+    const context = buildFormulaContext(lead, DEFAULT_SCHEDULING.timezone);
+    const result = evaluateExpression(step.delayExpression, context);
+    const parsed = safeNumber(result);
+    if (parsed !== null) {
+      return Math.max(0, parsed) * (DELAY_UNIT_TO_MS[step.delayUnit] ?? DELAY_UNIT_TO_MS.hours);
+    }
+  }
+
+  return (step.delayValue ?? 0) * (DELAY_UNIT_TO_MS[step.delayUnit] ?? DELAY_UNIT_TO_MS.hours);
+};
 
 export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
   {
@@ -581,6 +665,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
           const delayValue = Number.isFinite(delayValueRaw) && delayValueRaw >= 0 ? delayValueRaw : 0;
           const delayUnit = normalizeDelayUnit(step?.delayUnit ?? (step?.delayHours != null ? 'hours' : undefined));
+          const delayExpression = typeof step?.delayExpression === 'string' ? step.delayExpression.trim() : '';
           const actionType = normalizeActionType(step?.actionType);
           if (actionType === 'send_message') {
             const messageSource = normalizeMessageSource(step?.messageSource);
@@ -591,6 +676,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
               delayValue,
               delayUnit,
+              delayExpression: delayExpression || undefined,
               actionType,
               messageSource,
               templateId: validTemplateId,
@@ -603,6 +689,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
               delayValue,
               delayUnit,
+              delayExpression: delayExpression || undefined,
               actionType,
               statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
             };
@@ -612,6 +699,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
             delayValue,
             delayUnit,
+            delayExpression: delayExpression || undefined,
             actionType,
           };
         });
@@ -692,7 +780,7 @@ export const applyTemplateVariables = (
   const greeting = getGreetingForDate(new Date(), timeZone);
   const greetingTitle = formatGreetingTitle(greeting);
 
-  return template
+  const withVariables = template
     .replace(/{{\s*nome\s*}}/gi, lead.nome_completo || '')
     .replace(/{{\s*primeiro_nome\s*}}/gi, firstName)
     .replace(/{{\s*saudacao\s*}}/gi, greeting)
@@ -700,6 +788,9 @@ export const applyTemplateVariables = (
     .replace(/{{\s*origem\s*}}/gi, lead.origem || '')
     .replace(/{{\s*cidade\s*}}/gi, lead.cidade || '')
     .replace(/{{\s*responsavel\s*}}/gi, lead.responsavel || '');
+
+  const context = buildFormulaContext(lead, timeZone);
+  return applyFormulaTokens(withVariables, context);
 };
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
@@ -1056,7 +1147,7 @@ export async function runAutoContactFlow({
   for (const step of matchingFlow.steps) {
     if (signal?.() === false) return;
     if (shouldExitFlow(matchingFlow, lead, event)) return;
-    const stepDelayMs = getAutoContactStepDelayMs(step);
+    const stepDelayMs = getAutoContactStepDelayMs(step, lead);
     const desiredAt = new Date(previousStepAt.getTime() + stepDelayMs);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
     const now = new Date();
@@ -1163,7 +1254,11 @@ const matchesFlowCondition = (
   if (condition.field === 'lead_created') {
     return event === 'lead_created';
   }
-  const value = normalizeText(condition.value);
+  const context = buildFormulaContext(lead, DEFAULT_SCHEDULING.timezone);
+  const resolvedValue = condition.value.trim().startsWith('=')
+    ? String(evaluateExpression(condition.value, context) ?? '')
+    : condition.value;
+  const value = normalizeText(resolvedValue);
   if (!value) return false;
 
   if (condition.field === 'tag') {

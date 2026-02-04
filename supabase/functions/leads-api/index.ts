@@ -82,6 +82,7 @@ type AutoContactFlowStep = {
   delayHours: number;
   delayValue?: number;
   delayUnit?: 'minutes' | 'hours' | 'days';
+  delayExpression?: string;
   actionType: AutoContactFlowActionType;
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
@@ -835,6 +836,74 @@ const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null
   };
 };
 
+type FormulaContext = {
+  lead: any;
+  now: Date;
+  nome: string;
+  primeiro_nome: string;
+  telefone: string;
+  email: string;
+  status: string;
+  origem: string;
+  cidade: string;
+  responsavel: string;
+};
+
+const buildFormulaContext = (lead: any, _timeZone?: string): FormulaContext => {
+  const firstName = lead?.nome_completo?.trim()?.split(/\s+/)?.[0] ?? '';
+  return {
+    lead,
+    now: new Date(),
+    nome: lead?.nome_completo ?? '',
+    primeiro_nome: firstName,
+    telefone: lead?.telefone ?? '',
+    email: lead?.email ?? '',
+    status: lead?.status ?? '',
+    origem: lead?.origem ?? '',
+    cidade: lead?.cidade ?? '',
+    responsavel: lead?.responsavel ?? '',
+  };
+};
+
+const formulaUtils = {
+  if: (condition: boolean, truthy: unknown, falsy: unknown) => (condition ? truthy : falsy),
+  concat: (...args: unknown[]) => args.map((item) => String(item ?? '')).join(''),
+  lower: (value: unknown) => String(value ?? '').toLowerCase(),
+  upper: (value: unknown) => String(value ?? '').toUpperCase(),
+  len: (value: unknown) => String(value ?? '').length,
+  number: (value: unknown) => Number(value),
+  now: () => new Date(),
+  dateAdd: (date: unknown, amount: number, unit: 'minutes' | 'hours' | 'days') => {
+    const base = date instanceof Date ? date : new Date(String(date));
+    const delta = unit === 'days' ? 86400000 : unit === 'hours' ? 3600000 : 60000;
+    return new Date(base.getTime() + amount * delta);
+  },
+  formatDate: (date: unknown, format: 'date' | 'datetime' = 'date') => {
+    const parsed = date instanceof Date ? date : new Date(String(date));
+    if (Number.isNaN(parsed.getTime())) return '';
+    return format === 'datetime'
+      ? parsed.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      : parsed.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  },
+};
+
+const evaluateExpression = (expression: string, context: FormulaContext): unknown => {
+  const trimmed = expression.trim().replace(/^=+\s*/, '');
+  if (!trimmed) return null;
+  try {
+    const fn = new Function('ctx', 'utils', `with(ctx){with(utils){return (${trimmed});}}`);
+    return fn(context, formulaUtils);
+  } catch {
+    return null;
+  }
+};
+
+const applyFormulaTokens = (value: string, context: FormulaContext): string =>
+  value.replace(/{{=\s*([^}]+)\s*}}/g, (_match, expr) => {
+    const result = evaluateExpression(expr, context);
+    return result == null ? '' : String(result);
+  });
+
 const applyTemplateVariables = (template: string, lead: any, timeZone?: string) => {
   const firstName = lead?.nome_completo?.trim()?.split(/\s+/)?.[0] ?? '';
   const greeting = getGreetingForDate(new Date(), timeZone);
@@ -1384,7 +1453,18 @@ const shouldExitFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlo
   return flow.exitConditionLogic === 'all' ? exitConditions.every(isMatch) : exitConditions.some(isMatch);
 };
 
-const getDelaySeconds = (step: AutoContactFlowStep): number => {
+const getDelaySeconds = (step: AutoContactFlowStep, lead?: any): number => {
+  if (step.delayExpression && lead) {
+    const context = buildFormulaContext(lead);
+    const result = evaluateExpression(step.delayExpression, context);
+    const parsed = typeof result === 'number' ? result : Number(result);
+    if (Number.isFinite(parsed)) {
+      if (step.delayUnit === 'minutes') return Math.max(0, parsed) * 60;
+      if (step.delayUnit === 'days') return Math.max(0, parsed) * 24 * 60 * 60;
+      return Math.max(0, parsed) * 60 * 60;
+    }
+  }
+
   if (typeof step.delayValue === 'number' && step.delayUnit) {
     if (step.delayUnit === 'minutes') return Math.max(0, step.delayValue) * 60;
     if (step.delayUnit === 'days') return Math.max(0, step.delayValue) * 24 * 60 * 60;
@@ -1396,11 +1476,13 @@ const getDelaySeconds = (step: AutoContactFlowStep): number => {
 async function scheduleFlowJobs({
   supabase,
   leadId,
+  lead,
   flow,
   scheduling,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
+  lead: any;
   flow: AutoContactFlow;
   scheduling: AutoContactSchedulingSettings;
 }): Promise<void> {
@@ -1413,7 +1495,7 @@ async function scheduleFlowJobs({
       flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
   };
   const jobs = flow.steps.map((step) => {
-    const delaySeconds = getDelaySeconds(step);
+    const delaySeconds = getDelaySeconds(step, lead);
     const desiredAt = new Date(now.getTime() + delaySeconds * 1000);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
     return {
@@ -1887,6 +1969,7 @@ async function runAutoContactFlowEngine({
     await scheduleFlowJobs({
       supabase,
       leadId: lead.id,
+      lead,
       flow: matchingFlow,
       scheduling: settings.scheduling,
     });
@@ -2448,6 +2531,13 @@ Deno.serve(async (req: Request) => {
         details: error.message,
       }),
       {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
+     {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }

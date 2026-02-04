@@ -5,7 +5,13 @@ import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
-import { buildChatIdFromPhone, getWhatsAppContacts, normalizeChatId } from '../../lib/whatsappApiService';
+import {
+  buildChatIdFromPhone,
+  getWhatsAppContacts,
+  getWhatsAppMessageHistory,
+  normalizeChatId,
+  type WhapiMessage,
+} from '../../lib/whatsappApiService';
 
 type WhatsAppChat = {
   id: string;
@@ -39,6 +45,63 @@ type WhatsAppMessage = {
   edited_at?: string | null;
   original_body?: string | null;
   author?: string | null;
+};
+
+const normalizeWhapiBody = (message: WhapiMessage): { body: string; hasMedia: boolean } => {
+  const raw = message as WhapiMessage & Record<string, any>;
+  if (raw.text?.body) return { body: raw.text.body, hasMedia: false };
+  if (raw.image) return { body: raw.image.caption || '[Imagem]', hasMedia: true };
+  if (raw.video) return { body: raw.video.caption || '[Vídeo]', hasMedia: true };
+  if (raw.audio) return { body: '[Áudio]', hasMedia: true };
+  if (raw.voice) return { body: '[Mensagem de voz]', hasMedia: true };
+  if (raw.document) {
+    const fileName = raw.document.filename || '';
+    const caption = raw.document.caption;
+    return {
+      body: caption ? `${caption} [Documento: ${fileName}]` : `[Documento${fileName ? `: ${fileName}` : ''}]`,
+      hasMedia: true,
+    };
+  }
+  if (raw.location) return { body: '[Localização]', hasMedia: true };
+  if (raw.live_location) return { body: '[Localização ao vivo]', hasMedia: true };
+  if (raw.contact) return { body: `[Contato: ${raw.contact.name}]`, hasMedia: false };
+  if (raw.contact_list) return { body: `[${raw.contact_list.list.length} contato(s)]`, hasMedia: false };
+  if (raw.sticker) return { body: '[Sticker]', hasMedia: true };
+  if (raw.action?.type === 'reaction') return { body: `Reagiu com ${raw.action.emoji || ''}`, hasMedia: false };
+  if (raw.action?.type === 'delete') return { body: '[Mensagem apagada]', hasMedia: false };
+  if (raw.action?.type === 'edit') return { body: raw.text?.body || '', hasMedia: false };
+  if (raw.reply?.buttons_reply) return { body: `Resposta: ${raw.reply.buttons_reply.title}`, hasMedia: false };
+  if (raw.group_invite) return { body: '[Convite para grupo]', hasMedia: false };
+  if (raw.poll) return { body: `[Enquete: ${raw.poll.title}]`, hasMedia: false };
+  if (raw.product) return { body: '[Produto do catálogo]', hasMedia: false };
+  if (raw.order) return { body: `[Pedido #${raw.order.order_id}]`, hasMedia: false };
+  return { body: `[${raw.type}]`, hasMedia: false };
+};
+
+const whapiToUiMessage = (message: WhapiMessage): WhatsAppMessage => {
+  const raw = message as WhapiMessage & Record<string, any>;
+  const direction = message.from_me ? 'outbound' : 'inbound';
+  const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toISOString() : null;
+  const { body, hasMedia } = normalizeWhapiBody(message);
+
+  return {
+    id: message.id,
+    chat_id: message.chat_id,
+    from_number: direction === 'inbound' ? message.from || message.chat_id : null,
+    to_number: direction === 'outbound' ? message.chat_id : null,
+    type: message.type || null,
+    body,
+    has_media: hasMedia,
+    timestamp,
+    direction,
+    ack_status: null,
+    created_at: timestamp || new Date().toISOString(),
+    is_deleted: raw.action?.type === 'delete' || message.type === 'revoked',
+    edit_count: raw.edit_history?.length ?? 0,
+    edited_at: raw.edited_at ? new Date(raw.edited_at * 1000).toISOString() : null,
+    original_body: raw.text?.body ?? body,
+    author: raw.from_name ?? null,
+  };
 };
 
 export default function WhatsAppTab() {
@@ -103,9 +166,10 @@ export default function WhatsAppTab() {
   useEffect(() => {
     const loadLeadNames = async () => {
       try {
-        const data = await fetchAllPages<{ telefone: string; nome_completo: string }>((from, to) =>
-          supabase.from('leads').select('telefone, nome_completo').range(from, to),
-        );
+        const data = await fetchAllPages<{ telefone: string; nome_completo: string }>(async (from, to) => {
+          const response = await supabase.from('leads').select('telefone, nome_completo').range(from, to);
+          return { data: response.data, error: response.error };
+        });
 
         const phoneMap = new Map<string, string>();
         (data || []).forEach((lead) => {
@@ -243,7 +307,25 @@ export default function WhatsAppTab() {
         .order('timestamp', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      const baseMessages = data || [];
+      setMessages(baseMessages);
+
+      const chatIdForWhapi = chat.is_group ? chat.id : normalizeChatId(chat.id);
+      const whapiChatId = chatIdForWhapi || (chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : chat.id);
+      const whapiResponse = await getWhatsAppMessageHistory({ chatId: whapiChatId, count: 200, offset: 0 });
+      const whapiMessages = whapiResponse.messages.map(whapiToUiMessage);
+
+      const merged = new Map<string, WhatsAppMessage>();
+      baseMessages.forEach((message) => merged.set(message.id, message));
+      whapiMessages.forEach((message) => merged.set(message.id, message));
+
+      const mergedList = Array.from(merged.values()).sort((a, b) => {
+        const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return left - right;
+      });
+
+      setMessages(mergedList);
     } catch (error) {
       console.error('Error loading messages:', error);
     }

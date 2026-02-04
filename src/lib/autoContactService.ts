@@ -21,7 +21,14 @@ export type AutoContactTemplate = {
   messages?: TemplateMessage[];
 };
 
-export type AutoContactFlowActionType = 'send_message' | 'update_status' | 'archive_lead' | 'delete_lead';
+export type AutoContactFlowActionType =
+  | 'send_message'
+  | 'update_status'
+  | 'archive_lead'
+  | 'delete_lead'
+  | 'webhook'
+  | 'create_task'
+  | 'send_email';
 
 export type AutoContactFlowMessageSource = 'template' | 'custom';
 
@@ -47,6 +54,19 @@ export type AutoContactFlowStep = {
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
   statusToSet?: string;
+  webhookUrl?: string;
+  webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
+  webhookHeaders?: string;
+  webhookBody?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  taskDueHours?: number;
+  taskPriority?: 'baixa' | 'normal' | 'alta';
+  emailTo?: string;
+  emailCc?: string;
+  emailBcc?: string;
+  emailSubject?: string;
+  emailBody?: string;
 };
 
 export type AutoContactFlowConditionField =
@@ -684,16 +704,60 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
             };
           }
 
-          if (actionType === 'update_status') {
-            return {
-              id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
-              delayValue,
-              delayUnit,
-              delayExpression: delayExpression || undefined,
-              actionType,
-              statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
-            };
-          }
+        if (actionType === 'update_status') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            statusToSet: typeof step?.statusToSet === 'string' ? step.statusToSet : '',
+          };
+        }
+
+        if (actionType === 'webhook') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            webhookUrl: typeof step?.webhookUrl === 'string' ? step.webhookUrl : '',
+            webhookMethod: typeof step?.webhookMethod === 'string' ? step.webhookMethod : 'POST',
+            webhookHeaders: typeof step?.webhookHeaders === 'string' ? step.webhookHeaders : '',
+            webhookBody: typeof step?.webhookBody === 'string' ? step.webhookBody : '',
+          };
+        }
+
+        if (actionType === 'create_task') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            taskTitle: typeof step?.taskTitle === 'string' ? step.taskTitle : '',
+            taskDescription: typeof step?.taskDescription === 'string' ? step.taskDescription : '',
+            taskDueHours: Number.isFinite(Number(step?.taskDueHours)) ? Number(step.taskDueHours) : undefined,
+            taskPriority:
+              step?.taskPriority === 'alta' || step?.taskPriority === 'baixa' ? step.taskPriority : 'normal',
+          };
+        }
+
+        if (actionType === 'send_email') {
+          return {
+            id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,
+            delayValue,
+            delayUnit,
+            delayExpression: delayExpression || undefined,
+            actionType,
+            emailTo: typeof step?.emailTo === 'string' ? step.emailTo : '',
+            emailCc: typeof step?.emailCc === 'string' ? step.emailCc : '',
+            emailBcc: typeof step?.emailBcc === 'string' ? step.emailBcc : '',
+            emailSubject: typeof step?.emailSubject === 'string' ? step.emailSubject : '',
+            emailBody: typeof step?.emailBody === 'string' ? step.emailBody : '',
+          };
+        }
 
           return {
             id: typeof step?.id === 'string' && step.id.trim() ? step.id : `flow-${flowId}-step-${stepIndex}`,

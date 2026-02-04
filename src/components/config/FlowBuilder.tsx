@@ -13,6 +13,7 @@ import ReactFlow, {
   useNodesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { RefreshCcw } from 'lucide-react';
 
 import {
   type AutoContactDelayUnit,
@@ -381,13 +382,15 @@ export default function FlowBuilder({
           fitView
           className="bg-slate-50"
         >
-          <div className="absolute bottom-20 left-4 z-10 flex flex-col gap-2">
+          <div className="absolute bottom-20 left-4 z-10 flex flex-col items-start gap-2">
             <button
               type="button"
               onClick={reorganizeLayout}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-100"
+              title="Reorganizar"
+              aria-label="Reorganizar"
             >
-              Reorganizar
+              <RefreshCcw className="h-4 w-4" />
             </button>
             <div className="text-[11px] text-slate-500">Clique em uma linha para remover</div>
           </div>

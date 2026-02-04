@@ -97,6 +97,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [skipAutomationOnCreate, setSkipAutomationOnCreate] = useState(false);
   const isNewLead = !lead;
 
   const activeLeadStatuses = leadStatuses.filter((status) => status.ativo);
@@ -246,6 +247,10 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         tipo_contratacao_id: resolveTipoContratacaoIdByLabel(tipoContratacaoOptions, normalizedLeadData.tipo_contratacao),
         responsavel_id: resolveResponsavelIdByLabel(responsavelOptions, normalizedLeadData.responsavel),
       };
+
+      if (!lead && skipAutomationOnCreate) {
+        leadDataForDb.skip_automation = true;
+      }
 
       delete leadDataForDb.origem;
       delete leadDataForDb.status;
@@ -652,6 +657,22 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 />
               )}
             </div>
+
+            {isNewLead && (
+              <div className="md:col-span-2">
+                <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={skipAutomationOnCreate}
+                    onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span>
+                    Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).
+                  </span>
+                </label>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">

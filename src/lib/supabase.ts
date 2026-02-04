@@ -86,6 +86,7 @@ export type Lead = {
   observacoes?: string;
   blackout_dates?: string[] | null;
   daily_send_limit?: number | null;
+  skip_automation?: boolean | null;
   arquivado: boolean;
   created_at: string;
   updated_at: string;

@@ -234,6 +234,7 @@ export default function FlowBuilder({
   const [edges, setEdges, onEdgesChange] = useEdgesState(baseGraph.edges.map(toReactFlowEdge));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [initializedFlowId, setInitializedFlowId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (initializedFlowId !== flow.id) {
@@ -277,6 +278,16 @@ export default function FlowBuilder({
       setEdges((current) => current.filter((item) => item.id !== edge.id));
     },
     [setEdges],
+  );
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((current) => current.filter((node) => node.id !== nodeId));
+      setEdges((current) => current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+      setSelectedNodeId((current) => (current === nodeId ? null : current));
+      setContextMenu(null);
+    },
+    [setEdges, setNodes],
   );
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
@@ -539,7 +550,16 @@ export default function FlowBuilder({
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           onEdgeClick={handleEdgeClick}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+          onNodeClick={(_, node) => {
+            setSelectedNodeId(node.id);
+            setContextMenu(null);
+          }}
+          onNodeContextMenu={(event, node) => {
+            event.preventDefault();
+            setSelectedNodeId(node.id);
+            setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+          }}
+          onPaneClick={() => setContextMenu(null)}
           nodeTypes={nodeTypes}
           fitView
           className="bg-slate-50"
@@ -548,6 +568,20 @@ export default function FlowBuilder({
           <Controls />
           <Background gap={18} size={1} color="#e2e8f0" />
         </ReactFlow>
+        {contextMenu && (
+          <div
+            className="fixed z-50 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              type="button"
+              className="block w-full px-3 py-2 text-left text-red-600 hover:bg-red-50"
+              onClick={() => handleDeleteNode(contextMenu.nodeId)}
+            >
+              Excluir bloco
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 h-[560px] overflow-y-auto">

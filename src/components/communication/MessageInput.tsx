@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle } from 'lucide-react';
+import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle, Sparkles, Scissors } from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 
@@ -46,6 +46,12 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
+  const [showRewriteModal, setShowRewriteModal] = useState(false);
+  const [rewriteTone, setRewriteTone] = useState('claro');
+  const [rewriteOriginal, setRewriteOriginal] = useState('');
+  const [rewriteResult, setRewriteResult] = useState('');
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [showLinkPreviewModal, setShowLinkPreviewModal] = useState(false);
   const [linkPreviewTitle, setLinkPreviewTitle] = useState('');
   const [linkPreviewDescription, setLinkPreviewDescription] = useState('');
@@ -66,7 +72,15 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const analyserDataRef = useRef<Uint8Array | null>(null);
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
+  const rewriteTones = [
+    { value: 'claro', label: 'Claro e correto' },
+    { value: 'formal', label: 'Formal' },
+    { value: 'amigavel', label: 'Amigavel' },
+    { value: 'curto', label: 'Curto e direto' },
+    { value: 'persuasivo', label: 'Persuasivo' },
+  ];
 
   const filteredContacts = useMemo(() => {
     const query = contactSearch.trim().toLowerCase();
@@ -74,6 +88,60 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     if (!query) return source;
     return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
   }, [contacts, contactSearch]);
+
+  const splitRewriteChunks = (text: string) =>
+    text
+      .split(/\n-{3,}\n/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+  const rewriteChunks = useMemo(
+    () => splitRewriteChunks(rewriteResult || rewriteOriginal),
+    [rewriteResult, rewriteOriginal],
+  );
+
+  const sendPlainTextMessage = async (text: string) => {
+    const response = await sendWhatsAppMessage({
+      chatId,
+      contentType: 'string',
+      content: text,
+      quotedMessageId: replyToMessage?.id,
+    });
+
+    const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+    const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
+      id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      chat_id: normalizedChatId,
+      from_number: null,
+      to_number: normalizedChatId,
+      type: 'text',
+      body: text,
+      has_media: false,
+      timestamp: new Date().toISOString(),
+      direction: 'outbound',
+      payload: response,
+    });
+
+    if (insertError) {
+      console.warn('Erro ao salvar mensagem no banco:', insertError);
+    }
+
+    const sentAt = new Date().toISOString();
+    const textPayload: SentMessagePayload = {
+      id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      chat_id: chatId,
+      body: text,
+      type: 'text',
+      has_media: false,
+      timestamp: sentAt,
+      direction: 'outbound',
+      created_at: sentAt,
+      payload: response,
+    };
+
+    if (onMessageSent) onMessageSent(textPayload);
+    return textPayload;
+  };
 
   useEffect(() => {
     if (editMessage) {
@@ -184,58 +252,62 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
           }
         }
 
-        const response = await sendWhatsAppMessage({
-          chatId,
-          contentType: showLinkPreviewModal && pendingLinkMessage ? 'LinkPreview' : 'string',
-          content: showLinkPreviewModal && pendingLinkMessage
-            ? {
-                body: pendingLinkMessage,
-                title: linkPreviewTitle.trim(),
-                description: linkPreviewDescription.trim() || undefined,
-                canonical: linkPreviewCanonical.trim() || undefined,
-              }
-            : message.trim(),
-          quotedMessageId: replyToMessage?.id,
-        });
-
-        const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
         const isLinkPreview = showLinkPreviewModal && pendingLinkMessage;
-        const bodyText = isLinkPreview ? pendingLinkMessage : message.trim();
-        const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
-          id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          chat_id: normalizedChatId,
-          from_number: null,
-          to_number: normalizedChatId,
-          type: isLinkPreview ? 'link_preview' : 'text',
-          body: bodyText,
-          has_media: Boolean(isLinkPreview),
-          timestamp: new Date().toISOString(),
-          direction: 'outbound',
-          payload: response,
-        });
+        if (isLinkPreview) {
+          const response = await sendWhatsAppMessage({
+            chatId,
+            contentType: 'LinkPreview',
+            content: {
+              body: pendingLinkMessage,
+              title: linkPreviewTitle.trim(),
+              description: linkPreviewDescription.trim() || undefined,
+              canonical: linkPreviewCanonical.trim() || undefined,
+            },
+            quotedMessageId: replyToMessage?.id,
+          });
 
-        if (insertError) {
-          console.warn('Erro ao salvar mensagem no banco:', insertError);
+          const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+          const bodyText = pendingLinkMessage;
+          const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
+            id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            chat_id: normalizedChatId,
+            from_number: null,
+            to_number: normalizedChatId,
+            type: 'link_preview',
+            body: bodyText,
+            has_media: true,
+            timestamp: new Date().toISOString(),
+            direction: 'outbound',
+            payload: response,
+          });
+
+          if (insertError) {
+            console.warn('Erro ao salvar mensagem no banco:', insertError);
+          }
+
+          const sentAt = new Date().toISOString();
+          const textPayload: SentMessagePayload = {
+            id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            chat_id: chatId,
+            body: bodyText,
+            type: 'link_preview',
+            has_media: true,
+            timestamp: sentAt,
+            direction: 'outbound',
+            created_at: sentAt,
+            payload: response,
+          };
+
+          setMessage('');
+          setPendingLinkMessage(null);
+          setShowLinkPreviewModal(false);
+          if (onCancelReply) onCancelReply();
+          if (onMessageSent) onMessageSent(textPayload);
+        } else {
+          await sendPlainTextMessage(message.trim());
+          setMessage('');
+          if (onCancelReply) onCancelReply();
         }
-
-        const sentAt = new Date().toISOString();
-        const textPayload: SentMessagePayload = {
-          id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          chat_id: chatId,
-          body: bodyText,
-          type: isLinkPreview ? 'link_preview' : 'text',
-          has_media: Boolean(isLinkPreview),
-          timestamp: sentAt,
-          direction: 'outbound',
-          created_at: sentAt,
-          payload: response,
-        };
-
-        setMessage('');
-        setPendingLinkMessage(null);
-        setShowLinkPreviewModal(false);
-        if (onCancelReply) onCancelReply();
-        if (onMessageSent) onMessageSent(textPayload);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -468,6 +540,79 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     }
   };
 
+  const handleOpenRewrite = () => {
+    const draft = message.trim();
+    if (!draft) {
+      alert('Digite uma mensagem para reescrever.');
+      return;
+    }
+    setRewriteOriginal(draft);
+    setRewriteResult('');
+    setRewriteError(null);
+    setShowRewriteModal(true);
+    handleRewrite(draft, rewriteTone);
+  };
+
+  const handleRewrite = async (draft: string, tone: string) => {
+    setRewriteLoading(true);
+    setRewriteError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('rewrite-message', {
+        body: { text: draft, tone },
+      });
+      if (error) {
+        setRewriteError(error.message || 'Erro ao gerar reescrita.');
+        return;
+      }
+      const resultText = (data as { rewrite?: string; text?: string })?.rewrite || (data as { text?: string })?.text;
+      setRewriteResult(resultText?.trim() || '');
+    } catch (err) {
+      console.error('Erro ao reescrever com GPT:', err);
+      setRewriteError('Erro ao gerar reescrita.');
+    } finally {
+      setRewriteLoading(false);
+    }
+  };
+
+  const handleInsertSplit = () => {
+    const textarea = rewriteTextareaRef.current;
+    if (!textarea) {
+      setRewriteResult((prev) => `${prev}\n---\n`);
+      return;
+    }
+    const start = textarea.selectionStart ?? rewriteResult.length;
+    const end = textarea.selectionEnd ?? rewriteResult.length;
+    const nextText = `${rewriteResult.slice(0, start)}\n---\n${rewriteResult.slice(end)}`;
+    setRewriteResult(nextText);
+    requestAnimationFrame(() => {
+      const cursor = start + 5;
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const handleSendRewriteChunks = async () => {
+    if (isSending) return;
+    const chunks = splitRewriteChunks(rewriteResult || rewriteOriginal);
+    if (chunks.length === 0) {
+      alert('Nada para enviar.');
+      return;
+    }
+    setIsSending(true);
+    try {
+      for (const chunk of chunks) {
+        await sendPlainTextMessage(chunk);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+      setMessage('');
+      setRewriteResult('');
+      setRewriteOriginal('');
+      setShowRewriteModal(false);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -562,6 +707,109 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
 
   return (
     <div className="border-t bg-white relative">
+      {showRewriteModal && (
+        <div className="absolute bottom-full left-4 mb-2 w-[520px] max-w-[90vw] bg-white border rounded-lg shadow-lg z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <span className="text-sm font-medium">Reescrever com GPT</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-gray-100"
+              onClick={() => setShowRewriteModal(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-3 space-y-3">
+            <div>
+              <label className="text-xs text-gray-500">Texto original</label>
+              <div className="mt-1 rounded border bg-gray-50 px-3 py-2 text-sm text-gray-700 whitespace-pre-wrap">
+                {rewriteOriginal}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-gray-500">Tom</label>
+                <select
+                  value={rewriteTone}
+                  onChange={(event) => setRewriteTone(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  {rewriteTones.map((tone) => (
+                    <option key={tone.value} value={tone.value}>
+                      {tone.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="self-end px-3 py-2 text-sm rounded-md bg-green-600 text-white"
+                onClick={() => handleRewrite(rewriteOriginal, rewriteTone)}
+                disabled={rewriteLoading}
+              >
+                {rewriteLoading ? 'Gerando...' : 'Gerar'}
+              </button>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Preview</label>
+              <textarea
+                ref={rewriteTextareaRef}
+                value={rewriteResult}
+                onChange={(event) => setRewriteResult(event.target.value)}
+                placeholder="Resultado da reescrita"
+                className="mt-1 w-full h-28 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-gray-500">Use --- para dividir</span>
+                <button
+                  type="button"
+                  className="text-xs text-green-700 flex items-center gap-1"
+                  onClick={handleInsertSplit}
+                >
+                  <Scissors className="w-3 h-3" />
+                  Inserir divisao
+                </button>
+              </div>
+            </div>
+            {rewriteError && <div className="text-xs text-red-500">{rewriteError}</div>}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Partes ({rewriteChunks.length})</div>
+              <div className="max-h-32 overflow-y-auto border rounded-md px-2 py-2 text-xs text-gray-700 space-y-2">
+                {rewriteChunks.length === 0 ? (
+                  <div className="text-gray-400">Nenhuma parte definida.</div>
+                ) : (
+                  rewriteChunks.map((chunk, index) => (
+                    <div key={`chunk-${index}`} className="border-b last:border-b-0 pb-2 last:pb-0">
+                      <div className="text-gray-400">Parte {index + 1}</div>
+                      <div className="whitespace-pre-wrap">{chunk}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border"
+                onClick={() => {
+                  setMessage(rewriteResult || rewriteOriginal);
+                  setShowRewriteModal(false);
+                }}
+              >
+                Usar no campo
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md bg-green-600 text-white"
+                onClick={handleSendRewriteChunks}
+                disabled={rewriteLoading || isSending}
+              >
+                Enviar em partes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showLinkPreviewModal && pendingLinkMessage && (
         <div className="absolute bottom-full left-4 mb-2 w-96 bg-white border rounded-lg shadow-lg z-20">
           <div className="flex items-center justify-between px-3 py-2 border-b">
@@ -824,14 +1072,24 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
 
         <div className="flex-1 bg-white border rounded-lg flex items-end overflow-hidden">
           <div className="relative">
-            <button
-              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-              disabled={isSending}
-              onClick={() => setShowEmojiPicker((prev) => !prev)}
-              type="button"
-            >
-              <Smile className="w-5 h-5" />
-            </button>
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            disabled={isSending}
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            type="button"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            disabled={isSending || isRecording || showLinkPreviewModal}
+            onClick={handleOpenRewrite}
+            type="button"
+            title="Reescrever com GPT"
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
 
             {showEmojiPicker && (
               <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">

@@ -30,6 +30,8 @@ type WhatsAppChat = {
   updated_at: string;
   last_message?: string;
   unread_count?: number;
+  archived?: boolean | null;
+  mute_until?: string | null;
 };
 
 type WhatsAppMessage = {
@@ -82,6 +84,8 @@ export default function WhatsAppTab() {
     [],
   );
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
@@ -336,6 +340,10 @@ export default function WhatsAppTab() {
           });
         });
         if (didAppend) {
+          const chatToUpdate = chats.find((chat) => chat.id === currentChat.id);
+          if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
+            updateChatArchive(chatToUpdate.id, false);
+          }
           scrollToBottom();
           if (message.direction === 'inbound' && user) {
             markMessagesRead([message]);
@@ -381,6 +389,7 @@ export default function WhatsAppTab() {
           const lastMessageAt = chat.last_message?.timestamp
             ? new Date(chat.last_message.timestamp * 1000).toISOString()
             : null;
+          const muteUntil = chat.mute_until ? new Date(chat.mute_until * 1000).toISOString() : null;
           return {
             id: chat.id,
             name: chat.name ?? null,
@@ -390,6 +399,8 @@ export default function WhatsAppTab() {
             updated_at: new Date().toISOString(),
             last_message: undefined,
             unread_count: chat.unread_count ?? 0,
+            archived: chat.archived ?? false,
+            mute_until: muteUntil,
           };
         });
 
@@ -561,6 +572,11 @@ export default function WhatsAppTab() {
         });
       });
 
+      const chatToUpdate = chats.find((chat) => chat.id === selectedChat.id);
+      if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
+        updateChatArchive(chatToUpdate.id, false);
+      }
+
       scrollToBottom();
       return;
     }
@@ -710,6 +726,8 @@ export default function WhatsAppTab() {
     const displayName = getChatDisplayName(chat).toLowerCase();
     return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
   });
+  const visibleChats = showArchived ? filteredChats : filteredChats.filter((chat) => !chat.archived);
+  const archivedCount = filteredChats.filter((chat) => chat.archived).length;
 
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
@@ -802,6 +820,31 @@ export default function WhatsAppTab() {
     setNewChatPhone('');
   };
 
+  const isChatMuted = (chat: WhatsAppChat) =>
+    chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
+
+  const updateChatArchive = async (chatId: string, archived: boolean) => {
+    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, archived } : chat)));
+    const { error } = await supabase
+      .from('whatsapp_chats')
+      .update({ archived, updated_at: new Date().toISOString() })
+      .eq('id', chatId);
+    if (error) {
+      console.error('Erro ao atualizar arquivamento do chat:', error);
+    }
+  };
+
+  const updateChatMute = async (chatId: string, muteUntil: string | null) => {
+    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, mute_until: muteUntil } : chat)));
+    const { error } = await supabase
+      .from('whatsapp_chats')
+      .update({ mute_until: muteUntil, updated_at: new Date().toISOString() })
+      .eq('id', chatId);
+    if (error) {
+      console.error('Erro ao atualizar mute do chat:', error);
+    }
+  };
+
   const handleUpdateLeadStatus = async (statusName: string) => {
     if (!selectedLead) return;
     const previousStatus = selectedLead.status ?? '';
@@ -843,7 +886,7 @@ export default function WhatsAppTab() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-slate-50">
+    <div className="flex h-full min-h-0 bg-slate-50" onClick={() => setChatMenu(null)}>
       {showNewChatModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-xl">
@@ -957,7 +1000,7 @@ export default function WhatsAppTab() {
         </div>
       )}
       {showChatList && (
-        <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col`}>
+        <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>
           <div className="p-4 border-b border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
@@ -983,17 +1026,29 @@ export default function WhatsAppTab() {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <button
+                type="button"
+                className={`px-2 py-1 rounded-full border ${showArchived ? 'bg-slate-200 border-slate-300 text-slate-700' : 'border-slate-200'}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowArchived((prev) => !prev);
+                }}
+              >
+                {showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'} ({archivedCount})
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {filteredChats.length === 0 ? (
+            {visibleChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-500">
                 <MessageCircle className="w-16 h-16 mb-4 text-slate-300" />
                 <p className="text-lg font-medium">Nenhuma conversa</p>
                 <p className="text-sm">As mensagens do WhatsApp aparecerão aqui</p>
               </div>
             ) : (
-              filteredChats.map((chat) => {
+              visibleChats.map((chat) => {
                 const chatDisplayName = getChatDisplayName(chat);
 
                 const chatPhoto = (() => {
@@ -1005,10 +1060,16 @@ export default function WhatsAppTab() {
                   return null;
                 })();
 
+                const muted = isChatMuted(chat);
+
                 return (
                   <button
                     key={chat.id}
                     onClick={() => setSelectedChat(chat)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setChatMenu({ chatId: chat.id, x: event.clientX, y: event.clientY });
+                    }}
                     className={`w-full p-4 flex items-start gap-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                       selectedChat?.id === chat.id ? 'bg-teal-50' : ''
                     }`}
@@ -1048,6 +1109,9 @@ export default function WhatsAppTab() {
                         <p className="text-sm text-slate-600 truncate">
                           {chat.last_message || 'Sem mensagens'}
                         </p>
+                        {muted && (
+                          <span className="text-[10px] text-slate-400">Silenciado</span>
+                        )}
                         {(chat.unread_count ?? 0) > 0 && (
                           <span className="flex-shrink-0 rounded-full bg-teal-600 text-white text-[11px] px-2 py-0.5">
                             {chat.unread_count}
@@ -1060,11 +1124,77 @@ export default function WhatsAppTab() {
               })
             )}
           </div>
+          {chatMenu && (
+            <div
+              className="fixed z-50 w-52 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"
+              style={{ left: chatMenu.x, top: chatMenu.y }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                onClick={() => {
+                  const target = chats.find((item) => item.id === chatMenu.chatId);
+                  if (target) {
+                    updateChatArchive(target.id, !target.archived);
+                  }
+                  setChatMenu(null);
+                }}
+              >
+                {chats.find((item) => item.id === chatMenu.chatId)?.archived ? 'Desarquivar' : 'Arquivar'}
+              </button>
+              <div className="border-t border-slate-100" />
+              {(() => {
+                const target = chats.find((item) => item.id === chatMenu.chatId);
+                const muted = target ? isChatMuted(target) : false;
+                const muteOptions = [
+                  { label: '1 hora', ms: 60 * 60 * 1000 },
+                  { label: '1 dia', ms: 24 * 60 * 60 * 1000 },
+                  { label: '1 semana', ms: 7 * 24 * 60 * 60 * 1000 },
+                  { label: '1 mês', ms: 30 * 24 * 60 * 60 * 1000 },
+                  { label: 'Definitivo', ms: 365 * 24 * 60 * 60 * 1000 },
+                ];
+                return (
+                  <div className="py-1">
+                    {muted ? (
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                        onClick={() => {
+                          if (target) updateChatMute(target.id, null);
+                          setChatMenu(null);
+                        }}
+                      >
+                        Desmutar
+                      </button>
+                    ) : (
+                      muteOptions.map((option) => (
+                        <button
+                          key={option.label}
+                          type="button"
+                          className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                          onClick={() => {
+                            if (target) {
+                              const until = new Date(Date.now() + option.ms).toISOString();
+                              updateChatMute(target.id, until);
+                            }
+                            setChatMenu(null);
+                          }}
+                        >
+                          Mutar por {option.label}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
 
       {showMessageArea && (
-        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex flex-col bg-slate-100 relative`}>
+        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex flex-col bg-slate-100 relative min-h-0`}>
           {selectedChat ? (
             <>
               <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
@@ -1146,7 +1276,7 @@ export default function WhatsAppTab() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
                     <p>Nenhuma mensagem ainda</p>

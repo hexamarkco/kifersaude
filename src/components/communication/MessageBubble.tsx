@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   ackStatus: number | null;
   hasMedia: boolean;
   payload?: any;
+  reactions?: Array<{ emoji: string; count: number }>;
   fromName?: string;
   isDeleted?: boolean;
   deletedAt?: string | null;
@@ -34,6 +35,7 @@ export function MessageBubble({
   ackStatus,
   hasMedia,
   payload,
+  reactions,
   fromName,
   isDeleted = false,
   deletedAt,
@@ -237,6 +239,20 @@ export function MessageBubble({
           )}
 
           {renderContent()}
+
+          {reactions && reactions.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {reactions.map((reaction) => (
+                <span
+                  key={`${id}-${reaction.emoji}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-gray-200 px-2 py-0.5 text-xs"
+                >
+                  <span>{reaction.emoji}</span>
+                  {reaction.count > 1 && <span className="text-gray-600">{reaction.count}</span>}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-2 mt-1">
             <div className="flex items-center gap-2">

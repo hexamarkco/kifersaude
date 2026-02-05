@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
@@ -678,6 +678,39 @@ export default function WhatsAppTab() {
     return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
   });
 
+  const reactionsByTargetId = useMemo(() => {
+    const map = new Map<string, Map<string, number>>();
+
+    messages.forEach((message) => {
+      const payloadData = message.payload as any;
+      const baseReactions = Array.isArray(payloadData?.reactions) ? payloadData.reactions : [];
+
+      baseReactions.forEach((reaction: { emoji?: string; count?: number }) => {
+        if (!reaction?.emoji) return;
+        const targetMap = map.get(message.id) ?? new Map<string, number>();
+        const current = targetMap.get(reaction.emoji) ?? 0;
+        const increment = typeof reaction.count === 'number' ? reaction.count : 1;
+        targetMap.set(reaction.emoji, current + increment);
+        map.set(message.id, targetMap);
+      });
+
+      const action = payloadData?.action;
+      if (action?.type === 'reaction' && action?.target && action?.emoji) {
+        const targetMap = map.get(action.target) ?? new Map<string, number>();
+        const current = targetMap.get(action.emoji) ?? 0;
+        targetMap.set(action.emoji, current + 1);
+        map.set(action.target, targetMap);
+      }
+    });
+
+    return new Map(
+      Array.from(map.entries()).map(([messageId, emojiMap]) => [
+        messageId,
+        Array.from(emojiMap.entries()).map(([emoji, count]) => ({ emoji, count })),
+      ]),
+    );
+  }, [messages]);
+
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
 
   const showChatList = !isMobileView || !selectedChat;
@@ -849,8 +882,12 @@ export default function WhatsAppTab() {
                   </div>
                 ) : (
                   messages.map((message) => {
+                    const payloadData = message.payload as any;
+                    const isReactionOnly = payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
+                    if (isReactionOnly) return null;
                     const showAuthor = selectedChat.is_group && message.direction === 'inbound' && message.author;
                     const authorName = showAuthor ? formatPhone(message.author!) : undefined;
+                    const reactions = reactionsByTargetId.get(message.id);
 
                     return (
                       <div key={message.id}>
@@ -869,6 +906,7 @@ export default function WhatsAppTab() {
                           ackStatus={message.ack_status}
                           hasMedia={message.has_media}
                           payload={message.payload}
+                          reactions={reactions}
                           fromName={authorName}
                           isDeleted={message.is_deleted}
                           deletedAt={message.deleted_at}

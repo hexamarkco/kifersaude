@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle } from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
@@ -17,6 +17,7 @@ export type SentMessagePayload = {
 interface MessageInputProps {
   chatId: string;
   onMessageSent?: (message?: SentMessagePayload) => void;
+  contacts?: Array<{ id: string; name: string; saved: boolean; pushname?: string }>;
   replyToMessage?: {
     id: string;
     body: string;
@@ -30,7 +31,7 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
 }
 
-export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelReply, editMessage, onCancelEdit }: MessageInputProps) {
+export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMessage, onCancelReply, editMessage, onCancelEdit }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -39,6 +40,8 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +51,13 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
+
+  const filteredContacts = useMemo(() => {
+    const query = contactSearch.trim().toLowerCase();
+    const source = contacts.filter((contact) => contact.saved);
+    if (!query) return source;
+    return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
+  }, [contacts, contactSearch]);
 
   useEffect(() => {
     if (editMessage) {
@@ -350,8 +360,97 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
     );
   };
 
+  const extractPhoneFromContactId = (contactId: string) => contactId.replace(/\D/g, '');
+
+  const buildVcard = (name: string, phone: string) =>
+    `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\nTEL;type=CELL;type=VOICE;waid=${phone}:${phone}\nEND:VCARD`;
+
+  const handleSendContact = async (contact: { id: string; name: string }) => {
+    const phone = extractPhoneFromContactId(contact.id);
+    if (!phone) {
+      alert('Contato sem telefone válido.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const response = await sendWhatsAppMessage({
+        chatId,
+        contentType: 'Contact',
+        content: {
+          name: contact.name,
+          vcard: buildVcard(contact.name, phone),
+        },
+        quotedMessageId: replyToMessage?.id,
+      });
+
+      const sentAt = new Date().toISOString();
+      const contactPayload: SentMessagePayload = {
+        id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        chat_id: chatId,
+        body: `[Contato: ${contact.name}]`,
+        type: 'contact',
+        has_media: false,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+      };
+
+      setShowContactPicker(false);
+      setContactSearch('');
+      if (onCancelReply) onCancelReply();
+      if (onMessageSent) onMessageSent(contactPayload);
+    } catch (error) {
+      console.error('Erro ao enviar contato:', error);
+      alert('Erro ao enviar contato');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
-    <div className="border-t bg-white">
+    <div className="border-t bg-white relative">
+      {showContactPicker && (
+        <div className="absolute bottom-full left-4 mb-2 w-80 bg-white border rounded-lg shadow-lg z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <span className="text-sm font-medium">Enviar contato</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-gray-100"
+              onClick={() => setShowContactPicker(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-2">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              placeholder="Buscar contato..."
+              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto px-2 pb-2">
+            {filteredContacts.length === 0 ? (
+              <div className="text-sm text-gray-500 px-2 py-3">Nenhum contato encontrado.</div>
+            ) : (
+              filteredContacts.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-50 flex items-center justify-between"
+                  onClick={() => handleSendContact(contact)}
+                  disabled={isSending}
+                >
+                  <span className="text-sm text-gray-800 truncate">{contact.name || contact.id}</span>
+                  <span className="text-xs text-gray-400">Enviar</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       {editMessage && (
         <div className="px-4 py-2 bg-blue-50 border-b flex items-center justify-between">
           <div className="flex-1 min-w-0">
@@ -472,6 +571,19 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
                   <MapPin className="w-4 h-4 text-green-600" />
                 </div>
                 <span className="text-sm">Localização</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowContactPicker(true);
+                  setShowAttachMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+              >
+                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Smile className="w-4 h-4 text-amber-600" />
+                </div>
+                <span className="text-sm">Contato</span>
               </button>
             </div>
           )}

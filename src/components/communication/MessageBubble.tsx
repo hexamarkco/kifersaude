@@ -98,6 +98,27 @@ export function MessageBubble({
     }
   };
 
+  const parseVcard = (vcard?: string | null) => {
+    if (!vcard) return { name: '', phone: '' };
+    const nameMatch = vcard.match(/^FN:(.*)$/m) || vcard.match(/^FN;.*:(.*)$/m);
+    const phoneMatch = vcard.match(/^TEL.*:(.*)$/m);
+    return {
+      name: nameMatch?.[1]?.trim() || '',
+      phone: phoneMatch?.[1]?.replace(/\D/g, '') || '',
+    };
+  };
+
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 13) {
+      return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+    }
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    return cleaned || phone;
+  };
+
   const renderContent = () => {
     const payloadData = payload as any;
     const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
@@ -114,6 +135,54 @@ export function MessageBubble({
                 em {format(new Date(deletedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
               </span>
             )}
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'contact' || payloadData?.contact) {
+      const contactPayload = payloadData?.contact;
+      const parsed = parseVcard(contactPayload?.vcard);
+      const contactName = parsed.name || contactPayload?.name || body || 'Contato';
+      const contactPhone = parsed.phone || contactPayload?.phone || '';
+      return (
+        <div className="space-y-2">
+          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                👤
+              </div>
+              <div>
+                <div className="font-medium">{contactName}</div>
+                {contactPhone && <div className="text-xs">{formatPhone(contactPhone)}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (payloadData?.contact_list?.list?.length) {
+      return (
+        <div className="space-y-2">
+          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
+            <div className="font-medium">Contatos</div>
+            <div className="mt-1 space-y-1">
+              {payloadData.contact_list.list.slice(0, 5).map((contact: { name?: string; vcard?: string }, index: number) => {
+                const parsed = parseVcard(contact?.vcard);
+                const contactName = parsed.name || contact?.name || `Contato ${index + 1}`;
+                const contactPhone = parsed.phone || '';
+                return (
+                  <div key={`${id}-contact-${index}`} className="text-xs text-gray-700">
+                    {contactName}
+                    {contactPhone ? ` · ${formatPhone(contactPhone)}` : ''}
+                  </div>
+                );
+              })}
+              {payloadData.contact_list.list.length > 5 && (
+                <div className="text-xs text-gray-500">+{payloadData.contact_list.list.length - 5} contato(s)</div>
+              )}
+            </div>
           </div>
         </div>
       );

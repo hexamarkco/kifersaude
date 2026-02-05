@@ -178,6 +178,8 @@ export interface SendMessageParams {
     longitude?: number;
     description?: string;
     contactId?: string;
+    name?: string;
+    vcard?: string;
   };
   quotedMessageId?: string;
   editMessageId?: string;
@@ -271,6 +273,19 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
     body.longitude = location.longitude;
     if (location.description) {
       body.address = location.description;
+    }
+  } else if (params.contentType === 'Contact' && typeof params.content === 'object') {
+    endpoint = '/messages/contact';
+    const contact = params.content as { name?: string; vcard?: string; contactId?: string };
+    if (contact.vcard) {
+      body.contact = {
+        name: contact.name || 'Contato',
+        vcard: contact.vcard,
+      };
+    } else if (contact.contactId) {
+      body.contact = { id: contact.contactId };
+    } else {
+      throw new Error('Contato inválido para envio');
     }
   } else {
     throw new Error('Tipo de conteúdo não suportado');

@@ -130,6 +130,9 @@ export default function WhatsAppTab() {
   } | null>(null);
   const [leadNamesByPhone, setLeadNamesByPhone] = useState<Map<string, string>>(new Map());
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
+  const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
+    [],
+  );
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
@@ -265,6 +268,15 @@ export default function WhatsAppTab() {
       try {
         const response = await getWhatsAppContacts();
         const contactMap = new Map<string, { name: string; saved: boolean }>();
+
+        setContactsList(
+          response.contacts.map((contact) => ({
+            id: contact.id,
+            name: contact.name || contact.pushname || contact.id,
+            saved: contact.saved,
+            pushname: contact.pushname,
+          })),
+        );
 
         response.contacts.forEach((contact) => {
           const normalized = normalizeChatId(contact.id);
@@ -927,6 +939,7 @@ export default function WhatsAppTab() {
 
               <MessageInput
                 chatId={selectedChat.id}
+                contacts={contactsList}
                 onMessageSent={handleMessageSent}
                 replyToMessage={replyToMessage}
                 onCancelReply={handleCancelReply}

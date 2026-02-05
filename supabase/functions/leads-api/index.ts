@@ -836,7 +836,9 @@ function normalizeTelefone(telefone: string): string {
 
 function isValidWhatsappNumber(telefone?: string | null): boolean {
   const digits = normalizeTelefone(telefone ?? '');
-  return digits.length >= 10;
+  if (!digits) return false;
+  const local = digits.startsWith('55') ? digits.slice(2) : digits;
+  return local.length === 10 || local.length === 11;
 }
 
 async function sendWhatsappMessages({

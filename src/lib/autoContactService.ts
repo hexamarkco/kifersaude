@@ -863,7 +863,9 @@ const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
 const isValidWhatsappNumber = (lead: Lead): boolean => {
   const digits = normalizePhone(lead.telefone ?? '');
-  return digits.length >= 10;
+  if (!digits) return false;
+  const local = digits.startsWith('55') ? digits.slice(2) : digits;
+  return local.length === 10 || local.length === 11;
 };
 
 type DateParts = {

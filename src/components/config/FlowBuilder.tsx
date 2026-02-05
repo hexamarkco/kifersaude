@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -9,11 +9,15 @@ import ReactFlow, {
   type Connection,
   type Edge,
   type Node,
+  getNodesBounds,
+  getViewportForBounds,
   useEdgesState,
   useNodesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Download } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 
 import {
   type AutoContactDelayUnit,
@@ -235,6 +239,8 @@ export default function FlowBuilder({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [initializedFlowId, setInitializedFlowId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const reactFlowWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (initializedFlowId !== flow.id) {
@@ -289,6 +295,73 @@ export default function FlowBuilder({
     },
     [setEdges, setNodes],
   );
+
+  const exportFlowAsImage = useCallback(async () => {
+    if (isExporting) return;
+    const viewport = reactFlowWrapperRef.current?.querySelector('.react-flow__viewport') as HTMLElement | null;
+    if (!viewport) return;
+    setIsExporting(true);
+    try {
+      const imageWidth = 1600;
+      const imageHeight = 900;
+      const bounds = getNodesBounds(nodes);
+      const transform = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 2);
+
+      const dataUrl = await toPng(viewport, {
+        backgroundColor: '#f8fafc',
+        width: imageWidth,
+        height: imageHeight,
+        pixelRatio: 2,
+        style: {
+          width: `${imageWidth}px`,
+          height: `${imageHeight}px`,
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+        },
+      });
+
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = 'fluxo-whatsapp.png';
+      link.click();
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting, nodes]);
+
+  const exportFlowAsPdf = useCallback(async () => {
+    if (isExporting) return;
+    const viewport = reactFlowWrapperRef.current?.querySelector('.react-flow__viewport') as HTMLElement | null;
+    if (!viewport) return;
+    setIsExporting(true);
+    try {
+      const pdfWidth = 1400;
+      const pdfHeight = 900;
+      const bounds = getNodesBounds(nodes);
+      const transform = getViewportForBounds(bounds, pdfWidth, pdfHeight, 0.1, 2);
+
+      const dataUrl = await toPng(viewport, {
+        backgroundColor: '#ffffff',
+        width: pdfWidth,
+        height: pdfHeight,
+        pixelRatio: 2,
+        style: {
+          width: `${pdfWidth}px`,
+          height: `${pdfHeight}px`,
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+        },
+      });
+
+      const pdf = new jsPDF({
+        orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [pdfWidth, pdfHeight],
+      });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('fluxo-whatsapp.pdf');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting, nodes]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
   const previewContext = useMemo(() => buildPreviewContext(), []);
@@ -505,7 +578,7 @@ export default function FlowBuilder({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 h-[560px]">
+      <div ref={reactFlowWrapperRef} className="rounded-2xl border border-slate-200 bg-slate-50 h-[560px]">
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 rounded-t-2xl">
           <div>
             <div className="text-xs uppercase text-slate-400 font-semibold">Builder avancado</div>
@@ -526,6 +599,26 @@ export default function FlowBuilder({
               className="px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800"
             >
               + Acao
+            </button>
+            <button
+              type="button"
+              onClick={exportFlowAsImage}
+              disabled={isExporting}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-60"
+              title="Exportar como imagem"
+            >
+              <Download className="h-4 w-4" />
+              PNG
+            </button>
+            <button
+              type="button"
+              onClick={exportFlowAsPdf}
+              disabled={isExporting}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-60"
+              title="Exportar como PDF"
+            >
+              <Download className="h-4 w-4" />
+              PDF
             </button>
             <button
               type="button"

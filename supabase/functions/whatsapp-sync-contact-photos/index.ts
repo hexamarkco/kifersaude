@@ -55,7 +55,11 @@ const fetchContactsPage = async (token: string, offset: number, count: number) =
 };
 
 const fetchContactProfile = async (token: string, contactId: string) => {
-  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(contactId)}/profile`, {
+  const normalizedId = contactId.replace(/\D/g, '');
+  if (!normalizedId) {
+    throw new Error(`Contato invalido: ${contactId}`);
+  }
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(normalizedId)}/profile`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,

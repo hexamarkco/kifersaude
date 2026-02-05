@@ -208,10 +208,20 @@ export function MessageBubble({
 
     if (hasMedia && type?.startsWith('image')) {
       const imageUrl = payloadData?.image?.link || payloadData?.media?.link || payloadData?.media?.url;
+      const imagePreview = payloadData?.image?.preview;
+      const displayUrl = imageUrl || imagePreview;
+      const shouldShowCaption = body && body !== '[Imagem]';
       return (
         <div className="space-y-2">
-          {imageUrl ? (
-            <img src={imageUrl} alt="Imagem" className="max-w-full rounded" loading="lazy" />
+          {displayUrl ? (
+            <a href={displayUrl} target="_blank" rel="noreferrer">
+              <img
+                src={displayUrl}
+                alt="Imagem"
+                className="max-w-full rounded"
+                loading="lazy"
+              />
+            </a>
           ) : (
             <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -223,7 +233,7 @@ export function MessageBubble({
               </div>
             </div>
           )}
-          {body && <div className="text-sm">{body}</div>}
+          {shouldShowCaption && <div className="text-sm">{body}</div>}
         </div>
       );
     }

@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   timestamp: string | null;
   ackStatus: number | null;
   hasMedia: boolean;
+  payload?: any;
   fromName?: string;
   isDeleted?: boolean;
   deletedAt?: string | null;
@@ -32,6 +33,7 @@ export function MessageBubble({
   timestamp,
   ackStatus,
   hasMedia,
+  payload,
   fromName,
   isDeleted = false,
   deletedAt,
@@ -97,6 +99,10 @@ export function MessageBubble({
   };
 
   const renderContent = () => {
+    const payloadData = payload as any;
+    const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
+    const audioUrl = audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
+
     if (isDeleted) {
       return (
         <div className="flex items-center gap-2">
@@ -150,7 +156,7 @@ export function MessageBubble({
       );
     }
 
-    if (hasMedia && type?.startsWith('audio') || type === 'ptt') {
+    if (hasMedia && (type?.startsWith('audio') || type === 'ptt' || type === 'voice')) {
       return (
         <div className="space-y-2">
           <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
@@ -160,7 +166,11 @@ export function MessageBubble({
               </div>
               <div className="flex-1">
                 <div className="font-medium">Áudio</div>
-                <div className="text-xs">Clique para ouvir</div>
+                {audioUrl ? (
+                  <audio className="w-full h-8 mt-1" controls preload="none" src={audioUrl} />
+                ) : (
+                  <div className="text-xs">Clique para ouvir</div>
+                )}
               </div>
             </div>
           </div>

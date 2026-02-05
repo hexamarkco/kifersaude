@@ -18,8 +18,6 @@ type WhapiContact = {
   id: string;
   name?: string;
   pushname?: string;
-  profile_pic?: string | null;
-  profile_pic_full?: string | null;
 };
 
 type WhapiContactListResponse = {
@@ -54,6 +52,23 @@ const fetchContactsPage = async (token: string, offset: number, count: number) =
   }
 
   return (await response.json()) as WhapiContactListResponse;
+};
+
+const fetchContactProfile = async (token: string, contactId: string) => {
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(contactId)}/profile`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Erro ao buscar perfil do contato ${contactId}: ${response.status} ${errorText}`);
+  }
+
+  return (await response.json()) as { icon?: string | null; icon_full?: string | null };
 };
 
 Deno.serve(async (req) => {
@@ -139,19 +154,20 @@ Deno.serve(async (req) => {
         if (processed >= fetchLimit) break;
         processed += 1;
 
-        const sourceUrl = contact.profile_pic_full || contact.profile_pic || null;
-        if (!sourceUrl) {
-          skipped += 1;
-          continue;
-        }
-
-        const existing = existingMap.get(contact.id);
-        if (!force && existing?.source_url === sourceUrl) {
-          skipped += 1;
-          continue;
-        }
-
         try {
+          const profile = await fetchContactProfile(token, contact.id);
+          const sourceUrl = profile.icon_full || profile.icon || null;
+          if (!sourceUrl) {
+            skipped += 1;
+            continue;
+          }
+
+          const existing = existingMap.get(contact.id);
+          if (!force && existing?.source_url === sourceUrl) {
+            skipped += 1;
+            continue;
+          }
+
           const photoResponse = await fetch(sourceUrl);
           if (!photoResponse.ok) {
             errors += 1;

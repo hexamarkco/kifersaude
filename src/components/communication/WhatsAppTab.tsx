@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History } from 'lucide-react';
+import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History, Plus } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { MessageBubble } from './MessageBubble';
@@ -136,6 +136,11 @@ export default function WhatsAppTab() {
     [],
   );
   const [contactPhotosById, setContactPhotosById] = useState<Map<string, string>>(new Map());
+  const [leadsList, setLeadsList] = useState<Array<{ name: string; phone: string }>>([]);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [newChatSearch, setNewChatSearch] = useState('');
+  const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
+  const [newChatPhone, setNewChatPhone] = useState('');
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -263,6 +268,14 @@ export default function WhatsAppTab() {
         });
 
         setLeadNamesByPhone(phoneMap);
+        setLeadsList(
+          (data || [])
+            .map((lead) => ({
+              name: lead.nome_completo,
+              phone: normalizePhoneNumber(lead.telefone),
+            }))
+            .filter((lead) => Boolean(lead.phone)),
+        );
       } catch (err) {
         console.error('Error loading lead names:', err);
       }
@@ -804,6 +817,56 @@ export default function WhatsAppTab() {
   }, [messages]);
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
+  const filteredLeads = useMemo(() => {
+    const query = newChatSearch.trim().toLowerCase();
+    if (!query) return leadsList;
+    return leadsList.filter((lead) => lead.name.toLowerCase().includes(query) || lead.phone.includes(query));
+  }, [leadsList, newChatSearch]);
+
+  const filteredContacts = useMemo(() => {
+    const query = newChatSearch.trim().toLowerCase();
+    const source = contactsList.filter((contact) => contact.saved);
+    if (!query) return source;
+    return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
+  }, [contactsList, newChatSearch]);
+
+  const openChatFromPhone = (phone: string, name?: string) => {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) return;
+    const chatId = buildChatIdFromPhone(normalizedPhone);
+    const now = new Date().toISOString();
+    setChats((prev) => {
+      if (prev.some((chat) => chat.id === chatId)) return prev;
+      return [
+        {
+          id: chatId,
+          name: name ?? null,
+          is_group: false,
+          phone_number: normalizedPhone,
+          last_message_at: null,
+          created_at: now,
+          updated_at: now,
+          last_message: '',
+          unread_count: 0,
+        },
+        ...prev,
+      ];
+    });
+    setSelectedChat({
+      id: chatId,
+      name: name ?? null,
+      is_group: false,
+      phone_number: normalizedPhone,
+      last_message_at: null,
+      created_at: now,
+      updated_at: now,
+      last_message: '',
+      unread_count: 0,
+    });
+    setShowNewChatModal(false);
+    setNewChatSearch('');
+    setNewChatPhone('');
+  };
 
   const showChatList = !isMobileView || !selectedChat;
   const showMessageArea = !isMobileView || selectedChat;
@@ -818,9 +881,135 @@ export default function WhatsAppTab() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-slate-50">
+      {showNewChatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg bg-white rounded-lg shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="text-base font-semibold">Novo chat</h3>
+              <button
+                type="button"
+                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => setShowNewChatModal(false)}
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-4 pt-3 flex gap-2">
+              <button
+                type="button"
+                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'leads' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                onClick={() => setNewChatTab('leads')}
+              >
+                Leads
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'contacts' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                onClick={() => setNewChatTab('contacts')}
+              >
+                Contatos
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'manual' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                onClick={() => setNewChatTab('manual')}
+              >
+                Numero
+              </button>
+            </div>
+            <div className="px-4 py-3">
+              {(newChatTab === 'leads' || newChatTab === 'contacts') && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={newChatTab === 'leads' ? 'Buscar lead...' : 'Buscar contato...'}
+                    value={newChatSearch}
+                    onChange={(e) => setNewChatSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              {newChatTab === 'leads' && (
+                <div className="max-h-72 overflow-y-auto border rounded-lg">
+                  {filteredLeads.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500">Nenhum lead encontrado.</div>
+                  ) : (
+                    filteredLeads.map((lead, index) => (
+                      <button
+                        key={`${lead.phone}-${index}`}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-b-0"
+                        onClick={() => openChatFromPhone(lead.phone, lead.name)}
+                      >
+                        <div className="text-sm font-medium text-slate-800">{lead.name}</div>
+                        <div className="text-xs text-slate-500">{formatPhone(lead.phone)}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {newChatTab === 'contacts' && (
+                <div className="max-h-72 overflow-y-auto border rounded-lg">
+                  {filteredContacts.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500">Nenhum contato encontrado.</div>
+                  ) : (
+                    filteredContacts.map((contact) => (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-b-0"
+                        onClick={() => openChatFromPhone(contact.id, contact.name || contact.id)}
+                      >
+                        <div className="text-sm font-medium text-slate-800">{contact.name || contact.id}</div>
+                        <div className="text-xs text-slate-500">{formatPhone(contact.id)}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {newChatTab === 'manual' && (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="DDD + telefone"
+                    value={newChatPhone}
+                    onChange={(e) => setNewChatPhone(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 rounded-lg bg-teal-600 text-white text-sm"
+                    onClick={() => openChatFromPhone(newChatPhone)}
+                  >
+                    Iniciar conversa
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {showChatList && (
         <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col`}>
-          <div className="p-4 border-b border-slate-200">
+          <div className="p-4 border-b border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-teal-600 text-white"
+                onClick={() => {
+                  setShowNewChatModal(true);
+                  setNewChatTab('leads');
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                Novo chat
+              </button>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input

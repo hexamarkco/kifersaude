@@ -68,7 +68,7 @@ BEGIN
 
   PERFORM cron.schedule(
     'sync-whatsapp-contact-photos-daily',
-    '0 3 * * *',
+    '0 0 * * *',
     format(
       'SELECT net.http_post(url := %L, headers := jsonb_build_object(''Content-Type'', ''application/json'', ''Authorization'', ''Bearer %s''), body := jsonb_build_object(''source'', ''cron''));',
       function_url,

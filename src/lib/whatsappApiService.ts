@@ -639,6 +639,32 @@ export async function getWhatsAppContacts(count: number = 500, offset: number = 
   return response.json();
 }
 
+export async function getWhatsAppMedia(mediaId: string): Promise<{ url?: string; data?: Blob }> {
+  const settings = await getWhatsAppSettings();
+  const response = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json, */*',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const json = await response.json().catch(() => ({} as Record<string, unknown>));
+    const url = (json as any)?.url || (json as any)?.link || (json as any)?.media || undefined;
+    return { url };
+  }
+
+  const data = await response.blob();
+  return { data };
+}
+
 export function buildChatIdFromPhone(phoneNumber: string): string {
   const cleanPhone = phoneNumber.replace(/\D/g, '');
 

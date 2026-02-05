@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageHistoryModal } from './MessageHistoryModal';
+import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 
 interface MessageBubbleProps {
   id: string;
@@ -46,6 +47,8 @@ export function MessageBubble({
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [audioMediaUrl, setAudioMediaUrl] = useState<string | null>(null);
+  const [audioMediaLoading, setAudioMediaLoading] = useState(false);
   const hasHistory = editCount > 0 || isDeleted;
 
   const formatTimestamp = (ts: string | null) => {
@@ -122,13 +125,40 @@ export function MessageBubble({
 
   const payloadData = payload as any;
   const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
-  const audioUrl = audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
+  const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
   const imageFullSrc =
     payloadData?.image?.link ||
     payloadData?.media?.link ||
     payloadData?.media?.url ||
     payloadData?.image?.preview ||
     '';
+
+  useEffect(() => {
+    return () => {
+      if (audioMediaUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(audioMediaUrl);
+      }
+    };
+  }, [audioMediaUrl]);
+
+  const loadAudioMedia = async () => {
+    const mediaId = audioPayload?.id;
+    if (!mediaId || audioMediaLoading) return;
+    setAudioMediaLoading(true);
+    try {
+      const response = await getWhatsAppMedia(mediaId);
+      if (response.url) {
+        setAudioMediaUrl(response.url);
+      } else if (response.data) {
+        const objectUrl = URL.createObjectURL(response.data);
+        setAudioMediaUrl(objectUrl);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar audio:', error);
+    } finally {
+      setAudioMediaLoading(false);
+    }
+  };
 
   const renderContent = () => {
 
@@ -259,7 +289,14 @@ export function MessageBubble({
                 {audioUrl ? (
                   <audio className="w-full h-8 mt-1" controls preload="none" src={audioUrl} />
                 ) : (
-                  <div className="text-xs">Clique para ouvir</div>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={loadAudioMedia}
+                    disabled={audioMediaLoading}
+                  >
+                    {audioMediaLoading ? 'Carregando audio...' : 'Carregar audio'}
+                  </button>
                 )}
               </div>
             </div>

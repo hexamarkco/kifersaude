@@ -17,6 +17,7 @@ type WhapiMessage = {
   from_me: boolean;
   type: string;
   chat_id: string;
+  chat_name?: string;
   timestamp: number;
   source?: string;
   status?: string;
@@ -202,6 +203,7 @@ type NormalizedMessage = {
   hasMedia: boolean;
   timestamp: string | null;
   contactName: string | null;
+  chatName: string | null;
   isGroup: boolean;
   author: string | null;
   ackStatus: number | null;
@@ -333,6 +335,7 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const fromNumber = direction === 'inbound' ? (message.from || chatId) : null;
   const toNumber = direction === 'outbound' ? chatId : null;
   const contactName = message.from_name || null;
+  const chatName = message.chat_name || null;
   const timestamp = toIsoString(message.timestamp);
 
   const ackStatus = message.status ? mapStatusToAck(message.status) : null;
@@ -348,6 +351,7 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
     hasMedia,
     timestamp,
     contactName,
+    chatName,
     isGroup,
     author: isGroup && fromNumber ? fromNumber : null,
     ackStatus,
@@ -460,7 +464,7 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
       return existingChat.name;
     }
 
-    return message.contactName ?? message.chatId;
+    return message.chatName ?? message.contactName ?? message.chatId;
   }
 
   const phoneNumber = extractPhoneNumber(message.chatId);

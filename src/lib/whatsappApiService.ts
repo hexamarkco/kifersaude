@@ -367,6 +367,7 @@ export async function sendMediaMessage(
     quotedMessageId?: string;
     viewOnce?: boolean;
     asVoice?: boolean;
+    seconds?: number;
   }
 ) {
   const base64Data = await fileToBase64(file);
@@ -383,6 +384,7 @@ export async function sendMediaMessage(
     filename: file.name,
     caption: options?.caption,
     viewOnce: options?.viewOnce,
+    seconds: options?.seconds,
   };
 
   return sendWhatsAppMessage({

@@ -240,6 +240,7 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
       };
 
       mediaRecorder.onstop = async () => {
+        const durationSeconds = recordingTime;
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
         const audioFile = new File([audioBlob], 'voice.ogg', { type: 'audio/ogg' });
 
@@ -254,13 +255,25 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
 
         try {
           setIsSending(true);
-          await sendMediaMessage(chatId, audioFile, {
-            asVoice: true,
+          const response = await sendMediaMessage(chatId, audioFile, {
             quotedMessageId: replyToMessage?.id,
+            seconds: durationSeconds,
           });
 
+          const sentAt = new Date().toISOString();
+          const audioPayload: SentMessagePayload = {
+            id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            chat_id: chatId,
+            body: '[Áudio]',
+            type: 'audio',
+            has_media: true,
+            timestamp: sentAt,
+            direction: 'outbound',
+            created_at: sentAt,
+          };
+
           if (onCancelReply) onCancelReply();
-          if (onMessageSent) onMessageSent();
+          if (onMessageSent) onMessageSent(audioPayload);
         } catch (error) {
           console.error('Erro ao enviar áudio:', error);
           alert('Erro ao enviar mensagem de voz');

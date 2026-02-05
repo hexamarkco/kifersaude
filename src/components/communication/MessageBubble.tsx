@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,6 +49,11 @@ export function MessageBubble({
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [audioMediaUrl, setAudioMediaUrl] = useState<string | null>(null);
   const [audioMediaLoading, setAudioMediaLoading] = useState(false);
+  const [audioIsPlaying, setAudioIsPlaying] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioRateIndex, setAudioRateIndex] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasHistory = editCount > 0 || isDeleted;
 
   const formatTimestamp = (ts: string | null) => {
@@ -157,6 +162,70 @@ export function MessageBubble({
       console.error('Erro ao carregar audio:', error);
     } finally {
       setAudioMediaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoaded = () => {
+      setAudioDuration(audio.duration || 0);
+    };
+
+    const handleTime = () => {
+      setAudioCurrentTime(audio.currentTime || 0);
+    };
+
+    const handleEnded = () => {
+      setAudioIsPlaying(false);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoaded);
+    audio.addEventListener('timeupdate', handleTime);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoaded);
+      audio.removeEventListener('timeupdate', handleTime);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [audioUrl]);
+
+  const formatAudioTime = (value: number) => {
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.floor(value % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const toggleAudioPlayback = async () => {
+    if (!audioUrl) {
+      await loadAudioMedia();
+      return;
+    }
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audioIsPlaying) {
+      audio.pause();
+      setAudioIsPlaying(false);
+    } else {
+      try {
+        await audio.play();
+        setAudioIsPlaying(true);
+      } catch (error) {
+        console.error('Erro ao reproduzir audio:', error);
+      }
+    }
+  };
+
+  const cycleAudioRate = () => {
+    const rates = [1, 1.5, 2, 3];
+    const nextIndex = (audioRateIndex + 1) % rates.length;
+    setAudioRateIndex(nextIndex);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rates[nextIndex];
     }
   };
 
@@ -279,33 +348,45 @@ export function MessageBubble({
     if (hasMedia && (type?.startsWith('audio') || type === 'ptt' || type === 'voice')) {
       return (
         <div className="space-y-2">
-          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600 w-[320px] max-w-full">
+          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600 w-[360px] max-w-full">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-lg"
-                onClick={() => {
-                  if (!audioUrl) {
-                    loadAudioMedia();
-                  }
-                }}
+                onClick={toggleAudioPlayback}
                 disabled={audioMediaLoading}
               >
-                ▶
+                {audioIsPlaying ? '⏸' : '▶'}
               </button>
               <div className="flex-1">
                 {audioUrl ? (
-                  <audio className="w-full h-8" controls preload="none" src={audioUrl} />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: audioDuration ? `${(audioCurrentTime / audioDuration) * 100}%` : '0%' }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 min-w-[64px] text-right">
+                      {formatAudioTime(audioCurrentTime)} / {formatAudioTime(audioDuration || audioPayload?.seconds || 0)}
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-xs">
                     {audioMediaLoading ? 'Carregando audio...' : 'Clique para carregar'}
                   </div>
                 )}
               </div>
-              <div className="text-xs text-gray-500">
-                {audioPayload?.seconds ? `${audioPayload.seconds}s` : ''}
-              </div>
+              <button
+                type="button"
+                className="text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-1"
+                onClick={cycleAudioRate}
+                disabled={!audioUrl}
+              >
+                {[1, 1.5, 2, 3][audioRateIndex]}x
+              </button>
             </div>
+            {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
           {body && <div className="text-sm">{body}</div>}
         </div>

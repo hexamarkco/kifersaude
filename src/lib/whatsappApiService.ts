@@ -230,7 +230,8 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
     if (media.url) {
       body.media = media.url;
     } else if (media.data) {
-      body.media = `data:${media.mimetype};base64,${media.data}`;
+      const useRawBase64 = ['audio', 'voice'].includes(params.contentType);
+      body.media = useRawBase64 ? media.data : `data:${media.mimetype};base64,${media.data}`;
     } else {
       throw new Error('Mídia deve conter URL ou dados base64');
     }

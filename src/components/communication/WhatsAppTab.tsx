@@ -135,6 +135,7 @@ export default function WhatsAppTab() {
   const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
     [],
   );
+  const [contactPhotosById, setContactPhotosById] = useState<Map<string, string>>(new Map());
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -301,8 +302,29 @@ export default function WhatsAppTab() {
       }
     };
 
+    const loadContactPhotos = async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_contact_photos')
+        .select('contact_id, public_url');
+
+      if (error) {
+        console.error('Error loading contact photos:', error);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      (data || []).forEach((row) => {
+        if (row.public_url) {
+          map.set(row.contact_id, row.public_url);
+        }
+      });
+
+      setContactPhotosById(map);
+    };
+
     loadLeadNames();
     loadSavedContacts();
+    loadContactPhotos();
   }, []);
 
   useEffect(() => {
@@ -822,6 +844,15 @@ export default function WhatsAppTab() {
               filteredChats.map((chat) => {
                 const chatDisplayName = getChatDisplayName(chat);
 
+                const chatPhoto = (() => {
+                  const variants = getChatIdVariants(chat);
+                  for (const variant of variants) {
+                    const photo = contactPhotosById.get(variant);
+                    if (photo) return photo;
+                  }
+                  return null;
+                })();
+
                 return (
                   <button
                     key={chat.id}
@@ -831,15 +862,19 @@ export default function WhatsAppTab() {
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
-                        chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
-                      }`}>
-                        {chat.is_group ? (
-                          <Users className="w-6 h-6" />
-                        ) : (
-                          getInitials(chatDisplayName)
-                        )}
-                      </div>
+                      {chatPhoto && !chat.is_group ? (
+                        <img src={chatPhoto} alt={chatDisplayName} className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                          chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                        }`}>
+                          {chat.is_group ? (
+                            <Users className="w-6 h-6" />
+                          ) : (
+                            getInitials(chatDisplayName)
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between mb-1">

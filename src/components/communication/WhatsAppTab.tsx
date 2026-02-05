@@ -130,6 +130,7 @@ export default function WhatsAppTab() {
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedChatRef = useRef<WhatsAppChat | null>(null);
   const { user } = useAuth();
 
   function normalizePhoneNumber(phone: string | null | undefined) {
@@ -233,6 +234,10 @@ export default function WhatsAppTab() {
   }, []);
 
   useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
+
+  useEffect(() => {
     const loadLeadNames = async () => {
       try {
         const data = await fetchAllPages<{ telefone: string; nome_completo: string }>(async (from, to) => {
@@ -295,8 +300,26 @@ export default function WhatsAppTab() {
 
     const messagesGlobalSubscription = supabase
       .channel('whatsapp_messages_global')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_messages' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
         loadChats();
+        const currentChat = selectedChatRef.current;
+        if (!currentChat) return;
+        const message = payload.new as WhatsAppMessage;
+        const variants = getChatIdVariants(currentChat);
+        if (!variants.includes(message.chat_id)) return;
+        setMessages((prev) => {
+          if (prev.some((item) => item.id === message.id)) return prev;
+          const merged = [...prev, message];
+          return merged.sort((a, b) => {
+            const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return left - right;
+          });
+        });
+        scrollToBottom();
+        if (message.direction === 'inbound' && user) {
+          markMessagesRead([message]);
+        }
       })
       .subscribe();
 

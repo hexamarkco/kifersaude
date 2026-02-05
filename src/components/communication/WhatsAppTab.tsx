@@ -4,6 +4,8 @@ import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, In
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
+import StatusDropdown from '../StatusDropdown';
+import { getBadgeStyle } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
@@ -848,6 +850,16 @@ export default function WhatsAppTab() {
     if (!phone) return null;
     return leadsList.find((lead) => lead.phone === phone) ?? null;
   }, [leadsList, selectedChat]);
+  const leadByPhone = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; phone: string; status?: string | null }>();
+    leadsList.forEach((lead) => map.set(lead.phone, lead));
+    return map;
+  }, [leadsList]);
+  const statusByName = useMemo(() => {
+    const map = new Map<string, LeadStatusConfig>();
+    leadStatuses.forEach((status) => map.set(status.nome, status));
+    return map;
+  }, [leadStatuses]);
   const filteredLeads = useMemo(() => {
     const query = newChatSearch.trim().toLowerCase();
     if (!query) return leadsList;
@@ -924,29 +936,30 @@ export default function WhatsAppTab() {
     }
   };
 
-  const handleUpdateLeadStatus = async (statusName: string) => {
-    if (!selectedLead) return;
-    const previousStatus = selectedLead.status ?? '';
+  const handleUpdateLeadStatus = async (statusName: string, leadId?: string) => {
+    const lead = leadId ? leadsList.find((item) => item.id === leadId) : selectedLead;
+    if (!lead) return;
+    const previousStatus = lead.status ?? '';
     if (!statusName || statusName === previousStatus) return;
     try {
       const nowIso = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('leads')
         .update({ status: statusName, ultimo_contato: nowIso })
-        .eq('id', selectedLead.id);
+        .eq('id', lead.id);
 
       if (updateError) throw updateError;
 
       await supabase.from('lead_status_history').insert([
         {
-          lead_id: selectedLead.id,
+          lead_id: lead.id,
           status_anterior: previousStatus,
           status_novo: statusName,
           responsavel: user?.email ?? 'WhatsApp',
         },
       ]);
 
-      setLeadsList((prev) => prev.map((lead) => (lead.id === selectedLead.id ? { ...lead, status: statusName } : lead)));
+      setLeadsList((prev) => prev.map((item) => (item.id === lead.id ? { ...item, status: statusName } : item)));
     } catch (error) {
       console.error('Erro ao atualizar status do lead:', error);
       alert('Erro ao atualizar status do lead');
@@ -1129,6 +1142,11 @@ export default function WhatsAppTab() {
             ) : (
               visibleChats.map((chat) => {
                 const chatDisplayName = getChatDisplayName(chat);
+                const chatPhone = !chat.is_group ? extractPhoneFromChatId(chat.id) : null;
+                const leadForChat = chatPhone ? leadByPhone.get(chatPhone) : null;
+                const leadStatus = leadForChat?.status ?? null;
+                const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
+                const badgeStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
 
                 const chatPhoto = (() => {
                   const variants = getChatIdVariants(chat);
@@ -1174,6 +1192,14 @@ export default function WhatsAppTab() {
                           <h3 className="font-medium text-slate-900 truncate">
                             {chatDisplayName}
                           </h3>
+                          {leadStatus && badgeStyles && (
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap"
+                              style={badgeStyles}
+                            >
+                              {leadStatus}
+                            </span>
+                          )}
                           {chat.is_group && (
                             <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                               Grupo
@@ -1316,18 +1342,12 @@ export default function WhatsAppTab() {
                       </span>
                     )}
                     {selectedLead && (
-                      <select
-                        value={selectedLead.status ?? ''}
-                        onChange={(event) => handleUpdateLeadStatus(event.target.value)}
-                        className="ml-2 px-2 py-1 text-xs border border-slate-200 rounded-md bg-white text-slate-700"
-                      >
-                        <option value="">Status</option>
-                        {leadStatuses.map((status) => (
-                          <option key={status.id} value={status.nome}>
-                            {status.nome}
-                          </option>
-                        ))}
-                      </select>
+                      <StatusDropdown
+                        currentStatus={selectedLead.status ?? 'Sem status'}
+                        leadId={selectedLead.id}
+                        onStatusChange={async (_leadId, newStatus) => handleUpdateLeadStatus(newStatus, selectedLead.id)}
+                        statusOptions={leadStatuses}
+                      />
                     )}
                   </div>
                   <p className="text-xs text-slate-500">

@@ -121,7 +121,8 @@ export default function AutoContactFlowSettings() {
     setAutoContactSettings(normalized);
     setAutoSendEnabled(normalized.autoSend);
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-    setFlowDrafts(normalized.flows ?? []);
+    const normalizedFlows = normalized.flows ?? [];
+    setFlowDrafts(filterDerivedFlows(normalizedFlows));
     setSchedulingDraft(normalized.scheduling);
     setMonitoringDraft(normalized.monitoring);
     setLoggingDraft(normalized.logging);
@@ -339,13 +340,28 @@ export default function AutoContactFlowSettings() {
     });
   };
 
+  const filterDerivedFlows = useCallback((flows: AutoContactFlow[]) => {
+    const ids = new Set(flows.map((flow) => flow.id));
+    return flows.filter((flow) => {
+      if (flow.id.endsWith('-nao')) {
+        const baseId = flow.id.replace(/-nao$/, '');
+        return !ids.has(baseId);
+      }
+      if (flow.name?.includes('(Nao)')) {
+        const baseId = flow.id.replace(/-nao$/, '');
+        return !ids.has(baseId);
+      }
+      return true;
+    });
+  }, []);
+
   const handleResetDraft = () => {
     const savedTemplates = autoContactSettings?.messageTemplates?.length
       ? autoContactSettings.messageTemplates
       : DEFAULT_MESSAGE_TEMPLATES;
 
     setMessageTemplatesDraft(savedTemplates);
-    setFlowDrafts(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS);
+    setFlowDrafts(filterDerivedFlows(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS));
     setAutoSendEnabled(autoContactSettings?.autoSend ?? defaultSettings.autoSend);
     setSchedulingDraft(autoContactSettings?.scheduling ?? defaultSettings.scheduling);
     setMonitoringDraft(autoContactSettings?.monitoring ?? defaultSettings.monitoring);
@@ -495,7 +511,7 @@ export default function AutoContactFlowSettings() {
       setAutoContactSettings(normalized);
       setAutoSendEnabled(normalized.autoSend);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-      setFlowDrafts(normalized.flows ?? []);
+      setFlowDrafts(filterDerivedFlows(normalized.flows ?? []));
       setSchedulingDraft(normalized.scheduling);
       setMonitoringDraft(normalized.monitoring);
       setLoggingDraft(normalized.logging);
@@ -758,7 +774,10 @@ export default function AutoContactFlowSettings() {
     );
   };
   const handleRemoveFlow = (flowId: string) => {
-    setFlowDrafts((previous) => previous.filter((flow) => flow.id !== flowId));
+    const baseId = flowId.endsWith('-nao') ? flowId.replace(/-nao$/, '') : flowId;
+    setFlowDrafts((previous) =>
+      previous.filter((flow) => flow.id !== baseId && flow.id !== `${baseId}-nao`),
+    );
     if (activeFlowId === flowId) {
       setActiveFlowId(null);
     }

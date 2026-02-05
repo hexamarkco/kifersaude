@@ -43,6 +43,7 @@ type WhatsAppMessage = {
   direction: 'inbound' | 'outbound' | null;
   ack_status: number | null;
   created_at: string;
+  payload?: any;
   is_deleted?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;
@@ -101,6 +102,7 @@ const whapiToUiMessage = (message: WhapiMessage): WhatsAppMessage => {
     direction,
     ack_status: null,
     created_at: timestamp || new Date().toISOString(),
+    payload: raw,
     is_deleted: raw.action?.type === 'delete' || message.type === 'revoked',
     edit_count: raw.edit_history?.length ?? 0,
     edited_at: raw.edited_at ? new Date(raw.edited_at * 1000).toISOString() : null,
@@ -866,6 +868,7 @@ export default function WhatsAppTab() {
                           timestamp={message.timestamp}
                           ackStatus={message.ack_status}
                           hasMedia={message.has_media}
+                          payload={message.payload}
                           fromName={authorName}
                           isDeleted={message.is_deleted}
                           deletedAt={message.deleted_at}

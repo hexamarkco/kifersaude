@@ -3,6 +3,7 @@ import { supabase, fetchAllPages } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History, Plus } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
+import type { LeadStatusConfig } from '../../lib/supabase';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
@@ -136,7 +137,10 @@ export default function WhatsAppTab() {
     [],
   );
   const [contactPhotosById, setContactPhotosById] = useState<Map<string, string>>(new Map());
-  const [leadsList, setLeadsList] = useState<Array<{ name: string; phone: string }>>([]);
+  const [leadsList, setLeadsList] = useState<Array<{ id: string; name: string; phone: string; status?: string | null }>>(
+    [],
+  );
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
@@ -254,8 +258,8 @@ export default function WhatsAppTab() {
   useEffect(() => {
     const loadLeadNames = async () => {
       try {
-        const data = await fetchAllPages<{ telefone: string; nome_completo: string }>(async (from, to) => {
-          const response = await supabase.from('leads').select('telefone, nome_completo').range(from, to);
+        const data = await fetchAllPages<{ id: string; telefone: string; nome_completo: string; status?: string | null }>(async (from, to) => {
+          const response = await supabase.from('leads').select('id, telefone, nome_completo, status').range(from, to);
           return { data: response.data, error: response.error };
         });
 
@@ -271,8 +275,10 @@ export default function WhatsAppTab() {
         setLeadsList(
           (data || [])
             .map((lead) => ({
+              id: lead.id,
               name: lead.nome_completo,
               phone: normalizePhoneNumber(lead.telefone),
+              status: lead.status ?? null,
             }))
             .filter((lead) => Boolean(lead.phone)),
         );
@@ -338,6 +344,25 @@ export default function WhatsAppTab() {
     loadLeadNames();
     loadSavedContacts();
     loadContactPhotos();
+  }, []);
+
+  useEffect(() => {
+    const loadLeadStatuses = async () => {
+      const { data, error } = await supabase
+        .from('lead_status_config')
+        .select('*')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao carregar status de lead:', error);
+        return;
+      }
+
+      setLeadStatuses(data || []);
+    };
+
+    loadLeadStatuses();
   }, []);
 
   useEffect(() => {
@@ -817,6 +842,12 @@ export default function WhatsAppTab() {
   }, [messages]);
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
+  const selectedLead = useMemo(() => {
+    if (!selectedChat || selectedChat.is_group) return null;
+    const phone = normalizePhoneNumber(selectedChat.phone_number || selectedChat.id);
+    if (!phone) return null;
+    return leadsList.find((lead) => lead.phone === phone) ?? null;
+  }, [leadsList, selectedChat]);
   const filteredLeads = useMemo(() => {
     const query = newChatSearch.trim().toLowerCase();
     if (!query) return leadsList;
@@ -866,6 +897,35 @@ export default function WhatsAppTab() {
     setShowNewChatModal(false);
     setNewChatSearch('');
     setNewChatPhone('');
+  };
+
+  const handleUpdateLeadStatus = async (statusName: string) => {
+    if (!selectedLead) return;
+    const previousStatus = selectedLead.status ?? '';
+    if (!statusName || statusName === previousStatus) return;
+    try {
+      const nowIso = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({ status: statusName, ultimo_contato: nowIso })
+        .eq('id', selectedLead.id);
+
+      if (updateError) throw updateError;
+
+      await supabase.from('lead_status_history').insert([
+        {
+          lead_id: selectedLead.id,
+          status_anterior: previousStatus,
+          status_novo: statusName,
+          responsavel: user?.email ?? 'WhatsApp',
+        },
+      ]);
+
+      setLeadsList((prev) => prev.map((lead) => (lead.id === selectedLead.id ? { ...lead, status: statusName } : lead)));
+    } catch (error) {
+      console.error('Erro ao atualizar status do lead:', error);
+      alert('Erro ao atualizar status do lead');
+    }
   };
 
   const showChatList = !isMobileView || !selectedChat;
@@ -1131,6 +1191,20 @@ export default function WhatsAppTab() {
                       <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                         Grupo
                       </span>
+                    )}
+                    {selectedLead && (
+                      <select
+                        value={selectedLead.status ?? ''}
+                        onChange={(event) => handleUpdateLeadStatus(event.target.value)}
+                        className="ml-2 px-2 py-1 text-xs border border-slate-200 rounded-md bg-white text-slate-700"
+                      >
+                        <option value="">Status</option>
+                        {leadStatuses.map((status) => (
+                          <option key={status.id} value={status.nome}>
+                            {status.nome}
+                          </option>
+                        ))}
+                      </select>
                     )}
                   </div>
                   <p className="text-xs text-slate-500">

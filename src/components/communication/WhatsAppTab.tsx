@@ -8,11 +8,13 @@ import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import {
   buildChatIdFromPhone,
+  getWhatsAppChat,
   getWhatsAppChats,
   getWhatsAppContacts,
   getWhatsAppMessageHistory,
   normalizeChatId,
   type WhapiChat,
+  type WhapiChatMetadata,
   type WhapiMessage,
 } from '../../lib/whatsappApiService';
 
@@ -126,6 +128,7 @@ export default function WhatsAppTab() {
   } | null>(null);
   const [leadNamesByPhone, setLeadNamesByPhone] = useState<Map<string, string>>(new Map());
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
+  const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -161,6 +164,47 @@ export default function WhatsAppTab() {
     }
     if (chat.lid) variants.add(chat.lid);
     return Array.from(variants);
+  };
+
+  const shouldFetchGroupName = (chat: WhatsAppChat) => {
+    if (!chat.is_group) return false;
+    if (chat.name && chat.name.trim() && chat.name !== chat.id) return false;
+    if (groupNamesById.has(chat.id)) return false;
+    return true;
+  };
+
+  const loadGroupNames = async (currentChats: WhatsAppChat[]) => {
+    const candidates = currentChats.filter(shouldFetchGroupName);
+    if (candidates.length === 0) return;
+
+    const updates = await Promise.all(
+      candidates.map(async (chat) => {
+        try {
+          const metadata: WhapiChatMetadata = await getWhatsAppChat(chat.id);
+          const name = metadata.name?.trim();
+          return name ? { id: chat.id, name } : null;
+        } catch (error) {
+          console.warn('Error loading group name:', { chatId: chat.id, error });
+          return null;
+        }
+      }),
+    );
+
+    const validUpdates = updates.filter((item): item is { id: string; name: string } => Boolean(item));
+    if (validUpdates.length === 0) return;
+
+    setGroupNamesById((prev) => {
+      const next = new Map(prev);
+      validUpdates.forEach((item) => next.set(item.id, item.name));
+      return next;
+    });
+
+    setChats((prev) =>
+      prev.map((chat) => {
+        const match = validUpdates.find((item) => item.id === chat.id);
+        return match ? { ...chat, name: match.name } : chat;
+      }),
+    );
   };
 
   const fetchWhapiMessages = async (chat: WhatsAppChat) => {
@@ -330,6 +374,7 @@ export default function WhatsAppTab() {
 
         setChats(mappedChats);
         await loadUnreadCounts();
+        await loadGroupNames(mappedChats);
         return;
       }
 
@@ -353,6 +398,7 @@ export default function WhatsAppTab() {
 
       setChats(chatsWithLastMessage);
       await loadUnreadCounts();
+      await loadGroupNames(chatsWithLastMessage);
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -518,7 +564,7 @@ export default function WhatsAppTab() {
   };
 
   function getChatDisplayName(chat: WhatsAppChat) {
-    if (chat.is_group) return chat.name || chat.id;
+    if (chat.is_group) return groupNamesById.get(chat.id) || chat.name || chat.id;
 
     const phone = extractPhoneFromChatId(chat.id);
 

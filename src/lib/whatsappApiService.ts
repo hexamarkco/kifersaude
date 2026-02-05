@@ -417,6 +417,37 @@ export interface WhapiChatListResponse {
   offset: number;
 }
 
+export interface WhapiChatMetadata {
+  id: string;
+  name?: string;
+  type?: string;
+  timestamp?: number;
+  unread_count?: number;
+  archived?: boolean;
+  pinned?: number;
+  mute_until?: number;
+  description?: string;
+}
+
+export async function getWhatsAppChat(chatId: string): Promise<WhapiChatMetadata> {
+  const settings = await getWhatsAppSettings();
+
+  const response = await fetch(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(chatId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
 export interface WhapiContact {
   id: string;
   name: string;

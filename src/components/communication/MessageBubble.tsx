@@ -388,7 +388,9 @@ export function MessageBubble({
             </div>
             {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
-          {body && <div className="text-sm">{body}</div>}
+          {body && body !== '[Mensagem de voz]' && body !== '[Áudio]' && (
+            <div className="text-sm">{body}</div>
+          )}
         </div>
       );
     }

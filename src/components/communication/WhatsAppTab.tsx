@@ -214,6 +214,16 @@ export default function WhatsAppTab() {
         const contactMap = new Map<string, { name: string; saved: boolean }>();
 
         response.contacts.forEach((contact) => {
+          const normalized = normalizeChatId(contact.id);
+          if (normalized) {
+            contactMap.set(normalized, { name: contact.name, saved: contact.saved });
+            if (normalized.endsWith('@s.whatsapp.net')) {
+              contactMap.set(
+                normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'),
+                { name: contact.name, saved: contact.saved },
+              );
+            }
+          }
           contactMap.set(contact.id, { name: contact.name, saved: contact.saved });
         });
 
@@ -456,7 +466,7 @@ export default function WhatsAppTab() {
       return leadNamesByPhone.get(phone)!;
     }
 
-    const contact = contactsById.get(chat.id);
+    const contact = contactsById.get(normalizeChatId(chat.id) || chat.id) || contactsById.get(chat.id);
     if (contact?.saved && contact.name) {
       return contact.name;
     }

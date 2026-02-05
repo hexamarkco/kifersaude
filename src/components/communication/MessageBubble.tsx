@@ -45,6 +45,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
   const hasHistory = editCount > 0 || isDeleted;
 
   const formatTimestamp = (ts: string | null) => {
@@ -119,10 +120,17 @@ export function MessageBubble({
     return cleaned || phone;
   };
 
+  const payloadData = payload as any;
+  const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
+  const audioUrl = audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
+  const imageFullSrc =
+    payloadData?.image?.link ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    payloadData?.image?.preview ||
+    '';
+
   const renderContent = () => {
-    const payloadData = payload as any;
-    const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
-    const audioUrl = audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
 
     if (isDeleted) {
       return (
@@ -214,14 +222,14 @@ export function MessageBubble({
       return (
         <div className="space-y-2">
           {displayUrl ? (
-            <a href={displayUrl} target="_blank" rel="noreferrer">
+            <button type="button" onClick={() => setShowImagePreview(true)} className="block">
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="max-w-full rounded"
+                className="rounded max-w-[360px] w-auto h-auto"
                 loading="lazy"
               />
-            </a>
+            </button>
           ) : (
             <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -402,6 +410,14 @@ export function MessageBubble({
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
       />
+
+      {showImagePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onClick={() => setShowImagePreview(false)}>
+          <div className="max-w-[90vw] max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
+            <img src={imageFullSrc} alt="Imagem" className="max-w-[90vw] max-h-[90vh] rounded" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

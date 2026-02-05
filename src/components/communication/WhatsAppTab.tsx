@@ -12,13 +12,11 @@ import {
   getWhatsAppChat,
   getWhatsAppChats,
   getWhatsAppContacts,
-  getWhatsAppMessageHistory,
   normalizeChatId,
   reactToMessage,
   removeReactionFromMessage,
   type WhapiChat,
   type WhapiChatMetadata,
-  type WhapiMessage,
 } from '../../lib/whatsappApiService';
 
 type WhatsAppChat = {
@@ -56,63 +54,6 @@ type WhatsAppMessage = {
   author?: string | null;
 };
 
-const normalizeWhapiBody = (message: WhapiMessage): { body: string; hasMedia: boolean } => {
-  const raw = message as WhapiMessage & Record<string, any>;
-  if (raw.text?.body) return { body: raw.text.body, hasMedia: false };
-  if (raw.image) return { body: raw.image.caption || '[Imagem]', hasMedia: true };
-  if (raw.video) return { body: raw.video.caption || '[Vídeo]', hasMedia: true };
-  if (raw.audio) return { body: '[Áudio]', hasMedia: true };
-  if (raw.voice) return { body: '[Mensagem de voz]', hasMedia: true };
-  if (raw.document) {
-    const fileName = raw.document.filename || '';
-    const caption = raw.document.caption;
-    return {
-      body: caption ? `${caption} [Documento: ${fileName}]` : `[Documento${fileName ? `: ${fileName}` : ''}]`,
-      hasMedia: true,
-    };
-  }
-  if (raw.location) return { body: '[Localização]', hasMedia: true };
-  if (raw.live_location) return { body: '[Localização ao vivo]', hasMedia: true };
-  if (raw.contact) return { body: `[Contato: ${raw.contact.name}]`, hasMedia: false };
-  if (raw.contact_list) return { body: `[${raw.contact_list.list.length} contato(s)]`, hasMedia: false };
-  if (raw.sticker) return { body: '[Sticker]', hasMedia: true };
-  if (raw.action?.type === 'reaction') return { body: `Reagiu com ${raw.action.emoji || ''}`, hasMedia: false };
-  if (raw.action?.type === 'delete') return { body: '[Mensagem apagada]', hasMedia: false };
-  if (raw.action?.type === 'edit') return { body: raw.text?.body || '', hasMedia: false };
-  if (raw.reply?.buttons_reply) return { body: `Resposta: ${raw.reply.buttons_reply.title}`, hasMedia: false };
-  if (raw.group_invite) return { body: '[Convite para grupo]', hasMedia: false };
-  if (raw.poll) return { body: `[Enquete: ${raw.poll.title}]`, hasMedia: false };
-  if (raw.product) return { body: '[Produto do catálogo]', hasMedia: false };
-  if (raw.order) return { body: `[Pedido #${raw.order.order_id}]`, hasMedia: false };
-  return { body: `[${raw.type}]`, hasMedia: false };
-};
-
-const whapiToUiMessage = (message: WhapiMessage): WhatsAppMessage => {
-  const raw = message as WhapiMessage & Record<string, any>;
-  const direction = message.from_me ? 'outbound' : 'inbound';
-  const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toISOString() : null;
-  const { body, hasMedia } = normalizeWhapiBody(message);
-
-  return {
-    id: message.id,
-    chat_id: message.chat_id,
-    from_number: direction === 'inbound' ? message.from || message.chat_id : null,
-    to_number: direction === 'outbound' ? message.chat_id : null,
-    type: message.type || null,
-    body,
-    has_media: hasMedia,
-    timestamp,
-    direction,
-    ack_status: null,
-    created_at: timestamp || new Date().toISOString(),
-    payload: raw,
-    is_deleted: raw.action?.type === 'delete' || message.type === 'revoked',
-    edit_count: raw.edit_history?.length ?? 0,
-    edited_at: raw.edited_at ? new Date(raw.edited_at * 1000).toISOString() : null,
-    original_body: raw.text?.body ?? body,
-    author: raw.from_name ?? null,
-  };
-};
 
 export default function WhatsAppTab() {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
@@ -224,21 +165,6 @@ export default function WhatsAppTab() {
         return match ? { ...chat, name: match.name } : chat;
       }),
     );
-  };
-
-  const fetchWhapiMessages = async (chat: WhatsAppChat) => {
-    const variants = getChatIdVariants(chat);
-    for (const candidate of variants) {
-      try {
-        const response = await getWhatsAppMessageHistory({ chatId: candidate, count: 200, offset: 0 });
-        if (response.messages?.length) {
-          return response.messages;
-        }
-      } catch (error) {
-        console.warn('[WhatsApp] Falha ao buscar mensagens do Whapi', { candidate, error });
-      }
-    }
-    return [] as WhapiMessage[];
   };
 
   useEffect(() => {
@@ -384,8 +310,24 @@ export default function WhatsAppTab() {
         const message = payload.new as WhatsAppMessage;
         const variants = getChatIdVariants(currentChat);
         if (!variants.includes(message.chat_id)) return;
+        let didAppend = false;
         setMessages((prev) => {
           if (prev.some((item) => item.id === message.id)) return prev;
+          const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
+          const now = Date.now();
+          if (messageTime && now - messageTime > 5 * 60 * 1000) {
+            return prev;
+          }
+          const latestTime = prev.reduce((max, item) => {
+            const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+            return Math.max(max, time);
+          }, 0);
+
+          if (messageTime && latestTime && messageTime < latestTime) {
+            return prev;
+          }
+
+          didAppend = true;
           const merged = [...prev, message];
           return merged.sort((a, b) => {
             const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
@@ -393,9 +335,11 @@ export default function WhatsAppTab() {
             return left - right;
           });
         });
-        scrollToBottom();
-        if (message.direction === 'inbound' && user) {
-          markMessagesRead([message]);
+        if (didAppend) {
+          scrollToBottom();
+          if (message.direction === 'inbound' && user) {
+            markMessagesRead([message]);
+          }
         }
       })
       .subscribe();
@@ -409,29 +353,6 @@ export default function WhatsAppTab() {
   useEffect(() => {
     if (selectedChat) {
       loadMessages(selectedChat);
-      const variants = getChatIdVariants(selectedChat);
-
-      const messagesSubscription = supabase
-        .channel(`messages_${selectedChat.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
-          const message = payload.new as WhatsAppMessage;
-          if (!variants.includes(message.chat_id)) return;
-          setMessages((prev) => [...prev, message]);
-          scrollToBottom();
-          if (message.direction === 'inbound' && user) {
-            markMessagesRead([message]);
-          }
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
-          const message = payload.new as WhatsAppMessage;
-          if (!variants.includes(message.chat_id)) return;
-          setMessages((prev) => prev.map((msg) => (msg.id === message.id ? message : msg)));
-        })
-        .subscribe();
-
-      return () => {
-        messagesSubscription.unsubscribe();
-      };
     }
   }, [selectedChat]);
 
@@ -521,24 +442,6 @@ export default function WhatsAppTab() {
 
       if (user) {
         await markMessagesRead(baseMessages);
-      }
-
-      const whapiRaw = await fetchWhapiMessages(chat);
-      const whapiMessages = whapiRaw.map(whapiToUiMessage);
-
-      const merged = new Map<string, WhatsAppMessage>();
-      baseMessages.forEach((message) => merged.set(message.id, message));
-      whapiMessages.forEach((message) => merged.set(message.id, message));
-
-      const mergedList = Array.from(merged.values()).sort((a, b) => {
-        const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        return left - right;
-      });
-
-      setMessages(mergedList);
-      if (user) {
-        await markMessagesRead(mergedList);
       }
     } catch (error) {
       console.error('Error loading messages:', error);

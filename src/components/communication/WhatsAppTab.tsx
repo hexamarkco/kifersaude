@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History } from 'lucide-react';
-import { MessageInput } from './MessageInput';
+import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
@@ -510,9 +510,61 @@ export default function WhatsAppTab() {
     setEditMessage(null);
   };
 
-  const handleMessageSent = () => {
-    loadMessages(selectedChat!);
-    scrollToBottom();
+  const handleMessageSent = (message?: SentMessagePayload) => {
+    if (message && selectedChat) {
+      const timestamp = message.timestamp || new Date().toISOString();
+      const nextMessage: WhatsAppMessage = {
+        id: message.id,
+        chat_id: message.chat_id,
+        from_number: null,
+        to_number: message.chat_id,
+        type: message.type,
+        body: message.body,
+        has_media: message.has_media,
+        timestamp,
+        direction: message.direction,
+        ack_status: null,
+        created_at: message.created_at || timestamp,
+      };
+
+      setMessages((prev) => {
+        if (prev.some((item) => item.id === nextMessage.id)) {
+          return prev;
+        }
+        const merged = [...prev, nextMessage];
+        return merged.sort((a, b) => {
+          const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return left - right;
+        });
+      });
+
+      setChats((prev) => {
+        const updated = prev.map((chat) => {
+          const variants = getChatIdVariants(chat);
+          if (!variants.includes(message.chat_id)) return chat;
+          return {
+            ...chat,
+            last_message: message.body || chat.last_message,
+            last_message_at: timestamp,
+          };
+        });
+
+        return updated.sort((a, b) => {
+          const left = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+          const right = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+          return right - left;
+        });
+      });
+
+      scrollToBottom();
+      return;
+    }
+
+    if (selectedChat) {
+      loadMessages(selectedChat);
+      scrollToBottom();
+    }
   };
 
   const handleSyncFromWhapi = async () => {

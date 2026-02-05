@@ -3,9 +3,20 @@ import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as Fil
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 
+export type SentMessagePayload = {
+  id: string;
+  chat_id: string;
+  body: string | null;
+  type: string | null;
+  has_media: boolean;
+  timestamp: string;
+  direction: 'outbound';
+  created_at: string;
+};
+
 interface MessageInputProps {
   chatId: string;
-  onMessageSent?: () => void;
+  onMessageSent?: (message?: SentMessagePayload) => void;
   replyToMessage?: {
     id: string;
     body: string;
@@ -85,15 +96,35 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
         if (onCancelEdit) onCancelEdit();
         if (onMessageSent) onMessageSent();
       } else if (selectedFile) {
-        await sendMediaMessage(chatId, selectedFile, {
+        const response = await sendMediaMessage(chatId, selectedFile, {
           caption: message.trim() || undefined,
           quotedMessageId: replyToMessage?.id,
         });
 
+        const sentAt = new Date().toISOString();
+        const caption = message.trim();
+        const fallbackBody = selectedFile.type.startsWith('audio/')
+          ? '[Áudio]'
+          : selectedFile.type.startsWith('image/')
+            ? '[Imagem]'
+            : selectedFile.type.startsWith('video/')
+              ? '[Vídeo]'
+              : '[Arquivo]';
+        const mediaPayload: SentMessagePayload = {
+          id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          chat_id: chatId,
+          body: caption || fallbackBody,
+          type: selectedFile.type || 'document',
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+        };
+
         clearFile();
         setMessage('');
         if (onCancelReply) onCancelReply();
-        if (onMessageSent) onMessageSent();
+        if (onMessageSent) onMessageSent(mediaPayload);
       } else if (message.trim()) {
         const response = await sendWhatsAppMessage({
           chatId,
@@ -102,8 +133,8 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
           quotedMessageId: replyToMessage?.id,
         });
 
-        const normalizedChatId = normalizeChatId(chatId);
-        await supabase.from('whatsapp_messages').upsert({
+        const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+        const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
           id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           chat_id: normalizedChatId,
           from_number: null,
@@ -116,9 +147,25 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
           payload: response,
         });
 
+        if (insertError) {
+          console.warn('Erro ao salvar mensagem no banco:', insertError);
+        }
+
+        const sentAt = new Date().toISOString();
+        const textPayload: SentMessagePayload = {
+          id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          chat_id: chatId,
+          body: message.trim(),
+          type: 'text',
+          has_media: false,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+        };
+
         setMessage('');
         if (onCancelReply) onCancelReply();
-        if (onMessageSent) onMessageSent();
+        if (onMessageSent) onMessageSent(textPayload);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);

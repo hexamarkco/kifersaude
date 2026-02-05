@@ -38,8 +38,6 @@ export function MessageBubble({
   isDeleted = false,
   deletedAt,
   editCount = 0,
-  editedAt,
-  originalBody,
   onReply,
   onEdit,
 }: MessageBubbleProps) {

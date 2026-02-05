@@ -89,7 +89,7 @@ const getBranchConditionNode = (graph: AutoContactFlowGraph): AutoContactFlowGra
   if (conditionNodes.length === 0) return null;
   for (const node of conditionNodes) {
     const edges = getOutgoingEdges(graph, node.id);
-    const hasBranch = edges.length > 1 || edges.some((edge) => ['sim', 'nao'].includes((edge.label ?? '').toLowerCase()));
+    const hasBranch = edges.length > 1;
     if (hasBranch) return node;
   }
   return conditionNodes[0];
@@ -263,8 +263,17 @@ export const expandFlowGraphToFlows = (flow: AutoContactFlow): AutoContactFlow[]
   }
 
   const edges = getOutgoingEdges(graph, conditionNode.id);
-  const yesEdge = edges.find((edge) => (edge.label ?? '').toLowerCase() === 'sim') ?? edges[0];
-  const noEdge = edges.find((edge) => (edge.label ?? '').toLowerCase() === 'nao') ?? null;
+  const yesEdge =
+    edges.find((edge) => edge.sourceHandle === 'yes')
+    ?? edges.find((edge) => (edge.label ?? '').toLowerCase() === 'sim')
+    ?? edges[0];
+  let noEdge =
+    edges.find((edge) => edge.sourceHandle === 'no')
+    ?? edges.find((edge) => (edge.label ?? '').toLowerCase() === 'nao')
+    ?? null;
+  if (!noEdge && edges.length > 1 && yesEdge) {
+    noEdge = edges.find((edge) => edge.id !== yesEdge.id) ?? null;
+  }
 
   const yesPath = yesEdge ? collectPathFromEdge(graph, yesEdge) : { steps: [], conditions: [], conditionLogic: 'all' };
   const yesSteps = yesPath.steps.map((step, index) => ({

@@ -258,14 +258,16 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
           const response = await sendMediaMessage(chatId, audioFile, {
             quotedMessageId: replyToMessage?.id,
             seconds: durationSeconds,
+            recordingTime: durationSeconds,
+            asVoice: true,
           });
 
           const sentAt = new Date().toISOString();
           const audioPayload: SentMessagePayload = {
             id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
             chat_id: chatId,
-            body: '[Áudio]',
-            type: 'audio',
+            body: '[Mensagem de voz]',
+            type: 'voice',
             has_media: true,
             timestamp: sentAt,
             direction: 'outbound',

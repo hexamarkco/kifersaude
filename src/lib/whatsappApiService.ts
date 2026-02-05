@@ -166,6 +166,7 @@ export interface MediaContent {
   viewOnce?: boolean;
   seconds?: number;
   waveform?: string;
+  recordingTime?: number;
   autoplay?: boolean;
 }
 
@@ -254,6 +255,10 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
 
     if (media.waveform && params.contentType === 'voice') {
       body.waveform = media.waveform;
+    }
+
+    if (media.recordingTime !== undefined && params.contentType === 'voice') {
+      body.recording_time = media.recordingTime;
     }
 
     if (media.autoplay !== undefined && params.contentType === 'gif') {
@@ -368,6 +373,8 @@ export async function sendMediaMessage(
     viewOnce?: boolean;
     asVoice?: boolean;
     seconds?: number;
+    recordingTime?: number;
+    waveform?: string;
   }
 ) {
   const base64Data = await fileToBase64(file);
@@ -385,6 +392,8 @@ export async function sendMediaMessage(
     caption: options?.caption,
     viewOnce: options?.viewOnce,
     seconds: options?.seconds,
+    recordingTime: options?.recordingTime,
+    waveform: options?.waveform,
   };
 
   return sendWhatsAppMessage({

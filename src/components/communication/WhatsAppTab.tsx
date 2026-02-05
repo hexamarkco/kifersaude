@@ -100,9 +100,8 @@ export default function WhatsAppTab() {
     if (!phone) return '';
     const digits = phone.replace(/\D/g, '');
 
-    if (digits.length > 11) {
-      const trimmed = digits.replace(/^55/, '');
-      return trimmed.slice(-11);
+    if (digits.startsWith('55') && digits.length >= 12) {
+      return digits.slice(-11);
     }
 
     return digits;
@@ -309,46 +308,80 @@ export default function WhatsAppTab() {
       .channel('whatsapp_messages_global')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
         loadChats();
-        const currentChat = selectedChatRef.current;
-        if (!currentChat) return;
         const message = payload.new as WhatsAppMessage;
-        const variants = getChatIdVariants(currentChat);
-        if (!variants.includes(message.chat_id)) return;
-        let didAppend = false;
-        setMessages((prev) => {
-          if (prev.some((item) => item.id === message.id)) return prev;
-          const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
-          const now = Date.now();
-          if (messageTime && now - messageTime > 5 * 60 * 1000) {
-            return prev;
-          }
-          const latestTime = prev.reduce((max, item) => {
-            const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
-            return Math.max(max, time);
-          }, 0);
-
-          if (messageTime && latestTime && messageTime < latestTime) {
-            return prev;
-          }
-
-          didAppend = true;
-          const merged = [...prev, message];
-          return merged.sort((a, b) => {
-            const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-            const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-            return left - right;
-          });
+        const chatToAutoUnarchive = chats.find((chat) => {
+          const variantsForChat = getChatIdVariants(chat);
+          return variantsForChat.includes(message.chat_id);
         });
-        if (didAppend) {
-          const chatToUpdate = chats.find((chat) => chat.id === currentChat.id);
-          if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
-            updateChatArchive(chatToUpdate.id, false);
-          }
-          scrollToBottom();
-          if (message.direction === 'inbound' && user) {
-            markMessagesRead([message]);
+        if (chatToAutoUnarchive?.archived && !isChatMuted(chatToAutoUnarchive)) {
+          updateChatArchive(chatToAutoUnarchive.id, false);
+        }
+        const currentChat = selectedChatRef.current;
+        if (currentChat) {
+          const variants = getChatIdVariants(currentChat);
+          if (variants.includes(message.chat_id)) {
+            let didAppend = false;
+            setMessages((prev) => {
+              if (prev.some((item) => item.id === message.id)) return prev;
+              const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
+              const now = Date.now();
+              if (messageTime && now - messageTime > 5 * 60 * 1000) {
+                return prev;
+              }
+              const latestTime = prev.reduce((max, item) => {
+                const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+                return Math.max(max, time);
+              }, 0);
+
+              if (messageTime && latestTime && messageTime < latestTime) {
+                return prev;
+              }
+
+              didAppend = true;
+              const merged = [...prev, message];
+              return merged.sort((a, b) => {
+                const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                return left - right;
+              });
+            });
+            if (didAppend) {
+              const chatToUpdate = chats.find((chat) => chat.id === currentChat.id);
+              if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
+                updateChatArchive(chatToUpdate.id, false);
+              }
+              scrollToBottom();
+              if (message.direction === 'inbound' && user) {
+                markMessagesRead([message]);
+              }
+            }
           }
         }
+
+        setChats((prev) => {
+          const updated = prev.map((chat) => {
+            const variantsForChat = getChatIdVariants(chat);
+            if (!variantsForChat.includes(message.chat_id)) return chat;
+            const messageTimestamp = message.timestamp || message.created_at || null;
+            const messageTime = messageTimestamp ? new Date(messageTimestamp).getTime() : 0;
+            const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
+            if (messageTime && currentTime && messageTime < currentTime) return chat;
+            const shouldUnarchive = chat.archived && !isChatMuted(chat);
+            const preview = getMessagePreview(message);
+            return {
+              ...chat,
+              last_message: preview ?? chat.last_message,
+              last_message_at: messageTimestamp || chat.last_message_at,
+              archived: shouldUnarchive ? false : chat.archived,
+            };
+          });
+
+          return updated.sort((a, b) => {
+            const left = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+            const right = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+            return right - left;
+          });
+        });
       })
       .subscribe();
 
@@ -415,15 +448,16 @@ export default function WhatsAppTab() {
           const variants = getChatIdVariants(chat as WhatsAppChat);
           const { data: lastMsg } = await supabase
             .from('whatsapp_messages')
-            .select('body')
+            .select('body, type, has_media, payload, timestamp, created_at')
             .in('chat_id', variants)
             .order('timestamp', { ascending: false })
+            .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
 
           return {
             ...chat,
-            last_message: lastMsg?.body || null,
+            last_message: lastMsg ? getMessagePreview(lastMsg as WhatsAppMessage) : null,
           };
         })
       );
@@ -687,7 +721,48 @@ export default function WhatsAppTab() {
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     }
 
+    if (cleaned.startsWith('54') && cleaned.length >= 11) {
+      const rest = cleaned.slice(2);
+      const isMobile = rest.startsWith('9');
+      const restDigits = isMobile ? rest.slice(1) : rest;
+      let area = restDigits.slice(0, 3);
+      let local = restDigits.slice(3);
+      if (restDigits.length === 10) {
+        area = restDigits.slice(0, 4);
+        local = restDigits.slice(4);
+      }
+      const localLeft = local.slice(0, 2);
+      const localRight = local.slice(2);
+      return `+54 ${isMobile ? '9 ' : ''}${area} ${localLeft}-${localRight}`.trim();
+    }
+
+    if (cleaned.length > 11) {
+      const cc = cleaned.slice(0, 2);
+      const rest = cleaned.slice(2);
+      const left = rest.slice(0, Math.max(0, rest.length - 4));
+      const right = rest.slice(-4);
+      return `+${cc} ${left} ${right}`.trim();
+    }
+
     return cleaned || phone;
+  };
+
+  const getMessagePreview = (message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload'>) => {
+    const body = message.body?.trim();
+    if (body) return body;
+
+    const payloadData = message.payload as any;
+    if (payloadData?.action?.type === 'reaction') return null;
+
+    const type = (message.type || '').toLowerCase();
+    if (type === 'image') return '[Imagem]';
+    if (type === 'video') return '[Vídeo]';
+    if (['audio', 'voice', 'ptt'].includes(type)) return '[Áudio]';
+    if (type === 'document') return '[Documento]';
+    if (type === 'contact') return '[Contato]';
+    if (type === 'location') return '[Localização]';
+    if (message.has_media) return '[Anexo]';
+    return 'Mensagem';
   };
 
   function getChatDisplayName(chat: WhatsAppChat) {
@@ -739,15 +814,19 @@ export default function WhatsAppTab() {
       baseReactions.forEach((reaction: { emoji?: string; count?: number }) => {
         if (!reaction?.emoji) return;
         const targetMap = map.get(message.id) ?? new Map<string, number>();
-        const current = targetMap.get(reaction.emoji) ?? 0;
         const increment = typeof reaction.count === 'number' ? reaction.count : 1;
-        targetMap.set(reaction.emoji, current + increment);
+        targetMap.set(reaction.emoji, increment);
         map.set(message.id, targetMap);
       });
+    });
 
+    messages.forEach((message) => {
+      const payloadData = message.payload as any;
       const action = payloadData?.action;
       if (action?.type === 'reaction' && action?.target && action?.emoji) {
-        const targetMap = map.get(action.target) ?? new Map<string, number>();
+        const existingTarget = map.get(action.target);
+        if (existingTarget?.has(action.emoji)) return;
+        const targetMap = existingTarget ?? new Map<string, number>();
         const current = targetMap.get(action.emoji) ?? 0;
         targetMap.set(action.emoji, current + 1);
         map.set(action.target, targetMap);

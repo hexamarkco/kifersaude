@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     await supabase.from('whatsapp_chats').upsert(
       {
         id: chatId,
-        name: chatName,
+        name: isGroup ? chatName : null,
         is_group: isGroup,
         last_message_at: lastMessageAt,
         updated_at: new Date().toISOString(),

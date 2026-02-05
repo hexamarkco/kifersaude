@@ -45,17 +45,66 @@ export interface EditedMessage extends MessageWithHistory {
 
 export async function getMessageHistory(messageId: string): Promise<MessageHistoryEntry[]> {
   const { data, error } = await supabase
-    .from('whatsapp_message_history')
-    .select('*')
-    .eq('message_id', messageId)
-    .order('changed_at', { ascending: true });
+    .from('whatsapp_messages')
+    .select('id, chat_id, body, original_body, is_deleted, deleted_at, edited_at, edit_count, payload, created_at')
+    .eq('id', messageId)
+    .maybeSingle();
 
   if (error) {
-    console.error('Erro ao buscar histórico da mensagem:', error);
-    throw new Error(`Erro ao buscar histórico: ${error.message}`);
+    console.error('Erro ao buscar mensagem:', error);
+    throw new Error(`Erro ao buscar mensagem: ${error.message}`);
   }
 
-  return data || [];
+  if (!data) return [];
+
+  const entries: MessageHistoryEntry[] = [];
+  entries.push({
+    id: `created-${data.id}`,
+    message_id: data.id,
+    chat_id: data.chat_id,
+    action_type: 'created',
+    old_body: null,
+    new_body: data.body,
+    old_payload: {},
+    new_payload: data.payload || {},
+    changed_by: null,
+    changed_at: data.created_at,
+    created_at: data.created_at,
+  });
+
+  if (data.edit_count && data.edited_at) {
+    entries.push({
+      id: `edited-${data.id}`,
+      message_id: data.id,
+      chat_id: data.chat_id,
+      action_type: 'edited',
+      old_body: data.original_body,
+      new_body: data.body,
+      old_payload: {},
+      new_payload: data.payload || {},
+      changed_by: null,
+      changed_at: data.edited_at,
+      created_at: data.created_at,
+    });
+  }
+
+  if (data.is_deleted && data.deleted_at) {
+    entries.push({
+      id: `deleted-${data.id}`,
+      message_id: data.id,
+      chat_id: data.chat_id,
+      action_type: 'deleted',
+      old_body: data.body,
+      new_body: null,
+      old_payload: data.payload || {},
+      new_payload: {},
+      changed_by: null,
+      changed_at: data.deleted_at,
+      created_at: data.created_at,
+    });
+  }
+
+  return entries;
 }
 
 export async function getDeletedMessages(
@@ -194,10 +243,11 @@ export async function getRecentHistoryActivity(
   startDate.setDate(startDate.getDate() - daysBack);
 
   const { data, error } = await supabase
-    .from('whatsapp_message_history')
-    .select('*')
-    .gte('changed_at', startDate.toISOString())
-    .order('changed_at', { ascending: false })
+    .from('whatsapp_messages')
+    .select('id, chat_id, body, original_body, is_deleted, deleted_at, edited_at, edit_count, payload, created_at')
+    .or('edit_count.gt.0,is_deleted.eq.true')
+    .gte('created_at', startDate.toISOString())
+    .order('created_at', { ascending: false })
     .limit(100);
 
   if (error) {
@@ -205,7 +255,40 @@ export async function getRecentHistoryActivity(
     throw new Error(`Erro ao buscar atividade: ${error.message}`);
   }
 
-  return data || [];
+  return (data || []).flatMap((message) => {
+    const entries: MessageHistoryEntry[] = [];
+    if (message.edit_count && message.edited_at) {
+      entries.push({
+        id: `edited-${message.id}`,
+        message_id: message.id,
+        chat_id: message.chat_id,
+        action_type: 'edited',
+        old_body: message.original_body,
+        new_body: message.body,
+        old_payload: {},
+        new_payload: message.payload || {},
+        changed_by: null,
+        changed_at: message.edited_at,
+        created_at: message.created_at,
+      });
+    }
+    if (message.is_deleted && message.deleted_at) {
+      entries.push({
+        id: `deleted-${message.id}`,
+        message_id: message.id,
+        chat_id: message.chat_id,
+        action_type: 'deleted',
+        old_body: message.body,
+        new_body: null,
+        old_payload: message.payload || {},
+        new_payload: {},
+        changed_by: null,
+        changed_at: message.deleted_at,
+        created_at: message.created_at,
+      });
+    }
+    return entries;
+  });
 }
 
 export function formatActionType(actionType: string): string {

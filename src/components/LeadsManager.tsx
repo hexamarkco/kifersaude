@@ -164,6 +164,7 @@ export default function LeadsManager({
   const { isObserver } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [nextReminderByLeadId, setNextReminderByLeadId] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? '');
   const [filterStatus, setFilterStatus] = useState<string[]>(initialStatusFilter ?? []);
@@ -492,6 +493,36 @@ export default function LeadsManager({
         : mappedLeads;
 
       setLeads(visibleLeads);
+      const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
+      if (leadIds.length === 0) {
+        setNextReminderByLeadId(new Map());
+      } else {
+        const nowIso = new Date().toISOString();
+        const leadIdChunks = chunkArray(leadIds, 100);
+        const results = await Promise.all(
+          leadIdChunks.map(async (chunk) => {
+            const { data: remindersData, error } = await supabase
+              .from('reminders')
+              .select('lead_id, data_lembrete, lido')
+              .in('lead_id', chunk)
+              .eq('lido', false)
+              .gte('data_lembrete', nowIso)
+              .order('data_lembrete', { ascending: true });
+
+            if (error) throw error;
+            return remindersData || [];
+          }),
+        );
+
+        const nextMap = new Map<string, string>();
+        results.flat().forEach((reminder) => {
+          if (!reminder.lead_id || !reminder.data_lembrete) return;
+          if (!nextMap.has(reminder.lead_id)) {
+            nextMap.set(reminder.lead_id, reminder.data_lembrete);
+          }
+        });
+        setNextReminderByLeadId(nextMap);
+      }
     } catch (error) {
       console.error('Erro ao carregar leads:', error);
     } finally {
@@ -1935,11 +1966,11 @@ export default function LeadsManager({
                         <span className="font-medium">Cidade:</span> {lead.cidade}
                       </div>
                     )}
-                    {lead.proximo_retorno && (
+                    {nextReminderByLeadId.get(lead.id) && (
                       <div className="mt-2 flex items-center space-x-2 text-sm">
                         <Calendar className="w-4 h-4 text-orange-500" />
                         <span className="text-orange-600 font-medium">
-                          Retorno: {formatDateTimeFullBR(lead.proximo_retorno)}
+                          Retorno: {formatDateTimeFullBR(nextReminderByLeadId.get(lead.id) ?? '')}
                         </span>
                       </div>
                     )}

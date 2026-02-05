@@ -81,6 +81,7 @@ export default function RemindersManagerEnhanced() {
     defaultTitle?: string;
     defaultDescription?: string;
     defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
+    defaultPriority?: 'normal' | 'alta' | 'baixa';
   } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
@@ -208,7 +209,7 @@ export default function RemindersManagerEnhanced() {
     return [
       `Telefone: ${leadData.telefone ?? 'Indisponível'}`,
       leadData.email ? `E-mail: ${leadData.email}` : null,
-      `Status: ${leadData.status ?? leadData.status_nome ?? 'Sem status'}`,
+      `Status: ${leadData.status ?? 'Sem status'}`,
       leadData.responsavel ? `Responsável: ${leadData.responsavel}` : null,
       leadData.ultimo_contato
         ? `Último contato: ${formatInteractionDate(leadData.ultimo_contato)}`
@@ -633,6 +634,9 @@ export default function RemindersManagerEnhanced() {
             defaultTitle: reminder.titulo,
             defaultDescription: reminder.descricao ?? undefined,
             defaultType: 'Follow-up',
+            defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
+              ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+              : 'normal',
           });
         }
       }
@@ -1835,6 +1839,7 @@ export default function RemindersManagerEnhanced() {
           defaultTitle={manualReminderPrompt.defaultTitle}
           defaultDescription={manualReminderPrompt.defaultDescription}
           defaultType={manualReminderPrompt.defaultType}
+          defaultPriority={manualReminderPrompt.defaultPriority}
         />
       )}
 

@@ -15,7 +15,7 @@ export default function ConfigPage() {
 
   if (!isAdmin) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-red-900 mb-2">Acesso Negado</h2>
@@ -34,7 +34,7 @@ export default function ConfigPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Configurações</h1>
         <p className="text-slate-600">Gerencie as configurações do sistema</p>

@@ -56,6 +56,9 @@ export function MessageBubble({
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioRateIndex, setAudioRateIndex] = useState(0);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasHistory = editCount > 0 || isDeleted;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -141,14 +144,22 @@ export function MessageBubble({
     payloadData?.media?.url ||
     payloadData?.image?.preview ||
     '';
+  const documentPayload = payloadData?.document || payloadData?.media;
+  const documentLink = documentPayload?.link || documentPayload?.url || documentPayload?.file || documentPayload?.path;
+  const documentName = documentPayload?.filename || documentPayload?.name || 'Documento';
+  const documentMime = documentPayload?.mime_type || documentPayload?.mimetype || '';
+  const isPdf = (documentMime || '').toLowerCase().includes('pdf') || documentName.toLowerCase().endsWith('.pdf');
 
   useEffect(() => {
     return () => {
       if (audioMediaUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(audioMediaUrl);
       }
+      if (documentUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(documentUrl);
+      }
     };
-  }, [audioMediaUrl]);
+  }, [audioMediaUrl, documentUrl]);
 
   const loadAudioMedia = async () => {
     const mediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id;
@@ -166,6 +177,25 @@ export function MessageBubble({
       console.error('Erro ao carregar audio:', error);
     } finally {
       setAudioMediaLoading(false);
+    }
+  };
+
+  const loadDocumentMedia = async () => {
+    const mediaId = documentPayload?.id || payloadData?.media?.id || payloadData?.document?.id;
+    if (!mediaId || documentLoading) return;
+    setDocumentLoading(true);
+    try {
+      const response = await getWhatsAppMedia(mediaId);
+      if (response.url) {
+        setDocumentUrl(response.url);
+      } else if (response.data) {
+        const objectUrl = URL.createObjectURL(response.data);
+        setDocumentUrl(objectUrl);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar documento:', error);
+    } finally {
+      setDocumentLoading(false);
     }
   };
 
@@ -412,6 +442,7 @@ export function MessageBubble({
     }
 
     if (hasMedia && type === 'document') {
+      const resolvedDocumentUrl = documentUrl || documentLink || '';
       return (
         <div className="space-y-2">
           <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
@@ -420,9 +451,45 @@ export function MessageBubble({
                 📄
               </div>
               <div>
-                <div className="font-medium">Documento</div>
-                <div className="text-xs">Clique para baixar</div>
+                <div className="font-medium">{documentName}</div>
+                <div className="text-xs text-slate-500">{isPdf ? 'PDF' : 'Documento'}</div>
               </div>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              {isPdf && (
+                <button
+                  type="button"
+                  className="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50"
+                  onClick={() => {
+                    if (!resolvedDocumentUrl) {
+                      loadDocumentMedia();
+                      setShowPdfPreview(true);
+                      return;
+                    }
+                    setShowPdfPreview(true);
+                  }}
+                  disabled={documentLoading}
+                >
+                  {documentLoading ? 'Carregando...' : 'Abrir'}
+                </button>
+              )}
+              <button
+                type="button"
+                className="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50"
+                onClick={() => {
+                  if (!resolvedDocumentUrl) {
+                    loadDocumentMedia();
+                    return;
+                  }
+                  const link = document.createElement('a');
+                  link.href = resolvedDocumentUrl;
+                  link.download = documentName;
+                  link.click();
+                }}
+                disabled={documentLoading}
+              >
+                {documentLoading ? 'Carregando...' : 'Baixar'}
+              </button>
             </div>
           </div>
           {body && <div className="text-sm">{body}</div>}
@@ -586,6 +653,28 @@ export function MessageBubble({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onClick={() => setShowImagePreview(false)}>
           <div className="max-w-[90vw] max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
             <img src={imageFullSrc} alt="Imagem" className="max-w-[90vw] max-h-[90vh] rounded" />
+          </div>
+        </div>
+      )}
+
+      {showPdfPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onClick={() => setShowPdfPreview(false)}>
+          <div className="w-full max-w-[90vw] h-[90vh] bg-white rounded" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-2 border-b">
+              <span className="text-sm font-medium text-slate-700">{documentName}</span>
+              <button
+                type="button"
+                className="text-sm text-slate-500 hover:text-slate-700"
+                onClick={() => setShowPdfPreview(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <iframe
+              title="PDF Preview"
+              src={documentUrl || documentLink || ''}
+              className="w-full h-[calc(90vh-44px)]"
+            />
           </div>
         </div>
       )}

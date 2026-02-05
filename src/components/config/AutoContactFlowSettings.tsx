@@ -95,17 +95,12 @@ export default function AutoContactFlowSettings() {
   const [dailyAutomationCount, setDailyAutomationCount] = useState<number | null>(null);
   const [dailyAutomationLoading, setDailyAutomationLoading] = useState(false);
   const [dailyAutomationError, setDailyAutomationError] = useState<string | null>(null);
-  const [flowEditorMode, setFlowEditorMode] = useState<'basic' | 'advanced'>('basic');
+  const [flowEditorMode] = useState<'basic' | 'advanced'>('advanced');
 
   useEffect(() => {
     void loadAutoContactSettings();
   }, []);
 
-  useEffect(() => {
-    if (activeFlowId) {
-      setFlowEditorMode('basic');
-    }
-  }, [activeFlowId]);
 
   const loadAutoContactSettings = async () => {
     setLoadingFlow(true);
@@ -627,12 +622,11 @@ export default function AutoContactFlowSettings() {
     () => (activeFlow ? flowDrafts.findIndex((flow) => flow.id === activeFlow.id) : -1),
     [activeFlow, flowDrafts],
   );
-  const handleSetFlowEditorMode = (mode: 'basic' | 'advanced') => {
-    setFlowEditorMode(mode);
-    if (mode === 'advanced' && activeFlow && !activeFlow.flowGraph) {
+  useEffect(() => {
+    if (activeFlow && !activeFlow.flowGraph) {
       handleUpdateFlowGraph(activeFlow.id, buildFlowGraphFromFlow(activeFlow));
     }
-  };
+  }, [activeFlow]);
   const availableTags = useMemo(() => {
     const tags = flowDrafts.flatMap((flow) => flow.tags ?? []).filter(Boolean);
     return Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -708,12 +702,6 @@ export default function AutoContactFlowSettings() {
       caption: '',
       filename: '',
     },
-  });
-  const createFlowCondition = (): AutoContactFlowCondition => ({
-    id: `flow-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    field: 'status',
-    operator: 'equals',
-    value: '',
   });
   const createFlowExitCondition = (): AutoContactFlowCondition => ({
     id: `flow-exit-condition-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -850,45 +838,6 @@ export default function AutoContactFlowSettings() {
           steps: nextSteps.length ? nextSteps : [createFlowStep()],
         };
       }),
-    );
-  };
-  const handleAddFlowCondition = (flowId: string) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) =>
-        flow.id === flowId
-          ? { ...flow, conditions: [...(flow.conditions ?? []), createFlowCondition()] }
-          : flow,
-      ),
-    );
-  };
-  const handleUpdateFlowCondition = (
-    flowId: string,
-    conditionId: string,
-    updates: Partial<AutoContactFlowCondition>,
-  ) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) =>
-        flow.id === flowId
-          ? {
-              ...flow,
-              conditions: (flow.conditions ?? []).map((condition) =>
-                condition.id === conditionId ? { ...condition, ...updates } : condition,
-              ),
-            }
-          : flow,
-      ),
-    );
-  };
-  const handleRemoveFlowCondition = (flowId: string, conditionId: string) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) =>
-        flow.id === flowId
-          ? {
-              ...flow,
-              conditions: (flow.conditions ?? []).filter((condition) => condition.id !== conditionId),
-            }
-          : flow,
-      ),
     );
   };
   const handleAddFlowTag = (flowId: string) => {
@@ -1470,30 +1419,6 @@ export default function AutoContactFlowSettings() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => handleSetFlowEditorMode('basic')}
-                          className={`px-3 py-1 text-xs rounded-full ${
-                            flowEditorMode === 'basic'
-                              ? 'bg-white text-slate-900 shadow-sm'
-                              : 'text-slate-500 hover:text-slate-700'
-                          }`}
-                        >
-                          Basico
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetFlowEditorMode('advanced')}
-                          className={`px-3 py-1 text-xs rounded-full ${
-                            flowEditorMode === 'advanced'
-                              ? 'bg-slate-900 text-white shadow-sm'
-                              : 'text-slate-500 hover:text-slate-700'
-                          }`}
-                        >
-                          Avancado
-                        </button>
-                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1631,162 +1556,18 @@ export default function AutoContactFlowSettings() {
                       </div>
                     </div>
 
-                    {flowEditorMode === 'advanced' && (
-                      <FlowBuilder
-                        flow={activeFlow}
-                        messageTemplates={messageTemplatesDraft}
-                        conditionFieldOptions={conditionFieldOptions}
-                        conditionOperatorLabels={conditionOperatorLabels}
-                        getConditionOptionLabel={getConditionOptionLabel}
-                        delayUnitLabels={delayUnitLabels}
-                        flowActionLabels={flowActionLabels}
-                        getConditionValueOptions={getConditionValueOptions}
-                        onChangeGraph={(graph) => handleUpdateFlowGraph(activeFlow.id, graph)}
-                      />
-                    )}
+                    <FlowBuilder
+                      flow={activeFlow}
+                      messageTemplates={messageTemplatesDraft}
+                      conditionFieldOptions={conditionFieldOptions}
+                      conditionOperatorLabels={conditionOperatorLabels}
+                      getConditionOptionLabel={getConditionOptionLabel}
+                      delayUnitLabels={delayUnitLabels}
+                      flowActionLabels={flowActionLabels}
+                      getConditionValueOptions={getConditionValueOptions}
+                      onChangeGraph={(graph) => handleUpdateFlowGraph(activeFlow.id, graph)}
+                    />
 
-                    {flowEditorMode === 'basic' && (
-                      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-800">Condições de entrada</h4>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Estas condições são a primeira etapa do fluxo e determinam quando ele começa.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleAddFlowCondition(activeFlow.id)}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Nova condição
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span>Aplicar quando</span>
-                        <select
-                          value={activeFlow.conditionLogic ?? 'all'}
-                          onChange={(event) =>
-                            handleUpdateFlow(activeFlow.id, {
-                              conditionLogic: event.target.value as AutoContactFlow['conditionLogic'],
-                            })
-                          }
-                          className="px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                        >
-                          <option value="all">todas as condições</option>
-                          <option value="any">qualquer condição</option>
-                        </select>
-                        <span>forem atendidas</span>
-                      </div>
-
-                      {(activeFlow.conditions ?? []).length === 0 ? (
-                        <div className="text-xs text-slate-500 bg-white border border-dashed border-slate-200 rounded-lg p-3">
-                          Nenhuma condição configurada. O fluxo será disparado para todos os leads.
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {(activeFlow.conditions ?? []).map((condition) => (
-                            <div
-                              key={condition.id}
-                              className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[160px_160px_1fr_auto]"
-                            >
-                              {(() => {
-                                const valueOptions = getConditionValueOptions(condition.field);
-                                return (
-                                  <>
-                              <select
-                                value={condition.field}
-                                onChange={(event) => {
-                                  const nextField = event.target.value as AutoContactFlowCondition['field'];
-                                  const nextUpdates =
-                                    nextField === 'event'
-                                      ? {
-                                          field: nextField,
-                                          operator: 'equals' as AutoContactFlowCondition['operator'],
-                                          value: 'lead_created',
-                                        }
-                                      : nextField === 'whatsapp_valid'
-                                        ? {
-                                            field: nextField,
-                                            operator: 'equals' as AutoContactFlowCondition['operator'],
-                                            value: 'true',
-                                          }
-                                      : { field: nextField, value: '' };
-                                  handleUpdateFlowCondition(activeFlow.id, condition.id, nextUpdates);
-                                }}
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {conditionFieldOptions.map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                              {!isEventLeadCreated(condition) && (
-                                <select
-                                  value={condition.operator}
-                                  onChange={(event) =>
-                                    handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                      operator: event.target.value as AutoContactFlowCondition['operator'],
-                                    })
-                                  }
-                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  {Object.entries(conditionOperatorLabels).map(([value, label]) => (
-                                    <option key={value} value={value}>
-                                      {label}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                              {!isEventLeadCreated(condition) &&
-                                (valueOptions ? (
-                                  <select
-                                    value={condition.value}
-                                    onChange={(event) =>
-                                      handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                        value: event.target.value,
-                                      })
-                                    }
-                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                  >
-                                    <option value="">Selecione</option>
-                                     {valueOptions.map((option) => (
-                                       <option key={option} value={option}>
-                                         {getConditionOptionLabel(condition.field, option)}
-                                       </option>
-                                     ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    value={condition.value}
-                                    onChange={(event) =>
-                                      handleUpdateFlowCondition(activeFlow.id, condition.id, {
-                                        value: event.target.value,
-                                      })
-                                    }
-                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                    placeholder="Digite o valor"
-                                  />
-                                ))}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFlowCondition(activeFlow.id, condition.id)}
-                                className="text-xs text-red-600 hover:text-red-700"
-                              >
-                                Remover
-                              </button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    )}
 
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-center justify-between">

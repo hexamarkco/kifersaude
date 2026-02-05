@@ -279,25 +279,31 @@ export function MessageBubble({
     if (hasMedia && (type?.startsWith('audio') || type === 'ptt' || type === 'voice')) {
       return (
         <div className="space-y-2">
-          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                🎤
-              </div>
+          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600 w-[320px] max-w-full">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-lg"
+                onClick={() => {
+                  if (!audioUrl) {
+                    loadAudioMedia();
+                  }
+                }}
+                disabled={audioMediaLoading}
+              >
+                ▶
+              </button>
               <div className="flex-1">
-                <div className="font-medium">Áudio</div>
                 {audioUrl ? (
-                  <audio className="w-full h-8 mt-1" controls preload="none" src={audioUrl} />
+                  <audio className="w-full h-8" controls preload="none" src={audioUrl} />
                 ) : (
-                  <button
-                    type="button"
-                    className="text-xs text-blue-600 hover:underline"
-                    onClick={loadAudioMedia}
-                    disabled={audioMediaLoading}
-                  >
-                    {audioMediaLoading ? 'Carregando audio...' : 'Carregar audio'}
-                  </button>
+                  <div className="text-xs">
+                    {audioMediaLoading ? 'Carregando audio...' : 'Clique para carregar'}
+                  </div>
                 )}
+              </div>
+              <div className="text-xs text-gray-500">
+                {audioPayload?.seconds ? `${audioPayload.seconds}s` : ''}
               </div>
             </div>
           </div>

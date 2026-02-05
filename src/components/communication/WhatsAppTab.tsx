@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History } from 'lucide-react';
 import { MessageInput } from './MessageInput';
+import { useAuth } from '../../contexts/AuthContext';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
@@ -126,6 +127,7 @@ export default function WhatsAppTab() {
   const [leadNamesByPhone, setLeadNamesByPhone] = useState<Map<string, string>>(new Map());
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   function normalizePhoneNumber(phone: string | null | undefined) {
     if (!phone) return '';
@@ -272,6 +274,9 @@ export default function WhatsAppTab() {
           if (!variants.includes(message.chat_id)) return;
           setMessages((prev) => [...prev, message]);
           scrollToBottom();
+          if (message.direction === 'inbound' && user) {
+            markMessagesRead([message]);
+          }
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
           const message = payload.new as WhatsAppMessage;
@@ -324,6 +329,7 @@ export default function WhatsAppTab() {
         });
 
         setChats(mappedChats);
+        await loadUnreadCounts();
         return;
       }
 
@@ -346,6 +352,7 @@ export default function WhatsAppTab() {
       );
 
       setChats(chatsWithLastMessage);
+      await loadUnreadCounts();
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -366,6 +373,10 @@ export default function WhatsAppTab() {
       const baseMessages = data || [];
       setMessages(baseMessages);
 
+      if (user) {
+        await markMessagesRead(baseMessages);
+      }
+
       const whapiRaw = await fetchWhapiMessages(chat);
       const whapiMessages = whapiRaw.map(whapiToUiMessage);
 
@@ -380,9 +391,58 @@ export default function WhatsAppTab() {
       });
 
       setMessages(mergedList);
+      if (user) {
+        await markMessagesRead(mergedList);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
+  };
+
+  const loadUnreadCounts = async () => {
+    if (!user) return;
+    const { data, error } = await supabase.rpc('get_whatsapp_unread_counts', { current_user: user.id });
+    if (error) {
+      console.error('Error loading unread counts:', error);
+      return;
+    }
+
+    const countsMap = new Map<string, number>();
+    (data || []).forEach((row: { chat_id: string; unread_count: number }) => {
+      countsMap.set(row.chat_id, row.unread_count);
+    });
+
+    setChats((prev) =>
+      prev.map((chat) => ({
+        ...chat,
+        unread_count: countsMap.get(chat.id) ?? 0,
+      })),
+    );
+  };
+
+  const markMessagesRead = async (messagesToMark: WhatsAppMessage[]) => {
+    if (!user) return;
+    const unreadInbound = messagesToMark.filter((message) => message.direction === 'inbound');
+    if (unreadInbound.length === 0) return;
+    const rows = unreadInbound.map((message) => ({
+      message_id: message.id,
+      user_id: user.id,
+      read_at: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase.from('whatsapp_message_reads').upsert(rows, { onConflict: 'message_id,user_id' });
+    if (error) {
+      console.error('Error marking messages as read:', error);
+    }
+
+    setUnreadByChatId((prev) => {
+      const next = new Map(prev);
+      unreadInbound.forEach((message) => {
+        const current = next.get(message.chat_id) ?? 0;
+        next.set(message.chat_id, Math.max(0, current - 1));
+      });
+      return next;
+    });
   };
 
   const handleReply = (messageId: string, body: string, from: string) => {
@@ -570,9 +630,16 @@ export default function WhatsAppTab() {
                           {formatTime(chat.last_message_at)}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600 truncate">
-                        {chat.last_message || 'Sem mensagens'}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm text-slate-600 truncate">
+                          {chat.last_message || 'Sem mensagens'}
+                        </p>
+                        {(chat.unread_count ?? 0) > 0 && (
+                          <span className="flex-shrink-0 rounded-full bg-teal-600 text-white text-[11px] px-2 py-0.5">
+                            {chat.unread_count}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );

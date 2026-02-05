@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File, StopCircle, Film } from 'lucide-react';
-import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, fileToBase64 } from '../../lib/whatsappApiService';
+import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle } from 'lucide-react';
+import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
+import { supabase } from '../../lib/supabase';
 
 interface MessageInputProps {
   chatId: string;
@@ -94,11 +95,25 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent();
       } else if (message.trim()) {
-        await sendWhatsAppMessage({
+        const response = await sendWhatsAppMessage({
           chatId,
           contentType: 'string',
           content: message.trim(),
           quotedMessageId: replyToMessage?.id,
+        });
+
+        const normalizedChatId = normalizeChatId(chatId);
+        await supabase.from('whatsapp_messages').upsert({
+          id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          chat_id: normalizedChatId,
+          from_number: null,
+          to_number: normalizedChatId,
+          type: 'text',
+          body: message.trim(),
+          has_media: false,
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          payload: response,
         });
 
         setMessage('');
@@ -160,7 +175,6 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
         const audioFile = new File([audioBlob], 'voice.ogg', { type: 'audio/ogg' });
 
         setIsRecording(false);
-        const recordedTime = recordingTime;
         setRecordingTime(0);
 
         stream.getTracks().forEach(track => track.stop());
@@ -303,7 +317,7 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
               )
             ) : (
               <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
-                <File className="w-8 h-8 text-gray-400" />
+                <FileIcon className="w-8 h-8 text-gray-400" />
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -361,7 +375,7 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
               >
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <File className="w-4 h-4 text-blue-600" />
+                  <FileIcon className="w-4 h-4 text-blue-600" />
                 </div>
                 <span className="text-sm">Documento</span>
               </button>

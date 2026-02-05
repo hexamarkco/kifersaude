@@ -139,6 +139,8 @@ export type AutoContactFlowGraphEdge = {
   source: string;
   target: string;
   label?: string;
+  sourceHandle?: string;
+  targetHandle?: string;
 };
 
 export type AutoContactFlowGraph = {

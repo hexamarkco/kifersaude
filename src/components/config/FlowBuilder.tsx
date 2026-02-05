@@ -138,6 +138,21 @@ const toReactFlowNode = (node: AutoContactFlowGraphNode): Node<AutoContactFlowGr
   data: node.data,
 });
 
+const toReactFlowEdge = (edge: AutoContactFlowGraph['edges'][number]): Edge => {
+  const label = typeof edge.label === 'string' ? edge.label : undefined;
+  const normalizedLabel = label?.toLowerCase();
+  const sourceHandle = edge.sourceHandle
+    ?? (normalizedLabel === 'sim' ? 'yes' : normalizedLabel === 'nao' ? 'no' : undefined);
+  return {
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    label,
+    sourceHandle,
+    targetHandle: edge.targetHandle,
+  };
+};
+
 const toGraphNode = (node: Node<AutoContactFlowGraphNodeData>): AutoContactFlowGraphNode => ({
   id: node.id,
   type: node.type as AutoContactFlowGraphNode['type'],
@@ -216,14 +231,14 @@ export default function FlowBuilder({
 }: FlowBuilderProps) {
   const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow.id, flow.flowGraph]);
   const [nodes, setNodes, onNodesChange] = useNodesState(baseGraph.nodes.map(toReactFlowNode));
-  const [edges, setEdges, onEdgesChange] = useEdgesState(baseGraph.edges as Edge[]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(baseGraph.edges.map(toReactFlowEdge));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [initializedFlowId, setInitializedFlowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (initializedFlowId !== flow.id) {
       setNodes(baseGraph.nodes.map(toReactFlowNode));
-      setEdges(baseGraph.edges as Edge[]);
+      setEdges(baseGraph.edges.map(toReactFlowEdge));
       setInitializedFlowId(flow.id);
     }
   }, [baseGraph, flow.id, initializedFlowId, setNodes, setEdges]);
@@ -236,6 +251,8 @@ export default function FlowBuilder({
         source: edge.source,
         target: edge.target,
         label: typeof edge.label === 'string' ? edge.label : undefined,
+        sourceHandle: edge.sourceHandle ?? undefined,
+        targetHandle: edge.targetHandle ?? undefined,
       })),
     };
     onChangeGraph(graph);

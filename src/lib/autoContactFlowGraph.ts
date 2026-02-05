@@ -74,6 +74,7 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
       source: lastNodeId,
       target: actionId,
       label: lastNodeId === conditionNodeId ? 'Sim' : undefined,
+      sourceHandle: lastNodeId === conditionNodeId ? 'yes' : undefined,
     });
     lastNodeId = actionId;
   });

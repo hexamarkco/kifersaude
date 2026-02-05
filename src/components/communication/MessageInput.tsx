@@ -38,6 +38,7 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +46,8 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
   const audioChunksRef = useRef<Blob[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
 
   useEffect(() => {
     if (editMessage) {
@@ -180,6 +183,25 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMessage((prev) => `${prev}${emoji}`);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? message.length;
+    const end = textarea.selectionEnd ?? message.length;
+    const nextMessage = `${message.slice(0, start)}${emoji}${message.slice(end)}`;
+    setMessage(nextMessage);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = start + emoji.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -456,14 +478,37 @@ export function MessageInput({ chatId, onMessageSent, replyToMessage, onCancelRe
         </div>
 
         <div className="flex-1 bg-white border rounded-lg flex items-end overflow-hidden">
-          <button
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-            disabled={isSending}
-          >
-            <Smile className="w-5 h-5" />
-          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              disabled={isSending}
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              type="button"
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+
+            {showEmojiPicker && (
+              <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">
+                {emojiList.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100"
+                    onClick={() => {
+                      insertEmoji(emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                  >
+                    <span className="text-base">{emoji}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => {
               setMessage(e.target.value);

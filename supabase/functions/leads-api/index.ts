@@ -841,6 +841,40 @@ function isValidWhatsappNumber(telefone?: string | null): boolean {
   return local.length === 10 || local.length === 11;
 }
 
+const usesWhatsappValidCondition = (flow: AutoContactFlow): boolean => {
+  const conditions = Array.isArray(flow.conditions) ? flow.conditions : [];
+  const exitConditions = Array.isArray(flow.exitConditions) ? flow.exitConditions : [];
+  return [...conditions, ...exitConditions].some((condition) => condition.field === 'whatsapp_valid');
+};
+
+const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<boolean | null> => {
+  const digits = normalizeTelefone(telefone ?? '');
+  if (!digits) return false;
+
+  const response = await fetch(`https://gate.whapi.cloud/contacts/${encodeURIComponent(digits)}`, {
+    method: 'HEAD',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 200) return true;
+  if (response.status === 404) return false;
+  return null;
+};
+
+const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> => {
+  try {
+    const exists = await checkWhatsAppExistence(apiKey, lead?.telefone);
+    if (exists !== null) return exists ? 'true' : 'false';
+  } catch (error) {
+    console.warn('Erro ao validar WhatsApp no Whapi', error);
+  }
+
+  return isValidWhatsappNumber(lead?.telefone) ? 'true' : 'false';
+};
+
 async function sendWhatsappMessages({
   endpoint,
   apiKey,
@@ -1550,6 +1584,9 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, even
     case 'telefone':
       return lead.telefone ?? '';
     case 'whatsapp_valid':
+      if (typeof lead.whatsapp_valid === 'string' && lead.whatsapp_valid.length) {
+        return lead.whatsapp_valid;
+      }
       return isValidWhatsappNumber(lead.telefone) ? 'true' : 'false';
     case 'data_criacao':
       return lead.data_criacao ?? '';
@@ -1837,12 +1874,16 @@ async function processFlowJobs({
       continue;
     }
 
-    const leadWithRelations = mapLeadRelationsForResponse(lead, lookups);
-    if (!leadWithRelations.status) {
-      leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
-    }
+      const leadWithRelations = mapLeadRelationsForResponse(lead, lookups);
+      if (!leadWithRelations.status) {
+        leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
+      }
 
-    if (shouldExitFlow(flow, leadWithRelations) || !matchesAutoContactFlow(flow, leadWithRelations)) {
+      if (usesWhatsappValidCondition(flow)) {
+        leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
+      }
+
+      if (shouldExitFlow(flow, leadWithRelations) || !matchesAutoContactFlow(flow, leadWithRelations)) {
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'skipped', last_error: 'Condições não atendidas' })
@@ -2285,6 +2326,10 @@ async function runAutoContactFlowEngine({
     }
     leadWithRelations.status = leadWithRelations.status || 'Novo';
 
+    if (settings.flows.some(usesWhatsappValidCondition)) {
+      leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
+    }
+
     const matchingFlow =
       settings.flows.find((flow) => matchesAutoContactFlow(flow, leadWithRelations, event)) ?? null;
     if (!matchingFlow) {
@@ -2407,6 +2452,9 @@ Deno.serve(async (req: Request) => {
       };
 
       const mappedLead = mapLeadForMatch(record);
+      if (settings.flows.some(usesWhatsappValidCondition)) {
+        mappedLead.whatsapp_valid = await resolveWhatsappValid(mappedLead, settings.apiKey);
+      }
       const newMatchingFlow =
         settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, event)) ?? null;
 
@@ -2425,6 +2473,9 @@ Deno.serve(async (req: Request) => {
 
       if (oldRecord && typeof oldRecord === 'object') {
         const mappedOldLead = mapLeadForMatch(oldRecord);
+        if (settings.flows.some(usesWhatsappValidCondition)) {
+          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead, settings.apiKey);
+        }
         const oldMatchingFlow =
           settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedOldLead)) ?? null;
 

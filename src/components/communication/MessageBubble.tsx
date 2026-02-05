@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageHistoryModal } from './MessageHistoryModal';
@@ -24,6 +24,7 @@ interface MessageBubbleProps {
   originalBody?: string | null;
   onReply?: (messageId: string, body: string, from: string) => void;
   onEdit?: (messageId: string, body: string) => void;
+  onReact?: (messageId: string, emoji: string) => void;
 }
 
 export function MessageBubble({
@@ -43,6 +44,7 @@ export function MessageBubble({
   editCount = 0,
   onReply,
   onEdit,
+  onReact,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -53,8 +55,10 @@ export function MessageBubble({
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioRateIndex, setAudioRateIndex] = useState(0);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasHistory = editCount > 0 || isDeleted;
+  const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   const formatTimestamp = (ts: string | null) => {
     if (!ts) return '';
@@ -510,6 +514,35 @@ export function MessageBubble({
         </div>
 
         <div className="flex items-center gap-2 mt-1">
+          {onReact && !isDeleted && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowReactionPicker((prev) => !prev)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 hover:text-gray-700 px-2 flex items-center gap-1"
+              >
+                <Smile className="w-3 h-3" />
+                <span>Reagir</span>
+              </button>
+              {showReactionPicker && (
+                <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-full shadow px-2 py-1 flex gap-1 z-10">
+                  {quickReactions.map((emoji) => (
+                    <button
+                      key={`${id}-${emoji}`}
+                      type="button"
+                      className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100"
+                      onClick={() => {
+                        onReact(id, emoji);
+                        setShowReactionPicker(false);
+                      }}
+                    >
+                      <span className="text-sm">{emoji}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {onReply && !isDeleted && (
             <button
               onClick={() => onReply(id, body || '', fromName || 'Contato')}

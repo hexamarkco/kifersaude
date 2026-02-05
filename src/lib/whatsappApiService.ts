@@ -665,6 +665,44 @@ export async function getWhatsAppMedia(mediaId: string): Promise<{ url?: string;
   return { data };
 }
 
+export async function reactToMessage(messageId: string, emoji: string) {
+  const settings = await getWhatsAppSettings();
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ emoji }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
+export async function removeReactionFromMessage(messageId: string) {
+  const settings = await getWhatsAppSettings();
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
 export function buildChatIdFromPhone(phoneNumber: string): string {
   const cleanPhone = phoneNumber.replace(/\D/g, '');
 

@@ -13,6 +13,8 @@ import {
   getWhatsAppContacts,
   getWhatsAppMessageHistory,
   normalizeChatId,
+  reactToMessage,
+  removeReactionFromMessage,
   type WhapiChat,
   type WhapiChatMetadata,
   type WhapiMessage,
@@ -133,6 +135,7 @@ export default function WhatsAppTab() {
   const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
     [],
   );
+  const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
@@ -605,6 +608,60 @@ export default function WhatsAppTab() {
     }
   };
 
+  const handleReact = async (messageId: string, emoji: string) => {
+    try {
+      const existingEmoji = myReactionsByMessage.get(messageId);
+      if (existingEmoji === emoji) {
+        await removeReactionFromMessage(messageId);
+        setMyReactionsByMessage((prev) => {
+          const next = new Map(prev);
+          next.delete(messageId);
+          return next;
+        });
+        setMessages((prev) =>
+          prev.map((message) => {
+            if (message.id !== messageId) return message;
+            const payloadData = message.payload && typeof message.payload === 'object' ? message.payload : {};
+            const reactions = Array.isArray((payloadData as any).reactions) ? (payloadData as any).reactions : [];
+            const nextReactions = reactions
+              .map((item: { emoji: string; count?: number }) =>
+                item.emoji === emoji ? { ...item, count: Math.max(0, (item.count ?? 1) - 1) } : item,
+              )
+              .filter((item: { count?: number }) => (item.count ?? 0) > 0);
+            return {
+              ...message,
+              payload: { ...payloadData, reactions: nextReactions },
+            };
+          }),
+        );
+        return;
+      }
+
+      await reactToMessage(messageId, emoji);
+      setMyReactionsByMessage((prev) => new Map(prev).set(messageId, emoji));
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (message.id !== messageId) return message;
+          const payloadData = message.payload && typeof message.payload === 'object' ? message.payload : {};
+          const reactions = Array.isArray((payloadData as any).reactions) ? (payloadData as any).reactions : [];
+          const existing = reactions.find((item: { emoji: string }) => item.emoji === emoji);
+          const nextReactions = existing
+            ? reactions.map((item: { emoji: string; count?: number }) =>
+                item.emoji === emoji ? { ...item, count: (item.count ?? 1) + 1 } : item,
+              )
+            : [...reactions, { emoji, count: 1 }];
+
+          return {
+            ...message,
+            payload: { ...payloadData, reactions: nextReactions },
+          };
+        }),
+      );
+    } catch (error) {
+      console.error('Erro ao reagir mensagem:', error);
+    }
+  };
+
   const handleSyncFromWhapi = async () => {
     if (!selectedChat) return;
     try {
@@ -926,6 +983,7 @@ export default function WhatsAppTab() {
                           editCount={message.edit_count}
                           editedAt={message.edited_at}
                           originalBody={message.original_body}
+                          onReact={handleReact}
                           onReply={handleReply}
                           onEdit={handleEdit}
                         />

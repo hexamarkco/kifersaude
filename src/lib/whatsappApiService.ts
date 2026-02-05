@@ -172,7 +172,18 @@ export interface MediaContent {
 
 export interface SendMessageParams {
   chatId: string;
-  contentType: 'string' | 'image' | 'video' | 'gif' | 'short' | 'audio' | 'voice' | 'document' | 'Location' | 'Contact';
+  contentType:
+    | 'string'
+    | 'image'
+    | 'video'
+    | 'gif'
+    | 'short'
+    | 'audio'
+    | 'voice'
+    | 'document'
+    | 'Location'
+    | 'Contact'
+    | 'LinkPreview';
   content: string | MediaContent | {
     latitude?: number;
     longitude?: number;
@@ -180,6 +191,11 @@ export interface SendMessageParams {
     contactId?: string;
     name?: string;
     vcard?: string;
+    body?: string;
+    title?: string;
+    canonical?: string;
+    preview?: string;
+    media?: MediaContent;
   };
   quotedMessageId?: string;
   editMessageId?: string;
@@ -286,6 +302,35 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
       body.contact = { id: contact.contactId };
     } else {
       throw new Error('Contato inválido para envio');
+    }
+  } else if (params.contentType === 'LinkPreview' && typeof params.content === 'object') {
+    endpoint = '/messages/link_preview';
+    const linkPreview = params.content as {
+      body?: string;
+      title?: string;
+      description?: string;
+      canonical?: string;
+      preview?: string;
+      media?: MediaContent;
+    };
+    if (!linkPreview.body || !linkPreview.title) {
+      throw new Error('Link preview exige body e title');
+    }
+    body.body = linkPreview.body;
+    body.title = linkPreview.title;
+    if (linkPreview.description) body.description = linkPreview.description;
+    if (linkPreview.canonical) body.canonical = linkPreview.canonical;
+    if (linkPreview.preview) body.preview = linkPreview.preview;
+    if (linkPreview.media) {
+      if (linkPreview.media.url) {
+        body.media = linkPreview.media.url;
+      } else if (linkPreview.media.data) {
+        body.media = `data:${linkPreview.media.mimetype};base64,${linkPreview.media.data}`;
+      }
+      if (linkPreview.media.mimetype) body.mime_type = linkPreview.media.mimetype;
+      if (linkPreview.media.mentions && linkPreview.media.mentions.length > 0) {
+        body.mentions = linkPreview.media.mentions;
+      }
     }
   } else {
     throw new Error('Tipo de conteúdo não suportado');

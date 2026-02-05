@@ -43,6 +43,11 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
+  const [showLinkPreviewModal, setShowLinkPreviewModal] = useState(false);
+  const [linkPreviewTitle, setLinkPreviewTitle] = useState('');
+  const [linkPreviewDescription, setLinkPreviewDescription] = useState('');
+  const [linkPreviewCanonical, setLinkPreviewCanonical] = useState('');
+  const [pendingLinkMessage, setPendingLinkMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +100,18 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isSending) return;
 
+    if (!editMessage && !selectedFile) {
+      const urlMatch = message.match(/https?:\/\/\S+/i);
+      if (urlMatch && !showLinkPreviewModal) {
+        const url = urlMatch[0];
+        setPendingLinkMessage(message.trim());
+        setLinkPreviewCanonical(url);
+        setLinkPreviewTitle(url.replace(/^https?:\/\//i, '').split('/')[0]);
+        setShowLinkPreviewModal(true);
+        return;
+      }
+    }
+
     setIsSending(true);
 
     try {
@@ -140,22 +157,39 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(mediaPayload);
       } else if (message.trim()) {
+        if (showLinkPreviewModal && pendingLinkMessage) {
+          if (!linkPreviewTitle.trim()) {
+            alert('Informe um titulo para o preview do link.');
+            setIsSending(false);
+            return;
+          }
+        }
+
         const response = await sendWhatsAppMessage({
           chatId,
-          contentType: 'string',
-          content: message.trim(),
+          contentType: showLinkPreviewModal && pendingLinkMessage ? 'LinkPreview' : 'string',
+          content: showLinkPreviewModal && pendingLinkMessage
+            ? {
+                body: pendingLinkMessage,
+                title: linkPreviewTitle.trim(),
+                description: linkPreviewDescription.trim() || undefined,
+                canonical: linkPreviewCanonical.trim() || undefined,
+              }
+            : message.trim(),
           quotedMessageId: replyToMessage?.id,
         });
 
         const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+        const isLinkPreview = showLinkPreviewModal && pendingLinkMessage;
+        const bodyText = isLinkPreview ? pendingLinkMessage : message.trim();
         const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
           id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           chat_id: normalizedChatId,
           from_number: null,
           to_number: normalizedChatId,
-          type: 'text',
-          body: message.trim(),
-          has_media: false,
+          type: isLinkPreview ? 'link_preview' : 'text',
+          body: bodyText,
+          has_media: Boolean(isLinkPreview),
           timestamp: new Date().toISOString(),
           direction: 'outbound',
           payload: response,
@@ -169,15 +203,18 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         const textPayload: SentMessagePayload = {
           id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           chat_id: chatId,
-          body: message.trim(),
-          type: 'text',
-          has_media: false,
+          body: bodyText,
+          type: isLinkPreview ? 'link_preview' : 'text',
+          has_media: Boolean(isLinkPreview),
           timestamp: sentAt,
           direction: 'outbound',
           created_at: sentAt,
+          payload: response,
         };
 
         setMessage('');
+        setPendingLinkMessage(null);
+        setShowLinkPreviewModal(false);
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(textPayload);
       }
@@ -412,6 +449,72 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
 
   return (
     <div className="border-t bg-white relative">
+      {showLinkPreviewModal && pendingLinkMessage && (
+        <div className="absolute bottom-full left-4 mb-2 w-96 bg-white border rounded-lg shadow-lg z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <span className="text-sm font-medium">Enviar preview de link</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-gray-100"
+              onClick={() => {
+                setShowLinkPreviewModal(false);
+                setPendingLinkMessage(null);
+              }}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-3 space-y-2">
+            <div>
+              <label className="text-xs text-gray-500">Titulo (obrigatorio)</label>
+              <input
+                type="text"
+                value={linkPreviewTitle}
+                onChange={(e) => setLinkPreviewTitle(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Descricao</label>
+              <input
+                type="text"
+                value={linkPreviewDescription}
+                onChange={(e) => setLinkPreviewDescription(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">URL canonica</label>
+              <input
+                type="text"
+                value={linkPreviewCanonical}
+                onChange={(e) => setLinkPreviewCanonical(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border"
+                onClick={() => {
+                  setShowLinkPreviewModal(false);
+                  setPendingLinkMessage(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md bg-green-600 text-white"
+                onClick={handleSendMessage}
+                disabled={isSending}
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showContactPicker && (
         <div className="absolute bottom-full left-4 mb-2 w-80 bg-white border rounded-lg shadow-lg z-20">
           <div className="flex items-center justify-between px-3 py-2 border-b">

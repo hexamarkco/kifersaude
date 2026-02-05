@@ -400,18 +400,30 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     setError(null);
     try {
       const [leadsData, contractsData, holdersData, dependentsData] = await Promise.all([
-        fetchAllPages<Lead>((from, to) =>
-          supabase.from('leads').select('*').order('created_at', { ascending: false }).range(from, to),
-        ),
-        fetchAllPages<Contract>((from, to) =>
-          supabase.from('contracts').select('*').order('created_at', { ascending: false }).range(from, to),
-        ),
-        fetchAllPages<Holder>((from, to) =>
-          supabase.from('contract_holders').select('*').range(from, to),
-        ),
-        fetchAllPages<Dependent>((from, to) =>
-          supabase.from('dependents').select('*').range(from, to),
-        ),
+        fetchAllPages<Lead>(async (from, to) => {
+          const response = await supabase
+            .from('leads')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(from, to);
+          return { data: response.data, error: response.error };
+        }),
+        fetchAllPages<Contract>(async (from, to) => {
+          const response = await supabase
+            .from('contracts')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(from, to);
+          return { data: response.data, error: response.error };
+        }),
+        fetchAllPages<Holder>(async (from, to) => {
+          const response = await supabase.from('contract_holders').select('*').range(from, to);
+          return { data: response.data, error: response.error };
+        }),
+        fetchAllPages<Dependent>(async (from, to) => {
+          const response = await supabase.from('dependents').select('*').range(from, to);
+          return { data: response.data, error: response.error };
+        }),
       ]);
 
       const mappedLeads = (leadsData || [])
@@ -828,20 +840,6 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       }));
   };
 
-  const getContractRenewalDate = (contract: Contract): Date | null => {
-    if (contract.data_renovacao) {
-      const [year, month] = contract.data_renovacao.split('-').map(Number);
-      return new Date(year, month - 1, 1);
-    }
-
-    if (contract.data_inicio) {
-      const startDate = new Date(contract.data_inicio);
-      return new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
-    }
-
-    return null;
-  };
-
   function validateDate(dateStr: string): boolean {
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     const match = dateStr.match(dateRegex);
@@ -992,7 +990,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
   const totalLeads = activeLeads.length;
   const leadsAtivos = activeLeads.filter(
-    (lead) => !['Fechado', 'Perdido'].includes(lead.status)
+    (lead) => !['Fechado', 'Perdido'].includes(lead.status ?? '')
   ).length;
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
@@ -1094,7 +1092,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const conversionRate = calculateConversionRate(activeLeads, filteredContracts);
 
   const leadStatusData = getLeadStatusDistribution(
-    activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status)),
+    activeLeads.filter((lead) => !['Fechado', 'Perdido'].includes(lead.status ?? '')),
   );
   const operadoraData = getOperadoraDistribution(filteredContracts);
   const getContractStartDate = useCallback((contract?: Contract | null) => {
@@ -1555,18 +1553,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     if (remindersToSchedule.length === 0) return true;
 
-    const reminderDates = remindersToSchedule.map((item) => item.reminderDate.getTime());
-    const minDate = new Date(Math.min(...reminderDates)).toISOString();
-    const maxDate = new Date(Math.max(...reminderDates)).toISOString();
     const contractIds = Array.from(new Set(remindersToSchedule.map((item) => item.contract.id)));
 
     const { data: existingReminders, error: fetchError } = await supabase
       .from('reminders')
       .select('id, contract_id, data_lembrete, tipo')
       .eq('tipo', 'Reajuste')
-      .in('contract_id', contractIds)
-      .gte('data_lembrete', minDate)
-      .lte('data_lembrete', maxDate);
+      .in('contract_id', contractIds);
 
     if (fetchError) {
       console.error('Erro ao verificar lembretes de reajuste existentes:', fetchError);
@@ -1574,11 +1567,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     }
 
     const existingKeys = new Set(
-      (existingReminders || []).map((reminder) => `${reminder.contract_id ?? ''}|${reminder.data_lembrete}`),
+      (existingReminders || []).map((reminder) => reminder.contract_id ?? ''),
     );
 
     const remindersToInsert = remindersToSchedule
-      .filter((item) => !existingKeys.has(`${item.contract.id}|${item.reminderDate.toISOString()}`))
+      .filter((item) => !existingKeys.has(item.contract.id))
       .map((item) => ({
         contract_id: item.contract.id,
         lead_id: item.contract.lead_id ?? null,
@@ -1592,7 +1585,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     if (remindersToInsert.length === 0) return true;
 
-    const { error: insertError } = await supabase.from('reminders').insert(remindersToInsert);
+    const { error: insertError } = await supabase
+      .from('reminders')
+      .upsert(remindersToInsert, { onConflict: 'contract_id' });
     if (insertError) {
       console.error('Erro ao criar lembretes de reajuste:', insertError);
       return false;

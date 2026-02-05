@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle, Sparkles, Scissors } from 'lucide-react';
+import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle, Sparkles, Scissors, MessageSquare } from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 
@@ -46,6 +46,11 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [quickReplySearch, setQuickReplySearch] = useState('');
+  const [quickReplyTitle, setQuickReplyTitle] = useState('');
+  const [quickReplyMessage, setQuickReplyMessage] = useState('');
+  const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [rewriteTone, setRewriteTone] = useState('claro');
   const [rewriteOriginal, setRewriteOriginal] = useState('');
@@ -88,6 +93,31 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     if (!query) return source;
     return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
   }, [contacts, contactSearch]);
+
+  const filteredQuickReplies = useMemo(() => {
+    const query = quickReplySearch.trim().toLowerCase();
+    if (!query) return quickReplies;
+    return quickReplies.filter(
+      (reply) => reply.title.toLowerCase().includes(query) || reply.message.toLowerCase().includes(query),
+    );
+  }, [quickReplies, quickReplySearch]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('whatsapp_quick_replies');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as Array<{ id: string; title: string; message: string }>;
+      if (Array.isArray(parsed)) {
+        setQuickReplies(parsed);
+      }
+    } catch {
+      setQuickReplies([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('whatsapp_quick_replies', JSON.stringify(quickReplies));
+  }, [quickReplies]);
 
   const splitRewriteChunks = (text: string) =>
     text
@@ -540,6 +570,33 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     }
   };
 
+  const handleAddQuickReply = () => {
+    const title = quickReplyTitle.trim();
+    const content = quickReplyMessage.trim();
+    if (!title || !content) {
+      alert('Preencha titulo e mensagem.');
+      return;
+    }
+    const newReply = {
+      id: `qr-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      title,
+      message: content,
+    };
+    setQuickReplies((prev) => [newReply, ...prev]);
+    setQuickReplyTitle('');
+    setQuickReplyMessage('');
+  };
+
+  const handleUseQuickReply = (reply: { message: string }) => {
+    setMessage(reply.message);
+    setShowQuickReplies(false);
+    setQuickReplySearch('');
+  };
+
+  const handleRemoveQuickReply = (replyId: string) => {
+    setQuickReplies((prev) => prev.filter((reply) => reply.id !== replyId));
+  };
+
   const handleOpenRewrite = () => {
     const draft = message.trim();
     if (!draft) {
@@ -707,6 +764,92 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
 
   return (
     <div className="border-t bg-white relative">
+      {showQuickReplies && (
+        <div className="absolute bottom-full left-4 mb-2 w-96 max-w-[90vw] bg-white border rounded-lg shadow-lg z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <span className="text-sm font-medium">Respostas rapidas</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-gray-100"
+              onClick={() => setShowQuickReplies(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-3 space-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={quickReplySearch}
+                onChange={(e) => setQuickReplySearch(e.target.value)}
+                placeholder="Buscar resposta..."
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            <div className="max-h-40 overflow-y-auto border rounded-md">
+              {filteredQuickReplies.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-500">Nenhuma resposta rapida encontrada.</div>
+              ) : (
+                filteredQuickReplies.map((reply) => (
+                  <div key={reply.id} className="px-3 py-2 border-b last:border-b-0">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-slate-800 text-left"
+                        onClick={() => handleUseQuickReply(reply)}
+                      >
+                        {reply.title}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-red-500 hover:text-red-600"
+                        onClick={() => handleRemoveQuickReply(reply.id)}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">{reply.message}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Nova resposta</span>
+                <button
+                  type="button"
+                  className="text-xs text-green-700"
+                  onClick={() => setQuickReplyMessage(message)}
+                >
+                  Usar texto atual
+                </button>
+              </div>
+              <input
+                type="text"
+                value={quickReplyTitle}
+                onChange={(e) => setQuickReplyTitle(e.target.value)}
+                placeholder="Titulo"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <textarea
+                value={quickReplyMessage}
+                onChange={(e) => setQuickReplyMessage(e.target.value)}
+                placeholder="Mensagem"
+                className="w-full h-20 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-sm rounded-md bg-green-600 text-white"
+                onClick={handleAddQuickReply}
+              >
+                Salvar resposta rapida
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showRewriteModal && (
         <div className="absolute bottom-full left-4 mb-2 w-[520px] max-w-[90vw] bg-white border rounded-lg shadow-lg z-20">
           <div className="flex items-center justify-between px-3 py-2 border-b">
@@ -1079,6 +1222,16 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
             type="button"
           >
             <Smile className="w-5 h-5" />
+          </button>
+
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            disabled={isSending}
+            onClick={() => setShowQuickReplies((prev) => !prev)}
+            type="button"
+            title="Respostas rapidas"
+          >
+            <MessageSquare className="w-5 h-5" />
           </button>
 
           <button

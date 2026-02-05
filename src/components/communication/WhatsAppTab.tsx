@@ -562,6 +562,7 @@ export default function WhatsAppTab() {
         direction: message.direction,
         ack_status: null,
         created_at: message.created_at || timestamp,
+        payload: message.payload,
       };
 
       setMessages((prev) => {

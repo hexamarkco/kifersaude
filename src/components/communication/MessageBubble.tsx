@@ -129,7 +129,7 @@ export function MessageBubble({
   };
 
   const payloadData = payload as any;
-  const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media;
+  const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media || payloadData;
   const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
   const imageFullSrc =
     payloadData?.image?.link ||
@@ -147,7 +147,7 @@ export function MessageBubble({
   }, [audioMediaUrl]);
 
   const loadAudioMedia = async () => {
-    const mediaId = audioPayload?.id;
+    const mediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id;
     if (!mediaId || audioMediaLoading) return;
     setAudioMediaLoading(true);
     try {
@@ -361,7 +361,19 @@ export function MessageBubble({
               <div className="flex-1">
                 {audioUrl ? (
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer"
+                      onClick={(event) => {
+                        const target = event.currentTarget;
+                        const rect = target.getBoundingClientRect();
+                        const clickX = event.clientX - rect.left;
+                        const percent = rect.width ? clickX / rect.width : 0;
+                        const audio = audioRef.current;
+                        if (audio && audioDuration) {
+                          audio.currentTime = audioDuration * Math.min(Math.max(percent, 0), 1);
+                        }
+                      }}
+                    >
                       <div
                         className="h-full bg-green-500"
                         style={{ width: audioDuration ? `${(audioCurrentTime / audioDuration) * 100}%` : '0%' }}

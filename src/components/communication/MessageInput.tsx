@@ -12,6 +12,7 @@ export type SentMessagePayload = {
   timestamp: string;
   direction: 'outbound';
   created_at: string;
+  payload?: any;
 };
 
 interface MessageInputProps {
@@ -282,6 +283,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
             timestamp: sentAt,
             direction: 'outbound',
             created_at: sentAt,
+            payload: response,
           };
 
           if (onCancelReply) onCancelReply();

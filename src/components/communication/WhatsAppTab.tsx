@@ -481,14 +481,15 @@ export default function WhatsAppTab() {
       console.error('Error marking messages as read:', error);
     }
 
-    setUnreadByChatId((prev) => {
-      const next = new Map(prev);
-      unreadInbound.forEach((message) => {
-        const current = next.get(message.chat_id) ?? 0;
-        next.set(message.chat_id, Math.max(0, current - 1));
-      });
-      return next;
-    });
+    setChats((prev) =>
+      prev.map((chat) => {
+        const variants = getChatIdVariants(chat);
+        const matches = unreadInbound.filter((message) => variants.includes(message.chat_id)).length;
+        if (!matches) return chat;
+        const current = chat.unread_count ?? 0;
+        return { ...chat, unread_count: Math.max(0, current - matches) };
+      }),
+    );
   };
 
   const handleReply = (messageId: string, body: string, from: string) => {

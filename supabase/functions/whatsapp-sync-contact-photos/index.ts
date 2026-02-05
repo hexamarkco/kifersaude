@@ -184,15 +184,19 @@ Deno.serve(async (req) => {
           const filePath = `contacts/${fileName}.${extension}`;
           const fileData = new Uint8Array(await photoResponse.arrayBuffer());
 
-          const uploadResult = await supabaseAdmin
-            .storage
-            .from(BUCKET_NAME)
-            .upload(filePath, fileData, {
-              contentType: contentType ?? 'image/jpeg',
-              upsert: true,
-            });
+          const storageBucket = supabaseAdmin.storage?.from(BUCKET_NAME);
+          if (!storageBucket) {
+            console.error('[whatsapp-sync-contact-photos] Storage bucket unavailable');
+            errors += 1;
+            continue;
+          }
 
-          if (uploadResult.error) {
+          const uploadResult = await storageBucket.upload(filePath, fileData, {
+            contentType: contentType ?? 'image/jpeg',
+            upsert: true,
+          });
+
+          if (!uploadResult || uploadResult.error) {
             errors += 1;
             continue;
           }

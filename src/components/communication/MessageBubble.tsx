@@ -207,19 +207,22 @@ export function MessageBubble({
     }
 
     if (hasMedia && type?.startsWith('image')) {
+      const imageUrl = payloadData?.image?.link || payloadData?.media?.link || payloadData?.media?.url;
       return (
         <div className="space-y-2">
-          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-                📷
-              </div>
-              <div>
-                <div className="font-medium">Imagem</div>
-                <div className="text-xs">Clique para visualizar</div>
+          {imageUrl ? (
+            <img src={imageUrl} alt="Imagem" className="max-w-full rounded" loading="lazy" />
+          ) : (
+            <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">📷</div>
+                <div>
+                  <div className="font-medium">Imagem</div>
+                  <div className="text-xs">Clique para visualizar</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           {body && <div className="text-sm">{body}</div>}
         </div>
       );

@@ -466,9 +466,20 @@ export default function WhatsAppTab() {
       return leadNamesByPhone.get(phone)!;
     }
 
-    const contact = contactsById.get(normalizeChatId(chat.id) || chat.id) || contactsById.get(chat.id);
-    if (contact?.saved && contact.name) {
-      return contact.name;
+    const contactCandidates = [
+      normalizeChatId(chat.id) || chat.id,
+      chat.id,
+      chat.id.endsWith('@s.whatsapp.net') ? chat.id.replace(/@s\.whatsapp\.net$/i, '@c.us') : null,
+      chat.id.endsWith('@c.us') ? chat.id.replace(/@c\.us$/i, '@s.whatsapp.net') : null,
+      chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : null,
+      chat.lid ?? null,
+    ].filter((value): value is string => Boolean(value));
+
+    for (const candidate of contactCandidates) {
+      const contact = contactsById.get(candidate);
+      if (contact?.saved && contact.name) {
+        return contact.name;
+      }
     }
 
     if (phone) {

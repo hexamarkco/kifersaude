@@ -35,6 +35,9 @@ interface MessageInputProps {
 export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMessage, onCancelReply, editMessage, onCancelEdit }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [audioPreviewBlob, setAudioPreviewBlob] = useState<Blob | null>(null);
+  const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -53,8 +56,15 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const imageInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingCancelledRef = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserDataRef = useRef<Uint8Array | null>(null);
+  const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
 
@@ -76,14 +86,23 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+      }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
-  }, [previewUrl]);
+  }, [previewUrl, audioPreviewUrl]);
 
   const handleTyping = () => {
     if (typingTimeoutRef.current) {
@@ -278,6 +297,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
 
   const startRecording = async () => {
     try {
+      recordingCancelledRef.current = false;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -290,7 +310,6 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
       mediaRecorder.onstop = async () => {
         const durationSeconds = recordingTime;
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-        const audioFile = new File([audioBlob], 'voice.ogg', { type: 'audio/ogg' });
 
         setIsRecording(false);
         setRecordingTime(0);
@@ -300,37 +319,22 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         if (recordingIntervalRef.current) {
           clearInterval(recordingIntervalRef.current);
         }
-
-        try {
-          setIsSending(true);
-          const response = await sendMediaMessage(chatId, audioFile, {
-            quotedMessageId: replyToMessage?.id,
-            seconds: durationSeconds,
-            recordingTime: durationSeconds,
-            asVoice: true,
-          });
-
-          const sentAt = new Date().toISOString();
-          const audioPayload: SentMessagePayload = {
-            id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            chat_id: chatId,
-            body: '[Mensagem de voz]',
-            type: 'voice',
-            has_media: true,
-            timestamp: sentAt,
-            direction: 'outbound',
-            created_at: sentAt,
-            payload: response,
-          };
-
-          if (onCancelReply) onCancelReply();
-          if (onMessageSent) onMessageSent(audioPayload);
-        } catch (error) {
-          console.error('Erro ao enviar áudio:', error);
-          alert('Erro ao enviar mensagem de voz');
-        } finally {
-          setIsSending(false);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
         }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
+
+        if (recordingCancelledRef.current) {
+          audioChunksRef.current = [];
+          return;
+        }
+
+        const objectUrl = URL.createObjectURL(audioBlob);
+        setAudioPreviewBlob(audioBlob);
+        setAudioPreviewUrl(objectUrl);
+        setAudioPreviewDuration(durationSeconds);
       };
 
       mediaRecorder.start();
@@ -343,6 +347,50 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      mediaSourceRef.current = source;
+      analyserDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+
+      const drawWave = () => {
+        const canvas = canvasRef.current;
+        const analyserNode = analyserRef.current;
+        const dataArray = analyserDataRef.current;
+        if (!canvas || !analyserNode || !dataArray) return;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        const { width, height } = canvas;
+        analyserNode.getByteTimeDomainData(dataArray);
+        context.clearRect(0, 0, width, height);
+        context.fillStyle = '#e2e8f0';
+        context.fillRect(0, 0, width, height);
+        context.lineWidth = 2;
+        context.strokeStyle = '#22c55e';
+        context.beginPath();
+        const sliceWidth = width / dataArray.length;
+        let x = 0;
+        for (let i = 0; i < dataArray.length; i += 1) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+          if (i === 0) {
+            context.moveTo(x, y);
+          } else {
+            context.lineTo(x, y);
+          }
+          x += sliceWidth;
+        }
+        context.lineTo(width, height / 2);
+        context.stroke();
+        animationFrameRef.current = requestAnimationFrame(drawWave);
+      };
+
+      drawWave();
+
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
       alert('Erro ao acessar o microfone');
@@ -352,6 +400,71 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      recordingCancelledRef.current = true;
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+    }
+  };
+
+  const clearAudioPreview = () => {
+    if (audioPreviewUrl) {
+      URL.revokeObjectURL(audioPreviewUrl);
+    }
+    setAudioPreviewUrl(null);
+    setAudioPreviewBlob(null);
+    setAudioPreviewDuration(0);
+  };
+
+  const handleSendAudioPreview = async () => {
+    if (!audioPreviewBlob || isSending) return;
+    try {
+      setIsSending(true);
+      const audioFile = new File([audioPreviewBlob], 'voice.ogg', { type: 'audio/ogg' });
+      const durationSeconds = audioPreviewDuration || recordingTime;
+      const response = await sendMediaMessage(chatId, audioFile, {
+        quotedMessageId: replyToMessage?.id,
+        seconds: durationSeconds,
+        recordingTime: durationSeconds,
+        asVoice: true,
+      });
+
+      const sentAt = new Date().toISOString();
+      const audioPayload: SentMessagePayload = {
+        id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        chat_id: chatId,
+        body: '[Mensagem de voz]',
+        type: 'voice',
+        has_media: true,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        payload: response,
+      };
+
+      clearAudioPreview();
+      if (onCancelReply) onCancelReply();
+      if (onMessageSent) onMessageSent(audioPayload);
+    } catch (error) {
+      console.error('Erro ao enviar áudio:', error);
+      alert('Erro ao enviar mensagem de voz');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -739,28 +852,47 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
             )}
           </div>
 
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => {
-              setMessage(e.target.value);
-              handleTyping();
-            }}
-            onKeyPress={handleKeyPress}
-            placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem"}
-            className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
-            rows={1}
-            disabled={isSending || isRecording}
-            style={{
-              height: 'auto',
-              minHeight: '40px',
-            }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-            }}
-          />
+          {isRecording ? (
+            <div className="flex-1 px-2 py-2">
+              <canvas ref={canvasRef} width={220} height={32} className="w-full h-8 rounded" />
+            </div>
+          ) : audioPreviewUrl ? (
+            <div className="flex-1 px-2 py-2">
+              <audio
+                src={audioPreviewUrl}
+                controls
+                preload="metadata"
+                className="w-full h-8"
+                onLoadedMetadata={(event) => {
+                  const target = event.currentTarget;
+                  setAudioPreviewDuration(target.duration || 0);
+                }}
+              />
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                handleTyping();
+              }}
+              onKeyPress={handleKeyPress}
+              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem"}
+              className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
+              rows={1}
+              disabled={isSending || isRecording}
+              style={{
+                height: 'auto',
+                minHeight: '40px',
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+              }}
+            />
+          )}
         </div>
 
         {isRecording ? (
@@ -772,10 +904,37 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
               </span>
             </div>
             <button
+              onClick={cancelRecording}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+              title="Cancelar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <button
               onClick={stopRecording}
               className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              title="Parar"
             >
               <StopCircle className="w-6 h-6" />
+            </button>
+          </div>
+        ) : audioPreviewUrl ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={clearAudioPreview}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+              title="Cancelar"
+              disabled={isSending}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleSendAudioPreview}
+              disabled={isSending}
+              className="p-2 text-white bg-green-500 hover:bg-green-600 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Enviar audio"
+            >
+              <Send className="w-5 h-5" />
             </button>
           </div>
         ) : message.trim() || selectedFile ? (

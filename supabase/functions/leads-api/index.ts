@@ -1744,20 +1744,28 @@ async function processFlowJobs({
   lookups,
   settings,
   logWithContext,
+  leadId,
 }: {
   supabase: ReturnType<typeof createClient>;
   lookups: LeadLookupMaps;
   settings: AutoContactFlowSettings;
   logWithContext: (message: string, details?: Record<string, unknown>) => void;
+  leadId?: string;
 }): Promise<void> {
   const nowIso = new Date().toISOString();
-  const { data: jobs, error: jobsError } = await supabase
+  let jobsQuery = supabase
     .from('auto_contact_flow_jobs')
     .select('*')
     .eq('status', 'pending')
     .lte('scheduled_at', nowIso)
     .order('scheduled_at', { ascending: true })
     .limit(25);
+
+  if (leadId) {
+    jobsQuery = jobsQuery.eq('lead_id', leadId);
+  }
+
+  const { data: jobs, error: jobsError } = await jobsQuery;
 
   if (jobsError) {
     logWithContext('Erro ao buscar jobs pendentes', { error: jobsError.message });
@@ -2302,6 +2310,14 @@ async function runAutoContactFlowEngine({
       lead,
       flow: matchingFlow,
       scheduling: settings.scheduling,
+    });
+
+    await processFlowJobs({
+      supabase,
+      lookups,
+      settings,
+      logWithContext,
+      leadId: lead.id,
     });
 
     logWithContext('Etapas do fluxo agendadas', {

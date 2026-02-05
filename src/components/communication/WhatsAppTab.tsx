@@ -1168,22 +1168,33 @@ export default function WhatsAppTab() {
                         Desmutar
                       </button>
                     ) : (
-                      muteOptions.map((option) => (
+                      <div className="relative group">
                         <button
-                          key={option.label}
                           type="button"
-                          className="w-full px-3 py-2 text-left hover:bg-slate-50"
-                          onClick={() => {
-                            if (target) {
-                              const until = new Date(Date.now() + option.ms).toISOString();
-                              updateChatMute(target.id, until);
-                            }
-                            setChatMenu(null);
-                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between"
                         >
-                          Mutar por {option.label}
+                          <span>Mutar</span>
+                          <span className="text-xs text-slate-400">›</span>
                         </button>
-                      ))
+                        <div className="absolute left-full top-0 ml-2 hidden min-w-[160px] rounded-lg border border-slate-200 bg-white shadow-lg group-hover:block">
+                          {muteOptions.map((option) => (
+                            <button
+                              key={option.label}
+                              type="button"
+                              className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                              onClick={() => {
+                                if (target) {
+                                  const until = new Date(Date.now() + option.ms).toISOString();
+                                  updateChatMute(target.id, until);
+                                }
+                                setChatMenu(null);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );

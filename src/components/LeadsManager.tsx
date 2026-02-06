@@ -2101,8 +2101,26 @@ export default function LeadsManager({
           lead={reminderLead}
           onClose={closeReminderScheduler}
           onScheduled={(_details) => {
+            if (!reminderLead) {
+              closeReminderScheduler();
+              return;
+            }
+
+            setLeads((current) =>
+              current.map((lead) =>
+                lead.id === reminderLead.id
+                  ? { ...lead, proximo_retorno: _details.reminderDate }
+                  : lead,
+              ),
+            );
+
+            setNextReminderByLeadId((current) => {
+              const next = new Map(current);
+              next.set(reminderLead.id, _details.reminderDate);
+              return next;
+            });
+
             closeReminderScheduler();
-            loadLeads();
           }}
           promptMessage={
             reminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta enviada?'

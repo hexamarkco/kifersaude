@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useSearchParams } from 'react-router-dom';
 import { supabase, Lead, Contract, fetchAllPages } from '../lib/supabase';
-import { parseDateWithoutTimezone, parseDateWithoutTimezoneAsDate } from '../lib/dateUtils';
+import {
+  getDateKey,
+  parseDateWithoutTimezone,
+  parseDateWithoutTimezoneAsDate,
+  SAO_PAULO_TIMEZONE,
+} from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import type { TabNavigationOptions } from '../types/navigation';
 import {
@@ -11,9 +16,10 @@ import {
   FileText,
   DollarSign,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   Target,
   Activity,
-  Cake,
   Filter,
   RefreshCw,
   Clock,
@@ -131,8 +137,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     return '';
   });
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [daysAhead, setDaysAhead] = useState(30);
-  const [timelineDirection, setTimelineDirection] = useState<'future' | 'past'>('future');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -1151,23 +1162,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [getContractStartDate],
   );
 
-  const getBirthdaysWithinRange = useCallback(
-    (daysAheadValue: number, direction: 'future' | 'past') => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const windowStart =
-        direction === 'future'
-          ? today
-          : new Date(today.getTime() - daysAheadValue * 24 * 60 * 60 * 1000);
-      windowStart.setHours(0, 0, 0, 0);
-
-      const windowEnd =
-        direction === 'future'
-          ? new Date(today.getTime() + daysAheadValue * 24 * 60 * 60 * 1000)
-          : today;
-      windowEnd.setHours(23, 59, 59, 999);
-
+  const buildBirthdayEventsInRange = useCallback(
+    (rangeStart: Date, rangeEnd: Date) => {
       const birthdays: Array<{
         nome: string;
         data_nascimento: string;
@@ -1176,34 +1172,27 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         contract?: Contract;
         holder?: Holder;
         isPJ: boolean;
+        nextBirthday: Date;
       }> = [];
 
-      const activeContractIds = activeContracts.map((c) => c.id);
+      const activeContractIds = new Set(activeContracts.map((c) => c.id));
       const contractsMap = new Map(activeContracts.map((c) => [c.id, c]));
       const holdersByContract = new Map(holdersVisibleWithFilters.map((h) => [h.contract_id, h]));
+      const startYear = rangeStart.getFullYear();
+      const endYear = rangeEnd.getFullYear();
 
       holdersVisibleWithFilters.forEach((holder) => {
-        if (!activeContractIds.includes(holder.contract_id)) return;
+        if (!activeContractIds.has(holder.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(holder.data_nascimento);
         if (!birthDate) return;
 
-        const futureBirthday = new Date(today);
-        futureBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-        futureBirthday.setHours(0, 0, 0, 0);
+        for (let year = startYear; year <= endYear; year += 1) {
+          const birthdayDate = new Date(year, birthDate.getMonth(), birthDate.getDate());
+          birthdayDate.setHours(0, 0, 0, 0);
 
-        const previousBirthday = new Date(futureBirthday);
-        if (futureBirthday > today) {
-          previousBirthday.setFullYear(today.getFullYear() - 1);
-        }
+          if (birthdayDate < rangeStart || birthdayDate > rangeEnd) continue;
 
-        if (futureBirthday < today) {
-          futureBirthday.setFullYear(today.getFullYear() + 1);
-        }
-
-        const selectedBirthday = direction === 'future' ? futureBirthday : previousBirthday;
-
-        if (selectedBirthday >= windowStart && selectedBirthday <= windowEnd) {
           birthdays.push({
             nome: holder.nome_completo,
             data_nascimento: holder.data_nascimento,
@@ -1211,33 +1200,25 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             contract_id: holder.contract_id,
             contract: contractsMap.get(holder.contract_id),
             isPJ: Boolean(holder?.cnpj),
+            nextBirthday: birthdayDate,
           });
         }
       });
 
       dependentsVisibleWithFilters.forEach((dependent) => {
-        if (!activeContractIds.includes(dependent.contract_id)) return;
+        if (!activeContractIds.has(dependent.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(dependent.data_nascimento);
         if (!birthDate) return;
 
-        const futureBirthday = new Date(today);
-        futureBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-        futureBirthday.setHours(0, 0, 0, 0);
+        for (let year = startYear; year <= endYear; year += 1) {
+          const birthdayDate = new Date(year, birthDate.getMonth(), birthDate.getDate());
+          birthdayDate.setHours(0, 0, 0, 0);
 
-        const previousBirthday = new Date(futureBirthday);
-        if (futureBirthday > today) {
-          previousBirthday.setFullYear(today.getFullYear() - 1);
-        }
+          if (birthdayDate < rangeStart || birthdayDate > rangeEnd) continue;
 
-        if (futureBirthday < today) {
-          futureBirthday.setFullYear(today.getFullYear() + 1);
-        }
-
-        const selectedBirthday = direction === 'future' ? futureBirthday : previousBirthday;
-
-        if (selectedBirthday >= windowStart && selectedBirthday <= windowEnd) {
           const holder = holdersByContract.get(dependent.contract_id);
+
           birthdays.push({
             nome: dependent.nome_completo,
             data_nascimento: dependent.data_nascimento,
@@ -1246,41 +1227,12 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             contract: contractsMap.get(dependent.contract_id),
             holder,
             isPJ: Boolean(holder?.cnpj),
+            nextBirthday: birthdayDate,
           });
         }
       });
 
-      return birthdays
-        .map((birthday) => {
-          const birthDate = parseDateWithoutTimezoneAsDate(birthday.data_nascimento);
-          if (!birthDate) return null;
-
-          const referenceBirthday = new Date(today);
-          referenceBirthday.setFullYear(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-          referenceBirthday.setHours(0, 0, 0, 0);
-
-          if (direction === 'future' && referenceBirthday < today) {
-            referenceBirthday.setFullYear(today.getFullYear() + 1);
-          }
-
-          if (direction === 'past' && referenceBirthday > today) {
-            referenceBirthday.setFullYear(today.getFullYear() - 1);
-          }
-
-          const diasRestantes = Math.ceil(
-            (referenceBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-          );
-
-          return {
-            ...birthday,
-            diasRestantes,
-            nextBirthday: referenceBirthday,
-          };
-        })
-        .filter((birthday): birthday is NonNullable<typeof birthday> => birthday !== null)
-        .sort((a, b) =>
-          direction === 'future' ? a.diasRestantes - b.diasRestantes : b.diasRestantes - a.diasRestantes,
-        );
+      return birthdays.sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
     },
     [activeContracts, dependentsVisibleWithFilters, holdersVisibleWithFilters],
   );
@@ -1302,116 +1254,90 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [],
   );
 
-  const adjustmentsInRange = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  type AdjustmentItem = {
+    id: string;
+    date: Date;
+    tipo: 'idade' | 'anual';
+    contract?: Contract;
+    personName?: string;
+    role?: string;
+    age?: number;
+  };
 
-    const windowStart =
-      timelineDirection === 'future'
-        ? today
-        : new Date(today.getTime() - daysAhead * 24 * 60 * 60 * 1000);
-    windowStart.setHours(0, 0, 0, 0);
+  const buildAdjustmentEventsInRange = useCallback(
+    (rangeStart: Date, rangeEnd: Date) => {
+      const adjustments: AdjustmentItem[] = [];
+      const contractsMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
+      const startYear = rangeStart.getFullYear();
+      const endYear = rangeEnd.getFullYear();
 
-    const windowEnd =
-      timelineDirection === 'future'
-        ? new Date(today.getTime() + daysAhead * 24 * 60 * 60 * 1000)
-        : today;
-    windowEnd.setHours(23, 59, 59, 999);
+      const evaluateBirthdayAdjustment = (
+        person: Holder | Dependent,
+        role: 'Titular' | 'Dependente',
+      ) => {
+        const contract = contractsMap.get(person.contract_id);
+        if (!contract) return;
 
-    type AdjustmentItem = {
-      id: string;
-      date: Date;
-      tipo: 'idade' | 'anual';
-      contract?: Contract;
-      personName?: string;
-      role?: string;
-      age?: number;
-    };
+        const contractStartDate = getContractStartDate(contract);
 
-    const adjustments: AdjustmentItem[] = [];
+        const birthDate = parseDateWithoutTimezoneAsDate(person.data_nascimento);
+        if (!birthDate) return;
 
-    const contractsMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
-
-    const evaluateBirthdayAdjustment = (
-      person: Holder | Dependent,
-      role: 'Titular' | 'Dependente',
-    ) => {
-      const contract = contractsMap.get(person.contract_id);
-      if (!contract) return;
-
-      const contractStartDate = getContractStartDate(contract);
-
-      const birthDate = parseDateWithoutTimezoneAsDate(person.data_nascimento);
-      if (!birthDate) return;
-
-      const candidateDates = ageAdjustmentMilestones
-        .map((age) => {
+        ageAdjustmentMilestones.forEach((age) => {
           const targetDate = new Date(birthDate);
           targetDate.setFullYear(birthDate.getFullYear() + age);
           targetDate.setHours(0, 0, 0, 0);
-          return { age, date: targetDate };
-        })
-        .filter(({ date }) => {
-          if (date > windowEnd || date < windowStart) return false;
-          if (contractStartDate && date <= contractStartDate) return false;
-          return true;
+
+          if (targetDate < rangeStart || targetDate > rangeEnd) return;
+          if (contractStartDate && targetDate <= contractStartDate) return;
+
+          adjustments.push({
+            id: `${person.id}-${age}`,
+            date: targetDate,
+            tipo: 'idade',
+            contract,
+            personName: 'nome_completo' in person ? person.nome_completo : undefined,
+            role,
+            age,
+          });
         });
+      };
 
-      if (candidateDates.length === 0) return;
+      holdersVisibleWithFilters.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
+      dependentsVisibleWithFilters.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
 
-      const selected = candidateDates.reduce((acc, curr) => {
-        if (timelineDirection === 'future') {
-          return !acc || curr.date < acc.date ? curr : acc;
+      activeContracts.forEach((contract) => {
+        if (!contract.mes_reajuste) return;
+
+        const contractStartDate = getContractStartDate(contract);
+        const monthIndex = contract.mes_reajuste - 1;
+
+        for (let year = startYear; year <= endYear; year += 1) {
+          const adjustmentDate = new Date(year, monthIndex, 1);
+          adjustmentDate.setHours(0, 0, 0, 0);
+
+          if (adjustmentDate < rangeStart || adjustmentDate > rangeEnd) continue;
+          if (contractStartDate && adjustmentDate <= contractStartDate) continue;
+
+          adjustments.push({
+            id: `${contract.id}-${year}`,
+            date: adjustmentDate,
+            tipo: 'anual',
+            contract,
+          });
         }
-        return !acc || curr.date > acc.date ? curr : acc;
       });
 
-      adjustments.push({
-        id: `${person.id}-${selected.age}`,
-        date: selected.date,
-        tipo: 'idade',
-        contract,
-        personName: 'nome_completo' in person ? person.nome_completo : undefined,
-        role,
-        age: selected.age,
-      });
-    };
-
-    holdersVisibleWithFilters.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
-    dependentsVisibleWithFilters.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
-
-    activeContracts.forEach((contract) => {
-      if (!contract.mes_reajuste) return;
-
-      const adjustmentDate = getAdjustmentDateForDirection(contract.mes_reajuste, timelineDirection, contract);
-
-      if (!adjustmentDate) {
-        return;
-      }
-
-      if (adjustmentDate >= windowStart && adjustmentDate <= windowEnd) {
-        adjustments.push({
-          id: `${contract.id}-${adjustmentDate.getFullYear()}`,
-          date: adjustmentDate,
-          tipo: 'anual',
-          contract,
-        });
-      }
-    });
-
-    return adjustments.sort((a, b) =>
-      timelineDirection === 'future' ? a.date.getTime() - b.date.getTime() : b.date.getTime() - a.date.getTime(),
-    );
-  }, [
-    activeContracts,
-    daysAhead,
-    getContractStartDate,
-    getAdjustmentDateForDirection,
-    holdersVisibleWithFilters,
-    dependentsVisibleWithFilters,
-    timelineDirection,
-    ageAdjustmentMilestones,
-  ]);
+      return adjustments.sort((a, b) => a.date.getTime() - b.date.getTime());
+    },
+    [
+      activeContracts,
+      ageAdjustmentMilestones,
+      dependentsVisibleWithFilters,
+      getContractStartDate,
+      holdersVisibleWithFilters,
+    ],
+  );
 
   const ensureBirthdayRemindersForToday = useCallback(async (): Promise<boolean> => {
     const today = new Date();
@@ -1596,10 +1522,241 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     return true;
   }, [activeContractsForReminders, getAdjustmentDateForDirection]);
 
-  const upcomingBirthdays = useMemo(
-    () => getBirthdaysWithinRange(daysAhead, timelineDirection),
-    [daysAhead, getBirthdaysWithinRange, timelineDirection],
+  type BirthdayEvent = {
+    nome: string;
+    data_nascimento: string;
+    tipo: 'Titular' | 'Dependente';
+    contract_id: string;
+    contract?: Contract;
+    holder?: Holder;
+    isPJ: boolean;
+    nextBirthday: Date;
+  };
+
+  const calendarMonthRange = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const monthStart = new Date(year, month, 1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(year, month + 1, 0);
+    monthEnd.setHours(23, 59, 59, 999);
+
+    return { monthStart, monthEnd };
+  }, [calendarMonth]);
+
+  const calendarMonthAdjustments = useMemo(
+    () => buildAdjustmentEventsInRange(calendarMonthRange.monthStart, calendarMonthRange.monthEnd),
+    [buildAdjustmentEventsInRange, calendarMonthRange],
   );
+
+  const calendarMonthBirthdays = useMemo<BirthdayEvent[]>(
+    () => buildBirthdayEventsInRange(calendarMonthRange.monthStart, calendarMonthRange.monthEnd),
+    [buildBirthdayEventsInRange, calendarMonthRange],
+  );
+
+  type CalendarEvent =
+    | {
+        id: string;
+        date: Date;
+        kind: 'adjustment';
+        adjustment: AdjustmentItem;
+      }
+    | {
+        id: string;
+        date: Date;
+        kind: 'birthday';
+        birthday: BirthdayEvent;
+      };
+
+  const calendarEvents = useMemo(() => {
+    const events: CalendarEvent[] = [];
+
+    calendarMonthAdjustments.forEach((adjustment) => {
+      events.push({
+        id: `adjustment-${adjustment.id}`,
+        date: adjustment.date,
+        kind: 'adjustment',
+        adjustment,
+      });
+    });
+
+    calendarMonthBirthdays.forEach((birthday, index) => {
+      events.push({
+        id: `birthday-${birthday.contract_id}-${birthday.nome}-${index}`,
+        date: birthday.nextBirthday,
+        kind: 'birthday',
+        birthday,
+      });
+    });
+
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [calendarMonthAdjustments, calendarMonthBirthdays]);
+
+  const calendarEventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+
+    calendarEvents.forEach((event) => {
+      const dateKey = getDateKey(event.date, SAO_PAULO_TIMEZONE);
+      const list = map.get(dateKey) ?? [];
+      list.push(event);
+      map.set(dateKey, list);
+    });
+
+    return map;
+  }, [calendarEvents]);
+
+  const selectedCalendarKey = selectedCalendarDate
+    ? getDateKey(selectedCalendarDate, SAO_PAULO_TIMEZONE)
+    : null;
+  const calendarMonthLabel = useMemo(
+    () =>
+      calendarMonth.toLocaleDateString('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      }),
+    [calendarMonth],
+  );
+  const selectedBaseDate = useMemo(() => {
+    const date = selectedCalendarDate ? new Date(selectedCalendarDate) : new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, [selectedCalendarDate]);
+
+  const calendarViewRange = useMemo(() => {
+    if (calendarView === 'month') {
+      return {
+        start: calendarMonthRange.monthStart,
+        end: calendarMonthRange.monthEnd,
+      };
+    }
+
+    if (calendarView === 'week') {
+      const start = new Date(selectedBaseDate);
+      start.setDate(selectedBaseDate.getDate() - selectedBaseDate.getDay());
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    const start = new Date(selectedBaseDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(selectedBaseDate);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }, [calendarMonthRange, calendarView, selectedBaseDate]);
+
+  const calendarViewEvents = useMemo(() => {
+    const events: CalendarEvent[] = [];
+
+    buildAdjustmentEventsInRange(calendarViewRange.start, calendarViewRange.end).forEach((adjustment) => {
+      events.push({
+        id: `adjustment-${adjustment.id}`,
+        date: adjustment.date,
+        kind: 'adjustment',
+        adjustment,
+      });
+    });
+
+    buildBirthdayEventsInRange(calendarViewRange.start, calendarViewRange.end).forEach((birthday, index) => {
+      events.push({
+        id: `birthday-${birthday.contract_id}-${birthday.nome}-${index}`,
+        date: birthday.nextBirthday,
+        kind: 'birthday',
+        birthday,
+      });
+    });
+
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [buildAdjustmentEventsInRange, buildBirthdayEventsInRange, calendarViewRange]);
+
+  const calendarViewLabel = useMemo(() => {
+    if (calendarView === 'month') {
+      return calendarMonthLabel;
+    }
+
+    if (calendarView === 'week') {
+      const startLabel = calendarViewRange.start.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+      });
+      const endLabel = calendarViewRange.end.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+      });
+      return `Semana de ${startLabel} a ${endLabel}`;
+    }
+
+    if (!selectedCalendarDate) {
+      return 'Selecione um dia';
+    }
+
+    return selectedBaseDate.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+    });
+  }, [calendarMonthLabel, calendarView, calendarViewRange, selectedBaseDate, selectedCalendarDate]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
+    const cells: JSX.Element[] = [];
+
+    for (let i = 0; i < firstDay; i += 1) {
+      cells.push(<div key={`empty-${i}`} className="aspect-square" />);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month, day);
+      date.setHours(0, 0, 0, 0);
+      const dateKey = getDateKey(date, SAO_PAULO_TIMEZONE);
+      const dayEvents = calendarEventsByDate.get(dateKey) ?? [];
+      const isToday = dateKey === todayKey;
+      const isSelected = selectedCalendarKey === dateKey;
+      const kinds = Array.from(new Set(dayEvents.map((event) => event.kind)));
+
+      cells.push(
+        <button
+          key={day}
+          type="button"
+          onClick={() => setSelectedCalendarDate(date)}
+          className={`aspect-square p-2 rounded-lg border transition-all relative focus:outline-none focus:ring-2 focus:ring-teal-500/40 ${
+            isSelected
+              ? 'bg-teal-600 text-white border-teal-600'
+              : isToday
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : dayEvents.length > 0
+                  ? 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                  : 'border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <div className="text-sm font-medium">{day}</div>
+          {kinds.length > 0 && (
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+              {kinds.map((kind) => (
+                <span
+                  key={kind}
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    kind === 'adjustment' ? 'bg-teal-500' : 'bg-pink-500'
+                  } ${isSelected ? 'bg-white' : ''}`}
+                />
+              ))}
+            </div>
+          )}
+        </button>,
+      );
+    }
+
+    return { weekDays, cells };
+  }, [calendarMonth, calendarEventsByDate, selectedCalendarKey]);
+
+  const calendarMonthEventCount = useMemo(() => calendarEvents.length, [calendarEvents]);
 
   useEffect(() => {
     const todayKey = new Date().toISOString().split('T')[0];
@@ -2150,299 +2307,322 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       {!isObserver && (
         <>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-600">
-            <div className="flex items-center gap-2">
-              <span>{timelineDirection === 'future' ? 'Próximos' : 'Últimos'}</span>
-              <select
-                value={daysAhead}
-                onChange={(e) => setDaysAhead(Number(e.target.value))}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-              >
-                {[15, 30, 60].map((days) => (
-                  <option key={days} value={days}>
-                    {days}
-                  </option>
-                ))}
-              </select>
-              <span>dias</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>Exibir</span>
-              <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setTimelineDirection('future')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    timelineDirection === 'future'
-                      ? 'bg-teal-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Futuros
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimelineDirection('past')}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    timelineDirection === 'past'
-                      ? 'bg-teal-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Passados
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Reajustes</h3>
-                  <p className="text-xs text-slate-500">
-                    {timelineDirection === 'future'
-                      ? `Próximos reajustes em até ${daysAhead} dias`
-                      : `Reajustes que aconteceram nos últimos ${daysAhead} dias`}
-                  </p>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Calendar className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <h3 className="text-lg font-semibold">Calendário de eventos</h3>
                 </div>
-                <BadgePercent className="w-5 h-5 text-teal-600" />
+                <p className="text-xs text-slate-500 mt-1">
+                  Reajustes e aniversários agrupados pelo período selecionado.
+                </p>
               </div>
-              {adjustmentsInRange.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {adjustmentsInRange.map((adjustment) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const holder = adjustment.contract
-                      ? holderByContractId.get(adjustment.contract.id) ?? null
-                      : null;
-                    const holderName = holder
-                      ? holder.nome_fantasia || holder.razao_social || holder.nome_completo
-                      : null;
-                    const ageBandIndex = adjustment.age
-                      ? ageBands.findIndex(
-                          (band) => adjustment.age! >= band.min && (band.max === null || adjustment.age! <= band.max),
-                        )
-                      : -1;
-                    const currentAgeBand = ageBandIndex >= 0 ? ageBands[ageBandIndex] : null;
-                    const previousAgeBand = ageBandIndex > 0 ? ageBands[ageBandIndex - 1] : null;
-                    const formatBandLabel = (band: { min: number; max: number | null }) =>
-                      band.max === null ? `${band.min}+` : `${band.min}-${band.max}`;
-                    const diasRestantes = Math.ceil(
-                      (adjustment.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-                    );
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
+                  <span className="text-slate-600">{calendarMonthEventCount}</span>
+                  <span>eventos no mês</span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-teal-500" /> Reajustes
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-pink-500" /> Aniversários
+                </span>
+              </div>
+            </div>
 
-                    const distanceLabel =
-                      timelineDirection === 'future'
-                        ? diasRestantes === 0
-                          ? 'Hoje'
-                          : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`
-                        : `${Math.abs(diasRestantes)} ${Math.abs(diasRestantes) === 1 ? 'dia' : 'dias'} atrás`;
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
+              <div className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCalendarMonth(
+                        new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1),
+                      )
+                    }
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    aria-label="Mês anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-slate-500" />
+                  </button>
+                  <h4 className="text-sm font-semibold text-slate-800 capitalize">
+                    {calendarMonthLabel}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCalendarMonth(
+                        new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1),
+                      )
+                    }
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    aria-label="Próximo mês"
+                  >
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-3">
+                  <span>Use os botões para alternar o período do painel.</span>
+                  <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        setCalendarView('day');
+                        setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                        setSelectedCalendarDate(today);
+                      }}
+                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
+                        calendarView === 'day'
+                          ? 'bg-teal-600 text-white'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedCalendarDate) {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          setSelectedCalendarDate(today);
+                        }
+                        setCalendarView('week');
+                      }}
+                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
+                        calendarView === 'week'
+                          ? 'bg-teal-600 text-white'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Semana
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarView('month')}
+                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
+                        calendarView === 'month'
+                          ? 'bg-teal-600 text-white'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Mês
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {calendarDays.weekDays.map((day) => (
+                    <div key={day} className="text-center text-xs font-semibold text-slate-500 py-1">
+                      {day}
+                    </div>
+                  ))}
+                  {calendarDays.cells}
+                </div>
+              </div>
 
-                    return (
-                      <div
-                        key={adjustment.id}
-                        className="flex flex-col gap-2 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
-                                  adjustment.tipo === 'idade'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                }`}
-                              >
-                                {adjustment.tipo === 'idade' ? 'Reajuste por idade' : 'Reajuste anual'}
-                              </span>
-                              <span className="text-xs text-slate-500">{distanceLabel}</span>
-                            </div>
-                            {adjustment.tipo === 'idade' ? (
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {adjustment.personName}
-                                  {adjustment.age && ` • ${adjustment.age} anos`}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase text-slate-400">Período selecionado</div>
+                    <h4 className="text-sm font-semibold text-slate-900 mt-1">
+                      {calendarViewLabel}
+                    </h4>
+                  </div>
+                  <span className="text-xs text-slate-500">
+                    {calendarViewEvents.length} evento{calendarViewEvents.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+
+                {calendarViewEvents.length === 0 ? (
+                  <div className="text-sm text-slate-500">Nenhum evento no período selecionado.</div>
+                ) : (
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                    {calendarViewEvents.map((event) => {
+                      if (event.kind === 'adjustment') {
+                        const adjustment = event.adjustment;
+                        const holder = adjustment.contract
+                          ? holderByContractId.get(adjustment.contract.id) ?? null
+                          : null;
+                        const holderName = holder
+                          ? holder.nome_fantasia || holder.razao_social || holder.nome_completo
+                          : null;
+                        const ageBandIndex = adjustment.age
+                          ? ageBands.findIndex(
+                              (band) =>
+                                adjustment.age! >= band.min && (band.max === null || adjustment.age! <= band.max),
+                            )
+                          : -1;
+                        const currentAgeBand = ageBandIndex >= 0 ? ageBands[ageBandIndex] : null;
+                        const previousAgeBand = ageBandIndex > 0 ? ageBands[ageBandIndex - 1] : null;
+                        const formatBandLabel = (band: { min: number; max: number | null }) =>
+                          band.max === null ? `${band.min}+` : `${band.min}-${band.max}`;
+
+                        return (
+                          <div
+                            key={event.id}
+                            className="rounded-lg border border-teal-200 bg-white p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1">
+                                <div className="text-xs font-semibold text-teal-700">Reajuste</div>
+                                {adjustment.tipo === 'idade' ? (
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      {adjustment.personName}
+                                      {adjustment.age && ` • ${adjustment.age} anos`}
+                                    </p>
+                                    <p className="text-xs text-slate-600">{adjustment.role}</p>
+                                    {currentAgeBand && previousAgeBand && (
+                                      <p className="text-xs text-slate-600">
+                                        Faixa: {formatBandLabel(previousAgeBand)} {'->'}{' '}
+                                        {formatBandLabel(currentAgeBand)}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm font-semibold text-slate-900">Reajuste contratual</p>
+                                )}
+                                {(adjustment.contract || holderName) && (
+                                  <div className="text-xs text-slate-600">
+                                    {holderName && <p>Titular: {holderName}</p>}
+                                    {adjustment.contract?.modalidade && (
+                                      <p>Modalidade: {adjustment.contract.modalidade}</p>
+                                    )}
+                                    {adjustment.contract?.responsavel && (
+                                      <p>Responsável: {adjustment.contract.responsavel}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right text-xs text-slate-500">
+                                <p className="font-semibold text-slate-900">
+                                  {adjustment.contract?.codigo_contrato}
                                 </p>
-                                <p className="text-xs text-slate-600">{adjustment.role}</p>
-                                {currentAgeBand && previousAgeBand && (
-                                  <p className="text-xs text-slate-600">
-                                    Faixa: {formatBandLabel(previousAgeBand)} {'->'} {formatBandLabel(currentAgeBand)}
-                                  </p>
-                                )}
+                                <p>{adjustment.contract?.operadora}</p>
                               </div>
-                            ) : (
-                              <p className="text-sm font-semibold text-slate-900">Reajuste contratual</p>
-                            )}
-                            {(adjustment.contract || holderName) && (
-                              <div className="text-xs text-slate-600">
-                                {holderName && <p>Titular: {holderName}</p>}
-                                {adjustment.contract?.modalidade && (
-                                  <p>Modalidade: {adjustment.contract.modalidade}</p>
-                                )}
-                                {adjustment.contract?.responsavel && (
-                                  <p>Responsável: {adjustment.contract.responsavel}</p>
-                                )}
-                              </div>
-                            )}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                              <button
+                                type="button"
+                                onClick={() => handleNavigateToContract(adjustment.contract)}
+                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                              >
+                                Ver contrato
+                              </button>
+                              {adjustment.contract?.lead_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleNavigateToLead(adjustment.contract?.lead_id)}
+                                  className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                                >
+                                  Abrir lead
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCreateReminderRequest({
+                                    contractId: adjustment.contract?.id,
+                                    leadId: adjustment.contract?.lead_id,
+                                    title:
+                                      adjustment.tipo === 'idade'
+                                        ? `Reajuste por idade - ${adjustment.personName ?? 'beneficiário'}`
+                                        : `Reajuste anual - ${adjustment.contract?.operadora ?? ''}`,
+                                    description: `Data: ${adjustment.date.toLocaleDateString('pt-BR')}`,
+                                  })
+                                }
+                                className="inline-flex items-center rounded-md border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 shadow-sm transition-colors hover:bg-white"
+                              >
+                                Criar lembrete
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-right text-xs text-slate-500">
-                            <p className="font-semibold text-slate-900">
-                              {adjustment.contract?.codigo_contrato}
-                            </p>
-                            <p>{adjustment.contract?.operadora}</p>
-                            <p>{adjustment.date.toLocaleDateString('pt-BR')}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-teal-100 pt-3">
-                          <button
-                            type="button"
-                            onClick={() => handleNavigateToContract(adjustment.contract)}
-                            className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
-                          >
-                            Ver contrato
-                          </button>
-                          {adjustment.contract?.lead_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleNavigateToLead(adjustment.contract?.lead_id)}
-                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
-                            >
-                              Abrir lead
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCreateReminderRequest({
-                                contractId: adjustment.contract?.id,
-                                leadId: adjustment.contract?.lead_id,
-                                title:
-                                  adjustment.tipo === 'idade'
-                                    ? `Reajuste por idade - ${adjustment.personName ?? 'beneficiário'}`
-                                    : `Reajuste anual - ${adjustment.contract?.operadora ?? ''}`,
-                                description: `Data: ${adjustment.date.toLocaleDateString('pt-BR')}`,
-                              })
-                            }
-                            className="inline-flex items-center rounded-md border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 shadow-sm transition-colors hover:bg-white"
-                          >
-                            Criar lembrete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                  <BadgePercent className="w-12 h-12 mb-2" />
-                  <p className="text-sm">Nenhum reajuste no período selecionado</p>
-                </div>
-              )}
-            </div>
+                        );
+                      }
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {timelineDirection === 'future'
-                    ? `Aniversários Próximos (até ${daysAhead} dias)`
-                    : `Aniversários Recentes (últimos ${daysAhead} dias)`}
-                </h3>
-                <Cake className="w-5 h-5 text-pink-500" />
-              </div>
-              {upcomingBirthdays.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {upcomingBirthdays.map((birthday, index) => {
-                    const diasRestantes = birthday.diasRestantes;
+                      const birthday = event.birthday;
 
-                    return (
-                      <div
-                        key={`${birthday.contract_id}-${birthday.nome}-${index}`}
-                        className="flex flex-col p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg border border-pink-200 hover:shadow-md transition-shadow"
-                      >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex-1">
-                              <p className="font-semibold text-slate-900 text-sm">{birthday.nome}</p>
+                      return (
+                        <div key={event.id} className="rounded-lg border border-pink-200 bg-white p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-xs font-semibold text-pink-700">Aniversário</div>
+                              <p className="text-sm font-semibold text-slate-900 mt-1">{birthday.nome}</p>
                               <p className="text-xs text-slate-600 mt-0.5">
                                 {birthday.tipo}
-                              {birthday.tipo === 'Dependente' && birthday.holder && (
-                                <span className="text-slate-500"> • Titular: {birthday.holder.nome_completo}</span>
-                              )}
-                            </p>
-                            {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
-                              <p className="text-xs text-blue-600 mt-1 font-medium">
-                                {birthday.holder.razao_social || birthday.holder.nome_fantasia}
+                                {birthday.tipo === 'Dependente' && birthday.holder && (
+                                  <span className="text-slate-500">
+                                    {' '}
+                                    • Titular: {birthday.holder.nome_completo}
+                                  </span>
+                                )}
                               </p>
-                            )}
+                              {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
+                                <p className="text-xs text-blue-600 mt-1 font-medium">
+                                  {birthday.holder.razao_social || birthday.holder.nome_fantasia}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right text-xs text-slate-500">
+                              <p className="font-semibold text-slate-900">
+                                {birthday.nextBirthday.toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-pink-600">
-                              {timelineDirection === 'future'
-                                ? diasRestantes === 0
-                                  ? 'Hoje!'
-                                  : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`
-                                : `${Math.abs(diasRestantes)} ${
-                                    Math.abs(diasRestantes) === 1 ? 'dia' : 'dias'
-                                  } atrás`}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {birthday.nextBirthday.toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                        </div>
-                        {birthday.contract && (
-                          <div className="pt-2 border-t border-pink-200">
-                            <p className="text-xs text-slate-600">
-                              <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
-                            </p>
-                            <p className="text-xs text-slate-600">
-                              <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
-                            </p>
-                          </div>
-                        )}
-                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pink-200 pt-3">
                           {birthday.contract && (
+                            <div className="pt-2 border-t border-pink-200 mt-2">
+                              <p className="text-xs text-slate-600">
+                                <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
+                              </p>
+                              <p className="text-xs text-slate-600">
+                                <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
+                              </p>
+                            </div>
+                          )}
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                            {birthday.contract && (
+                              <button
+                                type="button"
+                                onClick={() => handleNavigateToContract(birthday.contract)}
+                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                              >
+                                Ver contrato
+                              </button>
+                            )}
+                            {birthday.contract?.lead_id && (
+                              <button
+                                type="button"
+                                onClick={() => handleNavigateToLead(birthday.contract?.lead_id)}
+                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                              >
+                                Abrir lead
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleNavigateToContract(birthday.contract)}
-                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                              onClick={() =>
+                                handleCreateReminderRequest({
+                                  contractId: birthday.contract?.id,
+                                  leadId: birthday.contract?.lead_id,
+                                  title: `Aniversário de ${birthday.nome}`,
+                                  description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
+                                })
+                              }
+                              className="inline-flex items-center rounded-md border border-pink-200 bg-pink-50 px-3 py-1.5 text-xs font-semibold text-pink-700 shadow-sm transition-colors hover:bg-white"
                             >
-                              Ver contrato
+                              Criar lembrete
                             </button>
-                          )}
-                          {birthday.contract?.lead_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleNavigateToLead(birthday.contract?.lead_id)}
-                              className="inline-flex items-center rounded-md border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
-                            >
-                              Abrir lead
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCreateReminderRequest({
-                                contractId: birthday.contract?.id,
-                                leadId: birthday.contract?.lead_id,
-                                title: `Aniversário de ${birthday.nome}`,
-                                description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
-                              })
-                            }
-                            className="inline-flex items-center rounded-md border border-pink-200 bg-pink-50 px-3 py-1.5 text-xs font-semibold text-pink-700 shadow-sm transition-colors hover:bg-white"
-                          >
-                            Criar lembrete
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                  <Cake className="w-12 h-12 mb-2" />
-                  <p className="text-sm">Nenhum aniversário próximo</p>
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>

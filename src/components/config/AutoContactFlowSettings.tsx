@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlarmClock,
@@ -83,6 +83,7 @@ export default function AutoContactFlowSettings() {
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [templateModalMode, setTemplateModalMode] = useState<'create' | 'edit'>('create');
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft | null>(null);
@@ -96,6 +97,10 @@ export default function AutoContactFlowSettings() {
   const [dailyAutomationLoading, setDailyAutomationLoading] = useState(false);
   const [dailyAutomationError, setDailyAutomationError] = useState<string | null>(null);
   const [flowEditorMode] = useState<'basic' | 'advanced'>('advanced');
+  const autoSaveReadyRef = useRef(false);
+  const autoSaveSkipRef = useRef(false);
+  const autoSaveTimerRef = useRef<number | null>(null);
+  const autoSaveInFlightRef = useRef(false);
 
   useEffect(() => {
     void loadAutoContactSettings();
@@ -316,6 +321,7 @@ export default function AutoContactFlowSettings() {
 
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
+      autoSaveSkipRef.current = true;
       setAutoSendEnabled(normalized.autoSend);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setStatusMessage({ type: 'success', text: 'Template salvo no banco de dados.' });
@@ -349,20 +355,6 @@ export default function AutoContactFlowSettings() {
       return true;
     });
   }, []);
-
-  const handleResetDraft = () => {
-    const savedTemplates = autoContactSettings?.messageTemplates?.length
-      ? autoContactSettings.messageTemplates
-      : DEFAULT_MESSAGE_TEMPLATES;
-
-    setMessageTemplatesDraft(savedTemplates);
-    setFlowDrafts(filterDerivedFlows(autoContactSettings?.flows ?? DEFAULT_AUTO_CONTACT_FLOWS));
-    setAutoSendEnabled(autoContactSettings?.autoSend ?? defaultSettings.autoSend);
-    setSchedulingDraft(autoContactSettings?.scheduling ?? defaultSettings.scheduling);
-    setMonitoringDraft(autoContactSettings?.monitoring ?? defaultSettings.monitoring);
-    setLoggingDraft(autoContactSettings?.logging ?? defaultSettings.logging);
-    setStatusMessage(null);
-  };
 
   const handleSaveFlow = async () => {
     if (!autoContactIntegration) {
@@ -504,6 +496,7 @@ export default function AutoContactFlowSettings() {
 
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
+      autoSaveSkipRef.current = true;
       setAutoSendEnabled(normalized.autoSend);
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setFlowDrafts(filterDerivedFlows(normalized.flows ?? []));
@@ -1001,6 +994,104 @@ export default function AutoContactFlowSettings() {
     void loadDailyAutomationCount();
   }, [loadDailyAutomationCount, lastRefreshAt]);
 
+  useEffect(() => {
+    if (!loadingFlow) {
+      autoSaveReadyRef.current = true;
+      autoSaveSkipRef.current = true;
+    }
+  }, [loadingFlow]);
+
+  const handleAutoSaveSettings = useCallback(
+    async (skipStateUpdates = false) => {
+      if (!autoContactIntegration || !autoSaveReadyRef.current) return;
+      if (autoSaveInFlightRef.current) return;
+
+      autoSaveInFlightRef.current = true;
+      if (!skipStateUpdates) {
+        setAutoSaveState('saving');
+      }
+
+      const currentSettings = autoContactSettings || normalizeAutoContactSettings(null);
+      const newSettings = {
+        ...currentSettings,
+        autoSend: autoSendEnabled,
+        scheduling: schedulingDraft,
+        monitoring: monitoringDraft,
+        logging: loggingDraft,
+      };
+
+      const { data, error } = await configService.updateIntegrationSetting(autoContactIntegration.id, {
+        settings: newSettings,
+      });
+
+      if (error) {
+        if (!skipStateUpdates) {
+          setAutoSaveState('error');
+        }
+      } else if (!skipStateUpdates) {
+        const updatedIntegration = data ?? autoContactIntegration;
+        const normalized = normalizeAutoContactSettings(updatedIntegration.settings);
+
+        setAutoContactIntegration(updatedIntegration);
+        setAutoContactSettings(normalized);
+        autoSaveSkipRef.current = true;
+        setAutoSendEnabled(normalized.autoSend);
+        setSchedulingDraft(normalized.scheduling);
+        setMonitoringDraft(normalized.monitoring);
+        setLoggingDraft(normalized.logging);
+        setAutoSaveState('saved');
+      }
+
+      autoSaveInFlightRef.current = false;
+    },
+    [
+      autoContactIntegration,
+      autoContactSettings,
+      autoSendEnabled,
+      loggingDraft,
+      monitoringDraft,
+      schedulingDraft,
+    ],
+  );
+
+  useEffect(() => {
+    if (!autoContactIntegration || !autoSaveReadyRef.current) return;
+    if (autoSaveSkipRef.current) {
+      autoSaveSkipRef.current = false;
+      return;
+    }
+
+    if (autoSaveTimerRef.current) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      void handleAutoSaveSettings();
+    }, 800);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        window.clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [
+    autoContactIntegration,
+    autoSendEnabled,
+    handleAutoSaveSettings,
+    loggingDraft,
+    monitoringDraft,
+    schedulingDraft,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        window.clearTimeout(autoSaveTimerRef.current);
+        void handleAutoSaveSettings(true);
+      }
+    };
+  }, [handleAutoSaveSettings]);
+
   if (loadingFlow) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-3 text-slate-600">
@@ -1039,7 +1130,15 @@ export default function AutoContactFlowSettings() {
         ) : null}
 
         <div>
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">Visão geral</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Acompanhe o volume de fluxos, etapas e envios automáticos.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase text-slate-500">Fluxos ativos</div>
@@ -1092,7 +1191,40 @@ export default function AutoContactFlowSettings() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="mt-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Configurações globais</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Controle o envio automático, a janela global de disparos e a observabilidade do sistema.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                {autoSaveState === 'saving' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      autoSaveState === 'error'
+                        ? 'bg-red-500'
+                        : autoSaveState === 'saved'
+                          ? 'bg-teal-500'
+                          : 'bg-slate-300'
+                    }`}
+                  />
+                )}
+                <span>
+                  {autoSaveState === 'saving'
+                    ? 'Salvando...'
+                    : autoSaveState === 'saved'
+                      ? 'Salvo automaticamente'
+                      : autoSaveState === 'error'
+                        ? 'Erro ao salvar'
+                        : 'Autosave ativo'}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
               <div className="flex items-center gap-2 text-slate-900 font-medium">
                 <ShieldCheck className="w-5 h-5" />
@@ -1170,7 +1302,7 @@ export default function AutoContactFlowSettings() {
               </label>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4 lg:col-span-2">
               <div className="flex items-center gap-2 text-slate-900 font-medium">
                 <ClipboardList className="w-5 h-5" />
                 Observabilidade e auditoria
@@ -1262,14 +1394,17 @@ export default function AutoContactFlowSettings() {
               </div>
             </div>
           </div>
+          </div>
 
-          <div className="flex items-center gap-2 text-slate-900 font-medium mb-4 pt-4">
-            <MessageCircle className="w-5 h-5" />
-            Templates da automação
+          <div className="mt-10 space-y-1">
+            <h3 className="text-sm font-semibold text-slate-800">Fluxos e templates</h3>
+            <p className="text-xs text-slate-500">
+              Crie, organize e acompanhe os fluxos e templates usados na automação.
+            </p>
           </div>
           {statusMessage && (
             <div
-              className={`p-3 rounded-lg border text-sm flex items-center gap-2 ${
+              className={`mt-4 p-3 rounded-lg border text-sm flex items-center gap-2 ${
                 statusMessage.type === 'success'
                   ? 'bg-green-50 border-green-200 text-green-800'
                   : statusMessage.type === 'warning'
@@ -1286,18 +1421,7 @@ export default function AutoContactFlowSettings() {
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mt-4">
-            <div className="font-semibold mb-2">Variáveis disponíveis:</div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{nome}}'}</code> nome completo</span>
-              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{primeiro_nome}}'}</code> primeiro nome</span>
-              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{origem}}'}</code> origem do lead</span>
-              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{cidade}}'}</code> cidade</span>
-              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{responsavel}}'}</code> responsável</span>
-            </div>
-          </div>
-
-          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4 mt-4">
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-4 mt-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Fluxos de automação</h3>
@@ -1407,7 +1531,7 @@ export default function AutoContactFlowSettings() {
 
             {activeFlow && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+                <div className="max-h-[92vh] w-full max-w-6xl 2xl:max-w-7xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
                   <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <div className="text-xs font-semibold text-slate-400 uppercase">
@@ -1463,35 +1587,40 @@ export default function AutoContactFlowSettings() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Nome do fluxo
-                      </label>
-                      <input
-                        type="text"
-                        value={activeFlow.name}
-                        onChange={(event) => handleUpdateFlow(activeFlow.id, { name: event.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Ex.: Follow-up de contato inicial"
-                      />
-                    </div>
+                  <div className="space-y-6 pt-4">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          Nome do fluxo
+                        </label>
+                        <input
+                          type="text"
+                          value={activeFlow.name}
+                          onChange={(event) => handleUpdateFlow(activeFlow.id, { name: event.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder="Ex.: Follow-up de contato inicial"
+                        />
+                        </div>
 
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <div className="text-xs font-semibold text-slate-500 uppercase">Resumo do fluxo</div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
-                          {activeFlow.triggerStatus ? `Status: ${activeFlow.triggerStatus}` : 'Disparo por condicoes'}
-                        </span>
-                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
-                          Janela {activeFlowScheduling.startHour} - {activeFlowScheduling.endHour}
-                        </span>
-                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
-                          {activeFlow.steps.length} etapa{activeFlow.steps.length === 1 ? '' : 's'}
-                        </span>
-                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
-                          {getFlowConditionPreview(activeFlow)}
-                        </span>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs font-semibold text-slate-500 uppercase">Resumo do fluxo</div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                            {activeFlow.triggerStatus ? `Status: ${activeFlow.triggerStatus}` : 'Disparo por condicoes'}
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                            Janela {activeFlowScheduling.startHour} - {activeFlowScheduling.endHour}
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                            {activeFlow.steps.length} etapa{activeFlow.steps.length === 1 ? '' : 's'}
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5">
+                            {getFlowConditionPreview(activeFlow)}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -2313,6 +2442,17 @@ export default function AutoContactFlowSettings() {
             )}
           </div>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mt-8">
+            <div className="font-semibold mb-2">Variáveis disponíveis:</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{nome}}'}</code> nome completo</span>
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{primeiro_nome}}'}</code> primeiro nome</span>
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{origem}}'}</code> origem do lead</span>
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{cidade}}'}</code> cidade</span>
+              <span><code className="bg-blue-100 px-1.5 py-0.5 rounded">{'{{responsavel}}'}</code> responsável</span>
+            </div>
+          </div>
+
           <div className="border-t border-slate-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -2412,27 +2552,6 @@ export default function AutoContactFlowSettings() {
             )}
           </div>
 
-          <div className="flex items-center justify-end pt-4 border-t border-slate-200">
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleResetDraft}
-                className="inline-flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4" />
-                Descartar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveFlow}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-60 transition-colors shadow-sm"
-                disabled={savingFlow}
-              >
-                {savingFlow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {savingFlow ? 'Salvando...' : 'Salvar automação'}
-              </button>
-            </div>
-          </div>
         </div>
         {isTemplateModalOpen && templateDraft && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">

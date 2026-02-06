@@ -75,14 +75,16 @@ export default function RemindersManagerEnhanced() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
-  const [manualReminderPrompt, setManualReminderPrompt] = useState<{
+  type ManualReminderPrompt = {
     lead: Lead;
     promptMessage: string;
     defaultTitle?: string;
     defaultDescription?: string;
     defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
     defaultPriority?: 'normal' | 'alta' | 'baixa';
-  } | null>(null);
+  };
+
+  const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const [historyModalData, setHistoryModalData] = useState<{
@@ -628,16 +630,19 @@ export default function RemindersManagerEnhanced() {
             onlyIfMatches: reminder.data_lembrete,
           });
 
-          setManualReminderPrompt({
-            lead: leadInfo,
-            promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
-            defaultTitle: reminder.titulo,
-            defaultDescription: reminder.descricao ?? undefined,
-            defaultType: 'Follow-up',
-            defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
-              ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
-              : 'normal',
-          });
+          setManualReminderQueue(prev => [
+            ...prev,
+            {
+              lead: leadInfo,
+              promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+              defaultTitle: reminder.titulo,
+              defaultDescription: reminder.descricao ?? undefined,
+              defaultType: 'Follow-up',
+              defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
+                ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+                : 'normal',
+            },
+          ]);
         }
       }
       setReminders(currentReminders =>
@@ -854,39 +859,59 @@ export default function RemindersManagerEnhanced() {
 
       await Promise.all(leadUpdates);
 
-      if (remindersToUpdate.length === 1) {
-        const [completedReminder] = remindersToUpdate;
-        const leadId = getLeadIdForReminder(completedReminder);
-        if (leadId) {
-          let leadInfo = leadsMap.get(leadId);
+      const reminderLeadPairs = remindersToUpdate
+        .map(reminder => ({ reminder, leadId: getLeadIdForReminder(reminder) }))
+        .filter(({ leadId }) => Boolean(leadId));
 
-          if (!leadInfo) {
-            const { data: leadData } = await supabase
-              .from('leads')
-              .select('id, nome_completo, telefone, responsavel, proximo_retorno')
-              .eq('id', leadId)
-              .maybeSingle();
+      const missingLeadIds = Array.from(
+        new Set(reminderLeadPairs.map(({ leadId }) => leadId).filter(leadId => leadId && !leadsMap.has(leadId)))
+      ) as string[];
 
-            if (leadData) {
-              leadInfo = leadData as Lead;
-              setLeadsMap(prev => {
-                const next = new Map(prev);
-                next.set(leadInfo!.id, leadInfo!);
-                return next;
-              });
-            }
-          }
+      let fetchedLeads = [] as Lead[];
 
-          if (leadInfo) {
-            setManualReminderPrompt({
-              lead: leadInfo,
-              promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
-              defaultTitle: completedReminder.titulo,
-              defaultDescription: completedReminder.descricao ?? undefined,
-              defaultType: 'Follow-up',
-            });
-          }
+      if (missingLeadIds.length > 0) {
+        const { data: leadsData } = await supabase
+          .from('leads')
+          .select('id, nome_completo, telefone, responsavel, proximo_retorno')
+          .in('id', missingLeadIds);
+
+        if (leadsData) {
+          fetchedLeads = leadsData as Lead[];
+          setLeadsMap(prev => {
+            const next = new Map(prev);
+            fetchedLeads.forEach(lead => next.set(lead.id, lead));
+            return next;
+          });
         }
+      }
+
+      const fallbackLeadsMap = fetchedLeads.reduce((acc, lead) => {
+        acc.set(lead.id, lead);
+        return acc;
+      }, new Map<string, Lead>());
+
+      const manualPrompts = reminderLeadPairs
+        .map(({ reminder, leadId }) => {
+          if (!leadId) return null;
+          const leadInfo = leadsMap.get(leadId) ?? fallbackLeadsMap.get(leadId);
+
+          if (!leadInfo) return null;
+
+          return {
+            lead: leadInfo,
+            promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+            defaultTitle: reminder.titulo,
+            defaultDescription: reminder.descricao ?? undefined,
+            defaultType: 'Follow-up',
+            defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
+              ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+              : 'normal',
+          } as ManualReminderPrompt;
+        })
+        .filter((prompt): prompt is ManualReminderPrompt => Boolean(prompt));
+
+      if (manualPrompts.length > 0) {
+        setManualReminderQueue(prev => [...prev, ...manualPrompts]);
       }
 
       setSelectedReminders(new Set());
@@ -1821,13 +1846,12 @@ export default function RemindersManagerEnhanced() {
         />
       )}
 
-      {manualReminderPrompt && (
+      {manualReminderQueue[0] && (
         <ReminderSchedulerModal
-          lead={manualReminderPrompt.lead}
-          onClose={() => setManualReminderPrompt(null)}
+          lead={manualReminderQueue[0].lead}
+          onClose={() => setManualReminderQueue(prev => prev.slice(1))}
           onScheduled={({ reminderDate }) => {
-            const { lead } = manualReminderPrompt;
-            setManualReminderPrompt(null);
+            const { lead } = manualReminderQueue[0];
             setLeadsMap(prev => {
               const next = new Map(prev);
               next.set(lead.id, { ...lead, proximo_retorno: reminderDate });
@@ -1835,11 +1859,11 @@ export default function RemindersManagerEnhanced() {
             });
             loadReminders();
           }}
-          promptMessage={manualReminderPrompt.promptMessage}
-          defaultTitle={manualReminderPrompt.defaultTitle}
-          defaultDescription={manualReminderPrompt.defaultDescription}
-          defaultType={manualReminderPrompt.defaultType}
-          defaultPriority={manualReminderPrompt.defaultPriority}
+          promptMessage={manualReminderQueue[0].promptMessage}
+          defaultTitle={manualReminderQueue[0].defaultTitle}
+          defaultDescription={manualReminderQueue[0].defaultDescription}
+          defaultType={manualReminderQueue[0].defaultType}
+          defaultPriority={manualReminderQueue[0].defaultPriority}
         />
       )}
 

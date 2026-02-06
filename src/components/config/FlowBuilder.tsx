@@ -577,8 +577,8 @@ export default function FlowBuilder({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div ref={reactFlowWrapperRef} className="rounded-2xl border border-slate-200 bg-slate-50 h-[560px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div ref={reactFlowWrapperRef} className="rounded-2xl border border-slate-200 bg-slate-50 h-[520px] sm:h-[560px] lg:h-[680px]">
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 rounded-t-2xl">
           <div>
             <div className="text-xs uppercase text-slate-400 font-semibold">Builder avancado</div>
@@ -677,7 +677,7 @@ export default function FlowBuilder({
         )}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 h-[560px] overflow-y-auto">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 h-[520px] sm:h-[560px] lg:h-[680px] overflow-y-auto">
         <div className="text-xs uppercase text-slate-400 font-semibold">Inspector</div>
             {selectedNode ? (
           <div className="mt-3 space-y-4">

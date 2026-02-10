@@ -103,24 +103,24 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
         <button
           key={day}
           onClick={() => handleDateClick(day)}
-          className={`aspect-square p-2 rounded-lg border transition-all relative ${
+          className={`calendar-day relative aspect-square rounded-xl border p-2 transition-all ${
             isSelected
-              ? 'bg-teal-600 text-white border-teal-600'
+              ? 'calendar-day-selected'
               : isToday
-              ? 'bg-blue-50 border-blue-300 text-blue-700'
+              ? 'calendar-day-today'
               : dayReminders.length > 0
-              ? 'bg-orange-50 border-orange-200 hover:bg-orange-100'
-              : 'border-slate-200 hover:bg-slate-50'
+              ? 'calendar-day-has-events'
+              : 'calendar-day-default'
           }`}
         >
-          <div className="text-sm font-medium">{day}</div>
+          <div className="calendar-day-number text-sm font-semibold">{day}</div>
           {dayReminders.length > 0 && (
-            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-0.5">
+            <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 space-x-0.5">
               {dayReminders.slice(0, 3).map((_, idx) => (
                 <div
                   key={idx}
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isSelected ? 'bg-white' : 'bg-teal-600'
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isSelected ? 'bg-white' : 'bg-teal-500'
                   }`}
                 />
               ))}
@@ -133,7 +133,7 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
     return (
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map(day => (
-          <div key={day} className="text-center text-sm font-semibold text-slate-600 py-2">
+          <div key={day} className="calendar-weekday py-2 text-center text-sm font-semibold text-slate-600">
             {day}
           </div>
         ))}
@@ -155,10 +155,10 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/60 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       onClick={handleBackdropClick}
     >
-      <div className="modal-panel bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel reminders-calendar-modal flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Calendário de Lembretes</h2>
@@ -168,22 +168,22 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6 text-slate-600" />
-          </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 transition-colors hover:bg-slate-100"
+            >
+              <X className="w-6 h-6 text-slate-600" />
+            </button>
         </div>
 
         <div className="modal-panel-content flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between mb-4">
                   <button
                     onClick={previousMonth}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="rounded-lg p-2 transition-colors hover:bg-slate-100"
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-600" />
                   </button>
@@ -192,7 +192,7 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
                   </h3>
                   <button
                     onClick={nextMonth}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="rounded-lg p-2 transition-colors hover:bg-slate-100"
                   >
                     <ChevronRight className="w-5 h-5 text-slate-600" />
                   </button>

@@ -5,9 +5,11 @@ import {
   FileText,
   LayoutDashboard,
   Bell,
+  Moon,
   LogOut,
   Settings,
   MessageCircle,
+  Sun,
   ChevronDown,
   ChevronUp,
   Menu,
@@ -44,6 +46,23 @@ type LayoutProps = {
   newLeadsCount?: number;
 };
 
+type ThemeMode = 'light' | 'dark';
+
+const PANEL_THEME_STORAGE_KEY = 'painel.theme.v1';
+
+const getInitialThemeMode = (): ThemeMode => {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  const storedTheme = window.localStorage.getItem(PANEL_THEME_STORAGE_KEY);
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    return storedTheme;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
 export default function Layout({
   children,
   activeTab,
@@ -60,6 +79,7 @@ export default function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [todayReminders, setTodayReminders] = useState<Reminder[]>([]);
@@ -516,6 +536,14 @@ export default function Layout({
     };
   }, [showNotificationsDropdown]);
 
+  useEffect(() => {
+    window.localStorage.setItem(PANEL_THEME_STORAGE_KEY, themeMode);
+  }, [themeMode]);
+
+  const toggleThemeMode = () => {
+    setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
+  };
+
   const toggleMobileParent = (parentId: string) => {
     setExpandedMobileParent(current => (current === parentId ? null : parentId));
   };
@@ -586,7 +614,7 @@ export default function Layout({
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-slate-50"
+      className={`painel-theme theme-${themeMode} flex min-h-screen flex-col bg-slate-50`}
     >
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -806,6 +834,15 @@ export default function Layout({
                   </div>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={toggleThemeMode}
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
+                title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+                aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              >
+                {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
               <button
                 onClick={handleLogout}
                 className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"

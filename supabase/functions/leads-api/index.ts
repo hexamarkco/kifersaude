@@ -210,6 +210,8 @@ type AutoContactFlowScheduling = {
   allowedWeekdays: number[];
 };
 
+type AutoContactInvalidNumberAction = 'none' | 'update_status' | 'archive_lead' | 'delete_lead';
+
 type AutoContactFlow = {
   id: string;
   name: string;
@@ -222,6 +224,8 @@ type AutoContactFlow = {
   exitConditions?: AutoContactFlowCondition[];
   tags?: string[];
   scheduling?: AutoContactFlowScheduling;
+  invalidNumberAction?: AutoContactInvalidNumberAction;
+  invalidNumberStatus?: string;
 };
 
 type AutoContactSchedulingSettings = {
@@ -875,6 +879,90 @@ const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> 
   return isValidWhatsappNumber(lead?.telefone) ? 'true' : 'false';
 };
 
+const isInvalidNumberError = (error: unknown): boolean => {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes('nao possui whatsapp') ||
+    message.includes('não possui whatsapp') ||
+    message.includes('invalid') ||
+    message.includes('invalido') ||
+    message.includes('inválido') ||
+    message.includes('does not exist') ||
+    message.includes('nao existe') ||
+    message.includes('não existe') ||
+    message.includes('not on whatsapp') ||
+    message.includes('recipient not found') ||
+    message.includes('recipient does not exist') ||
+    message.includes('chat not found') ||
+    message.includes('invalid chatid')
+  );
+};
+
+const applyInvalidNumberAction = async ({
+  supabase,
+  lead,
+  flow,
+  lookups,
+  logWithContext,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lead: any;
+  flow: AutoContactFlow;
+  lookups: LeadLookupMaps;
+  logWithContext: (message: string, details?: Record<string, unknown>) => void;
+}): Promise<void> => {
+  const requestedAction = flow.invalidNumberAction ?? 'none';
+  const action: AutoContactInvalidNumberAction = requestedAction === 'none' ? 'update_status' : requestedAction;
+
+  if (action === 'delete_lead') {
+    await supabase.from('leads').delete().eq('id', lead.id);
+    logWithContext('Lead removido após número inválido', { leadId: lead.id, flowId: flow.id });
+    return;
+  }
+
+  if (action === 'archive_lead') {
+    await supabase.from('leads').update({ arquivado: true }).eq('id', lead.id);
+    await supabase.from('interactions').insert({
+      lead_id: lead.id,
+      tipo: 'Sistema',
+      descricao: 'Lead arquivado automaticamente por número inválido/sem WhatsApp.',
+      responsavel: 'Sistema',
+    });
+    logWithContext('Lead arquivado após número inválido', { leadId: lead.id, flowId: flow.id });
+    return;
+  }
+
+  const configuredStatus = flow.invalidNumberStatus?.trim();
+  const fallbackLost = 'Perdido';
+  const targetStatus = configuredStatus || fallbackLost;
+  const targetStatusId =
+    lookups.statusByName.get(normalizeText(targetStatus)) ??
+    lookups.statusByName.get(normalizeText(fallbackLost)) ??
+    lookups.defaultStatusId;
+
+  if (!targetStatusId) {
+    logWithContext('Falha ao resolver status para número inválido', {
+      leadId: lead.id,
+      flowId: flow.id,
+      requestedStatus: targetStatus,
+    });
+    return;
+  }
+
+  await supabase.from('leads').update({ status_id: targetStatusId }).eq('id', lead.id);
+  await supabase.from('interactions').insert({
+    lead_id: lead.id,
+    tipo: 'Sistema',
+    descricao: `Lead movido automaticamente para \"${targetStatus}\" por número inválido/sem WhatsApp.`,
+    responsavel: 'Sistema',
+  });
+  logWithContext('Status atualizado após número inválido', {
+    leadId: lead.id,
+    flowId: flow.id,
+    status: targetStatus,
+  });
+};
+
 async function sendWhatsappMessages({
   endpoint,
   apiKey,
@@ -1208,6 +1296,17 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
   }
   };
 
+  const normalizeInvalidNumberAction = (value: unknown): AutoContactInvalidNumberAction => {
+    switch (value) {
+      case 'update_status':
+      case 'archive_lead':
+      case 'delete_lead':
+        return value;
+      default:
+        return 'none';
+    }
+  };
+
   const normalizeMessageSource = (value: unknown): AutoContactFlowMessageSource =>
     value === 'custom' ? 'custom' : 'template';
 
@@ -1408,6 +1507,8 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           ? flow.tags.filter((tag: unknown) => typeof tag === 'string' && tag.trim()).map((tag: string) => tag.trim())
           : [],
         scheduling: flowScheduling,
+        invalidNumberAction: normalizeInvalidNumberAction(flow?.invalidNumberAction),
+        invalidNumberStatus: typeof flow?.invalidNumberStatus === 'string' ? flow.invalidNumberStatus : '',
       };
     })
     .filter((flow) => flow.steps.length > 0);
@@ -2099,6 +2200,44 @@ async function processFlowJobs({
         .eq('id', job.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
+      if (job.action_type === 'send_message' && isInvalidNumberError(error)) {
+        const reason = 'Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
+        try {
+          await applyInvalidNumberAction({
+            supabase,
+            lead,
+            flow,
+            lookups,
+            logWithContext,
+          });
+          await cancelFlowJobs({
+            supabase,
+            leadId: lead.id,
+            flowId: flow.id,
+            reason,
+          });
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({ status: 'skipped', last_error: reason })
+            .eq('id', job.id);
+          continue;
+        } catch (invalidNumberActionError) {
+          const invalidActionMessage =
+            invalidNumberActionError instanceof Error
+              ? invalidNumberActionError.message
+              : String(invalidNumberActionError);
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({
+              status: 'failed',
+              last_error: `${reason} Erro ao aplicar ação: ${invalidActionMessage}`,
+            })
+            .eq('id', job.id);
+          continue;
+        }
+      }
+
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'failed', last_error: message })
@@ -2480,7 +2619,54 @@ Deno.serve(async (req: Request) => {
           settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedOldLead)) ?? null;
 
         if (oldMatchingFlow?.id === newMatchingFlow.id) {
-          return new Response(JSON.stringify({ success: true, skipped: true }), {
+          const { data: activeJobs } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('id')
+            .eq('lead_id', record.id)
+            .eq('flow_id', newMatchingFlow.id)
+            .in('status', ['pending', 'processing'])
+            .limit(1);
+
+          if (activeJobs && activeJobs.length > 0) {
+            await processFlowJobs({
+              supabase,
+              lookups,
+              settings,
+              logWithContext,
+              leadId: record.id,
+            });
+
+            return new Response(JSON.stringify({ success: true, recovered: true, source: 'active_jobs' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          const { data: completedJobs } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('id')
+            .eq('lead_id', record.id)
+            .eq('flow_id', newMatchingFlow.id)
+            .eq('status', 'completed')
+            .limit(1);
+
+          if (completedJobs && completedJobs.length > 0) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'already_completed' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          await runAutoContactFlowEngine({
+            supabase,
+            lead: record,
+            lookups,
+            logWithContext,
+            settings,
+            event,
+          });
+
+          return new Response(JSON.stringify({ success: true, recovered: true, source: 'rescheduled' }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });

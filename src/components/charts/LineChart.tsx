@@ -66,7 +66,7 @@ export default function LineChart({
                 y1={y}
                 x2="90"
                 y2={y}
-                stroke="#e2e8f0"
+                stroke="var(--panel-chart-grid, #e2e8f0)"
                 strokeWidth="0.2"
               />
             ))}
@@ -102,7 +102,7 @@ export default function LineChart({
               cx={point.x}
               cy={point.y}
               r="1.5"
-              fill="white"
+              fill="var(--panel-surface, #ffffff)"
               stroke={color}
               strokeWidth="0.5"
               className="transition-all duration-300 hover:r-2"

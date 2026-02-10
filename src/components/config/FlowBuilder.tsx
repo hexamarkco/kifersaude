@@ -240,7 +240,35 @@ export default function FlowBuilder({
   const [initializedFlowId, setInitializedFlowId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const reactFlowWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = reactFlowWrapperRef.current?.closest('.painel-theme');
+    if (!root) return;
+
+    const syncTheme = () => {
+      setIsDarkTheme(root.classList.contains('theme-dark'));
+    };
+
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const flowThemeColors = useMemo(
+    () => ({
+      exportBackground: isDarkTheme ? '#0f172a' : '#f8fafc',
+      minimapNode: isDarkTheme ? '#334155' : '#e2e8f0',
+      minimapMask: isDarkTheme ? 'rgba(15, 23, 42, 0.6)' : 'rgba(15, 23, 42, 0.1)',
+      backgroundGrid: isDarkTheme ? '#334155' : '#e2e8f0',
+    }),
+    [isDarkTheme],
+  );
 
   useEffect(() => {
     if (initializedFlowId !== flow.id) {
@@ -308,7 +336,7 @@ export default function FlowBuilder({
       const transform = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 2);
 
       const dataUrl = await toPng(viewport, {
-        backgroundColor: '#f8fafc',
+        backgroundColor: flowThemeColors.exportBackground,
         width: imageWidth,
         height: imageHeight,
         pixelRatio: 2,
@@ -326,7 +354,7 @@ export default function FlowBuilder({
     } finally {
       setIsExporting(false);
     }
-  }, [isExporting, nodes]);
+  }, [flowThemeColors.exportBackground, isExporting, nodes]);
 
   const exportFlowAsPdf = useCallback(async () => {
     if (isExporting) return;
@@ -340,7 +368,7 @@ export default function FlowBuilder({
       const transform = getViewportForBounds(bounds, pdfWidth, pdfHeight, 0.1, 2);
 
       const dataUrl = await toPng(viewport, {
-        backgroundColor: '#ffffff',
+        backgroundColor: flowThemeColors.exportBackground,
         width: pdfWidth,
         height: pdfHeight,
         pixelRatio: 2,
@@ -361,7 +389,7 @@ export default function FlowBuilder({
     } finally {
       setIsExporting(false);
     }
-  }, [isExporting, nodes]);
+  }, [flowThemeColors.exportBackground, isExporting, nodes]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
   const previewContext = useMemo(() => buildPreviewContext(), []);
@@ -657,9 +685,9 @@ export default function FlowBuilder({
           fitView
           className="bg-slate-50"
         >
-          <MiniMap nodeColor="#e2e8f0" maskColor="rgba(15,23,42,0.1)" />
+          <MiniMap nodeColor={flowThemeColors.minimapNode} maskColor={flowThemeColors.minimapMask} />
           <Controls />
-          <Background gap={18} size={1} color="#e2e8f0" />
+          <Background gap={18} size={1} color={flowThemeColors.backgroundGrid} />
         </ReactFlow>
         {contextMenu && (
           <div

@@ -59,7 +59,7 @@ export default function DonutChart({ data, size = 200, strokeWidth = 30, onSegme
           cy={center}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke="var(--panel-chart-grid, #e2e8f0)"
           strokeWidth={strokeWidth}
         />
         {segments.map((segment, index) => (

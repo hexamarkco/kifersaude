@@ -525,10 +525,10 @@ export function MessageBubble({
     >
       <div className={`max-w-[70%] ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
-          className={`rounded-lg px-3 py-2 ${
+          className={`message-bubble rounded-lg px-3 py-2 ${
             isOutbound
-              ? 'bg-green-100 text-gray-900'
-              : 'bg-white text-gray-900 border border-gray-200'
+              ? 'message-bubble-outbound bg-green-100 text-gray-900'
+              : 'message-bubble-inbound bg-white text-gray-900 border border-gray-200'
           }`}
         >
           {!isOutbound && fromName && (

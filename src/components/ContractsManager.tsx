@@ -23,18 +23,6 @@ type ContractHolder = {
   cnpj?: string;
 };
 
-type SavedContractView = {
-  id: string;
-  name: string;
-  filters: {
-    searchTerm: string;
-    filterStatus: string;
-    filterResponsavel: string;
-    filterOperadora: string;
-    dateProximityFilter: 'todos' | 'proximos-30';
-  };
-};
-
 export default function ContractsManager({
   leadToConvert,
   onConvertComplete,
@@ -51,10 +39,6 @@ export default function ContractsManager({
   const [filterResponsavel, setFilterResponsavel] = useState('todos');
   const [filterOperadora, setFilterOperadora] = useState('todas');
   const [dateProximityFilter, setDateProximityFilter] = useState<'todos' | 'proximos-30'>('todos');
-  const [savedViews, setSavedViews] = useState<SavedContractView[]>([]);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [isSavingView, setIsSavingView] = useState(false);
-  const [newViewName, setNewViewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
@@ -140,63 +124,6 @@ export default function ContractsManager({
       setFilterOperadora('todas');
     }
   }, [initialOperadoraFilter]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('contracts.savedViews.v1');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as SavedContractView[];
-      if (Array.isArray(parsed)) {
-        setSavedViews(parsed);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar views salvas:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('contracts.savedViews.v1', JSON.stringify(savedViews));
-  }, [savedViews]);
-
-  const applySavedView = (view: SavedContractView) => {
-    setSearchTerm(view.filters.searchTerm);
-    setFilterStatus(view.filters.filterStatus);
-    setFilterResponsavel(view.filters.filterResponsavel);
-    setFilterOperadora(view.filters.filterOperadora);
-    setDateProximityFilter(view.filters.dateProximityFilter);
-    setActiveViewId(view.id);
-  };
-
-  const handleSaveView = () => {
-    if (!newViewName.trim()) {
-      alert('Informe um nome para a view.');
-      return;
-    }
-
-    const newView: SavedContractView = {
-      id: `${Date.now()}`,
-      name: newViewName.trim(),
-      filters: {
-        searchTerm,
-        filterStatus,
-        filterResponsavel,
-        filterOperadora,
-        dateProximityFilter,
-      },
-    };
-
-    setSavedViews((current) => [newView, ...current]);
-    setActiveViewId(newView.id);
-    setNewViewName('');
-    setIsSavingView(false);
-  };
-
-  const handleRemoveView = (viewId: string) => {
-    setSavedViews((current) => current.filter((view) => view.id !== viewId));
-    if (activeViewId === viewId) {
-      setActiveViewId(null);
-    }
-  };
 
   const loadContracts = async () => {
     setLoading(true);
@@ -512,67 +439,6 @@ export default function ContractsManager({
             <span className="font-semibold text-teal-700">{filteredContracts.length}</span>
             <span>contrato(s) encontrado(s)</span>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={activeViewId ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (!value) {
-                  setActiveViewId(null);
-                  return;
-                }
-                const view = savedViews.find((item) => item.id === value);
-                if (view) {
-                  applySavedView(view);
-                }
-              }}
-              className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="">Views salvas</option>
-              {savedViews.map((view) => (
-                <option key={view.id} value={view.id}>
-                  {view.name}
-                </option>
-              ))}
-            </select>
-            {activeViewId && (
-              <button
-                type="button"
-                onClick={() => handleRemoveView(activeViewId)}
-                className="h-10 px-3 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-              >
-                Remover view
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setIsSavingView((current) => !current)}
-              className="h-10 px-3 text-sm border border-teal-200 rounded-lg text-teal-700 hover:bg-teal-50"
-            >
-              Salvar view
-            </button>
-          </div>
-          {isSavingView && (
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                value={newViewName}
-                onChange={(event) => setNewViewName(event.target.value)}
-                placeholder="Nome da view"
-                className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={handleSaveView}
-                className="h-10 px-3 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-              >
-                Salvar
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">

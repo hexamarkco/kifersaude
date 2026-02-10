@@ -100,29 +100,6 @@ type LeadsManagerProps = {
 
 type SortField = 'created_at' | 'nome' | 'origem' | 'tipo_contratacao' | 'telefone';
 
-type SavedLeadView = {
-  id: string;
-  name: string;
-  filters: {
-    searchTerm: string;
-    filterStatus: string[];
-    filterResponsavel: string[];
-    filterOrigem: string[];
-    filterTipoContratacao: string[];
-    filterTags: string[];
-    filterCanais: string[];
-    filterCreatedFrom: string;
-    filterCreatedTo: string;
-    filterUltimoContatoFrom: string;
-    filterUltimoContatoTo: string;
-    filterProximoRetornoFrom: string;
-    filterProximoRetornoTo: string;
-    sortField: SortField;
-    sortDirection: 'asc' | 'desc';
-    showArchived: boolean;
-  };
-};
-
 type StatusReminderRule = {
   hoursFromNow: number;
   title: string;
@@ -181,10 +158,6 @@ export default function LeadsManager({
   const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState('');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [savedViews, setSavedViews] = useState<SavedLeadView[]>([]);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [isSavingView, setIsSavingView] = useState(false);
-  const [newViewName, setNewViewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -305,105 +278,6 @@ export default function LeadsManager({
     setFilterProximoRetornoFrom('');
     setFilterProximoRetornoTo('');
   }, [initialStatusFilter]);
-
-  const buildCurrentFilters = useCallback(() => ({
-    searchTerm,
-    filterStatus,
-    filterResponsavel,
-    filterOrigem,
-    filterTipoContratacao,
-    filterTags,
-    filterCanais,
-    filterCreatedFrom,
-    filterCreatedTo,
-    filterUltimoContatoFrom,
-    filterUltimoContatoTo,
-    filterProximoRetornoFrom,
-    filterProximoRetornoTo,
-    sortField,
-    sortDirection,
-    showArchived,
-  }), [
-    searchTerm,
-    filterStatus,
-    filterResponsavel,
-    filterOrigem,
-    filterTipoContratacao,
-    filterTags,
-    filterCanais,
-    filterCreatedFrom,
-    filterCreatedTo,
-    filterUltimoContatoFrom,
-    filterUltimoContatoTo,
-    filterProximoRetornoFrom,
-    filterProximoRetornoTo,
-    sortField,
-    sortDirection,
-    showArchived,
-  ]);
-
-  const applySavedView = useCallback((view: SavedLeadView) => {
-    const filters = view.filters;
-    setSearchTerm(filters.searchTerm);
-    setFilterStatus(filters.filterStatus);
-    setFilterResponsavel(filters.filterResponsavel);
-    setFilterOrigem(filters.filterOrigem);
-    setFilterTipoContratacao(filters.filterTipoContratacao);
-    setFilterTags(filters.filterTags);
-    setFilterCanais(filters.filterCanais);
-    setFilterCreatedFrom(filters.filterCreatedFrom);
-    setFilterCreatedTo(filters.filterCreatedTo);
-    setFilterUltimoContatoFrom(filters.filterUltimoContatoFrom);
-    setFilterUltimoContatoTo(filters.filterUltimoContatoTo);
-    setFilterProximoRetornoFrom(filters.filterProximoRetornoFrom);
-    setFilterProximoRetornoTo(filters.filterProximoRetornoTo);
-    setSortField(filters.sortField);
-    setSortDirection(filters.sortDirection);
-    setShowArchived(filters.showArchived);
-    setActiveViewId(view.id);
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('leads.savedViews.v1');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as SavedLeadView[];
-      if (Array.isArray(parsed)) {
-        setSavedViews(parsed);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar views salvas:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('leads.savedViews.v1', JSON.stringify(savedViews));
-  }, [savedViews]);
-
-  const handleSaveView = () => {
-    if (!newViewName.trim()) {
-      alert('Informe um nome para a view.');
-      return;
-    }
-
-    const newView: SavedLeadView = {
-      id: `${Date.now()}`,
-      name: newViewName.trim(),
-      filters: buildCurrentFilters(),
-    };
-
-    setSavedViews((current) => [newView, ...current]);
-    setActiveViewId(newView.id);
-    setNewViewName('');
-    setIsSavingView(false);
-  };
-
-  const handleRemoveView = (viewId: string) => {
-    setSavedViews((current) => current.filter((view) => view.id !== viewId));
-    if (activeViewId === viewId) {
-      setActiveViewId(null);
-    }
-  };
 
   const chunkArray = useCallback(<T,>(items: T[], chunkSize: number): T[][] => {
     if (chunkSize <= 0) return [items];
@@ -1533,67 +1407,6 @@ export default function LeadsManager({
               <span>lead(s) encontrado(s)</span>
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={activeViewId ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (!value) {
-                  setActiveViewId(null);
-                  return;
-                }
-                const view = savedViews.find((item) => item.id === value);
-                if (view) {
-                  applySavedView(view);
-                }
-              }}
-              className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="">Views salvas</option>
-              {savedViews.map((view) => (
-                <option key={view.id} value={view.id}>
-                  {view.name}
-                </option>
-              ))}
-            </select>
-            {activeViewId && (
-              <button
-                type="button"
-                onClick={() => handleRemoveView(activeViewId)}
-                className="h-10 px-3 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-              >
-                Remover view
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setIsSavingView((current) => !current)}
-              className="h-10 px-3 text-sm border border-teal-200 rounded-lg text-teal-700 hover:bg-teal-50"
-            >
-              Salvar view
-            </button>
-          </div>
-          {isSavingView && (
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                value={newViewName}
-                onChange={(event) => setNewViewName(event.target.value)}
-                placeholder="Nome da view"
-                className="h-10 px-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={handleSaveView}
-                className="h-10 px-3 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-              >
-                Salvar
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">

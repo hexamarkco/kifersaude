@@ -950,53 +950,52 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     [activeLeadStatusNames, filteredLeads],
   );
 
+  const dashboardScopedContracts = useMemo(
+    () =>
+      contractsVisibleToUser.filter((contract) => {
+        const lead = contract.lead_id ? leadsById.get(contract.lead_id) : null;
+
+        if (dashboardOriginFilter && (!lead || lead.origem !== dashboardOriginFilter)) {
+          return false;
+        }
+
+        if (dashboardOwnerFilter && (!lead || lead.responsavel !== dashboardOwnerFilter)) {
+          return false;
+        }
+
+        return true;
+      }),
+    [contractsVisibleToUser, dashboardOriginFilter, dashboardOwnerFilter, leadsById],
+  );
+
   const filteredContracts = useMemo(() => {
-    const periodFilteredContracts = filterByPeriod(contractsVisibleToUser, (contract) => {
+    return filterByPeriod(dashboardScopedContracts, (contract) => {
       return (
         parseDateValue(contract.data_inicio) ||
         parseDateValue(contract.previsao_recebimento_comissao) ||
         parseDateValue(contract.created_at)
       );
     });
+  }, [dashboardScopedContracts, periodFilter, customStartDate, customEndDate]);
 
-    return periodFilteredContracts.filter((contract) => {
-      const lead = contract.lead_id ? leadsById.get(contract.lead_id) : null;
+  const calendarScopedContractIds = useMemo(
+    () => new Set(dashboardScopedContracts.map((contract) => contract.id)),
+    [dashboardScopedContracts],
+  );
 
-      if (dashboardOriginFilter && (!lead || lead.origem !== dashboardOriginFilter)) {
-        return false;
-      }
+  const calendarHolders = useMemo(
+    () => holdersVisibleToUser.filter((holder) => calendarScopedContractIds.has(holder.contract_id)),
+    [calendarScopedContractIds, holdersVisibleToUser],
+  );
 
-      if (dashboardOwnerFilter && (!lead || lead.responsavel !== dashboardOwnerFilter)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [
-    contractsVisibleToUser,
-    dashboardOriginFilter,
-    dashboardOwnerFilter,
-    leadsById,
-    periodFilter,
-    customStartDate,
-    customEndDate,
-  ]);
-
-  const filteredContractIds = useMemo(() => new Set(filteredContracts.map((contract) => contract.id)), [
-    filteredContracts,
-  ]);
-
-  const holdersVisibleWithFilters = useMemo(() => {
-    return holdersVisibleToUser.filter((holder) => filteredContractIds.has(holder.contract_id));
-  }, [filteredContractIds, holdersVisibleToUser]);
-
-  const dependentsVisibleWithFilters = useMemo(() => {
-    return dependentsVisibleToUser.filter((dependent) => filteredContractIds.has(dependent.contract_id));
-  }, [dependentsVisibleToUser, filteredContractIds]);
+  const calendarDependents = useMemo(
+    () => dependentsVisibleToUser.filter((dependent) => calendarScopedContractIds.has(dependent.contract_id)),
+    [calendarScopedContractIds, dependentsVisibleToUser],
+  );
 
   const holderByContractId = useMemo(
-    () => new Map(holdersVisibleWithFilters.map((holder) => [holder.contract_id, holder])),
-    [holdersVisibleWithFilters],
+    () => new Map(calendarHolders.map((holder) => [holder.contract_id, holder])),
+    [calendarHolders],
   );
 
   const totalLeads = activeLeads.length;
@@ -1005,9 +1004,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   ).length;
 
   const contratosAtivos = filteredContracts.filter((c) => c.status === 'Ativo');
-  const activeContracts = useMemo(
-    () => filteredContracts.filter((contract) => contract.status === 'Ativo'),
-    [filteredContracts],
+  const calendarActiveContracts = useMemo(
+    () => dashboardScopedContracts.filter((contract) => contract.status === 'Ativo'),
+    [dashboardScopedContracts],
   );
   const comissaoTotal = contratosAtivos.reduce((sum, c) => sum + (c.comissao_prevista || 0), 0);
 
@@ -1175,13 +1174,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         nextBirthday: Date;
       }> = [];
 
-      const activeContractIds = new Set(activeContracts.map((c) => c.id));
-      const contractsMap = new Map(activeContracts.map((c) => [c.id, c]));
-      const holdersByContract = new Map(holdersVisibleWithFilters.map((h) => [h.contract_id, h]));
+      const activeContractIds = new Set(calendarActiveContracts.map((c) => c.id));
+      const contractsMap = new Map(calendarActiveContracts.map((c) => [c.id, c]));
+      const holdersByContract = new Map(calendarHolders.map((h) => [h.contract_id, h]));
       const startYear = rangeStart.getFullYear();
       const endYear = rangeEnd.getFullYear();
 
-      holdersVisibleWithFilters.forEach((holder) => {
+      calendarHolders.forEach((holder) => {
         if (!activeContractIds.has(holder.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(holder.data_nascimento);
@@ -1205,7 +1204,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         }
       });
 
-      dependentsVisibleWithFilters.forEach((dependent) => {
+      calendarDependents.forEach((dependent) => {
         if (!activeContractIds.has(dependent.contract_id)) return;
 
         const birthDate = parseDateWithoutTimezoneAsDate(dependent.data_nascimento);
@@ -1234,7 +1233,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       return birthdays.sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
     },
-    [activeContracts, dependentsVisibleWithFilters, holdersVisibleWithFilters],
+    [calendarActiveContracts, calendarDependents, calendarHolders],
   );
 
   const ageAdjustmentMilestones = useMemo(() => [19, 24, 29, 34, 39, 44, 49, 54, 59], []);
@@ -1267,7 +1266,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const buildAdjustmentEventsInRange = useCallback(
     (rangeStart: Date, rangeEnd: Date) => {
       const adjustments: AdjustmentItem[] = [];
-      const contractsMap = new Map(activeContracts.map((contract) => [contract.id, contract]));
+      const contractsMap = new Map(calendarActiveContracts.map((contract) => [contract.id, contract]));
       const startYear = rangeStart.getFullYear();
       const endYear = rangeEnd.getFullYear();
 
@@ -1303,10 +1302,10 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         });
       };
 
-      holdersVisibleWithFilters.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
-      dependentsVisibleWithFilters.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
+      calendarHolders.forEach((holder) => evaluateBirthdayAdjustment(holder, 'Titular'));
+      calendarDependents.forEach((dependent) => evaluateBirthdayAdjustment(dependent, 'Dependente'));
 
-      activeContracts.forEach((contract) => {
+      calendarActiveContracts.forEach((contract) => {
         if (!contract.mes_reajuste) return;
 
         const contractStartDate = getContractStartDate(contract);
@@ -1331,11 +1330,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       return adjustments.sort((a, b) => a.date.getTime() - b.date.getTime());
     },
     [
-      activeContracts,
+      calendarActiveContracts,
       ageAdjustmentMilestones,
-      dependentsVisibleWithFilters,
+      calendarDependents,
       getContractStartDate,
-      holdersVisibleWithFilters,
+      calendarHolders,
     ],
   );
 
@@ -1732,8 +1731,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               : isToday
                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : dayEvents.length > 0
-                  ? 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                  : 'border-slate-200 hover:bg-slate-50'
+                  ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <div className="text-sm font-medium">{day}</div>
@@ -2364,7 +2363,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-3">
-                  <span>Use os botões para alternar o período do painel.</span>
+                  <span>Navegue os meses para consultar reajustes e aniversários.</span>
                   <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
                     <button
                       type="button"

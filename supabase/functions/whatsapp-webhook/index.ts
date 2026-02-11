@@ -3,7 +3,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-Whapi-Event',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, X-Client-Info, Apikey, X-Whapi-Event, X-Webhook-Secret, X-Webhook-Signature, X-Whapi-Signature',
 };
 
 type StoredEvent = {
@@ -212,12 +213,146 @@ type NormalizedMessage = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const webhookSecret = Deno.env.get('WHATSAPP_WEBHOOK_SECRET')?.trim() ?? '';
+const webhookSignatureSecret = Deno.env.get('WHATSAPP_WEBHOOK_SIGNATURE_SECRET')?.trim() || webhookSecret;
+const allowUnverifiedWebhook = Deno.env.get('WHATSAPP_WEBHOOK_ALLOW_UNVERIFIED') === 'true';
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('Missing Supabase environment variables.');
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+const sensitiveHeaderKeys = new Set([
+  'authorization',
+  'apikey',
+  'x-api-key',
+  'x-webhook-secret',
+  'x-whapi-secret',
+  'x-webhook-signature',
+  'x-whapi-signature',
+  'x-signature',
+]);
+
+const timingSafeEqual = (left: string, right: string): boolean => {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+
+  return mismatch === 0;
+};
+
+const getWebhookSecretCandidate = (headers: Headers): string | null => {
+  const directSecret = headers.get('x-webhook-secret') ?? headers.get('x-whapi-secret');
+  if (directSecret && directSecret.trim()) {
+    return directSecret.trim();
+  }
+
+  const authHeader = headers.get('authorization');
+  const bearerMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+  return bearerMatch?.[1]?.trim() || null;
+};
+
+const normalizeSignatureHeader = (value: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lower = trimmed.toLowerCase();
+  const knownPrefixes = ['sha256=', 'sha1=', 'v1='];
+  for (const prefix of knownPrefixes) {
+    if (lower.startsWith(prefix)) {
+      return trimmed.slice(prefix.length).trim();
+    }
+  }
+
+  return trimmed;
+};
+
+const bytesToHex = (bytes: Uint8Array): string =>
+  Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+
+const bytesToBase64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
+
+const createExpectedSignatures = async (
+  secret: string,
+  payload: string,
+): Promise<{ hex: string; base64: string }> => {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+  const signatureBytes = new Uint8Array(signature);
+
+  return {
+    hex: bytesToHex(signatureBytes),
+    base64: bytesToBase64(signatureBytes),
+  };
+};
+
+const verifyWebhookRequest = async (
+  req: Request,
+  rawBody: string,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> => {
+  if (allowUnverifiedWebhook) {
+    return { ok: true };
+  }
+
+  if (!webhookSecret && !webhookSignatureSecret) {
+    return {
+      ok: false,
+      status: 500,
+      error: 'Webhook sem segredo configurado. Configure WHATSAPP_WEBHOOK_SECRET.',
+    };
+  }
+
+  if (webhookSecret) {
+    const providedSecret = getWebhookSecretCandidate(req.headers);
+    if (providedSecret && timingSafeEqual(providedSecret, webhookSecret)) {
+      return { ok: true };
+    }
+  }
+
+  const providedSignature = normalizeSignatureHeader(
+    req.headers.get('x-whapi-signature') ?? req.headers.get('x-webhook-signature') ?? req.headers.get('x-signature'),
+  );
+
+  if (providedSignature && webhookSignatureSecret) {
+    const expected = await createExpectedSignatures(webhookSignatureSecret, rawBody);
+    const signatureLooksHex = /^[0-9a-f]+$/i.test(providedSignature);
+
+    if (signatureLooksHex && timingSafeEqual(providedSignature.toLowerCase(), expected.hex)) {
+      return { ok: true };
+    }
+
+    if (!signatureLooksHex && timingSafeEqual(providedSignature, expected.base64)) {
+      return { ok: true };
+    }
+  }
+
+  return {
+    ok: false,
+    status: 401,
+    error: 'Assinatura ou segredo do webhook inválido',
+  };
+};
 
 function respond(body: Record<string, unknown>, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -244,7 +379,8 @@ function extractEventName(payload: WhapiWebhook, headers: Headers): string {
 function extractHeaders(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
   headers.forEach((value, key) => {
-    result[key.toLowerCase()] = value;
+    const normalizedKey = key.toLowerCase();
+    result[normalizedKey] = sensitiveHeaderKeys.has(normalizedKey) ? '[redacted]' : value;
   });
   return result;
 }
@@ -983,11 +1119,32 @@ Deno.serve(async (req) => {
   }
 
   let payload: WhapiWebhook;
+  let rawBody = '';
 
   try {
-    payload = await req.json();
+    rawBody = await req.text();
   } catch (error) {
-    console.error('whatsapp-webhook: erro ao ler payload', error);
+    console.error('whatsapp-webhook: erro ao ler corpo da requisição', error);
+    return respond({ error: 'Payload inválido' }, { status: 400 });
+  }
+
+  if (!rawBody.trim()) {
+    return respond({ error: 'Payload vazio' }, { status: 400 });
+  }
+
+  const verification = await verifyWebhookRequest(req, rawBody);
+  if (!verification.ok) {
+    console.warn('whatsapp-webhook: requisição rejeitada por falha de autenticação', {
+      status: verification.status,
+      reason: verification.error,
+    });
+    return respond({ error: verification.error }, { status: verification.status });
+  }
+
+  try {
+    payload = JSON.parse(rawBody) as WhapiWebhook;
+  } catch (error) {
+    console.error('whatsapp-webhook: erro ao converter payload para JSON', error);
     return respond({ error: 'Payload inválido' }, { status: 400 });
   }
 

@@ -70,6 +70,242 @@ function log(message: string, details?: Record<string, unknown>) {
   }
 }
 
+type DashboardRole = 'admin' | 'observer';
+
+type AuthorizedDashboardUser = {
+  id: string;
+  role: DashboardRole;
+};
+
+const ADMIN_ROLE_SET = new Set<DashboardRole>(['admin']);
+const READ_ROLE_SET = new Set<DashboardRole>(['admin', 'observer']);
+
+const jsonResponse = (body: Record<string, unknown>, status: number): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+const getBearerToken = (authHeader: string | null): string | null => {
+  if (!authHeader) return null;
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1]?.trim();
+  return token || null;
+};
+
+const getUserManagementId = (user: any): string | null => {
+  if (!user || typeof user !== 'object') {
+    return null;
+  }
+
+  const candidates = [
+    user.user_metadata?.user_management_id,
+    user.user_metadata?.user_management_user_id,
+    user.user_metadata?.user_id,
+    user.app_metadata?.user_management_id,
+    user.app_metadata?.user_id,
+    user.id,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
+
+const normalizeDashboardRole = (value: unknown): DashboardRole | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'admin' || normalized === 'observer') {
+    return normalized;
+  }
+
+  return null;
+};
+
+const resolveRoleFromMetadata = (user: any): DashboardRole | null => {
+  if (!user || typeof user !== 'object') {
+    return null;
+  }
+
+  const candidates = [
+    user.app_metadata?.role,
+    user.user_metadata?.role,
+    user.app_metadata?.assigned_role,
+    user.user_metadata?.assigned_role,
+  ];
+
+  for (const candidate of candidates) {
+    const role = normalizeDashboardRole(candidate);
+    if (role) {
+      return role;
+    }
+  }
+
+  return null;
+};
+
+const isServiceRoleRequest = (req: Request, serviceRoleKey: string): boolean => {
+  const bearerToken = getBearerToken(req.headers.get('Authorization'));
+  if (bearerToken && bearerToken === serviceRoleKey) {
+    return true;
+  }
+
+  const apiKeyHeader = req.headers.get('apikey')?.trim() ?? req.headers.get('x-api-key')?.trim();
+  return apiKeyHeader === serviceRoleKey;
+};
+
+const assertInternalServiceRole = (req: Request, serviceRoleKey: string): Response | null => {
+  if (isServiceRoleRequest(req, serviceRoleKey)) {
+    return null;
+  }
+
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Acesso não autorizado para esta ação',
+    },
+    401,
+  );
+};
+
+const authorizeDashboardUser = async ({
+  req,
+  supabaseUrl,
+  supabaseAnonKey,
+  supabase,
+  allowedRoles,
+}: {
+  req: Request;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  supabase: ReturnType<typeof createClient>;
+  allowedRoles: ReadonlySet<DashboardRole>;
+}): Promise<{ authorized: true; user: AuthorizedDashboardUser } | { authorized: false; response: Response }> => {
+  const authHeader = req.headers.get('Authorization');
+  const bearerToken = getBearerToken(authHeader);
+
+  if (!bearerToken) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Não autenticado',
+        },
+        401,
+      ),
+    };
+  }
+
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+      },
+    },
+  });
+
+  const {
+    data: { user },
+    error: userError,
+  } = await authClient.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Token de autenticação inválido',
+        },
+        401,
+      ),
+    };
+  }
+
+  const profileId = getUserManagementId(user);
+  if (!profileId) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Perfil do usuário não encontrado',
+        },
+        403,
+      ),
+    };
+  }
+
+  let role = resolveRoleFromMetadata(user);
+
+  if (!role) {
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (profileError) {
+      return {
+        authorized: false,
+        response: jsonResponse(
+          {
+            success: false,
+            error: 'Erro ao validar permissões do usuário',
+          },
+          500,
+        ),
+      };
+    }
+
+    role = normalizeDashboardRole(profile?.role);
+  }
+
+  if (!role) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Perfil sem permissão válida para acessar esta rota',
+        },
+        403,
+      ),
+    };
+  }
+
+  const effectiveRole = role;
+
+  if (!allowedRoles.has(effectiveRole)) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Permissões insuficientes',
+        },
+        403,
+      ),
+    };
+  }
+
+  return {
+    authorized: true,
+    user: {
+      id: profileId,
+      role: effectiveRole,
+    },
+  };
+};
+
 type LeadLookupMaps = {
   originById: Map<string, string>;
   originByName: Map<string, string>;
@@ -2533,6 +2769,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -2541,6 +2778,15 @@ Deno.serve(async (req: Request) => {
     const action = url.searchParams.get('action') ?? req.headers.get('x-action');
 
     logWithContext('Request received', { method: req.method, path, search: url.search || undefined });
+
+    const authorizeDashboard = async (allowedRoles: ReadonlySet<DashboardRole>) =>
+      authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabase,
+        allowedRoles,
+      });
 
     let lookupMaps: LeadLookupMaps | null = null;
     const getLookups = async () => {
@@ -2558,6 +2804,16 @@ Deno.serve(async (req: Request) => {
     };
 
     if (action === 'auto-contact' && req.method === 'POST') {
+      const deniedResponse = assertInternalServiceRole(req, supabaseServiceKey);
+      if (deniedResponse) {
+        logWithContext('Unauthorized auto-contact request', {
+          method: req.method,
+          path,
+          action,
+        });
+        return deniedResponse;
+      }
+
       const payload = await req.json().catch(() => null);
       const record = payload?.record ?? null;
       const oldRecord = payload?.old_record ?? null;
@@ -2702,6 +2958,16 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'process-flow-jobs' && req.method === 'POST') {
+      const deniedResponse = assertInternalServiceRole(req, supabaseServiceKey);
+      if (deniedResponse) {
+        logWithContext('Unauthorized process-flow-jobs request', {
+          method: req.method,
+          path,
+          action,
+        });
+        return deniedResponse;
+      }
+
       const lookups = await getLookups();
       const settings = await loadAutoContactFlowSettings(supabase);
 
@@ -2726,6 +2992,16 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'manual-automation' && req.method === 'POST') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        logWithContext('Unauthorized manual-automation request', {
+          method: req.method,
+          path,
+          action,
+        });
+        return authResult.response;
+      }
+
       const body = await req.json().catch(() => null);
 
       if (!body || typeof body.chatId !== 'string' || !Array.isArray(body.messages)) {
@@ -2794,6 +3070,16 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path.endsWith('/leads') && req.method === 'POST') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        logWithContext('Unauthorized lead creation request', {
+          method: req.method,
+          path,
+          userRole: null,
+        });
+        return authResult.response;
+      }
+
       const body = await req.json();
       const lookups = await getLookups();
       const validation = validateLeadData(body, lookups);
@@ -2861,6 +3147,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path.endsWith('/leads') && req.method === 'GET') {
+      const authResult = await authorizeDashboard(READ_ROLE_SET);
+      if (!authResult.authorized) {
+        logWithContext('Unauthorized lead list request', {
+          method: req.method,
+          path,
+        });
+        return authResult.response;
+      }
+
       const lookups = await getLookups();
       const searchParams = url.searchParams;
       const status = searchParams.get('status_id') || searchParams.get('status');
@@ -2956,6 +3251,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path.match(/\/leads\/[a-f0-9-]+$/) && req.method === 'PUT') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        logWithContext('Unauthorized lead update request', {
+          method: req.method,
+          path,
+        });
+        return authResult.response;
+      }
+
       const leadId = path.split('/').pop();
       const body = await req.json();
       const lookups = await getLookups();
@@ -3011,6 +3315,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path.endsWith('/leads/batch') && req.method === 'POST') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        logWithContext('Unauthorized lead batch request', {
+          method: req.method,
+          path,
+        });
+        return authResult.response;
+      }
+
       const body = await req.json();
       const lookups = await getLookups();
 

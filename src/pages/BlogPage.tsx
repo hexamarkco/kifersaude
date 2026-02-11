@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
@@ -284,6 +285,17 @@ export default function BlogPage() {
 
   const isLoadingPost = Boolean(slug) && loading;
   const isInitialLoading = loading && posts.length === 0;
+  const sanitizedSelectedPostContent = useMemo(
+    () =>
+      selectedPost?.content
+        ? DOMPurify.sanitize(selectedPost.content, {
+            USE_PROFILES: { html: true },
+            FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+            ALLOW_UNKNOWN_PROTOCOLS: false,
+          })
+        : '',
+    [selectedPost?.content],
+  );
 
   if (isLoadingPost) {
     return (
@@ -541,7 +553,7 @@ export default function BlogPage() {
                   prose-table:w-full prose-table:border-collapse prose-table:my-6
                   prose-th:bg-slate-100 prose-th:p-3 prose-th:text-left prose-th:font-bold prose-th:border prose-th:border-slate-300
                   prose-td:p-3 prose-td:border prose-td:border-slate-300"
-                dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizedSelectedPostContent }}
               />
             </div>
 

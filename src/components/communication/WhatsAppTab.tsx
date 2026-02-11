@@ -497,7 +497,19 @@ export default function WhatsAppTab() {
 
   const loadUnreadCounts = async () => {
     if (!user) return;
-    const { data, error } = await supabase.rpc('get_whatsapp_unread_counts', { current_user: user.id });
+
+    let unreadCountsResponse = await supabase.rpc('get_whatsapp_unread_counts', {
+      current_user_id: user.id,
+    });
+
+    if (unreadCountsResponse.error?.code === 'PGRST202') {
+      unreadCountsResponse = await supabase.rpc('get_whatsapp_unread_counts', {
+        current_user: user.id,
+      });
+    }
+
+    const { data, error } = unreadCountsResponse;
+
     if (error) {
       console.error('Error loading unread counts:', error);
       return;

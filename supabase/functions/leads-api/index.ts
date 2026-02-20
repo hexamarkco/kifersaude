@@ -1074,10 +1074,24 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
-function isValidWhatsappNumber(telefone?: string | null): boolean {
+function normalizeBrazilianPhoneLocal(telefone?: string | null): string {
   const digits = normalizeTelefone(telefone ?? '');
-  if (!digits) return false;
-  const local = digits.startsWith('55') ? digits.slice(2) : digits;
+  if (!digits) return '';
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    return digits.slice(2);
+  }
+  return digits;
+}
+
+function toWhapiPhoneNumber(telefone?: string | null): string {
+  const local = normalizeBrazilianPhoneLocal(telefone);
+  if (!local) return '';
+  return local.startsWith('55') ? local : `55${local}`;
+}
+
+function isValidWhatsappNumber(telefone?: string | null): boolean {
+  const local = normalizeBrazilianPhoneLocal(telefone);
+  if (!local) return false;
   return local.length === 10 || local.length === 11;
 }
 
@@ -1088,7 +1102,7 @@ const usesWhatsappValidCondition = (flow: AutoContactFlow): boolean => {
 };
 
 const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<boolean | null> => {
-  const digits = normalizeTelefone(telefone ?? '');
+  const digits = toWhapiPhoneNumber(telefone);
   if (!digits) return false;
 
   const response = await fetch(`https://gate.whapi.cloud/contacts/${encodeURIComponent(digits)}`, {
@@ -1173,23 +1187,24 @@ const applyInvalidNumberAction = async ({
   const targetStatus = configuredStatus || fallbackLost;
   const targetStatusId =
     lookups.statusByName.get(normalizeText(targetStatus)) ??
-    lookups.statusByName.get(normalizeText(fallbackLost)) ??
-    lookups.defaultStatusId;
+    lookups.statusByName.get(normalizeText(fallbackLost));
 
   if (!targetStatusId) {
+    const reason = 'Status "Perdido" não configurado para ação de número inválido.';
     logWithContext('Falha ao resolver status para número inválido', {
       leadId: lead.id,
       flowId: flow.id,
       requestedStatus: targetStatus,
+      reason,
     });
-    return;
+    throw new Error(reason);
   }
 
   await supabase.from('leads').update({ status_id: targetStatusId }).eq('id', lead.id);
   await supabase.from('interactions').insert({
     lead_id: lead.id,
     tipo: 'Sistema',
-    descricao: `Lead movido automaticamente para \"${targetStatus}\" por número inválido/sem WhatsApp.`,
+    descricao: `Lead movido automaticamente para "${targetStatus}" por número inválido/sem WhatsApp.`,
     responsavel: 'Sistema',
   });
   logWithContext('Status atualizado após número inválido', {
@@ -1517,6 +1532,19 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
     }
   };
 
+  const normalizeConditionValue = (field: AutoContactFlowConditionField, value: unknown): string => {
+    const rawValue = typeof value === 'string' ? value : '';
+    if (field !== 'whatsapp_valid') return rawValue;
+    const normalized = rawValue.trim().toLowerCase();
+    if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return 'true';
+    }
+    if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return 'false';
+    }
+    return rawValue;
+  };
+
   const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
   switch (value) {
     case 'send_message':
@@ -1596,26 +1624,32 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
       const rawConditions = Array.isArray(flow?.conditions) ? flow.conditions : [];
       const rawExitConditions = Array.isArray(flow?.exitConditions) ? flow.exitConditions : [];
       const normalizedConditions = rawConditions
-        .map((condition: any, conditionIndex: number) => ({
-          id:
-            typeof condition?.id === 'string' && condition.id.trim()
-              ? condition.id
-              : `flow-${flowId}-condition-${conditionIndex}`,
-          field: normalizeConditionField(condition?.field),
-          operator: normalizeConditionOperator(condition?.operator),
-          value: typeof condition?.value === 'string' ? condition.value : '',
-        }))
+        .map((condition: any, conditionIndex: number) => {
+          const field = normalizeConditionField(condition?.field);
+          return {
+            id:
+              typeof condition?.id === 'string' && condition.id.trim()
+                ? condition.id
+                : `flow-${flowId}-condition-${conditionIndex}`,
+            field,
+            operator: normalizeConditionOperator(condition?.operator),
+            value: normalizeConditionValue(field, condition?.value),
+          };
+        })
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedExitConditions = rawExitConditions
-        .map((condition: any, conditionIndex: number) => ({
-          id:
-            typeof condition?.id === 'string' && condition.id.trim()
-              ? condition.id
-              : `flow-${flowId}-exit-condition-${conditionIndex}`,
-          field: normalizeConditionField(condition?.field),
-          operator: normalizeConditionOperator(condition?.operator),
-          value: typeof condition?.value === 'string' ? condition.value : '',
-        }))
+        .map((condition: any, conditionIndex: number) => {
+          const field = normalizeConditionField(condition?.field);
+          return {
+            id:
+              typeof condition?.id === 'string' && condition.id.trim()
+                ? condition.id
+                : `flow-${flowId}-exit-condition-${conditionIndex}`,
+            field,
+            operator: normalizeConditionOperator(condition?.operator),
+            value: normalizeConditionValue(field, condition?.value),
+          };
+        })
         .filter((condition) => condition.field === 'lead_created' || condition.value.trim());
       const normalizedSteps = steps.map((step: any, stepIndex: number) => {
         const delayValueRaw = Number(step?.delayValue ?? step?.delayHours);
@@ -2438,7 +2472,7 @@ async function processFlowJobs({
       const message = error instanceof Error ? error.message : String(error);
 
       if (job.action_type === 'send_message' && isInvalidNumberError(error)) {
-        const reason = 'Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
+        const reason = 'invalid_number: Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
         try {
           await applyInvalidNumberAction({
             supabase,
@@ -2493,8 +2527,8 @@ async function sendAutoContactMessage({
   content: string | { url: string; caption?: string; filename?: string };
   settings: AutoContactFlowSettings;
 }): Promise<void> {
-  const normalizedPhone = normalizeTelefone(lead?.telefone || '');
-  if (!normalizedPhone) {
+  const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
+  if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
     throw new Error('Telefone inválido para envio automático.');
   }
 
@@ -2503,7 +2537,7 @@ async function sendAutoContactMessage({
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
-  const chatId = `55${normalizedPhone}@s.whatsapp.net`;
+  const chatId = `${whapiPhone}@s.whatsapp.net`;
   let endpoint = '';
   const body: Record<string, unknown> = { to: chatId };
 
@@ -2584,8 +2618,8 @@ async function triggerAutoContactForLead({
     return;
   }
 
-  const normalizedPhone = normalizeTelefone(lead?.telefone || '');
-  if (!normalizedPhone) {
+  const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
+  if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
     logWithContext('Lead sem telefone válido para automação', { leadId: lead?.id });
     return;
   }
@@ -2606,7 +2640,7 @@ async function triggerAutoContactForLead({
         'x-api-key': settings.apiKey,
       },
       body: JSON.stringify({
-        chatId: `55${normalizedPhone}@s.whatsapp.net`,
+        chatId: `${whapiPhone}@s.whatsapp.net`,
         contentType: 'string',
         content: message,
       }),

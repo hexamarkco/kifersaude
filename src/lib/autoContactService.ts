@@ -544,6 +544,19 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         return 'contains';
     }
   };
+
+  const normalizeConditionValue = (field: AutoContactFlowConditionField, value: unknown): string => {
+    const rawValue = typeof value === 'string' ? value : '';
+    if (field !== 'whatsapp_valid') return rawValue;
+    const normalized = normalizeText(rawValue);
+    if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return 'true';
+    }
+    if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return 'false';
+    }
+    return rawValue;
+  };
   const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
     switch (value) {
       case 'send_message':
@@ -658,7 +671,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               : `flow-${flowId}-condition-${conditionIndex}`,
           field,
           operator: normalizeConditionOperator(condition?.operator),
-          value: typeof condition?.value === 'string' ? condition.value : '',
+          value: normalizeConditionValue(field, condition?.value),
         };
         })
         // "lead_created" is treated as an event boolean and does not require a value.
@@ -675,7 +688,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               : `flow-${flowId}-exit-condition-${conditionIndex}`,
           field,
           operator: normalizeConditionOperator(condition?.operator),
-          value: typeof condition?.value === 'string' ? condition.value : '',
+          value: normalizeConditionValue(field, condition?.value),
         };
         })
         // "lead_created" is treated as an event boolean and does not require a value.

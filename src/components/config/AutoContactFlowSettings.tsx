@@ -373,9 +373,7 @@ export default function AutoContactFlowSettings() {
 
         return expandedFlows.map((expandedFlow, expandedIndex) => {
           const flowKey = expandedIndex > 0 ? `${flowIndex}-${expandedIndex}` : `${flowIndex}`;
-          const effectiveFlow = expandedFlow.flowGraph
-            ? applyFlowGraphToFlow(expandedFlow, expandedFlow.flowGraph)
-            : expandedFlow;
+          const effectiveFlow = expandedFlow;
           const steps = effectiveFlow.steps
           .map((step, stepIndex) => {
             const stepWithLegacyDelay = step as AutoContactFlowStep & { delayHours?: number };

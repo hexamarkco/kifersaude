@@ -1372,6 +1372,8 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead, event?: strin
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
+const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid', 'event', 'lead_created'];
+
 const matchesFlowCondition = (
   condition: AutoContactFlowCondition,
   lead: Lead,
@@ -1380,6 +1382,12 @@ const matchesFlowCondition = (
   if (condition.field === 'lead_created') {
     return event === 'lead_created';
   }
+
+  if (BOOLEAN_CONDITION_FIELDS.includes(condition.field)) {
+    const leadValue = getLeadFieldValue(lead, condition.field, event);
+    return leadValue === 'true';
+  }
+
   const context = buildFormulaContext(lead, DEFAULT_SCHEDULING.timezone);
   const resolvedValue = condition.value.trim().startsWith('=')
     ? String(evaluateExpression(condition.value, context) ?? '')

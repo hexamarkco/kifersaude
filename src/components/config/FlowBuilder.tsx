@@ -167,14 +167,33 @@ const toGraphNode = (node: Node<AutoContactFlowGraphNodeData>): AutoContactFlowG
   data: node.data,
 });
 
-const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-    <div className="text-xs font-semibold uppercase text-slate-400">Gatilho</div>
-    <div className="text-sm font-semibold text-slate-800">{data.label || 'Lead criado'}</div>
-    <div className="text-xs text-slate-500 mt-1">Dispara quando um lead entra no fluxo.</div>
-    <Handle type="source" position={Position.Right} className="w-2 h-2 bg-slate-400" />
-  </div>
-);
+const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
+  const getTriggerDescription = () => {
+    switch (data.triggerType) {
+      case 'status_changed':
+        return data.triggerStatuses?.length 
+          ? `Dispara ao mudar para: ${data.triggerStatuses.join(', ')}`
+          : 'Dispara ao mudar de status';
+      case 'status_duration':
+        return data.triggerStatuses?.length
+          ? `Dispara após ${data.triggerDurationHours ?? 24}h em: ${data.triggerStatuses.join(', ')}`
+          : `Dispara após ${data.triggerDurationHours ?? 24}h em status específico`;
+      default:
+        return 'Dispara quando um lead é criado';
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="text-xs font-semibold uppercase text-slate-400">Gatilho</div>
+      <div className="text-sm font-semibold text-slate-800">{data.label || 'Lead criado'}</div>
+      <div className="text-xs text-slate-500 mt-1">{getTriggerDescription()}</div>
+      <Handle type="source" position={Position.Right} className="w-2 h-2 bg-slate-400" />
+    </div>
+  );
+};
+
+const BOOLEAN_FIELDS = ['whatsapp_valid', 'event', 'lead_created'];
 
 const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
@@ -238,7 +257,13 @@ export default function FlowBuilder({
   onChangeGraph,
   onTriggerChange,
 }: FlowBuilderProps) {
-  const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow.id, flow.flowGraph]);
+  const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [
+    flow.id, 
+    flow.flowGraph, 
+    flow.triggerType, 
+    flow.triggerStatuses, 
+    flow.triggerDurationHours,
+  ]);
   const [nodes, setNodes, onNodesChange] = useNodesState(baseGraph.nodes.map(toReactFlowNode));
   const [edges, setEdges, onEdgesChange] = useEdgesState(baseGraph.edges.map(toReactFlowEdge));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -864,37 +889,44 @@ export default function FlowBuilder({
                         {Object.entries(conditionOperatorLabels).map(([value, label]) => (
                           <option key={value} value={value}>
                             {label}
-                          </option>
-                        ))}
-                      </select>
-                      {valueOptions ? (
-                        <select
-                          value={condition.value}
-                          onChange={(event) => {
-                            const nextConditions = [...(selectedNode.data.conditions ?? [])];
-                            nextConditions[index] = { ...condition, value: event.target.value };
-                            updateSelectedNode({ conditions: nextConditions });
-                          }}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                        >
-                          <option value="">Selecione</option>
-                          {valueOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {getConditionOptionLabel(condition.field, option)}
-                            </option>
                           ))}
-                        </select>
+                      </select>
+                      {BOOLEAN_FIELDS.includes(condition.field) ? (
+                        <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">
+                          Use as conexões <span className="font-semibold">Sim/Não</span> para definir o fluxo quando a condição for verdadeira ou falsa.
+                        </div>
                       ) : (
-                        <input
-                          type="text"
-                          value={condition.value}
-                          onChange={(event) => {
-                            const nextConditions = [...(selectedNode.data.conditions ?? [])];
-                            nextConditions[index] = { ...condition, value: event.target.value };
-                            updateSelectedNode({ conditions: nextConditions });
-                          }}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                        />
+                        <>
+                          {valueOptions ? (
+                            <select
+                              value={condition.value}
+                              onChange={(event) => {
+                                const nextConditions = [...(selectedNode.data.conditions ?? [])];
+                                nextConditions[index] = { ...condition, value: event.target.value };
+                                updateSelectedNode({ conditions: nextConditions });
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                            >
+                              <option value="">Selecione</option>
+                              {valueOptions.map((option) => (
+                                <option key={option} value={option}>
+                                  {getConditionOptionLabel(condition.field, option)}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={condition.value}
+                              onChange={(event) => {
+                                const nextConditions = [...(selectedNode.data.conditions ?? [])];
+                                nextConditions[index] = { ...condition, value: event.target.value };
+                                updateSelectedNode({ conditions: nextConditions });
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                            />
+                          )}
+                        </>
                       )}
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-slate-400">Condicao {index + 1}</span>

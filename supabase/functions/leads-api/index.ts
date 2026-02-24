@@ -1975,6 +1975,8 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, even
   }
 };
 
+const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid', 'event', 'lead_created'];
+
 const matchesFlowCondition = (
   condition: AutoContactFlowCondition,
   lead: any,
@@ -1982,6 +1984,11 @@ const matchesFlowCondition = (
 ): boolean => {
   if (condition.field === 'lead_created') {
     return event === 'lead_created';
+  }
+
+  if (BOOLEAN_CONDITION_FIELDS.includes(condition.field)) {
+    const leadValue = getLeadFieldValue(lead, condition.field, event);
+    return leadValue === 'true';
   }
 
   const context = buildFormulaContext(lead);

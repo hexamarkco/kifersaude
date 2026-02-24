@@ -32,6 +32,7 @@ import {
   type AutoContactFlowStep,
   type AutoContactTemplate,
 } from '../../lib/autoContactService';
+import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 
 type FlowBuilderProps = {
@@ -43,6 +44,7 @@ type FlowBuilderProps = {
   delayUnitLabels: Record<AutoContactDelayUnit, { singular: string; plural: string }>;
   flowActionLabels: Record<AutoContactFlowActionType, string>;
   getConditionValueOptions: (field: AutoContactFlowCondition['field']) => string[] | null;
+  leadStatuses: LeadStatusConfig[];
   onChangeGraph: (graph: AutoContactFlowGraph) => void;
 };
 
@@ -231,6 +233,7 @@ export default function FlowBuilder({
   delayUnitLabels,
   flowActionLabels,
   getConditionValueOptions,
+  leadStatuses,
   onChangeGraph,
 }: FlowBuilderProps) {
   const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow.id, flow.flowGraph]);
@@ -1013,13 +1016,18 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === 'update_status' && (
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">Status do lead</label>
-                    <input
-                      type="text"
+                    <select
                       value={selectedNode.data.step?.statusToSet ?? ''}
                       onChange={(event) => updateSelectedStep({ statusToSet: event.target.value })}
                       className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                      placeholder="Ex.: Contato Inicial"
-                    />
+                    >
+                      <option value="">Selecione um status</option>
+                      {leadStatuses.filter((status) => status.ativo !== false).map((status) => (
+                        <option key={status.id} value={status.nome}>
+                          {status.nome}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 

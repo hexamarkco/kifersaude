@@ -1692,6 +1692,7 @@ export default function AutoContactFlowSettings() {
                       delayUnitLabels={delayUnitLabels}
                       flowActionLabels={flowActionLabels}
                       getConditionValueOptions={getConditionValueOptions}
+                      leadStatuses={leadStatuses}
                       onChangeGraph={(graph) => handleUpdateFlowGraph(activeFlow.id, graph)}
                     />
 

@@ -452,6 +452,9 @@ type AutoContactFlow = {
   id: string;
   name: string;
   triggerStatus: string;
+  triggerType?: 'lead_created' | 'status_changed' | 'status_duration';
+  triggerStatuses?: string[];
+  triggerDurationHours?: number;
   steps: AutoContactFlowStep[];
   finalStatus?: string;
   conditionLogic?: 'all' | 'any';
@@ -482,7 +485,7 @@ type AutoContactFlowSettings = {
   scheduling: AutoContactSchedulingSettings;
 };
 
-type AutoContactFlowEvent = 'lead_created';
+type AutoContactFlowEvent = 'lead_created' | 'status_changed';
 
 type LookupTableRow = { id: string; nome?: string | null; label?: string | null; padrao?: boolean | null };
 
@@ -2000,6 +2003,24 @@ const matchesFlowCondition = (
 };
 
 const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlowEvent): boolean => {
+  const triggerType = flow.triggerType ?? 'lead_created';
+  
+  if (triggerType === 'lead_created') {
+    if (event !== 'lead_created') return false;
+  }
+  
+  if (triggerType === 'status_changed') {
+    if (event !== 'status_changed') return false;
+    const triggerStatuses = flow.triggerStatuses ?? [];
+    if (triggerStatuses.length > 0 && !triggerStatuses.includes(lead.status ?? '')) {
+      return false;
+    }
+  }
+  
+  if (triggerType === 'status_duration') {
+    return false;
+  }
+
   const rawConditions = flow.conditions ?? [];
   const conditions = [...rawConditions];
   const triggerStatus = flow.triggerStatus?.trim();
@@ -2851,8 +2872,13 @@ Deno.serve(async (req: Request) => {
       const payload = await req.json().catch(() => null);
       const record = payload?.record ?? null;
       const oldRecord = payload?.old_record ?? null;
+      const isStatusChange = payload?.is_status_change === true;
       const event: AutoContactFlowEvent | undefined =
-        payload?.type === 'INSERT' || !oldRecord ? 'lead_created' : undefined;
+        payload?.type === 'INSERT' || !oldRecord 
+          ? 'lead_created' 
+          : isStatusChange 
+            ? 'status_changed' 
+            : undefined;
 
       if (!record || typeof record !== 'object' || !record.id) {
         return new Response(JSON.stringify({ success: false, error: 'Payload inválido para automação' }), {
@@ -3020,6 +3046,104 @@ Deno.serve(async (req: Request) => {
       });
 
       return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'check-status-duration' && req.method === 'POST') {
+      const deniedResponse = assertInternalServiceRole(req, supabaseServiceKey);
+      if (deniedResponse) {
+        logWithContext('Unauthorized check-status-duration request', {
+          method: req.method,
+          path,
+          action,
+        });
+        return deniedResponse;
+      }
+
+      const payload = await req.json().catch(() => null);
+      const leadId = payload?.lead_id ?? null;
+      const flowId = payload?.flow_id ?? null;
+
+      const lookups = await getLookups();
+      const settings = await loadAutoContactFlowSettings(supabase);
+
+      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
+        return new Response(JSON.stringify({ success: true, skipped: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      let targetFlow: typeof settings.flows[number] | null = null;
+      if (flowId) {
+        targetFlow = settings.flows.find(f => f.id === flowId) ?? null;
+      }
+
+      if (!targetFlow || targetFlow.triggerType !== 'status_duration') {
+        return new Response(JSON.stringify({ success: false, error: 'Flow not found or not a status_duration flow' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (leadId) {
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('id', leadId)
+          .single();
+
+        if (!lead) {
+          return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const mappedLead = mapLeadRelationsForResponse(lead, lookups);
+        if (!mappedLead.status) {
+          mappedLead.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
+        }
+
+        const triggerStatuses = targetFlow.triggerStatuses ?? [];
+        if (triggerStatuses.length > 0 && !triggerStatuses.includes(mappedLead.status ?? '')) {
+          return new Response(JSON.stringify({ success: false, error: 'Lead not in trigger status' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const { error: execError } = await supabase
+          .from('auto_contact_flow_executions')
+          .upsert({
+            lead_id: leadId,
+            flow_id: targetFlow.id,
+          }, {
+            onConflict: 'lead_id,flow_id',
+            ignoreDuplicates: true,
+          });
+
+        if (execError) {
+          logWithContext('Error recording flow execution', { leadId, flowId: targetFlow.id, error: execError.message });
+        }
+
+        await scheduleFlowJobs({
+          supabase,
+          leadId,
+          lead: mappedLead,
+          flow: targetFlow,
+          scheduling: settings.scheduling,
+        });
+
+        return new Response(JSON.stringify({ success: true, leadId, flowId: targetFlow.id }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'Use lead_id and flow_id in body' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

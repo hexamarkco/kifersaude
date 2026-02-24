@@ -704,6 +704,9 @@ export default function AutoContactFlowSettings() {
     id: `flow-${Date.now()}`,
     name: '',
     triggerStatus: '',
+    triggerType: 'lead_created',
+    triggerStatuses: [],
+    triggerDurationHours: 24,
     steps: [createFlowStep()],
     finalStatus: '',
     scheduling: {
@@ -1694,6 +1697,13 @@ export default function AutoContactFlowSettings() {
                       getConditionValueOptions={getConditionValueOptions}
                       leadStatuses={leadStatuses}
                       onChangeGraph={(graph) => handleUpdateFlowGraph(activeFlow.id, graph)}
+                      onTriggerChange={(triggerType, triggerStatuses, triggerDurationHours) => {
+                        handleUpdateFlow(activeFlow.id, {
+                          triggerType,
+                          triggerStatuses,
+                          triggerDurationHours,
+                        });
+                      }}
                     />
 
 

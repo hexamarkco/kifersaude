@@ -46,6 +46,7 @@ type FlowBuilderProps = {
   getConditionValueOptions: (field: AutoContactFlowCondition['field']) => string[] | null;
   leadStatuses: LeadStatusConfig[];
   onChangeGraph: (graph: AutoContactFlowGraph) => void;
+  onTriggerChange?: (triggerType: 'lead_created' | 'status_changed' | 'status_duration', triggerStatuses: string[], triggerDurationHours: number) => void;
 };
 
 const createId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -235,6 +236,7 @@ export default function FlowBuilder({
   getConditionValueOptions,
   leadStatuses,
   onChangeGraph,
+  onTriggerChange,
 }: FlowBuilderProps) {
   const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow.id, flow.flowGraph]);
   const [nodes, setNodes, onNodesChange] = useNodesState(baseGraph.nodes.map(toReactFlowNode));
@@ -453,6 +455,16 @@ export default function FlowBuilder({
     setNodes((current) =>
       current.map((node) => (node.id === selectedNode.id ? { ...node, data: { ...node.data, ...updates } } : node)),
     );
+    if (selectedNode.type === 'trigger' && onTriggerChange) {
+      const triggerType = updates.triggerType ?? selectedNode.data.triggerType ?? 'lead_created';
+      const triggerStatuses = updates.triggerStatuses ?? selectedNode.data.triggerStatuses ?? [];
+      const triggerDurationHours = updates.triggerDurationHours ?? selectedNode.data.triggerDurationHours ?? 24;
+      onTriggerChange(
+        triggerType as 'lead_created' | 'status_changed' | 'status_duration',
+        triggerStatuses,
+        triggerDurationHours,
+      );
+    }
   };
 
   const updateSelectedStep = (updates: Partial<AutoContactFlowStep>) => {
@@ -720,6 +732,76 @@ export default function FlowBuilder({
             {selectedNodeIssues.length > 0 && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
                 {selectedNodeIssues.join(' • ')}
+              </div>
+            )}
+
+            {selectedNode.type === 'trigger' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] text-slate-500 mb-1">Tipo de gatilho</label>
+                  <select
+                    value={selectedNode.data.triggerType ?? 'lead_created'}
+                    onChange={(event) => {
+                      const triggerType = event.target.value as 'lead_created' | 'status_changed' | 'status_duration';
+                      const label = triggerType === 'lead_created' 
+                        ? 'Lead criado' 
+                        : triggerType === 'status_changed' 
+                          ? 'Mudança de status' 
+                          : 'Tempo em status';
+                      updateSelectedNode({ 
+                        triggerType, 
+                        label,
+                        triggerStatuses: triggerType !== 'lead_created' ? (selectedNode.data.triggerStatuses ?? []) : [],
+                        triggerDurationHours: triggerType === 'status_duration' ? (selectedNode.data.triggerDurationHours ?? 24) : 24,
+                      });
+                    }}
+                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                  >
+                    <option value="lead_created">Lead criado</option>
+                    <option value="status_changed">Mudança de status</option>
+                    <option value="status_duration">Tempo em status</option>
+                  </select>
+                </div>
+
+                {(selectedNode.data.triggerType === 'status_changed' || selectedNode.data.triggerType === 'status_duration') && (
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">Status do lead</label>
+                    <select
+                      multiple
+                      value={selectedNode.data.triggerStatuses ?? []}
+                      onChange={(event) => {
+                        const selected = Array.from(event.target.selectedOptions, (option) => option.value);
+                        updateSelectedNode({ triggerStatuses: selected });
+                      }}
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md h-24"
+                    >
+                      {leadStatuses.filter((s) => s.ativo !== false).map((status) => (
+                        <option key={status.id} value={status.nome}>
+                          {status.nome}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-[10px] text-slate-400 mt-1">Segure Ctrl/Cmd para selecionar múltiplos</div>
+                  </div>
+                )}
+
+                {selectedNode.data.triggerType === 'status_duration' && (
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">Tempo no status (horas)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={selectedNode.data.triggerDurationHours ?? 24}
+                      onChange={(event) =>
+                        updateSelectedNode({ triggerDurationHours: Number(event.target.value) })
+                      }
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                    />
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      O fluxo será executado quando o lead estiver há mais de X horas neste(s) status
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

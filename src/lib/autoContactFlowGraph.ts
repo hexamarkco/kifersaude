@@ -5,6 +5,7 @@ import type {
   AutoContactFlowGraphEdge,
   AutoContactFlowGraphNode,
   AutoContactFlowStep,
+  AutoContactFlowTriggerType,
 } from './autoContactService';
 
 const ACTION_NODE_WIDTH = 240;
@@ -20,11 +21,23 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
   let conditionNodeId: string | null = null;
 
   const triggerId = createNodeId('trigger');
+  const triggerType = flow.triggerType ?? 'lead_created';
+  const triggerLabel = triggerType === 'lead_created' 
+    ? 'Lead criado' 
+    : triggerType === 'status_changed' 
+      ? 'Mudança de status' 
+      : 'Tempo em status';
+  
   nodes.push({
     id: triggerId,
     type: 'trigger',
     position: { x: 0, y: 0 },
-    data: { label: 'Lead criado' },
+    data: { 
+      label: triggerLabel,
+      triggerType,
+      triggerStatuses: flow.triggerStatuses ?? [],
+      triggerDurationHours: flow.triggerDurationHours ?? 24,
+    },
   });
 
   let lastNodeId = triggerId;

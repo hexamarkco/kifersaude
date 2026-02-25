@@ -392,11 +392,11 @@ export default function ConversionLandingPage() {
                   </div>
                 </div>
                 <div className="hero-logos flex flex-wrap gap-4 items-center">
-                  <img src="/amil-logo-1-2.png" alt="Amil" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/amil-logo-1-2.png" alt="Amil" className="h-7 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
                   <img src="/bradesco-saude-logo-1-1.png" alt="Bradesco" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
-                  <img src="/sulamerica-saude-logo.png" alt="SulAmérica" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
-                  <img src="/porto-logo.png" alt="Porto" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
-                  <img src="/assim-saude-logo.png" alt="Assim" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/sulamerica-saude-logo.png" alt="SulAmérica" className="h-7 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/porto-logo.png" alt="Porto" className="h-10 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/assim-saude-logo.png" alt="Assim" className="h-10 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
                 </div>
               </div>
               
@@ -607,17 +607,17 @@ export default function ConversionLandingPage() {
             </div>
             <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 mt-8">
               {[
-                { src: '/amil-logo-1-2.png', alt: 'Amil' },
-                { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco' },
-                { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica' },
-                { src: '/porto-logo.png', alt: 'Porto' },
-                { src: '/assim-saude-logo.png', alt: 'Assim' },
+                { src: '/amil-logo-1-2.png', alt: 'Amil', h: 'h-10' },
+                { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco', h: 'h-12' },
+                { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica', h: 'h-10' },
+                { src: '/porto-logo.png', alt: 'Porto', h: 'h-14' },
+                { src: '/assim-saude-logo.png', alt: 'Assim', h: 'h-14' },
               ].map((logo, i) => (
                 <img 
                   key={i}
                   src={logo.src} 
                   alt={logo.alt} 
-                  className="h-12 grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110 cursor-pointer" 
+                  className={`${logo.h} grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110 cursor-pointer`} 
                 />
               ))}
             </div>

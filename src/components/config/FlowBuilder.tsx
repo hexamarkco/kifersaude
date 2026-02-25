@@ -889,7 +889,8 @@ export default function FlowBuilder({
                         {Object.entries(conditionOperatorLabels).map(([value, label]) => (
                           <option key={value} value={value}>
                             {label}
-                          ))}
+                          </option>
+                        ))}
                       </select>
                       {BOOLEAN_FIELDS.includes(condition.field) ? (
                         <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">

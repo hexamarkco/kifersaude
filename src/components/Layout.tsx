@@ -3,7 +3,7 @@ import {
   Users,
   FileText,
   LayoutDashboard,
-  Bell,
+  BellRing,
   Moon,
   LogOut,
   Settings,
@@ -107,7 +107,7 @@ export default function Layout({
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'financeiro-agenda', label: 'Tarefas', icon: Calendar },
-    { id: 'reminders', label: 'Lembretes', icon: Bell, badge: unreadReminders },
+    { id: 'reminders', label: 'Lembretes', icon: BellRing, badge: unreadReminders },
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
@@ -479,7 +479,7 @@ export default function Layout({
               <span
                 className={`absolute ${isMenuCollapsed ? 'top-0 right-0' : ''} ${
                   tab.badgeColor || 'bg-orange-500'
-                } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                   hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
                 } ${
                   (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
@@ -514,7 +514,7 @@ export default function Layout({
                       <span
                         className={`${
                           child.badgeColor || 'bg-orange-500'
-                        } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                        } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                           child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
                         } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
                       >
@@ -547,7 +547,7 @@ export default function Layout({
           <span
             className={`${
               tab.badgeColor || 'bg-orange-500'
-            } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+            } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
               hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
             } ${
               (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
@@ -601,22 +601,21 @@ export default function Layout({
             </div>
           </nav>
 
-          <div className={`border-t border-slate-200 p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
-            <div className={`flex gap-1 ${isMenuCollapsed ? 'flex-col' : 'flex-row'} ${!isMenuCollapsed ? 'mb-2' : ''}`}>
-              <div className="relative">
-                <button
-                  ref={notificationsButtonRef}
-                  onClick={() => setShowNotificationsDropdown((current) => !current)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600 ${
-                    isMenuCollapsed ? 'w-full justify-center px-2' : ''
-                  }`}
-                  title="Notificações"
-                  aria-expanded={showNotificationsDropdown}
-                  aria-haspopup="true"
-                >
-                  <div className="relative">
-                    <Bell className="h-5 w-5" />
-                    {unreadReminders > 0 && (
+          <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
+            <div className="relative">
+              <button
+                ref={notificationsButtonRef}
+                onClick={() => setShowNotificationsDropdown((current) => !current)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600 ${
+                  isMenuCollapsed ? 'w-full justify-center px-2' : ''
+                }`}
+                title="Notificações"
+                aria-expanded={showNotificationsDropdown}
+                aria-haspopup="true"
+              >
+                <div className="relative">
+                  <BellRing className="h-5 w-5" />
+                  {unreadReminders > 0 && (
                       <span
                         className={`absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                           hasActiveNotification ? 'bg-orange-500 animate-pulse' : 'bg-orange-500'
@@ -722,23 +721,22 @@ export default function Layout({
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={toggleThemeMode}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
-                  isMenuCollapsed ? 'w-full justify-center px-2' : ''
-                }`}
-                title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-                aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              >
-                {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                {!isMenuCollapsed && <span>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={toggleThemeMode}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
+                isMenuCollapsed ? 'justify-center px-2' : ''
+              }`}
+              title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+            >
+              {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {!isMenuCollapsed && <span>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>}
+            </button>
             <button
               onClick={handleLogout}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 ${
-                isMenuCollapsed ? 'justify-center' : ''
+                isMenuCollapsed ? 'justify-center px-2' : ''
               }`}
               title={isMenuCollapsed ? 'Sair' : undefined}
             >

@@ -605,7 +605,7 @@ export default function ConversionLandingPage() {
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Trabalhamos com as maiores operadoras do Brasil</h2>
             </div>
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 mt-8">
+              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 mt-8">
               {[
                 { src: '/amil-logo-1-2.png', alt: 'Amil', h: 'h-10' },
                 { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco', h: 'h-12' },
@@ -617,7 +617,7 @@ export default function ConversionLandingPage() {
                   key={i}
                   src={logo.src} 
                   alt={logo.alt} 
-                  className={`${logo.h} grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110 cursor-pointer`} 
+                  className={`${logo.h} grayscale brightness-0 hover:grayscale-0 transition-all duration-300 hover:scale-110 cursor-pointer`} 
                 />
               ))}
             </div>

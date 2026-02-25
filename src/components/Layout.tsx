@@ -1,5 +1,4 @@
-import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Users,
   FileText,
@@ -11,7 +10,6 @@ import {
   MessageCircle,
   Sun,
   ChevronDown,
-  ChevronUp,
   Menu,
   X,
   Briefcase,
@@ -19,6 +17,8 @@ import {
   PiggyBank,
   DollarSign,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase, Reminder, Contract } from '../lib/supabase';
@@ -77,7 +77,11 @@ export default function Layout({
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
   const [expandedMobileParent, setExpandedMobileParent] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
+  const [isMenuCollapsed, setIsMenuCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('painel.sidebar.collapsed');
+    return stored === 'true';
+  });
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -97,10 +101,6 @@ export default function Layout({
     contract?: Contract | null;
     holderName?: string | null;
   }[]>([]);
-  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const collapsedMenuDragStartY = useRef<number | null>(null);
-  const [dropdownAlignment, setDropdownAlignment] = useState<Record<string, 'left' | 'right'>>({});
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
   const currentRole = role;
@@ -388,77 +388,6 @@ export default function Layout({
     return tab.children.reduce((sum, child) => sum + (child.badge || 0), 0);
   };
 
-  const updateDropdownAlignment = useCallback(
-    (parentId: string) => {
-      const dropdown = dropdownRefs.current[parentId];
-      const trigger = triggerRefs.current[parentId];
-
-      if (!dropdown || !trigger) {
-        return;
-      }
-
-      const dropdownRect = dropdown.getBoundingClientRect();
-      const triggerRect = trigger.getBoundingClientRect();
-      const dropdownWidth = dropdownRect.width;
-      const viewportWidth = window.innerWidth;
-
-      let alignment: 'left' | 'right' = 'left';
-      const leftAlignedRightEdge = triggerRect.left + dropdownWidth;
-      const rightAlignedLeftEdge = triggerRect.right - dropdownWidth;
-
-      if (leftAlignedRightEdge > viewportWidth) {
-        alignment = 'right';
-      }
-
-      if (alignment === 'right' && rightAlignedLeftEdge < 0) {
-        alignment = 'left';
-      }
-
-      setDropdownAlignment((previous) => {
-        if (previous[parentId] === alignment) {
-          return previous;
-        }
-
-        return { ...previous, [parentId]: alignment };
-      });
-    },
-    []
-  );
-
-  useLayoutEffect(() => {
-    if (!expandedParent) {
-      return;
-    }
-
-    updateDropdownAlignment(expandedParent);
-
-    const handleResize = () => {
-      updateDropdownAlignment(expandedParent);
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [expandedParent, updateDropdownAlignment]);
-
-  useEffect(() => {
-    if (!expandedParent) {
-      return;
-    }
-
-    const handleScroll = () => {
-      updateDropdownAlignment(expandedParent);
-    };
-
-    window.addEventListener('scroll', handleScroll, true);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [expandedParent, updateDropdownAlignment]);
-
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -537,6 +466,10 @@ export default function Layout({
   }, [showNotificationsDropdown]);
 
   useEffect(() => {
+    localStorage.setItem('painel.sidebar.collapsed', String(isMenuCollapsed));
+  }, [isMenuCollapsed]);
+
+  useEffect(() => {
     window.localStorage.setItem(PANEL_THEME_STORAGE_KEY, themeMode);
   }, [themeMode]);
 
@@ -591,41 +524,174 @@ export default function Layout({
     );
   };
 
-  const handleCollapsedMenuPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
-    collapsedMenuDragStartY.current = event.clientY;
-  }, []);
+  const renderSidebarItem = (tab: TabConfig) => {
+    const Icon = tab.icon;
+    const isActive = isParentActive(tab);
+    const isExpanded = expandedParent === tab.id;
+    const totalBadge = getTotalBadge(tab);
 
-  const handleCollapsedMenuPointerEnd = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (collapsedMenuDragStartY.current === null) {
-      return;
+    if (tab.children && tab.children.length > 0) {
+      return (
+        <div key={tab.id} className="flex flex-col">
+          <button
+            onClick={() => handleTabClick(tab)}
+            className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+              isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
+            } ${isMenuCollapsed ? 'justify-center' : ''}`}
+            title={isMenuCollapsed ? tab.label : undefined}
+          >
+            <div className={`flex items-center gap-3 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {!isMenuCollapsed && <span>{tab.label}</span>}
+            </div>
+            {!isMenuCollapsed && (
+              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            )}
+            {totalBadge > 0 && (
+              <span
+                className={`absolute ${isMenuCollapsed ? 'top-0 right-0' : ''} ${
+                  tab.badgeColor || 'bg-orange-500'
+                } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                  hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                } ${
+                  (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
+                } ${isMenuCollapsed ? 'relative static' : ''}`}
+              >
+                {totalBadge > 9 ? '9+' : totalBadge}
+              </span>
+            )}
+          </button>
+
+          {!isMenuCollapsed && isExpanded && (
+            <div className="mt-1 space-y-1 pl-4">
+              {tab.children.map((child) => {
+                const ChildIcon = child.icon;
+                const isChildActive = activeTab === child.id;
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => {
+                      onTabChange(child.id);
+                      setExpandedParent(null);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                      isChildActive ? 'bg-orange-100 text-orange-800' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChildIcon className="h-4 w-4" />
+                      <span>{child.label}</span>
+                    </div>
+                    {child.badge !== undefined && child.badge > 0 && (
+                      <span
+                        className={`${
+                          child.badgeColor || 'bg-orange-500'
+                        } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+                          child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                        } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                      >
+                        {child.badge > 9 ? '9+' : child.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
     }
 
-    const dragDistance = event.clientY - collapsedMenuDragStartY.current;
-    collapsedMenuDragStartY.current = null;
-
-    if (dragDistance > 30) {
-      setIsMenuCollapsed(false);
-    }
-  }, []);
-
-  const handleCollapsedMenuPointerCancel = useCallback(() => {
-    collapsedMenuDragStartY.current = null;
-  }, []);
+    return (
+      <button
+        key={tab.id}
+        onClick={() => handleTabClick(tab)}
+        className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
+        } ${isMenuCollapsed ? 'justify-center' : ''}`}
+        title={isMenuCollapsed ? tab.label : undefined}
+      >
+        <div className={`flex items-center gap-3 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
+          <Icon className="h-5 w-5 flex-shrink-0" />
+          {!isMenuCollapsed && <span>{tab.label}</span>}
+        </div>
+        {totalBadge > 0 && !isMenuCollapsed && (
+          <span
+            className={`${
+              tab.badgeColor || 'bg-orange-500'
+            } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+              hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+            } ${
+              (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
+            }`}
+          >
+            {totalBadge > 9 ? '9+' : totalBadge}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div
-      className={`painel-theme theme-${themeMode} flex min-h-screen flex-col bg-slate-50`}
+      className={`painel-theme theme-${themeMode} flex min-h-screen bg-slate-50`}
     >
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                <span className="text-lg font-bold text-white">K</span>
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen transition-all duration-300 ${
+          isMenuCollapsed ? 'w-16' : 'w-64'
+        }`}
+      >
+        <div className="flex h-full flex-col border-r border-slate-200 bg-white">
+          <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!isMenuCollapsed && (
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                  <span className="text-base font-bold text-white">K</span>
+                </div>
+                <span className="text-sm font-semibold text-slate-800">KS Workspace</span>
               </div>
-              <span className="sr-only">Kifer Saúde - Sistema de Gestão</span>
+            )}
+            {isMenuCollapsed && (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                <span className="text-base font-bold text-white">K</span>
+              </div>
+            )}
+            <button
+              onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+              className={`hidden rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 lg:flex ${
+                isMenuCollapsed ? 'absolute -right-3 top-4 z-50 bg-white shadow-md' : ''
+              }`}
+              title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
+            >
+              {isMenuCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+          </div>
+
+          <nav className={`flex-1 overflow-y-auto p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
+            <div className="space-y-1">
+              {tabs.map((tab) => renderSidebarItem(tab))}
             </div>
-            <div className="flex items-center gap-2">
+          </nav>
+
+          <div className={`border-t border-slate-200 p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
+            <button
+              onClick={handleLogout}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 ${
+                isMenuCollapsed ? 'justify-center' : ''
+              }`}
+              title={isMenuCollapsed ? 'Sair' : undefined}
+            >
+              <LogOut className="h-5 w-5" />
+              {!isMenuCollapsed && <span>Sair</span>}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className={`flex flex-1 flex-col transition-all duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
+        <header className="sticky top-0 z-30 h-16 border-b border-slate-200 bg-white">
+          <div className="flex h-full items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(current => !current)}
@@ -635,93 +701,8 @@ export default function Layout({
               >
                 {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-              <nav className="hidden items-center gap-2 lg:flex">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = isParentActive(tab);
-                  const isExpanded = expandedParent === tab.id;
-                  const totalBadge = getTotalBadge(tab);
-
-                  return (
-                    <div key={tab.id} className="relative">
-                      <button
-                        ref={(element) => {
-                          triggerRefs.current[tab.id] = element;
-                        }}
-                        onClick={() => handleTabClick(tab)}
-                        className={`relative flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors ${
-                          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                        aria-expanded={isExpanded}
-                        aria-haspopup={tab.children && tab.children.length > 0 ? 'menu' : undefined}
-                        title={tab.label}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="hidden xl:inline">{tab.label}</span>
-                        {tab.children && tab.children.length > 0 && (
-                          <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                        )}
-                        {totalBadge > 0 && (
-                          <span
-                            className={`absolute -top-1 -right-1 ${
-                              tab.badgeColor || 'bg-orange-500'
-                            } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
-                              hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
-                            } ${
-                              (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                            }`}
-                          >
-                            {totalBadge > 9 ? '9+' : totalBadge}
-                          </span>
-                        )}
-                      </button>
-
-                      {tab.children && isExpanded && (
-                        <div
-                          ref={(element) => {
-                            dropdownRefs.current[tab.id] = element;
-                          }}
-                          className={`absolute top-full mt-1 min-w-[180px] rounded-lg border border-slate-200 bg-white py-1 shadow-xl ${
-                            dropdownAlignment[tab.id] === 'right' ? 'right-0 left-auto' : 'left-0'
-                          }`}
-                        >
-                          {tab.children.map((child) => {
-                            const ChildIcon = child.icon;
-                            return (
-                              <button
-                                key={child.id}
-                                onClick={() => {
-                                  onTabChange(child.id);
-                                  setExpandedParent(null);
-                                }}
-                                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm font-medium transition-colors ${
-                                  activeTab === child.id ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-50'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <ChildIcon className="h-4 w-4" />
-                                  <span>{child.label}</span>
-                                </div>
-                                {child.badge !== undefined && child.badge > 0 && (
-                                  <span
-                                    className={`${
-                                      child.badgeColor || 'bg-orange-500'
-                                    } flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
-                                      child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
-                                    } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
-                                  >
-                                    {child.badge > 9 ? '9+' : child.badge}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </nav>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="relative">
                 <button
                   ref={notificationsButtonRef}
@@ -798,7 +779,7 @@ export default function Layout({
                               {todayPayments.slice(0, 5).map((payment) => (
                                 <div key={payment.id} className="rounded-lg border border-slate-100 bg-emerald-50 px-3 py-2">
                                   <p className="text-sm font-semibold text-slate-800">
-                                    {payment.type === 'comissao' ? 'Comissao' : 'Bonificacao'}
+                                    {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
                                     {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
                                   </p>
                                   <p className="text-xs text-slate-600">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
@@ -842,14 +823,6 @@ export default function Layout({
                 aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               >
                 {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"
-                title="Sair"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="sr-only">Sair</span>
               </button>
             </div>
           </div>
@@ -923,19 +896,19 @@ export default function Layout({
               </nav>
             </div>
           )}
-        </div>
-      </header>
-      <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        <div
-          className={
-            activeTab === 'whatsapp'
-              ? 'w-full h-[calc(100vh-4rem)] min-h-0'
-              : 'w-full px-4 py-8 sm:px-6 lg:px-8'
-          }
-        >
-          {children}
-        </div>
-      </main>
+        </header>
+        <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div
+            className={
+              activeTab === 'whatsapp'
+                ? 'w-full h-[calc(100vh-4rem)] min-h-0'
+                : 'w-full px-4 py-8 sm:px-6 lg:px-8'
+            }
+          >
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

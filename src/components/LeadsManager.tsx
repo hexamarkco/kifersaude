@@ -1381,30 +1381,30 @@ export default function LeadsManager({
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors whitespace-nowrap"
             >
               <Filter className="w-4 h-4" />
-              Limpar filtros
+              Limpar
             </button>
             <button
               type="button"
               onClick={handleExportFilteredLeads}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors whitespace-nowrap"
             >
               <Download className="w-4 h-4" />
-              Exportar filtrados
+              Exportar
             </button>
             <button
               type="button"
               onClick={handleExportCurrentPage}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap"
             >
               <Download className="w-4 h-4" />
-              Exportar página
+              Página
             </button>
-            <div className="px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
+            <div className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-1.5 border border-slate-200 whitespace-nowrap">
               <span className="font-semibold text-teal-700">{filteredLeads.length}</span>
-              <span>lead(s) encontrado(s)</span>
+              <span>leads</span>
             </div>
           </div>
         </div>

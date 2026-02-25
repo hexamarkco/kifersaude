@@ -509,7 +509,7 @@ export default function Layout({
                   hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
                 } ${
                   (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                } ${isMenuCollapsed ? 'absolute -top-1 -right-1' : ''}`}
+                } ${isMenuCollapsed ? 'absolute -top-1 -right-1' : 'absolute -right-1 -top-1'}`}
               >
                 {totalBadge > 9 ? '9+' : totalBadge}
               </span>
@@ -654,19 +654,12 @@ export default function Layout({
               </div>
             )}
             {isMenuCollapsed && (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                <span className="text-base font-bold text-white">K</span>
+              <div className="h-9 w-9 flex-shrink-0">
+                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                  <span className="text-base font-bold text-white">K</span>
+                </div>
               </div>
             )}
-            <button
-              onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
-              className={`hidden rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 lg:flex ${
-                isMenuCollapsed ? 'absolute -right-3 top-4 z-50 bg-white shadow-md' : ''
-              }`}
-              title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
-            >
-              {isMenuCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
           </div>
 
           <nav className={`flex-1 overflow-y-auto p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
@@ -676,6 +669,16 @@ export default function Layout({
           </nav>
 
           <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
+            <button
+              onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
+                isMenuCollapsed ? 'justify-center px-2' : ''
+              }`}
+              title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
+            >
+              {isMenuCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+              {!isMenuCollapsed && <span>{isMenuCollapsed ? 'Expandir' : 'Recolher'}</span>}
+            </button>
             <div className="relative">
               <button
                 ref={notificationsButtonRef}

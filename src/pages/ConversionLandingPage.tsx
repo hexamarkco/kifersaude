@@ -395,8 +395,8 @@ export default function ConversionLandingPage() {
                   <img src="/amil-logo-1-2.png" alt="Amil" className="h-7 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
                   <img src="/bradesco-saude-logo-1-1.png" alt="Bradesco" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
                   <img src="/sulamerica-saude-logo.png" alt="SulAmérica" className="h-7 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
-                  <img src="/porto-logo.png" alt="Porto" className="h-10 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
-                  <img src="/assim-saude-logo.png" alt="Assim" className="h-10 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/porto-logo.png" alt="Porto" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
+                  <img src="/assim-saude-logo.png" alt="Assim" className="h-8 brightness-0 invert opacity-70 hover:opacity-100 transition-opacity" />
                 </div>
               </div>
               
@@ -610,8 +610,8 @@ export default function ConversionLandingPage() {
                 { src: '/amil-logo-1-2.png', alt: 'Amil', h: 'h-10' },
                 { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco', h: 'h-12' },
                 { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica', h: 'h-10' },
-                { src: '/porto-logo.png', alt: 'Porto', h: 'h-14' },
-                { src: '/assim-saude-logo.png', alt: 'Assim', h: 'h-14' },
+                { src: '/porto-logo.png', alt: 'Porto', h: 'h-11' },
+                { src: '/assim-saude-logo.png', alt: 'Assim', h: 'h-11' },
               ].map((logo, i) => (
                 <img 
                   key={i}

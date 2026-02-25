@@ -590,6 +590,8 @@ export default function RemindersManagerEnhanced() {
 
   const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
     try {
+      pendingRefreshIdsRef.current.add(id);
+      
       const reminder = reminders.find(r => r.id === id);
       const leadId = getLeadIdForReminder(reminder);
       const completionDate = !currentStatus ? new Date().toISOString() : null;
@@ -603,7 +605,10 @@ export default function RemindersManagerEnhanced() {
         .update(updateData)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        pendingRefreshIdsRef.current.delete(id);
+        throw error;
+      }
 
       if (completionDate && leadId) {
         let leadInfo = leadsMap.get(leadId);

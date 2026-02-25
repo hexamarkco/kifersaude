@@ -6,9 +6,18 @@ import { ConfigProvider } from './contexts/ConfigContext';
 import LandingPage from './pages/LandingPage';
 import ConversionLandingPage from './pages/ConversionLandingPage';
 import BlogPage from './pages/BlogPage';
-import PainelPage from './pages/PainelPage';
+import PainelWrapper from './pages/PainelWrapper';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import DashboardWrapper from './pages/routes/DashboardWrapper';
+import LeadsManagerWrapper from './pages/routes/LeadsManagerWrapper';
+import ContractsManagerWrapper from './pages/routes/ContractsManagerWrapper';
+import RemindersManagerEnhanced from './components/RemindersManagerEnhanced';
+import BlogTab from './components/config/BlogTab';
+import WhatsAppTab from './components/communication/WhatsAppTab';
+import ConfigPage from './pages/ConfigPage';
+import FinanceiroComissoesTab from './components/finance/FinanceiroComissoesTab';
+import FinanceiroAgendaTab from './components/finance/FinanceiroAgendaTab';
 import './index.css';
 
 if ('serviceWorker' in navigator) {
@@ -34,11 +43,22 @@ createRoot(document.getElementById('root')!).render(
             element={
               <ProtectedRoute>
                 <ConfigProvider>
-                  <PainelPage />
+                  <PainelWrapper />
                 </ConfigProvider>
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Navigate to="/painel/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardWrapper />} />
+            <Route path="leads" element={<LeadsManagerWrapper />} />
+            <Route path="contratos" element={<ContractsManagerWrapper />} />
+            <Route path="comissoes" element={<FinanceiroComissoesTab />} />
+            <Route path="tarefas" element={<FinanceiroAgendaTab />} />
+            <Route path="lembretes" element={<RemindersManagerEnhanced />} />
+            <Route path="whatsapp" element={<WhatsAppTab />} />
+            <Route path="blog" element={<BlogTab />} />
+            <Route path="config" element={<ConfigPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

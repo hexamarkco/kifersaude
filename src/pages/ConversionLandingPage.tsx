@@ -37,7 +37,13 @@ export default function ConversionLandingPage() {
   });
   const [isScrolled, setIsScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [showExitPopup, setShowExitPopup] = useState(false);
+  const [showExitPopup, setShowExitPopup] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('exit_popup_seen') !== 'true';
+    }
+    return false;
+  });
+  const exitPopupShown = useRef(false);
   const [exitFormData, setExitFormData] = useState({ nome: '', whatsapp: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leadOrigins, setLeadOrigins] = useState<LeadOrigem[]>([]);
@@ -62,7 +68,8 @@ export default function ConversionLandingPage() {
 
   useEffect(() => {
     const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && window.innerWidth > 768) {
+      if (e.clientY <= 0 && window.innerWidth > 768 && !exitPopupShown.current) {
+        exitPopupShown.current = true;
         setShowExitPopup(true);
       }
     };
@@ -813,7 +820,10 @@ export default function ConversionLandingPage() {
             onMouseEnter={() => gsap.fromTo('.popup-content', { scale: 0.9 }, { scale: 1, duration: 0.3 })}
           >
             <button 
-              onClick={() => setShowExitPopup(false)} 
+              onClick={() => {
+                setShowExitPopup(false);
+                localStorage.setItem('exit_popup_seen', 'true');
+              }} 
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-6 h-6" />
@@ -850,6 +860,20 @@ export default function ConversionLandingPage() {
                 Ver ofertas
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
+              <label className="flex items-center justify-center gap-2 text-sm text-slate-500 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      localStorage.setItem('exit_popup_seen', 'true');
+                    } else {
+                      localStorage.removeItem('exit_popup_seen');
+                    }
+                  }}
+                />
+                Não mostrar novamente
+              </label>
             </form>
           </div>
         </div>

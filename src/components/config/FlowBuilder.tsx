@@ -34,6 +34,7 @@ import {
 } from '../../lib/autoContactService';
 import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
+import MultiSelectDropdown from './MultiSelectDropdown';
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -790,23 +791,17 @@ export default function FlowBuilder({
 
                 {(selectedNode.data.triggerType === 'status_changed' || selectedNode.data.triggerType === 'status_duration') && (
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">Status do lead</label>
-                    <select
-                      multiple
-                      value={selectedNode.data.triggerStatuses ?? []}
-                      onChange={(event) => {
-                        const selected = Array.from(event.target.selectedOptions, (option) => option.value);
-                        updateSelectedNode({ triggerStatuses: selected });
-                      }}
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md h-24"
-                    >
-                      {leadStatuses.filter((s) => s.ativo !== false).map((status) => (
-                        <option key={status.id} value={status.nome}>
-                          {status.nome}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="text-[10px] text-slate-400 mt-1">Segure Ctrl/Cmd para selecionar múltiplos</div>
+                    <MultiSelectDropdown
+                      options={leadStatuses.filter((s) => s.ativo !== false).map((status) => ({
+                        value: status.nome,
+                        label: status.nome,
+                      }))}
+                      values={selectedNode.data.triggerStatuses ?? []}
+                      onChange={(selected) => updateSelectedNode({ triggerStatuses: selected })}
+                      placeholder="Selecione os status..."
+                      label="Status do lead"
+                    />
+                    <div className="text-[10px] text-slate-400 mt-1">Selecione um ou mais status</div>
                   </div>
                 )}
 

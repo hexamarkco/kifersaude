@@ -456,6 +456,10 @@ export default function Layout({
       if (button && button.contains(target)) {
         return;
       }
+      const dropdown = document.getElementById(`dropdown-${activeDropdownTab}`);
+      if (dropdown && dropdown.contains(target)) {
+        return;
+      }
       setActiveDropdownTab(null);
     };
 
@@ -520,6 +524,7 @@ export default function Layout({
             const buttonRect = menuItemRefs.current[tab.id]!.getBoundingClientRect();
             return (
               <div 
+                id={`dropdown-${tab.id}`}
                 className="fixed z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
                 style={{ 
                   left: buttonRect.right + 8,

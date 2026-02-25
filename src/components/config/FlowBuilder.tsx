@@ -17,7 +17,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { RefreshCcw, Download } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 
 import {
   type AutoContactDelayUnit,
@@ -387,40 +386,184 @@ export default function FlowBuilder({
     }
   }, [flowThemeColors.exportBackground, isExporting, nodes]);
 
-  const exportFlowAsPdf = useCallback(async () => {
+  const exportFlowAsTxt = useCallback(async () => {
     if (isExporting) return;
-    const viewport = reactFlowWrapperRef.current?.querySelector('.react-flow__viewport') as HTMLElement | null;
-    if (!viewport) return;
     setIsExporting(true);
     try {
-      const pdfWidth = 1400;
-      const pdfHeight = 900;
-      const bounds = getNodesBounds(nodes);
-      const transform = getViewportForBounds(bounds, pdfWidth, pdfHeight, 0.1, 2);
+      const triggerNode = nodes.find((n) => n.type === 'trigger');
+      const conditionNodes = nodes.filter((n) => n.type === 'condition');
+      const actionNodes = nodes.filter((n) => n.type === 'action');
 
-      const dataUrl = await toPng(viewport, {
-        backgroundColor: flowThemeColors.exportBackground,
-        width: pdfWidth,
-        height: pdfHeight,
-        pixelRatio: 2,
-        style: {
-          width: `${pdfWidth}px`,
-          height: `${pdfHeight}px`,
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-        },
-      });
+      const getNodeLabel = (nodeId: string) => {
+        const node = nodes.find((n) => n.id === nodeId);
+        return node?.data.label || node?.type || nodeId;
+      };
 
-      const pdf = new jsPDF({
-        orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [pdfWidth, pdfHeight],
-      });
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('fluxo-whatsapp.pdf');
+      const getOutgoingEdges = (nodeId: string) => {
+        return edges.filter((e) => e.source === nodeId);
+      };
+
+      const formatDelay = (step: AutoContactFlowStep | undefined) => {
+        if (!step?.delayValue) return '';
+        const unit = step.delayUnit === 'minutes' ? 'minuto(s)' : step.delayUnit === 'hours' ? 'hora(s)' : 'dia(s)';
+        return `Aguardar ${step.delayValue} ${unit}`;
+      };
+
+      let txt = '';
+      txt += '═══════════════════════════════════════════════════════════════════════════════\n';
+      txt += `FLUXO DE AUTOMACAO - ${flow.name || 'Sem nome'}\n`;
+      txt += '═══════════════════════════════════════════════════════════════════════════════\n\n';
+
+      if (triggerNode) {
+        txt += '┌──────────────────────────────────────────────────────────────────────────────┐\n';
+        txt += '│ GATILHO (INICIO)                                                             │\n';
+        txt += '└──────────────────────────────────────────────────────────────────────────────┘\n';
+        const data = triggerNode.data;
+        txt += `  ID: ${triggerNode.id}\n`;
+        txt += `  Nome: ${data.label || 'Gatilho'}\n`;
+        
+        const triggerType = data.triggerType || 'lead_created';
+        if (triggerType === 'lead_created') {
+          txt += `  Tipo: Dispara quando um lead é criado\n`;
+        } else if (triggerType === 'status_changed') {
+          txt += `  Tipo: Dispara ao mudar de status\n`;
+          txt += `  Status: ${data.triggerStatuses?.join(', ') || 'Não definido'}\n`;
+        } else if (triggerType === 'status_duration') {
+          txt += `  Tipo: Dispara após ${data.triggerDurationHours || 24}h no status\n`;
+          txt += `  Status: ${data.triggerStatuses?.join(', ') || 'Não definido'}\n`;
+        }
+        txt += '\n';
+      }
+
+      let stepNumber = 1;
+      const processNode = (nodeId: string, visited: Set<string>): string => {
+        if (visited.has(nodeId)) return '';
+        visited.add(nodeId);
+
+        const node = nodes.find((n) => n.id === nodeId);
+        if (!node) return '';
+
+        let result = '';
+        const outEdges = getOutgoingEdges(nodeId);
+
+        if (node.type === 'condition') {
+          txt += '┌──────────────────────────────────────────────────────────────────────────────┐\n';
+          txt += `│ CONDICAO #${stepNumber++}                                                              │\n`;
+          txt += '└──────────────────────────────────────────────────────────────────────────────┘\n';
+          txt += `  ID: ${node.id}\n`;
+          txt += `  Nome: ${node.data.label || 'Condição'}\n`;
+          txt += `  Logica: ${node.data.conditionLogic === 'all' ? 'TODAS as condições' : 'QUALQUER condição'}\n`;
+          
+          if (node.data.conditions && node.data.conditions.length > 0) {
+            txt += `  Condicoes (${node.data.conditions.length}):\n`;
+            node.data.conditions.forEach((cond: AutoContactFlowCondition, idx: number) => {
+              const fieldLabel = conditionFieldOptions.find(([v]) => v === cond.field)?.[1] || cond.field;
+              const operatorLabel = conditionOperatorLabels[cond.operator] || cond.operator;
+              txt += `    ${idx + 1}. ${fieldLabel} ${operatorLabel} "${cond.value}"\n`;
+            });
+          } else {
+            txt += `  Condicoes: Nenhuma condição definida\n`;
+          }
+
+          const yesEdge = outEdges.find((e) => String(e.label ?? '').toLowerCase() === 'sim' || e.sourceHandle === 'yes');
+          const noEdge = outEdges.find((e) => String(e.label ?? '').toLowerCase() === 'nao' || e.sourceHandle === 'no');
+
+          txt += `  Conexoes:\n`;
+          txt += `    → SIM: ${yesEdge ? getNodeLabel(yesEdge.target) : 'Não conectado'}\n`;
+          txt += `    → NAO: ${noEdge ? getNodeLabel(noEdge.target) : 'Não conectado'}\n`;
+          txt += '\n';
+
+          if (yesEdge) result += processNode(yesEdge.target, visited);
+          if (noEdge) result += processNode(noEdge.target, visited);
+
+        } else if (node.type === 'action') {
+          const step = node.data.step;
+          txt += '┌──────────────────────────────────────────────────────────────────────────────┐\n';
+          txt += `│ ACAO #${stepNumber++}                                                                       │\n`;
+          txt += '└──────────────────────────────────────────────────────────────────────────────┘\n';
+          txt += `  ID: ${node.id}\n`;
+          txt += `  Nome: ${node.data.label || 'Ação'}\n`;
+          
+          if (step) {
+            const delayInfo = formatDelay(step);
+            if (delayInfo) {
+              txt += `  ${delayInfo}\n`;
+            }
+
+            const actionType = step.actionType || 'send_message';
+            const actionLabel = flowActionLabels[actionType] || actionType;
+            txt += `  Tipo: ${actionLabel}\n`;
+
+            if (actionType === 'send_message') {
+              const msgSource = step.messageSource === 'template' ? 'Template' : 'Mensagem customizada';
+              txt += `  Origem da mensagem: ${msgSource}\n`;
+              
+              if (step.messageSource === 'template' && step.templateId) {
+                const template = messageTemplates.find((t) => t.id === step.templateId);
+                txt += `  Template: ${template?.name || step.templateId}\n`;
+              } else if (step.messageSource === 'custom' && step.customMessage?.text) {
+                txt += `  Mensagem: "${step.customMessage.text.substring(0, 100)}${step.customMessage.text.length > 100 ? '...' : ''}"\n`;
+              }
+            } else if (actionType === 'update_status') {
+              txt += `  Novo status: ${step.statusToSet || 'Não definido'}\n`;
+            } else if (actionType === 'create_task') {
+              txt += `  Titulo: ${step.taskTitle || 'Não definido'}\n`;
+              txt += `  Descricao: ${step.taskDescription || 'Não definida'}\n`;
+              txt += `  Prioridade: ${step.taskPriority || 'normal'}\n`;
+              if (step.taskDueHours) {
+                txt += `  Vencimento: ${step.taskDueHours}h\n`;
+              }
+            } else if (actionType === 'send_email') {
+              txt += `  E-mail: ${step.emailTo || 'Não definido'}\n`;
+              if (step.emailSubject) {
+                txt += `  Assunto: ${step.emailSubject}\n`;
+              }
+              if (step.emailBody) {
+                txt += `  Corpo: "${step.emailBody.substring(0, 100)}${step.emailBody.length > 100 ? '...' : ''}"\n`;
+              }
+            } else if (actionType === 'webhook') {
+              txt += `  URL: ${step.webhookUrl || 'Não definida'}\n`;
+              if (step.webhookMethod) {
+                txt += `  Metodo: ${step.webhookMethod}\n`;
+              }
+            }
+          }
+          txt += '\n';
+
+          for (const edge of outEdges) {
+            result += processNode(edge.target, visited);
+          }
+        }
+
+        return result;
+      };
+
+      const visited = new Set<string>();
+      if (triggerNode) {
+        const outEdges = getOutgoingEdges(triggerNode.id);
+        for (const edge of outEdges) {
+          processNode(edge.target, visited);
+        }
+      }
+
+      txt += '═══════════════════════════════════════════════════════════════════════════════\n';
+      txt += 'RESUMO DO FLUXO\n';
+      txt += '═══════════════════════════════════════════════════════════════════════════════\n';
+      txt += `  Total de nos: ${nodes.length}\n`;
+      txt += `  Condicoes: ${conditionNodes.length}\n`;
+      txt += `  Acoes: ${actionNodes.length}\n`;
+      txt += '\n';
+
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${(flow.name || 'fluxo').toLowerCase().replace(/\s+/g, '-')}-detalhes.txt`;
+      link.click();
+      URL.revokeObjectURL(link.href);
     } finally {
       setIsExporting(false);
     }
-  }, [flowThemeColors.exportBackground, isExporting, nodes]);
+  }, [isExporting, nodes, edges, flow, messageTemplates, conditionFieldOptions, conditionOperatorLabels, flowActionLabels]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
   const previewContext = useMemo(() => buildPreviewContext(), []);
@@ -681,13 +824,13 @@ export default function FlowBuilder({
             </button>
             <button
               type="button"
-              onClick={exportFlowAsPdf}
+              onClick={exportFlowAsTxt}
               disabled={isExporting}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-60"
-              title="Exportar como PDF"
+              title="Exportar detalhes do fluxo em TXT"
             >
               <Download className="h-4 w-4" />
-              PDF
+              TXT
             </button>
             <button
               type="button"

@@ -99,6 +99,8 @@ export default function Layout({
   }[]>([]);
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -363,10 +365,15 @@ export default function Layout({
 
   const handleTabClick = (tab: TabConfig) => {
     if (tab.children && tab.children.length > 0) {
-      setExpandedParent(expandedParent === tab.id ? null : tab.id);
+      if (isMenuCollapsed) {
+        setActiveDropdownTab(activeDropdownTab === tab.id ? null : tab.id);
+      } else {
+        setExpandedParent(expandedParent === tab.id ? null : tab.id);
+      }
     } else {
       onTabChange(tab.id);
       setExpandedParent(null);
+      setActiveDropdownTab(null);
     }
   };
 
@@ -441,6 +448,24 @@ export default function Layout({
   }, [showNotificationsDropdown]);
 
   useEffect(() => {
+    if (!activeDropdownTab) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const button = menuItemRefs.current[activeDropdownTab];
+      if (button && button.contains(target)) {
+        return;
+      }
+      setActiveDropdownTab(null);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeDropdownTab]);
+
+  useEffect(() => {
     localStorage.setItem('painel.sidebar.collapsed', String(isMenuCollapsed));
   }, [isMenuCollapsed]);
 
@@ -455,13 +480,14 @@ export default function Layout({
   const renderSidebarItem = (tab: TabConfig) => {
     const Icon = tab.icon;
     const isActive = isParentActive(tab);
-    const isExpanded = expandedParent === tab.id;
+    const isExpanded = isMenuCollapsed ? activeDropdownTab === tab.id : expandedParent === tab.id;
     const totalBadge = getTotalBadge(tab);
 
     if (tab.children && tab.children.length > 0) {
       return (
-        <div key={tab.id} className="flex flex-col">
+        <div key={tab.id} className="flex flex-col relative">
           <button
+            ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={() => handleTabClick(tab)}
             className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
@@ -490,8 +516,56 @@ export default function Layout({
             )}
           </button>
 
-          {isExpanded && (
-            <div className={`mt-1 space-y-1 ${isMenuCollapsed ? 'absolute left-full ml-2 top-0 z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg' : 'pl-4'}`}>
+          {isExpanded && isMenuCollapsed && menuItemRefs.current[tab.id] && (() => {
+            const buttonRect = menuItemRefs.current[tab.id]!.getBoundingClientRect();
+            return (
+              <div 
+                className="fixed z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+                style={{ 
+                  left: buttonRect.right + 8,
+                  top: buttonRect.top
+                }}
+              >
+                <div className="space-y-1">
+                  {tab.children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const isChildActive = activeTab === child.id;
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => {
+                          onTabChange(child.id);
+                          setActiveDropdownTab(null);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                          isChildActive ? 'bg-orange-100 text-orange-800' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <ChildIcon className="h-4 w-4" />
+                          <span>{child.label}</span>
+                        </div>
+                        {child.badge !== undefined && child.badge > 0 && (
+                          <span
+                            className={`${
+                              child.badgeColor || 'bg-orange-500'
+                            } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                              child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                            } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                          >
+                            {child.badge > 9 ? '9+' : child.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {isExpanded && !isMenuCollapsed && (
+            <div className="mt-1 space-y-1 pl-4">
               {tab.children.map((child) => {
                 const ChildIcon = child.icon;
                 const isChildActive = activeTab === child.id;
@@ -630,7 +704,7 @@ export default function Layout({
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className={`absolute ${isMenuCollapsed ? 'left-full ml-2 top-0' : 'right-0 mt-2'} w-96 max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-xl z-50`}
+                    className={`absolute ${isMenuCollapsed ? 'left-full ml-2 bottom-0' : 'right-0 mb-2'} w-96 max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-xl z-50`}
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>

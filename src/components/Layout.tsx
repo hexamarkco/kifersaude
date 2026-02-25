@@ -489,14 +489,14 @@ export default function Layout({
           <button
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={() => handleTabClick(tab)}
-            className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+            className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${
               isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
             } ${isMenuCollapsed ? 'justify-center px-2' : ''}`}
             title={isMenuCollapsed ? tab.label : undefined}
           >
-            <div className={`flex items-center gap-3 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
+            <div className={`flex items-center gap-3 transition-all duration-200 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
               <Icon className="h-5 w-5 flex-shrink-0" />
-              {!isMenuCollapsed && <span>{tab.label}</span>}
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
             </div>
             {!isMenuCollapsed && (
               <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -613,9 +613,9 @@ export default function Layout({
         } ${isMenuCollapsed ? 'justify-center' : ''}`}
         title={isMenuCollapsed ? tab.label : undefined}
       >
-        <div className={`flex items-center gap-3 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
+        <div className={`flex items-center gap-3 transition-all duration-200 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
           <Icon className="h-5 w-5 flex-shrink-0" />
-          {!isMenuCollapsed && <span>{tab.label}</span>}
+          <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
         </div>
         {totalBadge > 0 && !isMenuCollapsed && (
           <span
@@ -639,30 +639,26 @@ export default function Layout({
       className={`painel-theme theme-${themeMode} flex min-h-screen bg-slate-50`}
     >
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen transition-all duration-300 ${
+        className={`fixed left-0 top-0 z-40 h-screen border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out ${
           isMenuCollapsed ? 'w-16' : 'w-64'
         }`}
       >
-        <div className="flex h-full flex-col border-r border-slate-200 bg-white">
-          <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isMenuCollapsed && (
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                  <span className="text-base font-bold text-white">K</span>
-                </div>
-                <span className="text-sm font-semibold text-slate-800">KS Workspace</span>
+        <div className="flex h-full flex-col">
+          <div className={`flex h-16 items-center border-b border-slate-200 px-4 transition-all duration-300 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className={`flex items-center gap-3 transition-all duration-300 ${isMenuCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                <span className="text-base font-bold text-white">K</span>
               </div>
-            )}
+              <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">KS Workspace</span>
+            </div>
             {isMenuCollapsed && (
-              <div className="h-9 w-9 flex-shrink-0">
-                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                  <span className="text-base font-bold text-white">K</span>
-                </div>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                <span className="text-base font-bold text-white">K</span>
               </div>
             )}
           </div>
 
-          <nav className={`flex-1 overflow-y-auto p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
+          <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1' : 'px-2'}`}>
             <div className="space-y-1">
               {tabs.map((tab) => renderSidebarItem(tab))}
             </div>
@@ -671,19 +667,19 @@ export default function Layout({
           <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
                 isMenuCollapsed ? 'justify-center px-2' : ''
               }`}
               title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
             >
               {isMenuCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-              {!isMenuCollapsed && <span>{isMenuCollapsed ? 'Expandir' : 'Recolher'}</span>}
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{isMenuCollapsed ? 'Expandir' : 'Recolher'}</span>
             </button>
             <div className="relative">
               <button
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600 ${
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-orange-50 hover:text-orange-600 ${
                   isMenuCollapsed ? 'w-full justify-center px-2' : ''
                 }`}
                 title="Notificações"
@@ -702,7 +698,7 @@ export default function Layout({
                       </span>
                     )}
                   </div>
-                  {!isMenuCollapsed && <span>Notificações</span>}
+                  <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
                 </button>
                 {showNotificationsDropdown && (
                   <div
@@ -801,24 +797,24 @@ export default function Layout({
             <button
               type="button"
               onClick={toggleThemeMode}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
                 isMenuCollapsed ? 'justify-center px-2' : ''
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
             >
               {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              {!isMenuCollapsed && <span>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>}
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>
             </button>
             <button
               onClick={handleLogout}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 ${
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
                 isMenuCollapsed ? 'justify-center px-2' : ''
               }`}
               title={isMenuCollapsed ? 'Sair' : undefined}
             >
               <LogOut className="h-5 w-5" />
-              {!isMenuCollapsed && <span>Sair</span>}
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sair</span>
             </button>
           </div>
         </div>

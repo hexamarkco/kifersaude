@@ -226,39 +226,39 @@ export default function LandingPage() {
       <div className="min-h-screen bg-white">
       <nav className={`fixed top-0 w-full z-40 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-sm shadow-sm'
-          : 'bg-transparent'
+          ? 'bg-white/98 backdrop-blur-md shadow-lg shadow-orange-100/50'
+          : 'bg-white'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-                <Heart className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
+                <Heart className="w-7 h-7 text-white" />
               </div>
               <span className={`text-2xl font-bold transition-colors duration-300 ${
                 isScrolled ? 'text-slate-900' : 'text-slate-900'
               }`}>Kifer Saúde</span>
             </div>
-            <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
+            <div className="hidden md:flex items-center space-x-8 flex-1 justify-center">
               <a href="#quem-somos" className={`font-medium transition-colors ${
-                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+                isScrolled ? 'text-slate-600 hover:text-orange-500' : 'text-slate-600 hover:text-orange-500'
               }`}>Quem Somos</a>
               <a href="#como-funciona" className={`font-medium transition-colors ${
-                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+                isScrolled ? 'text-slate-600 hover:text-orange-500' : 'text-slate-600 hover:text-orange-500'
               }`}>Como Funciona</a>
               <a href="#planos" className={`font-medium transition-colors ${
-                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+                isScrolled ? 'text-slate-600 hover:text-orange-500' : 'text-slate-600 hover:text-orange-500'
               }`}>Planos</a>
               <a href="#faq" className={`font-medium transition-colors ${
-                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+                isScrolled ? 'text-slate-600 hover:text-orange-500' : 'text-slate-600 hover:text-orange-500'
               }`}>FAQ</a>
               <a href="#contato" className={`font-medium transition-colors ${
-                isScrolled ? 'text-slate-700 hover:text-orange-600' : 'text-slate-800 hover:text-orange-600'
+                isScrolled ? 'text-slate-600 hover:text-orange-500' : 'text-slate-600 hover:text-orange-500'
               }`}>Contato</a>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="hidden md:block px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:scale-105"
+              className="hidden md:block px-6 py-2.5 bg-gradient-to-r from-orange-400 to-orange-500 text-white rounded-xl font-semibold hover:from-orange-500 hover:to-orange-600 transition-all shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:scale-105"
             >
               Cotação Grátis
             </button>
@@ -266,57 +266,58 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="pt-8 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 relative overflow-hidden min-h-[85vh] flex items-center">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
+      <section className="pt-8 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-orange-50/50 to-amber-50/30 relative overflow-hidden min-h-[85vh] flex items-center">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-200/30 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-orange-100/40 to-amber-100/40 rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className="text-left order-2 lg:order-1">
               <div className="mb-6">
-                <span className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full text-sm font-bold shadow-lg animate-pulse">
+                <span className="inline-flex items-center px-5 py-2.5 bg-white text-orange-600 rounded-full text-sm font-bold shadow-lg border border-orange-100">
                   <Star className="w-4 h-4 mr-2 fill-current" />
                   Especialista #1 em Planos de Saúde RJ
                 </span>
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 leading-tight">
-                O plano ideal começa com <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600">gente de verdade.</span>
+                O plano ideal começa com <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">gente de verdade.</span>
               </h1>
 
-              <p className="text-lg md:text-xl text-slate-700 mb-5 font-light leading-relaxed">
+              <p className="text-lg md:text-xl text-slate-600 mb-5 font-light leading-relaxed">
                 Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
-                <span className="block mt-2 font-semibold text-orange-700">Mais de 500 clientes satisfeitos!</span>
+                <span className="block mt-2 font-semibold text-orange-600">Mais de 500 clientes satisfeitos!</span>
               </p>
 
               <div className="flex gap-2 mb-6">
-                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <Shield className="w-4 h-4 mr-1.5 text-orange-600" />
-                  <span className="font-semibold text-slate-900 text-sm">100% Gratuito</span>
+                <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-orange-100 shadow-sm">
+                  <Shield className="w-4 h-4 mr-1.5 text-orange-500" />
+                  <span className="font-semibold text-slate-700 text-sm">100% Gratuito</span>
                 </div>
-                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <CheckCircle className="w-4 h-4 mr-1.5 text-orange-600" />
-                  <span className="font-semibold text-slate-900 text-sm">Sem Compromisso</span>
+                <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-orange-100 shadow-sm">
+                  <CheckCircle className="w-4 h-4 mr-1.5 text-orange-500" />
+                  <span className="font-semibold text-slate-700 text-sm">Sem Compromisso</span>
                 </div>
-                <div className="inline-flex items-center px-4 py-2 bg-slate-800/10 backdrop-blur-sm rounded-full border border-slate-300/50">
-                  <ThumbsUp className="w-4 h-4 mr-1.5 text-orange-600" />
-                  <span className="font-semibold text-slate-900 text-sm">98% Satisfação</span>
+                <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-orange-100 shadow-sm">
+                  <ThumbsUp className="w-4 h-4 mr-1.5 text-orange-500" />
+                  <span className="font-semibold text-slate-700 text-sm">98% Satisfação</span>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-base md:text-lg rounded-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-2xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
+                  className="px-8 py-4 bg-gradient-to-r from-orange-400 to-orange-500 text-white text-base md:text-lg rounded-2xl font-bold hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl hover:shadow-orange-300 hover:scale-105 transform whitespace-nowrap"
                 >
                   Quero minha cotação gratuita
                 </button>
 
                 <button
                   onClick={scrollToForm}
-                  className="px-8 py-4 bg-slate-900 text-white text-base md:text-lg rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl hover:scale-105 transform whitespace-nowrap"
+                  className="px-8 py-4 bg-white text-orange-600 text-base md:text-lg rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-lg border-2 border-orange-100 hover:border-orange-200 hover:scale-105 transform whitespace-nowrap"
                 >
                   <MessageCircle className="inline-block mr-2 w-5 h-5" />
                   Falar com um especialista
@@ -327,22 +328,22 @@ export default function LandingPage() {
             <div className="flex justify-center order-1 lg:order-2 relative">
               <div className="relative pt-20 pb-8">
 
-                <div className="absolute top-20 -left-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10">
-                  <div className="text-2xl font-bold text-orange-600 mb-0">500+</div>
-                  <div className="text-xs font-medium text-slate-600">Clientes</div>
+                <div className="absolute top-20 -left-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10 border border-orange-50">
+                  <div className="text-2xl font-bold text-orange-500 mb-0">500+</div>
+                  <div className="text-xs font-medium text-slate-500">Clientes</div>
                 </div>
 
-                <div className="absolute bottom-32 -right-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10">
-                  <div className="text-2xl font-bold text-orange-600 mb-0">4.9★</div>
-                  <div className="text-xs font-medium text-slate-600">Avaliação</div>
+                <div className="absolute bottom-32 -right-2 bg-white rounded-2xl shadow-xl px-5 py-3 z-10 border border-orange-50">
+                  <div className="text-2xl font-bold text-orange-500 mb-0">4.9★</div>
+                  <div className="text-xs font-medium text-slate-500">Avaliação</div>
                 </div>
 
                 <div className="relative w-[320px] h-[480px] md:w-[360px] md:h-[540px]">
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-xl px-4 py-2 flex items-center gap-2 z-20 whitespace-nowrap animate-pulse">
+                  <div className="absolute top-20 -right-2 bg-gradient-to-r from-orange-400 to-amber-400 rounded-full shadow-xl px-4 py-2 flex items-center gap-2 z-20 whitespace-nowrap">
                     <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     <span className="font-bold text-white text-xs">Online Agora</span>
                   </div>
-                  <div className="absolute inset-0 rounded-[1rem] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-orange-200 to-amber-200">
+                  <div className="absolute inset-0 rounded-[1rem] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-orange-100 to-amber-100">
                     <img
                       src="/image.png"
                       alt="Luiza Kifer - Especialista em Planos de Saúde"
@@ -351,9 +352,9 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl px-8 py-4 text-center min-w-[280px] z-10">
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl px-8 py-4 text-center min-w-[280px] z-10 border border-orange-50">
                   <h3 className="text-xl font-bold text-slate-900 mb-1">Luiza Kifer</h3>
-                  <p className="text-orange-600 font-semibold whitespace-nowrap">Sua especialista em saúde</p>
+                  <p className="text-orange-500 font-semibold whitespace-nowrap">Sua especialista em saúde</p>
                 </div>
               </div>
             </div>
@@ -958,82 +959,82 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="contato" className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 scroll-mt-32">
+      <section id="contato" className="bg-gradient-to-br from-orange-50 via-white to-amber-50 py-16 px-4 sm:px-6 lg:px-8 scroll-mt-32">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
               Entre em Contato
             </h2>
-            <p className="text-xl text-slate-300">
+            <p className="text-xl text-slate-600">
               Estamos prontos para te ajudar a encontrar o plano ideal
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <a href="tel:+5521979302389" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
-              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+            <a href="tel:+5521979302389" className="bg-white rounded-2xl p-8 hover:shadow-xl hover:shadow-orange-100 transition-all group border border-orange-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform shadow-lg shadow-orange-200">
                 <Phone className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">Telefone</h3>
-              <p className="text-slate-300 text-center">(21) 97930-2389</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 text-center">Telefone</h3>
+              <p className="text-slate-600 text-center">(21) 97930-2389</p>
             </a>
 
-            <a href="mailto:contato@kifersaude.com.br" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
-              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+            <a href="mailto:contato@kifersaude.com.br" className="bg-white rounded-2xl p-8 hover:shadow-xl hover:shadow-orange-100 transition-all group border border-orange-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform shadow-lg shadow-orange-200">
                 <Mail className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">E-mail</h3>
-              <p className="text-slate-300 text-center">contato@kifersaude.com.br</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 text-center">E-mail</h3>
+              <p className="text-slate-600 text-center">contato@kifersaude.com.br</p>
             </a>
 
-            <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="bg-slate-800 rounded-2xl p-8 hover:bg-slate-700 transition-all group">
-              <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+            <a href="https://wa.me/5521979302389" target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl p-8 hover:shadow-xl hover:shadow-orange-100 transition-all group border border-orange-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform shadow-lg shadow-orange-200">
                 <MessageCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">Contato</h3>
-              <p className="text-slate-300 text-center">Atendimento rápido</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 text-center">WhatsApp</h3>
+              <p className="text-slate-600 text-center">Atendimento rápido</p>
             </a>
           </div>
         </div>
       </section>
 
-      <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-white text-slate-700 py-16 px-4 sm:px-6 lg:px-8 border-t border-orange-100">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
                   <Heart className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold">Kifer Saúde</span>
+                <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
               </div>
-              <p className="text-slate-400 leading-relaxed">
+              <p className="text-slate-500 leading-relaxed">
                 Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
-              <ul className="space-y-3 text-slate-400">
-                <li><a href="#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
-                <li><a href="#cotacao" className="hover:text-orange-400 transition-colors">Planos</a></li>
-                <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
-                <li><a href="#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Links Úteis</h3>
+              <ul className="space-y-3 text-slate-500">
+                <li><a href="#quem-somos" className="hover:text-orange-500 transition-colors">Sobre Nós</a></li>
+                <li><a href="#cotacao" className="hover:text-orange-500 transition-colors">Planos</a></li>
+                <li><a href="/blog" className="hover:text-orange-500 transition-colors">Blog</a></li>
+                <li><a href="#contato" className="hover:text-orange-500 transition-colors">Contato</a></li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-lg font-bold mb-4">Contato</h3>
-              <div className="space-y-3 text-slate-400">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Contato</h3>
+              <div className="space-y-3 text-slate-500">
                 <div className="flex items-start">
                   <MapPin className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                   <span>Rio de Janeiro, RJ</span>
                 </div>
-                <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-400 transition-colors">
+                <a href="mailto:contato@kifersaude.com.br" className="flex items-start hover:text-orange-500 transition-colors">
                   <Mail className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                   <span>contato@kifersaude.com.br</span>
                 </a>
-                <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-400 transition-colors">
+                <a href="https://instagram.com/souluizakifer" target="_blank" rel="noopener noreferrer" className="flex items-start hover:text-orange-500 transition-colors">
                   <Instagram className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-orange-500" />
                   <span>@souluizakifer</span>
                 </a>
@@ -1041,14 +1042,14 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-bold mb-4">Legal</h3>
-              <div className="space-y-2 text-slate-400">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Legal</h3>
+              <div className="space-y-2 text-slate-500">
                 <p className="text-sm">CNPJ: 46.423.078/0001-10</p>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
+          <div className="border-t border-orange-100 pt-8 text-center text-slate-400">
             <p>© 2025 Kifer Saúde. Todos os direitos reservados.</p>
           </div>
         </div>

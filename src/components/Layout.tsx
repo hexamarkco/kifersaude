@@ -10,8 +10,6 @@ import {
   MessageCircle,
   Sun,
   ChevronDown,
-  Menu,
-  X,
   Briefcase,
   BookOpen,
   PiggyBank,
@@ -75,8 +73,6 @@ export default function Layout({
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const [expandedParent, setExpandedParent] = useState<string | null>(null);
-  const [expandedMobileParent, setExpandedMobileParent] = useState<string | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('painel.sidebar.collapsed');
@@ -371,7 +367,6 @@ export default function Layout({
     } else {
       onTabChange(tab.id);
       setExpandedParent(null);
-      setIsMobileMenuOpen(false);
     }
   };
 
@@ -387,26 +382,6 @@ export default function Layout({
     if (!tab.children) return tab.badge || 0;
     return tab.children.reduce((sum, child) => sum + (child.badge || 0), 0);
   };
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsMobileMenuOpen(false);
-        setExpandedMobileParent(null);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-    setExpandedMobileParent(null);
-  }, [activeTab]);
 
   useEffect(() => {
     if (!showNotificationsDropdown) {
@@ -475,53 +450,6 @@ export default function Layout({
 
   const toggleThemeMode = () => {
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
-  };
-
-  const toggleMobileParent = (parentId: string) => {
-    setExpandedMobileParent(current => (current === parentId ? null : parentId));
-  };
-
-  const renderMobileChildren = (tab: TabConfig) => {
-    if (!tab.children || tab.children.length === 0 || expandedMobileParent !== tab.id) {
-      return null;
-    }
-
-    return (
-      <div className="mt-2 space-y-1 pl-10">
-        {tab.children.map((child) => {
-          const ChildIcon = child.icon;
-          return (
-            <button
-              key={child.id}
-              onClick={() => {
-                onTabChange(child.id);
-                setIsMobileMenuOpen(false);
-                setExpandedMobileParent(null);
-              }}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                activeTab === child.id ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ChildIcon className="h-4 w-4" />
-                <span>{child.label}</span>
-              </div>
-              {child.badge !== undefined && child.badge > 0 && (
-                <span
-                  className={`${
-                    child.badgeColor || 'bg-orange-500'
-                  } text-white text-xs font-semibold inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 ${
-                    child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
-                  } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
-                >
-                  {child.badge > 9 ? '9+' : child.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    );
   };
 
   const renderSidebarItem = (tab: TabConfig) => {
@@ -606,7 +534,7 @@ export default function Layout({
       <button
         key={tab.id}
         onClick={() => handleTabClick(tab)}
-        className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+        className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
           isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
         } ${isMenuCollapsed ? 'justify-center' : ''}`}
         title={isMenuCollapsed ? tab.label : undefined}
@@ -674,60 +602,36 @@ export default function Layout({
           </nav>
 
           <div className={`border-t border-slate-200 p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
-            <button
-              onClick={handleLogout}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 ${
-                isMenuCollapsed ? 'justify-center' : ''
-              }`}
-              title={isMenuCollapsed ? 'Sair' : undefined}
-            >
-              <LogOut className="h-5 w-5" />
-              {!isMenuCollapsed && <span>Sair</span>}
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className={`flex flex-1 flex-col transition-all duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <header className="sticky top-0 z-30 h-16 border-b border-slate-200 bg-white">
-          <div className="flex h-full items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(current => !current)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 lg:hidden"
-                aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-                aria-expanded={isMobileMenuOpen}
-              >
-                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex gap-1 ${isMenuCollapsed ? 'flex-col' : 'flex-row'} ${!isMenuCollapsed ? 'mb-2' : ''}`}>
               <div className="relative">
                 <button
                   ref={notificationsButtonRef}
                   onClick={() => setShowNotificationsDropdown((current) => !current)}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600"
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600 ${
+                    isMenuCollapsed ? 'w-full justify-center px-2' : ''
+                  }`}
                   title="Notificações"
                   aria-expanded={showNotificationsDropdown}
                   aria-haspopup="true"
                 >
-                  <Bell className="h-5 w-5" />
-                  {unreadReminders > 0 && (
-                    <span
-                      className={`absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white ${
-                        hasActiveNotification ? 'bg-orange-500 animate-pulse' : 'bg-orange-500'
-                      }`}
-                    >
-                      {unreadReminders > 9 ? '9+' : unreadReminders}
-                    </span>
-                  )}
-                  <span className="sr-only">Notificações</span>
+                  <div className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadReminders > 0 && (
+                      <span
+                        className={`absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                          hasActiveNotification ? 'bg-orange-500 animate-pulse' : 'bg-orange-500'
+                        }`}
+                      >
+                        {unreadReminders > 9 ? '9+' : unreadReminders}
+                      </span>
+                    )}
+                  </div>
+                  {!isMenuCollapsed && <span>Notificações</span>}
                 </button>
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className="absolute right-0 mt-2 w-96 max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    className={`absolute ${isMenuCollapsed ? 'left-full ml-2 top-0' : 'right-0 mt-2'} w-96 max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-xl z-50`}
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
@@ -735,7 +639,10 @@ export default function Layout({
                         <p className="text-xs text-slate-500">Resumo de hoje</p>
                       </div>
                       <button
-                        onClick={() => onTabChange('reminders')}
+                        onClick={() => {
+                          onTabChange('reminders');
+                          setShowNotificationsDropdown(false);
+                        }}
                         className="text-xs font-semibold text-orange-600 hover:text-orange-700"
                       >
                         Ver tudo
@@ -818,90 +725,36 @@ export default function Layout({
               <button
                 type="button"
                 onClick={toggleThemeMode}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 ${
+                  isMenuCollapsed ? 'w-full justify-center px-2' : ''
+                }`}
                 title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
                 aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               >
                 {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {!isMenuCollapsed && <span>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>}
               </button>
             </div>
+            <button
+              onClick={handleLogout}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 ${
+                isMenuCollapsed ? 'justify-center' : ''
+              }`}
+              title={isMenuCollapsed ? 'Sair' : undefined}
+            >
+              <LogOut className="h-5 w-5" />
+              {!isMenuCollapsed && <span>Sair</span>}
+            </button>
           </div>
-          {isMobileMenuOpen && (
-            <div className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl lg:hidden">
-              <nav className="flex flex-col gap-2">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const totalBadge = getTotalBadge(tab);
-                  const isExpanded = expandedMobileParent === tab.id;
-                  const isActive = isParentActive(tab);
+        </div>
+      </aside>
 
-                  return (
-                    <div key={tab.id} className="flex flex-col">
-                      <button
-                        onClick={() => {
-                          if (tab.children && tab.children.length > 0) {
-                            toggleMobileParent(tab.id);
-                          } else {
-                            onTabChange(tab.id);
-                          }
-                        }}
-                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                              isActive ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </span>
-                          <div className="flex flex-col text-left">
-                            <span>{tab.label}</span>
-                            {tab.children && tab.children.length > 0 && (
-                              <span className="text-xs font-normal text-slate-500">
-                                {isExpanded ? 'Recolher' : 'Expandir'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {totalBadge > 0 && (
-                            <span
-                              className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs font-semibold text-white ${
-                                tab.badgeColor || 'bg-orange-500'
-                              } ${
-                                hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders')
-                                  ? 'animate-pulse'
-                                  : ''
-                              } ${
-                                (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0
-                                  ? 'animate-pulse'
-                                  : ''
-                              }`}
-                            >
-                              {totalBadge > 9 ? '9+' : totalBadge}
-                            </span>
-                          )}
-                          {tab.children && tab.children.length > 0 && (
-                            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                          )}
-                        </div>
-                      </button>
-                      {renderMobileChildren(tab)}
-                    </div>
-                  );
-                })}
-              </nav>
-            </div>
-          )}
-        </header>
+      <div className={`flex flex-1 flex-col transition-all duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
         <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             className={
               activeTab === 'whatsapp'
-                ? 'w-full h-[calc(100vh-4rem)] min-h-0'
+                ? 'w-full h-[calc(100vh)] min-h-0'
                 : 'w-full px-4 py-8 sm:px-6 lg:px-8'
             }
           >

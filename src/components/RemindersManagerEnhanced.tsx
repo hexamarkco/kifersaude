@@ -4,7 +4,7 @@ import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
   ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2, MessageSquare,
-  RefreshCw, Sparkles, Copy,
+  RefreshCw, Sparkles, Copy, CalendarPlus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
@@ -107,7 +107,10 @@ export default function RemindersManagerEnhanced() {
   const [followUpApproved, setFollowUpApproved] = useState(false);
   const [followUpBlocks, setFollowUpBlocks] = useState<string[]>([]);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
-  const [quickSchedulingReminderId, setQuickSchedulingReminderId] = useState<string | null>(null);
+  const [quickSchedulingAction, setQuickSchedulingAction] = useState<{
+    reminderId: string;
+    daysAhead: 1 | 2;
+  } | null>(null);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -701,7 +704,7 @@ export default function RemindersManagerEnhanced() {
     nextReminderDate.setDate(nextReminderDate.getDate() + daysAhead);
     const nextReminderDateISO = nextReminderDate.toISOString();
 
-    setQuickSchedulingReminderId(reminder.id);
+    setQuickSchedulingAction({ reminderId: reminder.id, daysAhead });
 
     try {
       const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
@@ -745,7 +748,7 @@ export default function RemindersManagerEnhanced() {
       console.error('Erro ao agendar lembrete rápido:', error);
       alert('Não foi possível criar o novo lembrete rápido.');
     } finally {
-      setQuickSchedulingReminderId(null);
+      setQuickSchedulingAction(null);
     }
   };
 
@@ -1374,25 +1377,37 @@ export default function RemindersManagerEnhanced() {
               <>
                 <button
                   onClick={() => handleQuickSchedule(reminder, 1)}
-                  disabled={quickSchedulingReminderId === reminder.id}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={quickSchedulingAction?.reminderId === reminder.id}
+                  className="p-2 rounded-lg text-teal-600 hover:bg-teal-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                   title="Agendar para 1 dia e marcar atual como lido"
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
-                    1 dia
-                  </span>
+                  {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 1 ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <span className="relative inline-flex">
+                      <CalendarPlus className="w-5 h-5" />
+                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                        1
+                      </span>
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => handleQuickSchedule(reminder, 2)}
-                  disabled={quickSchedulingReminderId === reminder.id}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={quickSchedulingAction?.reminderId === reminder.id}
+                  className="p-2 rounded-lg text-teal-600 hover:bg-teal-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                   title="Agendar para 2 dias e marcar atual como lido"
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
-                    2 dias
-                  </span>
+                  {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 2 ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <span className="relative inline-flex">
+                      <CalendarPlus className="w-5 h-5" />
+                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                        2
+                      </span>
+                    </span>
+                  )}
                 </button>
               </>
             )}

@@ -499,13 +499,28 @@ export default function Layout({
             title={isMenuCollapsed ? tab.label : undefined}
           >
             <div className={`flex items-center gap-3 transition-all duration-200 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <div className="relative flex items-center">
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {totalBadge > 0 && isMenuCollapsed && (
+                  <span
+                    className={`${
+                      tab.badgeColor || 'bg-orange-500'
+                    } absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                      hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                    } ${
+                      (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
+                    }`}
+                  >
+                    {totalBadge > 9 ? '9+' : totalBadge}
+                  </span>
+                )}
+              </div>
               <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
             </div>
             {!isMenuCollapsed && (
               <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
             )}
-            {totalBadge > 0 && (
+            {totalBadge > 0 && !isMenuCollapsed && (
               <span
                 className={`${
                   tab.badgeColor || 'bg-orange-500'
@@ -513,7 +528,7 @@ export default function Layout({
                   hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
                 } ${
                   (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                } ${isMenuCollapsed ? 'absolute -top-1 -right-1' : 'absolute -right-1 -top-1'}`}
+                } absolute -right-1 -top-1`}
               >
                 {totalBadge > 9 ? '9+' : totalBadge}
               </span>

@@ -234,8 +234,10 @@ export default function Layout({
         if (commissionDate && contract.comissao_prevista) {
           const totalCommission = contract.comissao_prevista;
           const isUpfront = contract.comissao_recebimento_adiantado ?? true;
-          const customInstallments = Array.isArray(contract.comissao_parcelas)
-            ? contract.comissao_parcelas
+          const customInstallments: { percentual: number; data_pagamento: string | null }[] = Array.isArray(
+            contract.comissao_parcelas
+          )
+            ? (contract.comissao_parcelas as { percentual: number; data_pagamento: string | null }[])
             : [];
 
           if (!isUpfront && customInstallments.length > 0) {
@@ -723,7 +725,11 @@ export default function Layout({
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className={`absolute ${isMenuCollapsed ? 'left-full ml-2 bottom-0' : 'right-0 mb-2'} w-96 max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-xl z-50`}
+                    className={`absolute z-50 w-96 rounded-2xl border border-slate-200 bg-white shadow-xl ${
+                      isMenuCollapsed
+                        ? 'left-full bottom-0 ml-2 max-w-[calc(100vw-5rem)]'
+                        : 'left-0 bottom-full mb-2 max-w-[calc(100vw-1rem)]'
+                    }`}
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>

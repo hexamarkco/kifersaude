@@ -790,7 +790,10 @@ export default function FlowBuilder({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div ref={reactFlowWrapperRef} className="rounded-2xl border border-slate-200 bg-slate-50 h-[520px] sm:h-[560px] lg:h-[680px]">
+      <div
+        ref={reactFlowWrapperRef}
+        className="flex h-[520px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 sm:h-[560px] lg:h-[680px]"
+      >
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 rounded-t-2xl">
           <div>
             <div className="text-xs uppercase text-slate-400 font-semibold">Builder avancado</div>
@@ -848,31 +851,33 @@ export default function FlowBuilder({
             Existem {totalIssueCount} alerta(s) de conexao no fluxo.
           </div>
         )}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={handleConnect}
-          onEdgeClick={handleEdgeClick}
-          onNodeClick={(_, node) => {
-            setSelectedNodeId(node.id);
-            setContextMenu(null);
-          }}
-          onNodeContextMenu={(event, node) => {
-            event.preventDefault();
-            setSelectedNodeId(node.id);
-            setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
-          }}
-          onPaneClick={() => setContextMenu(null)}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-slate-50"
-        >
-          <MiniMap nodeColor={flowThemeColors.minimapNode} maskColor={flowThemeColors.minimapMask} />
-          <Controls />
-          <Background gap={18} size={1} color={flowThemeColors.backgroundGrid} />
-        </ReactFlow>
+        <div className="min-h-0 flex-1">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={handleConnect}
+            onEdgeClick={handleEdgeClick}
+            onNodeClick={(_, node) => {
+              setSelectedNodeId(node.id);
+              setContextMenu(null);
+            }}
+            onNodeContextMenu={(event, node) => {
+              event.preventDefault();
+              setSelectedNodeId(node.id);
+              setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+            }}
+            onPaneClick={() => setContextMenu(null)}
+            nodeTypes={nodeTypes}
+            fitView
+            className="h-full bg-slate-50"
+          >
+            <MiniMap nodeColor={flowThemeColors.minimapNode} maskColor={flowThemeColors.minimapMask} />
+            <Controls />
+            <Background gap={18} size={1} color={flowThemeColors.backgroundGrid} />
+          </ReactFlow>
+        </div>
         {contextMenu && (
           <div
             className="fixed z-50 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"

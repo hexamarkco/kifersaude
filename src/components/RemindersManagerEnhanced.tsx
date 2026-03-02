@@ -306,7 +306,7 @@ export default function RemindersManagerEnhanced() {
   };
 
   useEffect(() => {
-    loadReminders();
+    loadReminders({ showLoading: true });
 
     const channel = supabase
       .channel('reminders-changes')
@@ -337,8 +337,13 @@ export default function RemindersManagerEnhanced() {
     };
   }, []);
 
-  const loadReminders = async () => {
-    setLoading(true);
+  const loadReminders = async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? false;
+
+    if (showLoading) {
+      setLoading(true);
+    }
+
     try {
       const { data, error } = await supabase
         .from('reminders')
@@ -395,7 +400,9 @@ export default function RemindersManagerEnhanced() {
     } catch (error) {
       console.error('Erro ao carregar lembretes:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1978,7 +1985,6 @@ export default function RemindersManagerEnhanced() {
               next.set(lead.id, { ...lead, proximo_retorno: reminderDate });
               return next;
             });
-            loadReminders();
           }}
           promptMessage={manualReminderQueue[0].promptMessage}
           defaultTitle={manualReminderQueue[0].defaultTitle}

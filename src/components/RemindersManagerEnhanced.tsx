@@ -107,6 +107,7 @@ export default function RemindersManagerEnhanced() {
   const [followUpApproved, setFollowUpApproved] = useState(false);
   const [followUpBlocks, setFollowUpBlocks] = useState<string[]>([]);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
+  const [quickSchedulingReminderId, setQuickSchedulingReminderId] = useState<string | null>(null);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -588,9 +589,14 @@ export default function RemindersManagerEnhanced() {
     }
   };
 
-  const handleMarkAsRead = async (id: string, currentStatus: boolean) => {
+  const handleMarkAsRead = async (
+    id: string,
+    currentStatus: boolean,
+    options?: { queueNextReminderPrompt?: boolean }
+  ): Promise<boolean> => {
     try {
       pendingRefreshIdsRef.current.add(id);
+      const queueNextReminderPrompt = options?.queueNextReminderPrompt ?? true;
       
       const reminder = reminders.find(r => r.id === id);
       const leadId = getLeadIdForReminder(reminder);
@@ -610,44 +616,46 @@ export default function RemindersManagerEnhanced() {
         throw error;
       }
 
-      if (completionDate && leadId) {
-        let leadInfo = leadsMap.get(leadId);
+      if (completionDate && leadId && reminder) {
+        await updateLeadNextReturnDate(leadId, null, {
+          onlyIfMatches: reminder.data_lembrete,
+        });
 
-        if (!leadInfo) {
-          const { data: leadData } = await supabase
-            .from('leads')
-            .select('id, nome_completo, telefone, responsavel, proximo_retorno')
-            .eq('id', leadId)
-            .maybeSingle();
+        if (queueNextReminderPrompt) {
+          let leadInfo = leadsMap.get(leadId);
 
-          if (leadData) {
-            leadInfo = leadData as Lead;
-            setLeadsMap(prev => {
-              const next = new Map(prev);
-              next.set(leadInfo!.id, leadInfo!);
-              return next;
-            });
+          if (!leadInfo) {
+            const { data: leadData } = await supabase
+              .from('leads')
+              .select('id, nome_completo, telefone, responsavel, proximo_retorno')
+              .eq('id', leadId)
+              .maybeSingle();
+
+            if (leadData) {
+              leadInfo = leadData as Lead;
+              setLeadsMap(prev => {
+                const next = new Map(prev);
+                next.set(leadInfo!.id, leadInfo!);
+                return next;
+              });
+            }
           }
-        }
 
-        if (leadInfo && reminder) {
-          await updateLeadNextReturnDate(leadId, null, {
-            onlyIfMatches: reminder.data_lembrete,
-          });
-
-          setManualReminderQueue(prev => [
-            ...prev,
-            {
-              lead: leadInfo,
-              promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
-              defaultTitle: reminder.titulo,
-              defaultDescription: reminder.descricao ?? undefined,
-              defaultType: 'Follow-up',
-              defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
-                ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
-                : 'normal',
-            },
-          ]);
+          if (leadInfo) {
+            setManualReminderQueue(prev => [
+              ...prev,
+              {
+                lead: leadInfo,
+                promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+                defaultTitle: reminder.titulo,
+                defaultDescription: reminder.descricao ?? undefined,
+                defaultType: 'Follow-up',
+                defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
+                  ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+                  : 'normal',
+              },
+            ]);
+          }
         }
       }
       setReminders(currentReminders =>
@@ -668,9 +676,79 @@ export default function RemindersManagerEnhanced() {
         return next;
       });
       pendingRefreshIdsRef.current.add(id);
+      return true;
     } catch (error) {
       console.error('Erro ao atualizar lembrete:', error);
       alert('Erro ao atualizar lembrete');
+      return false;
+    }
+  };
+
+  const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2) => {
+    if (reminder.lido) return;
+
+    const leadId = getLeadIdForReminder(reminder);
+    if (!leadId) {
+      alert('Não foi possível identificar o lead deste lembrete.');
+      return;
+    }
+
+    const sourceDate = new Date(reminder.data_lembrete);
+    const nextReminderDate = new Date();
+
+    if (!Number.isNaN(sourceDate.getTime())) {
+      nextReminderDate.setHours(sourceDate.getHours(), sourceDate.getMinutes(), 0, 0);
+    }
+
+    nextReminderDate.setDate(nextReminderDate.getDate() + daysAhead);
+    const nextReminderDateISO = nextReminderDate.toISOString();
+
+    setQuickSchedulingReminderId(reminder.id);
+
+    try {
+      const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
+        queueNextReminderPrompt: false,
+      });
+
+      if (!markedAsRead) {
+        return;
+      }
+
+      const payload = {
+        lead_id: leadId,
+        contract_id: reminder.contract_id ?? undefined,
+        tipo: reminder.tipo,
+        titulo: reminder.titulo,
+        descricao: reminder.descricao ?? null,
+        data_lembrete: nextReminderDateISO,
+        lido: false,
+        prioridade: reminder.prioridade,
+        responsavel: reminder.responsavel ?? undefined,
+      };
+
+      const { data: createdReminder, error: insertError } = await supabase
+        .from('reminders')
+        .insert([payload])
+        .select('*')
+        .maybeSingle();
+
+      if (insertError) throw insertError;
+
+      await updateLeadNextReturnDate(leadId, nextReminderDateISO);
+
+      if (createdReminder) {
+        const nextReminder = createdReminder as Reminder;
+        setReminders(current =>
+          [...current, nextReminder].sort(
+            (a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime()
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao agendar lembrete rápido:', error);
+      alert('Não foi possível criar o novo lembrete rápido.');
+    } finally {
+      setQuickSchedulingReminderId(null);
     }
   };
 
@@ -1294,6 +1372,28 @@ export default function RemindersManagerEnhanced() {
                   </>
                 )}
               </div>
+            )}
+            {!reminder.lido && (
+              <>
+                <button
+                  onClick={() => handleQuickSchedule(reminder, 1)}
+                  disabled={quickSchedulingReminderId === reminder.id}
+                  className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  title="Agendar para 1 dia e marcar atual como lido"
+                >
+                  {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                  1 dia
+                </button>
+                <button
+                  onClick={() => handleQuickSchedule(reminder, 2)}
+                  disabled={quickSchedulingReminderId === reminder.id}
+                  className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  title="Agendar para 2 dias e marcar atual como lido"
+                >
+                  {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                  2 dias
+                </button>
+              </>
             )}
             <button
               onClick={() => handleMarkAsRead(reminder.id, reminder.lido)}

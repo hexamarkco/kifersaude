@@ -493,19 +493,19 @@ export default function Layout({
           <button
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={() => handleTabClick(tab)}
-            className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${
+            className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 ${
               isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
-            } ${isMenuCollapsed ? 'justify-center px-2' : ''}`}
+            } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
             title={isMenuCollapsed ? tab.label : undefined}
           >
-            <div className={`flex items-center gap-3 transition-all duration-200 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
-              <div className="relative flex items-center">
+            <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
+              <div className="relative flex h-5 w-5 items-center justify-center">
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 {totalBadge > 0 && isMenuCollapsed && (
                   <span
                     className={`${
                       tab.badgeColor || 'bg-orange-500'
-                    } absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                    } absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                       hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
                     } ${
                       (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
@@ -628,12 +628,12 @@ export default function Layout({
       <button
         key={tab.id}
         onClick={() => handleTabClick(tab)}
-        className={`relative flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+        className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors ${
           isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
-        } ${isMenuCollapsed ? 'justify-center' : ''}`}
+        } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
         title={isMenuCollapsed ? tab.label : undefined}
       >
-        <div className={`flex items-center gap-3 transition-all duration-200 ${isMenuCollapsed ? 'justify-center w-full' : ''}`}>
+        <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
           <Icon className="h-5 w-5 flex-shrink-0" />
           <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
         </div>
@@ -687,8 +687,8 @@ export default function Layout({
           <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
-                isMenuCollapsed ? 'justify-center px-2' : ''
+              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
+                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
             >
@@ -699,14 +699,14 @@ export default function Layout({
               <button
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-orange-50 hover:text-orange-600 ${
-                  isMenuCollapsed ? 'w-full justify-center px-2' : ''
+                className={`flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-orange-50 hover:text-orange-600 ${
+                  isMenuCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
                 }`}
                 title="Notificações"
                 aria-expanded={showNotificationsDropdown}
                 aria-haspopup="true"
               >
-                <div className="relative">
+                <div className="relative flex h-5 w-5 items-center justify-center">
                   <BellRing className="h-5 w-5" />
                   {unreadReminders > 0 && (
                       <span
@@ -817,8 +817,8 @@ export default function Layout({
             <button
               type="button"
               onClick={toggleThemeMode}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
-                isMenuCollapsed ? 'justify-center px-2' : ''
+              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
+                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -828,8 +828,8 @@ export default function Layout({
             </button>
             <button
               onClick={handleLogout}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
-                isMenuCollapsed ? 'justify-center px-2' : ''
+              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
+                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isMenuCollapsed ? 'Sair' : undefined}
             >

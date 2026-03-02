@@ -471,20 +471,18 @@ export default function RemindersManagerEnhanced() {
         query = query.eq('proximo_retorno', options.onlyIfMatches);
       }
 
-      const { data, error } = await query
-        .select('id, nome_completo, telefone, responsavel, proximo_retorno')
-        .maybeSingle();
+      const { error } = await query;
 
       if (error) throw error;
 
-      if (data) {
-        setLeadsMap(prev => {
-          const next = new Map(prev);
-          const existing = next.get(leadId);
-          next.set(leadId, existing ? { ...existing, ...data } : (data as Lead));
-          return next;
-        });
-      }
+      setLeadsMap(prev => {
+        const next = new Map(prev);
+        const existing = next.get(leadId);
+        if (existing) {
+          next.set(leadId, { ...existing, proximo_retorno: nextReturnDate });
+        }
+        return next;
+      });
     } catch (error) {
       console.error('Erro ao sincronizar próximo retorno do lead:', error);
     }
@@ -627,7 +625,7 @@ export default function RemindersManagerEnhanced() {
           if (!leadInfo) {
             const { data: leadData } = await supabase
               .from('leads')
-              .select('id, nome_completo, telefone, responsavel, proximo_retorno')
+              .select('id, nome_completo, telefone, proximo_retorno')
               .eq('id', leadId)
               .maybeSingle();
 
@@ -723,7 +721,6 @@ export default function RemindersManagerEnhanced() {
         data_lembrete: nextReminderDateISO,
         lido: false,
         prioridade: reminder.prioridade,
-        responsavel: reminder.responsavel ?? undefined,
       };
 
       const { data: createdReminder, error: insertError } = await supabase
@@ -955,7 +952,7 @@ export default function RemindersManagerEnhanced() {
       if (missingLeadIds.length > 0) {
         const { data: leadsData } = await supabase
           .from('leads')
-          .select('id, nome_completo, telefone, responsavel, proximo_retorno')
+          .select('id, nome_completo, telefone, proximo_retorno')
           .in('id', missingLeadIds);
 
         if (leadsData) {
@@ -1271,7 +1268,7 @@ export default function RemindersManagerEnhanced() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 ml-4">
+          <div className="ml-4 flex flex-wrap items-center gap-2">
             <button
               onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone, reminder.lead_id ?? contract?.lead_id ?? null)}
               disabled={!leadInfo?.telefone}
@@ -1378,20 +1375,24 @@ export default function RemindersManagerEnhanced() {
                 <button
                   onClick={() => handleQuickSchedule(reminder, 1)}
                   disabled={quickSchedulingReminderId === reminder.id}
-                  className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                   title="Agendar para 1 dia e marcar atual como lido"
                 >
-                  {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
-                  1 dia
+                  <span className="inline-flex items-center gap-1">
+                    {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                    1 dia
+                  </span>
                 </button>
                 <button
                   onClick={() => handleQuickSchedule(reminder, 2)}
                   disabled={quickSchedulingReminderId === reminder.id}
-                  className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                   title="Agendar para 2 dias e marcar atual como lido"
                 >
-                  {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
-                  2 dias
+                  <span className="inline-flex items-center gap-1">
+                    {quickSchedulingReminderId === reminder.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                    2 dias
+                  </span>
                 </button>
               </>
             )}

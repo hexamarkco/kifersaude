@@ -558,7 +558,7 @@ export default function Layout({
                           setActiveDropdownTab(null);
                         }}
                         className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                          isChildActive ? 'bg-orange-100 text-orange-800' : 'text-slate-600 hover:bg-slate-50'
+                          isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -597,7 +597,7 @@ export default function Layout({
                       setExpandedParent(null);
                     }}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                      isChildActive ? 'bg-orange-100 text-orange-800' : 'text-slate-600 hover:bg-slate-50'
+                      isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">

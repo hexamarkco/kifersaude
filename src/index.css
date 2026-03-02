@@ -200,7 +200,7 @@
 }
 
 .painel-theme.theme-dark .text-white {
-  color: var(--panel-bg) !important;
+  color: #f8fafc !important;
 }
 
 .painel-theme.theme-dark .ring-gray-200,
@@ -220,10 +220,19 @@
 
 .painel-theme.theme-dark .bg-teal-600,
 .painel-theme.theme-dark .bg-teal-700 {
-  background-color: var(--panel-accent-teal-text) !important;
-  color: var(--panel-bg) !important;
+  color: #ecfeff !important;
 }
 
+.painel-theme.theme-dark .bg-teal-600 {
+  background-color: #0f766e !important;
+}
+
+.painel-theme.theme-dark .bg-teal-700 {
+  background-color: #115e59 !important;
+}
+
+.painel-theme.theme-dark .text-teal-900,
+.painel-theme.theme-dark .text-teal-800,
 .painel-theme.theme-dark .text-teal-700,
 .painel-theme.theme-dark .text-teal-600 {
   color: var(--panel-accent-teal-text) !important;
@@ -234,8 +243,8 @@
 }
 
 .painel-theme.theme-dark .hover\:bg-teal-700:hover {
-  background-color: var(--panel-accent-teal-text) !important;
-  color: var(--panel-bg) !important;
+  background-color: #0d9488 !important;
+  color: #ecfeff !important;
 }
 
 .painel-theme.theme-dark .border-teal-100,
@@ -257,6 +266,8 @@
   background-color: var(--panel-accent-emerald-bg-strong) !important;
 }
 
+.painel-theme.theme-dark .text-emerald-900,
+.painel-theme.theme-dark .text-emerald-800,
 .painel-theme.theme-dark .text-emerald-700,
 .painel-theme.theme-dark .text-emerald-600 {
   color: var(--panel-accent-emerald-text) !important;
@@ -277,6 +288,8 @@
   background-color: var(--panel-accent-orange-bg) !important;
 }
 
+.painel-theme.theme-dark .text-orange-900,
+.painel-theme.theme-dark .text-orange-800,
 .painel-theme.theme-dark .text-orange-700,
 .painel-theme.theme-dark .text-orange-600,
 .painel-theme.theme-dark .text-orange-500 {
@@ -344,7 +357,8 @@
 
 .painel-theme.theme-dark .text-blue-700,
 .painel-theme.theme-dark .text-blue-600,
-.painel-theme.theme-dark .text-blue-800 {
+.painel-theme.theme-dark .text-blue-800,
+.painel-theme.theme-dark .text-blue-900 {
   color: var(--panel-accent-blue-text) !important;
 }
 
@@ -370,6 +384,7 @@
 .painel-theme.theme-dark .text-amber-900,
 .painel-theme.theme-dark .text-amber-800,
 .painel-theme.theme-dark .text-amber-700,
+.painel-theme.theme-dark .text-yellow-900,
 .painel-theme.theme-dark .text-yellow-800,
 .painel-theme.theme-dark .text-yellow-700 {
   color: var(--panel-accent-amber-text) !important;
@@ -385,6 +400,8 @@
   background-color: var(--panel-accent-green-bg) !important;
 }
 
+.painel-theme.theme-dark .text-green-900,
+.painel-theme.theme-dark .text-green-800,
 .painel-theme.theme-dark .text-green-700,
 .painel-theme.theme-dark .text-green-600 {
   color: var(--panel-accent-green-text) !important;

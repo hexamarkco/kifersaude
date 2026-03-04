@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Lead, Interaction, Reminder, LeadStatusHistory } from '../lib/supabase';
-import { X, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock } from 'lucide-react';
+import { X, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import NextStepSuggestion from './NextStepSuggestion';
+import FilterSingleSelect from './FilterSingleSelect';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -282,32 +283,36 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Tipo de Interação
                   </label>
-                  <select
-                    required
+                  <FilterSingleSelect
+                    icon={Clock}
                     value={formData.tipo}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-teal-500"
-                  >
-                    <option value="Ligação">Ligação</option>
-                    <option value="Mensagem">Mensagem</option>
-                    <option value="E-mail">E-mail</option>
-                    <option value="Reunião">Reunião</option>
-                    <option value="Observação">Observação</option>
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, tipo: value })}
+                    placeholder="Tipo de interação"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: 'Ligação', label: 'Ligação' },
+                      { value: 'Mensagem', label: 'Mensagem' },
+                      { value: 'E-mail', label: 'E-mail' },
+                      { value: 'Reunião', label: 'Reunião' },
+                      { value: 'Observação', label: 'Observação' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Responsável
                   </label>
-                  <select
-                    required
+                  <FilterSingleSelect
+                    icon={UserCircle}
                     value={formData.responsavel}
-                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-teal-500"
-                  >
-                    <option value="Luiza">Luiza</option>
-                    <option value="Nick">Nick</option>
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, responsavel: value })}
+                    placeholder="Responsável"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: 'Luiza', label: 'Luiza' },
+                      { value: 'Nick', label: 'Nick' },
+                    ]}
+                  />
                 </div>
               </div>
               <div className="mb-4">

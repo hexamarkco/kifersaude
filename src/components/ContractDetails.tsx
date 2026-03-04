@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
 import ContractForm from './ContractForm';
 import DependentForm from './DependentForm';
+import FilterSingleSelect from './FilterSingleSelect';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
@@ -1104,32 +1105,38 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Tipo de Interação
                     </label>
-                    <select
-                      required
+                    <FilterSingleSelect
+                      icon={MessageCircle}
                       value={interactionData.tipo}
-                      onChange={(e) => setInteractionData({ ...interactionData, tipo: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="Ligação">Ligação</option>
-                      <option value="Mensagem">Mensagem</option>
-                      <option value="E-mail">E-mail</option>
-                      <option value="Reunião">Reunião</option>
-                      <option value="Observação">Observação</option>
-                    </select>
+                      onChange={(value) => setInteractionData({ ...interactionData, tipo: value })}
+                      placeholder="Tipo de interação"
+                      includePlaceholderOption={false}
+                      options={[
+                        { value: 'Ligação', label: 'Ligação' },
+                        { value: 'Mensagem', label: 'Mensagem' },
+                        { value: 'E-mail', label: 'E-mail' },
+                        { value: 'Reunião', label: 'Reunião' },
+                        { value: 'Observação', label: 'Observação' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Responsável
                     </label>
-                    <select
-                      required
+                    <FilterSingleSelect
+                      icon={User}
                       value={interactionData.responsavel}
-                      onChange={(e) => setInteractionData({ ...interactionData, responsavel: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="Luiza">Luiza</option>
-                      <option value="Nick">Nick</option>
-                    </select>
+                      onChange={(value) =>
+                        setInteractionData({ ...interactionData, responsavel: value })
+                      }
+                      placeholder="Responsável"
+                      includePlaceholderOption={false}
+                      options={[
+                        { value: 'Luiza', label: 'Luiza' },
+                        { value: 'Nick', label: 'Nick' },
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="mb-4">

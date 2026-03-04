@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { X, Search } from 'lucide-react';
+import { X, Search, Compass, Briefcase, AlertCircle, UserCircle } from 'lucide-react';
 import {
   formatDateForInput,
   formatDateTimeForInput,
@@ -16,6 +16,7 @@ import {
   resolveTipoContratacaoIdByLabel,
   resolveResponsavelIdByLabel,
 } from '../lib/leadRelations';
+import FilterSingleSelect from './FilterSingleSelect';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -201,6 +202,21 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     setSaving(true);
 
     try {
+      const requiredValues = [
+        { value: formData.nome_completo.trim(), label: 'nome completo' },
+        { value: formData.telefone.trim(), label: 'telefone' },
+        { value: formData.origem.trim(), label: 'origem do lead' },
+        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratação' },
+        { value: formData.status.trim(), label: 'status' },
+        { value: formData.responsavel.trim(), label: 'responsável' },
+      ];
+
+      const missingRequired = requiredValues.find((item) => !item.value);
+      if (missingRequired) {
+        alert(`Preencha o campo obrigatório: ${missingRequired.label}.`);
+        return;
+      }
+
       const creationDateIso = formData.data_criacao
         ? convertLocalToUTC(`${formData.data_criacao}T00:00`)
         : '';
@@ -519,26 +535,23 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 Origem do Lead *
               </label>
               {activeOrigins.length > 0 ? (
-                <select
-                  required
+                <FilterSingleSelect
+                  icon={Compass}
                   value={formData.origem}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, origem: e.target.value }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  {!activeOrigins.some((origin) => origin.nome === formData.origem) &&
-                    formData.origem && (
-                      <option value={formData.origem} hidden>
-                        Origem selecionada
-                      </option>
-                    )}
-                  {activeOrigins.map((origin) => (
-                    <option key={origin.id} value={origin.nome}>
-                      {origin.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
+                  placeholder="Origem do lead"
+                  includePlaceholderOption={false}
+                  options={[
+                    ...(!activeOrigins.some((origin) => origin.nome === formData.origem) &&
+                    formData.origem
+                      ? [{ value: formData.origem, label: formData.origem }]
+                      : []),
+                    ...activeOrigins.map((origin) => ({
+                      value: origin.nome,
+                      label: origin.nome,
+                    })),
+                  ]}
+                />
               ) : (
                 <input
                   type="text"
@@ -558,31 +571,34 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 Tipo de Contratação *
               </label>
               {tipoContratacaoOptions.length > 0 ? (
-                <select
-                  required
+                <FilterSingleSelect
+                  icon={Briefcase}
                   value={formData.tipo_contratacao}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setFormData((prev) => ({
                       ...prev,
-                      tipo_contratacao: e.target.value,
+                      tipo_contratacao: value,
                     }))
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  {!tipoContratacaoOptions.some(
-                    (option) => option.label === formData.tipo_contratacao,
-                  ) &&
-                    formData.tipo_contratacao && (
-                      <option value={formData.tipo_contratacao} hidden>
-                        Tipo selecionado
-                      </option>
-                    )}
-                  {tipoContratacaoOptions.map((option) => (
-                    <option key={option.id} value={option.label}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Tipo de contratação"
+                  includePlaceholderOption={false}
+                  options={[
+                    ...(!tipoContratacaoOptions.some(
+                      (option) => option.label === formData.tipo_contratacao,
+                    ) && formData.tipo_contratacao
+                      ? [
+                          {
+                            value: formData.tipo_contratacao,
+                            label: formData.tipo_contratacao,
+                          },
+                        ]
+                      : []),
+                    ...tipoContratacaoOptions.map((option) => ({
+                      value: option.label,
+                      label: option.label,
+                    })),
+                  ]}
+                />
               ) : (
                 <input
                   type="text"
@@ -622,28 +638,23 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 Status *
               </label>
               {activeLeadStatuses.length > 0 ? (
-                <select
-                  required
+                <FilterSingleSelect
+                  icon={AlertCircle}
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, status: e.target.value }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  {!activeLeadStatuses.some(
-                    (status) => status.nome === formData.status,
-                  ) &&
-                    formData.status && (
-                      <option value={formData.status} hidden>
-                        Status selecionado
-                      </option>
-                    )}
-                  {activeLeadStatuses.map((status) => (
-                    <option key={status.id} value={status.nome}>
-                      {status.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+                  placeholder="Status"
+                  includePlaceholderOption={false}
+                  options={[
+                    ...(!activeLeadStatuses.some((status) => status.nome === formData.status) &&
+                    formData.status
+                      ? [{ value: formData.status, label: formData.status }]
+                      : []),
+                    ...activeLeadStatuses.map((status) => ({
+                      value: status.nome,
+                      label: status.nome,
+                    })),
+                  ]}
+                />
               ) : (
                 <input
                   type="text"
@@ -679,31 +690,29 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 Responsável *
               </label>
               {responsavelOptions.length > 0 ? (
-                <select
-                  required
+                <FilterSingleSelect
+                  icon={UserCircle}
                   value={formData.responsavel}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setFormData((prev) => ({
                       ...prev,
-                      responsavel: e.target.value,
+                      responsavel: value,
                     }))
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  {!responsavelOptions.some(
-                    (option) => option.label === formData.responsavel,
-                  ) &&
-                    formData.responsavel && (
-                      <option value={formData.responsavel} hidden>
-                        Responsável selecionado
-                      </option>
-                    )}
-                  {responsavelOptions.map((option) => (
-                    <option key={option.id} value={option.label}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Responsável"
+                  includePlaceholderOption={false}
+                  options={[
+                    ...(!responsavelOptions.some(
+                      (option) => option.label === formData.responsavel,
+                    ) && formData.responsavel
+                      ? [{ value: formData.responsavel, label: formData.responsavel }]
+                      : []),
+                    ...responsavelOptions.map((option) => ({
+                      value: option.label,
+                      label: option.label,
+                    })),
+                  ]}
+                />
               ) : (
                 <input
                   type="text"

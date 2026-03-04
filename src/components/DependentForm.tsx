@@ -3,6 +3,7 @@ import { supabase, Dependent, ContractHolder } from '../lib/supabase';
 import { Search, X, Users } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
+import FilterSingleSelect from './FilterSingleSelect';
 
 type DependentFormProps = {
   contractId: string;
@@ -149,19 +150,20 @@ export default function DependentForm({
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Titular *
               </label>
-              <select
-                required
+              <FilterSingleSelect
+                icon={Users}
                 value={formData.holder_id}
-                onChange={(e) => setFormData({ ...formData, holder_id: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">Selecione um titular</option>
-                {holderOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFormData({ ...formData, holder_id: value })}
+                placeholder="Selecione um titular"
+                includePlaceholderOption={false}
+                options={[
+                  { value: '', label: 'Selecione um titular' },
+                  ...holderOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  })),
+                ]}
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -235,18 +237,20 @@ export default function DependentForm({
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Relação com Titular *
               </label>
-              <select
-                required
+              <FilterSingleSelect
+                icon={Users}
                 value={formData.relacao}
-                onChange={(e) => setFormData({ ...formData, relacao: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="Cônjuge">Cônjuge</option>
-                <option value="Filho(a)">Filho(a)</option>
-                <option value="Enteado(a)">Enteado(a)</option>
-                <option value="Pai/Mãe">Pai/Mãe</option>
-                <option value="Outro">Outro</option>
-              </select>
+                onChange={(value) => setFormData({ ...formData, relacao: value })}
+                placeholder="Relação com titular"
+                includePlaceholderOption={false}
+                options={[
+                  { value: 'Cônjuge', label: 'Cônjuge' },
+                  { value: 'Filho(a)', label: 'Filho(a)' },
+                  { value: 'Enteado(a)', label: 'Enteado(a)' },
+                  { value: 'Pai/Mãe', label: 'Pai/Mãe' },
+                  { value: 'Outro', label: 'Outro' },
+                ]}
+              />
             </div>
 
             <div>
@@ -266,17 +270,20 @@ export default function DependentForm({
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Carência Individual
               </label>
-              <select
+              <FilterSingleSelect
+                icon={Users}
                 value={formData.carencia_individual}
-                onChange={(e) => setFormData({ ...formData, carencia_individual: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">Mesma do titular</option>
-                <option value="padrão">Padrão</option>
-                <option value="reduzida">Reduzida</option>
-                <option value="portabilidade">Portabilidade</option>
-                <option value="zero">Zero</option>
-              </select>
+                onChange={(value) => setFormData({ ...formData, carencia_individual: value })}
+                placeholder="Carência individual"
+                includePlaceholderOption={false}
+                options={[
+                  { value: '', label: 'Mesma do titular' },
+                  { value: 'padrão', label: 'Padrão' },
+                  { value: 'reduzida', label: 'Reduzida' },
+                  { value: 'portabilidade', label: 'Portabilidade' },
+                  { value: 'zero', label: 'Zero' },
+                ]}
+              />
             </div>
 
             <div className="md:col-span-2">

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
-import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search } from 'lucide-react';
+import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
+import FilterSingleSelect from './FilterSingleSelect';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
@@ -355,6 +356,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         return;
       }
 
+      const requiredValues = [
+        { value: formData.status.trim(), label: 'status' },
+        { value: formData.modalidade.trim(), label: 'modalidade' },
+        { value: formData.operadora.trim(), label: 'operadora' },
+        { value: formData.produto_plano.trim(), label: 'produto/plano' },
+        { value: formData.responsavel.trim(), label: 'responsável' },
+      ];
+
+      const missingRequired = requiredValues.find((item) => !item.value);
+      if (missingRequired) {
+        alert(`Preencha o campo obrigatório: ${missingRequired.label}.`);
+        return;
+      }
+
       const installmentsPayload = commissionInstallments
         .map(parcel => ({
           percentual: parseFloat(parcel.percentual || '0'),
@@ -526,16 +541,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Lead Vinculado
                 </label>
-                <select
+                <FilterSingleSelect
+                  icon={User}
                   value={formData.lead_id}
-                  onChange={(e) => setFormData({ ...formData, lead_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Nenhum</option>
-                  {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.nome_completo}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, lead_id: value })}
+                  placeholder="Lead vinculado"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '', label: 'Nenhum' },
+                    ...leads.map((lead) => ({
+                      value: lead.id,
+                      label: lead.nome_completo,
+                    })),
+                  ]}
+                />
               </div>
 
               <div>
@@ -543,18 +562,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Status *
                 </label>
                 {contractStatusOptions.length > 0 ? (
-                  <select
-                    required
+                  <FilterSingleSelect
+                    icon={AlertCircle}
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {contractStatusOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, status: value })}
+                    placeholder="Status"
+                    includePlaceholderOption={false}
+                    options={contractStatusOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -572,18 +590,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Modalidade *
                 </label>
                 {modalidadeOptions.length > 0 ? (
-                  <select
-                    required
+                  <FilterSingleSelect
+                    icon={AlertCircle}
                     value={formData.modalidade}
-                    onChange={(e) => setFormData({ ...formData, modalidade: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {modalidadeOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, modalidade: value })}
+                    placeholder="Modalidade"
+                    includePlaceholderOption={false}
+                    options={modalidadeOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -665,17 +682,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Operadora *
                 </label>
-                <select
-                  required
+                <FilterSingleSelect
+                  icon={Search}
                   value={formData.operadora}
-                  onChange={(e) => handleOperadoraChange(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Selecione uma operadora</option>
-                  {operadoras.map(op => (
-                    <option key={op.id} value={op.nome}>{op.nome}</option>
-                  ))}
-                </select>
+                  onChange={(value) => handleOperadoraChange(value)}
+                  placeholder="Selecione uma operadora"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '', label: 'Selecione uma operadora' },
+                    ...operadoras.map((op) => ({
+                      value: op.nome,
+                      label: op.nome,
+                    })),
+                  ]}
+                />
                 <p className="text-xs text-slate-500 mt-1">
                   Comissão e bônus serão preenchidos automaticamente
                 </p>
@@ -699,17 +719,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Abrangência
                 </label>
                 {abrangenciaOptions.length > 0 ? (
-                  <select
+                  <FilterSingleSelect
+                    icon={AlertCircle}
                     value={formData.abrangencia}
-                    onChange={(e) => setFormData({ ...formData, abrangencia: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {abrangenciaOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, abrangencia: value })}
+                    placeholder="Abrangência"
+                    includePlaceholderOption={false}
+                    options={abrangenciaOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -726,17 +746,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Acomodação
                 </label>
                 {acomodacaoOptions.length > 0 ? (
-                  <select
+                  <FilterSingleSelect
+                    icon={AlertCircle}
                     value={formData.acomodacao}
-                    onChange={(e) => setFormData({ ...formData, acomodacao: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {acomodacaoOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, acomodacao: value })}
+                    placeholder="Acomodação"
+                    includePlaceholderOption={false}
+                    options={acomodacaoOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -777,27 +797,28 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Mês de reajuste
                 </label>
-                <select
+                <FilterSingleSelect
+                  icon={Calendar}
                   value={formData.mes_reajuste}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mes_reajuste: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Selecione</option>
-                  <option value="01">Janeiro</option>
-                  <option value="02">Fevereiro</option>
-                  <option value="03">Março</option>
-                  <option value="04">Abril</option>
-                  <option value="05">Maio</option>
-                  <option value="06">Junho</option>
-                  <option value="07">Julho</option>
-                  <option value="08">Agosto</option>
-                  <option value="09">Setembro</option>
-                  <option value="10">Outubro</option>
-                  <option value="11">Novembro</option>
-                  <option value="12">Dezembro</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, mes_reajuste: value })}
+                  placeholder="Selecione"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '', label: 'Selecione' },
+                    { value: '01', label: 'Janeiro' },
+                    { value: '02', label: 'Fevereiro' },
+                    { value: '03', label: 'Março' },
+                    { value: '04', label: 'Abril' },
+                    { value: '05', label: 'Maio' },
+                    { value: '06', label: 'Junho' },
+                    { value: '07', label: 'Julho' },
+                    { value: '08', label: 'Agosto' },
+                    { value: '09', label: 'Setembro' },
+                    { value: '10', label: 'Outubro' },
+                    { value: '11', label: 'Novembro' },
+                    { value: '12', label: 'Dezembro' },
+                  ]}
+                />
               </div>
 
               <div>
@@ -805,17 +826,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Carência
                 </label>
                 {carenciaOptions.length > 0 ? (
-                  <select
+                  <FilterSingleSelect
+                    icon={AlertCircle}
                     value={formData.carencia}
-                    onChange={(e) => setFormData({ ...formData, carencia: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {carenciaOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, carencia: value })}
+                    placeholder="Carência"
+                    includePlaceholderOption={false}
+                    options={carenciaOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -1247,18 +1268,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Responsável *
                 </label>
                 {responsavelOptions.length > 0 ? (
-                  <select
-                    required
+                  <FilterSingleSelect
+                    icon={User}
                     value={formData.responsavel}
-                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {responsavelOptions.map(option => (
-                      <option key={option.id} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, responsavel: value })}
+                    placeholder="Responsável"
+                    includePlaceholderOption={false}
+                    options={responsavelOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
                 ) : (
                   <input
                     type="text"

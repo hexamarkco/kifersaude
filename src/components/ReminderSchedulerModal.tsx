@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { X, Calendar, Clock } from 'lucide-react';
+import { X, Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
+import FilterSingleSelect from './FilterSingleSelect';
 
 const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
 const PRIORITY_OPTIONS = ['alta', 'normal', 'baixa'] as const;
@@ -187,31 +188,31 @@ export default function ReminderSchedulerModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Tipo do lembrete</label>
-                <select
+                <FilterSingleSelect
+                  icon={Tag}
                   value={type}
-                  onChange={(event) => setType(event.target.value as (typeof TYPE_OPTIONS)[number])}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                >
-                  {TYPE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setType(value as (typeof TYPE_OPTIONS)[number])}
+                  placeholder="Tipo do lembrete"
+                  includePlaceholderOption={false}
+                  options={TYPE_OPTIONS.map((option) => ({
+                    value: option,
+                    label: option,
+                  }))}
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Prioridade</label>
-                <select
+                <FilterSingleSelect
+                  icon={AlertCircle}
                   value={priority}
-                  onChange={(event) => setPriority(event.target.value as (typeof PRIORITY_OPTIONS)[number])}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                >
-                  {PRIORITY_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setPriority(value as (typeof PRIORITY_OPTIONS)[number])}
+                  placeholder="Prioridade"
+                  includePlaceholderOption={false}
+                  options={PRIORITY_OPTIONS.map((option) => ({
+                    value: option,
+                    label: option.charAt(0).toUpperCase() + option.slice(1),
+                  }))}
+                />
               </div>
             </div>
 

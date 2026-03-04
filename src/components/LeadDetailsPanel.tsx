@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Contract,
   ConfigOption,
@@ -6,6 +6,7 @@ import {
   LeadStatusConfig,
 } from '../lib/supabase';
 import StatusDropdown from './StatusDropdown';
+import FilterSingleSelect from './FilterSingleSelect';
 import {
   AlertCircle,
   ClipboardList,
@@ -95,8 +96,7 @@ export default function LeadDetailsPanel({
   const safeResponsavelValue = lead.responsavel_value ?? '';
   const observations = lead.observacoes?.trim() || null;
 
-  const handleResponsavelChange = async (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextResponsavel = event.target.value;
+  const handleResponsavelChange = async (nextResponsavel: string) => {
     if (!nextResponsavel || nextResponsavel === lead.responsavel_value) {
       return;
     }
@@ -256,18 +256,20 @@ export default function LeadDetailsPanel({
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500">Responsável</p>
               {responsavelOptions.length > 0 ? (
-                <select
-                  value={safeResponsavelValue}
-                  onChange={handleResponsavelChange}
-                  disabled={disabled || isUpdatingResponsavel}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 disabled:cursor-not-allowed"
-                >
-                  {responsavelOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <FilterSingleSelect
+                    icon={UserCircle}
+                    value={safeResponsavelValue}
+                    onChange={handleResponsavelChange}
+                    disabled={disabled || isUpdatingResponsavel}
+                    placeholder="Responsável"
+                    includePlaceholderOption={false}
+                    options={responsavelOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                  />
+                </div>
               ) : (
                 <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                   {lead.responsavel_label || 'Responsável não informado'}

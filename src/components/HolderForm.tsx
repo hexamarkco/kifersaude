@@ -5,6 +5,7 @@ import { formatDateForInput } from '../lib/dateUtils';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
+import FilterSingleSelect from './FilterSingleSelect';
 
 type HolderFormProps = {
   contractId: string;
@@ -316,32 +317,38 @@ export default function HolderForm({
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Sexo
                 </label>
-                <select
+                <FilterSingleSelect
+                  icon={User}
                   value={formData.sexo}
-                  onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Selecione</option>
-                  <option value="Masculino">Masculino</option>
-                  <option value="Feminino">Feminino</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, sexo: value })}
+                  placeholder="Selecione"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '', label: 'Selecione' },
+                    { value: 'Masculino', label: 'Masculino' },
+                    { value: 'Feminino', label: 'Feminino' },
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Estado Civil
                 </label>
-                <select
+                <FilterSingleSelect
+                  icon={User}
                   value={formData.estado_civil}
-                  onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Selecione</option>
-                  <option value="Solteiro(a)">Solteiro(a)</option>
-                  <option value="Casado(a)">Casado(a)</option>
-                  <option value="Divorciado(a)">Divorciado(a)</option>
-                  <option value="Viúvo(a)">Viúvo(a)</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, estado_civil: value })}
+                  placeholder="Selecione"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '', label: 'Selecione' },
+                    { value: 'Solteiro(a)', label: 'Solteiro(a)' },
+                    { value: 'Casado(a)', label: 'Casado(a)' },
+                    { value: 'Divorciado(a)', label: 'Divorciado(a)' },
+                    { value: 'Viúvo(a)', label: 'Viúvo(a)' },
+                  ]}
+                />
               </div>
 
               <div>

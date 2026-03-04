@@ -4,6 +4,7 @@ import { Search, X, Users } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
+import DateTimePicker from './ui/DateTimePicker';
 
 type DependentFormProps = {
   contractId: string;
@@ -87,6 +88,10 @@ export default function DependentForm({
     try {
       if (!formData.holder_id) {
         throw new Error('Selecione um titular para o dependente');
+      }
+
+      if (!formData.data_nascimento.trim()) {
+        throw new Error('Informe a data de nascimento do dependente');
       }
 
       const dataToSave = {
@@ -207,12 +212,11 @@ export default function DependentForm({
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Data de Nascimento *
               </label>
-              <input
+              <DateTimePicker
                 type="date"
-                required
                 value={formData.data_nascimento}
-                onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
+                placeholder="Selecionar data"
               />
             </div>
 

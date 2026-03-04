@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowUpRight, Bell, Check, Clock, RefreshCw } from 'lucide-react';
 import type { Reminder } from '../lib/supabase';
 import { formatDateTimeForInput, formatDateTimeFullBR } from '../lib/dateUtils';
+import DateTimePicker from './ui/DateTimePicker';
 
 const EMPTY_STATE_COPY = {
   title: 'Nenhum lembrete para este lead',
@@ -37,6 +38,11 @@ export default function LeadRemindersPanel({
       (a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime(),
     );
   }, [reminders]);
+
+  const minRescheduleDateTime = useMemo(
+    () => formatDateTimeForInput(new Date().toISOString()),
+    [],
+  );
 
   const openRescheduleForm = (reminder: Reminder) => {
     setRescheduleTargetId(reminder.id);
@@ -190,12 +196,13 @@ export default function LeadRemindersPanel({
                 {isOpen ? (
                   <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <label className="block text-xs font-semibold text-slate-700">Nova data e hora</label>
-                    <input
+                    <DateTimePicker
                       type="datetime-local"
                       value={rescheduleValue}
-                      onChange={event => setRescheduleValue(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                      min={new Date().toISOString().slice(0, 16)}
+                      onChange={setRescheduleValue}
+                      className="mt-1"
+                      min={minRescheduleDateTime}
+                      placeholder="Selecionar nova data"
                     />
                     <div className="mt-3 flex items-center gap-2">
                       <button

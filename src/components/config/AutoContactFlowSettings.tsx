@@ -55,6 +55,7 @@ import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig, Lead } from '../../lib/supabase';
 import FlowBuilder from './FlowBuilder';
 import FilterSingleSelect from '../FilterSingleSelect';
+import DateTimePicker from '../ui/DateTimePicker';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
@@ -440,6 +441,7 @@ export default function AutoContactFlowSettings() {
             startHour: schedulingDraft.startHour,
             endHour: schedulingDraft.endHour,
             allowedWeekdays: schedulingDraft.allowedWeekdays,
+            dailySendLimit: null,
           };
           const flowScheduling = effectiveFlow.scheduling ?? fallbackScheduling;
           const allowedWeekdays = Array.isArray(flowScheduling.allowedWeekdays)
@@ -447,11 +449,23 @@ export default function AutoContactFlowSettings() {
                 .map((value) => Number(value))
                 .filter((value) => Number.isFinite(value) && value >= 1 && value <= 7)
             : fallbackScheduling.allowedWeekdays;
+          const rawFlowDailySendLimit = Number(flowScheduling.dailySendLimit);
+          const flowDailySendLimit =
+            Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
+              ? Math.floor(rawFlowDailySendLimit)
+              : null;
 
           return {
             id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowKey}`,
             name: effectiveFlow.name?.trim() || `Fluxo ${flowIndex + 1}`,
             triggerStatus: effectiveFlow.triggerStatus?.trim() || '',
+            triggerType: effectiveFlow.triggerType ?? 'lead_created',
+            triggerStatuses: Array.isArray(effectiveFlow.triggerStatuses)
+              ? effectiveFlow.triggerStatuses.filter((status) => typeof status === 'string' && status.trim())
+              : [],
+            triggerDurationHours: Number.isFinite(Number(effectiveFlow.triggerDurationHours))
+              ? Number(effectiveFlow.triggerDurationHours)
+              : 24,
             steps,
             finalStatus: effectiveFlow.finalStatus?.trim() || '',
             invalidNumberAction: effectiveFlow.invalidNumberAction ?? 'none',
@@ -465,6 +479,7 @@ export default function AutoContactFlowSettings() {
               startHour: flowScheduling.startHour || fallbackScheduling.startHour,
               endHour: flowScheduling.endHour || fallbackScheduling.endHour,
               allowedWeekdays,
+              dailySendLimit: flowDailySendLimit,
             },
             flowGraph: effectiveFlow.flowGraph,
           };
@@ -714,6 +729,7 @@ export default function AutoContactFlowSettings() {
       startHour: schedulingDraft.startHour,
       endHour: schedulingDraft.endHour,
       allowedWeekdays: schedulingDraft.allowedWeekdays,
+      dailySendLimit: null,
     },
     invalidNumberAction: 'none',
     invalidNumberStatus: '',
@@ -745,6 +761,7 @@ export default function AutoContactFlowSettings() {
           startHour: schedulingDraft.startHour,
           endHour: schedulingDraft.endHour,
           allowedWeekdays: schedulingDraft.allowedWeekdays,
+          dailySendLimit: null,
         };
         return {
           ...flow,
@@ -909,6 +926,7 @@ export default function AutoContactFlowSettings() {
       allowedWeekdays: flow?.scheduling?.allowedWeekdays?.length
         ? flow.scheduling.allowedWeekdays
         : schedulingDraft.allowedWeekdays,
+      dailySendLimit: flow?.scheduling?.dailySendLimit ?? null,
     }),
     [schedulingDraft],
   );
@@ -1118,19 +1136,6 @@ export default function AutoContactFlowSettings() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="space-y-6">
-        {schedulingDraft.dailySendLimit && dailyAutomationCount !== null && dailyAutomationCount >= schedulingDraft.dailySendLimit ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 text-amber-700" />
-            <div>
-              <p className="font-semibold">Limite diário atingido</p>
-              <p className="text-xs text-amber-800 mt-1">
-                O limite de {schedulingDraft.dailySendLimit} envios automáticos foi alcançado hoje. Novos envios serão
-                reagendados para o próximo dia disponível.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
         <div>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -1186,9 +1191,7 @@ export default function AutoContactFlowSettings() {
               <p className="text-xs text-slate-500 mt-1">
                 {dailyAutomationError
                   ? dailyAutomationError
-                  : schedulingDraft.dailySendLimit
-                    ? `Limite diário: ${schedulingDraft.dailySendLimit}`
-                    : 'Sem limite diário configurado'}
+                  : 'Limites são definidos por fluxo no agendamento.'}
               </p>
             </div>
           </div>
@@ -1198,7 +1201,7 @@ export default function AutoContactFlowSettings() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Configurações globais</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Controle o envio automático, a janela global de disparos e a observabilidade do sistema.
+                  Controle o envio automático, o fuso horário e a observabilidade do sistema.
                 </p>
               </div>
               <div className="inline-flex items-center gap-2 text-xs text-slate-500">
@@ -1267,29 +1270,9 @@ export default function AutoContactFlowSettings() {
                     placeholder="America/Sao_Paulo"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Limite diário por tenant</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={schedulingDraft.dailySendLimit ?? ''}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value);
-                      setSchedulingDraft((previous) => ({
-                        ...previous,
-                        dailySendLimit: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null,
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Sem limite"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Mantém a automação dentro do limite diário global.
-                  </p>
-                </div>
               </div>
               <p className="text-[11px] text-slate-400">
-                A janela diária e os dias permitidos são definidos em cada fluxo.
+                A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.
               </p>
               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
                 <input
@@ -1632,7 +1615,7 @@ export default function AutoContactFlowSettings() {
                       <div>
                         <h4 className="text-sm font-semibold text-slate-800">Agendamento do fluxo</h4>
                         <p className="text-xs text-slate-500 mt-1">
-                          Defina a janela diária e os dias permitidos para este fluxo.
+                          Defina a janela diária, os dias permitidos e o limite de envios deste fluxo.
                         </p>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -1685,6 +1668,25 @@ export default function AutoContactFlowSettings() {
                               );
                             })}
                           </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Limite diário deste fluxo</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={activeFlowScheduling.dailySendLimit ?? ''}
+                            onChange={(event) => {
+                              const parsed = Number(event.target.value);
+                              handleUpdateFlowScheduling(activeFlow.id, {
+                                dailySendLimit: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null,
+                              });
+                            }}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            placeholder="Sem limite"
+                          />
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Conta apenas os envios automáticos deste fluxo por dia.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -2428,11 +2430,12 @@ export default function AutoContactFlowSettings() {
                             <label className="block text-xs font-semibold text-teal-700 mb-1">
                               Início da simulação
                             </label>
-                            <input
+                            <DateTimePicker
                               type="datetime-local"
                               value={simulationStart || getLocalDateTimeValue()}
-                              onChange={(event) => setSimulationStart(event.target.value)}
-                              className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                              onChange={setSimulationStart}
+                              triggerClassName="border-teal-200 bg-white"
+                              placeholder="Selecionar inicio"
                             />
                           </div>
                           <div className="text-xs text-teal-700 flex items-end">

@@ -444,6 +444,7 @@ type AutoContactFlowScheduling = {
   startHour: string;
   endHour: string;
   allowedWeekdays: number[];
+  dailySendLimit: number | null;
 };
 
 type AutoContactInvalidNumberAction = 'none' | 'update_status' | 'archive_lead' | 'delete_lead';
@@ -637,6 +638,65 @@ const getNextAllowedSendAt = (reference: Date, scheduling: AutoContactScheduling
   }
 
   return candidate;
+};
+
+const buildTimeZoneDayWindow = (
+  reference: Date,
+  timeZone: string,
+): { dayKey: string; start: Date; end: Date } => {
+  const zoned = toZonedDate(reference, timeZone);
+  const year = zoned.getUTCFullYear();
+  const month = zoned.getUTCMonth();
+  const day = zoned.getUTCDate();
+  const nextDayUtc = new Date(Date.UTC(year, month, day + 1, 0, 0, 0));
+  const start = buildDateInTimeZone({ year, month, day, hour: 0, minute: 0 }, timeZone);
+  const end = buildDateInTimeZone(
+    {
+      year: nextDayUtc.getUTCFullYear(),
+      month: nextDayUtc.getUTCMonth(),
+      day: nextDayUtc.getUTCDate(),
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
+  const dayKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return { dayKey, start, end };
+};
+
+const getFlowDailySendCount = async ({
+  supabase,
+  flowId,
+  start,
+  end,
+  logWithContext,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  flowId: string;
+  start: Date;
+  end: Date;
+  logWithContext: (message: string, details?: Record<string, unknown>) => void;
+}): Promise<number> => {
+  const { count, error } = await supabase
+    .from('auto_contact_flow_jobs')
+    .select('id', { count: 'exact', head: true })
+    .eq('flow_id', flowId)
+    .eq('action_type', 'send_message')
+    .eq('status', 'completed')
+    .gte('updated_at', start.toISOString())
+    .lt('updated_at', end.toISOString());
+
+  if (error) {
+    logWithContext('Erro ao consultar limite diário por fluxo', {
+      flowId,
+      error: error.message,
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+    return 0;
+  }
+
+  return count ?? 0;
 };
 
 function buildLookupMaps({
@@ -1754,6 +1814,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
 
       const rawFlowScheduling =
         flow?.scheduling && typeof flow.scheduling === 'object' ? flow.scheduling : {};
+      const rawFlowDailySendLimit = Number((rawFlowScheduling as any).dailySendLimit);
       const flowScheduling: AutoContactFlowScheduling = {
         startHour:
           typeof rawFlowScheduling.startHour === 'string' ? rawFlowScheduling.startHour : scheduling.startHour,
@@ -1764,12 +1825,26 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
               .map((value: unknown) => Number(value))
               .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
           : scheduling.allowedWeekdays,
+        dailySendLimit:
+          Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
+            ? Math.floor(rawFlowDailySendLimit)
+            : null,
       };
 
       return {
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
+        triggerType:
+          flow?.triggerType === 'status_changed' || flow?.triggerType === 'status_duration'
+            ? flow.triggerType
+            : 'lead_created',
+        triggerStatuses: Array.isArray(flow?.triggerStatuses)
+          ? flow.triggerStatuses.filter((status: unknown) => typeof status === 'string')
+          : [],
+        triggerDurationHours: Number.isFinite(Number(flow?.triggerDurationHours))
+          ? Number(flow.triggerDurationHours)
+          : 24,
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
@@ -2093,6 +2168,7 @@ async function scheduleFlowJobs({
     endHour: flow.scheduling?.endHour ?? scheduling.endHour,
     allowedWeekdays:
       flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
+    dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
   };
   const jobs = flow.steps.map((step) => {
     const delaySeconds = getDelaySeconds(step, lead);
@@ -2190,6 +2266,7 @@ async function processFlowJobs({
   logWithContext: (message: string, details?: Record<string, unknown>) => void;
   leadId?: string;
 }): Promise<void> {
+  const flowDailyUsageCache = new Map<string, { count: number }>();
   const nowIso = new Date().toISOString();
   let jobsQuery = supabase
     .from('auto_contact_flow_jobs')
@@ -2257,7 +2334,13 @@ async function processFlowJobs({
       endHour: flow.scheduling?.endHour ?? settings.scheduling.endHour,
       allowedWeekdays:
         flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
+      dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
     };
+    const rawFlowDailySendLimit = Number(effectiveScheduling.dailySendLimit);
+    const flowDailySendLimit =
+      Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
+        ? Math.floor(rawFlowDailySendLimit)
+        : null;
     const now = new Date();
     const nextAllowed = getNextAllowedSendAt(now, effectiveScheduling);
     if (nextAllowed.getTime() > now.getTime()) {
@@ -2291,7 +2374,40 @@ async function processFlowJobs({
     }
 
     try {
+      let flowDailyUsageCacheKey: string | null = null;
       if (job.action_type === 'send_message') {
+        if (flowDailySendLimit) {
+          const { dayKey, start, end } = buildTimeZoneDayWindow(now, effectiveScheduling.timezone);
+          flowDailyUsageCacheKey = `${flow.id}:${dayKey}`;
+          let cachedUsage = flowDailyUsageCache.get(flowDailyUsageCacheKey);
+          if (!cachedUsage) {
+            const currentCount = await getFlowDailySendCount({
+              supabase,
+              flowId: flow.id,
+              start,
+              end,
+              logWithContext,
+            });
+            cachedUsage = { count: currentCount };
+            flowDailyUsageCache.set(flowDailyUsageCacheKey, cachedUsage);
+          }
+
+          if (cachedUsage.count >= flowDailySendLimit) {
+            const nextReference = new Date(end.getTime() + 60000);
+            const nextAvailableAt = getNextAllowedSendAt(nextReference, effectiveScheduling);
+            await supabase
+              .from('auto_contact_flow_jobs')
+              .update({
+                status: 'pending',
+                scheduled_at: nextAvailableAt.toISOString(),
+                last_error: `Limite diário do fluxo (${flowDailySendLimit}) atingido`,
+                attempts: previousAttempts,
+              })
+              .eq('id', job.id);
+            continue;
+          }
+        }
+
         let payload:
           | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
           | null = null;
@@ -2323,8 +2439,8 @@ async function processFlowJobs({
           settings,
         });
 
-        const now = new Date().toISOString();
-        await supabase.from('leads').update({ ultimo_contato: now }).eq('id', lead.id);
+        const contactNowIso = new Date().toISOString();
+        await supabase.from('leads').update({ ultimo_contato: contactNowIso }).eq('id', lead.id);
         await supabase.from('interactions').insert({
           lead_id: lead.id,
           tipo: 'Mensagem Automática',
@@ -2496,6 +2612,13 @@ async function processFlowJobs({
         .from('auto_contact_flow_jobs')
         .update({ status: 'completed', last_error: null })
         .eq('id', job.id);
+
+      if (job.action_type === 'send_message' && flowDailyUsageCacheKey) {
+        const cachedUsage = flowDailyUsageCache.get(flowDailyUsageCacheKey);
+        if (cachedUsage) {
+          cachedUsage.count += 1;
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 

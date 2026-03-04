@@ -17,6 +17,7 @@ import {
   resolveResponsavelIdByLabel,
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
+import DateTimePicker from './ui/DateTimePicker';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -734,13 +735,13 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Data de criação
               </label>
-              <input
+              <DateTimePicker
                 type="date"
                 value={formData.data_criacao}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, data_criacao: e.target.value }))
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, data_criacao: value }))
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Selecionar data"
               />
             </div>
 
@@ -748,16 +749,16 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Próximo Retorno
               </label>
-              <input
+              <DateTimePicker
                 type="datetime-local"
                 value={formData.proximo_retorno}
-                onChange={(e) =>
+                onChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    proximo_retorno: e.target.value,
+                    proximo_retorno: value,
                   }))
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Selecionar data e hora"
               />
             </div>
 

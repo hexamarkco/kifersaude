@@ -6,6 +6,7 @@ import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaSe
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
+import DateTimePicker from './ui/DateTimePicker';
 
 type HolderFormProps = {
   contractId: string;
@@ -141,6 +142,10 @@ export default function HolderForm({
     setSaving(true);
 
     try {
+      if (!formData.data_nascimento.trim()) {
+        throw new Error('Informe a data de nascimento do titular');
+      }
+
       const dataToSave = {
         contract_id: contractId,
         nome_completo: formData.nome_completo,
@@ -287,12 +292,11 @@ export default function HolderForm({
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Data de Nascimento *
                 </label>
-                <input
+                <DateTimePicker
                   type="date"
-                  required
                   value={formData.data_nascimento}
-                  onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
+                  placeholder="Selecionar data"
                 />
               </div>
 
@@ -512,11 +516,11 @@ export default function HolderForm({
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Data de Abertura do CNPJ
                   </label>
-                  <input
+                  <DateTimePicker
                     type="date"
                     value={formData.data_abertura_cnpj}
-                    onChange={(e) => setFormData({ ...formData, data_abertura_cnpj: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    onChange={(value) => setFormData({ ...formData, data_abertura_cnpj: value })}
+                    placeholder="Selecionar data"
                   />
                 </div>
 

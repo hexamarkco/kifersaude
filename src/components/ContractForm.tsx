@@ -5,6 +5,7 @@ import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, C
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import FilterSingleSelect from './FilterSingleSelect';
+import DateTimePicker from './ui/DateTimePicker';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
@@ -772,11 +773,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Data de Início
                 </label>
-                <input
+                <DateTimePicker
                   type="date"
                   value={formData.data_inicio}
-                  onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onChange={(value) => setFormData({ ...formData, data_inicio: value })}
+                  placeholder="Selecionar data"
                 />
               </div>
 
@@ -1014,11 +1015,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Previsão Recebimento Comissão
                 </label>
-                <input
+                <DateTimePicker
                   type="date"
                   value={formData.previsao_recebimento_comissao}
-                  onChange={(e) => setFormData({ ...formData, previsao_recebimento_comissao: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onChange={(value) => setFormData({ ...formData, previsao_recebimento_comissao: value })}
+                  placeholder="Selecionar data"
                 />
               </div>
 
@@ -1118,11 +1119,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                                 </div>
                                 <div>
                                   <label className="block text-xs font-medium text-slate-600 mb-1">Data de pagamento</label>
-                                  <input
+                                  <DateTimePicker
                                     type="date"
                                     value={parcel.data_pagamento}
-                                    onChange={(e) => handleInstallmentChange(index, 'data_pagamento', e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    onChange={(value) => handleInstallmentChange(index, 'data_pagamento', value)}
+                                    placeholder="Selecionar data"
                                   />
                                   <p className="text-[11px] text-slate-500 mt-1">Defina o dia previsto para esta parcela.</p>
                                 </div>
@@ -1248,13 +1249,13 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Previsão Pagamento Bonificação
                 </label>
-                <input
+                <DateTimePicker
                   type="date"
                   value={formData.previsao_pagamento_bonificacao}
-                  onChange={(e) =>
-                    setFormData({ ...formData, previsao_pagamento_bonificacao: e.target.value })
+                  onChange={(value) =>
+                    setFormData({ ...formData, previsao_pagamento_bonificacao: value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Selecionar data"
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Informe quando a bonificação deverá ser recebida.

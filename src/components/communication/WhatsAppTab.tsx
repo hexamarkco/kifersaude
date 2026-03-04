@@ -204,6 +204,15 @@ export default function WhatsAppTab() {
     return chat.id;
   };
 
+  const isPhoneLikeLabel = (value: string | null | undefined) => {
+    if (!value) return false;
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
+    const digits = trimmed.replace(/\D/g, '');
+    return digits.length >= 10;
+  };
+
   const extractPhoneFromChatId = (chatId: string) => {
     if (getWhatsAppChatKind(chatId) !== 'direct') return '';
     return normalizePhoneNumber(chatId);
@@ -239,7 +248,8 @@ export default function WhatsAppTab() {
   const shouldFetchNewsletterName = (chat: WhatsAppChat) => {
     const kind = getChatKind(chat);
     if (kind !== 'newsletter') return false;
-    if (chat.name && chat.name.trim() && chat.name !== chat.id) return false;
+    const currentName = chat.name?.trim();
+    if (currentName && currentName !== chat.id && !isPhoneLikeLabel(currentName)) return false;
     if (newsletterNamesByIdRef.current.has(chat.id)) return false;
     if (newsletterNameLookupAttemptsRef.current.has(chat.id)) return false;
     return true;
@@ -328,18 +338,21 @@ export default function WhatsAppTab() {
         }),
       );
 
-      const { error: persistError } = await supabase.from('whatsapp_chats').upsert(
-        validUpdates.map((item) => ({
-          id: item.id,
-          name: item.name,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: 'id' },
-      );
+      const now = new Date().toISOString();
+      await Promise.all(
+        validUpdates.map(async (item) => {
+          const { error: persistError } = await supabase
+            .from('whatsapp_chats')
+            .update({ name: item.name, updated_at: now })
+            .eq('id', item.id)
+            .select('id')
+            .maybeSingle();
 
-      if (persistError) {
-        console.warn('Error persisting newsletter names:', persistError);
-      }
+          if (persistError) {
+            console.warn('Error persisting newsletter name:', { chatId: item.id, error: persistError });
+          }
+        }),
+      );
     } catch (error) {
       console.warn('Error loading newsletter names:', error);
     }
@@ -1245,7 +1258,7 @@ export default function WhatsAppTab() {
 
     if (chatKind !== 'direct') {
       const resolvedName = newsletterNamesById.get(chat.id) || chat.name;
-      if (resolvedName?.trim() && resolvedName !== chat.id) {
+      if (resolvedName?.trim() && resolvedName !== chat.id && !isPhoneLikeLabel(resolvedName)) {
         return resolvedName;
       }
       return getNonDirectFallbackName(chat);
@@ -1303,24 +1316,43 @@ export default function WhatsAppTab() {
   const groupInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'group').length;
   const directInboxCount = inboxChats.filter((chat) => isDirectChat(chat)).length;
 
-  const visibleChats = inboxChats
-    .filter((chat) => {
-      if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
-      if (chatFilterMode === 'groups') return getChatKind(chat) === 'group';
-      if (chatFilterMode === 'direct') return isDirectChat(chat);
-      return true;
-    })
-    .sort((left, right) => {
-      if (prioritizeUnread) {
-        const leftUnread = left.unread_count ?? 0;
-        const rightUnread = right.unread_count ?? 0;
-        if (leftUnread !== rightUnread) {
-          return rightUnread - leftUnread;
-        }
-      }
+  const filteredVisibleChats = inboxChats.filter((chat) => {
+    if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
+    if (chatFilterMode === 'groups') return getChatKind(chat) === 'group';
+    if (chatFilterMode === 'direct') return isDirectChat(chat);
+    return true;
+  });
 
-      return sortChatsByLatest(left, right);
-    });
+  const sortedVisibleChats = [...filteredVisibleChats].sort((left, right) => {
+    if (prioritizeUnread) {
+      const leftUnread = left.unread_count ?? 0;
+      const rightUnread = right.unread_count ?? 0;
+      if (leftUnread !== rightUnread) {
+        return rightUnread - leftUnread;
+      }
+    }
+
+    return sortChatsByLatest(left, right);
+  });
+
+  const visibleChats = (() => {
+    if (!selectedChat || chatFilterMode === 'unread') {
+      return sortedVisibleChats;
+    }
+
+    const selectedIndex = sortedVisibleChats.findIndex((chat) => chat.id === selectedChat.id);
+    if (selectedIndex < 0) {
+      return sortedVisibleChats;
+    }
+
+    if (selectedIndex === 0) {
+      return sortedVisibleChats;
+    }
+
+    const selectedItem = sortedVisibleChats[selectedIndex];
+    const withoutSelected = sortedVisibleChats.filter((chat) => chat.id !== selectedChat.id);
+    return [selectedItem, ...withoutSelected];
+  })();
   const unreadQueue = visibleChats.filter((chat) => (chat.unread_count ?? 0) > 0);
   const nextUnreadChat = unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null;
   const notificationsActive = notificationPermission === 'granted' && desktopNotificationsEnabled;
@@ -1602,25 +1634,47 @@ export default function WhatsAppTab() {
   const isChatMuted = (chat: WhatsAppChat) =>
     chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
 
+  const patchSelectedChat = (chatId: string, patch: Partial<WhatsAppChat>) => {
+    setSelectedChat((current) => (current && current.id === chatId ? { ...current, ...patch } : current));
+  };
+
   const updateChatArchive = async (chatId: string, archived: boolean) => {
+    const previousArchived = chatsRef.current.find((chat) => chat.id === chatId)?.archived ?? false;
+
     setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, archived } : chat)));
-    const { error } = await supabase
+    patchSelectedChat(chatId, { archived });
+
+    const { data, error } = await supabase
       .from('whatsapp_chats')
       .update({ archived, updated_at: new Date().toISOString() })
-      .eq('id', chatId);
-    if (error) {
-      console.error('Erro ao atualizar arquivamento do chat:', error);
+      .eq('id', chatId)
+      .select('id')
+      .maybeSingle();
+
+    if (error || !data) {
+      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, archived: previousArchived } : chat)));
+      patchSelectedChat(chatId, { archived: previousArchived });
+      console.error('Erro ao atualizar arquivamento do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
     }
   };
 
   const updateChatMute = async (chatId: string, muteUntil: string | null) => {
+    const previousMuteUntil = chatsRef.current.find((chat) => chat.id === chatId)?.mute_until ?? null;
+
     setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, mute_until: muteUntil } : chat)));
-    const { error } = await supabase
+    patchSelectedChat(chatId, { mute_until: muteUntil });
+
+    const { data, error } = await supabase
       .from('whatsapp_chats')
       .update({ mute_until: muteUntil, updated_at: new Date().toISOString() })
-      .eq('id', chatId);
-    if (error) {
-      console.error('Erro ao atualizar mute do chat:', error);
+      .eq('id', chatId)
+      .select('id')
+      .maybeSingle();
+
+    if (error || !data) {
+      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, mute_until: previousMuteUntil } : chat)));
+      patchSelectedChat(chatId, { mute_until: previousMuteUntil });
+      console.error('Erro ao atualizar mute do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
     }
   };
 

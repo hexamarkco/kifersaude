@@ -1,8 +1,14 @@
 import { useMemo, useState } from 'react';
-import { X, Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
+import DateTimePicker from './ui/DateTimePicker';
+import Field from './ui/Field';
+import Input from './ui/Input';
+import ModalShell from './ui/ModalShell';
+import Textarea from './ui/Textarea';
 
 const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
 const PRIORITY_OPTIONS = ['alta', 'normal', 'baixa'] as const;
@@ -133,131 +139,98 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-stretch justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
-          <div className="flex items-center space-x-3">
-            <div className="rounded-xl bg-white/20 p-2">
-              <Calendar className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Agendar novo lembrete</h3>
-              <p className="text-xs text-teal-100">{lead.nome_completo}</p>
-              {formattedLeadPhone && (
-                <p className="text-[11px] text-teal-100/80">{formattedLeadPhone}</p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-white transition-colors hover:bg-white/20"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="modal-panel-content space-y-6 px-6 py-6">
-          <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
-            <div className="flex items-start space-x-3">
-              <Clock className="h-5 w-5 flex-shrink-0 text-teal-600" />
-              <div className="text-sm text-teal-800">
-                <p className="font-medium">
-                  {promptMessage ?? 'Defina o próximo lembrete para continuar o acompanhamento manual do lead.'}
-                </p>
-                <p className="mt-1 text-xs text-teal-700">
-                  Escolha o melhor momento e personalize as informações conforme necessário.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Título *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                placeholder="Ex: Follow-up com o cliente"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Tipo do lembrete</label>
-                <FilterSingleSelect
-                  icon={Tag}
-                  value={type}
-                  onChange={(value) => setType(value as (typeof TYPE_OPTIONS)[number])}
-                  placeholder="Tipo do lembrete"
-                  includePlaceholderOption={false}
-                  options={TYPE_OPTIONS.map((option) => ({
-                    value: option,
-                    label: option,
-                  }))}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Prioridade</label>
-                <FilterSingleSelect
-                  icon={AlertCircle}
-                  value={priority}
-                  onChange={(value) => setPriority(value as (typeof PRIORITY_OPTIONS)[number])}
-                  placeholder="Prioridade"
-                  includePlaceholderOption={false}
-                  options={PRIORITY_OPTIONS.map((option) => ({
-                    value: option,
-                    label: option.charAt(0).toUpperCase() + option.slice(1),
-                  }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Data e hora *</label>
-              <input
-                type="datetime-local"
-                value={scheduledFor}
-                onChange={(event) => setScheduledFor(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Observações</label>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={3}
-                placeholder="Anote detalhes importantes para o próximo contato"
-                className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-            type="button"
-          >
-            Agora não
-          </button>
-          <button
-            onClick={handleSchedule}
-            disabled={saving}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-          >
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Agendar novo lembrete"
+      description={formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}
+      size="md"
+      panelClassName="max-w-lg"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Agora nao
+          </Button>
+          <Button variant="primary" onClick={handleSchedule} disabled={saving} loading={saving}>
             {saving ? 'Salvando...' : 'Agendar lembrete'}
-          </button>
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
+          <div className="flex items-start space-x-3">
+            <Clock className="h-5 w-5 flex-shrink-0 text-teal-600" />
+            <div className="text-sm text-teal-800">
+              <p className="font-medium">
+                {promptMessage ?? 'Defina o proximo lembrete para continuar o acompanhamento manual do lead.'}
+              </p>
+              <p className="mt-1 text-xs text-teal-700">
+                Escolha o melhor momento e personalize as informacoes conforme necessario.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          <Field label="Titulo" required>
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Ex: Follow-up com o cliente"
+              required
+              leftIcon={Calendar}
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Tipo do lembrete">
+              <FilterSingleSelect
+                icon={Tag}
+                value={type}
+                onChange={(value) => setType(value as (typeof TYPE_OPTIONS)[number])}
+                placeholder="Tipo do lembrete"
+                includePlaceholderOption={false}
+                options={TYPE_OPTIONS.map((option) => ({
+                  value: option,
+                  label: option,
+                }))}
+              />
+            </Field>
+            <Field label="Prioridade">
+              <FilterSingleSelect
+                icon={AlertCircle}
+                value={priority}
+                onChange={(value) => setPriority(value as (typeof PRIORITY_OPTIONS)[number])}
+                placeholder="Prioridade"
+                includePlaceholderOption={false}
+                options={PRIORITY_OPTIONS.map((option) => ({
+                  value: option,
+                  label: option.charAt(0).toUpperCase() + option.slice(1),
+                }))}
+              />
+            </Field>
+          </div>
+
+          <Field label="Data e hora" required>
+            <DateTimePicker
+              type="datetime-local"
+              value={scheduledFor}
+              onChange={setScheduledFor}
+              placeholder="Selecionar data e hora"
+            />
+          </Field>
+
+          <Field label="Observacoes">
+            <Textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+              placeholder="Anote detalhes importantes para o proximo contato"
+            />
+          </Field>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

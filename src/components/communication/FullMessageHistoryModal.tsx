@@ -3,6 +3,9 @@ import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Search } from 'lucid
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
 import FilterSingleSelect from '../FilterSingleSelect';
 import DateTimePicker from '../ui/DateTimePicker';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -197,250 +200,230 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
   const hasActiveFilters = filterFromMe !== undefined || filterAuthor || filterDateFrom || filterDateTo;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-900">Histórico Completo</h2>
-            <p className="text-sm text-slate-500 mt-1">{chatName}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            <X className="w-6 h-6 text-slate-600" />
-          </button>
-        </div>
-
-        <div className="p-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              <span className="text-sm font-medium">Filtros</span>
-              {hasActiveFilters && (
-                <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                  Ativos
-                </span>
-              )}
-            </button>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">
-                {totalMessages} mensagem{totalMessages !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-
-          {showFilters && (
-            <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Período
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <DateTimePicker
-                      type="date"
-                      value={filterDateFrom}
-                      onChange={setFilterDateFrom}
-                      placeholder="Data inicial"
-                    />
-                    <span className="text-slate-500">até</span>
-                    <DateTimePicker
-                      type="date"
-                      value={filterDateTo}
-                      onChange={setFilterDateTo}
-                      placeholder="Data final"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Enviado por
-                  </label>
-                  <FilterSingleSelect
-                    icon={User}
-                    value={filterFromMe === undefined ? 'all' : filterFromMe ? 'me' : 'others'}
-                    onChange={(value) => {
-                      setFilterFromMe(value === 'all' ? undefined : value === 'me');
-                    }}
-                    placeholder="Enviado por"
-                    includePlaceholderOption={false}
-                    options={[
-                      { value: 'all', label: 'Todos' },
-                      { value: 'me', label: 'Minhas mensagens' },
-                      { value: 'others', label: 'Outros' },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="w-56">
-                  <FilterSingleSelect
-                    icon={Clock}
-                    value={sortOrder}
-                    onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
-                    placeholder="Ordenação"
-                    includePlaceholderOption={false}
-                    options={[
-                      { value: 'desc', label: 'Mais recentes primeiro' },
-                      { value: 'asc', label: 'Mais antigas primeiro' },
-                    ]}
-                  />
-                </div>
-
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    Limpar filtros
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {resolvingChatId ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-slate-600">Buscando chat...</p>
-            </div>
-          ) : loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="text-red-500 mb-4">
-                <X className="w-12 h-12" />
-              </div>
-              <p className="text-red-600 font-medium mb-2">Erro ao carregar histórico</p>
-              <p className="text-slate-600 text-sm mb-4">{error}</p>
-              <button
-                onClick={() => {
-                  if (!resolvedChatId) {
-                    resolveChatId();
-                  } else {
-                    loadMessages();
-                  }
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Historico Completo"
+      description={chatName}
+      size="xl"
+      panelClassName="max-w-4xl"
+      bodyClassName="p-0"
+      footer={
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Mostrar</span>
+            <div className="w-24">
+              <FilterSingleSelect
+                icon={Filter}
+                value={String(pageSize)}
+                onChange={(value) => {
+                  setPageSize(Number(value));
+                  setCurrentOffset(0);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Tentar novamente
-              </button>
+                placeholder="50"
+                includePlaceholderOption={false}
+                options={[
+                  { value: '25', label: '25' },
+                  { value: '50', label: '50' },
+                  { value: '100', label: '100' },
+                ]}
+              />
             </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-              <Search className="w-16 h-16 mb-4 text-slate-300" />
-              <p className="text-lg font-medium">Nenhuma mensagem encontrada</p>
-              <p className="text-sm">Tente ajustar os filtros</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-4 rounded-lg border ${
-                    message.from_me
-                      ? 'bg-teal-50 border-teal-200 ml-8'
-                      : 'bg-slate-50 border-slate-200 mr-8'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <User className={`w-4 h-4 ${message.from_me ? 'text-teal-600' : 'text-slate-600'}`} />
-                      <span className={`text-sm font-medium ${message.from_me ? 'text-teal-900' : 'text-slate-900'}`}>
-                        {message.from_me ? 'Você' : message.from_name || message.from || 'Desconhecido'}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        message.from_me ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {getMessageTypeLabel(message)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatTimestamp(message.timestamp)}</span>
-                    </div>
-                  </div>
+            <span className="text-sm text-slate-600">por pagina</span>
+          </div>
 
-                  <div className={`text-sm ${message.from_me ? 'text-teal-900' : 'text-slate-700'}`}>
-                    {getMessageBody(message)}
-                  </div>
+          <div className="flex items-center gap-2">
+            <Button variant="icon" size="icon" onClick={prevPage} disabled={currentOffset === 0}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
 
-                  {message.context?.quoted_id && (
-                    <div className="mt-2 pl-3 border-l-2 border-slate-300 text-xs text-slate-500 italic">
-                      Em resposta a uma mensagem
-                    </div>
-                  )}
+            <span className="text-sm text-slate-600">
+              Pagina {currentPage} de {Math.max(1, totalPages)}
+            </span>
 
-                  {message.status && (
-                    <div className="mt-2 text-xs text-slate-500">
-                      Status: {message.status}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+            <Button
+              variant="icon"
+              size="icon"
+              onClick={nextPage}
+              disabled={currentOffset + pageSize >= totalMessages}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="border-b border-slate-200 bg-slate-50 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <Button variant="secondary" size="sm" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="h-4 w-4" />
+            <span>Filtros</span>
+            {hasActiveFilters && (
+              <span className="ml-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs text-teal-700">Ativos</span>
+            )}
+          </Button>
+
+          <span className="text-sm text-slate-600">
+            {totalMessages} mensagem{totalMessages !== 1 ? 's' : ''}
+          </span>
         </div>
 
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Mostrar</span>
-              <div className="w-24">
+        {showFilters && (
+          <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Periodo</label>
+                <div className="flex items-center gap-2">
+                  <DateTimePicker
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={setFilterDateFrom}
+                    placeholder="Data inicial"
+                  />
+                  <span className="text-slate-500">ate</span>
+                  <DateTimePicker
+                    type="date"
+                    value={filterDateTo}
+                    onChange={setFilterDateTo}
+                    placeholder="Data final"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Enviado por</label>
                 <FilterSingleSelect
-                  icon={Filter}
-                  value={String(pageSize)}
+                  icon={User}
+                  value={filterFromMe === undefined ? 'all' : filterFromMe ? 'me' : 'others'}
                   onChange={(value) => {
-                    setPageSize(Number(value));
-                    setCurrentOffset(0);
+                    setFilterFromMe(value === 'all' ? undefined : value === 'me');
                   }}
-                  placeholder="50"
+                  placeholder="Enviado por"
                   includePlaceholderOption={false}
                   options={[
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                    { value: '100', label: '100' },
+                    { value: 'all', label: 'Todos' },
+                    { value: 'me', label: 'Minhas mensagens' },
+                    { value: 'others', label: 'Outros' },
                   ]}
                 />
               </div>
-              <span className="text-sm text-slate-600">por página</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={prevPage}
-                disabled={currentOffset === 0}
-                className="p-2 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+              <div className="w-56">
+                <FilterSingleSelect
+                  icon={Clock}
+                  value={sortOrder}
+                  onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+                  placeholder="Ordenacao"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'desc', label: 'Mais recentes primeiro' },
+                    { value: 'asc', label: 'Mais antigas primeiro' },
+                  ]}
+                />
+              </div>
 
-              <span className="text-sm text-slate-600">
-                Página {currentPage} de {totalPages}
-              </span>
+              <div className="w-full max-w-sm">
+                <Input
+                  value={filterAuthor}
+                  onChange={(event) => setFilterAuthor(event.target.value)}
+                  placeholder="Filtrar por autor"
+                  leftIcon={Search}
+                />
+              </div>
 
-              <button
-                onClick={nextPage}
-                disabled={currentOffset + pageSize >= totalMessages}
-                className="p-2 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                  Limpar filtros
+                </Button>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+
+      <div className="max-h-[65vh] overflow-y-auto p-6">
+        {resolvingChatId ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-teal-600"></div>
+            <p className="text-slate-600">Buscando chat...</p>
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-teal-600"></div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="mb-4 text-red-500">
+              <X className="h-12 w-12" />
+            </div>
+            <p className="mb-2 font-medium text-red-600">Erro ao carregar historico</p>
+            <p className="mb-4 text-sm text-slate-600">{error}</p>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (!resolvedChatId) {
+                  resolveChatId();
+                } else {
+                  loadMessages();
+                }
+              }}
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <Search className="mb-4 h-16 w-16 text-slate-300" />
+            <p className="text-lg font-medium">Nenhuma mensagem encontrada</p>
+            <p className="text-sm">Tente ajustar os filtros</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`rounded-lg border p-4 ${
+                  message.from_me ? 'ml-8 border-teal-200 bg-teal-50' : 'mr-8 border-slate-200 bg-slate-50'
+                }`}
+              >
+                <div className="mb-2 flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className={`h-4 w-4 ${message.from_me ? 'text-teal-600' : 'text-slate-600'}`} />
+                    <span className={`text-sm font-medium ${message.from_me ? 'text-teal-900' : 'text-slate-900'}`}>
+                      {message.from_me ? 'Voce' : message.from_name || message.from || 'Desconhecido'}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        message.from_me ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {getMessageTypeLabel(message)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatTimestamp(message.timestamp)}</span>
+                  </div>
+                </div>
+
+                <div className={`text-sm ${message.from_me ? 'text-teal-900' : 'text-slate-700'}`}>
+                  {getMessageBody(message)}
+                </div>
+
+                {message.context?.quoted_id && (
+                  <div className="mt-2 border-l-2 border-slate-300 pl-3 text-xs italic text-slate-500">
+                    Em resposta a uma mensagem
+                  </div>
+                )}
+
+                {message.status && <div className="mt-2 text-xs text-slate-500">Status: {message.status}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </ModalShell>
   );
 }

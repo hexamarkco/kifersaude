@@ -8,7 +8,7 @@ import {
   RefreshCw, Sparkles, Copy, CalendarPlus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
+import { formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
 import {
   groupRemindersByPeriod,
   getPeriodLabel,
@@ -26,6 +26,9 @@ import FilterSingleSelect from './FilterSingleSelect';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '../lib/whatsappApiService';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import Button from './ui/Button';
+import DateTimePicker from './ui/DateTimePicker';
+import ModalShell from './ui/ModalShell';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -1429,7 +1432,7 @@ export default function RemindersManagerEnhanced() {
                           setOpenSnoozeMenu(null);
                           const now = new Date();
                           now.setMinutes(now.getMinutes() + 30);
-                          setCustomSnoozeDateTime(now.toISOString().slice(0, 16));
+                          setCustomSnoozeDateTime(formatDateTimeForInput(now.toISOString()));
                         }}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors text-teal-600 font-medium"
                       >
@@ -1997,43 +2000,43 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {customSnoozeReminder && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="modal-panel panel-glass-strong flex w-full max-w-md flex-col rounded-xl border border-slate-200 p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Adiar para data/hora personalizada</h3>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Data e Hora
-              </label>
-              <input
-                type="datetime-local"
-                value={customSnoozeDateTime}
-                onChange={(e) => setCustomSnoozeDateTime(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                min={new Date().toISOString().slice(0, 16)}
-              />
-            </div>
-
-            <div className="flex space-x-3">
-              <button
+        <ModalShell
+          isOpen
+          onClose={() => {
+            setCustomSnoozeReminder(null);
+            setCustomSnoozeDateTime('');
+          }}
+          title="Adiar para data/hora personalizada"
+          size="sm"
+          panelClassName="max-w-md"
+          footer={
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setCustomSnoozeReminder(null);
                   setCustomSnoozeDateTime('');
                 }}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
               >
                 Cancelar
-              </button>
-              <button
-                onClick={handleCustomSnooze}
-                disabled={!customSnoozeDateTime}
-                className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button variant="primary" onClick={handleCustomSnooze} disabled={!customSnoozeDateTime}>
                 Adiar
-              </button>
+              </Button>
             </div>
+          }
+        >
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">Data e Hora</label>
+            <DateTimePicker
+              type="datetime-local"
+              value={customSnoozeDateTime}
+              onChange={setCustomSnoozeDateTime}
+              min={formatDateTimeForInput(new Date().toISOString())}
+              placeholder="Selecionar data e hora"
+            />
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {showCalendar && (

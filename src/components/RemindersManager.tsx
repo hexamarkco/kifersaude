@@ -4,6 +4,7 @@ import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus } fr
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
 import { createAdditionalFollowUps } from '../lib/followUpService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import DateTimePicker from './ui/DateTimePicker';
 
 export default function RemindersManager() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -469,11 +470,11 @@ export default function RemindersManager() {
                           <label className="block text-sm font-medium text-slate-700 mb-1">
                             Nova Data e Hora
                           </label>
-                          <input
+                          <DateTimePicker
                             type="datetime-local"
                             value={newReminderDate}
-                            onChange={(e) => setNewReminderDate(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            onChange={setNewReminderDate}
+                            placeholder="Selecionar nova data"
                           />
                         </div>
                         <button

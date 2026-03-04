@@ -118,6 +118,7 @@ export type AutoContactFlowScheduling = {
   startHour: string;
   endHour: string;
   allowedWeekdays: number[];
+  dailySendLimit: number | null;
 };
 
 export type AutoContactFlowGraphNodeType = 'trigger' | 'condition' | 'action';
@@ -397,6 +398,7 @@ export const DEFAULT_AUTO_CONTACT_FLOWS: AutoContactFlow[] = [
       startHour: DEFAULT_SCHEDULING.startHour,
       endHour: DEFAULT_SCHEDULING.endHour,
       allowedWeekdays: DEFAULT_SCHEDULING.allowedWeekdays,
+      dailySendLimit: null,
     },
     steps: [
       {
@@ -796,6 +798,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
 
       const rawFlowScheduling =
         flow?.scheduling && typeof flow.scheduling === 'object' ? flow.scheduling : {};
+      const rawFlowDailySendLimit = Number((rawFlowScheduling as any).dailySendLimit);
       const flowScheduling: AutoContactFlowScheduling = {
         startHour:
           typeof rawFlowScheduling.startHour === 'string' ? rawFlowScheduling.startHour : scheduling.startHour,
@@ -805,6 +808,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               .map((value: unknown) => Number(value))
               .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
           : scheduling.allowedWeekdays,
+        dailySendLimit:
+          Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
+            ? Math.floor(rawFlowDailySendLimit)
+            : null,
       };
 
       const conditionLogic: AutoContactFlow['conditionLogic'] = flow?.conditionLogic === 'any' ? 'any' : 'all';

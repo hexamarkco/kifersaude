@@ -15,11 +15,7 @@ type FilterMultiSelectProps = {
   onChange: (next: string[]) => void;
 };
 
-const dropdownBaseClasses =
-  'absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-30';
-
-const optionBaseClasses =
-  'flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer';
+type DropdownPos = { top: number; left: number; width: number };
 
 export default function FilterMultiSelect({
   icon: Icon,
@@ -29,34 +25,55 @@ export default function FilterMultiSelect({
   onChange,
 }: FilterMultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [pos, setPos] = useState<DropdownPos | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const toggleOption = (value: string) => {
-    onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  const calcPos = () => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  const open = () => {
+    calcPos();
+    setIsOpen(true);
   };
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
+    if (!isOpen) return;
 
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    }
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+
+    const handleScroll = () => calcPos();
+    const handleResize = () => calcPos();
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isOpen]);
+
+  const toggleOption = (value: string) => {
+    onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  };
 
   const selectedOptions = useMemo(
     () => options.filter((option) => values.includes(option.value)),
@@ -65,17 +82,16 @@ export default function FilterMultiSelect({
 
   const displayText = useMemo(() => {
     if (selectedOptions.length === 0) return placeholder;
-    if (selectedOptions.length <= 2) {
-      return selectedOptions.map((option) => option.label).join(', ');
-    }
+    if (selectedOptions.length <= 2) return selectedOptions.map((o) => o.label).join(', ');
     return `${selectedOptions.length} selecionado(s)`;
   }, [placeholder, selectedOptions]);
 
   return (
     <div className="relative" ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => (isOpen ? setIsOpen(false) : open())}
         className="relative w-full h-11 pl-10 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left flex items-center justify-between"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -89,8 +105,13 @@ export default function FilterMultiSelect({
         />
       </button>
 
-      {isOpen && (
-        <div className={dropdownBaseClasses} role="listbox">
+      {isOpen && pos && (
+        <div
+          ref={dropdownRef}
+          role="listbox"
+          className="panel-glass-panel fixed z-[200] max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          style={{ top: pos.top, left: pos.left, width: pos.width }}
+        >
           <button
             type="button"
             className="w-full text-left text-sm text-teal-600 px-3 py-2 hover:bg-slate-50"
@@ -102,9 +123,9 @@ export default function FilterMultiSelect({
           {options.map((option) => {
             const isSelected = values.includes(option.value);
             return (
-              <label key={option.value} className={optionBaseClasses}>
+              <label key={option.value} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer">
                 <span
-                  className={`flex items-center justify-center w-4 h-4 border rounded ${
+                  className={`flex items-center justify-center w-4 h-4 border rounded flex-shrink-0 ${
                     isSelected ? 'bg-teal-500 border-teal-500' : 'border-slate-300'
                   }`}
                 >

@@ -18,6 +18,8 @@ type FilterSingleSelectProps = {
   size?: 'default' | 'compact';
 };
 
+type DropdownPos = { top: number; left: number; width: number };
+
 export default function FilterSingleSelect({
   icon: Icon,
   options,
@@ -30,49 +32,62 @@ export default function FilterSingleSelect({
 }: FilterSingleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [pos, setPos] = useState<DropdownPos | null>(null);
   const listboxId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  const calcPos = () => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  const openDropdown = () => {
+    if (disabled) return;
+    calcPos();
+    setIsOpen(true);
+  };
+
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      const dropdown = document.getElementById(listboxId);
+      if (dropdown?.contains(target)) return;
+      setIsOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
+      if (event.key === 'Escape') setIsOpen(false);
     };
+
+    const handleSync = () => calcPos();
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleSync, true);
+    window.addEventListener('resize', handleSync);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleSync, true);
+      window.removeEventListener('resize', handleSync);
     };
-  }, []);
+  }, [isOpen, listboxId]);
 
   useEffect(() => {
-    if (disabled && isOpen) {
-      setIsOpen(false);
-    }
+    if (disabled && isOpen) setIsOpen(false);
   }, [disabled, isOpen]);
 
   const optionsWithDefault = useMemo(() => {
-    if (!includePlaceholderOption) {
-      return options;
-    }
-
+    if (!includePlaceholderOption) return options;
     const hasDefault = options.some((option) => option.value === '');
-    if (hasDefault) {
-      return options;
-    }
-
+    if (hasDefault) return options;
     return [{ value: '', label: placeholder }, ...options];
   }, [includePlaceholderOption, options, placeholder]);
 
@@ -91,20 +106,17 @@ export default function FilterSingleSelect({
       setHighlightedIndex(-1);
       return;
     }
-
     setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
   }, [isOpen, selectedIndex]);
 
   useEffect(() => {
     if (!isOpen || highlightedIndex < 0) return;
-
     optionRefs.current[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [highlightedIndex, isOpen]);
 
   const selectOptionByIndex = (index: number) => {
     const option = optionsWithDefault[index];
     if (!option || disabled) return;
-
     onChange(option.value);
     setIsOpen(false);
   };
@@ -112,69 +124,37 @@ export default function FilterSingleSelect({
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (disabled) return;
 
-    if (event.key === 'Tab') {
-      setIsOpen(false);
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      setIsOpen(false);
-      return;
-    }
+    if (event.key === 'Tab') { setIsOpen(false); return; }
+    if (event.key === 'Escape') { setIsOpen(false); return; }
 
     const lastIndex = optionsWithDefault.length - 1;
     if (lastIndex < 0) return;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      if (!isOpen) {
-        setIsOpen(true);
-        return;
-      }
-
-      setHighlightedIndex((current) => (current >= lastIndex ? 0 : current + 1));
+      if (!isOpen) { openDropdown(); return; }
+      setHighlightedIndex((c) => (c >= lastIndex ? 0 : c + 1));
       return;
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      if (!isOpen) {
-        setIsOpen(true);
-        return;
-      }
-
-      setHighlightedIndex((current) => (current <= 0 ? lastIndex : current - 1));
+      if (!isOpen) { openDropdown(); return; }
+      setHighlightedIndex((c) => (c <= 0 ? lastIndex : c - 1));
       return;
     }
 
-    if (event.key === 'Home' && isOpen) {
-      event.preventDefault();
-      setHighlightedIndex(0);
-      return;
-    }
-
-    if (event.key === 'End' && isOpen) {
-      event.preventDefault();
-      setHighlightedIndex(lastIndex);
-      return;
-    }
+    if (event.key === 'Home' && isOpen) { event.preventDefault(); setHighlightedIndex(0); return; }
+    if (event.key === 'End' && isOpen) { event.preventDefault(); setHighlightedIndex(lastIndex); return; }
 
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-
-      if (!isOpen) {
-        setIsOpen(true);
-        return;
-      }
-
-      if (highlightedIndex >= 0) {
-        selectOptionByIndex(highlightedIndex);
-      }
+      if (!isOpen) { openDropdown(); return; }
+      if (highlightedIndex >= 0) selectOptionByIndex(highlightedIndex);
     }
   };
 
   const isCompact = size === 'compact';
-
   const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
   const iconOffsetClass = isCompact ? 'left-2.5' : 'left-3';
   const chevronSizeClass = isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4';
@@ -185,11 +165,9 @@ export default function FilterSingleSelect({
   return (
     <div className="relative" ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => {
-          if (disabled) return;
-          setIsOpen((current) => !current);
-        }}
+        onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
         className={`panel-glass-panel panel-interactive-glass relative w-full rounded-lg border border-slate-300 bg-white text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 ${buttonPaddingClass}`}
         aria-haspopup="listbox"
         aria-controls={isOpen ? listboxId : undefined}
@@ -211,10 +189,11 @@ export default function FilterSingleSelect({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && pos && (
         <div
           id={listboxId}
-          className="panel-glass-panel absolute left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          className="panel-glass-panel fixed z-[200] max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          style={{ top: pos.top, left: pos.left, width: pos.width }}
           role="listbox"
         >
           {optionsWithDefault.map((option, index) => {
@@ -228,13 +207,9 @@ export default function FilterSingleSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
-                ref={(element) => {
-                  optionRefs.current[index] = element;
-                }}
+                ref={(element) => { optionRefs.current[index] = element; }}
                 onMouseEnter={() => setHighlightedIndex(index)}
-                onClick={() => {
-                  selectOptionByIndex(index);
-                }}
+                onClick={() => selectOptionByIndex(index)}
                 className={`flex w-full items-center justify-between px-3 text-left transition-colors ${optionTextClass} ${
                   isSelected
                     ? 'bg-teal-50 font-medium text-teal-700'
@@ -244,7 +219,7 @@ export default function FilterSingleSelect({
                 }`}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && <Check className="h-4 w-4" />}
+                {isSelected && <Check className="h-4 w-4 flex-shrink-0" />}
               </button>
             );
           })}

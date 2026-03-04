@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
@@ -21,6 +21,8 @@ interface BlogPost {
   meta_title?: string;
   meta_description?: string;
 }
+
+const siteUrl = 'https://kifersaude.com.br';
 
 const BlogFooter = () => (
   <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8 mt-12">
@@ -114,24 +116,36 @@ export default function BlogPage() {
     }, 3000);
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (slug) {
-      loadPostBySlug(slug);
-      return;
-    }
-    setSelectedPost(null);
-    setRelatedPosts([]);
-    loadPosts();
-  }, [slug]);
-
   useEffect(() => () => {
     if (feedbackTimeoutRef.current) {
       window.clearTimeout(feedbackTimeoutRef.current);
     }
   }, []);
 
-  const loadPosts = async () => {
+  const incrementViewCount = useCallback(async (postId: string) => {
+    await supabase.rpc('increment', {
+      row_id: postId,
+      table_name: 'blog_posts',
+      column_name: 'views_count'
+    });
+  }, []);
+
+  const loadRelatedPosts = useCallback(async (category: string, currentPostId: string) => {
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('*')
+      .eq('published', true)
+      .eq('category', category)
+      .neq('id', currentPostId)
+      .order('published_at', { ascending: false })
+      .limit(2);
+
+    if (data) {
+      setRelatedPosts(data);
+    }
+  }, []);
+
+  const loadPosts = useCallback(async () => {
     setLoading(true);
     setError(null);
     setLoadingMore(false);
@@ -156,30 +170,14 @@ export default function BlogPage() {
 
     setLoading(false);
     setIsRetrying(false);
-  };
+  }, []);
 
-  const handleRetry = () => {
-    setIsRetrying(true);
-    if (slug) {
-      loadPostBySlug(slug);
-      return;
-    }
-    loadPosts();
-  };
-
-  const handleLoadMore = () => {
-    if (loadingMore || !hasMore) {
-      return;
-    }
-    setLoadingMore(true);
-    loadPosts();
-  };
-
-  const loadPostBySlug = async (postSlug: string) => {
+  const loadPostBySlug = useCallback(async (postSlug: string) => {
     setLoading(true);
     setError(null);
     setSelectedPost(null);
     setRelatedPosts([]);
+
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
@@ -194,35 +192,41 @@ export default function BlogPage() {
 
     if (!error && data) {
       setSelectedPost(data);
-      incrementViewCount(data.id);
-      loadRelatedPosts(data.category, data.id);
+      void incrementViewCount(data.id);
+      void loadRelatedPosts(data.category, data.id);
     }
+
     setLoading(false);
     setIsRetrying(false);
-  };
+  }, [incrementViewCount, loadRelatedPosts]);
 
-  const incrementViewCount = async (postId: string) => {
-    await supabase.rpc('increment', {
-      row_id: postId,
-      table_name: 'blog_posts',
-      column_name: 'views_count'
-    });
-  };
-
-  const loadRelatedPosts = async (category: string, currentPostId: string) => {
-    const { data } = await supabase
-      .from('blog_posts')
-      .select('*')
-      .eq('published', true)
-      .eq('category', category)
-      .neq('id', currentPostId)
-      .order('published_at', { ascending: false })
-      .limit(2);
-
-    if (data) {
-      setRelatedPosts(data);
+  useEffect(() => {
+    if (slug) {
+      void loadPostBySlug(slug);
+      return;
     }
-  };
+
+    setSelectedPost(null);
+    setRelatedPosts([]);
+    void loadPosts();
+  }, [slug, loadPostBySlug, loadPosts]);
+
+  const handleRetry = useCallback(() => {
+    setIsRetrying(true);
+    if (slug) {
+      void loadPostBySlug(slug);
+      return;
+    }
+    void loadPosts();
+  }, [slug, loadPostBySlug, loadPosts]);
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMore) {
+      return;
+    }
+    setLoadingMore(true);
+    void loadPosts();
+  }, [loadingMore, hasMore, loadPosts]);
 
   const categories = ['Todos', ...Array.from(new Set(posts.map(p => p.category)))];
 
@@ -317,6 +321,77 @@ export default function BlogPage() {
         : '',
     [selectedPost?.content],
   );
+  const selectedPostSchema = useMemo(() => {
+    if (!selectedPost) {
+      return '';
+    }
+
+    const canonicalUrl = `${siteUrl}/blog/${selectedPost.slug}`;
+    const schema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: selectedPost.meta_title || selectedPost.title,
+      description: selectedPost.meta_description || selectedPost.excerpt,
+      datePublished: selectedPost.published_at,
+      dateModified: selectedPost.published_at,
+      mainEntityOfPage: canonicalUrl,
+      url: canonicalUrl,
+      articleSection: selectedPost.category,
+      author: {
+        '@type': 'Organization',
+        name: 'Kifer Saude',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Kifer Saude',
+        logo: {
+          '@type': 'ImageObject',
+          url: `${siteUrl}/image.png`,
+        },
+      },
+    };
+
+    if (selectedPost.cover_image_url) {
+      schema.image = [selectedPost.cover_image_url];
+    }
+
+    return JSON.stringify(schema);
+  }, [selectedPost]);
+  const blogCollectionSchema = useMemo(
+    () =>
+      JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        name: 'Blog Kifer Saude',
+        description: 'Dicas, guias e informacoes sobre planos de saude',
+        url: `${siteUrl}/blog`,
+        publisher: {
+          '@type': 'Organization',
+          name: 'Kifer Saude',
+          logo: {
+            '@type': 'ImageObject',
+            url: `${siteUrl}/image.png`,
+          },
+        },
+      }),
+    [],
+  );
+  const blogItemListSchema = useMemo(() => {
+    if (posts.length === 0) {
+      return '';
+    }
+
+    return JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: posts.slice(0, 50).map((post, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${siteUrl}/blog/${post.slug}`,
+        name: post.title,
+      })),
+    });
+  }, [posts]);
 
   if (isLoadingPost) {
     return (
@@ -450,7 +525,8 @@ export default function BlogPage() {
           <meta property="og:title" content={selectedPost.meta_title || selectedPost.title} />
           <meta property="og:description" content={selectedPost.meta_description || selectedPost.excerpt} />
           <meta property="og:type" content="article" />
-          <meta property="og:url" content={`https://kifersaude.com.br/blog/${selectedPost.slug}`} />
+          <meta property="og:url" content={`${siteUrl}/blog/${selectedPost.slug}`} />
+          <meta property="article:published_time" content={selectedPost.published_at} />
           {selectedPost.cover_image_url && (
             <meta property="og:image" content={selectedPost.cover_image_url} />
           )}
@@ -460,7 +536,8 @@ export default function BlogPage() {
           {selectedPost.cover_image_url && (
             <meta name="twitter:image" content={selectedPost.cover_image_url} />
           )}
-          <link rel="canonical" href={`https://kifersaude.com.br/blog/${selectedPost.slug}`} />
+          <link rel="canonical" href={`${siteUrl}/blog/${selectedPost.slug}`} />
+          {selectedPostSchema && <script type="application/ld+json">{selectedPostSchema}</script>}
         </Helmet>
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -650,8 +727,10 @@ export default function BlogPage() {
         <meta property="og:title" content="Blog Kifer Saúde | Dicas e Guias sobre Planos de Saúde" />
         <meta property="og:description" content="Aprenda tudo sobre planos de saúde com nossos artigos especializados." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://kifersaude.com.br/blog" />
-        <link rel="canonical" href="https://kifersaude.com.br/blog" />
+        <meta property="og:url" content={`${siteUrl}/blog`} />
+        <link rel="canonical" href={`${siteUrl}/blog`} />
+        <script type="application/ld+json">{blogCollectionSchema}</script>
+        {blogItemListSchema && <script type="application/ld+json">{blogItemListSchema}</script>}
       </Helmet>
       <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

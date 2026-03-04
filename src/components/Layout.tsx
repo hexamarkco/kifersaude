@@ -736,54 +736,47 @@ export default function Layout({
             )}
           </button>
 
-          {isExpanded && isMenuCollapsed && menuItemRefs.current[tab.id] && (() => {
-            const buttonRect = menuItemRefs.current[tab.id]!.getBoundingClientRect();
-            return (
-              <div 
-                id={`dropdown-${tab.id}`}
-                className="panel-glass-panel fixed z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
-                style={{ 
-                  left: buttonRect.right + 8,
-                  top: buttonRect.top
-                }}
-              >
-                <div className="space-y-1">
-                  {tab.children.map((child) => {
-                    const ChildIcon = child.icon;
-                    const isChildActive = activeTab === child.id;
-                    return (
-                      <button
-                        key={child.id}
-                        onClick={() => {
-                          onTabChange(child.id);
-                          setActiveDropdownTab(null);
-                        }}
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                          isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <ChildIcon className="h-4 w-4" />
-                          <span>{child.label}</span>
-                        </div>
-                        {child.badge !== undefined && child.badge > 0 && (
-                          <span
-                            className={`${
-                              child.badgeColor || 'bg-orange-500'
-                            } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                              child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
-                            } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
-                          >
-                            {child.badge > 9 ? '9+' : child.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+          {isExpanded && isMenuCollapsed && (
+            <div
+              id={`dropdown-${tab.id}`}
+              className="panel-glass-panel absolute left-full top-0 z-50 ml-2 min-w-[180px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+            >
+              <div className="space-y-1">
+                {tab.children.map((child) => {
+                  const ChildIcon = child.icon;
+                  const isChildActive = activeTab === child.id;
+                  return (
+                    <button
+                      key={child.id}
+                      onClick={() => {
+                        onTabChange(child.id);
+                        setActiveDropdownTab(null);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                        isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <ChildIcon className="h-4 w-4" />
+                        <span>{child.label}</span>
+                      </div>
+                      {child.badge !== undefined && child.badge > 0 && (
+                        <span
+                          className={`${
+                            child.badgeColor || 'bg-orange-500'
+                          } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                            child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                          } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                        >
+                          {child.badge > 9 ? '9+' : child.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })()}
+            </div>
+          )}
 
           {isExpanded && !isMenuCollapsed && (
             <div className="mt-1 space-y-1 pl-4">
@@ -886,7 +879,7 @@ export default function Layout({
             )}
           </div>
 
-          <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1' : 'px-2'}`}>
+          <nav className={`flex-1 overflow-y-auto py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1 overflow-x-visible' : 'px-2 overflow-x-hidden'}`}>
             <div className="space-y-1">
               {tabs.map((tab) => renderSidebarItem(tab))}
             </div>

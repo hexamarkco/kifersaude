@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Lead, Interaction, Reminder, LeadStatusHistory } from '../lib/supabase';
-import { X, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
+import { MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
+import ModalShell from './ui/ModalShell';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -148,14 +149,16 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-stretch justify-center bg-slate-900/60 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
-      <div className="modal-panel relative flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
-          <div className="pr-4">
-            <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">{lead.nome_completo}</h3>
-            <p className="text-xs text-slate-600 sm:text-sm">Histórico de Interações</p>
-          </div>
-          <div className="flex items-center gap-2">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={lead.nome_completo}
+      description="Historico de Interacoes"
+      size="lg"
+      panelClassName="sm:max-w-3xl"
+    >
+      <div className="flex-1 overflow-y-auto">
+          <div className="mb-4 flex items-center justify-end gap-2">
             {!isObserver && (
               <button
                 type="button"
@@ -176,17 +179,8 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                 <span className="hidden sm:inline">Excluir</span>
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 transition-colors hover:bg-slate-100"
-              aria-label="Fechar detalhes do lead"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-6 rounded-lg bg-slate-50 p-4">
             <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
@@ -375,9 +369,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               ))}
             </div>
           )}
-        </div>
       </div>
-
-    </div>
+    </ModalShell>
   );
 }

@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { supabase, Dependent, ContractHolder } from '../lib/supabase';
-import { Search, X, Users } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
 import DateTimePicker from './ui/DateTimePicker';
+import ModalShell from './ui/ModalShell';
 
 type DependentFormProps = {
   contractId: string;
@@ -132,24 +133,15 @@ export default function DependentForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Users className="w-6 h-6 text-teal-600" />
-            <h3 className="text-xl font-bold text-slate-900">
-              {dependent ? 'Editar Dependente' : 'Novo Dependente'}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={dependent ? 'Editar Dependente' : 'Novo Dependente'}
+      size="md"
+      panelClassName="max-w-2xl"
+      bodyClassName="p-0"
+    >
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -321,7 +313,6 @@ export default function DependentForm({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

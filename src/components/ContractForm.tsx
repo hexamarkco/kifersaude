@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
-import { X, User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar } from 'lucide-react';
+import { User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import DateTimePicker from './ui/DateTimePicker';
+import ModalShell from './ui/ModalShell';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
@@ -496,28 +497,21 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">
-              {contract ? 'Editar Contrato' : leadToConvert ? 'Converter Lead em Contrato' : 'Novo Contrato'}
-            </h3>
-            {leadToConvert && (
-              <p className="text-sm text-slate-600 mt-1">
-                Lead: {leadToConvert.nome_completo} - {leadToConvert.telefone}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
+    <>
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        title={contract ? 'Editar Contrato' : leadToConvert ? 'Converter Lead em Contrato' : 'Novo Contrato'}
+        description={
+          leadToConvert
+            ? `Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`
+            : undefined
+        }
+        size="xl"
+        panelClassName="max-w-4xl"
+        bodyClassName="p-0"
+      >
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="mb-6 bg-teal-50 rounded-lg p-4">
             <h4 className="font-semibold text-slate-900 mb-3 flex items-center">
               <User className="w-5 h-5 mr-2" />
@@ -1323,7 +1317,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
             </button>
           </div>
         </form>
-      </div>
+      </ModalShell>
 
       {showAdjustmentForm && contract?.id && (
         <ValueAdjustmentForm
@@ -1344,6 +1338,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         />
       )}
       {ConfirmationDialog}
-    </div>
+    </>
   );
 }

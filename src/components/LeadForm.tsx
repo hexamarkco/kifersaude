@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Lead } from '../lib/supabase';
-import { X, Search, Compass, Briefcase, AlertCircle, UserCircle } from 'lucide-react';
+import { Search, Compass, Briefcase, AlertCircle, UserCircle } from 'lucide-react';
 import {
   formatDateForInput,
   formatDateTimeForInput,
@@ -18,6 +18,7 @@ import {
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
 import DateTimePicker from './ui/DateTimePicker';
+import ModalShell from './ui/ModalShell';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -395,24 +396,18 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-stretch justify-center bg-slate-900/60 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
-      <div className="modal-panel relative flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
-          <h3 className="text-xl font-bold text-slate-900">
-            {lead ? 'Editar Lead' : 'Novo Lead'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
-        >
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={lead ? 'Editar Lead' : 'Novo Lead'}
+      size="lg"
+      panelClassName="sm:max-w-3xl"
+      bodyClassName="p-0"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
+      >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -839,8 +834,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }

@@ -5,6 +5,7 @@ import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
 import StatusDropdown from '../StatusDropdown';
+import ModalShell from '../ui/ModalShell';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
@@ -129,6 +130,7 @@ export default function WhatsAppTab() {
   const notificationAudioRef = useRef<AudioContext | null>(null);
   const activeDesktopNotificationRef = useRef<Notification | null>(null);
   const skipNextAutoScrollRef = useRef(false);
+  const activeMessagesLoadIdRef = useRef(0);
   const { user } = useAuth();
 
   function normalizePhoneNumber(phone: string | null | undefined) {
@@ -686,6 +688,11 @@ export default function WhatsAppTab() {
     if (selectedChat) {
       setCopiedPhone(null);
       setShowGroupInfo(false);
+      setReplyToMessage(null);
+      setEditMessage(null);
+      setMessages([]);
+      setHasOlderMessages(false);
+      setLoadedMessagesCount(0);
       loadMessages(selectedChat);
       return;
     }
@@ -789,6 +796,9 @@ export default function WhatsAppTab() {
   };
 
   const loadMessages = async (chat: WhatsAppChat) => {
+    activeMessagesLoadIdRef.current += 1;
+    const currentLoadId = activeMessagesLoadIdRef.current;
+
     try {
       const variants = getChatIdVariants(chat);
       const { data, error } = await supabase
@@ -800,6 +810,13 @@ export default function WhatsAppTab() {
         .limit(MESSAGES_PAGE_SIZE);
 
       if (error) throw error;
+
+      const stillActiveLoad =
+        activeMessagesLoadIdRef.current === currentLoadId && selectedChatRef.current?.id === chat.id;
+      if (!stillActiveLoad) {
+        return;
+      }
+
       const baseMessages = [...(data || [])].sort(sortMessagesChronologically);
       setMessages(baseMessages);
       setLoadedMessagesCount(baseMessages.length);
@@ -828,6 +845,8 @@ export default function WhatsAppTab() {
     if (!selectedChat || !hasOlderMessages || isLoadingOlderMessages) return;
 
     setIsLoadingOlderMessages(true);
+    const currentChatId = selectedChat.id;
+    const currentLoadId = activeMessagesLoadIdRef.current;
     try {
       const variants = getChatIdVariants(selectedChat);
       const { data, error } = await supabase
@@ -839,6 +858,12 @@ export default function WhatsAppTab() {
         .range(loadedMessagesCount, loadedMessagesCount + MESSAGES_PAGE_SIZE - 1);
 
       if (error) throw error;
+
+      const stillActiveLoad =
+        activeMessagesLoadIdRef.current === currentLoadId && selectedChatRef.current?.id === currentChatId;
+      if (!stillActiveLoad) {
+        return;
+      }
 
       const olderMessages = [...(data || [])].sort(sortMessagesChronologically);
       if (olderMessages.length === 0) {
@@ -1722,19 +1747,14 @@ export default function WhatsAppTab() {
   return (
     <div className="flex h-full min-h-0 bg-slate-50" onClick={() => setChatMenu(null)}>
       {showNewChatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg bg-white rounded-lg shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <h3 className="text-base font-semibold">Novo chat</h3>
-              <button
-                type="button"
-                className="p-1 rounded hover:bg-gray-100"
-                onClick={() => setShowNewChatModal(false)}
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="px-4 pt-3 flex gap-2">
+        <ModalShell
+          isOpen
+          onClose={() => setShowNewChatModal(false)}
+          title="Novo chat"
+          size="md"
+          panelClassName="max-w-lg"
+        >
+            <div className="flex gap-2">
               <button
                 type="button"
                 className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'leads' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
@@ -1757,7 +1777,7 @@ export default function WhatsAppTab() {
                 Numero
               </button>
             </div>
-            <div className="px-4 py-3">
+            <div className="pt-3">
               {(newChatTab === 'leads' || newChatTab === 'contacts') && (
                 <div className="relative mb-3">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1830,8 +1850,7 @@ export default function WhatsAppTab() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
       {showChatList && (
         <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, ContractHolder, Dependent, Interaction, ContractValueAdjustment } from '../lib/supabase';
-import { X, User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import HolderForm from './HolderForm';
 import ContractForm from './ContractForm';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
+import ModalShell from './ui/ModalShell';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
@@ -541,49 +542,52 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
-      </div>
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        title="Carregando contrato"
+        description="Aguarde enquanto reunimos os dados mais recentes."
+        size="xl"
+        panelClassName="sm:max-w-5xl"
+        showCloseButton={false}
+        bodyClassName="flex min-h-[260px] items-center justify-center"
+      >
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+      </ModalShell>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">{contract.codigo_contrato}</h3>
-            <p className="text-sm text-slate-600">{contract.operadora} - {contract.produto_plano}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isObserver && (
-              <button
-                onClick={() => setShowEditForm(true)}
-                className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-              >
-                Editar
-              </button>
-            )}
-            {!isObserver && onDelete && (
-              <button
-                onClick={() => onDelete(contract)}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
-                type="button"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Excluir</span>
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={contract.codigo_contrato}
+      description={`${contract.operadora} - ${contract.produto_plano}`}
+      size="xl"
+      panelClassName="sm:max-w-5xl"
+    >
+      <div className="mb-4 flex items-center justify-end gap-2">
+        {!isObserver && (
+          <button
+            onClick={() => setShowEditForm(true)}
+            className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          >
+            Editar
+          </button>
+        )}
+        {!isObserver && onDelete && (
+          <button
+            onClick={() => onDelete(contract)}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
+            type="button"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Excluir</span>
+          </button>
+        )}
+      </div>
 
-        <div className="p-6">
+      <div className="p-1">
           <div className="mb-6 bg-slate-50 rounded-lg p-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div>
@@ -1219,7 +1223,6 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               </div>
             )}
           </div>
-        </div>
       </div>
 
       {showHolderForm && (
@@ -1272,6 +1275,6 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
         />
       )}
       {ConfirmationDialog}
-    </div>
+    </ModalShell>
   );
 }

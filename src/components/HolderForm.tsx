@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { supabase, ContractHolder } from '../lib/supabase';
-import { Search, X, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import DateTimePicker from './ui/DateTimePicker';
+import ModalShell from './ui/ModalShell';
 
 type HolderFormProps = {
   contractId: string;
@@ -217,24 +218,15 @@ export default function HolderForm({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-        <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <User className="w-6 h-6 text-teal-600" />
-              <h3 className="text-xl font-bold text-slate-900">
-                {holder ? 'Editar Titular' : 'Dados do Titular'}
-              </h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-6">
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        title={holder ? 'Editar Titular' : 'Dados do Titular'}
+        size="xl"
+        panelClassName="max-w-5xl"
+        bodyClassName="p-0"
+      >
+          <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="mb-6">
             <h4 className="font-semibold text-slate-900 mb-4">Informações Pessoais</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -582,8 +574,7 @@ export default function HolderForm({
             </button>
           </div>
           </form>
-        </div>
-      </div>
+      </ModalShell>
 
       {showDependentForm && (
         <DependentForm

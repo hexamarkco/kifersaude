@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase, ContractValueAdjustment } from '../lib/supabase';
-import { X, DollarSign } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
+import ModalShell from './ui/ModalShell';
 
 type ValueAdjustmentFormProps = {
   contractId: string;
@@ -75,22 +76,19 @@ export default function ValueAdjustmentForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-stretch justify-center z-[60] p-0 sm:items-center sm:p-4">
-      <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full flex flex-col">
-        <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center">
-            <DollarSign className="w-5 h-5 mr-2" />
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}
+      size="sm"
+      panelClassName="max-w-md"
+      bodyClassName="p-0"
+    >
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
+          <h3 className="mb-4 flex items-center text-lg font-bold text-slate-900">
+            <DollarSign className="mr-2 h-5 w-5" />
             {adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}
           </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
@@ -180,7 +178,6 @@ export default function ValueAdjustmentForm({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

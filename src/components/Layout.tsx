@@ -102,12 +102,14 @@ export default function Layout({
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const collapsedDropdownRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const panelContentRef = useRef<HTMLDivElement | null>(null);
   const auroraPrimaryRef = useRef<HTMLDivElement | null>(null);
   const auroraSecondaryRef = useRef<HTMLDivElement | null>(null);
   const auroraTertiaryRef = useRef<HTMLDivElement | null>(null);
   const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
+  const [collapsedDropdownPosition, setCollapsedDropdownPosition] = useState<{ left: number; top: number } | null>(null);
   const { motionEnabled, enterDuration, sectionStagger, ease } = usePanelMotion();
   const currentRole = role;
 
@@ -400,6 +402,37 @@ export default function Layout({
     return tab.children.reduce((sum, child) => sum + (child.badge || 0), 0);
   };
 
+  const updateCollapsedDropdownPosition = useCallback(() => {
+    if (!isMenuCollapsed || !activeDropdownTab) {
+      setCollapsedDropdownPosition(null);
+      return;
+    }
+
+    const triggerElement = menuItemRefs.current[activeDropdownTab];
+    if (!triggerElement) {
+      setCollapsedDropdownPosition(null);
+      return;
+    }
+
+    const triggerRect = triggerElement.getBoundingClientRect();
+    const viewportPadding = 8;
+    const sideOffset = 8;
+    const dropdownWidth = 224;
+    const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 260;
+
+    let left = triggerRect.right + sideOffset;
+    if (left + dropdownWidth > window.innerWidth - viewportPadding) {
+      left = Math.max(viewportPadding, triggerRect.left - dropdownWidth - sideOffset);
+    }
+
+    let top = triggerRect.top;
+    if (top + dropdownHeight > window.innerHeight - viewportPadding) {
+      top = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
+    }
+
+    setCollapsedDropdownPosition({ left, top });
+  }, [activeDropdownTab, isMenuCollapsed]);
+
   useEffect(() => {
     if (!showNotificationsDropdown) {
       return;
@@ -478,6 +511,35 @@ export default function Layout({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [activeDropdownTab]);
+
+  useEffect(() => {
+    if (!isMenuCollapsed) {
+      setActiveDropdownTab(null);
+      setCollapsedDropdownPosition(null);
+    }
+  }, [isMenuCollapsed]);
+
+  useEffect(() => {
+    if (!activeDropdownTab || !isMenuCollapsed) {
+      setCollapsedDropdownPosition(null);
+      return;
+    }
+
+    const syncPosition = () => {
+      updateCollapsedDropdownPosition();
+    };
+
+    syncPosition();
+    const rafId = window.requestAnimationFrame(syncPosition);
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [activeDropdownTab, isMenuCollapsed, updateCollapsedDropdownPosition]);
 
   useEffect(() => {
     localStorage.setItem('painel.sidebar.collapsed', String(isMenuCollapsed));
@@ -645,7 +707,7 @@ export default function Layout({
   }, [isMenuCollapsed, motionEnabled, showNotificationsDropdown]);
 
   useEffect(() => {
-    if (!activeDropdownTab || !motionEnabled) {
+    if (!activeDropdownTab || !motionEnabled || (isMenuCollapsed && !collapsedDropdownPosition)) {
       return;
     }
 
@@ -675,7 +737,7 @@ export default function Layout({
     return () => {
       animation.kill();
     };
-  }, [activeDropdownTab, motionEnabled]);
+  }, [activeDropdownTab, collapsedDropdownPosition, isMenuCollapsed, motionEnabled]);
 
   const toggleThemeMode = () => {
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
@@ -736,10 +798,15 @@ export default function Layout({
             )}
           </button>
 
-          {isExpanded && isMenuCollapsed && (
+          {isExpanded && isMenuCollapsed && collapsedDropdownPosition && (
             <div
               id={`dropdown-${tab.id}`}
-              className="panel-glass-panel absolute left-full top-0 z-50 ml-2 min-w-[180px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+              ref={collapsedDropdownRef}
+              className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-2xl"
+              style={{
+                left: collapsedDropdownPosition.left,
+                top: collapsedDropdownPosition.top,
+              }}
             >
               <div className="space-y-1">
                 {tab.children.map((child) => {
@@ -879,7 +946,7 @@ export default function Layout({
             )}
           </div>
 
-          <nav className={`flex-1 overflow-y-auto py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1 overflow-x-visible' : 'px-2 overflow-x-hidden'}`}>
+          <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1' : 'px-2'}`}>
             <div className="space-y-1">
               {tabs.map((tab) => renderSidebarItem(tab))}
             </div>

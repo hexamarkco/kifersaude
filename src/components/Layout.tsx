@@ -394,8 +394,8 @@ export default function Layout({
           const triggerRect = triggerElement.getBoundingClientRect();
           const viewportPadding = 8;
           const sideOffset = 8;
-          const dropdownWidth = 224;
-          const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 260;
+          const dropdownWidth = collapsedDropdownRef.current?.offsetWidth ?? 220;
+          const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 220;
 
           let left = triggerRect.right + sideOffset;
           let side: 'right' | 'left' = 'right';
@@ -404,10 +404,10 @@ export default function Layout({
             side = 'left';
           }
 
-          let top = triggerRect.top;
-          if (top + dropdownHeight > window.innerHeight - viewportPadding) {
-            top = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
-          }
+          const top = Math.max(
+            viewportPadding,
+            Math.min(triggerRect.top, window.innerHeight - dropdownHeight - viewportPadding),
+          );
 
           const triggerCenterY = triggerRect.top + triggerRect.height / 2;
           const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
@@ -452,8 +452,8 @@ export default function Layout({
     const triggerRect = triggerElement.getBoundingClientRect();
     const viewportPadding = 8;
     const sideOffset = 8;
-    const dropdownWidth = 224;
-    const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 260;
+    const dropdownWidth = collapsedDropdownRef.current?.offsetWidth ?? 220;
+    const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 220;
 
     let left = triggerRect.right + sideOffset;
     let side: 'right' | 'left' = 'right';
@@ -462,10 +462,10 @@ export default function Layout({
       side = 'left';
     }
 
-    let top = triggerRect.top;
-    if (top + dropdownHeight > window.innerHeight - viewportPadding) {
-      top = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
-    }
+    const top = Math.max(
+      viewportPadding,
+      Math.min(triggerRect.top, window.innerHeight - dropdownHeight - viewportPadding),
+    );
 
     const triggerCenterY = triggerRect.top + triggerRect.height / 2;
     const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
@@ -1119,7 +1119,7 @@ export default function Layout({
         <div
           id="collapsed-menu-dropdown"
           ref={collapsedDropdownRef}
-          className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-2xl"
+          className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xl"
           style={{
             left: collapsedDropdownPosition.left,
             top: collapsedDropdownPosition.top,
@@ -1134,7 +1134,7 @@ export default function Layout({
             }`}
             style={{ top: collapsedDropdownPosition.caretTop - 6 }}
           />
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {activeCollapsedParentTab.children.map((child) => {
               const ChildIcon = child.icon;
               const isChildActive = activeTab === child.id;
@@ -1147,7 +1147,7 @@ export default function Layout({
                     setActiveDropdownTab(null);
                     setCollapsedDropdownPosition(null);
                   }}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  className={`flex min-w-[156px] items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors ${
                     isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >

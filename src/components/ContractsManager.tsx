@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
+import FilterSingleSelect from './FilterSingleSelect';
 import Pagination from './Pagination';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { usePanelMotion } from '../hooks/usePanelMotion';
@@ -494,7 +495,7 @@ export default function ContractsManager({
               className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
-          <div className="px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
+          <div className="w-full sm:w-auto px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
             <span className="font-semibold text-teal-700">{filteredContracts.length}</span>
             <span>contrato(s) encontrado(s)</span>
           </div>
@@ -505,80 +506,80 @@ export default function ContractsManager({
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Filtros</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <Filter className="w-3.5 h-3.5 text-slate-400" />
-                  Status
-                </label>
-                <select
+                <label className="text-xs font-medium text-slate-600">Status</label>
+                <FilterSingleSelect
+                  icon={Filter}
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="todos">Todos os status</option>
-                  <option value="Rascunho">Rascunho</option>
-                  <option value="Em análise">Em análise</option>
-                  <option value="Documentos pendentes">Documentos pendentes</option>
-                  <option value="Proposta enviada">Proposta enviada</option>
-                  <option value="Aguardando assinatura">Aguardando assinatura</option>
-                  <option value="Emitido">Emitido</option>
-                  <option value="Ativo">Ativo</option>
-                  <option value="Suspenso">Suspenso</option>
-                  <option value="Cancelado">Cancelado</option>
-                  <option value="Encerrado">Encerrado</option>
-                </select>
+                  onChange={(value) => setFilterStatus(value)}
+                  placeholder="Todos os status"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'todos', label: 'Todos os status' },
+                    { value: 'Rascunho', label: 'Rascunho' },
+                    { value: 'Em análise', label: 'Em análise' },
+                    { value: 'Documentos pendentes', label: 'Documentos pendentes' },
+                    { value: 'Proposta enviada', label: 'Proposta enviada' },
+                    { value: 'Aguardando assinatura', label: 'Aguardando assinatura' },
+                    { value: 'Emitido', label: 'Emitido' },
+                    { value: 'Ativo', label: 'Ativo' },
+                    { value: 'Suspenso', label: 'Suspenso' },
+                    { value: 'Cancelado', label: 'Cancelado' },
+                    { value: 'Encerrado', label: 'Encerrado' },
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-slate-400" />
-                  Responsável
-                </label>
-                <select
+                <label className="text-xs font-medium text-slate-600">Responsável</label>
+                <FilterSingleSelect
+                  icon={Users}
                   value={filterResponsavel}
-                  onChange={(e) => setFilterResponsavel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="todos">Todos os responsáveis</option>
-                  {responsavelFilterOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilterResponsavel(value)}
+                  placeholder="Todos os responsáveis"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'todos', label: 'Todos os responsáveis' },
+                    ...responsavelFilterOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })),
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-slate-400" />
-                  Operadora
-                </label>
-                <select
+                <label className="text-xs font-medium text-slate-600">Operadora</label>
+                <FilterSingleSelect
+                  icon={FileText}
                   value={filterOperadora}
-                  onChange={(e) => setFilterOperadora(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadoraOptions.map((operadora) => (
-                    <option key={operadora} value={operadora}>
-                      {operadora}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilterOperadora(value)}
+                  placeholder="Todas as operadoras"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'todas', label: 'Todas as operadoras' },
+                    ...operadoraOptions.map((operadora) => ({
+                      value: operadora,
+                      label: operadora,
+                    })),
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  Datas importantes
-                </label>
-                <select
+                <label className="text-xs font-medium text-slate-600">Datas importantes</label>
+                <FilterSingleSelect
+                  icon={Calendar}
                   value={dateProximityFilter}
-                  onChange={(e) => setDateProximityFilter(e.target.value as 'todos' | 'proximos-30')}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="todos">Todas as datas</option>
-                  <option value="proximos-30">Próximos 30 dias</option>
-                </select>
+                  onChange={(value) =>
+                    setDateProximityFilter(value as 'todos' | 'proximos-30')
+                  }
+                  placeholder="Todas as datas"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'todos', label: 'Todas as datas' },
+                    { value: 'proximos-30', label: 'Próximos 30 dias' },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -681,10 +682,10 @@ export default function ContractsManager({
                     <div className="mt-1">Criado: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</div>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4 sm:justify-start">
                   <button
                     onClick={() => setSelectedContract(contract)}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-100 px-3 py-2 text-sm text-teal-700 transition-colors hover:bg-teal-200"
                   >
                     <Eye className="w-4 h-4" />
                     <span>Abrir</span>
@@ -692,7 +693,7 @@ export default function ContractsManager({
                   {!isObserver && (
                     <button
                       onClick={() => handleDeleteContract(contract)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 transition-colors hover:bg-red-200"
                       type="button"
                     >
                       <Trash2 className="w-4 h-4" />

@@ -62,6 +62,11 @@ const MESSAGES_PAGE_SIZE = 120;
 
 type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct';
 
+type FirstResponseSLA =
+  | { kind: 'no-inbound' }
+  | { kind: 'waiting'; minutes: number }
+  | { kind: 'replied'; minutes: number };
+
 
 export default function WhatsAppTab() {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
@@ -102,6 +107,7 @@ export default function WhatsAppTab() {
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
+  const [slaTick, setSlaTick] = useState(0);
   const [desktopNotificationsEnabled, setDesktopNotificationsEnabled] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
@@ -560,6 +566,16 @@ export default function WhatsAppTab() {
     setLoadedMessagesCount(0);
     setReplyToMessage(null);
     setEditMessage(null);
+  }, [selectedChat]);
+
+  useEffect(() => {
+    if (!selectedChat) return;
+
+    const intervalId = window.setInterval(() => {
+      setSlaTick((current) => current + 1);
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
   }, [selectedChat]);
 
   useEffect(() => {
@@ -1028,6 +1044,14 @@ export default function WhatsAppTab() {
     }
   };
 
+  const formatMinutesDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
   const maybeNotifyInboundMessage = (message: WhatsAppMessage, matchedChat?: WhatsAppChat) => {
     if (message.direction !== 'inbound') return;
 
@@ -1214,6 +1238,89 @@ export default function WhatsAppTab() {
     if (!phone) return null;
     return leadsList.find((lead) => lead.phone === phone) ?? null;
   }, [leadsList, selectedChat]);
+  const firstResponseSla = useMemo<FirstResponseSLA>(() => {
+    const timeline = [...messages]
+      .filter((message) => {
+        if (!message.direction) return false;
+        const payloadData = message.payload as any;
+        return !(payloadData?.action?.type === 'reaction' && payloadData?.action?.target);
+      })
+      .sort(sortMessagesChronologically);
+
+    let lastInboundAt: number | null = null;
+    let firstOutboundAfterInboundAt: number | null = null;
+
+    timeline.forEach((message) => {
+      const timeValue = getMessageTimeValue(message);
+      if (!timeValue) return;
+
+      if (message.direction === 'inbound') {
+        lastInboundAt = timeValue;
+        firstOutboundAfterInboundAt = null;
+        return;
+      }
+
+      if (message.direction === 'outbound' && lastInboundAt !== null && firstOutboundAfterInboundAt === null) {
+        firstOutboundAfterInboundAt = timeValue;
+      }
+    });
+
+    if (lastInboundAt === null) {
+      return { kind: 'no-inbound' };
+    }
+
+    if (firstOutboundAfterInboundAt !== null && firstOutboundAfterInboundAt >= lastInboundAt) {
+      const responseMinutes = Math.max(1, Math.round((firstOutboundAfterInboundAt - lastInboundAt) / 60000));
+      return { kind: 'replied', minutes: responseMinutes };
+    }
+
+    const waitingMinutes = Math.max(1, Math.round((Date.now() - lastInboundAt) / 60000));
+    return { kind: 'waiting', minutes: waitingMinutes };
+  }, [messages, slaTick]);
+  const firstResponseSlaBadge = useMemo(() => {
+    if (firstResponseSla.kind === 'no-inbound') {
+      return {
+        label: 'SLA 1a resposta: sem pendencia',
+        className: 'border-slate-200 bg-slate-100 text-slate-600',
+      };
+    }
+
+    if (firstResponseSla.kind === 'replied') {
+      if (firstResponseSla.minutes <= 5) {
+        return {
+          label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        };
+      }
+      if (firstResponseSla.minutes <= 15) {
+        return {
+          label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+          className: 'border-amber-200 bg-amber-50 text-amber-700',
+        };
+      }
+      return {
+        label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+        className: 'border-slate-200 bg-slate-100 text-slate-700',
+      };
+    }
+
+    if (firstResponseSla.minutes <= 5) {
+      return {
+        label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      };
+    }
+    if (firstResponseSla.minutes <= 15) {
+      return {
+        label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+      };
+    }
+    return {
+      label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+    };
+  }, [firstResponseSla]);
   const leadByPhone = useMemo(() => {
     const map = new Map<string, { id: string; name: string; phone: string; status?: string | null }>();
     leadsList.forEach((lead) => map.set(lead.phone, lead));
@@ -1236,6 +1343,42 @@ export default function WhatsAppTab() {
     if (!query) return source;
     return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
   }, [contactsList, newChatSearch]);
+
+  const templateVariablesForInput = useMemo(() => {
+    const fullName = (selectedLead?.name || selectedChatDisplayName || '').trim();
+    const firstName = fullName.split(/\s+/).filter(Boolean)[0] || '';
+    const rawPhone = selectedChat && !selectedChat.is_group
+      ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
+      : '';
+
+    return {
+      nome: fullName,
+      primeiro_nome: firstName,
+      telefone: rawPhone ? formatPhone(rawPhone) : '',
+      telefone_digits: rawPhone,
+      status: selectedLead?.status ?? 'Sem status',
+      atendente: user?.email ? user.email.split('@')[0] : '',
+      chat_nome: selectedChatDisplayName || selectedChat?.id || '',
+    };
+  }, [selectedChat, selectedChatDisplayName, selectedLead, user]);
+
+  const templateVariableShortcuts = [
+    { key: 'nome', label: 'Nome' },
+    { key: 'primeiro_nome', label: 'Primeiro nome' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'status', label: 'Status' },
+    { key: 'atendente', label: 'Atendente' },
+    { key: 'data_hoje', label: 'Data de hoje' },
+    { key: 'hora_agora', label: 'Hora atual' },
+  ];
+
+  const getUnreadWaitingLabel = (chat: WhatsAppChat) => {
+    if ((chat.unread_count ?? 0) <= 0 || !chat.last_message_at) return null;
+    const messageTime = new Date(chat.last_message_at).getTime();
+    if (!Number.isFinite(messageTime) || Number.isNaN(messageTime)) return null;
+    const waitingMinutes = Math.max(1, Math.round((Date.now() - messageTime) / 60000));
+    return formatMinutesDuration(waitingMinutes);
+  };
 
   const openChatContextMenu = (chatId: string, x: number, y: number) => {
     const menuWidth = 224;
@@ -1634,6 +1777,7 @@ export default function WhatsAppTab() {
                 })();
 
                 const muted = isChatMuted(chat);
+                const unreadWaitingLabel = getUnreadWaitingLabel(chat);
 
                 return (
                   <button
@@ -1690,6 +1834,9 @@ export default function WhatsAppTab() {
                         <p className="text-sm text-slate-600 truncate">
                           {chat.last_message || 'Sem mensagens'}
                         </p>
+                        {unreadWaitingLabel && (
+                          <span className="text-[10px] text-rose-600 whitespace-nowrap">Aguardando {unreadWaitingLabel}</span>
+                        )}
                         {muted && (
                           <span className="text-[10px] text-slate-400">Silenciado</span>
                         )}
@@ -1833,6 +1980,11 @@ export default function WhatsAppTab() {
                         ? `${selectedChatPhoneFormatted}${copiedPhone === selectedChatPhone ? ' • copiado' : ''}`
                         : 'Conversa individual'}
                   </p>
+                  {!selectedChat.is_group && (
+                    <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${firstResponseSlaBadge.className}`}>
+                      {firstResponseSlaBadge.label}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedChat.is_group ? (
@@ -1944,6 +2096,8 @@ export default function WhatsAppTab() {
               <MessageInput
                 chatId={selectedChat.id}
                 contacts={contactsList}
+                templateVariables={templateVariablesForInput}
+                templateVariableShortcuts={templateVariableShortcuts}
                 onMessageSent={handleMessageSent}
                 replyToMessage={replyToMessage}
                 onCancelReply={handleCancelReply}

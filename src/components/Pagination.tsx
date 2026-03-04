@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListFilter } from 'lucide-react';
+import FilterSingleSelect from './FilterSingleSelect';
 
 type PaginationProps = {
   currentPage: number;
@@ -53,25 +54,30 @@ export default function Pagination({
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200">
-      <div className="flex items-center space-x-2">
+    <div className="panel-glass-panel flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-slate-700">Itens por página:</span>
-        <select
-          value={itemsPerPage}
-          onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-          className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-        >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
-        </select>
+        <div className="w-28">
+          <FilterSingleSelect
+            icon={ListFilter}
+            value={String(itemsPerPage)}
+            onChange={(value) => onItemsPerPageChange(Number(value))}
+            placeholder="25"
+            includePlaceholderOption={false}
+            options={[
+              { value: '10', label: '10' },
+              { value: '25', label: '25' },
+              { value: '50', label: '50' },
+              { value: '100', label: '100' },
+            ]}
+          />
+        </div>
         <span className="text-sm text-slate-700">
           {startItem}-{endItem} de {totalItems}
         </span>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
@@ -81,7 +87,7 @@ export default function Pagination({
           <ChevronLeft className="w-4 h-4 text-slate-600" />
         </button>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
           {getPageNumbers().map((page, index) => (
             <div key={index}>
               {page === '...' ? (

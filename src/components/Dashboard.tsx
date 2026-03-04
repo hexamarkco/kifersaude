@@ -2219,21 +2219,27 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <select
-              value={periodFilter}
-              onChange={(e) => {
-                setPeriodFilter(e.target.value as 'mes-atual' | 'todo-periodo' | 'personalizado');
-                if (e.target.value !== 'personalizado') {
-                  setCustomStartDate('');
-                  setCustomEndDate('');
-                }
-              }}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="mes-atual">Mês atual</option>
-              <option value="todo-periodo">Todo período</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
+            <div className="w-full sm:w-44">
+              <FilterSingleSelect
+                icon={Filter}
+                value={periodFilter}
+                onChange={(value) => {
+                  const nextPeriod = value as 'mes-atual' | 'todo-periodo' | 'personalizado';
+                  setPeriodFilter(nextPeriod);
+                  if (nextPeriod !== 'personalizado') {
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }
+                }}
+                placeholder="Mês atual"
+                includePlaceholderOption={false}
+                options={[
+                  { value: 'mes-atual', label: 'Mês atual' },
+                  { value: 'todo-periodo', label: 'Todo período' },
+                  { value: 'personalizado', label: 'Personalizado' },
+                ]}
+              />
+            </div>
 
             <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm">
               {(
@@ -2258,14 +2264,19 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               ))}
             </div>
 
-            <select
-              value={chartRangeInMonths}
-              onChange={(e) => setChartRangeInMonths(Number(e.target.value) as 6 | 12)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-            >
-              <option value={6}>Últimos 6 meses</option>
-              <option value={12}>Últimos 12 meses</option>
-            </select>
+            <div className="w-full sm:w-48">
+              <FilterSingleSelect
+                icon={Clock}
+                value={String(chartRangeInMonths)}
+                onChange={(value) => setChartRangeInMonths(Number(value) as 6 | 12)}
+                placeholder="Últimos 6 meses"
+                includePlaceholderOption={false}
+                options={[
+                  { value: '6', label: 'Últimos 6 meses' },
+                  { value: '12', label: 'Últimos 12 meses' },
+                ]}
+              />
+            </div>
           </div>
         </div>
 

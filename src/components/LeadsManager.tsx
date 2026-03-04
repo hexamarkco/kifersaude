@@ -22,6 +22,7 @@ import {
   Share2,
   Trash2,
   Download,
+  ArrowUpDown,
 } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
@@ -36,6 +37,7 @@ import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import FilterDateRange from './FilterDateRange';
+import FilterSingleSelect from './FilterSingleSelect';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
@@ -1597,35 +1599,36 @@ export default function LeadsManager({
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Ordenação</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600" htmlFor="lead-sort-field">
+                <label className="text-xs font-medium text-slate-600">
                   Ordenar por
                 </label>
-                <select
-                  id="lead-sort-field"
+                <FilterSingleSelect
+                  icon={Filter}
                   value={sortField}
-                  onChange={(event) => setSortField(event.target.value as SortField)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setSortField(value as SortField)}
+                  placeholder="Data de criação"
+                  includePlaceholderOption={false}
+                  options={SORT_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600" htmlFor="lead-sort-direction">
+                <label className="text-xs font-medium text-slate-600">
                   Direção
                 </label>
-                <select
-                  id="lead-sort-direction"
+                <FilterSingleSelect
+                  icon={ArrowUpDown}
                   value={sortDirection}
-                  onChange={(event) => setSortDirection(event.target.value as typeof sortDirection)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="asc">Crescente</option>
-                  <option value="desc">Decrescente</option>
-                </select>
+                  onChange={(value) => setSortDirection(value as typeof sortDirection)}
+                  placeholder="Decrescente"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'asc', label: 'Crescente' },
+                    { value: 'desc', label: 'Decrescente' },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -1660,36 +1663,40 @@ export default function LeadsManager({
                     {selectedLeadIds.length} lead(s) selecionado(s)
                   </span>
                   <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
-                    <select
-                      value={bulkStatus}
-                      onChange={(event) => setBulkStatus(event.target.value)}
-                      className="w-full xl:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      disabled={isBulkUpdating}
-                    >
-                      <option value="" disabled>
-                        Selecionar novo status
-                      </option>
-                      {activeLeadStatuses.map((status) => (
-                        <option key={status.id} value={status.nome}>
-                          {status.nome}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={bulkResponsavel}
-                      onChange={(event) => setBulkResponsavel(event.target.value)}
-                      className="w-full xl:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      disabled={isBulkUpdating}
-                    >
-                      <option value="" disabled>
-                        Selecionar responsável
-                      </option>
-                      {responsavelOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={Tag}
+                        value={bulkStatus}
+                        onChange={(value) => setBulkStatus(value)}
+                        placeholder="Selecionar novo status"
+                        includePlaceholderOption={false}
+                        disabled={isBulkUpdating}
+                        options={[
+                          { value: '', label: 'Selecionar novo status' },
+                          ...activeLeadStatuses.map((status) => ({
+                            value: status.nome,
+                            label: status.nome,
+                          })),
+                        ]}
+                      />
+                    </div>
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={UserCircle}
+                        value={bulkResponsavel}
+                        onChange={(value) => setBulkResponsavel(value)}
+                        placeholder="Selecionar responsável"
+                        includePlaceholderOption={false}
+                        disabled={isBulkUpdating}
+                        options={[
+                          { value: '', label: 'Selecionar responsável' },
+                          ...responsavelOptions.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                          })),
+                        ]}
+                      />
+                    </div>
                     <input
                       type="datetime-local"
                       value={bulkProximoRetorno}
@@ -1697,18 +1704,23 @@ export default function LeadsManager({
                       className="w-full xl:w-56 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       disabled={isBulkUpdating}
                     />
-                    <select
-                      value={bulkArchiveAction}
-                      onChange={(event) =>
-                        setBulkArchiveAction(event.target.value as typeof bulkArchiveAction)
-                      }
-                      className="w-full xl:w-48 px-3 py-2 text-sm border border-teal-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      disabled={isBulkUpdating}
-                    >
-                      <option value="none">Ação de arquivamento (opcional)</option>
-                      <option value="archive">Arquivar selecionados</option>
-                      <option value="unarchive">Reativar selecionados</option>
-                    </select>
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={Archive}
+                        value={bulkArchiveAction}
+                        onChange={(value) =>
+                          setBulkArchiveAction(value as typeof bulkArchiveAction)
+                        }
+                        placeholder="Ação de arquivamento"
+                        includePlaceholderOption={false}
+                        disabled={isBulkUpdating}
+                        options={[
+                          { value: 'none', label: 'Ação de arquivamento (opcional)' },
+                          { value: 'archive', label: 'Arquivar selecionados' },
+                          { value: 'unarchive', label: 'Reativar selecionados' },
+                        ]}
+                      />
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"

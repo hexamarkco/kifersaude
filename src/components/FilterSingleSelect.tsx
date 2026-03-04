@@ -14,6 +14,7 @@ type FilterSingleSelectProps = {
   value: string;
   onChange: (next: string) => void;
   includePlaceholderOption?: boolean;
+  disabled?: boolean;
 };
 
 export default function FilterSingleSelect({
@@ -23,6 +24,7 @@ export default function FilterSingleSelect({
   value,
   onChange,
   includePlaceholderOption = true,
+  disabled = false,
 }: FilterSingleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,12 @@ export default function FilterSingleSelect({
     };
   }, []);
 
+  useEffect(() => {
+    if (disabled && isOpen) {
+      setIsOpen(false);
+    }
+  }, [disabled, isOpen]);
+
   const optionsWithDefault = useMemo(() => {
     if (!includePlaceholderOption) {
       return options;
@@ -72,10 +80,14 @@ export default function FilterSingleSelect({
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className="relative h-11 w-full rounded-lg border border-slate-300 pl-10 pr-10 text-left focus:border-transparent focus:ring-2 focus:ring-teal-500"
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen((current) => !current);
+        }}
+        className="panel-glass-panel panel-interactive-glass relative h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-10 text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        disabled={disabled}
       >
         <Icon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
         <span className={`block truncate text-sm ${value ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
@@ -89,7 +101,7 @@ export default function FilterSingleSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg" role="listbox">
+        <div className="panel-glass-panel absolute left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg" role="listbox">
           {optionsWithDefault.map((option) => {
             const isSelected = option.value === value;
 
@@ -98,6 +110,7 @@ export default function FilterSingleSelect({
                 key={`${option.value}-${option.label}`}
                 type="button"
                 onClick={() => {
+                  if (disabled) return;
                   onChange(option.value);
                   setIsOpen(false);
                 }}

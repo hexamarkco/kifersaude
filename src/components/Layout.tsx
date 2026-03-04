@@ -1063,7 +1063,7 @@ export default function Layout({
             className={
               activeTab === 'whatsapp'
                 ? 'w-full h-[calc(100vh)] min-h-0'
-                : 'w-full px-4 py-8 sm:px-6 lg:px-8'
+                : 'w-full py-8 pl-2 pr-4 sm:pl-3 sm:pr-6 lg:pl-4 lg:pr-8'
             }
           >
             {children}

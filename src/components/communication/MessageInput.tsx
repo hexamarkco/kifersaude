@@ -19,6 +19,8 @@ interface MessageInputProps {
   chatId: string;
   onMessageSent?: (message?: SentMessagePayload) => void;
   contacts?: Array<{ id: string; name: string; saved: boolean; pushname?: string }>;
+  templateVariables?: Record<string, string>;
+  templateVariableShortcuts?: Array<{ key: string; label: string }>;
   replyToMessage?: {
     id: string;
     body: string;
@@ -32,7 +34,17 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
 }
 
-export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMessage, onCancelReply, editMessage, onCancelEdit }: MessageInputProps) {
+export function MessageInput({
+  chatId,
+  onMessageSent,
+  contacts = [],
+  templateVariables = {},
+  templateVariableShortcuts = [],
+  replyToMessage,
+  onCancelReply,
+  editMessage,
+  onCancelEdit,
+}: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
@@ -87,6 +99,51 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     { value: 'persuasivo', label: 'Persuasivo' },
   ];
 
+  const normalizedTemplateVariables = useMemo(() => {
+    const normalized = new Map<string, string>();
+    Object.entries(templateVariables).forEach(([key, value]) => {
+      if (typeof value !== 'string') return;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      normalized.set(key.toLowerCase(), trimmed);
+    });
+    return normalized;
+  }, [templateVariables]);
+
+  const getRuntimeTemplateVariable = (key: string) => {
+    const normalizedKey = key.toLowerCase();
+    if (normalizedTemplateVariables.has(normalizedKey)) {
+      return normalizedTemplateVariables.get(normalizedKey) || '';
+    }
+
+    const now = new Date();
+    if (normalizedKey === 'data_hoje') {
+      return now.toLocaleDateString('pt-BR');
+    }
+
+    if (normalizedKey === 'hora_agora') {
+      return now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return '';
+  };
+
+  const applyTemplateVariables = (text: string) =>
+    text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (full, token) => {
+      const resolved = getRuntimeTemplateVariable(token);
+      return resolved || full;
+    });
+
+  const insertTemplateTokenOnDraft = (key: string) => {
+    const token = `{{${key}}}`;
+    setMessage((prev) => `${prev}${token}`);
+  };
+
+  const insertTemplateTokenOnQuickReply = (key: string) => {
+    const token = `{{${key}}}`;
+    setQuickReplyMessage((prev) => `${prev}${token}`);
+  };
+
   const filteredContacts = useMemo(() => {
     const query = contactSearch.trim().toLowerCase();
     const source = contacts.filter((contact) => contact.saved);
@@ -131,10 +188,12 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   );
 
   const sendPlainTextMessage = async (text: string) => {
+    const resolvedText = applyTemplateVariables(text).trim() || text.trim();
+
     const response = await sendWhatsAppMessage({
       chatId,
       contentType: 'string',
-      content: text,
+      content: resolvedText,
       quotedMessageId: replyToMessage?.id,
     });
 
@@ -145,7 +204,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
       from_number: null,
       to_number: normalizedChatId,
       type: 'text',
-      body: text,
+      body: resolvedText,
       has_media: false,
       timestamp: new Date().toISOString(),
       direction: 'outbound',
@@ -160,7 +219,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
     const textPayload: SentMessagePayload = {
       id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       chat_id: chatId,
-      body: text,
+      body: resolvedText,
       type: 'text',
       has_media: false,
       timestamp: sentAt,
@@ -215,13 +274,16 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   };
 
   const handleSendMessage = async () => {
-    if ((!message.trim() && !selectedFile) || isSending) return;
+    const rawMessage = message.trim();
+    const resolvedMessage = applyTemplateVariables(rawMessage);
+
+    if ((!rawMessage && !selectedFile) || isSending) return;
 
     if (!editMessage && !selectedFile) {
-      const urlMatch = message.match(/https?:\/\/\S+/i);
+      const urlMatch = resolvedMessage.match(/https?:\/\/\S+/i);
       if (urlMatch && !showLinkPreviewModal) {
         const url = urlMatch[0];
-        setPendingLinkMessage(message.trim());
+        setPendingLinkMessage(resolvedMessage);
         setLinkPreviewCanonical(url);
         setLinkPreviewTitle(url.replace(/^https?:\/\//i, '').split('/')[0]);
         setShowLinkPreviewModal(true);
@@ -236,7 +298,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         await sendWhatsAppMessage({
           chatId,
           contentType: 'string',
-          content: message.trim(),
+          content: resolvedMessage,
           editMessageId: editMessage.id,
         });
 
@@ -245,12 +307,12 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         if (onMessageSent) onMessageSent();
       } else if (selectedFile) {
         const response = await sendMediaMessage(chatId, selectedFile, {
-          caption: message.trim() || undefined,
+          caption: resolvedMessage || undefined,
           quotedMessageId: replyToMessage?.id,
         });
 
         const sentAt = new Date().toISOString();
-        const caption = message.trim();
+        const caption = resolvedMessage;
         const fallbackBody = selectedFile.type.startsWith('audio/')
           ? '[Áudio]'
           : selectedFile.type.startsWith('image/')
@@ -273,7 +335,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
         setMessage('');
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(mediaPayload);
-      } else if (message.trim()) {
+      } else if (rawMessage) {
         if (showLinkPreviewModal && pendingLinkMessage) {
           if (!linkPreviewTitle.trim()) {
             alert('Informe um titulo para o preview do link.');
@@ -334,7 +396,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
           if (onCancelReply) onCancelReply();
           if (onMessageSent) onMessageSent(textPayload);
         } else {
-          await sendPlainTextMessage(message.trim());
+          await sendPlainTextMessage(resolvedMessage || rawMessage);
           setMessage('');
           if (onCancelReply) onCancelReply();
         }
@@ -588,7 +650,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
   };
 
   const handleUseQuickReply = (reply: { message: string }) => {
-    setMessage(reply.message);
+    setMessage(applyTemplateVariables(reply.message));
     setShowQuickReplies(false);
     setQuickReplySearch('');
   };
@@ -787,31 +849,57 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
               />
             </div>
 
+            {templateVariableShortcuts.length > 0 && (
+              <div className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-2">
+                <div className="text-[11px] font-semibold text-emerald-700">Variaveis de template</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {templateVariableShortcuts.map((shortcut) => (
+                    <button
+                      key={`qr-variable-${shortcut.key}`}
+                      type="button"
+                      className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[11px] text-emerald-700 hover:bg-emerald-100"
+                      onClick={() => insertTemplateTokenOnQuickReply(shortcut.key)}
+                    >
+                      {shortcut.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="max-h-40 overflow-y-auto border rounded-md">
               {filteredQuickReplies.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-gray-500">Nenhuma resposta rapida encontrada.</div>
               ) : (
-                filteredQuickReplies.map((reply) => (
-                  <div key={reply.id} className="px-3 py-2 border-b last:border-b-0">
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        className="text-sm font-medium text-slate-800 text-left"
-                        onClick={() => handleUseQuickReply(reply)}
-                      >
-                        {reply.title}
-                      </button>
-                      <button
-                        type="button"
-                        className="text-xs text-red-500 hover:text-red-600"
-                        onClick={() => handleRemoveQuickReply(reply.id)}
-                      >
-                        Remover
-                      </button>
+                filteredQuickReplies.map((reply) => {
+                  const resolvedPreview = applyTemplateVariables(reply.message);
+                  const hasDynamicPreview = resolvedPreview !== reply.message;
+
+                  return (
+                    <div key={reply.id} className="px-3 py-2 border-b last:border-b-0">
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-slate-800 text-left"
+                          onClick={() => handleUseQuickReply(reply)}
+                        >
+                          {reply.title}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-red-500 hover:text-red-600"
+                          onClick={() => handleRemoveQuickReply(reply.id)}
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1 whitespace-pre-wrap">{reply.message}</div>
+                      {hasDynamicPreview && (
+                        <div className="text-[11px] text-emerald-700 mt-1 whitespace-pre-wrap">Preview: {resolvedPreview}</div>
+                      )}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">{reply.message}</div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -836,7 +924,7 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
               <textarea
                 value={quickReplyMessage}
                 onChange={(e) => setQuickReplyMessage(e.target.value)}
-                placeholder="Mensagem"
+                placeholder="Mensagem (use {{nome}}, {{telefone}}, etc.)"
                 className="w-full h-20 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               <button
@@ -1131,6 +1219,23 @@ export function MessageInput({ chatId, onMessageSent, contacts = [], replyToMess
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {templateVariableShortcuts.length > 0 && (
+        <div className="px-3 pt-2 flex flex-wrap items-center gap-1.5 border-b border-slate-100 bg-slate-50">
+          <span className="text-[11px] text-slate-500">Variaveis:</span>
+          {templateVariableShortcuts.map((shortcut) => (
+            <button
+              key={`draft-variable-${shortcut.key}`}
+              type="button"
+              className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+              onClick={() => insertTemplateTokenOnDraft(shortcut.key)}
+              disabled={isSending || isRecording}
+            >
+              {shortcut.label}
+            </button>
+          ))}
         </div>
       )}
 

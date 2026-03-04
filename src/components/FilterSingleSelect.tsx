@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 type Option = {
   value: string;
@@ -36,6 +37,7 @@ export default function FilterSingleSelect({
   const listboxId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const calcPos = () => {
@@ -56,8 +58,7 @@ export default function FilterSingleSelect({
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       if (containerRef.current?.contains(target)) return;
-      const dropdown = document.getElementById(listboxId);
-      if (dropdown?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
       setIsOpen(false);
     };
 
@@ -189,10 +190,11 @@ export default function FilterSingleSelect({
         />
       </button>
 
-      {isOpen && pos && (
+      {isOpen && pos && typeof document !== 'undefined' && createPortal(
         <div
           id={listboxId}
-          className="panel-glass-panel fixed z-[200] max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          ref={dropdownRef}
+          className="panel-glass-panel fixed z-[70] max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
           role="listbox"
         >
@@ -223,7 +225,8 @@ export default function FilterSingleSelect({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

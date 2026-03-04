@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 type Option = {
   value: string;
@@ -105,11 +106,11 @@ export default function FilterMultiSelect({
         />
       </button>
 
-      {isOpen && pos && (
+      {isOpen && pos && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
           role="listbox"
-          className="panel-glass-panel fixed z-[200] max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          className="panel-glass-panel fixed z-[70] max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <button
@@ -144,7 +145,8 @@ export default function FilterMultiSelect({
           {options.length === 0 && (
             <div className="px-3 py-2 text-sm text-slate-500">Nenhuma opção disponível</div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

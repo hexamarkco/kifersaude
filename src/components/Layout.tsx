@@ -114,6 +114,7 @@ export default function Layout({
     top: number;
     side: 'right' | 'left';
     caretTop: number;
+    maxHeight: number;
   } | null>(null);
   const { motionEnabled, enterDuration, sectionStagger, ease } = usePanelMotion();
   const currentRole = role;
@@ -404,15 +405,13 @@ export default function Layout({
             side = 'left';
           }
 
-          const top = Math.max(
-            viewportPadding,
-            Math.min(triggerRect.top, window.innerHeight - dropdownHeight - viewportPadding),
-          );
+          const top = Math.max(viewportPadding, triggerRect.top);
+          const maxHeight = Math.max(120, window.innerHeight - top - viewportPadding);
 
           const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-          const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
+          const caretTop = Math.max(12, Math.min(triggerCenterY - top, Math.min(dropdownHeight, maxHeight) - 12));
 
-          setCollapsedDropdownPosition({ left, top, side, caretTop });
+          setCollapsedDropdownPosition({ left, top, side, caretTop, maxHeight });
         }
       } else {
         setExpandedParent(expandedParent === tab.id ? null : tab.id);
@@ -462,15 +461,13 @@ export default function Layout({
       side = 'left';
     }
 
-    const top = Math.max(
-      viewportPadding,
-      Math.min(triggerRect.top, window.innerHeight - dropdownHeight - viewportPadding),
-    );
+    const top = Math.max(viewportPadding, triggerRect.top);
+    const maxHeight = Math.max(120, window.innerHeight - top - viewportPadding);
 
     const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-    const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
+    const caretTop = Math.max(12, Math.min(triggerCenterY - top, Math.min(dropdownHeight, maxHeight) - 12));
 
-    setCollapsedDropdownPosition({ left, top, side, caretTop });
+    setCollapsedDropdownPosition({ left, top, side, caretTop, maxHeight });
   }, [activeDropdownTab, isMenuCollapsed]);
 
   useEffect(() => {
@@ -1119,10 +1116,11 @@ export default function Layout({
         <div
           id="collapsed-menu-dropdown"
           ref={collapsedDropdownRef}
-          className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xl"
+          className="panel-glass-panel fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xl"
           style={{
             left: collapsedDropdownPosition.left,
             top: collapsedDropdownPosition.top,
+            maxHeight: collapsedDropdownPosition.maxHeight,
           }}
         >
           <div

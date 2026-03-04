@@ -123,7 +123,7 @@ const faqCategories: FaqCategory[] = [
           'Nem sempre. Em geral, a operadora sinaliza pendencia para ajuste. Acompanhamos esse retorno para evitar retrabalho.',
       },
       {
-        question: 'Vocês ajudam depois da contratacao?',
+        question: 'Voces ajudam depois da contratacao?',
         answer:
           'Sim. O pos-venda faz parte do nosso processo: orientacao de uso, duvidas operacionais e apoio em ajustes cadastrais.',
       },

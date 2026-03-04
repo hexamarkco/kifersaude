@@ -44,7 +44,7 @@ const processSteps = [
     step: '06',
     title: 'Suporte de ativacao e pos-venda',
     description:
-      'Após a aprovacao, orientamos os primeiros passos de uso e permanecemos disponiveis para ajustes operacionais.',
+      'Apos a aprovacao, orientamos os primeiros passos de uso e permanecemos disponiveis para ajustes operacionais.',
     output: 'Cliente orientado para usar o plano com seguranca desde o primeiro dia.',
   },
 ];

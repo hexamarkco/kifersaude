@@ -195,7 +195,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </div>
 
         <div className="border-t border-slate-100 px-4 py-5 text-center text-xs text-slate-500">
-          <p>© 2026 Kifer Saude. Todos os direitos reservados.</p>
+          <p>(c) 2026 Kifer Saude. Todos os direitos reservados.</p>
         </div>
       </footer>
 

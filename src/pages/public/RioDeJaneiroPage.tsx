@@ -64,7 +64,7 @@ const faq = [
     answer: 'Depende. Sem checagem de rede e uso real, o menor preco pode gerar custo maior e baixa aderencia no cotidiano.',
   },
   {
-    question: 'Vocês ajudam a comparar por bairro?',
+    question: 'Voces ajudam a comparar por bairro?',
     answer: 'Sim. Organizamos comparativo com foco em deslocamento real e pontos de atendimento relevantes para sua rotina.',
   },
 ];

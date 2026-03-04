@@ -16,7 +16,7 @@ const sections = [
   {
     title: '3. Finalidade do tratamento',
     content:
-      'Os dados sao utilizados para responder contato, elaborar comparativos de plano, conduzir proposta, apoiar o pos-venda e melhorar a experiencia de atendimento. Nao utilizamos dados para finalidades incompatíveis com a natureza da relacao comercial.',
+      'Os dados sao utilizados para responder contato, elaborar comparativos de plano, conduzir proposta, apoiar o pos-venda e melhorar a experiencia de atendimento. Nao utilizamos dados para finalidades incompativeis com a natureza da relacao comercial.',
   },
   {
     title: '4. Compartilhamento de dados',
@@ -26,7 +26,7 @@ const sections = [
   {
     title: '5. Seguranca e armazenamento',
     content:
-      'Adotamos medidas tecnicas e organizacionais para proteger dados contra acesso nao autorizado, alteracao indevida e perda acidental. O periodo de armazenamento considera obrigacoes legais, regulatórias e necessidades operacionais legitimas.',
+      'Adotamos medidas tecnicas e organizacionais para proteger dados contra acesso nao autorizado, alteracao indevida e perda acidental. O periodo de armazenamento considera obrigacoes legais, regulatorias e necessidades operacionais legitimas.',
   },
   {
     title: '6. Direitos do titular',
@@ -76,7 +76,7 @@ export default function PoliticaPrivacidadePage() {
             </article>
           ))}
           <p className="text-xs text-slate-500">
-            Ultima atualizacao: marco de 2026. Este documento pode ser revisado para refletir atualizacoes regulatórias e
+            Ultima atualizacao: marco de 2026. Este documento pode ser revisado para refletir atualizacoes regulatorias e
             melhorias de processo.
           </p>
         </div>

@@ -46,7 +46,7 @@ const testimonials = [
       'Recebeu analise por fase de vida e contratou plano aderente ao uso esperado dos proximos anos.',
   },
   {
-    name: 'André L.',
+    name: 'Andre L.',
     profile: 'Autonomo, uso frequente de exames',
     context:
       'Queria previsibilidade de custo e atendimento em rede especifica para acompanhamento recorrente.',

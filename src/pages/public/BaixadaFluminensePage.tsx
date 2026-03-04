@@ -41,7 +41,7 @@ const approach = [
   },
   {
     title: 'Suporte no pos-venda',
-    text: 'Acompanhamos ajustes operacionais para garantir que o plano permaneça aderente ao cotidiano.',
+    text: 'Acompanhamos ajustes operacionais para garantir que o plano permaneca aderente ao cotidiano.',
     Icon: Users,
   },
 ];

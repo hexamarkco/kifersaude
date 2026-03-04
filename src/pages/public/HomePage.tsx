@@ -13,6 +13,7 @@ import {
   Stethoscope,
   Users,
 } from 'lucide-react';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
 import PublicLayout from '../../components/public/PublicLayout';
 import PublicSeo from '../../components/public/PublicSeo';
 
@@ -131,6 +132,7 @@ export default function HomePage() {
         canonicalPath="/"
         breadcrumbs={[{ name: 'Inicio', path: '/' }]}
       />
+      <PublicBreadcrumbs items={[{ name: 'Inicio', path: '/' }]} />
 
       <section className="relative overflow-hidden px-4 pb-20 pt-12 sm:px-6 lg:px-8">
         <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-orange-200/40 blur-3xl" />

@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
     'Content-Type, Authorization, X-Client-Info, Apikey, X-Whapi-Event, X-Webhook-Secret, X-Webhook-Signature, X-Whapi-Signature',
 };
@@ -801,11 +801,11 @@ async function updateMessageAck(messageId: string, ackStatus: number) {
 
 function getAckLabel(ack: number): string {
   const labels: Record<number, string> = {
-    0: 'enviando',
-    1: 'enviado',
-    2: 'recebido',
-    3: 'lido',
-    4: 'ouvido',
+    0: 'falhou',
+    1: 'pendente',
+    2: 'enviado',
+    3: 'entregue',
+    4: 'lido',
   };
   return labels[ack] || 'desconhecido';
 }
@@ -819,7 +819,7 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
 
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('body, original_body, edit_count, payload')
+    .select('body, original_body, edit_count, edited_at, payload')
     .eq('id', message.id)
     .maybeSingle();
 
@@ -836,7 +836,18 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
 
   const oldBody = existingMessage.body;
   const newBody = normalized.body;
-  const editCount = (existingMessage.edit_count || 0) + 1;
+  const incomingEditedAtIso = message.edited_at ? toIsoString(message.edited_at) : null;
+  const hasBodyChanged = (oldBody ?? '') !== (newBody ?? '');
+  const hasEditedAtChanged = Boolean(incomingEditedAtIso && incomingEditedAtIso !== existingMessage.edited_at);
+
+  if (!hasBodyChanged && !hasEditedAtChanged) {
+    console.log('whatsapp-webhook: atualização de edição ignorada (idempotente)', {
+      messageId: message.id,
+    });
+    return;
+  }
+
+  const editCount = hasBodyChanged ? (existingMessage.edit_count || 0) + 1 : existingMessage.edit_count || 0;
   const originalBody = existingMessage.original_body || existingMessage.body;
 
   const { error: updateError } = await supabase
@@ -845,7 +856,7 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
       body: newBody,
       original_body: originalBody,
       edit_count: editCount,
-      edited_at: message.edited_at ? toIsoString(message.edited_at) : new Date().toISOString(),
+      edited_at: incomingEditedAtIso || new Date().toISOString(),
       payload: normalized.payload,
     })
     .eq('id', message.id);
@@ -864,15 +875,18 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
 }
 
 async function processMessageDelete(message: WhapiMessage) {
+  const targetMessageId = message.action?.target || message.id;
+
   console.log('whatsapp-webhook: processando deleção de mensagem', {
-    messageId: message.id,
+    messageId: targetMessageId,
+    eventId: message.id,
     chatId: message.chat_id,
   });
 
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('body, payload')
-    .eq('id', message.id)
+    .select('payload')
+    .eq('id', targetMessageId)
     .maybeSingle();
 
   if (fetchError) {
@@ -881,7 +895,10 @@ async function processMessageDelete(message: WhapiMessage) {
   }
 
   if (!existingMessage) {
-    console.log('whatsapp-webhook: mensagem não encontrada para deleção', { messageId: message.id });
+    console.log('whatsapp-webhook: mensagem não encontrada para deleção', {
+      messageId: targetMessageId,
+      eventId: message.id,
+    });
     return;
   }
 
@@ -893,9 +910,12 @@ async function processMessageDelete(message: WhapiMessage) {
       is_deleted: true,
       deleted_at: new Date().toISOString(),
       deleted_by: deletedBy,
-      payload: JSON.parse(JSON.stringify(message)),
+      payload: {
+        ...(existingMessage?.payload && typeof existingMessage.payload === 'object' ? existingMessage.payload : {}),
+        delete_event: JSON.parse(JSON.stringify(message)),
+      },
     })
-    .eq('id', message.id);
+    .eq('id', targetMessageId);
 
   if (updateError) {
     console.error('whatsapp-webhook: erro ao marcar mensagem como deletada', updateError);
@@ -903,7 +923,8 @@ async function processMessageDelete(message: WhapiMessage) {
   }
 
   console.log('whatsapp-webhook: mensagem marcada como deletada', {
-    messageId: message.id,
+    messageId: targetMessageId,
+    eventId: message.id,
     deletedBy,
   });
 }
@@ -1156,7 +1177,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== 'POST' && req.method !== 'PATCH') {
+  if (req.method !== 'POST' && req.method !== 'PATCH' && req.method !== 'PUT' && req.method !== 'DELETE') {
     return respond({ error: 'Method not allowed' }, { status: 405 });
   }
 

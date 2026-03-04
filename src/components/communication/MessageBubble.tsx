@@ -83,16 +83,17 @@ export function MessageBubble({
 
     switch (ackStatus) {
       case 0:
-        return <Clock className="w-3 h-3 text-gray-400" />;
+        return <AlertCircle className="w-3 h-3 text-red-500" />;
       case 1:
-        return <Check className="w-3 h-3 text-gray-400" />;
+        return <Clock className="w-3 h-3 text-gray-400" />;
       case 2:
-        return <CheckCheck className="w-3 h-3 text-gray-400" />;
+        return <Check className="w-3 h-3 text-gray-400" />;
       case 3:
+        return <CheckCheck className="w-3 h-3 text-gray-400" />;
       case 4:
         return <CheckCheck className="w-3 h-3 text-blue-500" />;
       default:
-        return <AlertCircle className="w-3 h-3 text-red-500" />;
+        return <Check className="w-3 h-3 text-gray-400" />;
     }
   };
 
@@ -101,15 +102,15 @@ export function MessageBubble({
 
     switch (ackStatus) {
       case 0:
-        return 'Enviando';
+        return 'Falhou';
       case 1:
-        return 'Enviado';
+        return 'Pendente';
       case 2:
-        return 'Entregue';
+        return 'Enviado';
       case 3:
-        return 'Lido';
+        return 'Entregue';
       case 4:
-        return 'Ouvido';
+        return 'Lido';
       default:
         return '';
     }

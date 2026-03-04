@@ -13,8 +13,8 @@ https://xhtwspmpzvmmmzntkgre.supabase.co/functions/v1/leads-api
 Todas as requisições devem incluir os seguintes headers de autenticação:
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodHdzcG1wenZtbW16bnRrZ3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNzY1ODQsImV4cCI6MjA3NTg1MjU4NH0.H4WH2H25eDCYMKybKoYWXabfjUcMFqWjLaGn8mFRgi8
-apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodHdzcG1wenZtbW16bnRrZ3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNzY1ODQsImV4cCI6MjA3NTg1MjU4NH0.H4WH2H25eDCYMKybKoYWXabfjUcMFqWjLaGn8mFRgi8
+Authorization: Bearer <SUA_SUPABASE_ANON_KEY>
+apikey: <SUA_SUPABASE_ANON_KEY>
 ```
 
 **Importante:** Ambos os headers são obrigatórios para autenticação nas Edge Functions do Supabase.

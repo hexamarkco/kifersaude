@@ -26,7 +26,10 @@ const navigationItems: NavigationItem[] = [
 
 const usefulLinks = [
   { label: 'Solicitar cotacao', href: '/cotacao' },
-  { label: 'Pessoa fisica e familia', href: '/planos' },
+  { label: 'Plano pessoa fisica', href: '/planos/pessoa-fisica' },
+  { label: 'Plano familiar', href: '/planos/familia' },
+  { label: 'Plano MEI/CNPJ', href: '/planos/mei-cnpj' },
+  { label: 'Portabilidade', href: '/portabilidade' },
   { label: 'Operadoras parceiras', href: '/operadoras' },
   { label: 'Perguntas frequentes', href: '/faq' },
   { label: 'Politica de privacidade', href: '/politica-de-privacidade' },

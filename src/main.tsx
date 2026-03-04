@@ -7,7 +7,12 @@ import HomePage from './pages/public/HomePage';
 import SobrePage from './pages/public/SobrePage';
 import ComoFuncionaPage from './pages/public/ComoFuncionaPage';
 import PlanosPage from './pages/public/PlanosPage';
+import PlanosPessoaFisicaPage from './pages/public/PlanosPessoaFisicaPage';
+import PlanosFamiliaPage from './pages/public/PlanosFamiliaPage';
+import PlanosMeiCnpjPage from './pages/public/PlanosMeiCnpjPage';
+import PlanosSeniorPage from './pages/public/PlanosSeniorPage';
 import OperadorasPage from './pages/public/OperadorasPage';
+import PortabilidadePage from './pages/public/PortabilidadePage';
 import DepoimentosPage from './pages/public/DepoimentosPage';
 import FaqPage from './pages/public/FaqPage';
 import ContatoPage from './pages/public/ContatoPage';
@@ -47,7 +52,12 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/sobre" element={<SobrePage />} />
           <Route path="/como-funciona" element={<ComoFuncionaPage />} />
           <Route path="/planos" element={<PlanosPage />} />
+          <Route path="/planos/pessoa-fisica" element={<PlanosPessoaFisicaPage />} />
+          <Route path="/planos/familia" element={<PlanosFamiliaPage />} />
+          <Route path="/planos/mei-cnpj" element={<PlanosMeiCnpjPage />} />
+          <Route path="/planos/senior" element={<PlanosSeniorPage />} />
           <Route path="/operadoras" element={<OperadorasPage />} />
+          <Route path="/portabilidade" element={<PortabilidadePage />} />
           <Route path="/depoimentos" element={<DepoimentosPage />} />
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/contato" element={<ContatoPage />} />

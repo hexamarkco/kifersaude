@@ -91,6 +91,34 @@ const commonMistakes = [
   'Nao organizar documentacao previamente e perder prazo de aprovacao por retrabalho.',
 ];
 
+const deepDivePages = [
+  {
+    title: 'Guia pessoa fisica',
+    description: 'Analise de rede, custo total e carencia para contratacao individual.',
+    to: '/planos/pessoa-fisica',
+  },
+  {
+    title: 'Guia familiar',
+    description: 'Composicao de vidas, cobertura da rotina e planejamento financeiro da familia.',
+    to: '/planos/familia',
+  },
+  {
+    title: 'Guia MEI/CNPJ',
+    description: 'Elegibilidade empresarial, governanca documental e estrategia de beneficio.',
+    to: '/planos/mei-cnpj',
+  },
+  {
+    title: 'Guia senior',
+    description: 'Escolha com foco em previsibilidade, uso recorrente e suporte continuo.',
+    to: '/planos/senior',
+  },
+  {
+    title: 'Portabilidade e migracao',
+    description: 'Passo a passo para trocar de plano com menos risco e mais clareza.',
+    to: '/portabilidade',
+  },
+];
+
 export default function PlanosPage() {
   return (
     <PublicLayout>
@@ -169,6 +197,32 @@ export default function PlanosPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-600">Paginas de aprofundamento</p>
+            <h2 className="mt-3 text-3xl font-black text-slate-900 md:text-4xl">Estude cada perfil com mais profundidade</h2>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {deepDivePages.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="group rounded-2xl border border-orange-100 bg-orange-50/40 p-6 transition hover:border-orange-300 hover:bg-orange-50"
+              >
+                <h3 className="text-xl font-black text-slate-900">{item.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                <span className="mt-5 inline-flex items-center text-xs font-black uppercase tracking-[0.12em] text-orange-700">
+                  Acessar guia
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

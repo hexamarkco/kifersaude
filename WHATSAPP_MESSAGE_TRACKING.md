@@ -124,11 +124,11 @@ Integração completa:
 Para capturar todos os eventos, configure no painel da Whapi Cloud:
 
 1. Acesse: https://gate.whapi.cloud/
-2. Token: `7TL1JVJpv5P4XowMZueaQdV6Xf7mriQd`
+2. Token: `<SEU_TOKEN_DA_WHAPI>`
 3. Configure os eventos:
-   - ✅ messages.create (POST)
-   - ✅ messages.update (PUT/PATCH) - **IMPORTANTE para edições**
-   - ✅ messages.delete (DELETE) - **IMPORTANTE para deleções**
+    - ✅ messages.create (POST)
+    - ✅ messages.update (PUT/PATCH) - **IMPORTANTE para edições**
+    - ✅ messages.delete (DELETE) - **IMPORTANTE para deleções**
    - ✅ statuses.update
    - ✅ groups.*
 

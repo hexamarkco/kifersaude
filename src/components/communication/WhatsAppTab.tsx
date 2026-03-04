@@ -607,53 +607,86 @@ export default function WhatsAppTab() {
 
     const messagesGlobalSubscription = supabase
       .channel('whatsapp_messages_global')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
-        loadChats();
-        const message = payload.new as WhatsAppMessage;
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
+        const eventType = payload.eventType;
+        const message = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
+        if (!message?.id || !message.chat_id) return;
+
+        if (eventType === 'INSERT') {
+          loadChats();
+        }
+
         const chatToAutoUnarchive = chatsRef.current.find((chat) => {
           const variantsForChat = getChatIdVariants(chat);
           return variantsForChat.includes(message.chat_id);
         });
-        maybeNotifyInboundMessage(message, chatToAutoUnarchive);
-        if (chatToAutoUnarchive?.archived && !isChatMuted(chatToAutoUnarchive)) {
+
+        if (eventType === 'INSERT') {
+          maybeNotifyInboundMessage(message, chatToAutoUnarchive);
+        }
+
+        if (eventType === 'INSERT' && chatToAutoUnarchive?.archived && !isChatMuted(chatToAutoUnarchive)) {
           updateChatArchive(chatToAutoUnarchive.id, false);
         }
+
         const currentChat = selectedChatRef.current;
         if (currentChat) {
           const variants = getChatIdVariants(currentChat);
           if (variants.includes(message.chat_id)) {
-            let didAppend = false;
-            setMessages((prev) => {
-              if (prev.some((item) => item.id === message.id)) return prev;
-              const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
-              const now = Date.now();
-              if (messageTime && now - messageTime > 5 * 60 * 1000) {
-                return prev;
-              }
-              const latestTime = prev.reduce((max, item) => {
-                const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
-                return Math.max(max, time);
-              }, 0);
+            if (eventType === 'UPDATE') {
+              setMessages((prev) => {
+                const targetIndex = prev.findIndex((item) => item.id === message.id);
+                if (targetIndex === -1) return prev;
+                const next = [...prev];
+                next[targetIndex] = { ...next[targetIndex], ...message };
+                return next.sort(sortMessagesChronologically);
+              });
+            }
 
-              if (messageTime && latestTime && messageTime < latestTime) {
-                return prev;
-              }
+            if (eventType === 'DELETE') {
+              setMessages((prev) => prev.filter((item) => item.id !== message.id));
+            }
 
-              didAppend = true;
-              const merged = [...prev, message];
-              return merged.sort(sortMessagesChronologically);
-            });
-            if (didAppend) {
-              const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
-              if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
-                updateChatArchive(chatToUpdate.id, false);
-              }
-              scrollToBottom();
-              if (message.direction === 'inbound' && user) {
-                markMessagesRead([message]);
+            if (eventType === 'INSERT') {
+              let didAppend = false;
+              setMessages((prev) => {
+                if (prev.some((item) => item.id === message.id)) return prev;
+                const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
+                const now = Date.now();
+                if (messageTime && now - messageTime > 5 * 60 * 1000) {
+                  return prev;
+                }
+                const latestTime = prev.reduce((max, item) => {
+                  const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+                  return Math.max(max, time);
+                }, 0);
+
+                if (messageTime && latestTime && messageTime < latestTime) {
+                  return prev;
+                }
+
+                didAppend = true;
+                const merged = [...prev, message];
+                return merged.sort(sortMessagesChronologically);
+              });
+
+              if (didAppend) {
+                const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
+                if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
+                  updateChatArchive(chatToUpdate.id, false);
+                }
+                scrollToBottom();
+                if (message.direction === 'inbound' && user) {
+                  markMessagesRead([message]);
+                }
               }
             }
           }
+        }
+
+        if (eventType === 'DELETE') {
+          loadChats();
+          return;
         }
 
         setChats((prev) => {
@@ -664,7 +697,7 @@ export default function WhatsAppTab() {
             const messageTime = messageTimestamp ? new Date(messageTimestamp).getTime() : 0;
             const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
             if (messageTime && currentTime && messageTime < currentTime) return chat;
-            const shouldUnarchive = chat.archived && !isChatMuted(chat);
+            const shouldUnarchive = eventType === 'INSERT' && chat.archived && !isChatMuted(chat);
             const preview = getMessagePreview(message);
             return {
               ...chat,
@@ -1151,7 +1184,11 @@ export default function WhatsAppTab() {
     return cleaned || phone;
   };
 
-  const getMessagePreview = (message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload'>) => {
+  const getMessagePreview = (
+    message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
+  ) => {
+    if (message.is_deleted) return 'Mensagem apagada';
+
     const body = message.body?.trim();
     if (body) return body;
 

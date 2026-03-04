@@ -380,10 +380,40 @@ export default function Layout({
     }
   }, []);
 
-  const handleTabClick = (tab: TabConfig) => {
+  const handleTabClick = (tab: TabConfig, triggerElement?: HTMLButtonElement | null) => {
     if (tab.children && tab.children.length > 0) {
       if (isMenuCollapsed) {
-        setActiveDropdownTab(activeDropdownTab === tab.id ? null : tab.id);
+        if (activeDropdownTab === tab.id) {
+          setActiveDropdownTab(null);
+          setCollapsedDropdownPosition(null);
+          return;
+        }
+
+        setActiveDropdownTab(tab.id);
+        if (triggerElement) {
+          const triggerRect = triggerElement.getBoundingClientRect();
+          const viewportPadding = 8;
+          const sideOffset = 8;
+          const dropdownWidth = 224;
+          const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 260;
+
+          let left = triggerRect.right + sideOffset;
+          let side: 'right' | 'left' = 'right';
+          if (left + dropdownWidth > window.innerWidth - viewportPadding) {
+            left = Math.max(viewportPadding, triggerRect.left - dropdownWidth - sideOffset);
+            side = 'left';
+          }
+
+          let top = triggerRect.top;
+          if (top + dropdownHeight > window.innerHeight - viewportPadding) {
+            top = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
+          }
+
+          const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+          const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
+
+          setCollapsedDropdownPosition({ left, top, side, caretTop });
+        }
       } else {
         setExpandedParent(expandedParent === tab.id ? null : tab.id);
       }
@@ -509,8 +539,7 @@ export default function Layout({
       if (button && button.contains(target)) {
         return;
       }
-      const dropdown = document.getElementById(`dropdown-${activeDropdownTab}`);
-      if (dropdown && dropdown.contains(target)) {
+      if (collapsedDropdownRef.current && collapsedDropdownRef.current.contains(target)) {
         return;
       }
       setActiveDropdownTab(null);
@@ -721,7 +750,7 @@ export default function Layout({
       return;
     }
 
-    const dropdown = document.getElementById(`dropdown-${activeDropdownTab}`);
+    const dropdown = collapsedDropdownRef.current;
     if (!dropdown) {
       return;
     }
@@ -766,7 +795,7 @@ export default function Layout({
         <div key={tab.id} className="flex flex-col relative">
           <button
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
-            onClick={() => handleTabClick(tab)}
+            onClick={(event) => handleTabClick(tab, event.currentTarget)}
             data-sidebar-item
             className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 ${
               isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
@@ -809,62 +838,6 @@ export default function Layout({
               </span>
             )}
           </button>
-
-          {isExpanded && isMenuCollapsed && collapsedDropdownPosition && (
-            <div
-              id={`dropdown-${tab.id}`}
-              ref={collapsedDropdownRef}
-              className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-2xl"
-              style={{
-                left: collapsedDropdownPosition.left,
-                top: collapsedDropdownPosition.top,
-              }}
-            >
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-slate-200 bg-white shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
-                  collapsedDropdownPosition.side === 'right'
-                    ? '-left-1.5 border-b-0 border-r-0'
-                    : '-right-1.5 border-l-0 border-t-0'
-                }`}
-                style={{ top: collapsedDropdownPosition.caretTop - 6 }}
-              />
-              <div className="space-y-1">
-                {tab.children.map((child) => {
-                  const ChildIcon = child.icon;
-                  const isChildActive = activeTab === child.id;
-                  return (
-                    <button
-                      key={child.id}
-                      onClick={() => {
-                        onTabChange(child.id);
-                        setActiveDropdownTab(null);
-                      }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                        isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <ChildIcon className="h-4 w-4" />
-                        <span>{child.label}</span>
-                      </div>
-                      {child.badge !== undefined && child.badge > 0 && (
-                        <span
-                          className={`${
-                            child.badgeColor || 'bg-orange-500'
-                          } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                            child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
-                          } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
-                        >
-                          {child.badge > 9 ? '9+' : child.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {isExpanded && !isMenuCollapsed && (
             <div className="mt-1 space-y-1 pl-4">
@@ -936,6 +909,11 @@ export default function Layout({
       </button>
     );
   };
+
+  const activeCollapsedParentTab =
+    isMenuCollapsed && activeDropdownTab
+      ? tabs.find((tab) => tab.id === activeDropdownTab && tab.children && tab.children.length > 0)
+      : undefined;
 
   return (
     <div
@@ -1136,6 +1114,64 @@ export default function Layout({
           </div>
         </div>
       </aside>
+
+      {activeCollapsedParentTab?.children && collapsedDropdownPosition && (
+        <div
+          id="collapsed-menu-dropdown"
+          ref={collapsedDropdownRef}
+          className="panel-glass-panel fixed z-[60] max-h-[calc(100vh-1rem)] w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-2xl"
+          style={{
+            left: collapsedDropdownPosition.left,
+            top: collapsedDropdownPosition.top,
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-slate-200 bg-white shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
+              collapsedDropdownPosition.side === 'right'
+                ? '-left-1.5 border-b-0 border-r-0'
+                : '-right-1.5 border-l-0 border-t-0'
+            }`}
+            style={{ top: collapsedDropdownPosition.caretTop - 6 }}
+          />
+          <div className="space-y-1">
+            {activeCollapsedParentTab.children.map((child) => {
+              const ChildIcon = child.icon;
+              const isChildActive = activeTab === child.id;
+
+              return (
+                <button
+                  key={child.id}
+                  onClick={() => {
+                    onTabChange(child.id);
+                    setActiveDropdownTab(null);
+                    setCollapsedDropdownPosition(null);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <ChildIcon className="h-4 w-4" />
+                    <span>{child.label}</span>
+                  </div>
+                  {child.badge !== undefined && child.badge > 0 && (
+                    <span
+                      className={`${
+                        child.badgeColor || 'bg-orange-500'
+                      } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
+                        child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                      } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                    >
+                      {child.badge > 9 ? '9+' : child.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
         <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>

@@ -34,6 +34,7 @@ import {
 import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 import MultiSelectDropdown from './MultiSelectDropdown';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -913,10 +914,12 @@ export default function FlowBuilder({
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">Tipo de gatilho</label>
-                  <select
+                  <FilterSingleSelect
+                    icon={RefreshCcw}
+                    size="compact"
                     value={selectedNode.data.triggerType ?? 'lead_created'}
-                    onChange={(event) => {
-                      const triggerType = event.target.value as 'lead_created' | 'status_changed' | 'status_duration';
+                    onChange={(value) => {
+                      const triggerType = value as 'lead_created' | 'status_changed' | 'status_duration';
                       const label = triggerType === 'lead_created' 
                         ? 'Lead criado' 
                         : triggerType === 'status_changed' 
@@ -929,12 +932,14 @@ export default function FlowBuilder({
                         triggerDurationHours: triggerType === 'status_duration' ? (selectedNode.data.triggerDurationHours ?? 24) : 24,
                       });
                     }}
-                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                  >
-                    <option value="lead_created">Lead criado</option>
-                    <option value="status_changed">Mudança de status</option>
-                    <option value="status_duration">Tempo em status</option>
-                  </select>
+                    placeholder="Tipo de gatilho"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: 'lead_created', label: 'Lead criado' },
+                      { value: 'status_changed', label: 'Mudança de status' },
+                      { value: 'status_duration', label: 'Tempo em status' },
+                    ]}
+                  />
                 </div>
 
                 {(selectedNode.data.triggerType === 'status_changed' || selectedNode.data.triggerType === 'status_duration') && (
@@ -977,25 +982,33 @@ export default function FlowBuilder({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span>Aplicar quando</span>
-                  <select
+                  <div className="w-40">
+                    <FilterSingleSelect
+                      icon={RefreshCcw}
+                      size="compact"
                     value={selectedNode.data.conditionLogic ?? 'all'}
-                    onChange={(event) =>
-                      updateSelectedNode({ conditionLogic: event.target.value === 'any' ? 'any' : 'all' })
+                      onChange={(value) =>
+                      updateSelectedNode({ conditionLogic: value === 'any' ? 'any' : 'all' })
                     }
-                    className="px-2 py-1 text-xs border border-slate-200 rounded-md"
-                  >
-                    <option value="all">todas as condicoes</option>
-                    <option value="any">qualquer condicao</option>
-                  </select>
+                      placeholder="Lógica"
+                      includePlaceholderOption={false}
+                      options={[
+                        { value: 'all', label: 'todas as condicoes' },
+                        { value: 'any', label: 'qualquer condicao' },
+                      ]}
+                    />
+                  </div>
                 </div>
                 {(selectedNode.data.conditions ?? []).map((condition, index) => {
                   const valueOptions = getConditionValueOptions(condition.field);
                   return (
                     <div key={condition.id} className="space-y-2 border border-slate-200 rounded-lg p-3">
-                      <select
+                      <FilterSingleSelect
+                        icon={RefreshCcw}
+                        size="compact"
                         value={condition.field}
-                        onChange={(event) => {
-                          const nextField = event.target.value as AutoContactFlowCondition['field'];
+                        onChange={(value) => {
+                          const nextField = value as AutoContactFlowCondition['field'];
                           const next = nextField === 'event'
                             ? { field: nextField, operator: 'equals' as AutoContactFlowConditionOperator, value: 'lead_created' }
                             : nextField === 'whatsapp_valid'
@@ -1009,32 +1022,32 @@ export default function FlowBuilder({
                           nextConditions[index] = { ...condition, ...next };
                           updateSelectedNode({ conditions: nextConditions });
                         }}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                      >
-                        {conditionFieldOptions.map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
+                        placeholder="Campo"
+                        includePlaceholderOption={false}
+                        options={conditionFieldOptions.map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                      />
+                      <FilterSingleSelect
+                        icon={RefreshCcw}
+                        size="compact"
                         value={condition.operator}
-                        onChange={(event) => {
+                        onChange={(value) => {
                           const nextConditions = [...(selectedNode.data.conditions ?? [])];
                           nextConditions[index] = {
                             ...condition,
-                            operator: event.target.value as AutoContactFlowConditionOperator,
+                            operator: value as AutoContactFlowConditionOperator,
                           };
                           updateSelectedNode({ conditions: nextConditions });
                         }}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                      >
-                        {Object.entries(conditionOperatorLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Operador"
+                        includePlaceholderOption={false}
+                        options={Object.entries(conditionOperatorLabels).map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                      />
                       {BOOLEAN_FIELDS.includes(condition.field) ? (
                         <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">
                           Use as conexões <span className="font-semibold">Sim/Não</span> para definir o fluxo quando a condição for verdadeira ou falsa.
@@ -1042,22 +1055,25 @@ export default function FlowBuilder({
                       ) : (
                         <>
                           {valueOptions ? (
-                            <select
+                            <FilterSingleSelect
+                              icon={RefreshCcw}
+                              size="compact"
                               value={condition.value}
-                              onChange={(event) => {
+                              onChange={(value) => {
                                 const nextConditions = [...(selectedNode.data.conditions ?? [])];
-                                nextConditions[index] = { ...condition, value: event.target.value };
+                                nextConditions[index] = { ...condition, value };
                                 updateSelectedNode({ conditions: nextConditions });
                               }}
-                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                            >
-                              <option value="">Selecione</option>
-                              {valueOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {getConditionOptionLabel(condition.field, option)}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Selecione"
+                              includePlaceholderOption={false}
+                              options={[
+                                { value: '', label: 'Selecione' },
+                                ...valueOptions.map((option) => ({
+                                  value: option,
+                                  label: getConditionOptionLabel(condition.field, option),
+                                })),
+                              ]}
+                            />
                           ) : (
                             <input
                               type="text"
@@ -1144,19 +1160,20 @@ export default function FlowBuilder({
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">Unidade</label>
-                    <select
+                    <FilterSingleSelect
+                      icon={RefreshCcw}
+                      size="compact"
                       value={selectedNode.data.step?.delayUnit ?? 'hours'}
-                      onChange={(event) =>
-                        updateSelectedStep({ delayUnit: event.target.value as AutoContactDelayUnit })
+                      onChange={(value) =>
+                        updateSelectedStep({ delayUnit: value as AutoContactDelayUnit })
                       }
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                    >
-                      {Object.entries(delayUnitLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label.plural}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Unidade"
+                      includePlaceholderOption={false}
+                      options={Object.entries(delayUnitLabels).map(([value, label]) => ({
+                        value,
+                        label: label.plural,
+                      }))}
+                    />
                   </div>
                 </div>
                 <div>
@@ -1194,19 +1211,20 @@ export default function FlowBuilder({
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">Tipo de acao</label>
-                  <select
+                  <FilterSingleSelect
+                    icon={RefreshCcw}
+                    size="compact"
                     value={selectedNode.data.step?.actionType ?? 'send_message'}
-                    onChange={(event) =>
-                      updateSelectedStep({ actionType: event.target.value as AutoContactFlowActionType })
+                    onChange={(value) =>
+                      updateSelectedStep({ actionType: value as AutoContactFlowActionType })
                     }
-                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                  >
-                    {Object.entries(flowActionLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Tipo de acao"
+                    includePlaceholderOption={false}
+                    options={Object.entries(flowActionLabels).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
+                  />
                 </div>
 
                 {selectedNode.data.step?.actionType === 'send_message' && (
@@ -1216,31 +1234,39 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Origem da mensagem</label>
-                      <select
+                      <FilterSingleSelect
+                        icon={RefreshCcw}
+                        size="compact"
                         value={selectedNode.data.step?.messageSource ?? 'template'}
-                        onChange={(event) =>
-                          updateSelectedStep({ messageSource: event.target.value as AutoContactFlowMessageSource })
+                        onChange={(value) =>
+                          updateSelectedStep({ messageSource: value as AutoContactFlowMessageSource })
                         }
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                      >
-                        <option value="template">Template</option>
-                        <option value="custom">Mensagem custom</option>
-                      </select>
+                        placeholder="Origem"
+                        includePlaceholderOption={false}
+                        options={[
+                          { value: 'template', label: 'Template' },
+                          { value: 'custom', label: 'Mensagem custom' },
+                        ]}
+                      />
                     </div>
                     {selectedNode.data.step?.messageSource === 'template' ? (
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Template</label>
-                        <select
+                        <FilterSingleSelect
+                          icon={RefreshCcw}
+                          size="compact"
                           value={selectedNode.data.step?.templateId ?? ''}
-                          onChange={(event) => updateSelectedStep({ templateId: event.target.value })}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                        >
-                          {messageTemplates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(value) => updateSelectedStep({ templateId: value })}
+                          placeholder="Selecione"
+                          includePlaceholderOption={false}
+                          options={[
+                            { value: '', label: 'Selecione' },
+                            ...messageTemplates.map((template) => ({
+                              value: template.id,
+                              label: template.name,
+                            })),
+                          ]}
+                        />
                       </div>
                     ) : (
                       <div>
@@ -1274,18 +1300,23 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === 'update_status' && (
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">Status do lead</label>
-                    <select
+                    <FilterSingleSelect
+                      icon={RefreshCcw}
+                      size="compact"
                       value={selectedNode.data.step?.statusToSet ?? ''}
-                      onChange={(event) => updateSelectedStep({ statusToSet: event.target.value })}
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                    >
-                      <option value="">Selecione um status</option>
-                      {leadStatuses.filter((status) => status.ativo !== false).map((status) => (
-                        <option key={status.id} value={status.nome}>
-                          {status.nome}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => updateSelectedStep({ statusToSet: value })}
+                      placeholder="Selecione um status"
+                      includePlaceholderOption={false}
+                      options={[
+                        { value: '', label: 'Selecione um status' },
+                        ...leadStatuses
+                          .filter((status) => status.ativo !== false)
+                          .map((status) => ({
+                            value: status.nome,
+                            label: status.nome,
+                          })),
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -1322,17 +1353,21 @@ export default function FlowBuilder({
                       </div>
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Prioridade</label>
-                        <select
+                        <FilterSingleSelect
+                          icon={RefreshCcw}
+                          size="compact"
                           value={selectedNode.data.step?.taskPriority ?? 'normal'}
-                          onChange={(event) =>
-                            updateSelectedStep({ taskPriority: event.target.value as AutoContactFlowStep['taskPriority'] })
+                          onChange={(value) =>
+                            updateSelectedStep({ taskPriority: value as AutoContactFlowStep['taskPriority'] })
                           }
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                        >
-                          <option value="baixa">Baixa</option>
-                          <option value="normal">Normal</option>
-                          <option value="alta">Alta</option>
-                        </select>
+                          placeholder="Prioridade"
+                          includePlaceholderOption={false}
+                          options={[
+                            { value: 'baixa', label: 'Baixa' },
+                            { value: 'normal', label: 'Normal' },
+                            { value: 'alta', label: 'Alta' },
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1387,20 +1422,24 @@ export default function FlowBuilder({
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Método</label>
-                        <select
+                        <FilterSingleSelect
+                          icon={RefreshCcw}
+                          size="compact"
                           value={selectedNode.data.step?.webhookMethod ?? 'POST'}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             updateSelectedStep({
-                              webhookMethod: event.target.value as AutoContactFlowStep['webhookMethod'],
+                              webhookMethod: value as AutoContactFlowStep['webhookMethod'],
                             })
                           }
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
-                        >
-                          <option value="POST">POST</option>
-                          <option value="PUT">PUT</option>
-                          <option value="PATCH">PATCH</option>
-                          <option value="GET">GET</option>
-                        </select>
+                          placeholder="Método"
+                          includePlaceholderOption={false}
+                          options={[
+                            { value: 'POST', label: 'POST' },
+                            { value: 'PUT', label: 'PUT' },
+                            { value: 'PATCH', label: 'PATCH' },
+                            { value: 'GET', label: 'GET' },
+                          ]}
+                        />
                       </div>
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Headers (JSON)</label>

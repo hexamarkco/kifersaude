@@ -15,6 +15,7 @@ import {
 import { configService } from '../../lib/configService';
 import type { IntegrationSetting } from '../../lib/supabase';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
 const META_PIXEL_SLUG = 'meta_pixel';
@@ -295,17 +296,19 @@ setSavingGpt(false);
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Modelo do GPT</label>
-            <select
+            <FilterSingleSelect
+              icon={Tag}
               value={gptFormState.textModel}
-              onChange={event => setGptFormState(prev => ({ ...prev, textModel: event.target.value }))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-            >
-              {TEXT_MODEL_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) =>
+                setGptFormState((prev) => ({ ...prev, textModel: value }))
+              }
+              placeholder="Modelo GPT"
+              includePlaceholderOption={false}
+              options={TEXT_MODEL_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+            />
             <p className="text-xs text-slate-500 mt-2">
               Escolha o modelo disponível na sua conta para respostas e reescritas de texto. Os áudios continuarão usando o Whisper
               automaticamente.

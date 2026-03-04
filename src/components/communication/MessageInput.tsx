@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle, Sparkles, Scissors, MessageSquare } from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 export type SentMessagePayload = {
   id: string;
@@ -960,17 +961,17 @@ export function MessageInput({
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <label className="text-xs text-gray-500">Tom</label>
-                <select
+                <FilterSingleSelect
+                  icon={Sparkles}
                   value={rewriteTone}
-                  onChange={(event) => setRewriteTone(event.target.value)}
-                  className="mt-1 w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  {rewriteTones.map((tone) => (
-                    <option key={tone.value} value={tone.value}>
-                      {tone.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setRewriteTone(value)}
+                  placeholder="Tom"
+                  includePlaceholderOption={false}
+                  options={rewriteTones.map((tone) => ({
+                    value: tone.value,
+                    label: tone.label,
+                  }))}
+                />
               </div>
               <button
                 type="button"

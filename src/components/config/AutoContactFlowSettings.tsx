@@ -54,6 +54,7 @@ import { applyFlowGraphToFlow, buildFlowGraphFromFlow, expandFlowGraphToFlows } 
 import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig, Lead } from '../../lib/supabase';
 import FlowBuilder from './FlowBuilder';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
@@ -1459,18 +1460,20 @@ export default function AutoContactFlowSettings() {
                     />
                   </div>
                   <div>
-                    <select
+                    <FilterSingleSelect
+                      icon={Tag}
                       value={flowTagFilter}
-                      onChange={(event) => setFlowTagFilter(event.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                    >
-                      <option value="all">Todas as tags</option>
-                      {availableTags.map((tagItem) => (
-                        <option key={tagItem} value={tagItem}>
-                          {tagItem}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setFlowTagFilter(value)}
+                      placeholder="Todas as tags"
+                      includePlaceholderOption={false}
+                      options={[
+                        { value: 'all', label: 'Todas as tags' },
+                        ...availableTags.map((tagItem) => ({
+                          value: tagItem,
+                          label: tagItem,
+                        })),
+                      ]}
+                    />
                   </div>
                   <div className="text-xs text-slate-500 flex items-center justify-end">
                     {filteredFlows.length} fluxo{filteredFlows.length === 1 ? '' : 's'} encontrado
@@ -1726,18 +1729,24 @@ export default function AutoContactFlowSettings() {
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <span>Encerrar quando</span>
-                        <select
+                        <div className="w-52">
+                          <FilterSingleSelect
+                            icon={AlertCircle}
+                            size="compact"
                           value={activeFlow.exitConditionLogic ?? 'any'}
-                          onChange={(event) =>
+                            onChange={(value) =>
                             handleUpdateFlow(activeFlow.id, {
-                              exitConditionLogic: event.target.value as AutoContactFlow['exitConditionLogic'],
+                                exitConditionLogic: value as AutoContactFlow['exitConditionLogic'],
                             })
                           }
-                          className="px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                        >
-                          <option value="any">qualquer condição</option>
-                          <option value="all">todas as condições</option>
-                        </select>
+                            placeholder="Lógica"
+                            includePlaceholderOption={false}
+                            options={[
+                              { value: 'any', label: 'qualquer condição' },
+                              { value: 'all', label: 'todas as condições' },
+                            ]}
+                          />
+                        </div>
                         <span>forem atendidas</span>
                       </div>
 
@@ -1756,10 +1765,12 @@ export default function AutoContactFlowSettings() {
                                 const valueOptions = getConditionValueOptions(condition.field);
                                 return (
                                   <>
-                              <select
+                              <FilterSingleSelect
+                                icon={AlertCircle}
+                                size="compact"
                                 value={condition.field}
-                                onChange={(event) => {
-                                  const nextField = event.target.value as AutoContactFlowCondition['field'];
+                                onChange={(value) => {
+                                  const nextField = value as AutoContactFlowCondition['field'];
                                   const nextUpdates =
                                     nextField === 'event'
                                       ? {
@@ -1776,49 +1787,52 @@ export default function AutoContactFlowSettings() {
                                       : { field: nextField, value: '' };
                                   handleUpdateFlowExitCondition(activeFlow.id, condition.id, nextUpdates);
                                 }}
-                                className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {conditionFieldOptions.map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="Campo"
+                                includePlaceholderOption={false}
+                                options={conditionFieldOptions.map(([value, label]) => ({
+                                  value,
+                                  label,
+                                }))}
+                              />
                               {!isEventLeadCreated(condition) && (
-                                <select
+                                <FilterSingleSelect
+                                  icon={AlertCircle}
+                                  size="compact"
                                   value={condition.operator}
-                                  onChange={(event) =>
+                                  onChange={(value) =>
                                     handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                      operator: event.target.value as AutoContactFlowCondition['operator'],
+                                      operator: value as AutoContactFlowCondition['operator'],
                                     })
                                   }
-                                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  {Object.entries(conditionOperatorLabels).map(([value, label]) => (
-                                    <option key={value} value={value}>
-                                      {label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  placeholder="Operador"
+                                  includePlaceholderOption={false}
+                                  options={Object.entries(conditionOperatorLabels).map(([value, label]) => ({
+                                    value,
+                                    label,
+                                  }))}
+                                />
                               )}
                               {!isEventLeadCreated(condition) &&
                                 (valueOptions ? (
-                                  <select
+                                  <FilterSingleSelect
+                                    icon={AlertCircle}
+                                    size="compact"
                                     value={condition.value}
-                                    onChange={(event) =>
+                                    onChange={(value) =>
                                       handleUpdateFlowExitCondition(activeFlow.id, condition.id, {
-                                        value: event.target.value,
+                                        value,
                                       })
                                     }
-                                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                  >
-                                    <option value="">Selecione</option>
-                                     {valueOptions.map((option) => (
-                                       <option key={option} value={option}>
-                                         {getConditionOptionLabel(condition.field, option)}
-                                       </option>
-                                     ))}
-                                  </select>
+                                    placeholder="Selecione"
+                                    includePlaceholderOption={false}
+                                    options={[
+                                      { value: '', label: 'Selecione' },
+                                      ...valueOptions.map((option) => ({
+                                        value: option,
+                                        label: getConditionOptionLabel(condition.field, option),
+                                      })),
+                                    ]}
+                                  />
                                 ) : (
                                   <input
                                     type="text"
@@ -1900,18 +1914,20 @@ export default function AutoContactFlowSettings() {
                         Status final se não houver resposta
                       </label>
                       {showStatusSelect ? (
-                        <select
+                        <FilterSingleSelect
+                          icon={Tag}
                           value={activeFlow.finalStatus ?? ''}
-                          onChange={(event) => handleUpdateFlow(activeFlow.id, { finalStatus: event.target.value })}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                        >
-                          <option value="">Não alterar status</option>
-                          {statusOptions.map((status) => (
-                            <option key={status.id} value={status.nome}>
-                              {status.nome}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(value) => handleUpdateFlow(activeFlow.id, { finalStatus: value })}
+                          placeholder="Não alterar status"
+                          includePlaceholderOption={false}
+                          options={[
+                            { value: '', label: 'Não alterar status' },
+                            ...statusOptions.map((status) => ({
+                              value: status.nome,
+                              label: status.nome,
+                            })),
+                          ]}
+                        />
                       ) : (
                         <input
                           type="text"
@@ -1967,41 +1983,41 @@ export default function AutoContactFlowSettings() {
                               <label className="block text-xs font-semibold text-slate-500 mb-1">
                                 Unidade
                               </label>
-                              <select
+                              <FilterSingleSelect
+                                icon={Timer}
                                 value={step.delayUnit ?? 'hours'}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   handleUpdateFlowStep(activeFlow.id, step.id, {
-                                    delayUnit: event.target.value as AutoContactDelayUnit,
+                                    delayUnit: value as AutoContactDelayUnit,
                                   })
                                 }
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {Object.entries(delayUnitLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label.plural}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="Unidade"
+                                includePlaceholderOption={false}
+                                options={Object.entries(delayUnitLabels).map(([value, label]) => ({
+                                  value,
+                                  label: label.plural,
+                                }))}
+                              />
                             </div>
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">
                                 Tipo de ação
                               </label>
-                              <select
+                              <FilterSingleSelect
+                                icon={Activity}
                                 value={step.actionType ?? 'send_message'}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   handleUpdateFlowStep(activeFlow.id, step.id, {
-                                    actionType: event.target.value as AutoContactFlowActionType,
+                                    actionType: value as AutoContactFlowActionType,
                                   })
                                 }
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                              >
-                                {Object.entries(flowActionLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="Tipo de ação"
+                                includePlaceholderOption={false}
+                                options={Object.entries(flowActionLabels).map(([value, label]) => ({
+                                  value,
+                                  label,
+                                }))}
+                              />
                             </div>
                             <div className="flex items-end">
                               <button
@@ -2023,40 +2039,43 @@ export default function AutoContactFlowSettings() {
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                                   Origem da mensagem
                                 </label>
-                                <select
+                                <FilterSingleSelect
+                                  icon={MessageCircle}
                                   value={step.messageSource ?? 'template'}
-                                  onChange={(event) =>
+                                  onChange={(value) =>
                                     handleUpdateFlowStep(activeFlow.id, step.id, {
-                                      messageSource: event.target.value as AutoContactFlowMessageSource,
+                                      messageSource: value as AutoContactFlowMessageSource,
                                     })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  {Object.entries(messageSourceLabels).map(([value, label]) => (
-                                    <option key={value} value={value}>
-                                      {label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  placeholder="Origem"
+                                  includePlaceholderOption={false}
+                                  options={Object.entries(messageSourceLabels).map(([value, label]) => ({
+                                    value,
+                                    label,
+                                  }))}
+                                />
                               </div>
                               {step.messageSource !== 'custom' ? (
                                 <div>
                                   <label className="block text-xs font-semibold text-slate-500 mb-1">
                                     Template da mensagem
                                   </label>
-                                  <select
+                                  <FilterSingleSelect
+                                    icon={MessageCircle}
                                     value={step.templateId ?? ''}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(activeFlow.id, step.id, { templateId: event.target.value })
+                                    onChange={(value) =>
+                                      handleUpdateFlowStep(activeFlow.id, step.id, { templateId: value })
                                     }
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                  >
-                                    {messageTemplatesDraft.map((template) => (
-                                      <option key={template.id} value={template.id}>
-                                        {template.name || 'Modelo sem nome'}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    placeholder="Template"
+                                    includePlaceholderOption={false}
+                                    options={[
+                                      { value: '', label: 'Selecione um template' },
+                                      ...messageTemplatesDraft.map((template) => ({
+                                        value: template.id,
+                                        label: template.name || 'Modelo sem nome',
+                                      })),
+                                    ]}
+                                  />
                                 </div>
                               ) : (
                                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2064,24 +2083,24 @@ export default function AutoContactFlowSettings() {
                                     <label className="block text-xs font-semibold text-slate-500 mb-1">
                                       Tipo de mensagem
                                     </label>
-                                    <select
+                                    <FilterSingleSelect
+                                      icon={MessageCircle}
                                       value={step.customMessage?.type ?? 'text'}
-                                      onChange={(event) =>
+                                      onChange={(value) =>
                                         handleUpdateFlowStep(activeFlow.id, step.id, {
                                           customMessage: {
                                             ...(step.customMessage ?? {}),
-                                            type: event.target.value as TemplateMessageType,
+                                            type: value as TemplateMessageType,
                                           } as AutoContactFlowCustomMessage,
                                         })
                                       }
-                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                    >
-                                      {Object.entries(messageTypeLabels).map(([value, label]) => (
-                                        <option key={value} value={value}>
-                                          {label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      placeholder="Tipo"
+                                      includePlaceholderOption={false}
+                                      options={Object.entries(messageTypeLabels).map(([value, label]) => ({
+                                        value,
+                                        label,
+                                      }))}
+                                    />
                                   </div>
                                   <div>
                                     <label className="block text-xs font-semibold text-slate-500 mb-1">
@@ -2196,19 +2215,22 @@ export default function AutoContactFlowSettings() {
                               </div>
                               <div>
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Prioridade</label>
-                                <select
+                                <FilterSingleSelect
+                                  icon={AlertCircle}
                                   value={step.taskPriority ?? 'normal'}
-                                  onChange={(event) =>
+                                  onChange={(value) =>
                                     handleUpdateFlowStep(activeFlow.id, step.id, {
-                                      taskPriority: event.target.value as AutoContactFlowStep['taskPriority'],
+                                      taskPriority: value as AutoContactFlowStep['taskPriority'],
                                     })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  <option value="baixa">Baixa</option>
-                                  <option value="normal">Normal</option>
-                                  <option value="alta">Alta</option>
-                                </select>
+                                  placeholder="Prioridade"
+                                  includePlaceholderOption={false}
+                                  options={[
+                                    { value: 'baixa', label: 'Baixa' },
+                                    { value: 'normal', label: 'Normal' },
+                                    { value: 'alta', label: 'Alta' },
+                                  ]}
+                                />
                               </div>
                             </div>
                           )}
@@ -2296,20 +2318,23 @@ export default function AutoContactFlowSettings() {
                               </div>
                               <div>
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Metodo</label>
-                                <select
+                                <FilterSingleSelect
+                                  icon={Activity}
                                   value={step.webhookMethod ?? 'POST'}
-                                  onChange={(event) =>
+                                  onChange={(value) =>
                                     handleUpdateFlowStep(activeFlow.id, step.id, {
-                                      webhookMethod: event.target.value as AutoContactFlowStep['webhookMethod'],
+                                      webhookMethod: value as AutoContactFlowStep['webhookMethod'],
                                     })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  <option value="POST">POST</option>
-                                  <option value="PUT">PUT</option>
-                                  <option value="PATCH">PATCH</option>
-                                  <option value="GET">GET</option>
-                                </select>
+                                  placeholder="Método"
+                                  includePlaceholderOption={false}
+                                  options={[
+                                    { value: 'POST', label: 'POST' },
+                                    { value: 'PUT', label: 'PUT' },
+                                    { value: 'PATCH', label: 'PATCH' },
+                                    { value: 'GET', label: 'GET' },
+                                  ]}
+                                />
                               </div>
                               <div>
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Headers (JSON)</label>
@@ -2347,20 +2372,22 @@ export default function AutoContactFlowSettings() {
                                 Novo status do lead
                               </label>
                               {showStatusSelect ? (
-                                <select
+                                <FilterSingleSelect
+                                  icon={Tag}
                                   value={step.statusToSet ?? ''}
-                                  onChange={(event) =>
-                                    handleUpdateFlowStep(activeFlow.id, step.id, { statusToSet: event.target.value })
+                                  onChange={(value) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { statusToSet: value })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                >
-                                  <option value="">Selecione um status</option>
-                                  {statusOptions.map((status) => (
-                                    <option key={status.id} value={status.nome}>
-                                      {status.nome}
-                                    </option>
-                                  ))}
-                                </select>
+                                  placeholder="Selecione um status"
+                                  includePlaceholderOption={false}
+                                  options={[
+                                    { value: '', label: 'Selecione um status' },
+                                    ...statusOptions.map((status) => ({
+                                      value: status.nome,
+                                      label: status.nome,
+                                    })),
+                                  ]}
+                                />
                               ) : (
                                 <input
                                   type="text"
@@ -2666,21 +2693,24 @@ export default function AutoContactFlowSettings() {
                               <span className="text-xs font-semibold text-slate-500 uppercase">
                                 Mensagem {index + 1}
                               </span>
-                              <select
+                              <div className="w-44">
+                                <FilterSingleSelect
+                                  icon={MessageCircle}
+                                  size="compact"
                                 value={message.type}
-                                onChange={(event) =>
+                                  onChange={(value) =>
                                   handleUpdateDraftMessage(message.id, {
-                                    type: event.target.value as TemplateMessageType,
+                                      type: value as TemplateMessageType,
                                   })
                                 }
-                                className="px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                              >
-                                {Object.entries(messageTypeLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
+                                  placeholder="Tipo"
+                                  includePlaceholderOption={false}
+                                  options={Object.entries(messageTypeLabels).map(([value, label]) => ({
+                                    value,
+                                    label,
+                                  }))}
+                                />
+                              </div>
                             </div>
                             <button
                               type="button"

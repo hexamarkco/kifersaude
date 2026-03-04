@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIcon, Save, Upload, Loader } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Eye, EyeOff, Search, X, Image as ImageIcon, Save, Upload, Loader, Tag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadBlogImage } from '../../lib/imageUploadService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import FilterSingleSelect from '../FilterSingleSelect';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -320,17 +321,20 @@ export default function BlogTab() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Categoria *
               </label>
-              <select
+              <FilterSingleSelect
+                icon={Tag}
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="Guias">Guias</option>
-                <option value="Dicas">Dicas</option>
-                <option value="Economia">Economia</option>
-                <option value="Novidades">Novidades</option>
-                <option value="Geral">Geral</option>
-              </select>
+                onChange={(value) => setFormData({ ...formData, category: value })}
+                placeholder="Categoria"
+                includePlaceholderOption={false}
+                options={[
+                  { value: 'Guias', label: 'Guias' },
+                  { value: 'Dicas', label: 'Dicas' },
+                  { value: 'Economia', label: 'Economia' },
+                  { value: 'Novidades', label: 'Novidades' },
+                  { value: 'Geral', label: 'Geral' },
+                ]}
+              />
             </div>
 
             <div>

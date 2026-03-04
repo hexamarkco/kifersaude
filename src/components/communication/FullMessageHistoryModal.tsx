@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Calendar, Search } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -265,30 +266,37 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Enviado por
                   </label>
-                  <select
+                  <FilterSingleSelect
+                    icon={User}
                     value={filterFromMe === undefined ? 'all' : filterFromMe ? 'me' : 'others'}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    onChange={(value) => {
                       setFilterFromMe(value === 'all' ? undefined : value === 'me');
                     }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">Todos</option>
-                    <option value="me">Minhas mensagens</option>
-                    <option value="others">Outros</option>
-                  </select>
+                    placeholder="Enviado por"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: 'all', label: 'Todos' },
+                      { value: 'me', label: 'Minhas mensagens' },
+                      { value: 'others', label: 'Outros' },
+                    ]}
+                  />
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="desc">Mais recentes primeiro</option>
-                  <option value="asc">Mais antigas primeiro</option>
-                </select>
+                <div className="w-56">
+                  <FilterSingleSelect
+                    icon={Clock}
+                    value={sortOrder}
+                    onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+                    placeholder="Ordenação"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: 'desc', label: 'Mais recentes primeiro' },
+                      { value: 'asc', label: 'Mais antigas primeiro' },
+                    ]}
+                  />
+                </div>
 
                 {hasActiveFilters && (
                   <button
@@ -393,18 +401,23 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600">Mostrar</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentOffset(0);
-                }}
-                className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+              <div className="w-24">
+                <FilterSingleSelect
+                  icon={Filter}
+                  value={String(pageSize)}
+                  onChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentOffset(0);
+                  }}
+                  placeholder="50"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                    { value: '100', label: '100' },
+                  ]}
+                />
+              </div>
               <span className="text-sm text-slate-600">por página</span>
             </div>
 

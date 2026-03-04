@@ -15,6 +15,7 @@ type FilterSingleSelectProps = {
   onChange: (next: string) => void;
   includePlaceholderOption?: boolean;
   disabled?: boolean;
+  size?: 'default' | 'compact';
 };
 
 export default function FilterSingleSelect({
@@ -25,6 +26,7 @@ export default function FilterSingleSelect({
   onChange,
   includePlaceholderOption = true,
   disabled = false,
+  size = 'default',
 }: FilterSingleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,15 @@ export default function FilterSingleSelect({
     return selected?.label ?? placeholder;
   }, [optionsWithDefault, placeholder, value]);
 
+  const isCompact = size === 'compact';
+
+  const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
+  const iconOffsetClass = isCompact ? 'left-2.5' : 'left-3';
+  const chevronSizeClass = isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4';
+  const buttonPaddingClass = isCompact ? 'pl-8 pr-8 h-8' : 'pl-10 pr-10 h-11';
+  const labelTextClass = isCompact ? 'text-xs' : 'text-sm';
+  const optionTextClass = isCompact ? 'text-xs py-1.5' : 'text-sm py-2';
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -84,17 +95,17 @@ export default function FilterSingleSelect({
           if (disabled) return;
           setIsOpen((current) => !current);
         }}
-        className="panel-glass-panel panel-interactive-glass relative h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-10 text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className={`panel-glass-panel panel-interactive-glass relative w-full rounded-lg border border-slate-300 bg-white text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 ${buttonPaddingClass}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         disabled={disabled}
       >
-        <Icon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-        <span className={`block truncate text-sm ${value ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
+        <Icon className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${iconOffsetClass} ${iconSizeClass}`} />
+        <span className={`block truncate ${labelTextClass} ${value ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
           {selectedLabel}
         </span>
         <ChevronDown
-          className={`absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-transform ${
+          className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${chevronSizeClass} ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -114,7 +125,7 @@ export default function FilterSingleSelect({
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+                className={`flex w-full items-center justify-between px-3 text-left transition-colors ${optionTextClass} ${
                   isSelected
                     ? 'bg-teal-50 font-medium text-teal-700'
                     : 'text-slate-700 hover:bg-slate-100'

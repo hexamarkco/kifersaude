@@ -7,6 +7,7 @@ import LeadStatusManager from './LeadStatusManager';
 import LeadOriginsManager from './LeadOriginsManager';
 import ConfigOptionManager from './ConfigOptionManager';
 import AccessControlManager from './AccessControlManager';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -165,15 +166,18 @@ export default function SystemSettingsTab() {
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Formato de Data
             </label>
-            <select
+            <FilterSingleSelect
+              icon={Calendar}
               value={settings.date_format}
-              onChange={(e) => setSettings({ ...settings, date_format: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-            </select>
+              onChange={(value) => setSettings({ ...settings, date_format: value })}
+              placeholder="Formato de data"
+              includePlaceholderOption={false}
+              options={[
+                { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
+                { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+                { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+              ]}
+            />
           </div>
 
           <div>

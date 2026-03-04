@@ -3,6 +3,7 @@ import { supabase, UserProfile, getUserManagementId } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import FilterSingleSelect from '../FilterSingleSelect';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
@@ -406,14 +407,17 @@ const handleDeleteUser = async (userId: string) => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Permissão
                 </label>
-                <select
+                <FilterSingleSelect
+                  icon={Shield}
                   value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'observer')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="observer">Observador</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  onChange={(value) => setNewUserRole(value as 'admin' | 'observer')}
+                  placeholder="Permissão"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'observer', label: 'Observador' },
+                    { value: 'admin', label: 'Administrador' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -480,14 +484,17 @@ const handleDeleteUser = async (userId: string) => {
 
               <div>
                 <label className="block text-sm font-medium text-amber-900 mb-2">Permissão</label>
-                <select
+                <FilterSingleSelect
+                  icon={Shield}
                   value={editUserRole}
-                  onChange={(e) => setEditUserRole(e.target.value as 'admin' | 'observer')}
-                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                >
-                  <option value="observer">Observador</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  onChange={(value) => setEditUserRole(value as 'admin' | 'observer')}
+                  placeholder="Permissão"
+                  includePlaceholderOption={false}
+                  options={[
+                    { value: 'observer', label: 'Observador' },
+                    { value: 'admin', label: 'Administrador' },
+                  ]}
+                />
               </div>
             </div>
 

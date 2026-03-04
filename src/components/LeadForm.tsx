@@ -156,12 +156,19 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   if (configLoading && !lead) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-slate-600 text-sm">Carregando configurações...</p>
-        </div>
-      </div>
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        title="Carregando configuracoes"
+        description="Aguarde enquanto buscamos as configuracoes para o formulario."
+        size="md"
+        panelClassName="max-w-md"
+        showCloseButton={false}
+        bodyClassName="flex min-h-[220px] flex-col items-center justify-center"
+      >
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+        <p className="mt-4 text-center text-sm text-slate-600">Carregando configurações...</p>
+      </ModalShell>
     );
   }
 

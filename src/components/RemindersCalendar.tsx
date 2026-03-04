@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Reminder } from '../lib/supabase';
-import { ChevronLeft, ChevronRight, X, Bell, Clock, AlertCircle, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR, getDateKey, SAO_PAULO_TIMEZONE } from '../lib/dateUtils';
+import ModalShell from './ui/ModalShell';
 
 type RemindersCalendarProps = {
   reminders: Reminder[];
@@ -63,12 +64,6 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
   const handleRescheduleClick = (reminderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setReschedulingReminder(reminderId);
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
   };
 
   const getDayReminders = () => {
@@ -154,29 +149,15 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
   const dayReminders = getDayReminders();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/60 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
-      onClick={handleBackdropClick}
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Calendario de Lembretes"
+      description={reschedulingReminder ? 'Selecione um dia para reagendar a tarefa' : undefined}
+      size="xl"
+      panelClassName="max-w-4xl"
+      bodyClassName="p-6"
     >
-      <div className="modal-panel reminders-calendar-modal flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Calendário de Lembretes</h2>
-            {reschedulingReminder && (
-              <p className="text-sm text-teal-600 mt-1">
-                Selecione um dia para reagendar a tarefa
-              </p>
-            )}
-          </div>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 transition-colors hover:bg-slate-100"
-            >
-              <X className="w-6 h-6 text-slate-600" />
-            </button>
-        </div>
-
-        <div className="modal-panel-content flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -297,8 +278,6 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

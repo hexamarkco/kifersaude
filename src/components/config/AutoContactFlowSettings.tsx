@@ -1517,8 +1517,14 @@ export default function AutoContactFlowSettings() {
             )}
 
             {activeFlow && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                <div className="max-h-[92vh] w-full max-w-6xl 2xl:max-w-7xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+              <ModalShell
+                isOpen
+                onClose={() => setActiveFlowId(null)}
+                size="xl"
+                panelClassName="max-w-6xl 2xl:max-w-7xl"
+                bodyClassName="p-6"
+                showCloseButton={false}
+              >
                   <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <div className="text-xs font-semibold text-slate-400 uppercase">
@@ -2476,8 +2482,7 @@ export default function AutoContactFlowSettings() {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
+              </ModalShell>
             )}
           </div>
 

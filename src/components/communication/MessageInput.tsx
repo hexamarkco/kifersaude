@@ -64,6 +64,7 @@ export function MessageInput({
   const [quickReplyTitle, setQuickReplyTitle] = useState('');
   const [quickReplyMessage, setQuickReplyMessage] = useState('');
   const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
+  const [slashQuickReplyIndex, setSlashQuickReplyIndex] = useState(0);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [rewriteTone, setRewriteTone] = useState('claro');
   const [rewriteOriginal, setRewriteOriginal] = useState('');
@@ -152,13 +153,68 @@ export function MessageInput({
     return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
   }, [contacts, contactSearch]);
 
+  const normalizeQuickReplySearch = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
   const filteredQuickReplies = useMemo(() => {
-    const query = quickReplySearch.trim().toLowerCase();
+    const query = normalizeQuickReplySearch(quickReplySearch.trim());
     if (!query) return quickReplies;
     return quickReplies.filter(
-      (reply) => reply.title.toLowerCase().includes(query) || reply.message.toLowerCase().includes(query),
+      (reply) =>
+        normalizeQuickReplySearch(reply.title).includes(query) ||
+        normalizeQuickReplySearch(reply.message).includes(query),
     );
   }, [quickReplies, quickReplySearch]);
+
+  const slashCommandState = useMemo(() => {
+    const draft = message.trimStart();
+    if (!draft.startsWith('/')) {
+      return {
+        active: false,
+        query: '',
+        results: [] as Array<{ id: string; title: string; message: string }>,
+      };
+    }
+
+    if (draft.includes('\n')) {
+      return {
+        active: false,
+        query: '',
+        results: [] as Array<{ id: string; title: string; message: string }>,
+      };
+    }
+
+    const query = draft.slice(1).trim();
+    const normalizedQuery = normalizeQuickReplySearch(query);
+    const results = quickReplies
+      .filter((reply) => {
+        if (!normalizedQuery) return true;
+        return normalizeQuickReplySearch(reply.title).includes(normalizedQuery);
+      })
+      .slice(0, 8);
+
+    return {
+      active: true,
+      query,
+      results,
+    };
+  }, [message, quickReplies]);
+
+  const selectedSlashQuickReply = slashCommandState.results[slashQuickReplyIndex] ?? null;
+
+  useEffect(() => {
+    if (!slashCommandState.active || slashCommandState.results.length === 0) {
+      if (slashQuickReplyIndex !== 0) setSlashQuickReplyIndex(0);
+      return;
+    }
+
+    if (slashQuickReplyIndex >= slashCommandState.results.length) {
+      setSlashQuickReplyIndex(0);
+    }
+  }, [slashCommandState.active, slashCommandState.results.length, slashQuickReplyIndex]);
 
   useEffect(() => {
     const stored = localStorage.getItem('whatsapp_quick_replies');
@@ -279,6 +335,11 @@ export function MessageInput({
     const resolvedMessage = applyTemplateVariables(rawMessage);
 
     if ((!rawMessage && !selectedFile) || isSending) return;
+
+    if (!editMessage && !selectedFile && slashCommandState.active && slashCommandState.results.length > 0) {
+      handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
+      return;
+    }
 
     if (!editMessage && !selectedFile) {
       const urlMatch = resolvedMessage.match(/https?:\/\/\S+/i);
@@ -410,9 +471,31 @@ export function MessageInput({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashCommandState.active && slashCommandState.results.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSlashQuickReplyIndex((prev) => (prev + 1) % slashCommandState.results.length);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSlashQuickReplyIndex((prev) =>
+          prev === 0 ? slashCommandState.results.length - 1 : prev - 1,
+        );
+        return;
+      }
+
+      if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
+        event.preventDefault();
+        handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
+        return;
+      }
+    }
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
       handleSendMessage();
     }
   };
@@ -650,10 +733,29 @@ export function MessageInput({
     setQuickReplyMessage('');
   };
 
-  const handleUseQuickReply = (reply: { message: string }) => {
-    setMessage(applyTemplateVariables(reply.message));
+  const applyQuickReplyToDraft = (reply: { message: string }) => {
+    const resolvedMessage = applyTemplateVariables(reply.message);
+    setMessage(resolvedMessage);
     setShowQuickReplies(false);
     setQuickReplySearch('');
+
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const cursorPosition = resolvedMessage.length;
+      textarea.setSelectionRange(cursorPosition, cursorPosition);
+    });
+  };
+
+  const handleUseQuickReply = (reply: { message: string }) => {
+    applyQuickReplyToDraft(reply);
+    setSlashQuickReplyIndex(0);
+  };
+
+  const handleUseSlashQuickReply = (reply: { message: string }) => {
+    applyQuickReplyToDraft(reply);
+    setSlashQuickReplyIndex(0);
   };
 
   const handleRemoveQuickReply = (replyId: string) => {
@@ -828,12 +930,12 @@ export function MessageInput({
   return (
     <div className="border-t bg-white relative">
       {showQuickReplies && (
-        <div className="absolute bottom-full left-4 mb-2 w-96 max-w-[90vw] bg-white border rounded-lg shadow-lg z-20">
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <span className="text-sm font-medium">Respostas rapidas</span>
+        <div className="absolute bottom-full left-4 mb-2 w-96 max-w-[90vw] bg-white border border-slate-200 rounded-lg shadow-xl z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+            <span className="text-sm font-medium text-slate-900">Respostas rapidas</span>
             <button
               type="button"
-              className="p-1 rounded hover:bg-gray-100"
+              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               onClick={() => setShowQuickReplies(false)}
             >
               <X className="w-4 h-4" />
@@ -846,7 +948,7 @@ export function MessageInput({
                 value={quickReplySearch}
                 onChange={(e) => setQuickReplySearch(e.target.value)}
                 placeholder="Buscar resposta..."
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -868,9 +970,9 @@ export function MessageInput({
               </div>
             )}
 
-            <div className="max-h-40 overflow-y-auto border rounded-md">
+            <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
               {filteredQuickReplies.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-gray-500">Nenhuma resposta rapida encontrada.</div>
+                <div className="px-3 py-2 text-xs text-slate-500">Nenhuma resposta rapida encontrada.</div>
               ) : (
                 filteredQuickReplies.map((reply) => {
                   const resolvedPreview = applyTemplateVariables(reply.message);
@@ -920,17 +1022,17 @@ export function MessageInput({
                 value={quickReplyTitle}
                 onChange={(e) => setQuickReplyTitle(e.target.value)}
                 placeholder="Titulo"
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               <textarea
                 value={quickReplyMessage}
                 onChange={(e) => setQuickReplyMessage(e.target.value)}
                 placeholder="Mensagem (use {{nome}}, {{telefone}}, etc.)"
-                className="w-full h-20 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full h-20 px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               <button
                 type="button"
-                className="w-full px-3 py-2 text-sm rounded-md bg-green-600 text-white"
+                className="w-full px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
                 onClick={handleAddQuickReply}
               >
                 Salvar resposta rapida
@@ -1240,7 +1342,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="p-3 flex items-end gap-2">
+      <div className="p-3 flex items-end gap-2 relative">
         <div className="relative">
           <button
             onClick={() => setShowAttachMenu(!showAttachMenu)}
@@ -1251,18 +1353,18 @@ export function MessageInput({
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border p-2 min-w-[200px]">
+            <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-slate-200 p-2 min-w-[220px] z-20">
               <button
                 onClick={() => {
                   imageInputRef.current?.click();
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
               >
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                   <ImageIcon className="w-4 h-4 text-purple-600" />
                 </div>
-                <span className="text-sm">Imagem ou vídeo</span>
+                <span className="text-sm font-medium">Imagem ou vídeo</span>
               </button>
 
               <button
@@ -1270,22 +1372,22 @@ export function MessageInput({
                   fileInputRef.current?.click();
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
               >
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                   <FileIcon className="w-4 h-4 text-blue-600" />
                 </div>
-                <span className="text-sm">Documento</span>
+                <span className="text-sm font-medium">Documento</span>
               </button>
 
               <button
                 onClick={handleSendLocation}
-                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
               >
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                   <MapPin className="w-4 h-4 text-green-600" />
                 </div>
-                <span className="text-sm">Localização</span>
+                <span className="text-sm font-medium">Localização</span>
               </button>
 
               <button
@@ -1293,12 +1395,12 @@ export function MessageInput({
                   setShowContactPicker(true);
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
               >
                 <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                   <Smile className="w-4 h-4 text-amber-600" />
                 </div>
-                <span className="text-sm">Contato</span>
+                <span className="text-sm font-medium">Contato</span>
               </button>
             </div>
           )}
@@ -1394,8 +1496,8 @@ export function MessageInput({
                 setMessage(e.target.value);
                 handleTyping();
               }}
-              onKeyPress={handleKeyPress}
-              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem"}
+              onKeyDown={handleTextareaKeyDown}
+              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
               className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
               rows={1}
               disabled={isSending || isRecording}
@@ -1411,6 +1513,40 @@ export function MessageInput({
             />
           )}
         </div>
+
+        {slashCommandState.active && (
+          <div className="absolute bottom-full left-14 right-14 mb-2 rounded-lg border border-slate-200 bg-white shadow-lg z-20 overflow-hidden">
+            <div className="px-3 py-2 text-[11px] text-slate-500 border-b border-slate-100">
+              {slashCommandState.query
+                ? `Atalho rapido: "${slashCommandState.query}"`
+                : 'Digite / e o nome da resposta rapida'}
+            </div>
+            {slashCommandState.results.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-slate-500">Nenhuma resposta rapida encontrada.</div>
+            ) : (
+              <div className="max-h-56 overflow-y-auto">
+                {slashCommandState.results.map((reply, index) => {
+                  const isActive = index === slashQuickReplyIndex;
+                  const resolvedPreview = applyTemplateVariables(reply.message);
+                  return (
+                    <button
+                      key={`slash-reply-${reply.id}`}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 border-b border-slate-100 last:border-b-0 ${
+                        isActive ? 'bg-emerald-50' : 'hover:bg-slate-50'
+                      }`}
+                      onMouseEnter={() => setSlashQuickReplyIndex(index)}
+                      onClick={() => handleUseSlashQuickReply(reply)}
+                    >
+                      <div className="text-xs font-semibold text-slate-800">/{reply.title}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{resolvedPreview}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {isRecording ? (
           <div className="flex items-center gap-2">

@@ -109,7 +109,12 @@ export default function Layout({
   const auroraSecondaryRef = useRef<HTMLDivElement | null>(null);
   const auroraTertiaryRef = useRef<HTMLDivElement | null>(null);
   const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
-  const [collapsedDropdownPosition, setCollapsedDropdownPosition] = useState<{ left: number; top: number } | null>(null);
+  const [collapsedDropdownPosition, setCollapsedDropdownPosition] = useState<{
+    left: number;
+    top: number;
+    side: 'right' | 'left';
+    caretTop: number;
+  } | null>(null);
   const { motionEnabled, enterDuration, sectionStagger, ease } = usePanelMotion();
   const currentRole = role;
 
@@ -421,8 +426,10 @@ export default function Layout({
     const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 260;
 
     let left = triggerRect.right + sideOffset;
+    let side: 'right' | 'left' = 'right';
     if (left + dropdownWidth > window.innerWidth - viewportPadding) {
       left = Math.max(viewportPadding, triggerRect.left - dropdownWidth - sideOffset);
+      side = 'left';
     }
 
     let top = triggerRect.top;
@@ -430,7 +437,10 @@ export default function Layout({
       top = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
     }
 
-    setCollapsedDropdownPosition({ left, top });
+    const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+    const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
+
+    setCollapsedDropdownPosition({ left, top, side, caretTop });
   }, [activeDropdownTab, isMenuCollapsed]);
 
   useEffect(() => {
@@ -716,11 +726,13 @@ export default function Layout({
       return;
     }
 
+    const fromX = isMenuCollapsed && collapsedDropdownPosition?.side === 'left' ? 6 : -6;
+
     const animation = gsap.fromTo(
       dropdown,
       {
         autoAlpha: 0,
-        x: -6,
+        x: fromX,
         y: 6,
         scale: 0.98,
       },
@@ -808,6 +820,15 @@ export default function Layout({
                 top: collapsedDropdownPosition.top,
               }}
             >
+              <div
+                aria-hidden="true"
+                className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-slate-200 bg-white shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
+                  collapsedDropdownPosition.side === 'right'
+                    ? '-left-1.5 border-b-0 border-r-0'
+                    : '-right-1.5 border-l-0 border-t-0'
+                }`}
+                style={{ top: collapsedDropdownPosition.caretTop - 6 }}
+              />
               <div className="space-y-1">
                 {tab.children.map((child) => {
                   const ChildIcon = child.icon;

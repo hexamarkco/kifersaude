@@ -1,5 +1,6 @@
 import { Pause, Play, Scissors, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ModalShell from './ui/ModalShell';
 
 const WAVEFORM_BAR_COUNT = 64;
 
@@ -402,8 +403,15 @@ export function AudioEditorModal({ dataUrl, durationSeconds, mimeType, onSave, o
   const selectionLabel = `${formatTime(startTime)} - ${formatTime(endTime)}`;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-stretch justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-      <div className="modal-panel w-full max-w-3xl rounded-2xl bg-white shadow-2xl flex flex-col">
+    <ModalShell
+      isOpen
+      onClose={onCancel}
+      size="lg"
+      panelClassName="max-w-3xl"
+      bodyClassName="p-0"
+      showCloseButton={false}
+    >
+      <div className="flex flex-col">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">Editar áudio</p>
@@ -519,6 +527,6 @@ export function AudioEditorModal({ dataUrl, durationSeconds, mimeType, onSave, o
           </button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

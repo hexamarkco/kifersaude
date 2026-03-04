@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, Reminder } from '../../lib/supabase';
 import {
   AlertCircle,
@@ -10,8 +10,8 @@ import {
   Loader2,
   Plus,
   Trash2,
-  X,
 } from 'lucide-react';
+import ModalShell from '../ui/ModalShell';
 
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
 
@@ -384,195 +384,157 @@ export default function TodoCalendar() {
       )}
 
       {isDayModalOpen && (
-        <Fragment>
-          <div
-            className="fixed inset-0 z-40 bg-slate-900/60"
-            aria-hidden="true"
-            onClick={() => {
-              if (!isAddModalOpen) {
-                closeDayModal();
-              }
-            }}
-          />
-          <div className="fixed inset-0 z-50 flex items-stretch justify-center px-0 sm:items-center sm:px-4">
-            <div className="modal-panel w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col" style={{ maxHeight: '90vh' }}>
-              <div className="flex items-start justify-between gap-4 p-6 border-b border-slate-200">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    Tarefas de{' '}
-                    {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    {pendingTasks.length + completedTasks.length > 0
-                      ? `${pendingTasks.length + completedTasks.length} tarefa(s) ao todo · ${pendingTasks.length} pendente(s) · ${completedTasks.length} concluída(s)`
-                      : 'Nenhuma tarefa cadastrada para este dia.'}
-                  </p>
-                  {reschedulingTaskId && (
-                    <p className="text-sm text-sky-600 mt-1">
-                      Selecione um dia para reagendar a tarefa
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium shadow-sm hover:bg-sky-700 transition-colors"
-                    type="button"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar tarefa
-                  </button>
-                  <button
-                    onClick={closeDayModal}
-                    className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label="Fechar"
-                    type="button"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+        <ModalShell
+          isOpen
+          onClose={closeDayModal}
+          title={`Tarefas de ${selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`}
+          description={
+            pendingTasks.length + completedTasks.length > 0
+              ? `${pendingTasks.length + completedTasks.length} tarefa(s) ao todo · ${pendingTasks.length} pendente(s) · ${completedTasks.length} concluída(s)`
+              : 'Nenhuma tarefa cadastrada para este dia.'
+          }
+          size="lg"
+          panelClassName="max-w-3xl"
+          bodyClassName="p-6"
+        >
+          {reschedulingTaskId && (
+            <p className="mb-4 text-sm text-sky-600">Selecione um dia para reagendar a tarefa</p>
+          )}
 
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="border border-slate-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">A fazer</h4>
-                    <span className="text-xs font-semibold text-sky-600">{pendingTasks.length}</span>
-                  </div>
-                  {pendingTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {pendingTasks.map((task) => (
-                        <article
-                          key={task.id}
-                          className={`border rounded-lg p-3 shadow-sm transition-all ${
-                            reschedulingTaskId === task.id
-                              ? 'border-sky-500 bg-sky-50'
-                              : 'border-sky-200 bg-white'
-                          }`}
+          <div className="mb-4 flex items-center justify-end">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-sky-700"
+              type="button"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar tarefa
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="border border-slate-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">A fazer</h4>
+                <span className="text-xs font-semibold text-sky-600">{pendingTasks.length}</span>
+              </div>
+              {pendingTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {pendingTasks.map((task) => (
+                    <article
+                      key={task.id}
+                      className={`border rounded-lg p-3 shadow-sm transition-all ${
+                        reschedulingTaskId === task.id
+                          ? 'border-sky-500 bg-sky-50'
+                          : 'border-sky-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{task.titulo}</p>
+                          {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-1 text-slate-400 hover:text-red-500"
+                          title="Remover tarefa"
+                          type="button"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">{task.titulo}</p>
-                              {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
-                            </div>
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="p-1 text-slate-400 hover:text-red-500"
-                              title="Remover tarefa"
-                              type="button"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                className="inline-flex items-center text-sky-600 hover:text-sky-700"
-                                onClick={() => updateTaskStatus(task.id, true)}
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
-                              </button>
-                              <button
-                                type="button"
-                                className="inline-flex items-center text-sky-600 hover:text-sky-700"
-                                onClick={() => setReschedulingTaskId(task.id)}
-                                title="Reagendar tarefa"
-                              >
-                                <Calendar className="w-4 h-4 mr-1" /> Reagendar
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500 py-8 text-center">Nenhuma tarefa pendente para este dia.</div>
-                  )}
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                            onClick={() => updateTaskStatus(task.id, true)}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                            onClick={() => setReschedulingTaskId(task.id)}
+                            title="Reagendar tarefa"
+                          >
+                            <Calendar className="w-4 h-4 mr-1" /> Reagendar
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
+              ) : (
+                <div className="text-sm text-slate-500 py-8 text-center">Nenhuma tarefa pendente para este dia.</div>
+              )}
+            </div>
 
-                <div className="border border-slate-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Feito</h4>
-                    <span className="text-xs font-semibold text-emerald-600">{completedTasks.length}</span>
-                  </div>
-                  {completedTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {completedTasks.map((task) => (
-                        <article key={task.id} className="border border-emerald-200 bg-white rounded-lg p-3 shadow-sm">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800 line-through">{task.titulo}</p>
-                              {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
-                            </div>
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="p-1 text-slate-400 hover:text-red-500"
-                              title="Remover tarefa"
-                              type="button"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                            <span>
-                              {task.concluido_em
-                                ? `Concluída em ${new Date(task.concluido_em).toLocaleDateString('pt-BR')}`
-                                : 'Concluída'}
-                            </span>
-                            <button
-                              type="button"
-                              className="inline-flex items-center text-emerald-600 hover:text-emerald-700"
-                              onClick={() => updateTaskStatus(task.id, false)}
-                            >
-                              <Circle className="w-4 h-4 mr-1" /> Reabrir
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500 py-8 text-center">Nenhuma tarefa concluída neste dia.</div>
-                  )}
-                </div>
-                </div>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700 mt-4">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{error}</span>
-                  </div>
-                )}
+            <div className="border border-slate-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Feito</h4>
+                <span className="text-xs font-semibold text-emerald-600">{completedTasks.length}</span>
               </div>
+              {completedTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {completedTasks.map((task) => (
+                    <article key={task.id} className="border border-emerald-200 bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 line-through">{task.titulo}</p>
+                          {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-1 text-slate-400 hover:text-red-500"
+                          title="Remover tarefa"
+                          type="button"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                        <span>
+                          {task.concluido_em
+                            ? `Concluída em ${new Date(task.concluido_em).toLocaleDateString('pt-BR')}`
+                            : 'Concluída'}
+                        </span>
+                        <button
+                          type="button"
+                          className="inline-flex items-center text-emerald-600 hover:text-emerald-700"
+                          onClick={() => updateTaskStatus(task.id, false)}
+                        >
+                          <Circle className="w-4 h-4 mr-1" /> Reabrir
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500 py-8 text-center">Nenhuma tarefa concluída neste dia.</div>
+              )}
             </div>
           </div>
-        </Fragment>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700 mt-4">
+              <AlertCircle className="w-4 h-4" />
+              <span>{error}</span>
+            </div>
+          )}
+        </ModalShell>
       )}
 
       {isDayModalOpen && isAddModalOpen && (
-        <Fragment>
-          <div className="fixed inset-0 z-60 bg-slate-900/70" aria-hidden="true" onClick={closeAddModal} />
-          <div className="fixed inset-0 z-70 flex items-stretch justify-center px-0 sm:items-center sm:px-4">
-            <div className="modal-panel w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h4 className="text-lg font-semibold text-slate-900">Nova tarefa</h4>
-                  <p className="text-sm text-slate-500">
-                    {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
-                <button
-                  onClick={closeAddModal}
-                  className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label="Fechar formulário de nova tarefa"
-                  type="button"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddTask} className="mt-4 space-y-4">
+        <ModalShell
+          isOpen
+          onClose={closeAddModal}
+          title="Nova tarefa"
+          description={selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+          size="sm"
+          panelClassName="max-w-md"
+        >
+              <form onSubmit={handleAddTask} className="space-y-4">
                 <div className="space-y-1">
                   <label htmlFor="task-title" className="text-sm font-medium text-slate-700">
                     Tarefa
@@ -627,9 +589,7 @@ export default function TodoCalendar() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        </Fragment>
+        </ModalShell>
       )}
     </section>
   );

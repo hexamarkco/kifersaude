@@ -3,6 +3,7 @@ import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile } 
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageHistoryModal } from './MessageHistoryModal';
+import ModalShell from '../ui/ModalShell';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 
 interface MessageBubbleProps {
@@ -650,33 +651,33 @@ export function MessageBubble({
       />
 
       {showImagePreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onClick={() => setShowImagePreview(false)}>
-          <div className="max-w-[90vw] max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
-            <img src={imageFullSrc} alt="Imagem" className="max-w-[90vw] max-h-[90vh] rounded" />
-          </div>
-        </div>
+        <ModalShell
+          isOpen
+          onClose={() => setShowImagePreview(false)}
+          size="xl"
+          panelClassName="max-w-6xl"
+          bodyClassName="flex items-center justify-center p-3"
+          showCloseButton={false}
+        >
+          <img src={imageFullSrc} alt="Imagem" className="max-h-[84vh] max-w-full rounded-xl object-contain" />
+        </ModalShell>
       )}
 
       {showPdfPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onClick={() => setShowPdfPreview(false)}>
-          <div className="w-full max-w-[90vw] h-[90vh] bg-white rounded" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-2 border-b">
-              <span className="text-sm font-medium text-slate-700">{documentName}</span>
-              <button
-                type="button"
-                className="text-sm text-slate-500 hover:text-slate-700"
-                onClick={() => setShowPdfPreview(false)}
-              >
-                Fechar
-              </button>
-            </div>
-            <iframe
-              title="PDF Preview"
-              src={documentUrl || documentLink || ''}
-              className="w-full h-[calc(90vh-44px)]"
-            />
-          </div>
-        </div>
+        <ModalShell
+          isOpen
+          onClose={() => setShowPdfPreview(false)}
+          title={documentName || 'Pre-visualizacao de PDF'}
+          size="xl"
+          panelClassName="max-w-6xl"
+          bodyClassName="p-0"
+        >
+          <iframe
+            title="PDF Preview"
+            src={documentUrl || documentLink || ''}
+            className="h-[84vh] w-full"
+          />
+        </ModalShell>
       )}
     </div>
   );

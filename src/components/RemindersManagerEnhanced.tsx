@@ -1749,34 +1749,25 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {historyModalData && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="modal-panel panel-glass-strong flex max-h-[90vh] w-full max-w-4xl min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 shadow-2xl">
-            <div className="flex items-start justify-between p-5 border-b border-slate-200">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-900">Histórico de mensagens</h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  {historyModalData.leadName ?? 'Lead sem nome'} · {historyModalData.phone || 'Telefone indisponível'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => historyModalData.phone && fetchHistoryMessages(historyModalData.phone)}
-                  disabled={!historyModalData.phone || historyLoading}
-                  className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
-                  Atualizar
-                </button>
-                <button
-                  type="button"
-                  onClick={closeHistoryModal}
-                  className="rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Fechar</span>
-                </button>
-              </div>
+        <ModalShell
+          isOpen
+          onClose={closeHistoryModal}
+          title="Historico de mensagens"
+          description={`${historyModalData.leadName ?? 'Lead sem nome'} · ${historyModalData.phone || 'Telefone indisponivel'}`}
+          size="xl"
+          panelClassName="max-w-4xl"
+          bodyClassName="p-0"
+        >
+            <div className="flex items-center justify-end border-b border-slate-200 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => historyModalData.phone && fetchHistoryMessages(historyModalData.phone)}
+                disabled={!historyModalData.phone || historyLoading}
+                className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
             </div>
 
             <div className="modal-panel-content flex-1 min-h-0 overflow-y-auto bg-slate-50 p-5 space-y-3">
@@ -1953,33 +1944,18 @@ export default function RemindersManagerEnhanced() {
             <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
               Mensagens exibidas conforme retorno da integração externa.
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {reminderPendingDeletion && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="modal-panel panel-glass-strong flex w-full max-w-md flex-col rounded-xl border border-slate-200 p-6 shadow-2xl">
-            <div className="flex items-start space-x-3">
-              <div className="p-3 rounded-full bg-red-100">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Remover lembrete</h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  Tem certeza que deseja remover o lembrete
-                  <span className="font-semibold text-slate-900"> "{reminderPendingDeletion.titulo}"</span>?
-                  Esta ação não pode ser desfeita.
-                </p>
-                {reminderPendingDeletion.descricao && (
-                  <p className="mt-2 text-xs text-slate-500 break-words">
-                    {reminderPendingDeletion.descricao}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
+        <ModalShell
+          isOpen
+          onClose={() => setReminderPendingDeletion(null)}
+          title="Remover lembrete"
+          size="sm"
+          panelClassName="max-w-md"
+          footer={
+            <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setReminderPendingDeletion(null)}
                 disabled={isDeletingReminder}
@@ -1995,8 +1971,26 @@ export default function RemindersManagerEnhanced() {
                 {isDeletingReminder ? 'Removendo...' : 'Remover'}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+            <div className="flex items-start space-x-3">
+              <div className="p-3 rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mt-1">
+                  Tem certeza que deseja remover o lembrete
+                  <span className="font-semibold text-slate-900"> "{reminderPendingDeletion.titulo}"</span>?
+                  Esta ação não pode ser desfeita.
+                </p>
+                {reminderPendingDeletion.descricao && (
+                  <p className="mt-2 text-xs text-slate-500 break-words">
+                    {reminderPendingDeletion.descricao}
+                  </p>
+                )}
+              </div>
+            </div>
+        </ModalShell>
       )}
 
       {customSnoozeReminder && (
@@ -2068,12 +2062,23 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {loadingLeadId && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
+        <ModalShell
+          isOpen
+          onClose={() => undefined}
+          title="Carregando lead"
+          description="Aguarde enquanto buscamos os dados mais recentes."
+          size="sm"
+          panelClassName="max-w-sm"
+          closeOnOverlay={false}
+          closeOnEscape={false}
+          showCloseButton={false}
+          bodyClassName="flex min-h-[180px] items-center justify-center"
+        >
           <div className="panel-glass-strong flex items-center space-x-2 rounded-lg border border-slate-200 px-4 py-3 shadow-lg">
             <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
             <span className="text-sm font-medium text-slate-700">Carregando lead...</span>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {editingLead && (

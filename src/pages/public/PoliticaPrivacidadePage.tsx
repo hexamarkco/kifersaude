@@ -1,5 +1,6 @@
-import { Helmet } from 'react-helmet';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const sections = [
   {
@@ -47,14 +48,13 @@ const sections = [
 export default function PoliticaPrivacidadePage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Politica de privacidade | Kifer Saude</title>
-        <meta
-          name="description"
-          content="Politica de privacidade da Kifer Saude sobre coleta, uso e protecao de dados em atendimentos e solicitacoes de cotacao."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/politica-de-privacidade" />
-      </Helmet>
+      <PublicSeo
+        title="Politica de privacidade | Kifer Saude"
+        description="Politica de privacidade da Kifer Saude sobre coleta, uso e protecao de dados em atendimentos e solicitacoes de cotacao."
+        canonicalPath="/politica-de-privacidade"
+        breadcrumbs={[{ name: 'Politica de privacidade', path: '/politica-de-privacidade' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Politica de privacidade', path: '/politica-de-privacidade' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">

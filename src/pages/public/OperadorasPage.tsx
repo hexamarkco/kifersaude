@@ -1,7 +1,8 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Building2, CheckCircle2, MapPin, ShieldCheck, Stethoscope, Users } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const operatorProfiles = [
   {
@@ -81,14 +82,13 @@ const validationQuestions = [
 export default function OperadorasPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Operadoras de saude | Comparativo pratico no RJ</title>
-        <meta
-          name="description"
-          content="Conheca o perfil das principais operadoras parceiras da Kifer Saude e veja como comparar rede, cobertura e custo com criterio no Rio de Janeiro."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/operadoras" />
-      </Helmet>
+      <PublicSeo
+        title="Operadoras de saude | Comparativo pratico no RJ"
+        description="Conheca o perfil das principais operadoras parceiras da Kifer Saude e veja como comparar rede, cobertura e custo com criterio no Rio de Janeiro."
+        canonicalPath="/operadoras"
+        breadcrumbs={[{ name: 'Operadoras', path: '/operadoras' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Operadoras', path: '/operadoras' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

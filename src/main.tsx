@@ -13,6 +13,10 @@ import PlanosMeiCnpjPage from './pages/public/PlanosMeiCnpjPage';
 import PlanosSeniorPage from './pages/public/PlanosSeniorPage';
 import OperadorasPage from './pages/public/OperadorasPage';
 import PortabilidadePage from './pages/public/PortabilidadePage';
+import RioDeJaneiroPage from './pages/public/RioDeJaneiroPage';
+import NiteroiPage from './pages/public/NiteroiPage';
+import SaoGoncaloPage from './pages/public/SaoGoncaloPage';
+import BaixadaFluminensePage from './pages/public/BaixadaFluminensePage';
 import DepoimentosPage from './pages/public/DepoimentosPage';
 import FaqPage from './pages/public/FaqPage';
 import ContatoPage from './pages/public/ContatoPage';
@@ -58,6 +62,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/planos/senior" element={<PlanosSeniorPage />} />
           <Route path="/operadoras" element={<OperadorasPage />} />
           <Route path="/portabilidade" element={<PortabilidadePage />} />
+          <Route path="/rio-de-janeiro" element={<RioDeJaneiroPage />} />
+          <Route path="/niteroi" element={<NiteroiPage />} />
+          <Route path="/sao-goncalo" element={<SaoGoncaloPage />} />
+          <Route path="/baixada-fluminense" element={<BaixadaFluminensePage />} />
           <Route path="/depoimentos" element={<DepoimentosPage />} />
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/contato" element={<ContatoPage />} />

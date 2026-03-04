@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -11,6 +10,8 @@ import {
   WalletCards,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const familyMoments = [
   {
@@ -89,14 +90,22 @@ const faq = [
 export default function PlanosFamiliaPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Plano de saude familiar | Guia para escolher com seguranca</title>
-        <meta
-          name="description"
-          content="Guia completo para plano de saude familiar no RJ: composicao de vidas, rede, custo anual, coparticipacao e regras de dependentes."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/planos/familia" />
-      </Helmet>
+      <PublicSeo
+        title="Plano de saude familiar | Guia para escolher com seguranca"
+        description="Guia completo para plano de saude familiar no RJ: composicao de vidas, rede, custo anual, coparticipacao e regras de dependentes."
+        canonicalPath="/planos/familia"
+        breadcrumbs={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Familia', path: '/planos/familia' },
+        ]}
+        faqItems={faq}
+      />
+      <PublicBreadcrumbs
+        items={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Familia', path: '/planos/familia' },
+        ]}
+      />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

@@ -1,7 +1,8 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Briefcase, CheckCircle2, HeartPulse, Landmark, Scale, UserRound, UsersRound } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const planTypes = [
   {
@@ -122,14 +123,13 @@ const deepDivePages = [
 export default function PlanosPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Planos de saude | Guia completo para PF, familia, MEI e CNPJ</title>
-        <meta
-          name="description"
-          content="Compare tipos de plano de saude, modelos financeiros e criterios de escolha. Guia completo da Kifer Saude para contratacao no Rio de Janeiro."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/planos" />
-      </Helmet>
+      <PublicSeo
+        title="Planos de saude | Guia completo para PF, familia, MEI e CNPJ"
+        description="Compare tipos de plano de saude, modelos financeiros e criterios de escolha. Guia completo da Kifer Saude para contratacao no Rio de Janeiro."
+        canonicalPath="/planos"
+        breadcrumbs={[{ name: 'Planos', path: '/planos' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Planos', path: '/planos' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

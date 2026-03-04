@@ -1,5 +1,6 @@
-import { Helmet } from 'react-helmet';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const clauses = [
   {
@@ -43,14 +44,13 @@ const clauses = [
 export default function TermosUsoPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Termos de uso | Kifer Saude</title>
-        <meta
-          name="description"
-          content="Termos de uso do site Kifer Saude para acesso, conteudo e atendimento consultivo sobre planos de saude."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/termos-de-uso" />
-      </Helmet>
+      <PublicSeo
+        title="Termos de uso | Kifer Saude"
+        description="Termos de uso do site Kifer Saude para acesso, conteudo e atendimento consultivo sobre planos de saude."
+        canonicalPath="/termos-de-uso"
+        breadcrumbs={[{ name: 'Termos de uso', path: '/termos-de-uso' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Termos de uso', path: '/termos-de-uso' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">

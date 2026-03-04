@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -11,6 +10,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const whenToConsider = [
   'Insatisfacao recorrente com rede de atendimento no seu territorio de uso.',
@@ -82,14 +83,14 @@ const faq = [
 export default function PortabilidadePage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Portabilidade e migracao de plano de saude | Kifer Saude</title>
-        <meta
-          name="description"
-          content="Guia de portabilidade e migracao de plano de saude no RJ: elegibilidade, checklist, riscos comuns e processo de transicao com seguranca."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/portabilidade" />
-      </Helmet>
+      <PublicSeo
+        title="Portabilidade e migracao de plano de saude | Kifer Saude"
+        description="Guia de portabilidade e migracao de plano de saude no RJ: elegibilidade, checklist, riscos comuns e processo de transicao com seguranca."
+        canonicalPath="/portabilidade"
+        breadcrumbs={[{ name: 'Portabilidade', path: '/portabilidade' }]}
+        faqItems={faq}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Portabilidade', path: '/portabilidade' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

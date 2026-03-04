@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -12,6 +11,8 @@ import {
   WalletCards,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const businessProfiles = [
   {
@@ -94,14 +95,22 @@ const faq = [
 export default function PlanosMeiCnpjPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Plano de saude MEI e CNPJ | Guia empresarial completo</title>
-        <meta
-          name="description"
-          content="Guia completo de plano de saude para MEI e CNPJ: elegibilidade, documentacao, custo empresarial e criterios de escolha no RJ."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/planos/mei-cnpj" />
-      </Helmet>
+      <PublicSeo
+        title="Plano de saude MEI e CNPJ | Guia empresarial completo"
+        description="Guia completo de plano de saude para MEI e CNPJ: elegibilidade, documentacao, custo empresarial e criterios de escolha no RJ."
+        canonicalPath="/planos/mei-cnpj"
+        breadcrumbs={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'MEI e CNPJ', path: '/planos/mei-cnpj' },
+        ]}
+        faqItems={faq}
+      />
+      <PublicBreadcrumbs
+        items={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'MEI e CNPJ', path: '/planos/mei-cnpj' },
+        ]}
+      />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

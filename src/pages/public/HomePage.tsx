@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -15,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const highlights = [
   {
@@ -98,32 +98,39 @@ const cityGroups = [
   {
     region: 'Capital e Zona Sul',
     areas: 'Copacabana, Botafogo, Tijuca, Barra, Recreio e bairros adjacentes.',
+    path: '/rio-de-janeiro',
   },
   {
     region: 'Zona Norte e Oeste',
     areas: 'Meier, Madureira, Campo Grande, Bangu, Jacarepagua e entorno.',
+    path: '/rio-de-janeiro',
   },
   {
-    region: 'Niteroi e Sao Goncalo',
-    areas: 'Atendimento remoto com foco em rede local e deslocamento intermunicipal.',
+    region: 'Niteroi',
+    areas: 'Comparativo local com foco em rede regional e deslocamento entre Niteroi e capital.',
+    path: '/niteroi',
+  },
+  {
+    region: 'Sao Goncalo',
+    areas: 'Analise orientada para uso intermunicipal e cobertura aderente ao cotidiano da regiao.',
+    path: '/sao-goncalo',
   },
   {
     region: 'Baixada Fluminense',
     areas: 'Duque de Caxias, Nova Iguacu, Belford Roxo, Nilopolis e cidades proximas.',
+    path: '/baixada-fluminense',
   },
 ];
 
 export default function HomePage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Kifer Saude | Consultoria completa em planos de saude no RJ</title>
-        <meta
-          name="description"
-          content="Site oficial multipaginas da Kifer Saude. Compare planos, operadoras, etapas de contratacao e tire duvidas com atendimento consultivo no Rio de Janeiro."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/" />
-      </Helmet>
+      <PublicSeo
+        title="Kifer Saude | Consultoria completa em planos de saude no RJ"
+        description="Site oficial multipaginas da Kifer Saude. Compare planos, operadoras, etapas de contratacao e tire duvidas com atendimento consultivo no Rio de Janeiro."
+        canonicalPath="/"
+        breadcrumbs={[{ name: 'Inicio', path: '/' }]}
+      />
 
       <section className="relative overflow-hidden px-4 pb-20 pt-12 sm:px-6 lg:px-8">
         <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-orange-200/40 blur-3xl" />
@@ -272,13 +279,21 @@ export default function HomePage() {
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             {cityGroups.map((city) => (
-              <article key={city.region} className="rounded-2xl border border-orange-100 bg-orange-50/50 p-6">
+              <Link
+                key={city.region}
+                to={city.path}
+                className="group rounded-2xl border border-orange-100 bg-orange-50/50 p-6 transition hover:border-orange-300 hover:bg-orange-50"
+              >
                 <h3 className="flex items-center gap-2 text-lg font-black text-slate-900">
                   <MapPin className="h-4 w-4 text-orange-500" />
                   {city.region}
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{city.areas}</p>
-              </article>
+                <span className="mt-4 inline-flex items-center text-xs font-black uppercase tracking-[0.12em] text-orange-700">
+                  Ver guia da regiao
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
             ))}
           </div>
         </div>

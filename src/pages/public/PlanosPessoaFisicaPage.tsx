@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -12,6 +11,8 @@ import {
   WalletCards,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const fitProfiles = [
   {
@@ -93,14 +94,22 @@ const quickFaq = [
 export default function PlanosPessoaFisicaPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Plano de saude pessoa fisica | Guia completo Kifer Saude</title>
-        <meta
-          name="description"
-          content="Entenda como escolher plano de saude pessoa fisica no RJ com criterio de rede, custo total, carencia e previsibilidade financeira."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/planos/pessoa-fisica" />
-      </Helmet>
+      <PublicSeo
+        title="Plano de saude pessoa fisica | Guia completo Kifer Saude"
+        description="Entenda como escolher plano de saude pessoa fisica no RJ com criterio de rede, custo total, carencia e previsibilidade financeira."
+        canonicalPath="/planos/pessoa-fisica"
+        breadcrumbs={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Pessoa fisica', path: '/planos/pessoa-fisica' },
+        ]}
+        faqItems={quickFaq}
+      />
+      <PublicBreadcrumbs
+        items={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Pessoa fisica', path: '/planos/pessoa-fisica' },
+        ]}
+      />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

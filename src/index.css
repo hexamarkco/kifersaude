@@ -783,7 +783,13 @@
 .panel-skeleton {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(130deg, rgba(226, 232, 240, 0.86) 0%, rgba(203, 213, 225, 0.8) 46%, rgba(226, 232, 240, 0.86) 100%);
+  background: linear-gradient(
+    130deg,
+    rgba(244, 247, 251, 0.95) 0%,
+    rgba(239, 244, 249, 0.94) 48%,
+    rgba(244, 247, 251, 0.95) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.42);
 }
 
 .panel-skeleton::before {
@@ -791,7 +797,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 72%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 76%);
   pointer-events: none;
 }
 
@@ -800,9 +806,14 @@
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(102deg, rgba(255, 255, 255, 0) 0%, rgba(248, 250, 252, 0.72) 46%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    102deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.46) 48%,
+    rgba(255, 255, 255, 0) 100%
+  );
   transform: translateX(-115%);
-  animation: panel-skeleton-shimmer 1.45s ease-in-out infinite;
+  animation: panel-skeleton-shimmer 1.8s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -821,13 +832,24 @@
 }
 
 .painel-theme.theme-dark .panel-skeleton {
-  background: linear-gradient(130deg, rgba(51, 65, 85, 0.74) 0%, rgba(71, 85, 105, 0.68) 46%, rgba(51, 65, 85, 0.74) 100%);
+  background: linear-gradient(
+    130deg,
+    rgba(37, 47, 64, 0.72) 0%,
+    rgba(44, 56, 74, 0.7) 48%,
+    rgba(37, 47, 64, 0.72) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.35);
 }
 
 .painel-theme.theme-dark .panel-skeleton::before {
-  background: linear-gradient(180deg, rgba(148, 163, 184, 0.14) 0%, rgba(148, 163, 184, 0) 70%);
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.1) 0%, rgba(148, 163, 184, 0) 72%);
 }
 
 .painel-theme.theme-dark .panel-skeleton::after {
-  background: linear-gradient(102deg, rgba(148, 163, 184, 0) 0%, rgba(148, 163, 184, 0.3) 44%, rgba(148, 163, 184, 0) 100%);
+  background: linear-gradient(
+    102deg,
+    rgba(148, 163, 184, 0) 0%,
+    rgba(148, 163, 184, 0.18) 46%,
+    rgba(148, 163, 184, 0) 100%
+  );
 }

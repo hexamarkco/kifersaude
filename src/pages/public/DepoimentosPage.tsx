@@ -1,7 +1,8 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BadgeCheck, BarChart3, CheckCircle2, HeartPulse, MessageSquareQuote, Star } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const testimonials = [
   {
@@ -91,14 +92,13 @@ const reasons = [
 export default function DepoimentosPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Depoimentos | Historias reais de clientes Kifer Saude</title>
-        <meta
-          name="description"
-          content="Veja relatos reais de familias e empresas atendidas pela Kifer Saude e entenda como nosso processo consultivo gera decisoes mais seguras."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/depoimentos" />
-      </Helmet>
+      <PublicSeo
+        title="Depoimentos | Historias reais de clientes Kifer Saude"
+        description="Veja relatos reais de familias e empresas atendidas pela Kifer Saude e entenda como nosso processo consultivo gera decisoes mais seguras."
+        canonicalPath="/depoimentos"
+        breadcrumbs={[{ name: 'Depoimentos', path: '/depoimentos' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Depoimentos', path: '/depoimentos' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

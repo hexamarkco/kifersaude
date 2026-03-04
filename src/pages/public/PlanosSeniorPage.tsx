@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -12,6 +11,8 @@ import {
   WalletCards,
 } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const priorities = [
   {
@@ -73,14 +74,22 @@ const faq = [
 export default function PlanosSeniorPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Plano de saude senior | Guia de escolha com foco em previsibilidade</title>
-        <meta
-          name="description"
-          content="Guia de plano de saude senior no RJ: rede assistencial, custo no medio prazo, carencias e criterios para escolher com seguranca."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/planos/senior" />
-      </Helmet>
+      <PublicSeo
+        title="Plano de saude senior | Guia de escolha com foco em previsibilidade"
+        description="Guia de plano de saude senior no RJ: rede assistencial, custo no medio prazo, carencias e criterios para escolher com seguranca."
+        canonicalPath="/planos/senior"
+        breadcrumbs={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Senior', path: '/planos/senior' },
+        ]}
+        faqItems={faq}
+      />
+      <PublicBreadcrumbs
+        items={[
+          { name: 'Planos', path: '/planos' },
+          { name: 'Senior', path: '/planos/senior' },
+        ]}
+      />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

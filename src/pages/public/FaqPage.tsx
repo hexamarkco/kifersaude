@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronDown, HelpCircle, MessageCircle } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 type FaqCategory = {
   title: string;
@@ -142,6 +143,7 @@ const faqCategories: FaqCategory[] = [
 
 export default function FaqPage() {
   const [openItemKey, setOpenItemKey] = useState<string | null>(null);
+  const faqSchemaItems = faqCategories.flatMap((category) => category.items);
 
   const handleToggle = (key: string) => {
     setOpenItemKey((current) => (current === key ? null : key));
@@ -149,14 +151,14 @@ export default function FaqPage() {
 
   return (
     <PublicLayout>
-      <Helmet>
-        <title>FAQ | Duvidas frequentes sobre planos de saude</title>
-        <meta
-          name="description"
-          content="Perguntas frequentes sobre contratacao, rede, carencia, coparticipacao, reajuste e pos-venda de planos de saude com a Kifer Saude."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/faq" />
-      </Helmet>
+      <PublicSeo
+        title="FAQ | Duvidas frequentes sobre planos de saude"
+        description="Perguntas frequentes sobre contratacao, rede, carencia, coparticipacao, reajuste e pos-venda de planos de saude com a Kifer Saude."
+        canonicalPath="/faq"
+        breadcrumbs={[{ name: 'FAQ', path: '/faq' }]}
+        faqItems={faqSchemaItems}
+      />
+      <PublicBreadcrumbs items={[{ name: 'FAQ', path: '/faq' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

@@ -1,7 +1,8 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Compass, HeartHandshake, Lightbulb, Shield, Users } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const timeline = [
   {
@@ -64,14 +65,13 @@ const method = [
 export default function SobrePage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Sobre a Kifer Saude | Historia, metodo e valores</title>
-        <meta
-          name="description"
-          content="Conheca a historia da Kifer Saude, nossos valores, metodo consultivo e compromisso com atendimento humano em planos de saude no RJ."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/sobre" />
-      </Helmet>
+      <PublicSeo
+        title="Sobre a Kifer Saude | Historia, metodo e valores"
+        description="Conheca a historia da Kifer Saude, nossos valores, metodo consultivo e compromisso com atendimento humano em planos de saude no RJ."
+        canonicalPath="/sobre"
+        breadcrumbs={[{ name: 'Sobre', path: '/sobre' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Sobre', path: '/sobre' }]} />
 
       <section className="px-4 pb-20 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">

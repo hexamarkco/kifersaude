@@ -1,7 +1,8 @@
-import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, ClipboardCheck, FileStack, Handshake, SearchCheck, Timer, WalletCards } from 'lucide-react';
 import PublicLayout from '../../components/public/PublicLayout';
+import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
+import PublicSeo from '../../components/public/PublicSeo';
 
 const processSteps = [
   {
@@ -124,14 +125,13 @@ const precautions = [
 export default function ComoFuncionaPage() {
   return (
     <PublicLayout>
-      <Helmet>
-        <title>Como funciona | Processo de cotacao e contratacao Kifer Saude</title>
-        <meta
-          name="description"
-          content="Veja o processo completo da Kifer Saude: briefing, comparativo, validacao, documentacao e suporte no pos-venda para planos de saude no RJ."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/como-funciona" />
-      </Helmet>
+      <PublicSeo
+        title="Como funciona | Processo de cotacao e contratacao Kifer Saude"
+        description="Veja o processo completo da Kifer Saude: briefing, comparativo, validacao, documentacao e suporte no pos-venda para planos de saude no RJ."
+        canonicalPath="/como-funciona"
+        breadcrumbs={[{ name: 'Como funciona', path: '/como-funciona' }]}
+      />
+      <PublicBreadcrumbs items={[{ name: 'Como funciona', path: '/como-funciona' }]} />
 
       <section className="px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

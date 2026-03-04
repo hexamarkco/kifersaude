@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus } from 'lucide-react';
+import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus, Bell, BellOff, SkipForward } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
@@ -102,6 +102,8 @@ export default function WhatsAppTab() {
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
+  const [desktopNotificationsEnabled, setDesktopNotificationsEnabled] = useState(true);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
@@ -109,6 +111,11 @@ export default function WhatsAppTab() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
+  const isWindowFocusedRef = useRef(true);
+  const desktopNotificationsEnabledRef = useRef(true);
+  const notificationPermissionRef = useRef<NotificationPermission | 'unsupported'>('unsupported');
+  const notificationAudioRef = useRef<AudioContext | null>(null);
+  const activeDesktopNotificationRef = useRef<Notification | null>(null);
   const skipNextAutoScrollRef = useRef(false);
   const { user } = useAuth();
 
@@ -146,6 +153,20 @@ export default function WhatsAppTab() {
     left: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
     right: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
   ) => getChatTimeValue(right) - getChatTimeValue(left);
+
+  const openNextUnreadChat = () => {
+    const unreadChats = chatsRef.current
+      .filter((chat) => !chat.archived && (chat.unread_count ?? 0) > 0)
+      .sort(sortChatsByLatest);
+
+    if (unreadChats.length === 0) return;
+
+    const currentChat = selectedChatRef.current;
+    const currentIndex = currentChat ? unreadChats.findIndex((chat) => chat.id === currentChat.id) : -1;
+    const nextChat = currentIndex >= 0 ? unreadChats[(currentIndex + 1) % unreadChats.length] : unreadChats[0];
+
+    setSelectedChat(nextChat);
+  };
 
   const extractPhoneFromChatId = (chatId: string) => normalizePhoneNumber(chatId);
 
@@ -229,6 +250,55 @@ export default function WhatsAppTab() {
   }, [chats]);
 
   useEffect(() => {
+    desktopNotificationsEnabledRef.current = desktopNotificationsEnabled;
+  }, [desktopNotificationsEnabled]);
+
+  useEffect(() => {
+    notificationPermissionRef.current = notificationPermission;
+  }, [notificationPermission]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setNotificationPermission('unsupported');
+      return;
+    }
+
+    setNotificationPermission(Notification.permission);
+  }, []);
+
+  useEffect(() => {
+    const syncFocusState = () => {
+      if (typeof document === 'undefined') {
+        isWindowFocusedRef.current = true;
+        return;
+      }
+
+      isWindowFocusedRef.current = document.visibilityState === 'visible' && document.hasFocus();
+    };
+
+    syncFocusState();
+    window.addEventListener('focus', syncFocusState);
+    window.addEventListener('blur', syncFocusState);
+    document.addEventListener('visibilitychange', syncFocusState);
+
+    return () => {
+      window.removeEventListener('focus', syncFocusState);
+      window.removeEventListener('blur', syncFocusState);
+      document.removeEventListener('visibilitychange', syncFocusState);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      activeDesktopNotificationRef.current?.close();
+      if (notificationAudioRef.current) {
+        void notificationAudioRef.current.close();
+        notificationAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
@@ -242,6 +312,12 @@ export default function WhatsAppTab() {
         event.preventDefault();
         setShowNewChatModal(true);
         setNewChatTab('leads');
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === 'j') {
+        event.preventDefault();
+        openNextUnreadChat();
         return;
       }
 
@@ -400,6 +476,7 @@ export default function WhatsAppTab() {
           const variantsForChat = getChatIdVariants(chat);
           return variantsForChat.includes(message.chat_id);
         });
+        maybeNotifyInboundMessage(message, chatToAutoUnarchive);
         if (chatToAutoUnarchive?.archived && !isChatMuted(chatToAutoUnarchive)) {
           updateChatArchive(chatToAutoUnarchive.id, false);
         }
@@ -919,6 +996,99 @@ export default function WhatsAppTab() {
     return 'Mensagem';
   };
 
+  const playNotificationTone = () => {
+    if (!desktopNotificationsEnabledRef.current || typeof window === 'undefined') return;
+
+    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+    const AudioContextCtor = window.AudioContext || audioWindow.webkitAudioContext;
+    if (!AudioContextCtor) return;
+
+    try {
+      const context = notificationAudioRef.current ?? new AudioContextCtor();
+      notificationAudioRef.current = context;
+
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 880;
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      const now = context.currentTime;
+      gainNode.gain.setValueAtTime(0.0001, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.045, now + 0.015);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.25);
+    } catch (error) {
+      console.warn('Erro ao reproduzir alerta sonoro:', error);
+    }
+  };
+
+  const maybeNotifyInboundMessage = (message: WhatsAppMessage, matchedChat?: WhatsAppChat) => {
+    if (message.direction !== 'inbound') return;
+
+    const activeChat = selectedChatRef.current;
+    const messageBelongsToActiveChat = activeChat
+      ? getChatIdVariants(activeChat).includes(message.chat_id)
+      : false;
+    const shouldAlert = !messageBelongsToActiveChat || !isWindowFocusedRef.current;
+
+    if (!shouldAlert || !desktopNotificationsEnabledRef.current) return;
+
+    const preview = getMessagePreview(message);
+    if (!preview) return;
+
+    playNotificationTone();
+
+    if (notificationPermissionRef.current !== 'granted' || typeof window === 'undefined') return;
+
+    const resolvedChat = matchedChat ?? chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id));
+
+    const title = resolvedChat?.name?.trim()
+      ? resolvedChat.name
+      : resolvedChat?.is_group
+        ? resolvedChat.id
+        : formatPhone(extractPhoneFromChatId(message.chat_id)) || 'Nova conversa';
+
+    activeDesktopNotificationRef.current?.close();
+    const desktopNotification = new Notification(title, {
+      body: preview,
+      tag: `whatsapp-${resolvedChat?.id || message.chat_id}`,
+    });
+    activeDesktopNotificationRef.current = desktopNotification;
+
+    desktopNotification.onclick = () => {
+      window.focus();
+      if (resolvedChat) {
+        setSelectedChat(resolvedChat);
+      }
+      desktopNotification.close();
+    };
+  };
+
+  const handleToggleDesktopNotifications = async () => {
+    if (notificationPermission === 'unsupported' || typeof window === 'undefined') return;
+
+    if (notificationPermission === 'denied') {
+      alert('Permissao de notificacao negada no navegador. Libere para receber alertas desktop.');
+      return;
+    }
+
+    if (notificationPermission === 'default') {
+      const nextPermission = await Notification.requestPermission();
+      setNotificationPermission(nextPermission);
+      if (nextPermission !== 'granted') return;
+      setDesktopNotificationsEnabled(true);
+      return;
+    }
+
+    setDesktopNotificationsEnabled((prev) => !prev);
+  };
+
   function getChatDisplayName(chat: WhatsAppChat) {
     if (chat.is_group) return groupNamesById.get(chat.id) || chat.name || chat.id;
 
@@ -988,6 +1158,17 @@ export default function WhatsAppTab() {
 
       return sortChatsByLatest(left, right);
     });
+  const unreadQueue = visibleChats.filter((chat) => (chat.unread_count ?? 0) > 0);
+  const nextUnreadChat = unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null;
+  const notificationsActive = notificationPermission === 'granted' && desktopNotificationsEnabled;
+  const notificationsLabel =
+    notificationPermission === 'unsupported'
+      ? 'Sem suporte'
+      : notificationPermission === 'denied'
+        ? 'Permissao bloqueada'
+        : notificationsActive
+          ? 'Notificacoes ligadas'
+          : 'Notificacoes desligadas';
 
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
@@ -1398,7 +1579,33 @@ export default function WhatsAppTab() {
                 Priorizar nao lidas
               </label>
             </div>
-            <p className="text-[11px] text-slate-400">Atalhos: Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat</p>
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  if (nextUnreadChat) {
+                    setSelectedChat(nextUnreadChat);
+                    return;
+                  }
+                  openNextUnreadChat();
+                }}
+                disabled={!nextUnreadChat}
+              >
+                <SkipForward className="h-3.5 w-3.5" />
+                {nextUnreadChat ? `Proxima nao lida (${unreadQueue.length})` : 'Fila zerada'}
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleToggleDesktopNotifications}
+                disabled={notificationPermission === 'unsupported'}
+              >
+                {notificationsActive ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                {notificationsLabel}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">Atalhos: Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat • Ctrl/Cmd + Shift + J proxima nao lida</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">

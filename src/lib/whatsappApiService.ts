@@ -7,6 +7,32 @@ interface WhatsAppSettings {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
+const DIRECT_CHAT_SUFFIXES = ['@s.whatsapp.net', '@c.us', '@lid'] as const;
+const GROUP_CHAT_SUFFIX = '@g.us';
+const NEWSLETTER_CHAT_SUFFIX = '@newsletter';
+const BROADCAST_CHAT_SUFFIX = '@broadcast';
+const STATUS_CHAT_ID = 'status@broadcast';
+
+export type WhatsAppChatKind = 'group' | 'direct' | 'newsletter' | 'broadcast' | 'status' | 'unknown';
+
+export function getWhatsAppChatKind(chatId: string): WhatsAppChatKind {
+  if (!chatId) return 'unknown';
+
+  const normalized = chatId.trim().toLowerCase();
+  if (!normalized) return 'unknown';
+
+  if (normalized.endsWith(GROUP_CHAT_SUFFIX)) return 'group';
+  if (normalized === STATUS_CHAT_ID) return 'status';
+  if (normalized.endsWith(NEWSLETTER_CHAT_SUFFIX)) return 'newsletter';
+  if (normalized.endsWith(BROADCAST_CHAT_SUFFIX)) return 'broadcast';
+  if (DIRECT_CHAT_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return 'direct';
+  return 'unknown';
+}
+
+export function isDirectWhatsAppChatId(chatId: string): boolean {
+  return getWhatsAppChatKind(chatId) === 'direct';
+}
+
 function sanitizeWhapiToken(rawToken: string): string {
   if (!rawToken) return '';
 
@@ -85,16 +111,26 @@ export function normalizeChatId(chatIdOrPhone: string): string {
   if (!chatIdOrPhone) return chatIdOrPhone;
 
   const trimmed = chatIdOrPhone.trim();
+  if (!trimmed) return trimmed;
 
-  const normalizedSuffix = trimmed
-    .replace(/@c\.us$/i, '@s.whatsapp.net')
-    .replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
-
-  if (normalizedSuffix.endsWith('@s.whatsapp.net')) {
-    return normalizedSuffix;
+  if (!trimmed.includes('@')) {
+    return buildChatIdFromPhone(trimmed);
   }
 
-  return buildChatIdFromPhone(normalizedSuffix);
+  if (/@c\.us$/i.test(trimmed)) {
+    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
+  }
+
+  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
+    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+  }
+
+  const chatKind = getWhatsAppChatKind(trimmed);
+  if (chatKind !== 'unknown') {
+    return trimmed;
+  }
+
+  return trimmed;
 }
 
 function normalizePhoneFromChatId(chatId: string): string | null {
@@ -501,6 +537,24 @@ export interface WhapiChatMetadata {
   description?: string;
 }
 
+export interface WhapiNewsletter {
+  id: string;
+  name?: string;
+  type?: string;
+  timestamp?: number;
+  unread?: number;
+  read_only?: boolean;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface WhapiNewsletterListResponse {
+  newsletters: WhapiNewsletter[];
+  count: number;
+  total: number;
+  offset: number;
+}
+
 export async function getWhatsAppChat(chatId: string): Promise<WhapiChatMetadata> {
   const settings = await getWhatsAppSettings();
 
@@ -662,6 +716,32 @@ export async function getWhatsAppChats(count: number = 100, offset: number = 0):
   return response.json();
 }
 
+export async function getWhatsAppNewsletters(
+  count: number = 100,
+  offset: number = 0,
+): Promise<WhapiNewsletterListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', count.toString());
+  queryParams.append('offset', offset.toString());
+
+  const response = await fetch(`${WHAPI_BASE_URL}/newsletters?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
+}
+
 export async function getWhatsAppContacts(count: number = 500, offset: number = 0): Promise<WhapiContactListResponse> {
   const settings = await getWhatsAppSettings();
 
@@ -773,7 +853,7 @@ export async function getChatIdByPhone(phoneNumber: string): Promise<string | nu
     if (testResponse.messages.length > 0 || testResponse.total >= 0) {
       return directChatId;
     }
-  } catch (err) {
+  } catch {
     console.log('Chat ID direto não funcionou, buscando em todos os chats...');
   }
 

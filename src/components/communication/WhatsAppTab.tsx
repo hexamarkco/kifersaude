@@ -11,9 +11,11 @@ import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import {
   buildChatIdFromPhone,
+  getWhatsAppChatKind,
   getWhatsAppChat,
   getWhatsAppChats,
   getWhatsAppContacts,
+  getWhatsAppNewsletters,
   normalizeChatId,
   reactToMessage,
   removeReactionFromMessage,
@@ -113,10 +115,14 @@ export default function WhatsAppTab() {
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
+  const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
+  const groupNamesByIdRef = useRef<Map<string, string>>(new Map());
+  const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
+  const newsletterNameLookupAttemptsRef = useRef<Set<string>>(new Set());
   const isWindowFocusedRef = useRef(true);
   const desktopNotificationsEnabledRef = useRef(true);
   const notificationPermissionRef = useRef<NotificationPermission | 'unsupported'>('unsupported');
@@ -174,12 +180,39 @@ export default function WhatsAppTab() {
     setSelectedChat(nextChat);
   };
 
-  const extractPhoneFromChatId = (chatId: string) => normalizePhoneNumber(chatId);
+  const getChatKind = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+    if (chat.is_group) return 'group' as const;
+    return getWhatsAppChatKind(chat.id);
+  };
+
+  const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => getChatKind(chat) === 'direct';
+
+  const getChatTypeLabel = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+    const kind = getChatKind(chat);
+    if (kind === 'group') return 'Grupo';
+    if (kind === 'newsletter') return 'Canal';
+    if (kind === 'status') return 'Status';
+    if (kind === 'broadcast') return 'Transmissao';
+    return null;
+  };
+
+  const getNonDirectFallbackName = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+    const kind = getChatKind(chat);
+    if (kind === 'newsletter') return 'Canal sem nome';
+    if (kind === 'status') return 'Status';
+    if (kind === 'broadcast') return 'Transmissao sem nome';
+    return chat.id;
+  };
+
+  const extractPhoneFromChatId = (chatId: string) => {
+    if (getWhatsAppChatKind(chatId) !== 'direct') return '';
+    return normalizePhoneNumber(chatId);
+  };
 
   const getChatIdVariants = (chat: WhatsAppChat) => {
     const variants = new Set<string>();
     if (chat.id) variants.add(chat.id);
-    if (!chat.id.endsWith('@g.us')) {
+    if (isDirectChat(chat)) {
       const normalized = normalizeChatId(chat.id);
       if (normalized) variants.add(normalized);
       if (normalized?.endsWith('@s.whatsapp.net')) {
@@ -191,15 +224,24 @@ export default function WhatsAppTab() {
       if (chat.phone_number) {
         variants.add(buildChatIdFromPhone(chat.phone_number));
       }
+      if (chat.lid) variants.add(chat.lid);
     }
-    if (chat.lid) variants.add(chat.lid);
     return Array.from(variants);
   };
 
   const shouldFetchGroupName = (chat: WhatsAppChat) => {
     if (!chat.is_group) return false;
     if (chat.name && chat.name.trim() && chat.name !== chat.id) return false;
-    if (groupNamesById.has(chat.id)) return false;
+    if (groupNamesByIdRef.current.has(chat.id)) return false;
+    return true;
+  };
+
+  const shouldFetchNewsletterName = (chat: WhatsAppChat) => {
+    const kind = getChatKind(chat);
+    if (kind !== 'newsletter') return false;
+    if (chat.name && chat.name.trim() && chat.name !== chat.id) return false;
+    if (newsletterNamesByIdRef.current.has(chat.id)) return false;
+    if (newsletterNameLookupAttemptsRef.current.has(chat.id)) return false;
     return true;
   };
 
@@ -237,6 +279,72 @@ export default function WhatsAppTab() {
     );
   };
 
+  const loadNewsletterNames = async (currentChats: WhatsAppChat[]) => {
+    const candidateIds = new Set(currentChats.filter(shouldFetchNewsletterName).map((chat) => chat.id));
+    if (candidateIds.size === 0) return;
+
+    try {
+      const namesById = new Map<string, string>();
+      const pageSize = 100;
+      let offset = 0;
+
+      for (let page = 0; page < 10; page += 1) {
+        const response = await getWhatsAppNewsletters(pageSize, offset);
+        const newsletters = response.newsletters || [];
+
+        newsletters.forEach((newsletter) => {
+          if (!candidateIds.has(newsletter.id)) return;
+          const name = newsletter.name?.trim();
+          if (!name) return;
+          namesById.set(newsletter.id, name);
+        });
+
+        const resolvedAllCandidates = Array.from(candidateIds).every((chatId) => namesById.has(chatId));
+        if (resolvedAllCandidates || newsletters.length < pageSize) {
+          break;
+        }
+
+        offset += newsletters.length;
+        if (newsletters.length === 0) {
+          break;
+        }
+      }
+
+      candidateIds.forEach((chatId) => newsletterNameLookupAttemptsRef.current.add(chatId));
+
+      const validUpdates = Array.from(namesById.entries()).map(([id, name]) => ({ id, name }));
+      if (validUpdates.length === 0) return;
+
+      setNewsletterNamesById((prev) => {
+        const next = new Map(prev);
+        validUpdates.forEach((item) => next.set(item.id, item.name));
+        return next;
+      });
+
+      setChats((prev) =>
+        prev.map((chat) => {
+          const match = validUpdates.find((item) => item.id === chat.id);
+          return match ? { ...chat, name: match.name } : chat;
+        }),
+      );
+
+      const { error: persistError } = await supabase.from('whatsapp_chats').upsert(
+        validUpdates.map((item) => ({
+          id: item.id,
+          name: item.name,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: 'id' },
+      );
+
+      if (persistError) {
+        console.warn('Error persisting newsletter names:', persistError);
+      }
+    } catch (error) {
+      console.warn('Error loading newsletter names:', error);
+    }
+  };
+
   useEffect(() => {
     const checkMobileView = () => {
       setIsMobileView(window.innerWidth < 768);
@@ -254,6 +362,14 @@ export default function WhatsAppTab() {
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
+
+  useEffect(() => {
+    groupNamesByIdRef.current = groupNamesById;
+  }, [groupNamesById]);
+
+  useEffect(() => {
+    newsletterNamesByIdRef.current = newsletterNamesById;
+  }, [newsletterNamesById]);
 
   useEffect(() => {
     desktopNotificationsEnabledRef.current = desktopNotificationsEnabled;
@@ -603,7 +719,7 @@ export default function WhatsAppTab() {
       if (!data || data.length === 0) {
         const response = await getWhatsAppChats(200, 0);
         const mappedChats: WhatsAppChat[] = response.chats.map((chat: WhapiChat) => {
-          const isGroup = chat.id.endsWith('@g.us');
+          const isGroup = getWhatsAppChatKind(chat.id) === 'group';
           const lastMessageAt = chat.last_message?.timestamp
             ? new Date(chat.last_message.timestamp * 1000).toISOString()
             : null;
@@ -625,6 +741,7 @@ export default function WhatsAppTab() {
         setChats(mappedChats);
         await loadUnreadCounts();
         await loadGroupNames(mappedChats);
+        await loadNewsletterNames(mappedChats);
         return;
       }
 
@@ -650,6 +767,7 @@ export default function WhatsAppTab() {
       setChats(chatsWithLastMessage);
       await loadUnreadCounts();
       await loadGroupNames(chatsWithLastMessage);
+      await loadNewsletterNames(chatsWithLastMessage);
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -1052,6 +1170,16 @@ export default function WhatsAppTab() {
     return `${hours}h ${remainingMinutes}m`;
   };
 
+  const getChatDisplayNameFromId = (chatId: string) => {
+    const chatKind = getWhatsAppChatKind(chatId);
+    if (chatKind === 'direct') {
+      const phone = extractPhoneFromChatId(chatId);
+      return phone ? formatPhone(phone) : 'Nova conversa';
+    }
+
+    return getNonDirectFallbackName({ id: chatId, is_group: chatKind === 'group' });
+  };
+
   const maybeNotifyInboundMessage = (message: WhatsAppMessage, matchedChat?: WhatsAppChat) => {
     if (message.direction !== 'inbound') return;
 
@@ -1072,11 +1200,7 @@ export default function WhatsAppTab() {
 
     const resolvedChat = matchedChat ?? chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id));
 
-    const title = resolvedChat?.name?.trim()
-      ? resolvedChat.name
-      : resolvedChat?.is_group
-        ? resolvedChat.id
-        : formatPhone(extractPhoneFromChatId(message.chat_id)) || 'Nova conversa';
+    const title = resolvedChat ? getChatDisplayName(resolvedChat) : getChatDisplayNameFromId(message.chat_id);
 
     activeDesktopNotificationRef.current?.close();
     const desktopNotification = new Notification(title, {
@@ -1114,9 +1238,20 @@ export default function WhatsAppTab() {
   };
 
   function getChatDisplayName(chat: WhatsAppChat) {
-    if (chat.is_group) return groupNamesById.get(chat.id) || chat.name || chat.id;
+    const chatKind = getChatKind(chat);
+    if (chatKind === 'group') {
+      return groupNamesById.get(chat.id) || chat.name || chat.id;
+    }
 
-    const phone = extractPhoneFromChatId(chat.id);
+    if (chatKind !== 'direct') {
+      const resolvedName = newsletterNamesById.get(chat.id) || chat.name;
+      if (resolvedName?.trim() && resolvedName !== chat.id) {
+        return resolvedName;
+      }
+      return getNonDirectFallbackName(chat);
+    }
+
+    const phone = normalizePhoneNumber(chat.phone_number || chat.id);
 
     if (phone && leadNamesByPhone.has(phone)) {
       return leadNamesByPhone.get(phone)!;
@@ -1136,6 +1271,10 @@ export default function WhatsAppTab() {
       if (contact?.saved && contact.name) {
         return contact.name;
       }
+    }
+
+    if (chat.name?.trim() && chat.name !== chat.id) {
+      return chat.name;
     }
 
     if (phone) {
@@ -1161,14 +1300,14 @@ export default function WhatsAppTab() {
   const archivedCount = chatsMatchingSearch.filter((chat) => chat.archived).length;
   const inboxChats = showArchived ? chatsMatchingSearch : chatsMatchingSearch.filter((chat) => !chat.archived);
   const unreadInboxCount = inboxChats.filter((chat) => (chat.unread_count ?? 0) > 0).length;
-  const groupInboxCount = inboxChats.filter((chat) => chat.is_group).length;
-  const directInboxCount = inboxChats.filter((chat) => !chat.is_group).length;
+  const groupInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'group').length;
+  const directInboxCount = inboxChats.filter((chat) => isDirectChat(chat)).length;
 
   const visibleChats = inboxChats
     .filter((chat) => {
       if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
-      if (chatFilterMode === 'groups') return chat.is_group;
-      if (chatFilterMode === 'direct') return !chat.is_group;
+      if (chatFilterMode === 'groups') return getChatKind(chat) === 'group';
+      if (chatFilterMode === 'direct') return isDirectChat(chat);
       return true;
     })
     .sort((left, right) => {
@@ -1233,7 +1372,7 @@ export default function WhatsAppTab() {
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
   const selectedLead = useMemo(() => {
-    if (!selectedChat || selectedChat.is_group) return null;
+    if (!selectedChat || !isDirectChat(selectedChat)) return null;
     const phone = normalizePhoneNumber(selectedChat.phone_number || selectedChat.id);
     if (!phone) return null;
     return leadsList.find((lead) => lead.phone === phone) ?? null;
@@ -1347,7 +1486,7 @@ export default function WhatsAppTab() {
   const templateVariablesForInput = useMemo(() => {
     const fullName = (selectedLead?.name || selectedChatDisplayName || '').trim();
     const firstName = fullName.split(/\s+/).filter(Boolean)[0] || '';
-    const rawPhone = selectedChat && !selectedChat.is_group
+    const rawPhone = selectedChat && isDirectChat(selectedChat)
       ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
       : '';
 
@@ -1389,7 +1528,20 @@ export default function WhatsAppTab() {
     setChatMenu({ chatId, x: safeX, y: safeY });
   };
 
-  const selectedChatPhone = selectedChat && !selectedChat.is_group
+  const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;
+  const selectedChatTypeLabel = selectedChat ? getChatTypeLabel(selectedChat) : null;
+  const selectedChatTypeBadgeClass =
+    selectedChatKind === 'group'
+      ? 'bg-blue-100 text-blue-700'
+      : selectedChatKind === 'newsletter'
+        ? 'bg-indigo-100 text-indigo-700'
+        : selectedChatKind === 'status'
+          ? 'bg-amber-100 text-amber-700'
+          : selectedChatKind === 'broadcast'
+            ? 'bg-orange-100 text-orange-700'
+            : 'bg-slate-100 text-slate-700';
+  const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
+  const selectedChatPhone = selectedChat && selectedChatIsDirect
     ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
     : '';
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
@@ -1761,11 +1913,23 @@ export default function WhatsAppTab() {
             ) : (
               visibleChats.map((chat) => {
                 const chatDisplayName = getChatDisplayName(chat);
-                const chatPhone = !chat.is_group ? extractPhoneFromChatId(chat.id) : null;
+                const chatKind = getChatKind(chat);
+                const chatTypeLabel = getChatTypeLabel(chat);
+                const chatPhone = isDirectChat(chat) ? normalizePhoneNumber(chat.phone_number || chat.id) : null;
                 const leadForChat = chatPhone ? leadByPhone.get(chatPhone) : null;
                 const leadStatus = leadForChat?.status ?? null;
                 const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
                 const badgeStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+                const chatTypeBadgeClass =
+                  chatKind === 'group'
+                    ? 'bg-blue-100 text-blue-700'
+                    : chatKind === 'newsletter'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : chatKind === 'status'
+                        ? 'bg-amber-100 text-amber-700'
+                        : chatKind === 'broadcast'
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'bg-slate-100 text-slate-700';
 
                 const chatPhoto = (() => {
                   const variants = getChatIdVariants(chat);
@@ -1792,13 +1956,19 @@ export default function WhatsAppTab() {
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      {chatPhoto && !chat.is_group ? (
+                      {chatPhoto && isDirectChat(chat) ? (
                         <img src={chatPhoto} alt={chatDisplayName} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
-                          chat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                          chatKind === 'group'
+                            ? 'bg-blue-500'
+                            : chatKind === 'newsletter'
+                              ? 'bg-indigo-500'
+                              : chatKind === 'status' || chatKind === 'broadcast'
+                                ? 'bg-amber-500'
+                                : 'bg-teal-100 text-teal-700'
                         }`}>
-                          {chat.is_group ? (
+                          {chatKind === 'group' ? (
                             <Users className="w-6 h-6" />
                           ) : (
                             getInitials(chatDisplayName)
@@ -1820,9 +1990,9 @@ export default function WhatsAppTab() {
                               {leadStatus}
                             </span>
                           )}
-                          {chat.is_group && (
-                            <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              Grupo
+                          {chatTypeLabel && (
+                            <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${chatTypeBadgeClass}`}>
+                              {chatTypeLabel}
                             </span>
                           )}
                         </div>
@@ -1946,9 +2116,15 @@ export default function WhatsAppTab() {
                   </button>
                 )}
                 <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
-                  selectedChat.is_group ? 'bg-blue-500' : 'bg-teal-100 text-teal-700'
+                  selectedChatKind === 'group'
+                    ? 'bg-blue-500'
+                    : selectedChatKind === 'newsletter'
+                      ? 'bg-indigo-500'
+                      : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
+                        ? 'bg-amber-500'
+                        : 'bg-teal-100 text-teal-700'
                 }`}>
-                  {selectedChat.is_group ? (
+                  {selectedChatKind === 'group' ? (
                     <Users className="w-5 h-5" />
                   ) : (
                     getInitials(selectedChatDisplayName)
@@ -1959,9 +2135,9 @@ export default function WhatsAppTab() {
                     <h2 className="font-semibold text-slate-900 truncate">
                       {selectedChatDisplayName || selectedChat.id}
                     </h2>
-                    {selectedChat.is_group && (
-                      <span className="flex-shrink-0 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                        Grupo
+                    {selectedChatTypeLabel && (
+                      <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${selectedChatTypeBadgeClass}`}>
+                        {selectedChatTypeLabel}
                       </span>
                     )}
                     {selectedLead && (
@@ -1974,20 +2150,28 @@ export default function WhatsAppTab() {
                     )}
                   </div>
                   <p className="text-xs text-slate-500">
-                    {selectedChat.is_group
+                    {selectedChatKind === 'group'
                       ? 'Toque para ver info do grupo'
-                      : selectedChatPhoneFormatted
-                        ? `${selectedChatPhoneFormatted}${copiedPhone === selectedChatPhone ? ' • copiado' : ''}`
-                        : 'Conversa individual'}
+                      : selectedChatIsDirect
+                        ? selectedChatPhoneFormatted
+                          ? `${selectedChatPhoneFormatted}${copiedPhone === selectedChatPhone ? ' • copiado' : ''}`
+                          : 'Conversa individual'
+                        : selectedChatKind === 'newsletter'
+                          ? 'Canal informativo'
+                          : selectedChatKind === 'status'
+                            ? 'Atualizacoes de status'
+                            : selectedChatKind === 'broadcast'
+                              ? 'Lista de transmissao'
+                              : 'Conversa'}
                   </p>
-                  {!selectedChat.is_group && (
+                  {selectedChatIsDirect && (
                     <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${firstResponseSlaBadge.className}`}>
                       {firstResponseSlaBadge.label}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedChat.is_group ? (
+                  {selectedChatKind === 'group' ? (
                     <button
                       type="button"
                       onClick={() => setShowGroupInfo(!showGroupInfo)}
@@ -1996,7 +2180,7 @@ export default function WhatsAppTab() {
                     >
                       <Info className="w-5 h-5 text-slate-600" />
                     </button>
-                  ) : (
+                  ) : selectedChatIsDirect ? (
                     <button
                       type="button"
                       className="p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -2005,7 +2189,7 @@ export default function WhatsAppTab() {
                     >
                       <Phone className="w-5 h-5 text-slate-600" />
                     </button>
-                  )}
+                  ) : null}
                   <button
                     type="button"
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2052,7 +2236,7 @@ export default function WhatsAppTab() {
                     const payloadData = message.payload as any;
                     const isReactionOnly = payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
                     if (isReactionOnly) return null;
-                    const showAuthor = selectedChat.is_group && message.direction === 'inbound' && message.author;
+                    const showAuthor = selectedChatKind === 'group' && message.direction === 'inbound' && message.author;
                     const authorName = showAuthor ? formatPhone(message.author!) : undefined;
                     const reactions = reactionsByTargetId.get(message.id);
 
@@ -2105,7 +2289,7 @@ export default function WhatsAppTab() {
                 onCancelEdit={handleCancelEdit}
               />
 
-              {showGroupInfo && selectedChat.is_group && (
+              {showGroupInfo && selectedChatKind === 'group' && (
                 <GroupInfoPanel
                   groupId={selectedChat.id}
                   onClose={() => setShowGroupInfo(false)}

@@ -6,6 +6,8 @@ import OperadorasTab from '../components/config/OperadorasTab';
 import UsersTab from '../components/config/UsersTab';
 import IntegrationsTab from '../components/config/IntegrationsTab';
 import AutomationFlowsTab from '../components/config/AutomationFlowsTab';
+import Card from '../components/ui/Card';
+import Tabs, { type TabItem } from '../components/ui/Tabs';
 
 type TabType = 'system' | 'operadoras' | 'users' | 'integrations' | 'automation';
 
@@ -16,16 +18,16 @@ export default function ConfigPage() {
   if (!isAdmin) {
     return (
       <div className="w-full">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+        <Card variant="glass" className="border-red-200 bg-red-50 p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-red-900 mb-2">Acesso Negado</h2>
           <p className="text-red-700">Você não tem permissão para acessar esta página.</p>
-        </div>
+        </Card>
       </div>
     );
   }
 
-  const tabs = [
+  const tabs: TabItem<TabType>[] = [
     { id: 'system' as TabType, label: 'Sistema', icon: Settings },
     { id: 'operadoras' as TabType, label: 'Operadoras', icon: Building2 },
     { id: 'users' as TabType, label: 'Usuários', icon: Users },
@@ -40,26 +42,8 @@ export default function ConfigPage() {
         <p className="text-slate-600">Gerencie as configurações do sistema</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-        <div className="flex border-b border-slate-200">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors border-b-2 ${
-                  activeTab === tab.id
-                    ? 'border-orange-600 text-orange-600'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      <Card variant="glass" padding="none" className="mb-6 overflow-hidden">
+        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
         <div className="p-6">
           {activeTab === 'system' && <SystemSettingsTab />}
@@ -68,7 +52,7 @@ export default function ConfigPage() {
           {activeTab === 'automation' && <AutomationFlowsTab />}
           {activeTab === 'integrations' && <IntegrationsTab />}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

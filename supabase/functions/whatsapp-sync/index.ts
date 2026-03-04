@@ -17,6 +17,8 @@ type WhapiMessage = {
   source?: string;
   timestamp: number;
   status?: string;
+  edited_at?: number;
+  edit_history?: Array<{ body?: string; timestamp?: number }>;
   text?: { body: string };
   image?: { caption?: string };
   video?: { caption?: string };
@@ -44,6 +46,70 @@ type WhapiMessageListResponse = {
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+
+type ChatIdKind = 'group' | 'direct' | 'newsletter' | 'broadcast' | 'status' | 'unknown';
+
+type WhapiNewsletter = {
+  id: string;
+  name?: string;
+};
+
+type WhapiNewsletterListResponse = {
+  newsletters?: WhapiNewsletter[];
+  count?: number;
+  total?: number;
+  offset?: number;
+};
+
+const getChatIdKind = (chatId: string): ChatIdKind => {
+  const normalized = chatId.trim().toLowerCase();
+  if (!normalized) return 'unknown';
+  if (normalized.endsWith('@g.us')) return 'group';
+  if (normalized === 'status@broadcast') return 'status';
+  if (normalized.endsWith('@newsletter')) return 'newsletter';
+  if (normalized.endsWith('@broadcast')) return 'broadcast';
+  if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net') || normalized.endsWith('@lid')) {
+    return 'direct';
+  }
+  return 'unknown';
+};
+
+const fetchNewsletterName = async (token: string, chatId: string): Promise<string | null> => {
+  const pageSize = 100;
+  let offset = 0;
+
+  for (let page = 0; page < 10; page += 1) {
+    const response = await fetch(`${WHAPI_BASE_URL}/newsletters?count=${pageSize}&offset=${offset}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as WhapiNewsletterListResponse;
+    const newsletters = payload.newsletters || [];
+    const match = newsletters.find((item) => item.id === chatId);
+    const resolvedName = match?.name?.trim();
+    if (resolvedName) {
+      return resolvedName;
+    }
+
+    if (newsletters.length < pageSize) {
+      break;
+    }
+
+    offset += newsletters.length;
+    if (newsletters.length === 0) {
+      break;
+    }
+  }
+
+  return null;
+};
 
 const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
 
@@ -166,14 +232,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isGroup = chatId.endsWith('@g.us');
+    const chatKind = getChatIdKind(chatId);
+    const isGroup = chatKind === 'group';
+    const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast' || chatKind === 'status';
     const lastMessageAt = toIsoString(messages[0]?.timestamp) ?? new Date().toISOString();
-    const chatName = messages[0]?.chat_name || messages[0]?.from_name || null;
+    const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
+    const messageChatName = messageChatNameRaw && messageChatNameRaw !== chatId ? messageChatNameRaw : null;
+    const messageFromName = messages.find((message) => message.from_name?.trim())?.from_name?.trim() || null;
+
+    let chatName = messageChatName;
+    if (!chatName && isGroup) {
+      chatName = messageFromName;
+    }
+
+    if (!chatName && isChannelChat) {
+      chatName = await fetchNewsletterName(token, chatId);
+    }
+
+    if (!chatName && chatKind === 'status') {
+      chatName = 'Status';
+    }
+
+    if (!isGroup && !isChannelChat) {
+      chatName = null;
+    }
 
     await supabase.from('whatsapp_chats').upsert(
       {
         id: chatId,
-        name: isGroup ? chatName : null,
+        name: chatName,
         is_group: isGroup,
         last_message_at: lastMessageAt,
         updated_at: new Date().toISOString(),

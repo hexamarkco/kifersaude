@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
+import DateTimePicker from './ui/DateTimePicker';
 
 export type FilterDateRangeProps = {
   icon: LucideIcon;
@@ -118,20 +119,20 @@ export default function FilterDateRange({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col text-sm text-slate-600 gap-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">De</span>
-              <input
+              <DateTimePicker
                 type={type}
                 value={fromValue}
-                onChange={(event) => onFromChange(event.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                onChange={onFromChange}
+                placeholder={type === 'date' ? 'Selecionar data inicial' : 'Selecionar data e hora inicial'}
               />
             </label>
             <label className="flex flex-col text-sm text-slate-600 gap-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Até</span>
-              <input
+              <DateTimePicker
                 type={type}
                 value={toValue}
-                onChange={(event) => onToChange(event.target.value)}
-                className="w-full h-11 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                onChange={onToChange}
+                placeholder={type === 'date' ? 'Selecionar data final' : 'Selecionar data e hora final'}
               />
             </label>
           </div>

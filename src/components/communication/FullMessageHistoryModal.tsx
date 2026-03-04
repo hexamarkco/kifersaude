@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Calendar, Search } from 'lucide-react';
+import { X, Clock, User, ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
 import FilterSingleSelect from '../FilterSingleSelect';
+import DateTimePicker from '../ui/DateTimePicker';
 
 interface FullMessageHistoryModalProps {
   chatId: string;
@@ -53,7 +54,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
       }
 
       console.log('[FullMessageHistoryModal] Testando chat ID com 1 mensagem...');
-      const testResponse = await getWhatsAppMessageHistory({
+      await getWhatsAppMessageHistory({
         chatId: finalChatId,
         count: 1,
         offset: 0,
@@ -172,11 +173,6 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
   const totalPages = Math.ceil(totalMessages / pageSize);
   const currentPage = Math.floor(currentOffset / pageSize) + 1;
 
-  const goToPage = (page: number) => {
-    const newOffset = (page - 1) * pageSize;
-    setCurrentOffset(newOffset);
-  };
-
   const nextPage = () => {
     if (currentOffset + pageSize < totalMessages) {
       setCurrentOffset(currentOffset + pageSize);
@@ -246,18 +242,18 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
                     Período
                   </label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <DateTimePicker
                       type="date"
                       value={filterDateFrom}
-                      onChange={(e) => setFilterDateFrom(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={setFilterDateFrom}
+                      placeholder="Data inicial"
                     />
                     <span className="text-slate-500">até</span>
-                    <input
+                    <DateTimePicker
                       type="date"
                       value={filterDateTo}
-                      onChange={(e) => setFilterDateTo(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={setFilterDateTo}
+                      placeholder="Data final"
                     />
                   </div>
                 </div>

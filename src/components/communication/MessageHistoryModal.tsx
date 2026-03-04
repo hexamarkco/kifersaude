@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
+import { Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
+import Button from '../ui/Button';
+import ModalShell from '../ui/ModalShell';
 
 interface MessageHistoryModalProps {
   messageId: string;
@@ -112,112 +114,108 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <MessageSquare className="h-6 w-6 text-blue-600" />
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Contexto da Mensagem"
+      description="Mensagens proximas (ultimos 10 minutos)"
+      size="lg"
+      panelClassName="max-w-3xl"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {!loading && !error && messages.length > 0 && (
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <MessageSquare className="h-4 w-4 text-teal-600" />
+            <span>{messages.length} mensagens carregadas no contexto</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600"></div>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Contexto da Mensagem</h2>
-              <p className="text-sm text-gray-500 mt-1">Mensagens próximas (últimos 10 minutos)</p>
+              <h3 className="text-sm font-medium text-red-800">Erro ao carregar contexto</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto p-6 min-h-0">
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          )}
+        {!loading && !error && messages.length === 0 && (
+          <div className="py-12 text-center">
+            <MessageSquare className="mx-auto mb-3 h-12 w-12 text-slate-400" />
+            <p className="text-slate-600">Nenhuma mensagem encontrada neste periodo</p>
+          </div>
+        )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">Erro ao carregar contexto</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-          )}
+        {!loading && !error && messages.length > 0 && (
+          <div className="space-y-3">
+            {messages.map((message) => {
+              const isTarget = isTargetMessage(message);
+              return (
+                <div
+                  key={message.id}
+                  className={`rounded-lg p-4 transition-all ${
+                    isTarget
+                      ? 'border-2 border-blue-500 bg-blue-100 shadow-md'
+                      : message.from_me
+                        ? 'ml-8 border border-teal-200 bg-teal-50'
+                        : 'mr-8 border border-slate-200 bg-slate-50'
+                  }`}
+                >
+                  {isTarget && (
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                      Esta mensagem
+                    </div>
+                  )}
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <User
+                        className={`h-4 w-4 ${
+                          isTarget ? 'text-blue-600' : message.from_me ? 'text-teal-600' : 'text-slate-600'
+                        }`}
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          isTarget ? 'text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-900'
+                        }`}
+                      >
+                        {message.from_me ? 'Voce' : message.from_name || message.from || 'Desconhecido'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatTimestamp(message.timestamp)}</span>
+                    </div>
+                  </div>
 
-          {!loading && !error && messages.length === 0 && (
-            <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Nenhuma mensagem encontrada neste período</p>
-            </div>
-          )}
-
-          {!loading && !error && messages.length > 0 && (
-            <div className="space-y-3">
-              {messages.map((message) => {
-                const isTarget = isTargetMessage(message);
-                return (
                   <div
-                    key={message.id}
-                    className={`rounded-lg p-4 transition-all ${
-                      isTarget
-                        ? 'bg-blue-100 border-2 border-blue-500 shadow-md scale-105'
-                        : message.from_me
-                        ? 'bg-teal-50 border border-teal-200 ml-8'
-                        : 'bg-slate-50 border border-slate-200 mr-8'
+                    className={`text-sm ${
+                      isTarget ? 'font-medium text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-700'
                     }`}
                   >
-                    {isTarget && (
-                      <div className="mb-2 text-xs font-semibold text-blue-700 uppercase tracking-wide">
-                        Esta mensagem
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <User className={`w-4 h-4 ${
-                          isTarget ? 'text-blue-600' : message.from_me ? 'text-teal-600' : 'text-slate-600'
-                        }`} />
-                        <span className={`text-sm font-medium ${
-                          isTarget ? 'text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-900'
-                        }`}>
-                          {message.from_me ? 'Você' : message.from_name || message.from || 'Desconhecido'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatTimestamp(message.timestamp)}</span>
-                      </div>
-                    </div>
-
-                    <div className={`text-sm ${
-                      isTarget ? 'text-blue-900 font-medium' : message.from_me ? 'text-teal-900' : 'text-slate-700'
-                    }`}>
-                      {getMessageBody(message)}
-                    </div>
-
-                    {message.status && (
-                      <div className="mt-2 text-xs text-slate-500">
-                        Status: {message.status}
-                      </div>
-                    )}
+                    {getMessageBody(message)}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
-        <div className="border-t p-4 bg-gray-50 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Fechar
-          </button>
-        </div>
+                  {message.status && <div className="mt-2 text-xs text-slate-500">Status: {message.status}</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -620,6 +620,42 @@
   fill: var(--panel-text-soft) !important;
 }
 
+.painel-theme.theme-dark .panel-ui-button {
+  --tw-ring-offset-color: var(--panel-bg);
+}
+
+.painel-theme.theme-dark .panel-ui-button-secondary {
+  background-color: var(--panel-surface) !important;
+  border-color: var(--panel-border-strong) !important;
+  color: var(--panel-text-soft) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-secondary:hover {
+  background-color: var(--panel-surface-soft) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-ghost,
+.painel-theme.theme-dark .panel-ui-button-icon {
+  color: var(--panel-text-muted) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-ghost:hover,
+.painel-theme.theme-dark .panel-ui-button-icon:hover {
+  background-color: var(--panel-surface-soft) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-input {
+  background-color: var(--panel-surface) !important;
+  border-color: var(--panel-border-strong) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-input::placeholder {
+  color: var(--panel-text-subtle) !important;
+}
+
 .painel-theme.theme-dark input,
 .painel-theme.theme-dark textarea,
 .painel-theme.theme-dark select {

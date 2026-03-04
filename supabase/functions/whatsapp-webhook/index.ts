@@ -518,15 +518,21 @@ function mapStatusToAck(status: string): number {
   return statusMap[status] ?? 1;
 }
 
-function extractPhoneNumber(chatId: string): string {
-  return chatId.replace(/@c\.us$|@s\.whatsapp\.net$|@g\.us$|@lid$/, '');
+function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
+  const normalized = chatId.trim().toLowerCase();
+  if (normalized.endsWith('@g.us')) return 'group';
+  if (normalized === 'status@broadcast') return 'status';
+  if (normalized.endsWith('@newsletter')) return 'newsletter';
+  if (normalized.endsWith('@broadcast')) return 'broadcast';
+  if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net')) return 'phone';
+  if (normalized.endsWith('@lid')) return 'lid';
+  return 'unknown';
 }
 
-function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'unknown' {
-  if (chatId.endsWith('@g.us')) return 'group';
-  if (chatId.endsWith('@c.us') || chatId.endsWith('@s.whatsapp.net')) return 'phone';
-  if (chatId.endsWith('@lid')) return 'lid';
-  return 'unknown';
+function extractPhoneNumber(chatId: string): string | null {
+  if (getChatIdType(chatId) !== 'phone') return null;
+  const phone = chatId.replace(/@c\.us$|@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
+  return phone || null;
 }
 
 async function findExistingChatByPhone(phoneNumber: string, currentChatId: string): Promise<string | null> {
@@ -589,7 +595,9 @@ async function findLeadByPhone(phoneNumber: string): Promise<string | null> {
 }
 
 async function resolveChatName(message: NormalizedMessage): Promise<string> {
-  if (message.isGroup) {
+  const chatType = getChatIdType(message.chatId);
+
+  if (message.isGroup || chatType === 'group') {
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
       .select('name')
@@ -603,15 +611,44 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
     return message.chatName ?? message.contactName ?? message.chatId;
   }
 
+  if (chatType === 'newsletter' || chatType === 'broadcast' || chatType === 'status') {
+    const { data: existingChat } = await supabase
+      .from('whatsapp_chats')
+      .select('name')
+      .eq('id', message.chatId)
+      .maybeSingle();
+
+    if (existingChat?.name) {
+      return existingChat.name;
+    }
+
+    const channelName = message.chatName?.trim() || message.contactName?.trim();
+    if (channelName && channelName !== message.chatId) {
+      return channelName;
+    }
+
+    if (chatType === 'status') {
+      return 'Status';
+    }
+
+    if (chatType === 'newsletter') {
+      return 'Canal sem nome';
+    }
+
+    return 'Transmissao sem nome';
+  }
+
   const phoneNumber = extractPhoneNumber(message.chatId);
 
-  const leadName = await findLeadByPhone(phoneNumber);
-  if (leadName) {
-    console.log('whatsapp-webhook: nome do lead encontrado no CRM', {
-      chatId: message.chatId,
-      leadName,
-    });
-    return leadName;
+  if (phoneNumber) {
+    const leadName = await findLeadByPhone(phoneNumber);
+    if (leadName) {
+      console.log('whatsapp-webhook: nome do lead encontrado no CRM', {
+        chatId: message.chatId,
+        leadName,
+      });
+      return leadName;
+    }
   }
 
   const { data: existingChat } = await supabase
@@ -628,15 +665,20 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
     return message.contactName;
   }
 
-  return phoneNumber;
+  if (message.chatName?.trim() && message.chatName !== message.chatId) {
+    return message.chatName;
+  }
+
+  return phoneNumber || message.chatId;
 }
 
 async function upsertChat(message: NormalizedMessage) {
   const lastMessageAt = message.timestamp ?? new Date().toISOString();
   const chatName = await resolveChatName(message);
   const chatIdType = getChatIdType(message.chatId);
+  const isDirectChat = chatIdType === 'phone' || chatIdType === 'lid';
 
-  const phoneNumber = !message.isGroup ? extractPhoneNumber(message.chatId) : null;
+  const phoneNumber = chatIdType === 'phone' ? extractPhoneNumber(message.chatId) : null;
   const lid = chatIdType === 'lid' ? message.chatId : null;
 
   console.log('whatsapp-webhook: upsert chat', {
@@ -649,7 +691,7 @@ async function upsertChat(message: NormalizedMessage) {
     contactName: message.contactName,
   });
 
-  if (phoneNumber && !message.isGroup) {
+  if (phoneNumber && isDirectChat) {
     const existingChatId = await findExistingChatByPhone(phoneNumber, message.chatId);
 
     if (existingChatId) {

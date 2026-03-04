@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -29,7 +29,10 @@ export default function FilterSingleSelect({
   size = 'default',
 }: FilterSingleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -78,6 +81,98 @@ export default function FilterSingleSelect({
     return selected?.label ?? placeholder;
   }, [optionsWithDefault, placeholder, value]);
 
+  const selectedIndex = useMemo(
+    () => optionsWithDefault.findIndex((option) => option.value === value),
+    [optionsWithDefault, value],
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [isOpen, selectedIndex]);
+
+  useEffect(() => {
+    if (!isOpen || highlightedIndex < 0) return;
+
+    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [highlightedIndex, isOpen]);
+
+  const selectOptionByIndex = (index: number) => {
+    const option = optionsWithDefault[index];
+    if (!option || disabled) return;
+
+    onChange(option.value);
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+
+    if (event.key === 'Tab') {
+      setIsOpen(false);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setIsOpen(false);
+      return;
+    }
+
+    const lastIndex = optionsWithDefault.length - 1;
+    if (lastIndex < 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      setHighlightedIndex((current) => (current >= lastIndex ? 0 : current + 1));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      setHighlightedIndex((current) => (current <= 0 ? lastIndex : current - 1));
+      return;
+    }
+
+    if (event.key === 'Home' && isOpen) {
+      event.preventDefault();
+      setHighlightedIndex(0);
+      return;
+    }
+
+    if (event.key === 'End' && isOpen) {
+      event.preventDefault();
+      setHighlightedIndex(lastIndex);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      if (highlightedIndex >= 0) {
+        selectOptionByIndex(highlightedIndex);
+      }
+    }
+  };
+
   const isCompact = size === 'compact';
 
   const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
@@ -97,8 +192,13 @@ export default function FilterSingleSelect({
         }}
         className={`panel-glass-panel panel-interactive-glass relative w-full rounded-lg border border-slate-300 bg-white text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 ${buttonPaddingClass}`}
         aria-haspopup="listbox"
+        aria-controls={isOpen ? listboxId : undefined}
         aria-expanded={isOpen}
+        aria-activedescendant={
+          isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined
+        }
         disabled={disabled}
+        onKeyDown={handleKeyDown}
       >
         <Icon className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${iconOffsetClass} ${iconSizeClass}`} />
         <span className={`block truncate ${labelTextClass} ${value ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
@@ -112,23 +212,35 @@ export default function FilterSingleSelect({
       </button>
 
       {isOpen && (
-        <div className="panel-glass-panel absolute left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg" role="listbox">
-          {optionsWithDefault.map((option) => {
+        <div
+          id={listboxId}
+          className="panel-glass-panel absolute left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          role="listbox"
+        >
+          {optionsWithDefault.map((option, index) => {
             const isSelected = option.value === value;
+            const isHighlighted = highlightedIndex === index;
 
             return (
               <button
                 key={`${option.value}-${option.label}`}
+                id={`${listboxId}-option-${index}`}
                 type="button"
+                role="option"
+                aria-selected={isSelected}
+                ref={(element) => {
+                  optionRefs.current[index] = element;
+                }}
+                onMouseEnter={() => setHighlightedIndex(index)}
                 onClick={() => {
-                  if (disabled) return;
-                  onChange(option.value);
-                  setIsOpen(false);
+                  selectOptionByIndex(index);
                 }}
                 className={`flex w-full items-center justify-between px-3 text-left transition-colors ${optionTextClass} ${
                   isSelected
                     ? 'bg-teal-50 font-medium text-teal-700'
-                    : 'text-slate-700 hover:bg-slate-100'
+                    : isHighlighted
+                      ? 'bg-slate-100 text-slate-700'
+                      : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <span className="truncate">{option.label}</span>

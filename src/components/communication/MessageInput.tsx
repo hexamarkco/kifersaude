@@ -198,7 +198,7 @@ export function MessageInput({
       quotedMessageId: replyToMessage?.id,
     });
 
-    const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+    const normalizedChatId = normalizeChatId(chatId);
     const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
       id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       chat_id: normalizedChatId,
@@ -359,7 +359,7 @@ export function MessageInput({
             quotedMessageId: replyToMessage?.id,
           });
 
-          const normalizedChatId = chatId.endsWith('@g.us') ? chatId : normalizeChatId(chatId);
+          const normalizedChatId = normalizeChatId(chatId);
           const bodyText = pendingLinkMessage;
           const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
             id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,

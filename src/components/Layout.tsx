@@ -1056,7 +1056,7 @@ export default function Layout({
         </div>
       </aside>
 
-      <div className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ${isMenuCollapsed ? 'pl-16' : 'pl-64'}`}>
+      <div className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
         <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}

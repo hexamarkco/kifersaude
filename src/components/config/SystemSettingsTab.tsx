@@ -8,6 +8,8 @@ import LeadOriginsManager from './LeadOriginsManager';
 import ConfigOptionManager from './ConfigOptionManager';
 import AccessControlManager from './AccessControlManager';
 import FilterSingleSelect from '../FilterSingleSelect';
+import { Skeleton } from '../ui/Skeleton';
+import { SystemSettingsSkeleton } from '../ui/panelSkeletons';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -108,12 +110,7 @@ export default function SystemSettingsTab() {
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto"></div>
-        <p className="text-slate-600 mt-4">Carregando configurações...</p>
-      </div>
-    );
+    return <SystemSettingsSkeleton />;
   }
 
   if (!settings) {
@@ -268,8 +265,21 @@ export default function SystemSettingsTab() {
       </div>
 
       {configLoading ? (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center text-slate-600">
-          Carregando configurações avançadas...
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <Skeleton className="h-6 w-56" />
+            <div className="mt-4 space-y-3">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <Skeleton className="h-6 w-48" />
+            <div className="mt-4 space-y-3">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

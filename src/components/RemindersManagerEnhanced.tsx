@@ -28,7 +28,9 @@ import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '.
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import Button from './ui/Button';
 import DateTimePicker from './ui/DateTimePicker';
+import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
+import { RemindersPageSkeleton } from './ui/panelSkeletons';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -93,6 +95,7 @@ export default function RemindersManagerEnhanced() {
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const snoozeMenuRef = useRef<HTMLDivElement | null>(null);
   const [historyModalData, setHistoryModalData] = useState<{
     phone: string;
     leadName?: string;
@@ -1215,6 +1218,31 @@ export default function RemindersManagerEnhanced() {
     };
   }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
 
+  useEffect(() => {
+    if (!openSnoozeMenu) {
+      return;
+    }
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (snoozeMenuRef.current && !snoozeMenuRef.current.contains(target)) {
+        setOpenSnoozeMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [openSnoozeMenu]);
+
   const getPriorityColor = (prioridade: string) => {
     const colors: Record<string, string> = {
       'baixa': 'bg-blue-100 text-blue-700',
@@ -1260,16 +1288,18 @@ export default function RemindersManagerEnhanced() {
       >
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex min-w-0 items-start space-x-4 xl:flex-1">
-            <button
+            <Button
               onClick={() => toggleReminderSelection(reminder.id)}
-              className="mt-1 text-slate-400 hover:text-teal-600 transition-colors"
+              variant="icon"
+              size="icon"
+              className="mt-1 h-8 w-8 text-slate-400 hover:text-teal-600"
             >
               {isSelected ? (
                 <CheckSquare className="w-5 h-5 text-teal-600" />
               ) : (
                 <Square className="w-5 h-5" />
               )}
-            </button>
+            </Button>
 
             <div className={`p-3 rounded-lg ${
               reminder.lido
@@ -1342,10 +1372,12 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:ml-4 xl:w-auto">
-            <button
+            <Button
               onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone, reminder.lead_id ?? contract?.lead_id ?? null)}
               disabled={!leadInfo?.telefone}
-              className={`p-2 rounded-lg transition-colors ${
+              variant="icon"
+              size="icon"
+              className={`h-9 w-9 ${
                 leadInfo?.telefone
                   ? 'text-slate-700 hover:bg-slate-100'
                   : 'text-slate-400 cursor-not-allowed'
@@ -1353,7 +1385,7 @@ export default function RemindersManagerEnhanced() {
               title={leadInfo?.telefone ? 'Ver histórico de mensagens' : 'Telefone não disponível'}
             >
               <MessageSquare className="w-5 h-5" />
-            </button>
+            </Button>
             {whatsappLink && (
               <a
                 href={whatsappLink}
@@ -1366,89 +1398,89 @@ export default function RemindersManagerEnhanced() {
               </a>
             )}
             {leadIdForReminder && (
-              <button
+              <Button
                 onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
-                className="p-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-60"
+                variant="icon"
+                size="icon"
+                className="h-9 w-9 text-red-700 hover:bg-red-50"
                 title="Marcar lead como perdido e limpar follow-ups"
                 disabled={markingLostLeadId === leadIdForReminder}
+                loading={markingLostLeadId === leadIdForReminder}
               >
-                {markingLostLeadId === leadIdForReminder ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <X className="w-5 h-5" />
-                )}
-              </button>
+                {markingLostLeadId !== leadIdForReminder && <X className="w-5 h-5" />}
+              </Button>
             )}
             {!reminder.lido && (
-              <div className="relative">
-                <button
+              <div
+                className="relative"
+                ref={openSnoozeMenu === reminder.id ? snoozeMenuRef : null}
+              >
+                <Button
                   onClick={() => setOpenSnoozeMenu(openSnoozeMenu === reminder.id ? null : reminder.id)}
-                  className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                  variant="icon"
+                  size="icon"
+                  className="h-9 w-9 text-orange-600 hover:bg-orange-50"
                   title="Adiar"
                 >
                   <Clock className="w-5 h-5" />
-                </button>
+                </Button>
                 {openSnoozeMenu === reminder.id && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setOpenSnoozeMenu(null)}
-                    />
-                    <div className="panel-glass-panel absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
-                      <button
-                        onClick={() => handleSnooze(reminder, 'minutes-15')}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        15 minutos
-                      </button>
-                      <button
-                        onClick={() => handleSnooze(reminder, 'minutes-30')}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        30 minutos
-                      </button>
-                      <button
-                        onClick={() => handleSnooze(reminder, 'hour-1')}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        1 hora
-                      </button>
-                      <button
-                        onClick={() => handleSnooze(reminder, 'tomorrow')}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        Amanhã às 9h
-                      </button>
-                      <button
-                        onClick={() => handleSnooze(reminder, 'next-week')}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        Próxima semana
-                      </button>
-                      <div className="border-t border-slate-200 my-2"></div>
-                      <button
-                        onClick={() => {
-                          setCustomSnoozeReminder(reminder.id);
-                          setOpenSnoozeMenu(null);
-                          const now = new Date();
-                          now.setMinutes(now.getMinutes() + 30);
-                          setCustomSnoozeDateTime(formatDateTimeForInput(now.toISOString()));
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors text-teal-600 font-medium"
-                      >
-                        Personalizado...
-                      </button>
-                    </div>
-                  </>
+                  <div className="panel-glass-panel absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
+                    <button
+                      onClick={() => handleSnooze(reminder, 'minutes-15')}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      15 minutos
+                    </button>
+                    <button
+                      onClick={() => handleSnooze(reminder, 'minutes-30')}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      30 minutos
+                    </button>
+                    <button
+                      onClick={() => handleSnooze(reminder, 'hour-1')}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      1 hora
+                    </button>
+                    <button
+                      onClick={() => handleSnooze(reminder, 'tomorrow')}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      Amanhã às 9h
+                    </button>
+                    <button
+                      onClick={() => handleSnooze(reminder, 'next-week')}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      Próxima semana
+                    </button>
+                    <div className="border-t border-slate-200 my-2"></div>
+                    <button
+                      onClick={() => {
+                        setCustomSnoozeReminder(reminder.id);
+                        setOpenSnoozeMenu(null);
+                        const now = new Date();
+                        now.setMinutes(now.getMinutes() + 30);
+                        setCustomSnoozeDateTime(formatDateTimeForInput(now.toISOString()));
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors text-teal-600 font-medium"
+                    >
+                      Personalizado...
+                    </button>
+                  </div>
                 )}
               </div>
             )}
             {!reminder.lido && (
               <>
-                <button
+                <Button
                   onClick={() => handleQuickSchedule(reminder, 1)}
                   disabled={quickSchedulingAction?.reminderId === reminder.id}
-                  className="p-2 rounded-lg text-teal-600 hover:bg-teal-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  variant="icon"
+                  size="icon"
+                  className="h-9 w-9 text-teal-600 hover:bg-teal-50"
                   title="Agendar para 1 dia e marcar atual como lido"
                 >
                   {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 1 ? (
@@ -1461,11 +1493,13 @@ export default function RemindersManagerEnhanced() {
                       </span>
                     </span>
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleQuickSchedule(reminder, 2)}
                   disabled={quickSchedulingAction?.reminderId === reminder.id}
-                  className="p-2 rounded-lg text-teal-600 hover:bg-teal-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  variant="icon"
+                  size="icon"
+                  className="h-9 w-9 text-teal-600 hover:bg-teal-50"
                   title="Agendar para 2 dias e marcar atual como lido"
                 >
                   {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 2 ? (
@@ -1478,12 +1512,14 @@ export default function RemindersManagerEnhanced() {
                       </span>
                     </span>
                   )}
-                </button>
+                </Button>
               </>
             )}
-            <button
+            <Button
               onClick={() => handleMarkAsRead(reminder.id, reminder.lido)}
-              className={`p-2 rounded-lg transition-colors ${
+              variant="icon"
+              size="icon"
+              className={`h-9 w-9 ${
                 reminder.lido
                   ? 'text-slate-600 hover:bg-slate-100'
                   : 'text-green-600 hover:bg-green-50'
@@ -1491,14 +1527,16 @@ export default function RemindersManagerEnhanced() {
               title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
             >
               <Check className="w-5 h-5" />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleDelete(reminder.id)}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              variant="icon"
+              size="icon"
+              className="h-9 w-9 text-red-600 hover:bg-red-50"
               title="Remover"
             >
               <Trash2 className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1506,11 +1544,7 @@ export default function RemindersManagerEnhanced() {
   };
 
   if (loading) {
-    return (
-      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
-      </div>
-    );
+    return <RemindersPageSkeleton />;
   }
 
   return (
@@ -1518,52 +1552,43 @@ export default function RemindersManagerEnhanced() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
             onClick={() => setShowCalendar(true)}
-            className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            variant="secondary"
+            size="icon"
             title="Ver Calendário"
           >
             <Calendar className="w-5 h-5" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setShowStats(!showStats)}
-            className={`p-2 rounded-lg transition-colors ${
-              showStats ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            variant={showStats ? 'primary' : 'secondary'}
+            size="icon"
             title="Estatísticas"
           >
             <BarChart3 className="w-5 h-5" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setFilter('nao-lidos')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'nao-lidos'
-                ? 'bg-teal-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            variant={filter === 'nao-lidos' ? 'primary' : 'secondary'}
+            size="md"
           >
             Não Lidos ({stats.unread})
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setFilter('todos')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'todos'
-                ? 'bg-teal-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            variant={filter === 'todos' ? 'primary' : 'secondary'}
+            size="md"
           >
             Todos ({stats.total})
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setFilter('lidos')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'lidos'
-                ? 'bg-teal-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            variant={filter === 'lidos' ? 'primary' : 'secondary'}
+            size="md"
           >
             Lidos ({stats.completed})
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1594,22 +1619,24 @@ export default function RemindersManagerEnhanced() {
 
       <div className="panel-glass-panel mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
+          <div className="relative flex-1">
+            <Input
               type="text"
               placeholder="Buscar lembretes por título, descrição ou tipo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              leftIcon={Search}
+              className="pr-10"
             />
             {searchQuery && (
-              <button
+              <Button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                variant="icon"
+                size="icon"
+                className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             )}
           </div>
 
@@ -1647,12 +1674,13 @@ export default function RemindersManagerEnhanced() {
             />
           </div>
 
-          <button
+          <Button
             onClick={() => setViewMode(viewMode === 'grouped' ? 'list' : 'grouped')}
-            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            variant="secondary"
+            size="md"
           >
             {viewMode === 'grouped' ? 'Lista' : 'Agrupar'}
-          </button>
+          </Button>
         </div>
 
         {selectedReminders.size > 0 && (
@@ -1660,31 +1688,37 @@ export default function RemindersManagerEnhanced() {
             <span className="text-sm text-slate-600 font-medium">
               {selectedReminders.size} selecionado(s)
             </span>
-            <button
+            <Button
               onClick={handleBatchMarkAsRead}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              variant="primary"
+              size="md"
+              className="bg-green-600 hover:bg-green-700"
             >
               Marcar como lido
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleBatchDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              variant="danger"
+              size="md"
             >
               Excluir
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setSelectedReminders(new Set())}
-              className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors text-sm"
+              variant="secondary"
+              size="md"
             >
               Cancelar
-            </button>
+            </Button>
             {filter === 'nao-lidos' && stats.unread > 0 && (
-              <button
+              <Button
                 onClick={handleMarkAllAsRead}
-                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm sm:ml-auto"
+                variant="primary"
+                size="md"
+                className="sm:ml-auto"
               >
                 Marcar todos como lido
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -1759,15 +1793,15 @@ export default function RemindersManagerEnhanced() {
           bodyClassName="p-0"
         >
             <div className="flex items-center justify-end border-b border-slate-200 px-5 py-3">
-              <button
-                type="button"
+              <Button
                 onClick={() => historyModalData.phone && fetchHistoryMessages(historyModalData.phone)}
                 disabled={!historyModalData.phone || historyLoading}
-                className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+                variant="secondary"
+                size="sm"
               >
                 <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
                 Atualizar
-              </button>
+              </Button>
             </div>
 
             <div className="modal-panel-content flex-1 min-h-0 overflow-y-auto bg-slate-50 p-5 space-y-3">
@@ -1822,19 +1856,17 @@ export default function RemindersManagerEnhanced() {
                           Use o histórico acima para criar uma resposta rápida de retorno.
                         </p>
                       </div>
-                      <button
-                        type="button"
+                      <Button
                         onClick={handleGenerateFollowUp}
                         disabled={generatingFollowUp}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-70 sm:w-auto"
+                        loading={generatingFollowUp}
+                        variant="primary"
+                        size="md"
+                        className="w-full sm:w-auto"
                       >
-                        {generatingFollowUp ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
+                        {!generatingFollowUp && <Sparkles className="h-4 w-4" />}
                         <span>{generatingFollowUp ? 'Gerando...' : 'Gerar follow-up'}</span>
-                      </button>
+                      </Button>
                     </div>
 
                     {followUpError && (
@@ -1846,18 +1878,20 @@ export default function RemindersManagerEnhanced() {
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
                           <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
+                            <Button
                               onClick={handleGenerateFollowUp}
-                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 rounded-md px-3 text-xs"
                             >
                               <RefreshCw className="h-4 w-4" />
                               <span>Gerar outro</span>
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
                               onClick={handleCopyFollowUp}
-                              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-white"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 rounded-md px-3 text-xs"
                             >
                               {followUpCopied ? (
                                 <>
@@ -1870,15 +1904,16 @@ export default function RemindersManagerEnhanced() {
                                   <span>Copiar</span>
                                 </>
                               )}
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
                               onClick={handleApproveFollowUp}
-                              className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                              variant="primary"
+                              size="sm"
+                              className="h-7 rounded-md px-3 text-xs"
                             >
                               <Check className="h-4 w-4" />
                               <span>Aprovar e dividir em blocos</span>
-                            </button>
+                            </Button>
                           </div>
                         </div>
 
@@ -1956,20 +1991,23 @@ export default function RemindersManagerEnhanced() {
           panelClassName="max-w-md"
           footer={
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setReminderPendingDeletion(null)}
                 disabled={isDeletingReminder}
-                className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                variant="secondary"
+                size="md"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={confirmDeleteReminder}
                 disabled={isDeletingReminder}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                variant="danger"
+                size="md"
+                loading={isDeletingReminder}
               >
-                {isDeletingReminder ? 'Removendo...' : 'Remover'}
-              </button>
+                Remover
+              </Button>
             </div>
           }
         >
@@ -2165,14 +2203,15 @@ function ReminderContextLink({
 
     if (onLeadClick) {
       return (
-        <button
-          type="button"
+        <Button
           onClick={() => onLeadClick(leadId)}
-          className={`${baseClassName} hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded transition-colors`}
+          variant="ghost"
+          size="sm"
+          className="h-auto px-0 text-xs text-teal-600 hover:bg-transparent hover:text-teal-700"
         >
           <ExternalLink className="w-3 h-3" />
           <span>Lead: {contextInfo.label}</span>
-        </button>
+        </Button>
       );
     }
 

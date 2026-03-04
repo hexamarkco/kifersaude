@@ -17,6 +17,7 @@ import {
   type AutoContactSettings,
 } from '../../lib/autoContactService';
 import type { IntegrationSetting } from '../../lib/supabase';
+import { WhatsAppApiSkeleton } from '../ui/panelSkeletons';
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
@@ -107,12 +108,7 @@ export default function WhatsAppApiSettings() {
   };
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-3 text-slate-600">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span>Carregando configurações da API...</span>
-      </div>
-    );
+    return <WhatsAppApiSkeleton />;
   }
 
   if (!autoContactIntegration) {

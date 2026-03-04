@@ -42,9 +42,9 @@ const BlogFooter = () => (
           <h3 className="text-lg font-bold mb-4">Links Úteis</h3>
           <ul className="space-y-3 text-slate-400">
             <li><a href="/" className="hover:text-orange-400 transition-colors">Home</a></li>
-            <li><a href="/#quem-somos" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
+            <li><a href="/sobre" className="hover:text-orange-400 transition-colors">Sobre Nós</a></li>
             <li><a href="/blog" className="hover:text-orange-400 transition-colors">Blog</a></li>
-            <li><a href="/#contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
+            <li><a href="/contato" className="hover:text-orange-400 transition-colors">Contato</a></li>
           </ul>
         </div>
 
@@ -96,6 +96,9 @@ export default function BlogPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
 
@@ -111,10 +114,15 @@ export default function BlogPage() {
     }, 3000);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (slug) {
       loadPostBySlug(slug);
+      return;
     }
+    setSelectedPost(null);
+    setRelatedPosts([]);
+    loadPosts();
   }, [slug]);
 
   useEffect(() => () => {
@@ -126,6 +134,8 @@ export default function BlogPage() {
   const loadPosts = async () => {
     setLoading(true);
     setError(null);
+    setLoadingMore(false);
+
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
@@ -138,19 +148,31 @@ export default function BlogPage() {
     }
 
     if (!error && data) {
-      setPosts((prev) => (append ? [...prev, ...data] : data));
-      setHasMore(data.length === pageSize);
+      setPosts(data);
+      setHasMore(false);
     } else {
       setHasMore(false);
     }
 
-    if (append) {
-      setLoadingMore(false);
-    } else {
-      setLoading(false);
-    }
     setLoading(false);
     setIsRetrying(false);
+  };
+
+  const handleRetry = () => {
+    setIsRetrying(true);
+    if (slug) {
+      loadPostBySlug(slug);
+      return;
+    }
+    loadPosts();
+  };
+
+  const handleLoadMore = () => {
+    if (loadingMore || !hasMore) {
+      return;
+    }
+    setLoadingMore(true);
+    loadPosts();
   };
 
   const loadPostBySlug = async (postSlug: string) => {
@@ -284,7 +306,6 @@ export default function BlogPage() {
   ) : null;
 
   const isLoadingPost = Boolean(slug) && loading;
-  const isInitialLoading = loading && posts.length === 0;
   const sanitizedSelectedPostContent = useMemo(
     () =>
       selectedPost?.content

@@ -10,6 +10,7 @@ import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import type { TabNavigationOptions } from '../types/navigation';
+import { PanelBootSkeleton } from '../components/ui/panelSkeletons';
 
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
@@ -155,11 +156,7 @@ export default function PainelWrapper() {
   };
 
   if (configLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
-      </div>
-    );
+    return <PanelBootSkeleton />;
   }
 
   return (

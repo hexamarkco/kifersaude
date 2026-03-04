@@ -3,6 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
+import HomePage from './pages/public/HomePage';
+import SobrePage from './pages/public/SobrePage';
+import ComoFuncionaPage from './pages/public/ComoFuncionaPage';
+import PlanosPage from './pages/public/PlanosPage';
+import OperadorasPage from './pages/public/OperadorasPage';
+import DepoimentosPage from './pages/public/DepoimentosPage';
+import FaqPage from './pages/public/FaqPage';
+import ContatoPage from './pages/public/ContatoPage';
+import PoliticaPrivacidadePage from './pages/public/PoliticaPrivacidadePage';
+import TermosUsoPage from './pages/public/TermosUsoPage';
 import LandingPage from './pages/LandingPage';
 import ConversionLandingPage from './pages/ConversionLandingPage';
 import BlogPage from './pages/BlogPage';
@@ -33,7 +43,17 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-<Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/sobre" element={<SobrePage />} />
+          <Route path="/como-funciona" element={<ComoFuncionaPage />} />
+          <Route path="/planos" element={<PlanosPage />} />
+          <Route path="/operadoras" element={<OperadorasPage />} />
+          <Route path="/depoimentos" element={<DepoimentosPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/contato" element={<ContatoPage />} />
+          <Route path="/politica-de-privacidade" element={<PoliticaPrivacidadePage />} />
+          <Route path="/termos-de-uso" element={<TermosUsoPage />} />
+          <Route path="/cotacao" element={<LandingPage />} />
           <Route path="/lp" element={<ConversionLandingPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />

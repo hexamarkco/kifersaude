@@ -7,8 +7,8 @@ import {
   ChevronRight,
   DollarSign,
   Gift,
-  Loader2,
 } from 'lucide-react';
+import { CommissionCalendarSkeleton } from '../ui/panelSkeletons';
 
 type CommissionEvent = {
   id: string;
@@ -301,6 +301,10 @@ export default function CommissionCalendar() {
     );
   };
 
+  if (loading) {
+    return <CommissionCalendarSkeleton />;
+  }
+
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -347,23 +351,16 @@ export default function CommissionCalendar() {
         </div>
 
         <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-500">
-              <Loader2 className="w-6 h-6 animate-spin mr-2" />
-              Carregando informações financeiras...
+          <div className="overflow-x-auto pb-2">
+            <div className="min-w-[640px]">
+              {renderCalendarDays()}
+              {monthEvents.length === 0 && (
+                <div className="text-center text-sm text-slate-500 py-10">
+                  Nenhuma previsão cadastrada para este mês.
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="overflow-x-auto pb-2">
-              <div className="min-w-[640px]">
-                {renderCalendarDays()}
-                {monthEvents.length === 0 && (
-                  <div className="text-center text-sm text-slate-500 py-10">
-                    Nenhuma previsão cadastrada para este mês.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 

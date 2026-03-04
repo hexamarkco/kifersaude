@@ -16,6 +16,7 @@ import { configService } from '../../lib/configService';
 import type { IntegrationSetting } from '../../lib/supabase';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
 import FilterSingleSelect from '../FilterSingleSelect';
+import { IntegrationsSkeleton } from '../ui/panelSkeletons';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
 const META_PIXEL_SLUG = 'meta_pixel';
@@ -195,12 +196,7 @@ setSavingGpt(false);
   };
 
   if (loadingGpt) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-600">
-        <Loader2 className="w-6 h-6 animate-spin mb-3" />
-        <p>Carregando integrações...</p>
-      </div>
-    );
+    return <IntegrationsSkeleton />;
   }
 
   return (

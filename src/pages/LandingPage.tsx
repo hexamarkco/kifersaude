@@ -221,7 +221,7 @@ export default function LandingPage() {
   return (
     <>
       <Helmet>
-        <title>Kifer Saúde | Planos de Saúde</title>
+        <title>Cotacao de Plano de Saude | Kifer Saude</title>
       </Helmet>
       <div className="min-h-screen bg-white">
       <nav className={`fixed top-0 w-full z-40 transition-all duration-300 ${
@@ -1016,10 +1016,10 @@ export default function LandingPage() {
             <div>
               <h3 className="text-lg font-bold text-slate-900 mb-4">Links Úteis</h3>
               <ul className="space-y-3 text-slate-500">
-                <li><a href="#quem-somos" className="hover:text-orange-500 transition-colors">Sobre Nós</a></li>
-                <li><a href="#cotacao" className="hover:text-orange-500 transition-colors">Planos</a></li>
+                <li><a href="/sobre" className="hover:text-orange-500 transition-colors">Sobre Nós</a></li>
+                <li><a href="/planos" className="hover:text-orange-500 transition-colors">Planos</a></li>
                 <li><a href="/blog" className="hover:text-orange-500 transition-colors">Blog</a></li>
-                <li><a href="#contato" className="hover:text-orange-500 transition-colors">Contato</a></li>
+                <li><a href="/contato" className="hover:text-orange-500 transition-colors">Contato</a></li>
               </ul>
             </div>
 

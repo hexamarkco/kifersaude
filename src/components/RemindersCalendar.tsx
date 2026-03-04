@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Reminder } from '../lib/supabase';
 import { ChevronLeft, ChevronRight, Bell, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR, getDateKey, SAO_PAULO_TIMEZONE } from '../lib/dateUtils';
+import Button from './ui/Button';
 import ModalShell from './ui/ModalShell';
 
 type RemindersCalendarProps = {
@@ -162,21 +163,23 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
             <div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <button
+                  <Button
                     onClick={previousMonth}
-                    className="rounded-lg p-2 transition-colors hover:bg-slate-100"
+                    variant="icon"
+                    size="icon"
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-600" />
-                  </button>
+                  </Button>
                   <h3 className="text-lg font-semibold text-slate-900 capitalize">
                     {getMonthYear()}
                   </h3>
-                  <button
+                  <Button
                     onClick={nextMonth}
-                    className="rounded-lg p-2 transition-colors hover:bg-slate-100"
+                    variant="icon"
+                    size="icon"
                   >
                     <ChevronRight className="w-5 h-5 text-slate-600" />
-                  </button>
+                  </Button>
                 </div>
                 {renderCalendar()}
               </div>
@@ -249,14 +252,16 @@ export default function RemindersCalendar({ reminders, onClose, onReminderClick,
                               )}
                             </div>
                             {onRescheduleReminder && !reminder.lido && (
-                              <button
+                              <Button
                                 onClick={(e) => handleRescheduleClick(reminder.id, e)}
-                                className="flex items-center space-x-1 px-2 py-1 text-xs text-teal-600 hover:bg-teal-50 rounded transition-colors"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs text-teal-600 hover:bg-teal-50 hover:text-teal-700"
                                 title="Reagendar tarefa"
                               >
                                 <Calendar className="w-3 h-3" />
                                 <span>Reagendar</span>
-                              </button>
+                              </Button>
                             )}
                           </div>
                           </div>

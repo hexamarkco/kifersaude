@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import FilterSingleSelect from '../FilterSingleSelect';
+import { UsersSkeleton } from '../ui/panelSkeletons';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
@@ -315,12 +316,7 @@ const handleDeleteUser = async (userId: string) => {
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto"></div>
-        <p className="text-slate-600 mt-4">Carregando usuários...</p>
-      </div>
-    );
+    return <UsersSkeleton />;
   }
 
   return (

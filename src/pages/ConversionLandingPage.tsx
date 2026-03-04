@@ -789,7 +789,7 @@ export default function ConversionLandingPage() {
           </div>
           <p className="text-slate-400 text-sm mb-4">CNPJ: 00.000.000/0001-00 | Regulamentado pela ANS</p>
           <div className="flex justify-center gap-6">
-            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Política de Privacidade</a>
+            <a href="/politica-de-privacidade" className="text-slate-400 hover:text-white text-sm transition-colors">Política de Privacidade</a>
             <a href="https://wa.me/5521979302389" className="text-green-400 hover:text-green-300 text-sm transition-colors flex items-center gap-1">
               <MessageCircle className="w-4 h-4" /> Falar no WhatsApp
             </a>

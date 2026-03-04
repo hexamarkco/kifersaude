@@ -84,14 +84,14 @@ export default function ModalShell({
           }
         }}
       />
-      <div className="fixed inset-0 z-[90] flex items-stretch justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6">
+      <div className="fixed inset-0 z-[90] flex items-stretch justify-center overflow-y-auto px-0 py-0 sm:items-center sm:px-4 sm:py-6">
         <section
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descriptionId : undefined}
           className={cx(
-            'modal-panel panel-glass-strong flex w-full flex-col overflow-hidden rounded-2xl border border-slate-200',
+            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-slate-200 sm:max-h-[calc(100dvh-3rem)]',
             sizeClasses[size],
             panelClassName,
           )}

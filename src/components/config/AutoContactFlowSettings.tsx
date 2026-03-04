@@ -56,6 +56,7 @@ import FlowBuilder from './FlowBuilder';
 import FilterSingleSelect from '../FilterSingleSelect';
 import DateTimePicker from '../ui/DateTimePicker';
 import ModalShell from '../ui/ModalShell';
+import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
@@ -1113,12 +1114,7 @@ export default function AutoContactFlowSettings() {
   }, [handleAutoSaveSettings]);
 
   if (loadingFlow) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-3 text-slate-600">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span>Carregando templates de automação...</span>
-      </div>
-    );
+    return <AutomationFlowsSkeleton />;
   }
 
   if (!autoContactIntegration) {

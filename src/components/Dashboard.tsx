@@ -42,6 +42,7 @@ import {
 import { useConfig } from '../contexts/ConfigContext';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { DashboardPageSkeleton } from './ui/panelSkeletons';
 
 type Holder = {
   id: string;
@@ -1908,11 +1909,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   }));
 
   if (isInitialLoad) {
-    return (
-      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
-      </div>
-    );
+    return <DashboardPageSkeleton />;
   }
 
   const formatDateInput = (value: string): string => {

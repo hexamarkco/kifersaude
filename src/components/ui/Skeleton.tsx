@@ -6,7 +6,7 @@ type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   variant?: SkeletonVariant;
 };
 
-const baseStyles = 'relative overflow-hidden animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200';
+const baseStyles = 'panel-skeleton relative overflow-hidden bg-slate-200/80';
 const variantStyles: Record<SkeletonVariant, string> = {
   block: 'rounded-2xl',
   line: 'rounded-full',

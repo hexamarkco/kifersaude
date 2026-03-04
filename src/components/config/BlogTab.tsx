@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { uploadBlogImage } from '../../lib/imageUploadService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import FilterSingleSelect from '../FilterSingleSelect';
+import { BlogTabSkeletonList } from '../ui/panelSkeletons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -579,9 +580,7 @@ export default function BlogTab() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
+          <BlogTabSkeletonList />
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />

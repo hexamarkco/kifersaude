@@ -7,11 +7,14 @@ import {
   ChevronRight,
   Circle,
   CheckCircle2,
-  Loader2,
   Plus,
   Trash2,
 } from 'lucide-react';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
+import Textarea from '../ui/Textarea';
+import { TodoCalendarSkeleton } from '../ui/panelSkeletons';
 
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
 
@@ -321,6 +324,10 @@ export default function TodoCalendar() {
     );
   };
 
+  if (loading) {
+    return <TodoCalendarSkeleton />;
+  }
+
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -332,12 +339,14 @@ export default function TodoCalendar() {
               : 'Clique em um dia para ver e gerenciar suas tarefas.'}
           </p>
           {reschedulingTaskId && (
-            <button
+            <Button
               onClick={() => setReschedulingTaskId(null)}
-              className="text-xs text-red-600 hover:text-red-700 mt-1 underline"
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-auto px-0 text-red-600 hover:bg-transparent hover:text-red-700"
             >
               Cancelar reagendamento
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex items-center space-x-4 text-sm text-slate-500">
@@ -352,28 +361,29 @@ export default function TodoCalendar() {
         </div>
       </div>
 
-      <div className="mt-6 border rounded-xl border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
-          <button onClick={goToPreviousMonth} className="p-2 rounded-lg hover:bg-white transition-colors" aria-label="Mês anterior">
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
-          </button>
+        <div className="mt-6 border rounded-xl border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
+            <Button
+              onClick={goToPreviousMonth}
+              variant="icon"
+              size="icon"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="w-5 h-5 text-slate-600" />
+            </Button>
           <h3 className="text-lg font-semibold text-slate-900 capitalize">
             {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </h3>
-          <button onClick={goToNextMonth} className="p-2 rounded-lg hover:bg-white transition-colors" aria-label="Próximo mês">
-            <ChevronRight className="w-5 h-5 text-slate-600" />
-          </button>
+            <Button
+              onClick={goToNextMonth}
+              variant="icon"
+              size="icon"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="w-5 h-5 text-slate-600" />
+            </Button>
         </div>
-        <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-500">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Carregando tarefas...
-            </div>
-          ) : (
-            renderCalendar()
-          )}
-        </div>
+        <div className="p-4">{renderCalendar()}</div>
       </div>
 
       {error && !isDayModalOpen && (
@@ -402,14 +412,15 @@ export default function TodoCalendar() {
           )}
 
           <div className="mb-4 flex items-center justify-end">
-            <button
+            <Button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-sky-700"
+              variant="primary"
+              size="md"
               type="button"
             >
               <Plus className="w-4 h-4" />
               Adicionar tarefa
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -434,32 +445,38 @@ export default function TodoCalendar() {
                           <p className="text-sm font-semibold text-slate-800">{task.titulo}</p>
                           {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
                         </div>
-                        <button
+                        <Button
                           onClick={() => handleDeleteTask(task.id)}
-                          className="p-1 text-slate-400 hover:text-red-500"
+                          variant="icon"
+                          size="icon"
+                          className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
                           title="Remover tarefa"
                           type="button"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <button
+                          <Button
                             type="button"
-                            className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
                             onClick={() => updateTaskStatus(task.id, true)}
                           >
                             <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            className="inline-flex items-center text-sky-600 hover:text-sky-700"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
                             onClick={() => setReschedulingTaskId(task.id)}
                             title="Reagendar tarefa"
                           >
                             <Calendar className="w-4 h-4 mr-1" /> Reagendar
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </article>
@@ -484,14 +501,16 @@ export default function TodoCalendar() {
                           <p className="text-sm font-semibold text-slate-800 line-through">{task.titulo}</p>
                           {task.descricao && <p className="text-xs text-slate-500 mt-1">{task.descricao}</p>}
                         </div>
-                        <button
+                        <Button
                           onClick={() => handleDeleteTask(task.id)}
-                          className="p-1 text-slate-400 hover:text-red-500"
+                          variant="icon"
+                          size="icon"
+                          className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
                           title="Remover tarefa"
                           type="button"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                         <span>
@@ -499,13 +518,15 @@ export default function TodoCalendar() {
                             ? `Concluída em ${new Date(task.concluido_em).toLocaleDateString('pt-BR')}`
                             : 'Concluída'}
                         </span>
-                        <button
+                        <Button
                           type="button"
-                          className="inline-flex items-center text-emerald-600 hover:text-emerald-700"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                           onClick={() => updateTaskStatus(task.id, false)}
                         >
                           <Circle className="w-4 h-4 mr-1" /> Reabrir
-                        </button>
+                        </Button>
                       </div>
                     </article>
                   ))}
@@ -539,13 +560,12 @@ export default function TodoCalendar() {
                   <label htmlFor="task-title" className="text-sm font-medium text-slate-700">
                     Tarefa
                   </label>
-                  <input
+                  <Input
                     id="task-title"
                     type="text"
                     value={newTaskTitle}
                     onChange={(event) => setNewTaskTitle(event.target.value)}
                     placeholder="Digite o título da tarefa"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                     required
                     disabled={savingTask}
                   />
@@ -555,38 +575,35 @@ export default function TodoCalendar() {
                   <label htmlFor="task-description" className="text-sm font-medium text-slate-700">
                     Descrição (opcional)
                   </label>
-                  <textarea
+                  <Textarea
                     id="task-description"
                     value={newTaskDescription}
                     onChange={(event) => setNewTaskDescription(event.target.value)}
                     placeholder="Adicione detalhes da tarefa"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent min-h-[96px]"
+                    className="min-h-[96px]"
                     disabled={savingTask}
                   />
                 </div>
 
                 <div className="flex items-center justify-end gap-3">
-                  <button
+                  <Button
                     type="button"
                     onClick={closeAddModal}
-                    className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                    variant="secondary"
+                    size="md"
                   >
                     Cancelar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="inline-flex items-center justify-center px-4 py-2 bg-sky-600 text-white rounded-lg shadow-sm hover:bg-sky-700 transition-colors disabled:opacity-60"
+                    variant="primary"
+                    size="md"
                     disabled={savingTask}
+                    loading={savingTask}
                   >
-                    {savingTask ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar
-                      </>
-                    )}
-                  </button>
+                    {!savingTask && <Plus className="w-4 h-4" />}
+                    Adicionar
+                  </Button>
                 </div>
               </form>
         </ModalShell>

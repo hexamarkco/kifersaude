@@ -44,6 +44,7 @@ import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
 import { downloadXlsx } from '../lib/xlsxExport';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { LeadsPageSkeleton } from './ui/panelSkeletons';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -1345,11 +1346,7 @@ export default function LeadsManager({
   }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
 
   if (loading) {
-    return (
-      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
-      </div>
-    );
+    return <LeadsPageSkeleton />;
   }
 
   return (

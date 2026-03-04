@@ -3,6 +3,7 @@ import { Building2, Plus, Edit2, Trash2, CheckCircle, AlertCircle, Save, X } fro
 import { Operadora } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { OperadorasSkeleton } from '../ui/panelSkeletons';
 
 export default function OperadorasTab() {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -109,12 +110,7 @@ export default function OperadorasTab() {
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto"></div>
-        <p className="text-slate-600 mt-4">Carregando operadoras...</p>
-      </div>
-    );
+    return <OperadorasSkeleton />;
   }
 
   return (

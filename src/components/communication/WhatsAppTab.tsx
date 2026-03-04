@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
+import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
@@ -1737,11 +1738,7 @@ export default function WhatsAppTab() {
   const showMessageArea = !isMobileView || selectedChat;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    );
+    return <WhatsAppPageSkeleton />;
   }
 
   return (

@@ -155,12 +155,17 @@
 .painel-theme .panel-glass-panel,
 .painel-theme .panel-glass-strong,
 .painel-theme .panel-glass-floating {
-  position: relative;
   border-color: var(--panel-glass-border) !important;
   background: var(--panel-glass-bg) !important;
   box-shadow: var(--panel-glass-shadow);
   backdrop-filter: blur(18px) saturate(145%);
   -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.painel-theme .panel-glass-panel,
+.painel-theme .panel-glass-floating,
+.painel-theme .panel-glass-strong:not(.fixed):not(.sticky) {
+  position: relative;
 }
 
 .painel-theme .panel-glass-panel::before,

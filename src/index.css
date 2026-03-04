@@ -30,6 +30,14 @@
   --panel-text-muted: #64748b;
   --panel-text-subtle: #94a3b8;
   --panel-chart-grid: #e2e8f0;
+  --panel-glass-bg: rgba(255, 255, 255, 0.58);
+  --panel-glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --panel-glass-border: rgba(148, 163, 184, 0.34);
+  --panel-glass-highlight: rgba(255, 255, 255, 0.54);
+  --panel-glass-shadow: 0 24px 55px -38px rgba(15, 23, 42, 0.55), 0 16px 30px -20px rgba(15, 23, 42, 0.32);
+  --panel-aurora-teal: rgba(20, 184, 166, 0.22);
+  --panel-aurora-blue: rgba(59, 130, 246, 0.2);
+  --panel-aurora-orange: rgba(249, 115, 22, 0.16);
 }
 
 .painel-theme.theme-dark {
@@ -79,6 +87,140 @@
   --panel-accent-green-bg-strong: #14532d;
   --panel-accent-green-text: #86efac;
   --panel-accent-green-border: #166534;
+  --panel-glass-bg: rgba(15, 23, 42, 0.58);
+  --panel-glass-bg-strong: rgba(15, 23, 42, 0.78);
+  --panel-glass-border: rgba(71, 85, 105, 0.58);
+  --panel-glass-highlight: rgba(148, 163, 184, 0.24);
+  --panel-glass-shadow: 0 30px 64px -42px rgba(2, 6, 23, 0.95), 0 18px 34px -24px rgba(2, 6, 23, 0.72);
+  --panel-aurora-teal: rgba(45, 212, 191, 0.17);
+  --panel-aurora-blue: rgba(96, 165, 250, 0.14);
+  --panel-aurora-orange: rgba(251, 146, 60, 0.12);
+}
+
+.painel-theme .panel-shell-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 12%, var(--panel-aurora-teal), transparent 42%),
+    radial-gradient(circle at 90% 4%, var(--panel-aurora-blue), transparent 38%),
+    radial-gradient(circle at 54% 100%, var(--panel-aurora-orange), transparent 44%);
+}
+
+.painel-theme .panel-shell-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.03) 0%, rgba(15, 23, 42, 0.09) 100%);
+}
+
+.painel-theme.theme-dark .panel-shell-bg::after {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.24) 0%, rgba(2, 6, 23, 0.55) 100%);
+}
+
+.painel-theme .panel-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0.62;
+  filter: blur(88px);
+  will-change: transform;
+}
+
+.painel-theme .panel-aurora-primary {
+  top: -22%;
+  left: -16%;
+  width: 40vw;
+  height: 42vw;
+  background: radial-gradient(circle at 35% 30%, var(--panel-aurora-teal), transparent 75%);
+}
+
+.painel-theme .panel-aurora-secondary {
+  top: 8%;
+  right: -16%;
+  width: 36vw;
+  height: 34vw;
+  background: radial-gradient(circle at 40% 32%, var(--panel-aurora-blue), transparent 75%);
+}
+
+.painel-theme .panel-aurora-tertiary {
+  bottom: -28%;
+  left: 28%;
+  width: 38vw;
+  height: 34vw;
+  background: radial-gradient(circle at 50% 42%, var(--panel-aurora-orange), transparent 78%);
+}
+
+.painel-theme .panel-glass-panel,
+.painel-theme .panel-glass-strong,
+.painel-theme .panel-glass-floating {
+  position: relative;
+  border-color: var(--panel-glass-border) !important;
+  background: var(--panel-glass-bg) !important;
+  box-shadow: var(--panel-glass-shadow);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.painel-theme .panel-glass-panel::before,
+.painel-theme .panel-glass-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border-top: 1px solid var(--panel-glass-highlight);
+  opacity: 0.72;
+}
+
+.painel-theme .panel-glass-strong {
+  background: var(--panel-glass-bg-strong) !important;
+}
+
+.painel-theme .panel-glass-floating {
+  background: var(--panel-glass-bg-strong) !important;
+}
+
+.painel-theme .panel-interactive-glass {
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.painel-theme .panel-interactive-glass:hover {
+  box-shadow: 0 34px 70px -44px rgba(15, 23, 42, 0.62), 0 16px 28px -20px rgba(15, 23, 42, 0.4);
+}
+
+.painel-theme.theme-dark .panel-interactive-glass:hover {
+  box-shadow: 0 34px 70px -42px rgba(2, 6, 23, 0.95), 0 18px 30px -22px rgba(2, 6, 23, 0.72);
+}
+
+.painel-theme .panel-dashboard-immersive [data-panel-animate] {
+  will-change: transform, opacity;
+}
+
+.painel-theme .panel-glass-hero {
+  position: relative;
+  border: 1px solid var(--panel-glass-border);
+  overflow: hidden;
+}
+
+.painel-theme .panel-glass-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 45%);
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .painel-theme .panel-aurora-primary,
+  .painel-theme .panel-aurora-secondary,
+  .painel-theme .panel-aurora-tertiary {
+    width: 70vw;
+    height: 60vw;
+    filter: blur(72px);
+    opacity: 0.55;
+  }
 }
 
 .painel-theme.theme-dark,

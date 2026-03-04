@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
@@ -21,8 +22,10 @@ import {
 import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
+import FilterSingleSelect from './FilterSingleSelect';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '../lib/whatsappApiService';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -111,6 +114,9 @@ export default function RemindersManagerEnhanced() {
     reminderId: string;
     daysAhead: 1 | 2;
   } | null>(null);
+  const remindersRootRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedSectionsRef = useRef(false);
+  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -1152,6 +1158,60 @@ export default function RemindersManagerEnhanced() {
     completed: reminders.filter(r => r.lido).length
   };
 
+  useEffect(() => {
+    if (loading || hasAnimatedSectionsRef.current) {
+      return;
+    }
+
+    const root = remindersRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-panel-animate]'));
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'transform,opacity,filter',
+      });
+      hasAnimatedSectionsRef.current = true;
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        sections,
+        {
+          autoAlpha: 0,
+          y: 22,
+          scale: 0.985,
+          filter: 'blur(10px)',
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          duration: sectionDuration,
+          ease,
+          stagger: sectionStagger,
+          clearProps: 'filter',
+        },
+      );
+    }, root);
+
+    hasAnimatedSectionsRef.current = true;
+
+    return () => {
+      context.revert();
+    };
+  }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
+
   const getPriorityColor = (prioridade: string) => {
     const colors: Record<string, string> = {
       'baixa': 'bg-blue-100 text-blue-700',
@@ -1189,14 +1249,14 @@ export default function RemindersManagerEnhanced() {
     return (
       <div
         key={reminder.id}
-        className={`bg-white rounded-xl shadow-sm border p-5 transition-all ${
+        className={`panel-glass-panel panel-interactive-glass rounded-xl border bg-white p-5 shadow-sm transition-all ${
           reminder.lido
             ? 'border-slate-200 opacity-60'
             : `${getUrgencyStyles(urgency)}`
         } ${isSelected ? 'ring-2 ring-teal-500' : ''}`}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-4 flex-1">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 items-start space-x-4 xl:flex-1">
             <button
               onClick={() => toggleReminderSelection(reminder.id)}
               className="mt-1 text-slate-400 hover:text-teal-600 transition-colors"
@@ -1219,7 +1279,7 @@ export default function RemindersManagerEnhanced() {
             </div>
 
             <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-semibold text-slate-900">
                   {reminder.titulo}
                 </h3>
@@ -1252,7 +1312,7 @@ export default function RemindersManagerEnhanced() {
                 </div>
               )}
 
-              <div className="flex items-center space-x-4 text-sm text-slate-500">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
@@ -1278,7 +1338,7 @@ export default function RemindersManagerEnhanced() {
             </div>
           </div>
 
-          <div className="ml-4 flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:ml-4 xl:w-auto">
             <button
               onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone, reminder.lead_id ?? contract?.lead_id ?? null)}
               disabled={!leadInfo?.telefone}
@@ -1331,7 +1391,7 @@ export default function RemindersManagerEnhanced() {
                       className="fixed inset-0 z-10"
                       onClick={() => setOpenSnoozeMenu(null)}
                     />
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-20 min-w-[180px]">
+                    <div className="panel-glass-panel absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
                       <button
                         onClick={() => handleSnooze(reminder, 'minutes-15')}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
@@ -1444,15 +1504,15 @@ export default function RemindersManagerEnhanced() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div ref={remindersRootRef} className="panel-dashboard-immersive">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1505,31 +1565,31 @@ export default function RemindersManagerEnhanced() {
       </div>
 
       {showStats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5" data-panel-animate>
+          <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-600 mb-1">Total</div>
             <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-600 mb-1">Não Lidos</div>
             <div className="text-3xl font-bold text-orange-600">{stats.unread}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-600 mb-1">Atrasados</div>
             <div className="text-3xl font-bold text-red-600">{stats.overdue}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-600 mb-1">Hoje</div>
             <div className="text-3xl font-bold text-teal-600">{stats.today}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-600 mb-1">Concluídos</div>
             <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+      <div className="panel-glass-panel mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -1550,29 +1610,39 @@ export default function RemindersManagerEnhanced() {
             )}
           </div>
 
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:w-48"
-          >
-            <option value="all">Todos os tipos</option>
-            <option value="Documentos pendentes">Documentos pendentes</option>
-            <option value="Assinatura">Assinatura</option>
-            <option value="Ativação">Ativação</option>
-            <option value="Renovação">Renovação</option>
-            <option value="Retorno">Retorno</option>
-          </select>
+          <div className="w-full sm:w-52">
+            <FilterSingleSelect
+              icon={Tag}
+              value={typeFilter}
+              onChange={(value) => setTypeFilter(value)}
+              placeholder="Todos os tipos"
+              includePlaceholderOption={false}
+              options={[
+                { value: 'all', label: 'Todos os tipos' },
+                { value: 'Documentos pendentes', label: 'Documentos pendentes' },
+                { value: 'Assinatura', label: 'Assinatura' },
+                { value: 'Ativação', label: 'Ativação' },
+                { value: 'Renovação', label: 'Renovação' },
+                { value: 'Retorno', label: 'Retorno' },
+              ]}
+            />
+          </div>
 
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:w-40"
-          >
-            <option value="all">Todas prioridades</option>
-            <option value="baixa">Baixa</option>
-            <option value="normal">Normal</option>
-            <option value="alta">Alta</option>
-          </select>
+          <div className="w-full sm:w-44">
+            <FilterSingleSelect
+              icon={AlertCircle}
+              value={priorityFilter}
+              onChange={(value) => setPriorityFilter(value)}
+              placeholder="Todas prioridades"
+              includePlaceholderOption={false}
+              options={[
+                { value: 'all', label: 'Todas prioridades' },
+                { value: 'baixa', label: 'Baixa' },
+                { value: 'normal', label: 'Normal' },
+                { value: 'alta', label: 'Alta' },
+              ]}
+            />
+          </div>
 
           <button
             onClick={() => setViewMode(viewMode === 'grouped' ? 'list' : 'grouped')}
@@ -1583,7 +1653,7 @@ export default function RemindersManagerEnhanced() {
         </div>
 
         {selectedReminders.size > 0 && (
-          <div className="flex items-center space-x-3 pt-4 border-t border-slate-200">
+          <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:gap-3">
             <span className="text-sm text-slate-600 font-medium">
               {selectedReminders.size} selecionado(s)
             </span>
@@ -1608,7 +1678,7 @@ export default function RemindersManagerEnhanced() {
             {filter === 'nao-lidos' && stats.unread > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="ml-auto px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm sm:ml-auto"
               >
                 Marcar todos como lido
               </button>
@@ -1618,7 +1688,7 @@ export default function RemindersManagerEnhanced() {
       </div>
 
       {filteredReminders.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm" data-panel-animate>
           <Bell className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum lembrete encontrado</h3>
           <p className="text-slate-600">
@@ -1632,7 +1702,7 @@ export default function RemindersManagerEnhanced() {
           </p>
         </div>
       ) : viewMode === 'grouped' ? (
-        <div className="space-y-6">
+        <div className="space-y-6" data-panel-animate>
           {(['overdue', 'today', 'tomorrow', 'thisWeek', 'thisMonth', 'later'] as ReminderPeriod[]).map(period => {
             const periodReminders = groupedReminders[period];
             if (periodReminders.length === 0) return null;
@@ -1640,7 +1710,7 @@ export default function RemindersManagerEnhanced() {
             const isExpanded = expandedPeriods.has(period);
 
             return (
-              <div key={period} className={`border rounded-xl ${getPeriodColor(period)}`}>
+              <div key={period} className={`panel-interactive-glass border rounded-xl ${getPeriodColor(period)}`}>
                 <button
                   onClick={() => togglePeriod(period)}
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/50 transition-colors rounded-xl"
@@ -1670,14 +1740,14 @@ export default function RemindersManagerEnhanced() {
           })}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-panel-animate>
           {filteredReminders.map(renderReminderCard)}
         </div>
       )}
 
       {historyModalData && (
-        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden min-h-0">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="modal-panel panel-glass-strong flex max-h-[90vh] w-full max-w-4xl min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 shadow-2xl">
             <div className="flex items-start justify-between p-5 border-b border-slate-200">
               <div>
                 <h3 className="text-xl font-semibold text-slate-900">Histórico de mensagens</h3>
@@ -1885,8 +1955,8 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {reminderPendingDeletion && (
-        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full p-6 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="modal-panel panel-glass-strong flex w-full max-w-md flex-col rounded-xl border border-slate-200 p-6 shadow-2xl">
             <div className="flex items-start space-x-3">
               <div className="p-3 rounded-full bg-red-100">
                 <Trash2 className="h-6 w-6 text-red-600" />
@@ -1927,8 +1997,8 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {customSnoozeReminder && (
-        <div className="fixed inset-0 bg-black/50 flex items-stretch justify-center z-50 p-0 sm:items-center sm:p-4">
-          <div className="modal-panel bg-white rounded-xl shadow-2xl max-w-md w-full p-6 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="modal-panel panel-glass-strong flex w-full max-w-md flex-col rounded-xl border border-slate-200 p-6 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Adiar para data/hora personalizada</h3>
 
             <div className="mb-6">
@@ -1995,8 +2065,8 @@ export default function RemindersManagerEnhanced() {
       )}
 
       {loadingLeadId && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="flex items-center space-x-2 rounded-lg bg-white px-4 py-3 shadow-lg">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
+          <div className="panel-glass-strong flex items-center space-x-2 rounded-lg border border-slate-200 px-4 py-3 shadow-lg">
             <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
             <span className="text-sm font-medium text-slate-700">Carregando lead...</span>
           </div>

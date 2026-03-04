@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import { supabase, Contract, Lead, fetchAllPages } from '../lib/supabase';
 import { Plus, Search, Filter, FileText, Eye, AlertCircle, Trash2, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +8,7 @@ import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 import Pagination from './Pagination';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -44,6 +46,9 @@ export default function ContractsManager({
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const contractsRootRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedSectionsRef = useRef(false);
+  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
     () => Array.from(new Set(contracts.map((contract) => contract.operadora).filter(Boolean))).sort(),
@@ -366,7 +371,7 @@ export default function ContractsManager({
       : contract.bonus_por_vida_valor;
   };
 
-  const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredContracts.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedContracts = filteredContracts.slice(startIndex, endIndex);
@@ -397,17 +402,71 @@ export default function ContractsManager({
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
 
+  useEffect(() => {
+    if (loading || hasAnimatedSectionsRef.current) {
+      return;
+    }
+
+    const root = contractsRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-panel-animate]'));
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'transform,opacity,filter',
+      });
+      hasAnimatedSectionsRef.current = true;
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        sections,
+        {
+          autoAlpha: 0,
+          y: 22,
+          scale: 0.985,
+          filter: 'blur(10px)',
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          duration: sectionDuration,
+          ease,
+          stagger: sectionStagger,
+          clearProps: 'filter',
+        },
+      );
+    }, root);
+
+    hasAnimatedSectionsRef.current = true;
+
+    return () => {
+      context.revert();
+    };
+  }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <div ref={contractsRootRef} className="panel-dashboard-immersive">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
         {!isObserver && (
           <button
@@ -423,7 +482,7 @@ export default function ContractsManager({
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-4 space-y-4">
+      <div className="panel-glass-panel mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-2xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -526,7 +585,7 @@ export default function ContractsManager({
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white shadow-sm" data-panel-animate>
         <div className="grid grid-cols-1 gap-4 p-4">
           {paginatedContracts.map((contract) => {
             const bonusValue = getBonusValue(contract);
@@ -534,7 +593,7 @@ export default function ContractsManager({
             return (
               <div
                 key={contract.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-all"
+                className="panel-glass-panel panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
                   <div className="flex-1 space-y-3">
@@ -647,7 +706,7 @@ export default function ContractsManager({
         </div>
 
       {filteredContracts.length === 0 && (
-        <div className="text-center py-12">
+        <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm" data-panel-animate>
           <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum contrato encontrado</h3>
           <p className="text-slate-600">Tente ajustar os filtros ou adicione um novo contrato.</p>

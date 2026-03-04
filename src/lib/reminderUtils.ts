@@ -122,10 +122,10 @@ export function getUrgencyLevel(reminder: Reminder): 'critical' | 'high' | 'medi
 
 export function getUrgencyStyles(urgency: 'critical' | 'high' | 'medium' | 'low'): string {
   const styles = {
-    critical: 'border-2 border-red-500 bg-red-50 shadow-lg',
-    high: 'border-l-4 border-orange-500',
-    medium: 'border-l-4 border-yellow-500',
-    low: 'border-l-2 border-slate-300'
+    critical: 'ring-2 ring-red-400/80',
+    high: 'ring-1 ring-orange-300/90',
+    medium: 'ring-1 ring-amber-300/90',
+    low: 'ring-1 ring-slate-300/80'
   };
   return styles[urgency];
 }

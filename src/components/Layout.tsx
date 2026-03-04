@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import {
   Users,
   FileText,
@@ -25,6 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 type TabConfig = {
   id: string;
@@ -100,7 +102,13 @@ export default function Layout({
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const panelContentRef = useRef<HTMLDivElement | null>(null);
+  const auroraPrimaryRef = useRef<HTMLDivElement | null>(null);
+  const auroraSecondaryRef = useRef<HTMLDivElement | null>(null);
+  const auroraTertiaryRef = useRef<HTMLDivElement | null>(null);
   const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
+  const { motionEnabled, enterDuration, sectionStagger, ease } = usePanelMotion();
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -479,6 +487,196 @@ export default function Layout({
     window.localStorage.setItem(PANEL_THEME_STORAGE_KEY, themeMode);
   }, [themeMode]);
 
+  useEffect(() => {
+    const panelContent = panelContentRef.current;
+    if (!panelContent) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(panelContent, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'filter,transform,opacity',
+      });
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      panelContent,
+      {
+        autoAlpha: 0,
+        y: 18,
+        filter: 'blur(10px)',
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        filter: 'blur(0px)',
+        duration: enterDuration,
+        ease,
+        clearProps: 'filter',
+        overwrite: 'auto',
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [activeTab, ease, enterDuration, motionEnabled]);
+
+  useEffect(() => {
+    const sidebarElement = sidebarRef.current;
+    if (!sidebarElement) {
+      return;
+    }
+
+    const items = Array.from(sidebarElement.querySelectorAll<HTMLElement>('[data-sidebar-item]'));
+    if (items.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(items, {
+        autoAlpha: 1,
+        x: 0,
+        clearProps: 'transform,opacity',
+      });
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        items,
+        {
+          autoAlpha: 0,
+          x: -12,
+        },
+        {
+          autoAlpha: 1,
+          x: 0,
+          duration: 0.46,
+          ease: 'power2.out',
+          stagger: Math.max(0.025, sectionStagger * 0.45),
+          overwrite: 'auto',
+        },
+      );
+    }, sidebarElement);
+
+    return () => {
+      context.revert();
+    };
+  }, [isMenuCollapsed, motionEnabled, sectionStagger, tabs.length]);
+
+  useEffect(() => {
+    const primary = auroraPrimaryRef.current;
+    const secondary = auroraSecondaryRef.current;
+    const tertiary = auroraTertiaryRef.current;
+
+    if (!primary || !secondary || !tertiary) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set([primary, secondary, tertiary], { clearProps: 'transform' });
+      return;
+    }
+
+    const animations = [
+      gsap.to(primary, {
+        xPercent: 8,
+        yPercent: -5,
+        scale: 1.06,
+        duration: 18,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      }),
+      gsap.to(secondary, {
+        xPercent: -7,
+        yPercent: 7,
+        scale: 0.94,
+        duration: 21,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      }),
+      gsap.to(tertiary, {
+        xPercent: 5,
+        yPercent: 4,
+        scale: 1.08,
+        duration: 24,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      }),
+    ];
+
+    return () => {
+      animations.forEach((animation) => animation.kill());
+    };
+  }, [motionEnabled]);
+
+  useEffect(() => {
+    if (!showNotificationsDropdown || !notificationsDropdownRef.current || !motionEnabled) {
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      notificationsDropdownRef.current,
+      {
+        autoAlpha: 0,
+        y: isMenuCollapsed ? 12 : 8,
+        scale: 0.985,
+        transformOrigin: 'left bottom',
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.32,
+        ease: 'power2.out',
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [isMenuCollapsed, motionEnabled, showNotificationsDropdown]);
+
+  useEffect(() => {
+    if (!activeDropdownTab || !motionEnabled) {
+      return;
+    }
+
+    const dropdown = document.getElementById(`dropdown-${activeDropdownTab}`);
+    if (!dropdown) {
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      dropdown,
+      {
+        autoAlpha: 0,
+        x: -6,
+        y: 6,
+        scale: 0.98,
+      },
+      {
+        autoAlpha: 1,
+        x: 0,
+        y: 0,
+        scale: 1,
+        duration: 0.24,
+        ease: 'power2.out',
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [activeDropdownTab, motionEnabled]);
+
   const toggleThemeMode = () => {
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
   };
@@ -495,6 +693,7 @@ export default function Layout({
           <button
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={() => handleTabClick(tab)}
+            data-sidebar-item
             className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 ${
               isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
             } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
@@ -542,7 +741,7 @@ export default function Layout({
             return (
               <div 
                 id={`dropdown-${tab.id}`}
-                className="fixed z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+                className="panel-glass-panel fixed z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
                 style={{ 
                   left: buttonRect.right + 8,
                   top: buttonRect.top
@@ -630,6 +829,7 @@ export default function Layout({
       <button
         key={tab.id}
         onClick={() => handleTabClick(tab)}
+        data-sidebar-item
         className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors ${
           isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
         } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
@@ -658,10 +858,16 @@ export default function Layout({
 
   return (
     <div
-      className={`painel-theme theme-${themeMode} flex min-h-screen bg-slate-50`}
+      className={`painel-theme theme-${themeMode} relative isolate flex min-h-screen bg-slate-50`}
     >
+      <div className="panel-shell-bg" aria-hidden="true">
+        <div ref={auroraPrimaryRef} className="panel-aurora panel-aurora-primary" />
+        <div ref={auroraSecondaryRef} className="panel-aurora panel-aurora-secondary" />
+        <div ref={auroraTertiaryRef} className="panel-aurora panel-aurora-tertiary" />
+      </div>
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out ${
+        ref={sidebarRef}
+        className={`panel-glass-strong fixed left-0 top-0 z-40 h-screen border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out ${
           isMenuCollapsed ? 'w-16' : 'w-64'
         }`}
       >
@@ -689,6 +895,7 @@ export default function Layout({
           <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+              data-sidebar-item
               className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
@@ -701,6 +908,7 @@ export default function Layout({
               <button
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
+                data-sidebar-item
                 className={`flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-orange-50 hover:text-orange-600 ${
                   isMenuCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
                 }`}
@@ -725,7 +933,7 @@ export default function Layout({
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className={`absolute z-50 w-96 rounded-2xl border border-slate-200 bg-white shadow-xl ${
+                    className={`panel-glass-panel absolute z-50 w-96 rounded-2xl border border-slate-200 bg-white shadow-xl ${
                       isMenuCollapsed
                         ? 'left-full bottom-0 ml-2 max-w-[calc(100vw-5rem)]'
                         : 'left-0 bottom-full mb-2 max-w-[calc(100vw-1rem)]'
@@ -823,6 +1031,7 @@ export default function Layout({
             <button
               type="button"
               onClick={toggleThemeMode}
+              data-sidebar-item
               className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
@@ -834,6 +1043,7 @@ export default function Layout({
             </button>
             <button
               onClick={handleLogout}
+              data-sidebar-item
               className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
@@ -846,9 +1056,10 @@ export default function Layout({
         </div>
       </aside>
 
-      <div className={`flex flex-1 flex-col transition-all duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
+      <div className={`relative z-10 flex flex-1 flex-col transition-all duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
         <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
+            ref={panelContentRef}
             className={
               activeTab === 'whatsapp'
                 ? 'w-full h-[calc(100vh)] min-h-0'

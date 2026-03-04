@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useSearchParams } from 'react-router-dom';
 import { supabase, Lead, Contract, fetchAllPages } from '../lib/supabase';
@@ -32,6 +33,7 @@ import LeadFunnel from './LeadFunnel';
 import ContractDetails from './ContractDetails';
 import LeadDetails from './LeadDetails';
 import LeadForm from './LeadForm';
+import FilterSingleSelect from './FilterSingleSelect';
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -39,6 +41,7 @@ import {
 } from '../lib/analytics';
 import { useConfig } from '../contexts/ConfigContext';
 import { mapLeadRelations } from '../lib/leadRelations';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 type Holder = {
   id: string;
@@ -84,9 +87,12 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
+  const dashboardRootRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedSectionsRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const lastBirthdayReminderSync = useRef<string | null>(null);
   const lastAdjustmentReminderSync = useRef<string | null>(null);
+  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
     const urlValue = searchParams.get('periodFilter');
     const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
@@ -773,6 +779,60 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     periodFilter,
     persistFilters,
   ]);
+
+  useEffect(() => {
+    if (isInitialLoad || loading || hasAnimatedSectionsRef.current) {
+      return;
+    }
+
+    const root = dashboardRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-panel-animate]'));
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'transform,opacity,filter',
+      });
+      hasAnimatedSectionsRef.current = true;
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        sections,
+        {
+          autoAlpha: 0,
+          y: 24,
+          scale: 0.985,
+          filter: 'blur(12px)',
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          duration: sectionDuration,
+          ease,
+          stagger: sectionStagger,
+          clearProps: 'filter',
+        },
+      );
+    }, root);
+
+    hasAnimatedSectionsRef.current = true;
+
+    return () => {
+      context.revert();
+    };
+  }, [ease, isInitialLoad, loading, motionEnabled, sectionDuration, sectionStagger]);
 
   const getStartOfMonth = () => {
     const now = new Date();
@@ -1849,7 +1909,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
   if (isInitialLoad) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="panel-glass-floating flex h-64 items-center justify-center rounded-2xl border border-slate-200">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
@@ -1936,16 +1996,16 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={dashboardRootRef} className="panel-dashboard-immersive space-y-6">
       {isRefreshing && (
         <div className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg ring-1 ring-slate-200">
+          <div className="panel-glass-floating pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg ring-1 ring-slate-200">
             <div className="h-3 w-3 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
             <span className="text-sm font-medium text-slate-600">Atualizando dados...</span>
           </div>
         </div>
       )}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4" data-panel-animate>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>
           <p className="mt-1 text-sm text-slate-600">
@@ -1954,23 +2014,26 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         </div>
         <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-slate-400" />
-              <select
+            <div className="w-full sm:w-52">
+              <FilterSingleSelect
+                icon={Filter}
                 value={periodFilter}
-                onChange={(e) => {
-                  setPeriodFilter(e.target.value as 'mes-atual' | 'todo-periodo' | 'personalizado');
-                  if (e.target.value !== 'personalizado') {
+                onChange={(value) => {
+                  const nextPeriod = value as 'mes-atual' | 'todo-periodo' | 'personalizado';
+                  setPeriodFilter(nextPeriod);
+                  if (nextPeriod !== 'personalizado') {
                     setCustomStartDate('');
                     setCustomEndDate('');
                   }
                 }}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-auto"
-              >
-                <option value="mes-atual">Mês Atual</option>
-                <option value="todo-periodo">Todo Período</option>
-                <option value="personalizado">Personalizado</option>
-              </select>
+                placeholder="Período"
+                includePlaceholderOption={false}
+                options={[
+                  { value: 'mes-atual', label: 'Mês Atual' },
+                  { value: 'todo-periodo', label: 'Todo Período' },
+                  { value: 'personalizado', label: 'Personalizado' },
+                ]}
+              />
             </div>
             {periodFilter === 'personalizado' && (
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
@@ -2002,43 +2065,35 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 />
               </div>
             )}
-            <div className="flex w-full items-center gap-2 sm:w-56">
-              <Target className="h-5 w-5 text-slate-400" />
-              <select
+            <div className="w-full sm:w-56">
+              <FilterSingleSelect
+                icon={Target}
                 value={dashboardOriginFilter}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   setDashboardOriginFilter(value);
                   persistFilters(undefined, undefined, undefined, value, dashboardOwnerFilter);
                 }}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="">Todas as origens</option>
-                {visibleLeadOrigins.map((origin) => (
-                  <option key={origin.id} value={origin.nome}>
-                    {origin.nome}
-                  </option>
-                ))}
-              </select>
+                placeholder="Todas as origens"
+                options={visibleLeadOrigins.map((origin) => ({
+                  value: origin.nome,
+                  label: origin.nome,
+                }))}
+              />
             </div>
-            <div className="flex w-full items-center gap-2 sm:w-56">
-              <Users className="h-5 w-5 text-slate-400" />
-              <select
+            <div className="w-full sm:w-56">
+              <FilterSingleSelect
+                icon={Users}
                 value={dashboardOwnerFilter}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   setDashboardOwnerFilter(value);
                   persistFilters(undefined, undefined, undefined, dashboardOriginFilter, value);
                 }}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium focus:border-transparent focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="">Todos os responsáveis</option>
-                {responsavelOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                placeholder="Todos os responsáveis"
+                options={responsavelOptions.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+              />
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -2086,6 +2141,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       )}
 
       <div
+        data-panel-animate
         className={
           isObserver
             ? 'grid grid-cols-1 gap-6'
@@ -2127,6 +2183,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       </div>
 
       <div
+        data-panel-animate
         className={
           isObserver ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 gap-6'
         }
@@ -2153,7 +2210,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Evolução mensal</h3>
@@ -2266,8 +2323,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       <LeadFunnel leads={activeLeads} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-panel-animate>
+        <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             Distribuição de Leads por Status
           </h3>
@@ -2285,7 +2342,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             Contratos por Operadora
           </h3>
@@ -2306,7 +2363,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       {!isObserver && (
         <>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-panel-animate>
             <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div>
                 <div className="flex items-center gap-2 text-slate-900">
@@ -2627,7 +2684,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         </>
       )}
 
-      <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl shadow-lg p-8 text-white">
+      <div className="panel-glass-hero rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 p-8 text-white shadow-lg" data-panel-animate>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-2xl font-bold mb-2">Continue crescendo!</h3>

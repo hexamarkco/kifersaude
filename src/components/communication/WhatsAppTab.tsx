@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, Video, MoreVertical, ArrowLeft, Users, Info, History, Plus } from 'lucide-react';
+import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
@@ -58,6 +58,10 @@ type WhatsAppMessage = {
   author?: string | null;
 };
 
+const MESSAGES_PAGE_SIZE = 120;
+
+type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct';
+
 
 export default function WhatsAppTab() {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
@@ -87,15 +91,25 @@ export default function WhatsAppTab() {
   );
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
+  const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
+  const [prioritizeUnread, setPrioritizeUnread] = useState(true);
   const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
+  const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
+  const skipNextAutoScrollRef = useRef(false);
   const { user } = useAuth();
 
   function normalizePhoneNumber(phone: string | null | undefined) {
@@ -108,6 +122,30 @@ export default function WhatsAppTab() {
 
     return digits;
   }
+
+  const getMessageTimeValue = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
+    const primary = message.timestamp ? new Date(message.timestamp).getTime() : Number.NaN;
+    if (!Number.isNaN(primary)) return primary;
+    const fallback = new Date(message.created_at).getTime();
+    return Number.isNaN(fallback) ? 0 : fallback;
+  };
+
+  const sortMessagesChronologically = (
+    left: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>,
+    right: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>,
+  ) => getMessageTimeValue(left) - getMessageTimeValue(right);
+
+  const getChatTimeValue = (chat: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>) => {
+    const primary = chat.last_message_at ? new Date(chat.last_message_at).getTime() : Number.NaN;
+    if (!Number.isNaN(primary)) return primary;
+    const fallback = new Date(chat.created_at).getTime();
+    return Number.isNaN(fallback) ? 0 : fallback;
+  };
+
+  const sortChatsByLatest = (
+    left: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
+    right: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
+  ) => getChatTimeValue(right) - getChatTimeValue(left);
 
   const extractPhoneFromChatId = (chatId: string) => normalizePhoneNumber(chatId);
 
@@ -185,6 +223,53 @@ export default function WhatsAppTab() {
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  useEffect(() => {
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      if ((event.ctrlKey || event.metaKey) && key === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && key === 'n') {
+        event.preventDefault();
+        setShowNewChatModal(true);
+        setNewChatTab('leads');
+        return;
+      }
+
+      if (event.key !== 'Escape') return;
+
+      if (chatMenu) {
+        setChatMenu(null);
+        return;
+      }
+
+      if (showNewChatModal) {
+        setShowNewChatModal(false);
+        return;
+      }
+
+      if (showGroupInfo) {
+        setShowGroupInfo(false);
+        return;
+      }
+
+      if (isMobileView && selectedChat) {
+        setSelectedChat(null);
+      }
+    };
+
+    window.addEventListener('keydown', onGlobalKeyDown);
+    return () => window.removeEventListener('keydown', onGlobalKeyDown);
+  }, [chatMenu, isMobileView, selectedChat, showGroupInfo, showNewChatModal]);
 
   useEffect(() => {
     const loadLeadNames = async () => {
@@ -311,7 +396,7 @@ export default function WhatsAppTab() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
         loadChats();
         const message = payload.new as WhatsAppMessage;
-        const chatToAutoUnarchive = chats.find((chat) => {
+        const chatToAutoUnarchive = chatsRef.current.find((chat) => {
           const variantsForChat = getChatIdVariants(chat);
           return variantsForChat.includes(message.chat_id);
         });
@@ -341,14 +426,10 @@ export default function WhatsAppTab() {
 
               didAppend = true;
               const merged = [...prev, message];
-              return merged.sort((a, b) => {
-                const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-                const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-                return left - right;
-              });
+              return merged.sort(sortMessagesChronologically);
             });
             if (didAppend) {
-              const chatToUpdate = chats.find((chat) => chat.id === currentChat.id);
+              const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
               if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
                 updateChatArchive(chatToUpdate.id, false);
               }
@@ -378,11 +459,7 @@ export default function WhatsAppTab() {
             };
           });
 
-          return updated.sort((a, b) => {
-            const left = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-            const right = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-            return right - left;
-          });
+          return updated.sort(sortChatsByLatest);
         });
       })
       .subscribe();
@@ -395,11 +472,24 @@ export default function WhatsAppTab() {
 
   useEffect(() => {
     if (selectedChat) {
+      setCopiedPhone(null);
+      setShowGroupInfo(false);
       loadMessages(selectedChat);
+      return;
     }
+
+    setMessages([]);
+    setHasOlderMessages(false);
+    setLoadedMessagesCount(0);
+    setReplyToMessage(null);
+    setEditMessage(null);
   }, [selectedChat]);
 
   useEffect(() => {
+    if (skipNextAutoScrollRef.current) {
+      skipNextAutoScrollRef.current = false;
+      return;
+    }
     scrollToBottom();
   }, [messages]);
 
@@ -481,17 +571,71 @@ export default function WhatsAppTab() {
         .from('whatsapp_messages')
         .select('*')
         .in('chat_id', variants)
-        .order('timestamp', { ascending: true });
+        .order('timestamp', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(MESSAGES_PAGE_SIZE);
 
       if (error) throw error;
-      const baseMessages = data || [];
+      const baseMessages = [...(data || [])].sort(sortMessagesChronologically);
       setMessages(baseMessages);
+      setLoadedMessagesCount(baseMessages.length);
+      setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
+
+      setChats((prev) =>
+        prev.map((item) =>
+          item.id === chat.id
+            ? {
+                ...item,
+                unread_count: 0,
+              }
+            : item,
+        ),
+      );
 
       if (user) {
         await markMessagesRead(baseMessages);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (!selectedChat || !hasOlderMessages || isLoadingOlderMessages) return;
+
+    setIsLoadingOlderMessages(true);
+    try {
+      const variants = getChatIdVariants(selectedChat);
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .in('chat_id', variants)
+        .order('timestamp', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .range(loadedMessagesCount, loadedMessagesCount + MESSAGES_PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const olderMessages = [...(data || [])].sort(sortMessagesChronologically);
+      if (olderMessages.length === 0) {
+        setHasOlderMessages(false);
+        return;
+      }
+
+      skipNextAutoScrollRef.current = true;
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id));
+        const deduped = olderMessages.filter((item) => !existingIds.has(item.id));
+        if (deduped.length === 0) return prev;
+        return [...deduped, ...prev];
+      });
+
+      setLoadedMessagesCount((current) => current + (data || []).length);
+      setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+    } finally {
+      setIsLoadingOlderMessages(false);
     }
   };
 
@@ -595,11 +739,7 @@ export default function WhatsAppTab() {
           return prev;
         }
         const merged = [...prev, nextMessage];
-        return merged.sort((a, b) => {
-          const left = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-          const right = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-          return left - right;
-        });
+        return merged.sort(sortMessagesChronologically);
       });
 
       setChats((prev) => {
@@ -613,14 +753,10 @@ export default function WhatsAppTab() {
           };
         });
 
-        return updated.sort((a, b) => {
-          const left = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-          const right = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-          return right - left;
-        });
+        return updated.sort(sortChatsByLatest);
       });
 
-      const chatToUpdate = chats.find((chat) => chat.id === selectedChat.id);
+      const chatToUpdate = chatsRef.current.find((chat) => chat.id === selectedChat.id);
       if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
         updateChatArchive(chatToUpdate.id, false);
       }
@@ -690,7 +826,9 @@ export default function WhatsAppTab() {
   };
 
   const handleSyncFromWhapi = async () => {
-    if (!selectedChat) return;
+    if (!selectedChat || syncingChatId === selectedChat.id) return;
+
+    setSyncingChatId(selectedChat.id);
     try {
       await supabase.functions.invoke('whatsapp-sync', {
         body: { chatId: selectedChat.id, count: 200 },
@@ -698,6 +836,8 @@ export default function WhatsAppTab() {
       await loadMessages(selectedChat);
     } catch (error) {
       console.error('Error syncing from Whapi:', error);
+    } finally {
+      setSyncingChatId(null);
     }
   };
 
@@ -811,12 +951,43 @@ export default function WhatsAppTab() {
     return chat.id;
   }
 
-  const filteredChats = chats.filter((chat) => {
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const chatsMatchingSearch = chats.filter((chat) => {
+    if (!normalizedSearchQuery) return true;
+
     const displayName = getChatDisplayName(chat).toLowerCase();
-    return displayName.includes(searchQuery.toLowerCase()) || chat.id.includes(searchQuery);
+    const preview = (chat.last_message || '').toLowerCase();
+    return (
+      displayName.includes(normalizedSearchQuery) ||
+      chat.id.toLowerCase().includes(normalizedSearchQuery) ||
+      preview.includes(normalizedSearchQuery)
+    );
   });
-  const visibleChats = showArchived ? filteredChats : filteredChats.filter((chat) => !chat.archived);
-  const archivedCount = filteredChats.filter((chat) => chat.archived).length;
+
+  const archivedCount = chatsMatchingSearch.filter((chat) => chat.archived).length;
+  const inboxChats = showArchived ? chatsMatchingSearch : chatsMatchingSearch.filter((chat) => !chat.archived);
+  const unreadInboxCount = inboxChats.filter((chat) => (chat.unread_count ?? 0) > 0).length;
+  const groupInboxCount = inboxChats.filter((chat) => chat.is_group).length;
+  const directInboxCount = inboxChats.filter((chat) => !chat.is_group).length;
+
+  const visibleChats = inboxChats
+    .filter((chat) => {
+      if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
+      if (chatFilterMode === 'groups') return chat.is_group;
+      if (chatFilterMode === 'direct') return !chat.is_group;
+      return true;
+    })
+    .sort((left, right) => {
+      if (prioritizeUnread) {
+        const leftUnread = left.unread_count ?? 0;
+        const rightUnread = right.unread_count ?? 0;
+        if (leftUnread !== rightUnread) {
+          return rightUnread - leftUnread;
+        }
+      }
+
+      return sortChatsByLatest(left, right);
+    });
 
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
@@ -885,6 +1056,34 @@ export default function WhatsAppTab() {
     return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
   }, [contactsList, newChatSearch]);
 
+  const openChatContextMenu = (chatId: string, x: number, y: number) => {
+    const menuWidth = 224;
+    const menuHeight = 260;
+    const safeX = Math.min(Math.max(8, x), Math.max(8, window.innerWidth - menuWidth - 8));
+    const safeY = Math.min(Math.max(8, y), Math.max(8, window.innerHeight - menuHeight - 8));
+
+    setChatMenu({ chatId, x: safeX, y: safeY });
+  };
+
+  const selectedChatPhone = selectedChat && !selectedChat.is_group
+    ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
+    : '';
+  const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
+
+  const handleCopySelectedChatPhone = async () => {
+    if (!selectedChatPhone) return;
+
+    try {
+      await navigator.clipboard.writeText(selectedChatPhone);
+      setCopiedPhone(selectedChatPhone);
+      window.setTimeout(() => {
+        setCopiedPhone((current) => (current === selectedChatPhone ? null : current));
+      }, 1800);
+    } catch (error) {
+      console.error('Erro ao copiar telefone:', error);
+    }
+  };
+
   const openChatFromPhone = (phone: string, name?: string) => {
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!normalizedPhone) return;
@@ -918,6 +1117,7 @@ export default function WhatsAppTab() {
       last_message: '',
       unread_count: 0,
     });
+    setChatFilterMode('all');
     setShowNewChatModal(false);
     setNewChatSearch('');
     setNewChatPhone('');
@@ -1123,6 +1323,7 @@ export default function WhatsAppTab() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Pesquisar conversas..."
                 value={searchQuery}
@@ -1130,7 +1331,53 @@ export default function WhatsAppTab() {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'all'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('all')}
+              >
+                Todas ({inboxChats.length})
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'unread'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('unread')}
+              >
+                Nao lidas ({unreadInboxCount})
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'direct'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('direct')}
+              >
+                Diretas ({directInboxCount})
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'groups'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('groups')}
+              >
+                Grupos ({groupInboxCount})
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
               <button
                 type="button"
                 className={`px-2 py-1 rounded-full border ${showArchived ? 'bg-slate-200 border-slate-300 text-slate-700' : 'border-slate-200'}`}
@@ -1141,7 +1388,17 @@ export default function WhatsAppTab() {
               >
                 {showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'} ({archivedCount})
               </button>
+              <label className="flex items-center gap-1.5 text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={prioritizeUnread}
+                  onChange={(event) => setPrioritizeUnread(event.target.checked)}
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                Priorizar nao lidas
+              </label>
             </div>
+            <p className="text-[11px] text-slate-400">Atalhos: Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -1177,7 +1434,7 @@ export default function WhatsAppTab() {
                     onClick={() => setSelectedChat(chat)}
                     onContextMenu={(event) => {
                       event.preventDefault();
-                      setChatMenu({ chatId: chat.id, x: event.clientX, y: event.clientY });
+                      openChatContextMenu(chat.id, event.clientX, event.clientY);
                     }}
                     className={`w-full p-4 flex items-start gap-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                       selectedChat?.id === chat.id ? 'bg-teal-50' : ''
@@ -1363,12 +1620,17 @@ export default function WhatsAppTab() {
                     )}
                   </div>
                   <p className="text-xs text-slate-500">
-                    {selectedChat.is_group ? 'Toque para ver info do grupo' : 'Online'}
+                    {selectedChat.is_group
+                      ? 'Toque para ver info do grupo'
+                      : selectedChatPhoneFormatted
+                        ? `${selectedChatPhoneFormatted}${copiedPhone === selectedChatPhone ? ' • copiado' : ''}`
+                        : 'Conversa individual'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedChat.is_group ? (
                     <button
+                      type="button"
                       onClick={() => setShowGroupInfo(!showGroupInfo)}
                       className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                       title="Informações do grupo"
@@ -1376,29 +1638,52 @@ export default function WhatsAppTab() {
                       <Info className="w-5 h-5 text-slate-600" />
                     </button>
                   ) : (
-                    <>
-                      <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <Phone className="w-5 h-5 text-slate-600" />
-                      </button>
-                      <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <Video className="w-5 h-5 text-slate-600" />
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                      title={copiedPhone === selectedChatPhone ? 'Telefone copiado' : 'Copiar telefone'}
+                      onClick={handleCopySelectedChatPhone}
+                    >
+                      <Phone className="w-5 h-5 text-slate-600" />
+                    </button>
                   )}
                   <button
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                    type="button"
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Sincronizar mensagens"
                     onClick={handleSyncFromWhapi}
+                    disabled={syncingChatId === selectedChat.id}
                   >
-                    <History className="w-5 h-5 text-slate-600" />
+                    <History className={`w-5 h-5 text-slate-600 ${syncingChatId === selectedChat.id ? 'animate-spin' : ''}`} />
                   </button>
-                  <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <button
+                    type="button"
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                    title="Ações da conversa"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      openChatContextMenu(selectedChat.id, rect.left, rect.bottom + 6);
+                    }}
+                  >
                     <MoreVertical className="w-5 h-5 text-slate-600" />
                   </button>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {hasOlderMessages && (
+                  <div className="mb-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={loadOlderMessages}
+                      disabled={isLoadingOlderMessages}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isLoadingOlderMessages ? 'Carregando mensagens antigas...' : 'Carregar mensagens antigas'}
+                    </button>
+                  </div>
+                )}
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
                     <p>Nenhuma mensagem ainda</p>

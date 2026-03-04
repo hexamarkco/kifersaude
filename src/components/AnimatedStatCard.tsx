@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LucideIcon } from 'lucide-react';
+import { gsap } from 'gsap';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 type AnimatedStatCardProps = {
   label: string;
@@ -31,6 +33,7 @@ export default function AnimatedStatCard({
 }: AnimatedStatCardProps) {
   const [displayValue, setDisplayValue] = useState<number | string>(0);
   const isNumeric = typeof value === 'number';
+  const { motionEnabled } = usePanelMotion();
 
   useEffect(() => {
     if (!isNumeric) {
@@ -38,30 +41,43 @@ export default function AnimatedStatCard({
       return;
     }
 
-    const duration = 1000;
-    const steps = 30;
-    const increment = value / steps;
-    let current = 0;
-    let step = 0;
+    if (!motionEnabled) {
+      setDisplayValue(value);
+      return;
+    }
 
-    const timer = setInterval(() => {
-      step++;
-      current += increment;
-
-      if (step >= steps) {
+    const counter = { current: 0 };
+    const animation = gsap.to(counter, {
+      current: value,
+      duration: prefix === 'R$' ? 1.1 : 0.9,
+      ease: 'power2.out',
+      onUpdate: () => {
+        setDisplayValue(counter.current);
+      },
+      onComplete: () => {
         setDisplayValue(value);
-        clearInterval(timer);
-      } else {
-        setDisplayValue(Math.floor(current));
-      }
-    }, duration / steps);
+      },
+    });
 
-    return () => clearInterval(timer);
-  }, [value, isNumeric]);
+    return () => {
+      animation.kill();
+    };
+  }, [isNumeric, motionEnabled, prefix, value]);
+
+  const formattedValue = useMemo(() => {
+    if (!isNumeric || typeof displayValue !== 'number') {
+      return displayValue;
+    }
+
+    return displayValue.toLocaleString('pt-BR', {
+      minimumFractionDigits: prefix === 'R$' ? 2 : 0,
+      maximumFractionDigits: prefix === 'R$' ? 2 : 0,
+    });
+  }, [displayValue, isNumeric, prefix]);
 
   const cardContent = (
     <>
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 transition-opacity group-hover:opacity-20`} />
 
       <div className="relative p-4 sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -70,17 +86,12 @@ export default function AnimatedStatCard({
               {label}
             </p>
             <div className="flex items-baseline gap-1">
-              {prefix && <span className="text-xl font-bold text-slate-900 sm:text-2xl">{prefix}</span>}
-              <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                {isNumeric
-                  ? displayValue.toLocaleString('pt-BR', {
-                      minimumFractionDigits: prefix === 'R$' ? 2 : 0,
-                      maximumFractionDigits: prefix === 'R$' ? 2 : 0,
-                    })
-                  : displayValue}
-              </p>
-              {suffix && <span className="text-base font-semibold text-slate-600 sm:text-lg">{suffix}</span>}
-            </div>
+                {prefix && <span className="text-xl font-bold text-slate-900 sm:text-2xl">{prefix}</span>}
+                <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                  {formattedValue}
+                </p>
+                {suffix && <span className="text-base font-semibold text-slate-600 sm:text-lg">{suffix}</span>}
+              </div>
             {subtitle && (
               <p className="mt-1 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
             )}
@@ -114,7 +125,7 @@ export default function AnimatedStatCard({
       <button
         type="button"
         onClick={onClick}
-        className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200 w-full text-left
+        className={`panel-glass-panel panel-interactive-glass relative w-full overflow-hidden rounded-2xl border border-slate-200 text-left shadow-lg
         hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500`}
       >
         {cardContent}
@@ -124,7 +135,7 @@ export default function AnimatedStatCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl shadow-lg border border-slate-200
+      className={`panel-glass-panel panel-interactive-glass relative overflow-hidden rounded-2xl border border-slate-200 shadow-lg
         hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
     >
       {cardContent}

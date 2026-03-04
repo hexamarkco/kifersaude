@@ -1998,10 +1998,10 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   return (
     <div ref={dashboardRootRef} className="panel-dashboard-immersive space-y-6">
       {isRefreshing && (
-        <div className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2">
-          <div className="panel-glass-floating pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg ring-1 ring-slate-200">
-            <div className="h-3 w-3 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
-            <span className="text-sm font-medium text-slate-600">Atualizando dados...</span>
+        <div className="pointer-events-none fixed bottom-6 right-6 z-50">
+          <div className="pointer-events-auto flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl ring-1 ring-black/5">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
+            <span className="text-sm font-medium text-slate-700">Atualizando dados...</span>
           </div>
         </div>
       )}

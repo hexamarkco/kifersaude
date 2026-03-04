@@ -162,9 +162,9 @@
   -webkit-backdrop-filter: blur(18px) saturate(145%);
 }
 
-.painel-theme .panel-glass-panel:not(.fixed):not(.sticky),
-.painel-theme .panel-glass-floating:not(.fixed):not(.sticky),
-.painel-theme .panel-glass-strong:not(.fixed):not(.sticky) {
+.painel-theme .panel-glass-panel:not(.fixed):not(.sticky):not(.absolute),
+.painel-theme .panel-glass-floating:not(.fixed):not(.sticky):not(.absolute),
+.painel-theme .panel-glass-strong:not(.fixed):not(.sticky):not(.absolute) {
   position: relative;
 }
 

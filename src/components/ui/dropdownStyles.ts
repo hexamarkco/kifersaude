@@ -8,6 +8,7 @@ type TriggerOptions = {
 
 type MenuOptions = {
   isDark: boolean;
+  position?: 'fixed' | 'absolute';
   className?: string;
 };
 
@@ -24,7 +25,24 @@ export const isPanelDarkTheme = () => {
     return false;
   }
 
-  return document.querySelector('.painel-theme.theme-dark') !== null;
+  if (document.querySelector('.painel-theme.theme-dark')) {
+    return true;
+  }
+
+  if (document.querySelector('.painel-theme.theme-light')) {
+    return false;
+  }
+
+  const storedTheme = window.localStorage.getItem('painel.theme.v1');
+  if (storedTheme === 'dark') {
+    return true;
+  }
+
+  if (storedTheme === 'light') {
+    return false;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
 export const getDropdownTriggerClass = ({
@@ -40,9 +58,14 @@ export const getDropdownTriggerClass = ({
     className,
   );
 
-export const getDropdownMenuClass = ({ isDark, className }: MenuOptions) =>
+export const getDropdownMenuClass = ({
+  isDark,
+  position = 'fixed',
+  className,
+}: MenuOptions) =>
   cx(
-    'panel-glass-panel panel-dropdown-scrollbar fixed z-[70] overflow-y-auto rounded-lg border shadow-xl',
+    'panel-glass-panel panel-dropdown-scrollbar z-[70] overflow-y-auto rounded-lg border shadow-xl',
+    position,
     isDark
       ? 'panel-dropdown-dark border-slate-700 bg-slate-900 text-slate-100'
       : 'border-slate-200 bg-white text-slate-700',

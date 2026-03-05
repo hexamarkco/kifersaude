@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
+import { cx } from '../../lib/cx';
+import {
+  getDropdownActionClass,
+  getDropdownMenuClass,
+  getDropdownTriggerClass,
+  isPanelDarkTheme,
+} from '../ui/dropdownStyles';
 
 type Option = {
   value: string;
@@ -55,6 +62,7 @@ export default function MultiSelectDropdown({
     () => options.filter((option) => values.includes(option.value)),
     [options, values]
   );
+  const isDarkTheme = isPanelDarkTheme();
 
   const displayText = useMemo(() => {
     if (selectedOptions.length === 0) return placeholder;
@@ -67,28 +75,48 @@ export default function MultiSelectDropdown({
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className="block text-[11px] text-slate-500 mb-1">{label}</label>
+        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+          {label}
+        </label>
       )}
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="relative w-full px-2 py-1.5 text-xs border border-slate-200 rounded-md bg-white text-left flex items-center justify-between hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        className={getDropdownTriggerClass({
+          isDark: isDarkTheme,
+          compact: true,
+          className: 'h-8 rounded-md pl-2.5 pr-8',
+        })}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={selectedOptions.length === 0 ? 'text-slate-400' : 'text-slate-700'}>
+        <span className={selectedOptions.length === 0 ? 'text-slate-400' : isDarkTheme ? 'text-slate-100' : 'text-slate-700'}>
           {displayText}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={cx(
+            'h-4 w-4 transition-transform',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isOpen && 'rotate-180',
+          )}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-[100]">
+        <div
+          className={getDropdownMenuClass({
+            isDark: isDarkTheme,
+            position: 'absolute',
+            className: 'left-0 right-0 mt-1 max-h-48 z-[100]',
+          })}
+        >
           <button
             type="button"
-            className="w-full text-left text-xs text-orange-600 px-3 py-2 hover:bg-slate-50 border-b border-slate-100"
+            className={cx(
+              getDropdownActionClass(isDarkTheme),
+              'border-b text-xs',
+              isDarkTheme ? 'border-slate-700' : 'border-slate-100',
+            )}
             onClick={() => {
               onChange([]);
               setIsOpen(false);
@@ -101,12 +129,20 @@ export default function MultiSelectDropdown({
             return (
               <label
                 key={option.value}
-                className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className={cx(
+                  'flex cursor-pointer items-center gap-2 px-3 py-2 text-xs',
+                  isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+                )}
               >
                 <span
-                  className={`flex items-center justify-center w-4 h-4 border rounded ${
-                    isSelected ? 'bg-orange-500 border-orange-500' : 'border-slate-300'
-                  }`}
+                  className={cx(
+                    'flex h-4 w-4 items-center justify-center rounded border',
+                    isSelected
+                      ? 'border-teal-500 bg-teal-500'
+                      : isDarkTheme
+                        ? 'border-slate-600'
+                        : 'border-slate-300',
+                  )}
                 >
                   {isSelected && <Check className="w-3 h-3 text-white" />}
                 </span>
@@ -121,7 +157,9 @@ export default function MultiSelectDropdown({
             );
           })}
           {options.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">Nenhuma opção disponível</div>
+            <div className={cx('px-3 py-2 text-xs', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+              Nenhuma opção disponível
+            </div>
           )}
         </div>
       )}

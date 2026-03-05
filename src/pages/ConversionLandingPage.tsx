@@ -129,7 +129,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             y: 0,
             duration: Math.max(0.28, microDuration + 0.12),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
         )
@@ -140,7 +140,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             y: 0,
             duration: Math.max(0.34, sectionDuration),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
           '-=0.18',
@@ -152,7 +152,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             y: 0,
             duration: Math.max(0.24, microDuration + 0.1),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
           '-=0.2',
@@ -164,7 +164,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             x: 0,
             duration: Math.max(0.24, microDuration + 0.1),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
           '-=0.16',
@@ -176,7 +176,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             y: 0,
             duration: Math.max(0.22, microDuration + 0.08),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
           '-=0.14',
@@ -189,7 +189,7 @@ export default function ConversionLandingPage() {
             x: 0,
             scale: 1,
             duration: Math.max(0.32, sectionDuration),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             force3D: true,
           },
           '-=0.26',
@@ -220,7 +220,7 @@ export default function ConversionLandingPage() {
             duration: sectionDuration,
             ease,
             stagger: Math.min(0.08, Math.max(0.024, sectionStagger * 1.8)),
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             overwrite: 'auto',
             force3D: true,
             scrollTrigger: {
@@ -340,7 +340,7 @@ export default function ConversionLandingPage() {
             scale: 1,
             duration: Math.max(0.2, microDuration + 0.08),
             ease: 'power2.out',
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             overwrite: 'auto',
             force3D: true,
           },
@@ -437,7 +437,7 @@ export default function ConversionLandingPage() {
         gsap.set(element, {
           height: isOpen ? 'auto' : 0,
           autoAlpha: isOpen ? 1 : 0,
-          clearProps: 'willChange',
+          clearProps: 'transform,opacity,willChange',
         });
         return;
       }
@@ -457,7 +457,7 @@ export default function ConversionLandingPage() {
             autoAlpha: 1,
             duration: Math.max(0.22, microDuration + 0.1),
             ease: 'power2.out',
-            clearProps: 'willChange',
+            clearProps: 'transform,opacity,willChange',
             overwrite: 'auto',
           },
         );
@@ -890,7 +890,6 @@ export default function ConversionLandingPage() {
                         faqAnswerRefs.current[i] = element;
                       }}
                       className="faq-answer overflow-hidden px-6 text-slate-600"
-                      style={{ height: 0, opacity: 0 }}
                     >
                       <div className="pb-4">{faq.a}</div>
                     </div>
@@ -1017,7 +1016,7 @@ export default function ConversionLandingPage() {
                   scale: 1,
                   duration: Math.max(0.2, microDuration + 0.08),
                   ease: 'power2.out',
-                  clearProps: 'willChange',
+                  clearProps: 'transform,opacity,willChange',
                   overwrite: 'auto',
                   force3D: true,
                 },

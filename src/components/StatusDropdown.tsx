@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { LeadStatusConfig } from '../lib/supabase';
 import { getBadgeStyle } from '../lib/colorUtils';
+import { cx } from '../lib/cx';
+import { getDropdownMenuClass, isPanelDarkTheme } from './ui/dropdownStyles';
 
 type StatusDropdownProps = {
   currentStatus: string;
@@ -144,6 +146,7 @@ export default function StatusDropdown({
 
   const displayStatus = isUpdating && pendingStatus ? pendingStatus : currentStatus;
   const buttonStyles = getButtonStyles(displayStatus);
+  const isDarkTheme = isPanelDarkTheme();
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>
@@ -170,7 +173,10 @@ export default function StatusDropdown({
         ? createPortal(
             <div
               ref={menuRef}
-              className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 overflow-y-auto"
+              className={getDropdownMenuClass({
+                isDark: isDarkTheme,
+                className: 'fixed z-[70] py-1',
+              })}
               style={{
                 top: menuPosition.top,
                 left: menuPosition.left,
@@ -183,13 +189,16 @@ export default function StatusDropdown({
                   type="button"
                   key={status.id}
                   onClick={() => handleStatusClick(status.nome)}
-                  className={`
-                    w-full text-left px-3 py-2 text-sm transition-colors
-                    ${status.nome === currentStatus
-                      ? 'bg-slate-100 font-medium text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }
-                  `}
+                  className={cx(
+                    'w-full px-3 py-2 text-left text-sm transition-colors',
+                    status.nome === currentStatus
+                      ? isDarkTheme
+                        ? 'bg-slate-800 font-medium text-slate-100'
+                        : 'bg-slate-100 font-medium text-slate-900'
+                      : isDarkTheme
+                        ? 'text-slate-200 hover:bg-slate-800'
+                        : 'text-slate-700 hover:bg-slate-50',
+                  )}
                 >
                   <span
                     className="inline-block w-2 h-2 rounded-full mr-2"

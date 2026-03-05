@@ -2,6 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { cx } from '../lib/cx';
+import {
+  getDropdownActionClass,
+  getDropdownMenuClass,
+  getDropdownTriggerClass,
+  isPanelDarkTheme,
+} from './ui/dropdownStyles';
 
 type Option = {
   value: string;
@@ -80,6 +87,7 @@ export default function FilterMultiSelect({
     () => options.filter((option) => values.includes(option.value)),
     [options, values]
   );
+  const isDarkTheme = isPanelDarkTheme();
 
   const displayText = useMemo(() => {
     if (selectedOptions.length === 0) return placeholder;
@@ -93,16 +101,36 @@ export default function FilterMultiSelect({
         ref={buttonRef}
         type="button"
         onClick={() => (isOpen ? setIsOpen(false) : open())}
-        className="relative w-full h-11 pl-10 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left flex items-center justify-between"
+        className={getDropdownTriggerClass({ isDark: isDarkTheme })}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        <span className={selectedOptions.length === 0 ? 'text-slate-400 text-sm' : 'text-slate-700 text-sm'}>
+        <Icon
+          className={cx(
+            'absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+          )}
+        />
+        <span
+          className={cx(
+            'text-sm',
+            selectedOptions.length === 0
+              ? isDarkTheme
+                ? 'text-slate-400'
+                : 'text-slate-400'
+              : isDarkTheme
+                ? 'text-slate-100'
+                : 'text-slate-700',
+          )}
+        >
           {displayText}
         </span>
         <ChevronDown
-          className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={cx(
+            'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isOpen && 'rotate-180',
+          )}
         />
       </button>
 
@@ -110,25 +138,39 @@ export default function FilterMultiSelect({
         <div
           ref={dropdownRef}
           role="listbox"
-          className="panel-glass-panel fixed z-[70] max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          className={getDropdownMenuClass({
+            isDark: isDarkTheme,
+            className: 'max-h-60',
+          })}
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <button
             type="button"
-            className="w-full text-left text-sm text-teal-600 px-3 py-2 hover:bg-slate-50"
+            className={getDropdownActionClass(isDarkTheme)}
             onClick={() => onChange([])}
           >
             Limpar seleção
           </button>
-          <div className="border-t border-slate-100" />
+          <div className={cx('border-t', isDarkTheme ? 'border-slate-700' : 'border-slate-100')} />
           {options.map((option) => {
             const isSelected = values.includes(option.value);
             return (
-              <label key={option.value} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer">
+              <label
+                key={option.value}
+                className={cx(
+                  'flex cursor-pointer items-center gap-2 px-3 py-2 text-sm',
+                  isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+                )}
+              >
                 <span
-                  className={`flex items-center justify-center w-4 h-4 border rounded flex-shrink-0 ${
-                    isSelected ? 'bg-teal-500 border-teal-500' : 'border-slate-300'
-                  }`}
+                  className={cx(
+                    'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border',
+                    isSelected
+                      ? 'border-teal-500 bg-teal-500'
+                      : isDarkTheme
+                        ? 'border-slate-600'
+                        : 'border-slate-300',
+                  )}
                 >
                   {isSelected && <Check className="w-3 h-3 text-white" />}
                 </span>
@@ -143,7 +185,9 @@ export default function FilterMultiSelect({
             );
           })}
           {options.length === 0 && (
-            <div className="px-3 py-2 text-sm text-slate-500">Nenhuma opção disponível</div>
+            <div className={cx('px-3 py-2 text-sm', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+              Nenhuma opção disponível
+            </div>
           )}
         </div>,
         document.body,

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
+import { cx } from '../lib/cx';
 import DateTimePicker from './ui/DateTimePicker';
+import { getDropdownMenuClass, getDropdownTriggerClass, isPanelDarkTheme } from './ui/dropdownStyles';
 
 export type FilterDateRangeProps = {
   icon: LucideIcon;
@@ -12,9 +14,6 @@ export type FilterDateRangeProps = {
   onToChange: (value: string) => void;
   type?: 'date' | 'datetime-local';
 };
-
-const dropdownClasses =
-  'absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-30 p-4 space-y-3';
 
 export default function FilterDateRange({
   icon: Icon,
@@ -87,6 +86,7 @@ export default function FilterDateRange({
   }, [fromValue, toValue]);
 
   const hasActiveFilter = Boolean(fromValue || toValue);
+  const isDarkTheme = isPanelDarkTheme();
 
   const handleClear = () => {
     onFromChange('');
@@ -98,27 +98,67 @@ export default function FilterDateRange({
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="relative w-full py-2 pl-10 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-left"
+        className={getDropdownTriggerClass({
+          isDark: isDarkTheme,
+          className: 'h-auto py-2.5',
+        })}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <Icon
+          className={cx(
+            'absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+          )}
+        />
         <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-          <span className={`text-sm ${hasActiveFilter ? 'text-slate-700' : 'text-slate-400'}`}>{displayValue}</span>
+          <span
+            className={cx(
+              'text-xs font-semibold uppercase tracking-wide',
+              isDarkTheme ? 'text-slate-400' : 'text-slate-500',
+            )}
+          >
+            {label}
+          </span>
+          <span
+            className={cx(
+              'text-sm',
+              hasActiveFilter
+                ? isDarkTheme
+                  ? 'text-slate-100'
+                  : 'text-slate-700'
+                : isDarkTheme
+                  ? 'text-slate-400'
+                  : 'text-slate-400',
+            )}
+          >
+            {displayValue}
+          </span>
         </div>
         <ChevronDown
-          className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+          className={cx(
+            'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isOpen && 'rotate-180',
+          )}
         />
       </button>
 
       {isOpen && (
-        <div className={dropdownClasses} role="dialog" aria-label={`Selecionar intervalo de ${label}`}>
+        <div
+          className={getDropdownMenuClass({
+            isDark: isDarkTheme,
+            position: 'absolute',
+            className: 'left-0 right-0 mt-2 z-30 p-4 space-y-3',
+          })}
+          role="dialog"
+          aria-label={`Selecionar intervalo de ${label}`}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col text-sm text-slate-600 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">De</span>
+            <label className={cx('flex flex-col gap-1 text-sm', isDarkTheme ? 'text-slate-300' : 'text-slate-600')}>
+              <span className={cx('text-xs font-semibold uppercase tracking-wide', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+                De
+              </span>
               <DateTimePicker
                 type={type}
                 value={fromValue}
@@ -126,8 +166,10 @@ export default function FilterDateRange({
                 placeholder={type === 'date' ? 'Selecionar data inicial' : 'Selecionar data e hora inicial'}
               />
             </label>
-            <label className="flex flex-col text-sm text-slate-600 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Até</span>
+            <label className={cx('flex flex-col gap-1 text-sm', isDarkTheme ? 'text-slate-300' : 'text-slate-600')}>
+              <span className={cx('text-xs font-semibold uppercase tracking-wide', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+                Até
+              </span>
               <DateTimePicker
                 type={type}
                 value={toValue}
@@ -136,11 +178,19 @@ export default function FilterDateRange({
               />
             </label>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div
+            className={cx(
+              'flex items-center justify-between border-t pt-2',
+              isDarkTheme ? 'border-slate-700' : 'border-slate-100',
+            )}
+          >
             <button
               type="button"
               onClick={handleClear}
-              className="text-sm font-medium text-teal-600 hover:text-teal-700"
+              className={cx(
+                'text-sm font-medium',
+                isDarkTheme ? 'text-teal-300 hover:text-teal-200' : 'text-teal-600 hover:text-teal-700',
+              )}
             >
               Limpar
             </button>

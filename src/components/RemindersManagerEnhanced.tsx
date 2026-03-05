@@ -1206,7 +1206,7 @@ export default function RemindersManagerEnhanced() {
           duration: sectionDuration,
           ease,
           stagger: sectionStagger,
-          clearProps: 'willChange',
+          clearProps: 'transform,opacity,willChange',
           overwrite: 'auto',
           force3D: true,
         },

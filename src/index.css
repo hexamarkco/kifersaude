@@ -230,6 +230,13 @@
   -webkit-backdrop-filter: blur(8px) saturate(118%);
 }
 
+:root[data-motion-profile='ultra'] .painel-theme .panel-glass-panel,
+:root[data-motion-profile='ultra'] .painel-theme .panel-glass-strong,
+:root[data-motion-profile='ultra'] .painel-theme .panel-glass-floating {
+  backdrop-filter: blur(6px) saturate(112%);
+  -webkit-backdrop-filter: blur(6px) saturate(112%);
+}
+
 :root[data-motion-profile='minimal'] .painel-theme .panel-glass-panel,
 :root[data-motion-profile='minimal'] .painel-theme .panel-glass-strong,
 :root[data-motion-profile='minimal'] .painel-theme .panel-glass-floating,
@@ -814,6 +821,19 @@
   background-color: rgba(100, 116, 139, 0.96);
 }
 
+.panel-dropdown-dark {
+  color-scheme: dark;
+  scrollbar-color: rgba(71, 85, 105, 0.92) transparent;
+}
+
+.panel-dropdown-dark::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.92);
+}
+
+.panel-dropdown-dark:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.96);
+}
+
 .panel-skeleton {
   position: relative;
   overflow: hidden;
@@ -1029,6 +1049,22 @@
 
 .public-theme .public-orb {
   animation: public-orb-float 16s ease-in-out infinite alternate;
+}
+
+:root[data-motion-profile='ultra'] .public-theme .public-orb {
+  animation-duration: 22s;
+  opacity: 0.78;
+}
+
+:root[data-motion-profile='ultra'] .public-theme .public-fade-up {
+  animation-duration: 0.48s;
+}
+
+:root[data-motion-profile='minimal'] .public-theme .public-fade-up,
+:root[data-motion-profile='minimal'] .public-theme .public-orb {
+  animation: none;
+  opacity: 1;
+  transform: none;
 }
 
 @keyframes public-reveal-up {

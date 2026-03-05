@@ -446,7 +446,7 @@ export default function ContractsManager({
           duration: sectionDuration,
           ease,
           stagger: sectionStagger,
-          clearProps: 'willChange',
+          clearProps: 'transform,opacity,willChange',
           overwrite: 'auto',
           force3D: true,
         },

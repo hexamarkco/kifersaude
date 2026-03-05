@@ -819,7 +819,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           duration: sectionDuration,
           ease,
           stagger: sectionStagger,
-          clearProps: 'willChange',
+          clearProps: 'transform,opacity,willChange',
           overwrite: 'auto',
           force3D: true,
         },
@@ -2012,7 +2012,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         </div>
         <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="w-full sm:w-52">
+            <div className="w-full sm:w-56">
               <FilterSingleSelect
                 icon={Filter}
                 value={periodFilter}

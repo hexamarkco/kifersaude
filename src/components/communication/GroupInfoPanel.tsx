@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, Crown, Shield, User as UserIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 
 type GroupParticipant = {
   phone: string;
@@ -121,11 +122,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   };
 
   const formatPhone = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 13) {
-      return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
-    }
-    return phone;
+    return formatPhoneDisplay(phone);
   };
 
   if (loading) {

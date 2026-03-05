@@ -6,6 +6,7 @@ import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
+import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 
 interface MessageBubbleProps {
   id: string;
@@ -130,14 +131,7 @@ export function MessageBubble({
   };
 
   const formatPhone = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 13) {
-      return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
-    }
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    }
-    return cleaned || phone;
+    return formatPhoneDisplay(phone);
   };
 
   const payloadData = payload as any;

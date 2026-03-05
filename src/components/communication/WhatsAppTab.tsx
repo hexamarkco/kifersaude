@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { startTransition, useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus, Bell, BellOff, SkipForward, Settings } from 'lucide-react';
+import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, UserCircle, Info, History, Plus, Bell, BellOff, SkipForward, Settings, Copy } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
@@ -73,6 +73,77 @@ type FirstResponseSLA =
   | { kind: 'waiting'; minutes: number }
   | { kind: 'replied'; minutes: number };
 
+const COUNTRY_CALLING_CODES = new Set<string>([
+  '1', '7', '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
+  '51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66', '81', '82', '84', '86', '90',
+  '91', '92', '93', '94', '95', '98', '211', '212', '213', '216', '218', '220', '221', '222', '223', '224', '225', '226',
+  '227', '228', '229', '230', '231', '232', '233', '234', '235', '236', '237', '238', '239', '240', '241', '242', '243',
+  '244', '245', '246', '247', '248', '249', '250', '251', '252', '253', '254', '255', '256', '257', '258', '260', '261',
+  '262', '263', '264', '265', '266', '267', '268', '269', '290', '291', '297', '298', '299', '350', '351', '352', '353',
+  '354', '355', '356', '357', '358', '359', '370', '371', '372', '373', '374', '375', '376', '377', '378', '380', '381',
+  '382', '383', '385', '386', '387', '389', '420', '421', '423', '500', '501', '502', '503', '504', '505', '506', '507',
+  '508', '509', '590', '591', '592', '593', '594', '595', '596', '597', '598', '599', '670', '672', '673', '674', '675',
+  '676', '677', '678', '679', '680', '681', '682', '683', '685', '686', '687', '688', '689', '690', '691', '692', '850',
+  '852', '853', '855', '856', '880', '886', '960', '961', '962', '963', '964', '965', '966', '967', '968', '970', '971',
+  '972', '973', '974', '975', '976', '977', '992', '993', '994', '995', '996', '998',
+]);
+
+const groupInternationalNationalNumber = (digits: string) => {
+  const length = digits.length;
+  if (length <= 4) return digits;
+  if (length <= 7) return `${digits.slice(0, length - 4)}-${digits.slice(-4)}`;
+  if (length === 8) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  if (length === 9) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  if (length === 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  if (length === 11) return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  if (length === 12) return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}`;
+
+  const tail = digits.slice(-4);
+  const head = digits.slice(0, -4);
+  const chunks = head.match(/.{1,3}/g) || [head];
+  return `${chunks.join(' ')} ${tail}`.trim();
+};
+
+const formatBrazilNationalNumber = (local: string) => {
+  if (local.length === 11) {
+    return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  }
+  if (local.length === 10) {
+    return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  }
+  return groupInternationalNationalNumber(local);
+};
+
+const isLikelyBrazilLocalNumber = (digits: string) => {
+  if (digits.length !== 10 && digits.length !== 11) return false;
+  const ddd = Number(digits.slice(0, 2));
+  if (!Number.isFinite(ddd) || ddd < 11 || ddd > 99) return false;
+  if (digits.length === 11) return digits[2] === '9';
+  return true;
+};
+
+const resolveInternationalPhoneParts = (digits: string): { countryCode: string; national: string } | null => {
+  const normalized = digits.replace(/^00+/, '');
+  if (!normalized) return null;
+
+  for (let size = 3; size >= 1; size -= 1) {
+    if (normalized.length <= size + 3) continue;
+    const code = normalized.slice(0, size);
+    if (!COUNTRY_CALLING_CODES.has(code)) continue;
+    return { countryCode: code, national: normalized.slice(size) };
+  }
+
+  if (normalized.length > 10) {
+    const inferredSize = Math.min(3, Math.max(1, normalized.length - 10));
+    return {
+      countryCode: normalized.slice(0, inferredSize),
+      national: normalized.slice(inferredSize),
+    };
+  }
+
+  return null;
+};
+
 
 export default function WhatsAppTab() {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
@@ -119,6 +190,7 @@ export default function WhatsAppTab() {
   const [desktopNotificationsEnabled, setDesktopNotificationsEnabled] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
@@ -144,6 +216,12 @@ export default function WhatsAppTab() {
     new Map(),
   );
   const loadingUi = useAdaptiveLoading(loading);
+
+  const selectChat = (chat: WhatsAppChat | null) => {
+    startTransition(() => {
+      setSelectedChat(chat);
+    });
+  };
 
   function normalizePhoneNumber(phone: string | null | undefined) {
     if (!phone) return '';
@@ -191,7 +269,7 @@ export default function WhatsAppTab() {
     const currentIndex = currentChat ? unreadChats.findIndex((chat) => chat.id === currentChat.id) : -1;
     const nextChat = currentIndex >= 0 ? unreadChats[(currentIndex + 1) % unreadChats.length] : unreadChats[0];
 
-    setSelectedChat(nextChat);
+    selectChat(nextChat);
   };
 
   const getChatKind = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
@@ -249,6 +327,63 @@ export default function WhatsAppTab() {
       }
       if (chat.lid) variants.add(chat.lid);
     }
+    return Array.from(variants);
+  };
+
+  const getPhoneDigits = (value: string | null | undefined) => {
+    if (!value) return '';
+    return value.replace(/\D/g, '');
+  };
+
+  const getDirectIdVariantsFromDigits = (digits: string) => {
+    if (!digits) return [];
+    const phoneDigitsVariants = new Set<string>([digits]);
+
+    const toggleBrazilNinthDigit = (value: string, withCountryCode: boolean) => {
+      const base = withCountryCode ? value.slice(2) : value;
+      if (base.length === 10) {
+        const withNine = `${base.slice(0, 2)}9${base.slice(2)}`;
+        phoneDigitsVariants.add(withCountryCode ? `55${withNine}` : withNine);
+      }
+      if (base.length === 11 && base[2] === '9') {
+        const withoutNine = `${base.slice(0, 2)}${base.slice(3)}`;
+        phoneDigitsVariants.add(withCountryCode ? `55${withoutNine}` : withoutNine);
+      }
+    };
+
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+      const local = digits.slice(2);
+      if (local) {
+        phoneDigitsVariants.add(local);
+      }
+      toggleBrazilNinthDigit(digits, true);
+      if (local) {
+        toggleBrazilNinthDigit(local, false);
+      }
+    }
+
+    if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+      phoneDigitsVariants.add(`55${digits}`);
+      toggleBrazilNinthDigit(digits, false);
+      toggleBrazilNinthDigit(`55${digits}`, true);
+    }
+
+    const snapshot = Array.from(phoneDigitsVariants);
+    snapshot.forEach((value) => {
+      if (value.startsWith('55') && (value.length === 12 || value.length === 13)) {
+        phoneDigitsVariants.add(value.slice(2));
+      }
+      if (!value.startsWith('55') && (value.length === 10 || value.length === 11)) {
+        phoneDigitsVariants.add(`55${value}`);
+      }
+    });
+
+    const variants = new Set<string>();
+    phoneDigitsVariants.forEach((value) => {
+      variants.add(`${value}@s.whatsapp.net`);
+      variants.add(`${value}@c.us`);
+    });
+
     return Array.from(variants);
   };
 
@@ -590,11 +725,26 @@ export default function WhatsAppTab() {
 
     const loadSavedContacts = async () => {
       try {
-        const response = await getWhatsAppContacts();
+        const pageSize = 500;
+        let offset = 0;
+        const loadedContacts: Array<{ id: string; name: string; pushname: string; saved: boolean }> = [];
+
+        while (true) {
+          const response = await getWhatsAppContacts(pageSize, offset);
+          const batch = Array.isArray(response.contacts) ? response.contacts : [];
+          if (batch.length === 0) break;
+
+          loadedContacts.push(...batch);
+          offset += batch.length;
+
+          if (batch.length < pageSize) break;
+          if (typeof response.total === 'number' && loadedContacts.length >= response.total) break;
+        }
+
         const contactMap = new Map<string, { name: string; saved: boolean }>();
 
         setContactsList(
-          response.contacts.map((contact) => ({
+          loadedContacts.map((contact) => ({
             id: contact.id,
             name: contact.name || contact.pushname || contact.id,
             saved: contact.saved,
@@ -602,18 +752,31 @@ export default function WhatsAppTab() {
           })),
         );
 
-        response.contacts.forEach((contact) => {
+        loadedContacts.forEach((contact) => {
+          const displayName = (contact.name || contact.pushname || '').trim();
+          if (!displayName) return;
+
+          const isSavedContact = contact.saved || Boolean(contact.name?.trim());
+          const variants = new Set<string>();
+          variants.add(contact.id);
+
           const normalized = normalizeChatId(contact.id);
           if (normalized) {
-            contactMap.set(normalized, { name: contact.name, saved: contact.saved });
+            variants.add(normalized);
             if (normalized.endsWith('@s.whatsapp.net')) {
-              contactMap.set(
-                normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'),
-                { name: contact.name, saved: contact.saved },
-              );
+              variants.add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
+            }
+            if (normalized.endsWith('@c.us')) {
+              variants.add(normalized.replace(/@c\.us$/i, '@s.whatsapp.net'));
             }
           }
-          contactMap.set(contact.id, { name: contact.name, saved: contact.saved });
+
+          const digits = getPhoneDigits(contact.id);
+          getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
+
+          variants.forEach((variant) => {
+            contactMap.set(variant, { name: displayName, saved: isSavedContact });
+          });
         });
 
         setContactsById(contactMap);
@@ -1437,21 +1600,16 @@ export default function WhatsAppTab() {
     }
   };
 
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    const words = name.split(' ');
-    if (words.length === 1) return words[0].charAt(0).toUpperCase();
-    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
-  };
-
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 13) {
-      return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+    if (!cleaned) return phone;
+
+    if (cleaned.startsWith('55') && (cleaned.length === 12 || cleaned.length === 13)) {
+      return `+55 ${formatBrazilNationalNumber(cleaned.slice(2))}`;
     }
 
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    if (isLikelyBrazilLocalNumber(cleaned)) {
+      return formatBrazilNationalNumber(cleaned);
     }
 
     if (cleaned.startsWith('54') && cleaned.length >= 11) {
@@ -1469,15 +1627,21 @@ export default function WhatsAppTab() {
       return `+54 ${isMobile ? '9 ' : ''}${area} ${localLeft}-${localRight}`.trim();
     }
 
-    if (cleaned.length > 11) {
-      const cc = cleaned.slice(0, 2);
-      const rest = cleaned.slice(2);
-      const left = rest.slice(0, Math.max(0, rest.length - 4));
-      const right = rest.slice(-4);
-      return `+${cc} ${left} ${right}`.trim();
+    const international = resolveInternationalPhoneParts(cleaned);
+    if (international && international.national) {
+      if (international.countryCode === '55') {
+        return `+55 ${formatBrazilNationalNumber(international.national)}`;
+      }
+      if (international.countryCode === '86' && international.national.length === 11) {
+        return `+86 ${international.national.slice(0, 3)} ${international.national.slice(3, 7)} ${international.national.slice(7)}`;
+      }
+      if (international.countryCode === '1' && international.national.length === 10) {
+        return `+1 (${international.national.slice(0, 3)}) ${international.national.slice(3, 6)}-${international.national.slice(6)}`;
+      }
+      return `+${international.countryCode} ${groupInternationalNationalNumber(international.national)}`.trim();
     }
 
-    return cleaned || phone;
+    return cleaned;
   };
 
   const getMessagePreview = (
@@ -1629,18 +1793,23 @@ export default function WhatsAppTab() {
       return leadNamesByPhone.get(phone)!;
     }
 
-    const contactCandidates = [
+    const contactCandidates = new Set<string>([
       normalizeChatId(chat.id) || chat.id,
       chat.id,
-      chat.id.endsWith('@s.whatsapp.net') ? chat.id.replace(/@s\.whatsapp\.net$/i, '@c.us') : null,
-      chat.id.endsWith('@c.us') ? chat.id.replace(/@c\.us$/i, '@s.whatsapp.net') : null,
-      chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : null,
-      chat.lid ?? null,
-    ].filter((value): value is string => Boolean(value));
+      chat.id.endsWith('@s.whatsapp.net') ? chat.id.replace(/@s\.whatsapp\.net$/i, '@c.us') : '',
+      chat.id.endsWith('@c.us') ? chat.id.replace(/@c\.us$/i, '@s.whatsapp.net') : '',
+      chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : '',
+      chat.lid ?? '',
+    ].filter(Boolean));
+
+    const candidateDigits = [getPhoneDigits(chat.id), getPhoneDigits(chat.phone_number), phone].filter(Boolean);
+    candidateDigits.forEach((digits) => {
+      getDirectIdVariantsFromDigits(digits).forEach((variant) => contactCandidates.add(variant));
+    });
 
     for (const candidate of contactCandidates) {
       const contact = contactsById.get(candidate);
-      if (contact?.saved && contact.name) {
+      if (contact?.name && (contact.saved || !isPhoneLikeLabel(contact.name))) {
         return contact.name;
       }
     }
@@ -1698,24 +1867,7 @@ export default function WhatsAppTab() {
     return sortChatsByLatest(left, right);
   });
 
-  const visibleChats = (() => {
-    if (!selectedChat || chatFilterMode === 'unread') {
-      return sortedVisibleChats;
-    }
-
-    const selectedIndex = sortedVisibleChats.findIndex((chat) => chat.id === selectedChat.id);
-    if (selectedIndex < 0) {
-      return sortedVisibleChats;
-    }
-
-    if (selectedIndex === 0) {
-      return sortedVisibleChats;
-    }
-
-    const selectedItem = sortedVisibleChats[selectedIndex];
-    const withoutSelected = sortedVisibleChats.filter((chat) => chat.id !== selectedChat.id);
-    return [selectedItem, ...withoutSelected];
-  })();
+  const visibleChats = sortedVisibleChats;
   const unreadQueue = visibleChats.filter((chat) => (chat.unread_count ?? 0) > 0);
   const nextUnreadChat = unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null;
   const notificationsActive = notificationPermission === 'granted' && desktopNotificationsEnabled;
@@ -1940,6 +2092,15 @@ export default function WhatsAppTab() {
     ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
     : '';
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
+  const selectedChatPhoto = (() => {
+    if (!selectedChat || !selectedChatIsDirect) return null;
+    const variants = getChatIdVariants(selectedChat);
+    for (const variant of variants) {
+      const photo = contactPhotosById.get(variant);
+      if (photo) return photo;
+    }
+    return null;
+  })();
   const effectiveFirstResponseSlaBadge =
     selectedChatIsDirect && isLoadingMessages && messages.length === 0
       ? {
@@ -1959,6 +2120,48 @@ export default function WhatsAppTab() {
       }, 1800);
     } catch (error) {
       console.error('Erro ao copiar telefone:', error);
+    }
+  };
+
+  const handleCopyFullChat = async () => {
+    if (!selectedChat || messages.length === 0) return;
+
+    const exportedLines = [...messages]
+      .sort(sortMessagesChronologically)
+      .map((message) => {
+        const preview = getMessagePreview(message);
+        if (!preview) return null;
+
+        const eventTime = message.timestamp || message.created_at;
+        const parsed = new Date(eventTime);
+        if (Number.isNaN(parsed.getTime())) return null;
+
+        const time = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const date = parsed.toLocaleDateString('pt-BR');
+
+        const author = (() => {
+          if (message.direction === 'outbound') return 'EU';
+          if (selectedChatKind === 'group') {
+            if (message.author) return formatPhone(message.author);
+            if (message.from_number) return formatPhone(message.from_number);
+          }
+          return selectedChatDisplayName || 'CONTATO';
+        })();
+
+        return `[${time}, ${date}] ${author}: ${preview}`;
+      })
+      .filter((line): line is string => Boolean(line));
+
+    if (exportedLines.length === 0) return;
+
+    try {
+      await navigator.clipboard.writeText(exportedLines.join('\n'));
+      setChatCopiedAt(Date.now());
+      window.setTimeout(() => {
+        setChatCopiedAt(null);
+      }, 1600);
+    } catch (error) {
+      console.error('Erro ao copiar chat:', error);
     }
   };
 
@@ -2378,7 +2581,7 @@ export default function WhatsAppTab() {
                 className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   if (nextUnreadChat) {
-                    setSelectedChat(nextUnreadChat);
+                    selectChat(nextUnreadChat);
                     return;
                   }
                   openNextUnreadChat();
@@ -2434,7 +2637,7 @@ export default function WhatsAppTab() {
                 return (
                   <button
                     key={chat.id}
-                    onClick={() => setSelectedChat(chat)}
+                    onClick={() => selectChat(chat)}
                     onContextMenu={(event) => {
                       event.preventDefault();
                       openChatContextMenu(chat.id, event.clientX, event.clientY);
@@ -2458,8 +2661,10 @@ export default function WhatsAppTab() {
                         }`}>
                           {chatKind === 'group' ? (
                             <Users className="w-6 h-6" />
+                          ) : isDirectChat(chat) ? (
+                            <UserCircle className="w-5 h-5" />
                           ) : (
-                            getInitials(chatDisplayName)
+                            <MessageCircle className="w-5 h-5" />
                           )}
                         </div>
                       )}
@@ -2512,13 +2717,13 @@ export default function WhatsAppTab() {
           </div>
           {chatMenu && (
             <div
-              className="fixed z-50 w-52 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"
+              className="fixed z-50 w-52 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl text-sm"
               style={{ left: chatMenu.x, top: chatMenu.y }}
               onClick={(event) => event.stopPropagation()}
             >
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                className="w-full px-3 py-2 text-left hover:bg-slate-800"
                 onClick={() => {
                   const target = chats.find((item) => item.id === chatMenu.chatId);
                   if (target) {
@@ -2529,7 +2734,7 @@ export default function WhatsAppTab() {
               >
                 {chats.find((item) => item.id === chatMenu.chatId)?.archived ? 'Desarquivar' : 'Arquivar'}
               </button>
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-800" />
               {(() => {
                 const target = chats.find((item) => item.id === chatMenu.chatId);
                 const muted = target ? isChatMuted(target) : false;
@@ -2545,7 +2750,7 @@ export default function WhatsAppTab() {
                     {muted ? (
                       <button
                         type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                        className="w-full px-3 py-2 text-left hover:bg-slate-800"
                         onClick={() => {
                           if (target) updateChatMute(target.id, null);
                           setChatMenu(null);
@@ -2557,17 +2762,17 @@ export default function WhatsAppTab() {
                       <div className="relative group">
                         <button
                           type="button"
-                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between"
+                          className="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center justify-between"
                         >
                           <span>Mutar</span>
-                          <span className="text-xs text-slate-400">›</span>
+                          <span className="text-xs text-slate-500">›</span>
                         </button>
-                        <div className="absolute left-full top-0 ml-2 hidden min-w-[160px] rounded-lg border border-slate-200 bg-white shadow-lg group-hover:block">
+                        <div className="absolute left-full top-0 ml-2 hidden min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl group-hover:block">
                           {muteOptions.map((option) => (
                             <button
                               key={option.label}
                               type="button"
-                              className="w-full px-3 py-2 text-left hover:bg-slate-50"
+                              className="w-full px-3 py-2 text-left hover:bg-slate-800"
                               onClick={() => {
                                 if (target) {
                                   const until = new Date(Date.now() + option.ms).toISOString();
@@ -2597,27 +2802,33 @@ export default function WhatsAppTab() {
               <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
                 {isMobileView && (
                   <button
-                    onClick={() => setSelectedChat(null)}
+                    onClick={() => selectChat(null)}
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                   >
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </button>
                 )}
-                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
-                  selectedChatKind === 'group'
-                    ? 'bg-blue-500'
-                    : selectedChatKind === 'newsletter'
-                      ? 'bg-indigo-500'
-                      : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
-                        ? 'bg-amber-500'
-                        : 'bg-teal-100 text-teal-700'
-                }`}>
-                  {selectedChatKind === 'group' ? (
-                    <Users className="w-5 h-5" />
-                  ) : (
-                    getInitials(selectedChatDisplayName)
-                  )}
-                </div>
+                {selectedChatPhoto ? (
+                  <img src={selectedChatPhoto} alt={selectedChatDisplayName || selectedChat.id} className="flex-shrink-0 w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                    selectedChatKind === 'group'
+                      ? 'bg-blue-500'
+                      : selectedChatKind === 'newsletter'
+                        ? 'bg-indigo-500'
+                        : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
+                          ? 'bg-amber-500'
+                          : 'bg-teal-100 text-teal-700'
+                  }`}>
+                    {selectedChatKind === 'group' ? (
+                      <Users className="w-5 h-5" />
+                    ) : selectedChatIsDirect ? (
+                      <UserCircle className="w-5 h-5" />
+                    ) : (
+                      <MessageCircle className="w-5 h-5" />
+                    )}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="font-semibold text-slate-900 truncate">
@@ -2689,6 +2900,15 @@ export default function WhatsAppTab() {
                   </button>
                   <button
                     type="button"
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={chatCopiedAt ? 'Chat copiado' : 'Copiar chat'}
+                    onClick={handleCopyFullChat}
+                    disabled={messages.length === 0}
+                  >
+                    <Copy className={`w-5 h-5 ${chatCopiedAt ? 'text-emerald-600' : 'text-slate-600'}`} />
+                  </button>
+                  <button
+                    type="button"
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                     title="Ações da conversa"
                     onClick={(event) => {
@@ -2730,11 +2950,6 @@ export default function WhatsAppTab() {
 
                     return (
                       <div key={message.id}>
-                        {showAuthor && (
-                          <div className="text-xs text-slate-500 mb-1 ml-2">
-                            {authorName}
-                          </div>
-                        )}
                         <MessageBubble
                           id={message.id}
                           chatId={selectedChat.id}

@@ -12,16 +12,10 @@ import {
   Sparkles,
   Scissors,
   MessageSquare,
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
 } from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 import FilterSingleSelect from '../FilterSingleSelect';
-import { WhatsAppFormattedText } from './WhatsAppFormattedText';
-import { hasWhatsAppFormatting } from '../../lib/whatsappTextFormatting';
 
 export type SentMessagePayload = {
   id: string;
@@ -54,6 +48,12 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
 }
 
+type QuickReplyItem = {
+  id: string;
+  title: string;
+  message: string;
+};
+
 export function MessageInput({
   chatId,
   onMessageSent,
@@ -82,7 +82,8 @@ export function MessageInput({
   const [quickReplySearch, setQuickReplySearch] = useState('');
   const [quickReplyTitle, setQuickReplyTitle] = useState('');
   const [quickReplyMessage, setQuickReplyMessage] = useState('');
-  const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
+  const [quickReplies, setQuickReplies] = useState<QuickReplyItem[]>([]);
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
   const [slashQuickReplyIndex, setSlashQuickReplyIndex] = useState(0);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
   const [rewriteTone, setRewriteTone] = useState('claro');
@@ -249,14 +250,6 @@ export function MessageInput({
     await fetchLinkPreviewMetadata(normalizedUrl);
   };
 
-  const formattingPreviewText = applyTemplateVariables(message);
-  const shouldShowFormattingPreview =
-    !selectedFile &&
-    !isRecording &&
-    !audioPreviewUrl &&
-    formattingPreviewText.trim().length > 0 &&
-    hasWhatsAppFormatting(formattingPreviewText);
-
   const applyInlineFormat = (opening: string, closing: string = opening) => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -287,11 +280,6 @@ export function MessageInput({
     });
 
     handleTyping();
-  };
-
-  const insertTemplateTokenOnDraft = (key: string) => {
-    const token = `{{${key}}}`;
-    setMessage((prev) => `${prev}${token}`);
   };
 
   const insertTemplateTokenOnQuickReply = (key: string) => {
@@ -370,21 +358,125 @@ export function MessageInput({
   }, [slashCommandState.active, slashCommandState.results.length, slashQuickReplyIndex]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('whatsapp_quick_replies');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as Array<{ id: string; title: string; message: string }>;
-      if (Array.isArray(parsed)) {
-        setQuickReplies(parsed);
-      }
-    } catch {
-      setQuickReplies([]);
-    }
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    localStorage.setItem('whatsapp_quick_replies', JSON.stringify(quickReplies));
-  }, [quickReplies]);
+    const normalizeQuickReply = (value: unknown): QuickReplyItem | null => {
+      const row = value as {
+        id?: string;
+        title?: string | null;
+        text?: string | null;
+        message?: string | null;
+      };
+
+      const id = typeof row.id === 'string' && row.id.trim() ? row.id : '';
+      if (!id) return null;
+
+      const message = typeof row.text === 'string'
+        ? row.text.trim()
+        : typeof row.message === 'string'
+          ? row.message.trim()
+          : '';
+      if (!message) return null;
+
+      const titleRaw = typeof row.title === 'string' ? row.title.trim() : '';
+      return {
+        id,
+        title: titleRaw || 'Resposta rapida',
+        message,
+      };
+    };
+
+    const loadQuickReplies = async () => {
+      setQuickRepliesLoading(true);
+
+      try {
+        const { data, error } = await supabase
+          .from('whatsapp_quick_replies')
+          .select('id, title, text, updated_at')
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        const fromDatabase = (Array.isArray(data) ? data : [])
+          .map(normalizeQuickReply)
+          .filter((reply): reply is QuickReplyItem => Boolean(reply));
+
+        if (!cancelled) {
+          setQuickReplies(fromDatabase);
+        }
+
+        const stored = localStorage.getItem('whatsapp_quick_replies');
+        if (!stored) return;
+
+        const parsed = JSON.parse(stored) as unknown;
+        const legacyReplies = (Array.isArray(parsed) ? parsed : [])
+          .map(normalizeQuickReply)
+          .filter((reply): reply is QuickReplyItem => Boolean(reply));
+
+        if (legacyReplies.length === 0) {
+          localStorage.removeItem('whatsapp_quick_replies');
+          return;
+        }
+
+        if (fromDatabase.length > 0) {
+          localStorage.removeItem('whatsapp_quick_replies');
+          return;
+        }
+
+        const payload = legacyReplies.map((reply) => ({
+          title: reply.title,
+          text: reply.message,
+        }));
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('whatsapp_quick_replies')
+          .insert(payload)
+          .select('id, title, text, updated_at')
+          .order('updated_at', { ascending: false });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        const migrated = (Array.isArray(inserted) ? inserted : [])
+          .map(normalizeQuickReply)
+          .filter((reply): reply is QuickReplyItem => Boolean(reply));
+
+        if (!cancelled && migrated.length > 0) {
+          setQuickReplies(migrated);
+        }
+
+        localStorage.removeItem('whatsapp_quick_replies');
+      } catch (error) {
+        console.error('Erro ao carregar respostas rapidas globais:', error);
+
+        const stored = localStorage.getItem('whatsapp_quick_replies');
+        if (!stored || cancelled) return;
+
+        try {
+          const parsed = JSON.parse(stored) as unknown;
+          const fallbackReplies = (Array.isArray(parsed) ? parsed : [])
+            .map(normalizeQuickReply)
+            .filter((reply): reply is QuickReplyItem => Boolean(reply));
+          setQuickReplies(fallbackReplies);
+        } catch {
+          setQuickReplies([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setQuickRepliesLoading(false);
+        }
+      }
+    };
+
+    loadQuickReplies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const splitRewriteChunks = (text: string) =>
     text
@@ -893,21 +985,47 @@ export function MessageInput({
     }
   };
 
-  const handleAddQuickReply = () => {
+  const handleAddQuickReply = async () => {
+    if (quickRepliesLoading) return;
+
     const title = quickReplyTitle.trim();
     const content = quickReplyMessage.trim();
     if (!title || !content) {
       alert('Preencha titulo e mensagem.');
       return;
     }
-    const newReply = {
-      id: `qr-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      title,
-      message: content,
-    };
-    setQuickReplies((prev) => [newReply, ...prev]);
-    setQuickReplyTitle('');
-    setQuickReplyMessage('');
+
+    setQuickRepliesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_quick_replies')
+        .insert({ title, text: content })
+        .select('id, title, text')
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.id) {
+        setQuickReplies((prev) => [
+          {
+            id: data.id,
+            title: (data.title || '').trim() || 'Resposta rapida',
+            message: (data.text || '').trim(),
+          },
+          ...prev,
+        ]);
+      }
+
+      setQuickReplyTitle('');
+      setQuickReplyMessage('');
+    } catch (error) {
+      console.error('Erro ao salvar resposta rapida global:', error);
+      alert('Erro ao salvar resposta rapida.');
+    } finally {
+      setQuickRepliesLoading(false);
+    }
   };
 
   const applyQuickReplyToDraft = (reply: { message: string }) => {
@@ -935,8 +1053,27 @@ export function MessageInput({
     setSlashQuickReplyIndex(0);
   };
 
-  const handleRemoveQuickReply = (replyId: string) => {
-    setQuickReplies((prev) => prev.filter((reply) => reply.id !== replyId));
+  const handleRemoveQuickReply = async (replyId: string) => {
+    if (quickRepliesLoading) return;
+
+    setQuickRepliesLoading(true);
+    try {
+      const { error } = await supabase
+        .from('whatsapp_quick_replies')
+        .delete()
+        .eq('id', replyId);
+
+      if (error) {
+        throw error;
+      }
+
+      setQuickReplies((prev) => prev.filter((reply) => reply.id !== replyId));
+    } catch (error) {
+      console.error('Erro ao remover resposta rapida global:', error);
+      alert('Erro ao remover resposta rapida.');
+    } finally {
+      setQuickRepliesLoading(false);
+    }
   };
 
   const handleOpenRewrite = () => {
@@ -1148,7 +1285,9 @@ export function MessageInput({
             )}
 
             <div className="panel-dropdown-scrollbar max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
-              {filteredQuickReplies.length === 0 ? (
+              {quickRepliesLoading ? (
+                <div className="px-3 py-2 text-xs text-slate-500">Carregando respostas rapidas...</div>
+              ) : filteredQuickReplies.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-slate-500">Nenhuma resposta rapida encontrada.</div>
               ) : (
                 filteredQuickReplies.map((reply) => {
@@ -1169,6 +1308,7 @@ export function MessageInput({
                           type="button"
                           className="text-xs text-red-500 hover:text-red-600"
                           onClick={() => handleRemoveQuickReply(reply.id)}
+                          disabled={quickRepliesLoading}
                         >
                           Remover
                         </button>
@@ -1211,8 +1351,9 @@ export function MessageInput({
                 type="button"
                 className="w-full px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
                 onClick={handleAddQuickReply}
+                disabled={quickRepliesLoading}
               >
-                Salvar resposta rapida
+                {quickRepliesLoading ? 'Salvando...' : 'Salvar resposta rapida'}
               </button>
             </div>
           </div>
@@ -1540,67 +1681,6 @@ export function MessageInput({
         </div>
       )}
 
-      {templateVariableShortcuts.length > 0 && (
-        <div className="px-3 pt-2 flex flex-wrap items-center gap-1.5 border-b border-slate-100 bg-slate-50">
-          <span className="text-[11px] text-slate-500">Variaveis:</span>
-          {templateVariableShortcuts.map((shortcut) => (
-            <button
-              key={`draft-variable-${shortcut.key}`}
-              type="button"
-              className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-              onClick={() => insertTemplateTokenOnDraft(shortcut.key)}
-              disabled={isSending || isRecording}
-            >
-              {shortcut.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="px-3 py-1.5 flex flex-wrap items-center gap-1.5 border-b border-slate-100 bg-slate-50">
-        <span className="text-[11px] text-slate-500">Formatacao:</span>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-          onClick={() => applyInlineFormat('*')}
-          disabled={isSending || isRecording}
-          title="Negrito (Ctrl/Cmd + B)"
-        >
-          <Bold className="h-3 w-3" />
-          <span>*B*</span>
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-          onClick={() => applyInlineFormat('_')}
-          disabled={isSending || isRecording}
-          title="Italico (Ctrl/Cmd + I)"
-        >
-          <Italic className="h-3 w-3" />
-          <span>_I_</span>
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-          onClick={() => applyInlineFormat('~')}
-          disabled={isSending || isRecording}
-          title="Tachado (Ctrl/Cmd + Shift + X)"
-        >
-          <Strikethrough className="h-3 w-3" />
-          <span>~S~</span>
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-          onClick={() => applyInlineFormat('`')}
-          disabled={isSending || isRecording}
-          title="Monoespaco (Ctrl/Cmd + Shift + M)"
-        >
-          <Code className="h-3 w-3" />
-          <span>`M`</span>
-        </button>
-      </div>
-
       <div className="p-3 flex items-end gap-2 relative">
         <div className="relative">
           <button
@@ -1756,7 +1836,7 @@ export function MessageInput({
                 handleTyping();
               }}
               onKeyDown={handleTextareaKeyDown}
-              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos e * _ ~ ` para formatar)"}
+              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
               className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
               rows={1}
               disabled={isSending || isRecording}
@@ -1869,16 +1949,6 @@ export function MessageInput({
         )}
       </div>
 
-      {shouldShowFormattingPreview && (
-        <div className="px-3 pb-3">
-          <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Pre-visualizacao</p>
-            <div className="mt-1 text-xs text-slate-700">
-              <WhatsAppFormattedText text={formattingPreviewText} className="whitespace-pre-wrap break-words" />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

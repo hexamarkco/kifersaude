@@ -4,6 +4,7 @@ import {
   Search,
   MessageCircle,
   Check,
+  X,
   Phone,
   MoreVertical,
   ArrowLeft,
@@ -35,6 +36,7 @@ import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
 import {
   buildChatIdFromPhone,
@@ -154,6 +156,9 @@ const REMINDER_QUICK_OPEN_PERIODS: Array<{
     accentClassName: 'border-slate-300 bg-slate-100 text-slate-700',
   },
 ];
+
+const REMINDER_QUICK_OPEN_AUTO_REFRESH_MS = 60_000;
+const REMINDER_QUICK_OPEN_STALE_MS = 45_000;
 
 const PERSON_FALLBACK_NOTIFICATION_ICON =
   "data:image/svg+xml;utf8," +
@@ -285,11 +290,13 @@ export default function WhatsAppTab() {
   const [showRemindersModal, setShowRemindersModal] = useState(false);
   const [reminderQuickOpenItems, setReminderQuickOpenItems] = useState<ReminderQuickOpenItem[]>([]);
   const [isLoadingReminderQuickOpen, setIsLoadingReminderQuickOpen] = useState(false);
+  const [hasLoadedReminderQuickOpen, setHasLoadedReminderQuickOpen] = useState(false);
   const [reminderQuickOpenError, setReminderQuickOpenError] = useState<string | null>(null);
   const [collapsedReminderQuickOpenPeriods, setCollapsedReminderQuickOpenPeriods] = useState<Set<ReminderQuickOpenPeriod>>(
     () => new Set(),
   );
   const [markingReminderReadId, setMarkingReminderReadId] = useState<string | null>(null);
+  const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
   const [reminderSchedulerRequest, setReminderSchedulerRequest] = useState<{
     lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
     promptMessage?: string;
@@ -317,11 +324,14 @@ export default function WhatsAppTab() {
   const activeChatsLoadIdRef = useRef(0);
   const lastGroupNamesSyncAtRef = useRef(0);
   const handledReminderQueryRef = useRef<string | null>(null);
+  const reminderQuickOpenLoadingRef = useRef(false);
+  const reminderQuickOpenLastLoadedAtRef = useRef(0);
   const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; loadedCount: number; hasOlder: boolean }>>(
     new Map(),
   );
   const messageByIdRef = useRef<Map<string, WhatsAppMessage>>(new Map());
   const loadingUi = useAdaptiveLoading(loading);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const selectChat = (chat: WhatsAppChat | null) => {
     startTransition(() => {
@@ -2984,7 +2994,12 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   return grouped;
 };
 
-  const loadReminderQuickOpen = async () => {
+  const loadReminderQuickOpen = async (options?: { preserveExistingItems?: boolean }) => {
+    if (reminderQuickOpenLoadingRef.current) return;
+
+    const preserveExistingItems = options?.preserveExistingItems ?? reminderQuickOpenItems.length > 0;
+
+    reminderQuickOpenLoadingRef.current = true;
     setIsLoadingReminderQuickOpen(true);
     setReminderQuickOpenError(null);
 
@@ -3116,14 +3131,44 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         .sort((left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime());
 
       setReminderQuickOpenItems(items);
+      reminderQuickOpenLastLoadedAtRef.current = Date.now();
     } catch (error) {
       console.error('Erro ao carregar lembretes para o WhatsApp:', error);
       setReminderQuickOpenError('Nao foi possivel carregar os lembretes agora.');
-      setReminderQuickOpenItems([]);
+      if (!preserveExistingItems) {
+        setReminderQuickOpenItems([]);
+      }
     } finally {
+      reminderQuickOpenLoadingRef.current = false;
+      setHasLoadedReminderQuickOpen(true);
       setIsLoadingReminderQuickOpen(false);
     }
   };
+
+  const handleOpenRemindersModal = () => {
+    setShowRemindersModal(true);
+    setIsListSettingsOpen(false);
+
+    const hasFreshSnapshot =
+      hasLoadedReminderQuickOpen &&
+      Date.now() - reminderQuickOpenLastLoadedAtRef.current <= REMINDER_QUICK_OPEN_STALE_MS;
+
+    if (!hasFreshSnapshot) {
+      void loadReminderQuickOpen({ preserveExistingItems: true });
+    }
+  };
+
+  useEffect(() => {
+    void loadReminderQuickOpen({ preserveExistingItems: true });
+
+    const refreshIntervalId = window.setInterval(() => {
+      void loadReminderQuickOpen({ preserveExistingItems: true });
+    }, REMINDER_QUICK_OPEN_AUTO_REFRESH_MS);
+
+    return () => {
+      window.clearInterval(refreshIntervalId);
+    };
+  }, []);
 
   const openReminderLeadInWhatsApp = (item: ReminderQuickOpenItem) => {
     if (!item.leadPhone) return;
@@ -3227,6 +3272,142 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       alert('Não foi possível marcar este lembrete como lido.');
     } finally {
       setMarkingReminderReadId((current) => (current === item.id ? null : current));
+    }
+  };
+
+  const handleMarkLeadAsLostAndDeleteFutureReminders = async (item: ReminderQuickOpenItem) => {
+    if (markingLostLeadId === item.leadId) return;
+
+    const leadFromList = leadsList.find((lead) => lead.id === item.leadId);
+    const leadName = resolveReminderLeadName(leadFromList?.name, item.title);
+    const previousStatus = leadFromList?.status ?? 'Sem status';
+
+    const confirmed = await requestConfirmation({
+      title: 'Marcar lead como perdido',
+      description: `Deseja marcar ${leadName} como perdido e deletar todos os lembretes futuros?`,
+      confirmLabel: 'Marcar como perdido',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setMarkingLostLeadId(item.leadId);
+
+    try {
+      const nowIso = new Date().toISOString();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const cutoffIso = startOfToday.toISOString();
+
+      const { error: updateLeadError } = await supabase
+        .from('leads')
+        .update({
+          status: 'Perdido',
+          proximo_retorno: null,
+          ultimo_contato: nowIso,
+        })
+        .eq('id', item.leadId);
+
+      if (updateLeadError) throw updateLeadError;
+
+      const { error: statusHistoryError } = await supabase.from('lead_status_history').insert([
+        {
+          lead_id: item.leadId,
+          status_anterior: previousStatus,
+          status_novo: 'Perdido',
+          responsavel: user?.email ?? 'WhatsApp',
+        },
+      ]);
+
+      if (statusHistoryError) {
+        console.error('Erro ao registrar historico de status do lead no WhatsApp:', statusHistoryError);
+      }
+
+      const reminderIdsToDelete = new Set<string>();
+
+      const { data: leadRemindersData, error: leadRemindersError } = await supabase
+        .from('reminders')
+        .select('id')
+        .eq('lido', false)
+        .eq('lead_id', item.leadId)
+        .gte('data_lembrete', cutoffIso)
+        .limit(1000);
+
+      if (leadRemindersError) throw leadRemindersError;
+
+      ((leadRemindersData || []) as Array<{ id: string }>).forEach((reminder) => {
+        if (reminder.id) reminderIdsToDelete.add(reminder.id);
+      });
+
+      const { data: contractsData, error: contractsError } = await supabase
+        .from('contracts')
+        .select('id')
+        .eq('lead_id', item.leadId);
+
+      if (contractsError) throw contractsError;
+
+      const contractIds = ((contractsData || []) as Array<{ id: string }>)
+        .map((contract) => contract.id)
+        .filter((contractId): contractId is string => Boolean(contractId));
+
+      if (contractIds.length > 0) {
+        const contractChunkSize = 40;
+
+        for (let index = 0; index < contractIds.length; index += contractChunkSize) {
+          const contractChunk = contractIds.slice(index, index + contractChunkSize);
+          const { data: contractRemindersData, error: contractRemindersError } = await supabase
+            .from('reminders')
+            .select('id')
+            .eq('lido', false)
+            .in('contract_id', contractChunk)
+            .gte('data_lembrete', cutoffIso)
+            .limit(1000);
+
+          if (contractRemindersError) throw contractRemindersError;
+
+          ((contractRemindersData || []) as Array<{ id: string }>).forEach((reminder) => {
+            if (reminder.id) reminderIdsToDelete.add(reminder.id);
+          });
+        }
+      }
+
+      const reminderIdsList = Array.from(reminderIdsToDelete);
+
+      if (reminderIdsList.length > 0) {
+        const deleteChunkSize = 200;
+
+        for (let index = 0; index < reminderIdsList.length; index += deleteChunkSize) {
+          const deleteChunk = reminderIdsList.slice(index, index + deleteChunkSize);
+          const { error: deleteError } = await supabase
+            .from('reminders')
+            .delete()
+            .in('id', deleteChunk);
+
+          if (deleteError) throw deleteError;
+        }
+      }
+
+      await syncLeadNextReturnFromUpcomingReminder(item.leadId);
+
+      setLeadsList((prev) => prev.map((lead) => (lead.id === item.leadId ? { ...lead, status: 'Perdido' } : lead)));
+      setReminderQuickOpenItems((current) =>
+        current
+          .filter((reminder) => !reminderIdsToDelete.has(reminder.id))
+          .map((reminder) =>
+            reminder.leadId === item.leadId
+              ? {
+                  ...reminder,
+                  leadStatus: 'Perdido',
+                }
+              : reminder,
+          ),
+      );
+    } catch (error) {
+      console.error('Erro ao marcar lead como perdido no WhatsApp:', error);
+      alert('Nao foi possivel marcar este lead como perdido.');
+    } finally {
+      setMarkingLostLeadId((current) => (current === item.leadId ? null : current));
     }
   };
 
@@ -3552,7 +3733,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               </div>
             </div>
 
-            {isLoadingReminderQuickOpen ? (
+            {(isLoadingReminderQuickOpen || !hasLoadedReminderQuickOpen) &&
+            reminderQuickOpenItems.length === 0 &&
+            !reminderQuickOpenError ? (
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
                 Carregando lembretes...
               </div>
@@ -3637,7 +3820,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                       void handleMarkReminderAsReadAndSchedule(item);
                                     }}
                                     loading={markingReminderReadId === item.id}
-                                    disabled={Boolean(markingReminderReadId && markingReminderReadId !== item.id)}
+                                    disabled={Boolean((markingReminderReadId && markingReminderReadId !== item.id) || markingLostLeadId)}
                                     variant="info"
                                     size="icon"
                                     className="h-9 w-9"
@@ -3649,7 +3832,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   <Button
                                     type="button"
                                     onClick={() => openReminderLeadInWhatsApp(item)}
-                                    disabled={!item.leadPhone || Boolean(markingReminderReadId)}
+                                    disabled={!item.leadPhone || Boolean(markingReminderReadId || markingLostLeadId)}
                                     variant="success"
                                     size="icon"
                                     className="h-9 w-9"
@@ -3657,6 +3840,21 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                     aria-label="Abrir no WhatsApp"
                                   >
                                     <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleMarkLeadAsLostAndDeleteFutureReminders(item);
+                                    }}
+                                    loading={markingLostLeadId === item.leadId}
+                                    disabled={Boolean((markingLostLeadId && markingLostLeadId !== item.leadId) || markingReminderReadId)}
+                                    variant="danger"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    title="Marcar como perdido e deletar lembretes futuros"
+                                    aria-label="Marcar como perdido e deletar lembretes futuros"
+                                  >
+                                    {markingLostLeadId !== item.leadId && <X className="h-4 w-4" />}
                                   </Button>
                                 </div>
                               </div>
@@ -3697,11 +3895,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 <button
                   type="button"
                   className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
-                  onClick={() => {
-                    setShowRemindersModal(true);
-                    void loadReminderQuickOpen();
-                    setIsListSettingsOpen(false);
-                  }}
+                  onClick={handleOpenRemindersModal}
                   title="Lembretes"
                   aria-label="Lembretes"
                 >
@@ -4338,6 +4532,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           defaultPriority={reminderSchedulerRequest.defaults?.defaultPriority}
         />
       )}
+      {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>
   );

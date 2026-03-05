@@ -19,6 +19,7 @@ import {
   formatEstimatedTime,
   ReminderPeriod
 } from '../lib/reminderUtils';
+import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import RemindersCalendar from './RemindersCalendar';
 import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
@@ -483,22 +484,11 @@ export default function RemindersManagerEnhanced() {
 
   const updateLeadNextReturnDate = async (
     leadId: string,
-    nextReturnDate: string | null,
-    options?: { onlyIfMatches?: string }
+    _nextReturnDate: string | null,
+    _options?: { onlyIfMatches?: string }
   ) => {
     try {
-      let query = supabase
-        .from('leads')
-        .update({ proximo_retorno: nextReturnDate })
-        .eq('id', leadId);
-
-      if (options?.onlyIfMatches) {
-        query = query.eq('proximo_retorno', options.onlyIfMatches);
-      }
-
-      const { error } = await query;
-
-      if (error) throw error;
+      const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(leadId);
 
       setLeadsMap(prev => {
         const next = new Map(prev);
@@ -639,11 +629,11 @@ export default function RemindersManagerEnhanced() {
         throw error;
       }
 
-      if (completionDate && leadId && reminder) {
-        await updateLeadNextReturnDate(leadId, null, {
-          onlyIfMatches: reminder.data_lembrete,
-        });
+      if (leadId) {
+        await updateLeadNextReturnDate(leadId, null);
+      }
 
+      if (completionDate && leadId && reminder) {
         if (queueNextReminderPrompt) {
           let leadInfo = leadsMap.get(leadId);
 
@@ -803,10 +793,9 @@ export default function RemindersManagerEnhanced() {
       });
       pendingRefreshIdsRef.current.add(reminderToDelete.id);
 
-      if (reminderToDelete.lead_id) {
-        await updateLeadNextReturnDate(reminderToDelete.lead_id, null, {
-          onlyIfMatches: reminderToDelete.data_lembrete,
-        });
+      const leadId = getLeadIdForReminder(reminderToDelete);
+      if (leadId) {
+        await updateLeadNextReturnDate(leadId, null);
       }
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
@@ -831,8 +820,11 @@ export default function RemindersManagerEnhanced() {
         .eq('id', reminder.id);
 
       if (error) throw error;
-      if (reminder.lead_id) {
-        await updateLeadNextReturnDate(reminder.lead_id, newDate);
+      {
+        const leadId = getLeadIdForReminder(reminder);
+        if (leadId) {
+          await updateLeadNextReturnDate(leadId, newDate);
+        }
       }
       setOpenSnoozeMenu(null);
       setReminders(current =>
@@ -872,8 +864,11 @@ export default function RemindersManagerEnhanced() {
         .eq('id', customSnoozeReminder);
 
       if (error) throw error;
-      if (reminder.lead_id) {
-        await updateLeadNextReturnDate(reminder.lead_id, newDate);
+      {
+        const leadId = getLeadIdForReminder(reminder);
+        if (leadId) {
+          await updateLeadNextReturnDate(leadId, newDate);
+        }
       }
       setCustomSnoozeReminder(null);
       setCustomSnoozeDateTime('');
@@ -915,8 +910,11 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      if (reminder.lead_id) {
-        await updateLeadNextReturnDate(reminder.lead_id, newDateISO);
+      {
+        const leadId = getLeadIdForReminder(reminder);
+        if (leadId) {
+          await updateLeadNextReturnDate(leadId, newDateISO);
+        }
       }
       setReminders(current =>
         current.map(item =>
@@ -953,14 +951,15 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
 
-      const leadUpdates = remindersToUpdate
-        .map(reminder => ({ reminder, leadId: getLeadIdForReminder(reminder) }))
-        .filter(({ leadId }) => Boolean(leadId))
-        .map(({ reminder, leadId }) =>
-          updateLeadNextReturnDate(leadId!, null, {
-            onlyIfMatches: reminder.data_lembrete,
-          })
-        );
+      const leadIdsToSync = Array.from(
+        new Set(
+          remindersToUpdate
+            .map((reminder) => getLeadIdForReminder(reminder))
+            .filter((leadId): leadId is string => Boolean(leadId)),
+        ),
+      );
+
+      const leadUpdates = leadIdsToSync.map((leadId) => updateLeadNextReturnDate(leadId, null));
 
       await Promise.all(leadUpdates);
 
@@ -1059,11 +1058,15 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
       setSelectedReminders(new Set());
-      const leadUpdates = remindersToDelete
-        .filter(reminder => reminder.lead_id)
-        .map(reminder =>
-          updateLeadNextReturnDate(reminder.lead_id!, null, { onlyIfMatches: reminder.data_lembrete })
-        );
+      const leadIdsToSync = Array.from(
+        new Set(
+          remindersToDelete
+            .map((reminder) => getLeadIdForReminder(reminder))
+            .filter((leadId): leadId is string => Boolean(leadId)),
+        ),
+      );
+
+      const leadUpdates = leadIdsToSync.map((leadId) => updateLeadNextReturnDate(leadId, null));
       await Promise.all(leadUpdates);
       setReminders(current => current.filter(reminder => !reminderIds.includes(reminder.id)));
     } catch (error) {
@@ -1082,6 +1085,15 @@ export default function RemindersManagerEnhanced() {
     if (!confirmed) return;
 
     try {
+      const unreadLeadIds = Array.from(
+        new Set(
+          reminders
+            .filter((reminder) => !reminder.lido)
+            .map((reminder) => getLeadIdForReminder(reminder))
+            .filter((leadId): leadId is string => Boolean(leadId)),
+        ),
+      );
+
       const { error } = await supabase
         .from('reminders')
         .update({
@@ -1091,6 +1103,11 @@ export default function RemindersManagerEnhanced() {
         .eq('lido', false);
 
       if (error) throw error;
+
+      if (unreadLeadIds.length > 0) {
+        await Promise.all(unreadLeadIds.map((leadId) => updateLeadNextReturnDate(leadId, null)));
+      }
+
       const completionDate = new Date().toISOString();
       setReminders(current =>
         current.map(item =>

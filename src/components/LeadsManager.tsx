@@ -42,6 +42,10 @@ import DateTimePicker from './ui/DateTimePicker';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
+import {
+  shouldPromptFirstReminderAfterQuote,
+  syncLeadNextReturnFromUpcomingReminder,
+} from '../lib/leadReminderUtils';
 import { downloadXlsx } from '../lib/xlsxExport';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { LeadsPageSkeleton } from './ui/panelSkeletons';
@@ -1104,7 +1108,6 @@ export default function LeadsManager({
 
     const oldStatus = lead.status;
     const timestamp = new Date().toISOString();
-    const updatedLead: Lead = { ...lead, status: newStatus, ultimo_contato: timestamp };
 
     setLeads((current) =>
       current.map((l) =>
@@ -1145,7 +1148,7 @@ export default function LeadsManager({
 
       const normalizedStatus = newStatus.trim().toLowerCase();
 
-      if (normalizedStatus === 'proposta enviada') {
+      if (shouldPromptFirstReminderAfterQuote(newStatus)) {
         openReminderScheduler(
           { ...lead, status: newStatus },
           'Deseja agendar o primeiro lembrete após a proposta enviada?'
@@ -1183,7 +1186,6 @@ export default function LeadsManager({
           reminderDate.setMinutes(0, 0, 0);
 
           const reminderDateISO = reminderDate.toISOString();
-          updatedLead.proximo_retorno = reminderDateISO;
 
           const { error: insertReminderError } = await supabase
             .from('reminders')
@@ -1201,17 +1203,12 @@ export default function LeadsManager({
 
           if (insertReminderError) throw insertReminderError;
 
-          const { error: leadUpdateError } = await supabase
-            .from('leads')
-            .update({ proximo_retorno: reminderDateISO })
-            .eq('id', leadId);
-
-          if (leadUpdateError) throw leadUpdateError;
+          const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(leadId);
 
           setLeads((current) =>
             current.map((leadItem) =>
               leadItem.id === leadId
-                ? { ...leadItem, proximo_retorno: reminderDateISO }
+                ? { ...leadItem, proximo_retorno: nextReturnDate }
                 : leadItem
             )
           );

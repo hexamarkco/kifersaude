@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
+import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
 import DateTimePicker from './ui/DateTimePicker';
@@ -112,10 +113,11 @@ export default function ReminderSchedulerModal({
 
       if (insertError) throw insertError;
 
+      const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(lead.id);
+
       const { error: leadUpdateError } = await supabase
         .from('leads')
         .update({
-          proximo_retorno: reminderDateUTC,
           ultimo_contato: new Date().toISOString(),
         })
         .eq('id', lead.id);
@@ -123,7 +125,7 @@ export default function ReminderSchedulerModal({
       if (leadUpdateError) throw leadUpdateError;
 
       onScheduled?.({
-        reminderDate: reminderDateUTC,
+        reminderDate: nextReturnDate || reminderDateUTC,
         type,
         title: trimmedTitle,
         description: finalDescription,

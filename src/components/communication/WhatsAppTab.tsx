@@ -1,5 +1,5 @@
 import { startTransition, useState, useEffect, useRef, useMemo } from 'react';
-import { supabase, fetchAllPages } from '../../lib/supabase';
+import { supabase, fetchAllPages, type Lead } from '../../lib/supabase';
 import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, UserCircle, Info, History, Plus, Bell, BellOff, SkipForward, Settings, Copy } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,7 +12,9 @@ import { getBadgeStyle } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
+import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { shouldPromptFirstReminderAfterQuote } from '../../lib/leadReminderUtils';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
@@ -168,7 +170,7 @@ export default function WhatsAppTab() {
     [],
   );
   const [contactPhotosById, setContactPhotosById] = useState<Map<string, string>>(new Map());
-  const [leadsList, setLeadsList] = useState<Array<{ id: string; name: string; phone: string; status?: string | null }>>(
+  const [leadsList, setLeadsList] = useState<Array<{ id: string; name: string; phone: string; status?: string | null; responsavel?: string | null }>>(
     [],
   );
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
@@ -195,6 +197,8 @@ export default function WhatsAppTab() {
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
+  const [reminderLead, setReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
+  const [reminderPromptMessage, setReminderPromptMessage] = useState<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
@@ -819,8 +823,17 @@ export default function WhatsAppTab() {
   useEffect(() => {
     const loadLeadNames = async () => {
       try {
-        const data = await fetchAllPages<{ id: string; telefone: string; nome_completo: string; status?: string | null }>(async (from, to) => {
-          const response = await supabase.from('leads').select('id, telefone, nome_completo, status').range(from, to);
+        const data = await fetchAllPages<{
+          id: string;
+          telefone: string;
+          nome_completo: string;
+          status?: string | null;
+          responsavel?: string | null;
+        }>(async (from, to) => {
+          const response = await supabase
+            .from('leads')
+            .select('id, telefone, nome_completo, status, responsavel')
+            .range(from, to);
           return { data: response.data, error: response.error };
         });
 
@@ -840,6 +853,7 @@ export default function WhatsAppTab() {
               name: lead.nome_completo,
               phone: normalizePhoneNumber(lead.telefone),
               status: lead.status ?? null,
+              responsavel: lead.responsavel ?? null,
             }))
             .filter((lead) => Boolean(lead.phone)),
         );
@@ -1804,6 +1818,11 @@ export default function WhatsAppTab() {
     return cleaned;
   };
 
+  const isReactionOnlyMessage = (message: Pick<WhatsAppMessage, 'payload'>) => {
+    const payloadData = message.payload as any;
+    return payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
+  };
+
   const getMessagePreview = (
     message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
   ) => {
@@ -1812,8 +1831,7 @@ export default function WhatsAppTab() {
     const body = message.body?.trim();
     if (body) return body;
 
-    const payloadData = message.payload as any;
-    if (payloadData?.action?.type === 'reaction') return null;
+    if (isReactionOnlyMessage(message)) return null;
 
     const type = (message.type || '').toLowerCase();
     if (type === 'image') return '[Imagem]';
@@ -2076,6 +2094,11 @@ export default function WhatsAppTab() {
       ]),
     );
   }, [messages]);
+
+  const renderedMessages = useMemo(
+    () => messages.filter((message) => !isReactionOnlyMessage(message)),
+    [messages],
+  );
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
   const selectedLead = useMemo(() => {
@@ -2359,10 +2382,41 @@ export default function WhatsAppTab() {
     }
   };
 
+  const resolveDirectChatTarget = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    if (trimmed.includes('@')) {
+      const normalizedId = normalizeChatId(trimmed);
+      const digits = getPhoneDigits(normalizedId);
+      const normalizedPhone = normalizePhoneNumber(digits);
+      return {
+        chatId: normalizedId,
+        phoneNumber: normalizedPhone || digits || null,
+      };
+    }
+
+    const digits = trimmed.replace(/\D/g, '');
+    if (!digits) return null;
+
+    const withCountryCode =
+      digits.startsWith('55') && (digits.length === 12 || digits.length === 13)
+        ? digits
+        : isLikelyBrazilLocalNumber(digits)
+          ? `55${digits}`
+          : digits;
+
+    return {
+      chatId: `${withCountryCode}@s.whatsapp.net`,
+      phoneNumber: normalizePhoneNumber(withCountryCode),
+    };
+  };
+
   const openChatFromPhone = (phone: string, name?: string) => {
-    const normalizedPhone = normalizePhoneNumber(phone);
-    if (!normalizedPhone) return;
-    const chatId = buildChatIdFromPhone(normalizedPhone);
+    const target = resolveDirectChatTarget(phone);
+    if (!target) return;
+
+    const { chatId, phoneNumber } = target;
     const now = new Date().toISOString();
     setChats((prev) => {
       if (prev.some((chat) => chat.id === chatId)) return prev;
@@ -2371,7 +2425,7 @@ export default function WhatsAppTab() {
           id: chatId,
           name: name ?? null,
           is_group: false,
-          phone_number: normalizedPhone,
+          phone_number: phoneNumber,
           last_message_at: null,
           created_at: now,
           updated_at: now,
@@ -2385,7 +2439,7 @@ export default function WhatsAppTab() {
       id: chatId,
       name: name ?? null,
       is_group: false,
-      phone_number: normalizedPhone,
+      phone_number: phoneNumber,
       last_message_at: null,
       created_at: now,
       updated_at: now,
@@ -2445,6 +2499,19 @@ export default function WhatsAppTab() {
     }
   };
 
+  const openReminderScheduler = (
+    lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>,
+    promptMessage?: string,
+  ) => {
+    setReminderLead(lead);
+    setReminderPromptMessage(promptMessage);
+  };
+
+  const closeReminderScheduler = () => {
+    setReminderLead(null);
+    setReminderPromptMessage(undefined);
+  };
+
   const handleUpdateLeadStatus = async (statusName: string, leadId?: string) => {
     const lead = leadId ? leadsList.find((item) => item.id === leadId) : selectedLead;
     if (!lead) return;
@@ -2469,6 +2536,18 @@ export default function WhatsAppTab() {
       ]);
 
       setLeadsList((prev) => prev.map((item) => (item.id === lead.id ? { ...item, status: statusName } : item)));
+
+      if (shouldPromptFirstReminderAfterQuote(statusName)) {
+        openReminderScheduler(
+          {
+            id: lead.id,
+            nome_completo: lead.name,
+            telefone: lead.phone,
+            responsavel: lead.responsavel ?? (user?.email ?? null),
+          },
+          'Deseja agendar o primeiro lembrete após a proposta/cotação enviada?'
+        );
+      }
     } catch (error) {
       console.error('Erro ao atualizar status do lead:', error);
       alert('Erro ao atualizar status do lead');
@@ -3142,17 +3221,13 @@ export default function WhatsAppTab() {
                     </button>
                   </div>
                 )}
-                {messages.length === 0 ? (
+                {renderedMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
                     <p>{isLoadingMessages ? 'Carregando mensagens...' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
-                  messages.map((message, index) => {
-                    const payloadData = message.payload as any;
-                    const isReactionOnly = payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
-                    if (isReactionOnly) return null;
-
-                    const previousMessage = index > 0 ? messages[index - 1] : null;
+                  renderedMessages.map((message, index) => {
+                    const previousMessage = index > 0 ? renderedMessages[index - 1] : null;
                     const currentDayKey = getMessageDayKey(message);
                     const previousDayKey = previousMessage ? getMessageDayKey(previousMessage) : '';
                     const shouldShowDaySeparator = Boolean(currentDayKey) && currentDayKey !== previousDayKey;
@@ -3230,6 +3305,20 @@ export default function WhatsAppTab() {
             </div>
           )}
         </div>
+      )}
+
+      {reminderLead && (
+        <ReminderSchedulerModal
+          lead={reminderLead}
+          onClose={closeReminderScheduler}
+          onScheduled={() => {
+            closeReminderScheduler();
+          }}
+          promptMessage={
+            reminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta/cotação enviada?'
+          }
+          defaultType="Follow-up"
+        />
       )}
       </div>
     </PanelAdaptiveLoadingFrame>

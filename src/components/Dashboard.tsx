@@ -2098,7 +2098,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+            <div className="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
               <Clock className="h-4 w-4 text-slate-500" />
               <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
             </div>
@@ -2106,6 +2106,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               type="button"
               onClick={loadData}
               disabled={loading}
+              size="lg"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               <span>Atualizar agora</span>
@@ -2416,7 +2417,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-3">
                   <span>Navegue os meses para consultar reajustes e aniversários.</span>
-                  <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
+                  <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
                     <Button
                       type="button"
                       onClick={() => {
@@ -2428,7 +2429,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                       }}
                       variant={calendarView === 'day' ? 'primary' : 'secondary'}
                       size="sm"
-                      className="h-7 rounded-full px-3 text-[11px]"
+                      className="h-7 rounded-md px-3 text-[11px]"
                     >
                       Hoje
                     </Button>
@@ -2444,7 +2445,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                       }}
                       variant={calendarView === 'week' ? 'primary' : 'secondary'}
                       size="sm"
-                      className="h-7 rounded-full px-3 text-[11px]"
+                      className="h-7 rounded-md px-3 text-[11px]"
                     >
                       Semana
                     </Button>
@@ -2453,7 +2454,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                       onClick={() => setCalendarView('month')}
                       variant={calendarView === 'month' ? 'primary' : 'secondary'}
                       size="sm"
-                      className="h-7 rounded-full px-3 text-[11px]"
+                      className="h-7 rounded-md px-3 text-[11px]"
                     >
                       Mês
                     </Button>

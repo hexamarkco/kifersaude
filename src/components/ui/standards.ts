@@ -116,7 +116,7 @@ const tabsListBaseClass = 'flex w-full flex-wrap';
 const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
   underline: 'gap-0 border-b border-slate-200 px-2 sm:px-4',
   pill: 'gap-2 rounded-xl bg-slate-100 p-1',
-  panel: 'panel-glass-panel gap-1 rounded-xl border border-slate-200 p-1',
+  panel: 'panel-glass-panel gap-1 rounded-xl border border-slate-200 p-[3px]',
 };
 
 const tabsTriggerBaseClass =
@@ -132,8 +132,8 @@ const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle
     idle: 'text-slate-600 hover:bg-white/70 hover:text-slate-900',
   },
   panel: {
-    active: 'bg-slate-100 text-teal-700 shadow-sm',
-    idle: 'text-slate-500 hover:bg-white/70 hover:text-slate-900',
+    active: 'h-9 bg-slate-100 px-3 py-0 text-teal-700 shadow-sm',
+    idle: 'h-9 px-3 py-0 text-slate-500 hover:bg-white/70 hover:text-slate-900',
   },
 };
 

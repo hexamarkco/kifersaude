@@ -64,7 +64,7 @@ export const getDropdownMenuClass = ({
   className,
 }: MenuOptions) =>
   cx(
-    'panel-glass-panel panel-dropdown-scrollbar z-[70] overflow-y-auto rounded-lg border shadow-xl',
+    'panel-glass-panel panel-dropdown-scrollbar z-[110] overflow-y-auto rounded-lg border shadow-xl',
     position,
     isDark
       ? 'panel-dropdown-dark border-slate-700 bg-slate-900 text-slate-100'

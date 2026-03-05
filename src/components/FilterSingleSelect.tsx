@@ -205,7 +205,7 @@ export default function FilterSingleSelect({
                 ? 'font-medium text-slate-100'
                 : 'font-medium text-slate-700'
               : isDarkTheme
-                ? 'text-slate-400'
+                ? 'text-slate-100'
                 : 'text-slate-500',
           )}
         >

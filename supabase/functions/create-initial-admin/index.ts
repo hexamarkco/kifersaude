@@ -24,6 +24,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const bootstrapEnabled = Deno.env.get('ENABLE_CREATE_INITIAL_ADMIN') === 'true';
+    if (!bootstrapEnabled) {
+      return new Response(
+        JSON.stringify({ error: 'Bootstrap de admin desabilitado. Defina ENABLE_CREATE_INITIAL_ADMIN=true para uso temporario.' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const bootstrapToken = Deno.env.get('CREATE_INITIAL_ADMIN_TOKEN')?.trim();
+    if (bootstrapToken) {
+      const providedToken = req.headers.get('x-bootstrap-token')?.trim();
+      if (!providedToken || providedToken !== bootstrapToken) {
+        return new Response(
+          JSON.stringify({ error: 'Token de bootstrap invalido.' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 

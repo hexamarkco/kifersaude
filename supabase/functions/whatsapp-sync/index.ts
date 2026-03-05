@@ -54,6 +54,11 @@ type WhapiNewsletter = {
   name?: string;
 };
 
+type WhapiGroup = {
+  id: string;
+  name?: string;
+};
+
 type WhapiNewsletterListResponse = {
   newsletters?: WhapiNewsletter[];
   count?: number;
@@ -109,6 +114,27 @@ const fetchNewsletterName = async (token: string, chatId: string): Promise<strin
   }
 
   return null;
+};
+
+const fetchGroupName = async (token: string, chatId: string): Promise<string | null> => {
+  const response = await fetch(`${WHAPI_BASE_URL}/groups/${encodeURIComponent(chatId)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as WhapiGroup;
+  const groupName = payload.name?.trim();
+  if (!groupName || groupName === chatId) {
+    return null;
+  }
+
+  return groupName;
 };
 
 const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
@@ -238,23 +264,29 @@ Deno.serve(async (req) => {
     const lastMessageAt = toIsoString(messages[0]?.timestamp) ?? new Date().toISOString();
     const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
     const messageChatName = messageChatNameRaw && messageChatNameRaw !== chatId ? messageChatNameRaw : null;
-    const messageFromName = messages.find((message) => message.from_name?.trim())?.from_name?.trim() || null;
+    const { data: existingChat } = await supabase
+      .from('whatsapp_chats')
+      .select('name')
+      .eq('id', chatId)
+      .maybeSingle();
 
-    let chatName = messageChatName;
-    if (!chatName && isGroup) {
-      chatName = messageFromName;
-    }
+    const existingChatName = existingChat?.name?.trim() || null;
 
-    if (!chatName && isChannelChat) {
-      chatName = await fetchNewsletterName(token, chatId);
-    }
-
-    if (!chatName && chatKind === 'status') {
-      chatName = 'Status';
-    }
-
-    if (!isGroup && !isChannelChat) {
-      chatName = null;
+    let chatName = existingChatName;
+    if (isGroup) {
+      const canonicalGroupName = await fetchGroupName(token, chatId);
+      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? chatId;
+    } else if (isChannelChat) {
+      const channelName = messageChatName ?? (await fetchNewsletterName(token, chatId));
+      if (chatKind === 'status') {
+        chatName = 'Status';
+      } else if (channelName) {
+        chatName = channelName;
+      } else if (chatKind === 'newsletter') {
+        chatName = existingChatName ?? 'Canal sem nome';
+      } else {
+        chatName = existingChatName ?? 'Transmissao sem nome';
+      }
     }
 
     await supabase.from('whatsapp_chats').upsert(
@@ -267,6 +299,13 @@ Deno.serve(async (req) => {
       },
       { onConflict: 'id' },
     );
+
+    if (isGroup && chatName) {
+      await supabase
+        .from('whatsapp_groups')
+        .update({ name: chatName, last_updated_at: new Date().toISOString() })
+        .eq('id', chatId);
+    }
 
     const normalized = messages.map((message) => {
       const direction = message.from_me ? 'outbound' : 'inbound';

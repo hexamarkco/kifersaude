@@ -12,13 +12,59 @@ type SyncRequest = {
   limit?: number;
 };
 
-type WhapiChatMetadata = {
+type WhapiGroup = {
   id: string;
   name?: string;
+  type?: string;
+  created_at?: number;
+  created_by?: string;
+  name_at?: number;
+  chat_pic?: string;
+  chat_pic_full?: string;
+  adminAddMemberMode?: boolean;
 };
 
-const fetchChatMetadata = async (token: string, chatId: string): Promise<WhapiChatMetadata> => {
-  const response = await fetch(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(chatId)}`, {
+type WhapiGroupListPayload = {
+  groups?: WhapiGroup[];
+  count?: number;
+  total?: number;
+  offset?: number;
+};
+
+const sanitizeWhapiToken = (rawToken: string): string => rawToken.replace(/^Bearer\s+/i, '').trim();
+
+const normalizeGroupsPayload = (payload: unknown): WhapiGroup[] => {
+  if (Array.isArray(payload)) {
+    return payload.filter((item): item is WhapiGroup => Boolean(item && typeof item === 'object' && 'id' in item));
+  }
+
+  if (payload && typeof payload === 'object') {
+    const typed = payload as WhapiGroupListPayload;
+    if (Array.isArray(typed.groups)) {
+      return typed.groups.filter((item): item is WhapiGroup => Boolean(item && typeof item === 'object' && item.id));
+    }
+
+    if ('id' in typed && typeof (typed as WhapiGroup).id === 'string') {
+      return [typed as WhapiGroup];
+    }
+  }
+
+  return [];
+};
+
+const toIsoString = (timestamp?: number): string | null => {
+  if (!timestamp || Number.isNaN(timestamp)) return null;
+  return new Date(timestamp * 1000).toISOString();
+};
+
+const fetchGroupsPage = async (token: string, count: number, offset: number): Promise<WhapiGroup[]> => {
+  const query = new URLSearchParams({
+    count: String(count),
+    offset: String(offset),
+    resync: 'false',
+  });
+
+  const response = await fetch(`${WHAPI_BASE_URL}/groups?${query.toString()}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -28,10 +74,11 @@ const fetchChatMetadata = async (token: string, chatId: string): Promise<WhapiCh
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Erro ao buscar chat ${chatId}: ${response.status} ${errorText}`);
+    throw new Error(`Erro ao buscar grupos: ${response.status} ${errorText}`);
   }
 
-  return response.json();
+  const payload = await response.json().catch(() => []);
+  return normalizeGroupsPayload(payload);
 };
 
 Deno.serve(async (req) => {
@@ -75,8 +122,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = (integration?.settings as { apiKey?: string; token?: string })?.apiKey
+    const tokenValue = (integration?.settings as { apiKey?: string; token?: string })?.apiKey
       ?? (integration?.settings as { token?: string })?.token;
+    const token = tokenValue ? sanitizeWhapiToken(tokenValue) : '';
 
     if (!token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
@@ -90,61 +138,142 @@ Deno.serve(async (req) => {
     let updated = 0;
     let skipped = 0;
     let errors = 0;
+    let page = 0;
 
     const fetchLimit = limit ?? Number.POSITIVE_INFINITY;
 
-    while (processed < fetchLimit) {
-      const { data: chats, error } = await supabaseAdmin
-        .from('whatsapp_chats')
-        .select('id, name')
-        .eq('is_group', true)
-        .order('updated_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-
-      if (error) {
-        return new Response(JSON.stringify({ error: 'Erro ao buscar chats.' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    while (processed < fetchLimit && page < 50) {
+      page += 1;
+      let groups: WhapiGroup[] = [];
+      try {
+        groups = await fetchGroupsPage(token, pageSize, offset);
+      } catch (syncError) {
+        console.error('[whatsapp-sync-group-names] Failed to fetch groups page', syncError);
+        errors += 1;
+        break;
       }
 
-      if (!chats || chats.length === 0) break;
+      if (groups.length === 0) {
+        break;
+      }
 
-      for (const chat of chats) {
+      for (const group of groups) {
         if (processed >= fetchLimit) break;
         processed += 1;
-        try {
-          const metadata = await fetchChatMetadata(token, chat.id);
-          const name = metadata?.name?.trim();
-          if (!name) {
-            skipped += 1;
-            continue;
-          }
 
-          if (chat.name === name) {
-            skipped += 1;
-            continue;
-          }
+        const groupName = group.name?.trim();
+        if (!groupName || groupName === group.id) {
+          skipped += 1;
+          continue;
+        }
 
-          const { error: updateError } = await supabaseAdmin
-            .from('whatsapp_chats')
-            .update({ name })
-            .eq('id', chat.id);
+        const now = new Date().toISOString();
 
-          if (updateError) {
+        const { data: existingGroup, error: existingGroupError } = await supabaseAdmin
+          .from('whatsapp_groups')
+          .select('id')
+          .eq('id', group.id)
+          .maybeSingle();
+
+        if (existingGroupError) {
+          console.error('[whatsapp-sync-group-names] Failed to load group snapshot', {
+            groupId: group.id,
+            error: existingGroupError,
+          });
+          errors += 1;
+          continue;
+        }
+
+        if (existingGroup?.id) {
+          const { error: groupUpdateError } = await supabaseAdmin
+            .from('whatsapp_groups')
+            .update({
+              name: groupName,
+              type: group.type || 'group',
+              chat_pic: group.chat_pic || null,
+              chat_pic_full: group.chat_pic_full || null,
+              name_at: toIsoString(group.name_at),
+              last_updated_at: now,
+            })
+            .eq('id', group.id);
+
+          if (groupUpdateError) {
+            console.error('[whatsapp-sync-group-names] Failed to update group metadata', {
+              groupId: group.id,
+              error: groupUpdateError,
+            });
             errors += 1;
             continue;
           }
+        } else {
+          const { error: groupInsertError } = await supabaseAdmin.from('whatsapp_groups').insert({
+            id: group.id,
+            name: groupName,
+            type: group.type || 'group',
+            chat_pic: group.chat_pic || null,
+            chat_pic_full: group.chat_pic_full || null,
+            created_at: toIsoString(group.created_at) || now,
+            created_by: group.created_by || 'system',
+            name_at: toIsoString(group.name_at),
+            admin_add_member_mode: group.adminAddMemberMode ?? true,
+            first_seen_at: now,
+            last_updated_at: now,
+          });
 
-          updated += 1;
-        } catch (syncError) {
-          console.error('[whatsapp-sync-group-names] Failed to sync chat name', syncError);
+          if (groupInsertError) {
+            console.error('[whatsapp-sync-group-names] Failed to insert group metadata', {
+              groupId: group.id,
+              error: groupInsertError,
+            });
+            errors += 1;
+            continue;
+          }
+        }
+
+        const { data: chatSnapshot, error: chatSnapshotError } = await supabaseAdmin
+          .from('whatsapp_chats')
+          .select('name')
+          .eq('id', group.id)
+          .maybeSingle();
+
+        if (chatSnapshotError) {
+          console.error('[whatsapp-sync-group-names] Failed to load chat snapshot', {
+            groupId: group.id,
+            error: chatSnapshotError,
+          });
           errors += 1;
+          continue;
+        }
+
+        const { error: chatUpsertError } = await supabaseAdmin.from('whatsapp_chats').upsert(
+          {
+            id: group.id,
+            name: groupName,
+            is_group: true,
+            updated_at: now,
+          },
+          { onConflict: 'id' },
+        );
+
+        if (chatUpsertError) {
+          console.error('[whatsapp-sync-group-names] Failed to upsert chat name', {
+            groupId: group.id,
+            error: chatUpsertError,
+          });
+          errors += 1;
+          continue;
+        }
+
+        const previousChatName = chatSnapshot?.name?.trim() || null;
+        if (previousChatName === groupName) {
+          skipped += 1;
+        } else {
+          updated += 1;
         }
       }
 
-      offset += chats.length;
-      if (chats.length < pageSize) break;
+      offset += groups.length;
+      if (groups.length < pageSize) break;
     }
 
     return new Response(

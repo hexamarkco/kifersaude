@@ -323,7 +323,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-lg">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-600 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-900/25">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg shadow-slate-900/30">
               <BadgeCheck className="h-5 w-5" />
             </span>
             <span className="marketing-display text-2xl font-semibold">Kifer Saude</span>
@@ -349,12 +349,12 @@ export default function LandingPage() {
 
       <main className="pb-28 md:pb-16">
         <section className="relative overflow-hidden px-4 pb-14 pt-14 sm:px-6 lg:px-8">
-          <div className="marketing-glow pointer-events-none absolute left-[-10rem] top-[-7rem] h-80 w-80 rounded-full bg-amber-300/35 blur-3xl" />
-          <div className="marketing-glow pointer-events-none absolute bottom-[-8rem] right-[-10rem] h-96 w-96 rounded-full bg-cyan-300/25 blur-3xl" />
+          <div className="marketing-glow pointer-events-none absolute left-[-10rem] top-[-7rem] h-80 w-80 rounded-full bg-sky-300/32 blur-3xl" />
+          <div className="marketing-glow pointer-events-none absolute bottom-[-8rem] right-[-10rem] h-96 w-96 rounded-full bg-teal-200/30 blur-3xl" />
 
           <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
             <div className="marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">landing de conversao</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">landing de conversao</p>
               <h1 className="marketing-display mt-4 text-5xl font-semibold leading-[0.95] text-slate-900 md:text-7xl">
                 Seu comparativo de planos, com criterio e rapidez.
               </h1>
@@ -367,7 +367,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={scrollToForm}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-700 to-orange-600 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-amber-900/25 transition hover:from-amber-800 hover:to-orange-700"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-700 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-slate-900/25 transition hover:from-slate-800 hover:to-slate-700"
                 >
                   Quero meu comparativo
                   <ArrowRight className="h-4 w-4" />
@@ -376,7 +376,7 @@ export default function LandingPage() {
                   href="https://wa.me/5521979302389"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-white"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-white"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Falar no WhatsApp
@@ -392,7 +392,7 @@ export default function LandingPage() {
               </div>
 
               <div className="mt-8 flex items-center gap-3 text-sm text-slate-600">
-                <div className="flex items-center gap-1 text-amber-500">
+                <div className="flex items-center gap-1 text-sky-500">
                   <Star className="h-4 w-4 fill-current" />
                   <Star className="h-4 w-4 fill-current" />
                   <Star className="h-4 w-4 fill-current" />
@@ -404,7 +404,7 @@ export default function LandingPage() {
             </div>
 
             <article id="lead-form" className="marketing-surface marketing-reveal marketing-delay-1 rounded-[2rem] p-8">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">formulario rapido</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-700">formulario rapido</p>
               <h2 className="marketing-display mt-3 text-4xl font-semibold text-slate-900">Receber analise personalizada</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
                 Preenchimento em menos de 2 minutos. Nossa equipe retorna com os proximos passos de forma objetiva.
@@ -421,7 +421,7 @@ export default function LandingPage() {
                     required
                     value={formData.nome}
                     onChange={(event) => setFormData((current) => ({ ...current, nome: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     placeholder="Como podemos te chamar?"
                   />
                 </div>
@@ -441,7 +441,7 @@ export default function LandingPage() {
                         whatsapp: formatPhone(event.target.value),
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     placeholder="(21) 99999-9999"
                   />
                 </div>
@@ -456,7 +456,7 @@ export default function LandingPage() {
                       type="text"
                       value={formData.cidade}
                       onChange={(event) => setFormData((current) => ({ ...current, cidade: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       placeholder="Rio de Janeiro"
                     />
                   </div>
@@ -474,7 +474,7 @@ export default function LandingPage() {
                           tipoContratacaoId: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     >
                       {contractTypeOptions.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -494,7 +494,7 @@ export default function LandingPage() {
                     type="email"
                     value={formData.email}
                     onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     placeholder="voce@exemplo.com"
                   />
                 </div>
@@ -531,27 +531,27 @@ export default function LandingPage() {
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
             <article className="marketing-surface marketing-reveal rounded-2xl p-6">
-              <Clock3 className="h-6 w-6 text-orange-600" />
+              <Clock3 className="h-6 w-6 text-sky-700" />
               <h3 className="mt-4 text-xl font-black text-slate-900">Triagem agil</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">Entendemos seu perfil e definimos o recorte certo de planos para comparar.</p>
             </article>
             <article className="marketing-surface marketing-reveal marketing-delay-1 rounded-2xl p-6">
-              <ShieldCheck className="h-6 w-6 text-orange-600" />
+              <ShieldCheck className="h-6 w-6 text-sky-700" />
               <h3 className="mt-4 text-xl font-black text-slate-900">Comparacao transparente</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">Rede, carencia, coparticipacao e reajuste com explicacao objetiva e sem jargao.</p>
             </article>
             <article className="marketing-surface marketing-reveal marketing-delay-2 rounded-2xl p-6">
-              <BadgeCheck className="h-6 w-6 text-orange-600" />
+              <BadgeCheck className="h-6 w-6 text-sky-700" />
               <h3 className="mt-4 text-xl font-black text-slate-900">Acompanhamento completo</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">Apoio na proposta, ativacao e primeiros passos de uso do seu novo plano.</p>
             </article>
           </div>
         </section>
 
-        <section className="bg-slate-950 px-4 py-16 text-white sm:px-6 lg:px-8">
+        <section className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <article className="rounded-2xl border border-white/15 bg-white/5 p-7 marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-200">depoimento</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">depoimento</p>
               <h2 className="mt-3 text-3xl font-black">"Sai da duvida para a decisao em um dia"</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 "A equipe da Kifer explicou tudo que eu precisava para contratar sem medo. Recebi comparativo com pontos
@@ -575,14 +575,14 @@ export default function LandingPage() {
         </section>
 
         <section className="px-4 pb-8 pt-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-amber-700 via-orange-600 to-red-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
+          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 p-10 text-white shadow-[0_40px_80px_-48px_rgba(15,23,42,0.52)] md:p-14">
             <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">pronto para decidir melhor?</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">pronto para decidir melhor?</p>
                 <h2 className="marketing-display mt-3 text-5xl font-semibold leading-tight md:text-6xl">
                   Vamos montar seu comparativo estrategico.
                 </h2>
-                <p className="mt-4 max-w-2xl text-orange-50">
+                <p className="mt-4 max-w-2xl text-slate-200">
                   Preencha o formulario ou chame no WhatsApp. O primeiro retorno acontece no mesmo dia util.
                 </p>
               </div>
@@ -590,7 +590,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={scrollToForm}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-slate-100"
                 >
                   Ir para o formulario
                 </button>
@@ -598,7 +598,7 @@ export default function LandingPage() {
                   href="https://wa.me/5521979302389"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/45 bg-white/10 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/20"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/20"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Conversar no WhatsApp

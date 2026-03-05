@@ -347,7 +347,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
         console.log('[LeadForm] Lead inserido com sucesso:', insertedLead);
         console.log('[LeadForm] ID do lead inserido:', insertedLead.id);
-        console.log('[LeadForm] Trigger auto-send-lead-messages deve ser acionado agora...');
+        console.log('[LeadForm] Trigger de auto-contact no leads-api deve ser acionado agora...');
 
         savedLead = insertedLead as Lead;
         savedLeadId = insertedLead.id;

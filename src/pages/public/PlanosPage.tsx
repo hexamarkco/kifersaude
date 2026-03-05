@@ -108,7 +108,7 @@ export default function PlanosPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-lg">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-600 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-900/25">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg shadow-slate-900/30">
               <BadgeCheck className="h-5 w-5" />
             </span>
             <span>
@@ -142,7 +142,7 @@ export default function PlanosPage() {
       <main className="pb-24">
         <section className="px-4 pb-10 pt-14 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl marketing-reveal">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">pagina reconstruida</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">pagina reconstruida</p>
             <h1 className="marketing-display mt-4 max-w-5xl text-5xl font-semibold leading-[0.95] text-slate-900 md:text-7xl">
               Compare planos com criterio de uso, cobertura e custo anual.
             </h1>
@@ -160,12 +160,12 @@ export default function PlanosPage() {
                 key={title}
                 className={`marketing-surface marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index >= 2 ? 'marketing-delay-2' : ''}`}
               >
-                <span className="inline-flex rounded-xl bg-amber-100 p-3 text-amber-700">
+                <span className="inline-flex rounded-xl bg-slate-100 p-3 text-slate-700">
                   <Icon className="h-5 w-5" />
                 </span>
                 <h2 className="mt-4 text-2xl font-black text-slate-900">{title}</h2>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{description}</p>
-                <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+                <p className="mt-4 rounded-xl bg-slate-100 px-4 py-3 text-sm leading-relaxed text-slate-700">
                   <strong className="font-black">Melhor para: </strong>
                   {bestFor}
                 </p>
@@ -177,7 +177,7 @@ export default function PlanosPage() {
         <section id="operadoras" className="px-4 py-14 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">operadoras</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">operadoras</p>
               <h2 className="marketing-display mt-3 text-5xl font-semibold text-slate-900">Comparativo de operadoras na mesma pagina</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 Conforme solicitado, o conteudo de /operadoras foi consolidado aqui para facilitar analise em um unico fluxo.
@@ -201,10 +201,10 @@ export default function PlanosPage() {
           </div>
         </section>
 
-        <section className="bg-slate-950 px-4 py-16 text-white sm:px-6 lg:px-8">
+        <section className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">modelo financeiro</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">modelo financeiro</p>
               <h2 className="marketing-display mt-3 text-5xl font-semibold">Quando a coparticipacao ajuda e quando ela pesa</h2>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-2">
@@ -213,7 +213,7 @@ export default function PlanosPage() {
                   key={title}
                   className={`rounded-2xl border border-white/15 bg-white/5 p-7 marketing-reveal ${index === 1 ? 'marketing-delay-1' : ''}`}
                 >
-                  <span className="inline-flex rounded-xl bg-amber-200/15 p-3 text-amber-200">
+                  <span className="inline-flex rounded-xl bg-cyan-300/15 p-3 text-cyan-100">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h3 className="mt-4 text-2xl font-black">{title}</h3>
@@ -228,13 +228,13 @@ export default function PlanosPage() {
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_1fr]">
             <article className="marketing-surface marketing-reveal rounded-2xl p-7">
               <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900">
-                <Building2 className="h-6 w-6 text-orange-600" />
+                <Building2 className="h-6 w-6 text-sky-700" />
                 Checklist antes de assinar
               </h2>
               <ul className="mt-6 space-y-4">
                 {decisionChecklist.map((item) => (
                   <li key={item} className="flex gap-3 text-sm text-slate-700">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-700" />
                     {item}
                   </li>
                 ))}
@@ -258,14 +258,14 @@ export default function PlanosPage() {
         </section>
 
         <section className="px-4 pb-8 pt-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-amber-700 via-orange-600 to-red-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
+          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 p-10 text-white shadow-[0_40px_80px_-48px_rgba(15,23,42,0.52)] md:p-14">
             <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">fale com a equipe</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">fale com a equipe</p>
                 <h2 className="marketing-display mt-3 text-5xl font-semibold leading-tight md:text-6xl">
                   Quer uma recomendacao para o seu perfil?
                 </h2>
-                <p className="mt-4 max-w-2xl text-orange-50">
+                <p className="mt-4 max-w-2xl text-slate-200">
                   Receba um comparativo objetivo com plano principal, alternativa de seguranca e orientacao completa de
                   contratacao.
                 </p>
@@ -274,7 +274,7 @@ export default function PlanosPage() {
               <div className="space-y-3">
                 <Link
                   to="/lp"
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-slate-100"
                 >
                   Solicitar cotacao
                 </Link>

@@ -105,7 +105,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-lg">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-600 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-900/25">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg shadow-slate-900/30">
               <HeartHandshake className="h-5 w-5" />
             </span>
             <span>
@@ -141,12 +141,12 @@ export default function HomePage() {
 
       <main className="pb-24">
         <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 lg:px-8">
-          <div className="marketing-glow pointer-events-none absolute left-[-10rem] top-[-8rem] h-80 w-80 rounded-full bg-amber-300/40 blur-3xl" />
-          <div className="marketing-glow pointer-events-none absolute bottom-[-6rem] right-[-9rem] h-96 w-96 rounded-full bg-cyan-300/25 blur-3xl" />
+          <div className="marketing-glow pointer-events-none absolute left-[-10rem] top-[-8rem] h-80 w-80 rounded-full bg-sky-300/35 blur-3xl" />
+          <div className="marketing-glow pointer-events-none absolute bottom-[-6rem] right-[-9rem] h-96 w-96 rounded-full bg-teal-200/30 blur-3xl" />
 
           <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:items-center">
             <div className="marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-700">institucional 2026</p>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">institucional 2026</p>
               <h1 className="marketing-display mt-5 text-5xl font-semibold leading-[0.95] text-slate-900 md:text-7xl">
                 Clareza para escolher o plano certo.
               </h1>
@@ -159,14 +159,14 @@ export default function HomePage() {
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   to="/lp"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-700 to-orange-600 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-amber-900/25 transition hover:from-amber-800 hover:to-orange-700"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-700 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-slate-900/25 transition hover:from-slate-800 hover:to-slate-700"
                 >
                   Receber comparativo
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   to="/planos"
-                  className="inline-flex items-center rounded-2xl border border-slate-300 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-white"
+                  className="inline-flex items-center rounded-2xl border border-slate-200 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-white"
                 >
                   Explorar planos
                 </Link>
@@ -180,19 +180,19 @@ export default function HomePage() {
             </div>
 
             <article className="marketing-surface marketing-reveal marketing-delay-1 rounded-[2rem] p-8">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">o que voce ganha</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-700">o que voce ganha</p>
               <h2 className="marketing-display mt-3 text-4xl font-semibold text-slate-900">Decisao com criterio real</h2>
               <ul className="mt-6 space-y-4 text-sm text-slate-700">
                 <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-700" />
                   Recomendacao guiada por uso real e nao por preco de entrada.
                 </li>
                 <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-700" />
                   Comparativo de rede, carencia, coparticipacao e reajuste em linguagem clara.
                 </li>
                 <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-700" />
                   Suporte na proposta e na ativacao para evitar retrabalho.
                 </li>
               </ul>
@@ -222,7 +222,7 @@ export default function HomePage() {
                 key={title}
                 className={`marketing-surface marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index === 2 ? 'marketing-delay-2' : ''}`}
               >
-                <span className="inline-flex rounded-xl bg-amber-100 p-3 text-amber-700">
+                <span className="inline-flex rounded-xl bg-slate-100 p-3 text-slate-700">
                   <Icon className="h-5 w-5" />
                 </span>
                 <h3 className="mt-4 text-xl font-black text-slate-900">{title}</h3>
@@ -233,9 +233,9 @@ export default function HomePage() {
         </section>
 
         <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-slate-950 px-8 py-11 text-white shadow-[0_40px_90px_-56px_rgba(15,23,42,0.95)] md:px-12">
+          <div className="mx-auto max-w-7xl rounded-[2rem] bg-slate-900 px-8 py-11 text-white shadow-[0_40px_90px_-56px_rgba(15,23,42,0.92)] md:px-12">
             <div className="max-w-3xl marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">como funciona</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">como funciona</p>
               <h2 className="marketing-display mt-3 text-5xl font-semibold leading-tight">Metodo consultivo em 3 movimentos</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 Conteudo de /como-funciona consolidado na home para voce entender rapidamente como conduzimos cada etapa.
@@ -247,7 +247,7 @@ export default function HomePage() {
                   key={step.title}
                   className={`rounded-2xl border border-white/15 bg-white/5 p-6 marketing-reveal ${index === 1 ? 'marketing-delay-1' : ''} ${index === 2 ? 'marketing-delay-2' : ''}`}
                 >
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-200">etapa {index + 1}</p>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-200">etapa {index + 1}</p>
                   <h3 className="mt-3 text-xl font-black">{step.title}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-slate-300">{step.text}</p>
                 </article>
@@ -259,7 +259,7 @@ export default function HomePage() {
         <section id="depoimentos" className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">depoimentos reais</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">depoimentos reais</p>
               <h2 className="marketing-display mt-3 text-5xl font-semibold text-slate-900">Historias de quem decidiu melhor</h2>
             </div>
 
@@ -269,7 +269,7 @@ export default function HomePage() {
                   key={testimonial.name}
                   className={`marketing-surface marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index === 2 ? 'marketing-delay-2' : ''}`}
                 >
-                  <div className="flex items-center gap-1 text-amber-500">
+                  <div className="flex items-center gap-1 text-sky-500">
                     <Star className="h-4 w-4 fill-current" />
                     <Star className="h-4 w-4 fill-current" />
                     <Star className="h-4 w-4 fill-current" />
@@ -288,7 +288,7 @@ export default function HomePage() {
         <section id="faq" className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="marketing-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">faq essencial</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">faq essencial</p>
               <h2 className="marketing-display mt-3 text-5xl font-semibold text-slate-900">Duvidas comuns, respostas diretas</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 Conteudo de /faq incorporado na home para facilitar sua leitura antes de pedir o comparativo.
@@ -310,7 +310,7 @@ export default function HomePage() {
                 >
                   <summary className="cursor-pointer list-none text-sm font-black text-slate-900">
                     <span className="inline-flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-700" />
+                      <Sparkles className="h-4 w-4 text-sky-700" />
                       {item.question}
                     </span>
                   </summary>
@@ -322,14 +322,14 @@ export default function HomePage() {
         </section>
 
         <section className="px-4 pb-8 pt-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-amber-700 via-orange-600 to-red-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
+          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 p-10 text-white shadow-[0_40px_80px_-48px_rgba(15,23,42,0.52)] md:p-14">
             <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">proximo passo</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">proximo passo</p>
                 <h2 className="marketing-display mt-3 text-5xl font-semibold leading-tight md:text-6xl">
                   Receba um comparativo desenhado para o seu perfil.
                 </h2>
-                <p className="mt-4 max-w-2xl text-orange-50">
+                <p className="mt-4 max-w-2xl text-slate-200">
                   Se voce esta no inicio ou pronto para contratar, nossa equipe organiza o caminho com clareza tecnica e
                   acompanhamento humano.
                 </p>
@@ -338,7 +338,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <Link
                   to="/lp"
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-slate-100"
                 >
                   Solicitar cotacao personalizada
                 </Link>
@@ -346,12 +346,12 @@ export default function HomePage() {
                   href="https://wa.me/5521979302389"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/45 bg-white/10 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/20"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/20"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Falar no WhatsApp
                 </a>
-                <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-orange-100">
+                <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100">
                   <Clock3 className="h-4 w-4" />
                   primeiro retorno no mesmo dia util
                 </p>

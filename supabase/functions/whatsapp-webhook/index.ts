@@ -594,21 +594,46 @@ async function findLeadByPhone(phoneNumber: string): Promise<string | null> {
   return data.nome_completo;
 }
 
+function getValidChatName(value: string | null | undefined, chatId: string): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === chatId) {
+    return null;
+  }
+  return trimmed;
+}
+
 async function resolveChatName(message: NormalizedMessage): Promise<string> {
   const chatType = getChatIdType(message.chatId);
 
   if (message.isGroup || chatType === 'group') {
+    const { data: existingGroup } = await supabase
+      .from('whatsapp_groups')
+      .select('name')
+      .eq('id', message.chatId)
+      .maybeSingle();
+
+    const canonicalGroupName = getValidChatName(existingGroup?.name, message.chatId);
+    if (canonicalGroupName) {
+      return canonicalGroupName;
+    }
+
+    const messageGroupName = getValidChatName(message.chatName, message.chatId);
+    if (messageGroupName) {
+      return messageGroupName;
+    }
+
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
       .select('name')
       .eq('id', message.chatId)
       .maybeSingle();
 
-    if (existingChat?.name) {
-      return existingChat.name;
+    const existingChatName = getValidChatName(existingChat?.name, message.chatId);
+    if (existingChatName) {
+      return existingChatName;
     }
 
-    return message.chatName ?? message.contactName ?? message.chatId;
+    return message.chatId;
   }
 
   if (chatType === 'newsletter' || chatType === 'broadcast' || chatType === 'status') {
@@ -752,6 +777,13 @@ async function upsertChat(message: NormalizedMessage) {
 
   if (error) {
     throw new Error(`Erro ao salvar chat: ${error.message}`);
+  }
+
+  if (chatIdType === 'group' && chatName && chatName !== message.chatId) {
+    await supabase
+      .from('whatsapp_groups')
+      .update({ name: chatName, last_updated_at: new Date().toISOString() })
+      .eq('id', message.chatId);
   }
 }
 

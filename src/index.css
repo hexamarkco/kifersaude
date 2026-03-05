@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -1093,25 +1093,42 @@
 }
 
 .marketing-theme {
-  --marketing-bg: #f5f3ed;
-  --marketing-line: rgba(30, 41, 59, 0.13);
-  font-family: 'Plus Jakarta Sans', 'Poppins', 'Segoe UI', sans-serif;
+  --marketing-bg: #f6f8fb;
+  --marketing-line: rgba(15, 23, 42, 0.1);
+  font-family: 'Poppins', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  color: #0f172a;
   background:
-    radial-gradient(circle at 10% 0%, rgba(245, 174, 83, 0.22), transparent 34%),
-    radial-gradient(circle at 90% 8%, rgba(59, 130, 246, 0.16), transparent 34%),
-    radial-gradient(circle at 52% 96%, rgba(251, 146, 60, 0.14), transparent 40%),
+    radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.14), transparent 36%),
+    radial-gradient(circle at 92% 9%, rgba(14, 165, 233, 0.12), transparent 34%),
+    radial-gradient(circle at 50% 96%, rgba(15, 23, 42, 0.06), transparent 42%),
     var(--marketing-bg);
 }
 
 .marketing-theme .marketing-display {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Space Grotesk', 'Poppins', 'Segoe UI', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.marketing-theme h1,
+.marketing-theme h2,
+.marketing-theme h3,
+.marketing-theme h4,
+.marketing-theme h5,
+.marketing-theme h6 {
+  font-family: 'Space Grotesk', 'Poppins', 'Segoe UI', sans-serif;
   letter-spacing: -0.02em;
 }
 
 .marketing-theme .marketing-surface {
   border: 1px solid var(--marketing-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 252, 247, 0.95) 100%);
-  box-shadow: 0 24px 52px -40px rgba(15, 23, 42, 0.42), 0 14px 24px -20px rgba(124, 45, 18, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.9) 100%);
+  box-shadow: 0 28px 58px -46px rgba(15, 23, 42, 0.28), 0 14px 26px -24px rgba(15, 23, 42, 0.12);
+}
+
+.marketing-theme .marketing-chip {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f172a;
 }
 
 .marketing-theme .marketing-reveal {

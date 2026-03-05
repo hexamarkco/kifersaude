@@ -16,15 +16,15 @@ import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
-  getWhatsAppChat,
   getWhatsAppChats,
   getWhatsAppContacts,
+  getWhatsAppGroups,
   getWhatsAppNewsletters,
   normalizeChatId,
   reactToMessage,
   removeReactionFromMessage,
   type WhapiChat,
-  type WhapiChatMetadata,
+  type WhapiGroup,
 } from '../../lib/whatsappApiService';
 
 type WhatsAppChat = {
@@ -125,17 +125,18 @@ export default function WhatsAppTab() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
-  const groupNamesByIdRef = useRef<Map<string, string>>(new Map());
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
   const newsletterNameLookupAttemptsRef = useRef<Set<string>>(new Set());
+  const { user } = useAuth();
+  const userRef = useRef(user);
   const isWindowFocusedRef = useRef(true);
   const desktopNotificationsEnabledRef = useRef(true);
   const notificationPermissionRef = useRef<NotificationPermission | 'unsupported'>('unsupported');
   const notificationAudioRef = useRef<AudioContext | null>(null);
   const activeDesktopNotificationRef = useRef<Notification | null>(null);
+  const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
-  const { user } = useAuth();
   const loadingUi = useAdaptiveLoading(loading);
 
   function normalizePhoneNumber(phone: string | null | undefined) {
@@ -245,13 +246,6 @@ export default function WhatsAppTab() {
     return Array.from(variants);
   };
 
-  const shouldFetchGroupName = (chat: WhatsAppChat) => {
-    if (!chat.is_group) return false;
-    if (chat.name && chat.name.trim() && chat.name !== chat.id) return false;
-    if (groupNamesByIdRef.current.has(chat.id)) return false;
-    return true;
-  };
-
   const shouldFetchNewsletterName = (chat: WhatsAppChat) => {
     const kind = getChatKind(chat);
     if (kind !== 'newsletter') return false;
@@ -263,37 +257,70 @@ export default function WhatsAppTab() {
   };
 
   const loadGroupNames = async (currentChats: WhatsAppChat[]) => {
-    const candidates = currentChats.filter(shouldFetchGroupName);
-    if (candidates.length === 0) return;
+    const groupIds = new Set(currentChats.filter((chat) => getChatKind(chat) === 'group').map((chat) => chat.id));
+    if (groupIds.size === 0) return;
 
-    const updates = await Promise.all(
-      candidates.map(async (chat) => {
-        try {
-          const metadata: WhapiChatMetadata = await getWhatsAppChat(chat.id);
-          const name = metadata.name?.trim();
-          return name ? { id: chat.id, name } : null;
-        } catch (error) {
-          console.warn('Error loading group name:', { chatId: chat.id, error });
-          return null;
+    try {
+      const namesById = new Map<string, string>();
+      const pageSize = 100;
+      let offset = 0;
+
+      for (let page = 0; page < 20; page += 1) {
+        const response = await getWhatsAppGroups(pageSize, offset, false);
+        const groups = response.groups || [];
+
+        groups.forEach((group: WhapiGroup) => {
+          if (!groupIds.has(group.id)) return;
+          const name = group.name?.trim();
+          if (!name || name === group.id) return;
+          namesById.set(group.id, name);
+        });
+
+        const resolvedAllCandidates = Array.from(groupIds).every((chatId) => namesById.has(chatId));
+        if (resolvedAllCandidates || groups.length < pageSize) {
+          break;
         }
-      }),
-    );
 
-    const validUpdates = updates.filter((item): item is { id: string; name: string } => Boolean(item));
-    if (validUpdates.length === 0) return;
+        offset += groups.length;
+        if (groups.length === 0) {
+          break;
+        }
+      }
 
-    setGroupNamesById((prev) => {
-      const next = new Map(prev);
-      validUpdates.forEach((item) => next.set(item.id, item.name));
-      return next;
-    });
+      const validUpdates = Array.from(namesById.entries()).map(([id, name]) => ({ id, name }));
+      if (validUpdates.length === 0) return;
 
-    setChats((prev) =>
-      prev.map((chat) => {
-        const match = validUpdates.find((item) => item.id === chat.id);
-        return match ? { ...chat, name: match.name } : chat;
-      }),
-    );
+      setGroupNamesById((prev) => {
+        const next = new Map(prev);
+        validUpdates.forEach((item) => next.set(item.id, item.name));
+        return next;
+      });
+
+      setChats((prev) =>
+        prev.map((chat) => {
+          const match = validUpdates.find((item) => item.id === chat.id);
+          return match ? { ...chat, name: match.name } : chat;
+        }),
+      );
+
+      const now = new Date().toISOString();
+      await Promise.all(
+        validUpdates.map(async (item) => {
+          const { error: persistError } = await supabase
+            .from('whatsapp_chats')
+            .update({ name: item.name, updated_at: now })
+            .eq('id', item.id)
+            .select('id')
+            .maybeSingle();
+
+          if (persistError) {
+            console.warn('Error persisting group name:', { chatId: item.id, error: persistError });
+          }
+        }),
+      );
+    } catch (error) {
+      console.warn('Error loading group names:', error);
+    }
   };
 
   const loadNewsletterNames = async (currentChats: WhatsAppChat[]) => {
@@ -384,12 +411,12 @@ export default function WhatsAppTab() {
   }, [chats]);
 
   useEffect(() => {
-    groupNamesByIdRef.current = groupNamesById;
-  }, [groupNamesById]);
-
-  useEffect(() => {
     newsletterNamesByIdRef.current = newsletterNamesById;
   }, [newsletterNamesById]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     desktopNotificationsEnabledRef.current = desktopNotificationsEnabled;
@@ -398,6 +425,16 @@ export default function WhatsAppTab() {
   useEffect(() => {
     notificationPermissionRef.current = notificationPermission;
   }, [notificationPermission]);
+
+  useEffect(
+    () => () => {
+      if (unreadCountsRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(unreadCountsRefreshTimeoutRef.current);
+        unreadCountsRefreshTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -621,6 +658,8 @@ export default function WhatsAppTab() {
         const message = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
         if (!message?.id || !message.chat_id) return;
 
+        scheduleUnreadCountsRefresh();
+
         if (eventType === 'INSERT') {
           loadChats();
         }
@@ -685,8 +724,8 @@ export default function WhatsAppTab() {
                   updateChatArchive(chatToUpdate.id, false);
                 }
                 scrollToBottom();
-                if (message.direction === 'inbound' && user) {
-                  markMessagesRead([message]);
+                if (message.direction === 'inbound' && userRef.current) {
+                  void markMessagesRead([message]);
                 }
               }
             }
@@ -748,6 +787,11 @@ export default function WhatsAppTab() {
   }, [selectedChat]);
 
   useEffect(() => {
+    if (!user) return;
+    void loadUnreadCounts();
+  }, [user]);
+
+  useEffect(() => {
     if (!selectedChat) return;
 
     const intervalId = window.setInterval(() => {
@@ -767,6 +811,17 @@ export default function WhatsAppTab() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scheduleUnreadCountsRefresh = (delayMs: number = 250) => {
+    if (unreadCountsRefreshTimeoutRef.current !== null) {
+      window.clearTimeout(unreadCountsRefreshTimeoutRef.current);
+    }
+
+    unreadCountsRefreshTimeoutRef.current = window.setTimeout(() => {
+      unreadCountsRefreshTimeoutRef.current = null;
+      void loadUnreadCounts();
+    }, delayMs);
   };
 
   const loadChats = async () => {
@@ -865,19 +920,9 @@ export default function WhatsAppTab() {
       setLoadedMessagesCount(baseMessages.length);
       setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
 
-      setChats((prev) =>
-        prev.map((item) =>
-          item.id === chat.id
-            ? {
-                ...item,
-                unread_count: 0,
-              }
-            : item,
-        ),
-      );
-
-      if (user) {
-        await markMessagesRead(baseMessages);
+      if (userRef.current) {
+        await markChatAsRead(chat, baseMessages);
+        await loadUnreadCounts();
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -932,15 +977,16 @@ export default function WhatsAppTab() {
   };
 
   const loadUnreadCounts = async () => {
-    if (!user) return;
+    const activeUser = userRef.current;
+    if (!activeUser) return;
 
     let unreadCountsResponse = await supabase.rpc('get_whatsapp_unread_counts', {
-      current_user_id: user.id,
+      current_user_id: activeUser.id,
     });
 
     if (unreadCountsResponse.error?.code === 'PGRST202') {
       unreadCountsResponse = await supabase.rpc('get_whatsapp_unread_counts', {
-        current_user: user.id,
+        current_user: activeUser.id,
       });
     }
 
@@ -957,27 +1003,73 @@ export default function WhatsAppTab() {
     });
 
     setChats((prev) =>
-      prev.map((chat) => ({
-        ...chat,
-        unread_count: countsMap.get(chat.id) ?? 0,
-      })),
+      prev.map((chat) => {
+        const unreadCount = getChatIdVariants(chat).reduce((total, variant) => total + (countsMap.get(variant) ?? 0), 0);
+        return {
+          ...chat,
+          unread_count: unreadCount,
+        };
+      }),
+    );
+  };
+
+  const markChatAsRead = async (chat: WhatsAppChat, fallbackMessages: WhatsAppMessage[] = []) => {
+    const activeUser = userRef.current;
+    if (!activeUser) return;
+
+    const chatIds = getChatIdVariants(chat);
+    if (chatIds.length === 0) return;
+
+    let response = await supabase.rpc('mark_whatsapp_chat_read', {
+      current_user_id: activeUser.id,
+      chat_ids: chatIds,
+    });
+
+    if (response.error?.code === 'PGRST202') {
+      response = await supabase.rpc('mark_whatsapp_chat_read', {
+        current_user: activeUser.id,
+        chat_ids: chatIds,
+      });
+    }
+
+    if (response.error) {
+      console.error('Error marking chat as read:', response.error);
+      if (fallbackMessages.length > 0) {
+        await markMessagesRead(fallbackMessages);
+      }
+      return;
+    }
+
+    setChats((prev) =>
+      prev.map((existing) =>
+        chatIds.includes(existing.id)
+          ? {
+              ...existing,
+              unread_count: 0,
+            }
+          : existing,
+      ),
     );
   };
 
   const markMessagesRead = async (messagesToMark: WhatsAppMessage[]) => {
-    if (!user) return;
+    const activeUser = userRef.current;
+    if (!activeUser) return;
     const unreadInbound = messagesToMark.filter((message) => message.direction === 'inbound');
     if (unreadInbound.length === 0) return;
     const rows = unreadInbound.map((message) => ({
       message_id: message.id,
-      user_id: user.id,
+      user_id: activeUser.id,
       read_at: new Date().toISOString(),
     }));
 
     const { error } = await supabase.from('whatsapp_message_reads').upsert(rows, { onConflict: 'message_id,user_id' });
     if (error) {
       console.error('Error marking messages as read:', error);
+      return;
     }
+
+    scheduleUnreadCountsRefresh();
 
     setChats((prev) =>
       prev.map((chat) => {
@@ -1054,6 +1146,7 @@ export default function WhatsAppTab() {
       }
 
       scrollToBottom();
+      scheduleUnreadCountsRefresh();
       return;
     }
 
@@ -1126,6 +1219,7 @@ export default function WhatsAppTab() {
         body: { chatId: selectedChat.id, count: 200 },
       });
       await loadMessages(selectedChat);
+      scheduleUnreadCountsRefresh();
     } catch (error) {
       console.error('Error syncing from Whapi:', error);
     } finally {

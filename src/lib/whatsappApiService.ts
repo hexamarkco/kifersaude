@@ -548,11 +548,77 @@ export interface WhapiNewsletter {
   [key: string]: unknown;
 }
 
+export interface WhapiGroup {
+  id: string;
+  name?: string;
+  type?: string;
+  timestamp?: number;
+  chat_pic?: string;
+  chat_pic_full?: string;
+  participants_count?: number;
+  [key: string]: unknown;
+}
+
+export interface WhapiGroupListResponse {
+  groups: WhapiGroup[];
+  count: number;
+  total: number;
+  offset: number;
+}
+
 export interface WhapiNewsletterListResponse {
   newsletters: WhapiNewsletter[];
   count: number;
   total: number;
   offset: number;
+}
+
+function normalizeWhapiGroupListPayload(payload: unknown, requestedOffset: number): WhapiGroupListResponse {
+  if (Array.isArray(payload)) {
+    const groups = payload.filter((item): item is WhapiGroup => Boolean(item && typeof item === 'object' && 'id' in item));
+    return {
+      groups,
+      count: groups.length,
+      total: groups.length,
+      offset: requestedOffset,
+    };
+  }
+
+  if (payload && typeof payload === 'object') {
+    const raw = payload as {
+      groups?: unknown;
+      count?: unknown;
+      total?: unknown;
+      offset?: unknown;
+      id?: unknown;
+    };
+
+    if (Array.isArray(raw.groups)) {
+      const groups = raw.groups.filter(
+        (item): item is WhapiGroup => Boolean(item && typeof item === 'object' && 'id' in item),
+      );
+      const count = typeof raw.count === 'number' ? raw.count : groups.length;
+      const total = typeof raw.total === 'number' ? raw.total : Math.max(count, groups.length);
+      const offset = typeof raw.offset === 'number' ? raw.offset : requestedOffset;
+      return { groups, count, total, offset };
+    }
+
+    if (typeof raw.id === 'string') {
+      return {
+        groups: [raw as unknown as WhapiGroup],
+        count: 1,
+        total: 1,
+        offset: requestedOffset,
+      };
+    }
+  }
+
+  return {
+    groups: [],
+    count: 0,
+    total: 0,
+    offset: requestedOffset,
+  };
 }
 
 export async function getWhatsAppChat(chatId: string): Promise<WhapiChatMetadata> {
@@ -740,6 +806,35 @@ export async function getWhatsAppNewsletters(
   }
 
   return response.json();
+}
+
+export async function getWhatsAppGroups(
+  count: number = 100,
+  offset: number = 0,
+  resync: boolean = false,
+): Promise<WhapiGroupListResponse> {
+  const settings = await getWhatsAppSettings();
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', count.toString());
+  queryParams.append('offset', offset.toString());
+  queryParams.append('resync', String(resync));
+
+  const response = await fetch(`${WHAPI_BASE_URL}/groups?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    throw new Error(formatApiError(error));
+  }
+
+  const payload = await response.json().catch(() => []);
+  return normalizeWhapiGroupListPayload(payload, offset);
 }
 
 export async function getWhatsAppContacts(count: number = 500, offset: number = 0): Promise<WhapiContactListResponse> {

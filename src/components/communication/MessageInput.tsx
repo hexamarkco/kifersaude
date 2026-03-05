@@ -500,27 +500,34 @@ export function MessageInput({
     });
 
     const normalizedChatId = normalizeChatId(chatId);
-    const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
-      id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      chat_id: normalizedChatId,
-      from_number: null,
-      to_number: normalizedChatId,
-      type: 'text',
-      body: resolvedText,
-      has_media: false,
-      timestamp: new Date().toISOString(),
-      direction: 'outbound',
-      payload: response,
-    });
+    const sentAt = new Date().toISOString();
+    const persistedMessageId = typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
+    const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-    if (insertError) {
-      console.warn('Erro ao salvar mensagem no banco:', insertError);
+    if (persistedMessageId) {
+      const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
+        id: persistedMessageId,
+        chat_id: normalizedChatId,
+        from_number: null,
+        to_number: normalizedChatId,
+        type: 'text',
+        body: resolvedText,
+        has_media: false,
+        timestamp: sentAt,
+        direction: 'outbound',
+        payload: response,
+      });
+
+      if (insertError) {
+        console.warn('Erro ao salvar mensagem no banco:', insertError);
+      }
+    } else {
+      console.warn('Resposta sem ID da mensagem; salvando apenas no estado local até sincronizar.', response);
     }
 
-    const sentAt = new Date().toISOString();
     const textPayload: SentMessagePayload = {
-      id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      chat_id: chatId,
+      id: messageId,
+      chat_id: normalizedChatId,
       body: resolvedText,
       type: 'text',
       has_media: false,
@@ -664,27 +671,34 @@ export function MessageInput({
 
           const normalizedChatId = normalizeChatId(chatId);
           const bodyText = pendingLinkMessage;
-          const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
-            id: response.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            chat_id: normalizedChatId,
-            from_number: null,
-            to_number: normalizedChatId,
-            type: 'link_preview',
-            body: bodyText,
-            has_media: true,
-            timestamp: new Date().toISOString(),
-            direction: 'outbound',
-            payload: response,
-          });
+          const sentAt = new Date().toISOString();
+          const persistedMessageId = typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
+          const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-          if (insertError) {
-            console.warn('Erro ao salvar mensagem no banco:', insertError);
+          if (persistedMessageId) {
+            const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
+              id: persistedMessageId,
+              chat_id: normalizedChatId,
+              from_number: null,
+              to_number: normalizedChatId,
+              type: 'link_preview',
+              body: bodyText,
+              has_media: true,
+              timestamp: sentAt,
+              direction: 'outbound',
+              payload: response,
+            });
+
+            if (insertError) {
+              console.warn('Erro ao salvar mensagem no banco:', insertError);
+            }
+          } else {
+            console.warn('Resposta sem ID da mensagem de link; salvando apenas no estado local até sincronizar.', response);
           }
 
-          const sentAt = new Date().toISOString();
           const textPayload: SentMessagePayload = {
-            id: response.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            chat_id: chatId,
+            id: messageId,
+            chat_id: normalizedChatId,
             body: bodyText,
             type: 'link_preview',
             has_media: true,

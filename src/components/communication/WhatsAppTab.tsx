@@ -176,6 +176,7 @@ export default function WhatsAppTab() {
   const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
   const [prioritizeUnread, setPrioritizeUnread] = useState(false);
   const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
+  const [chatMenuMuteOpen, setChatMenuMuteOpen] = useState(false);
   const [isListSettingsOpen, setIsListSettingsOpen] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
@@ -208,6 +209,7 @@ export default function WhatsAppTab() {
   const notificationAudioRef = useRef<AudioContext | null>(null);
   const activeDesktopNotificationRef = useRef<Notification | null>(null);
   const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
+  const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
@@ -257,6 +259,129 @@ export default function WhatsAppTab() {
     left: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
     right: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
   ) => getChatTimeValue(right) - getChatTimeValue(left);
+
+  const isClientGeneratedMessageId = (id: string) => id.startsWith('local-') || id.startsWith('msg-');
+
+  const normalizeMessageBodyForMatch = (value: string | null | undefined) =>
+    (value || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const isLikelyOutboundDuplicateMessage = (
+    left: Pick<WhatsAppMessage, 'id' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
+    right: Pick<WhatsAppMessage, 'id' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
+  ) => {
+    if (left.id === right.id) return true;
+    if (left.direction !== 'outbound' || right.direction !== 'outbound') return false;
+    if (!isClientGeneratedMessageId(left.id) && !isClientGeneratedMessageId(right.id)) return false;
+
+    const leftBody = normalizeMessageBodyForMatch(left.body);
+    const rightBody = normalizeMessageBodyForMatch(right.body);
+    if (!leftBody || !rightBody || leftBody !== rightBody) return false;
+
+    const leftType = (left.type || '').toLowerCase();
+    const rightType = (right.type || '').toLowerCase();
+    if (leftType !== rightType) return false;
+    if (Boolean(left.has_media) !== Boolean(right.has_media)) return false;
+
+    const timeDelta = Math.abs(getMessageTimeValue(left) - getMessageTimeValue(right));
+    return timeDelta <= 2 * 60 * 1000;
+  };
+
+  const getMessageMergeScore = (
+    message: Pick<WhatsAppMessage, 'id' | 'ack_status' | 'timestamp' | 'payload' | 'created_at'>,
+  ) => {
+    let score = 0;
+    if (!isClientGeneratedMessageId(message.id)) score += 4;
+    if (typeof message.ack_status === 'number') score += 2;
+    if (message.timestamp) score += 1;
+    if (message.payload && typeof message.payload === 'object') score += 1;
+    if (message.created_at) score += 1;
+    return score;
+  };
+
+  const mergeMessageForDisplay = (left: WhatsAppMessage, right: WhatsAppMessage): WhatsAppMessage => {
+    const leftScore = getMessageMergeScore(left);
+    const rightScore = getMessageMergeScore(right);
+
+    const preferred =
+      rightScore > leftScore || (rightScore === leftScore && getMessageTimeValue(right) >= getMessageTimeValue(left))
+        ? right
+        : left;
+    const fallback = preferred === left ? right : left;
+
+    return {
+      ...fallback,
+      ...preferred,
+      id: preferred.id,
+      ack_status: preferred.ack_status ?? fallback.ack_status,
+      body: preferred.body ?? fallback.body,
+      timestamp: preferred.timestamp ?? fallback.timestamp,
+      payload: preferred.payload ?? fallback.payload,
+      created_at: preferred.created_at || fallback.created_at,
+    };
+  };
+
+  const dedupeMessagesForDisplay = (items: WhatsAppMessage[]) => {
+    const sorted = [...items].sort(sortMessagesChronologically);
+    const deduped: WhatsAppMessage[] = [];
+
+    sorted.forEach((message) => {
+      const sameIdIndex = deduped.findIndex((item) => item.id === message.id);
+      if (sameIdIndex >= 0) {
+        deduped[sameIdIndex] = mergeMessageForDisplay(deduped[sameIdIndex], message);
+        return;
+      }
+
+      const likelyDuplicateIndex = deduped.findIndex((item) => isLikelyOutboundDuplicateMessage(item, message));
+      if (likelyDuplicateIndex >= 0) {
+        deduped[likelyDuplicateIndex] = mergeMessageForDisplay(deduped[likelyDuplicateIndex], message);
+        return;
+      }
+
+      deduped.push(message);
+    });
+
+    return deduped.sort(sortMessagesChronologically);
+  };
+
+  const getMessageCalendarDate = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
+    const timeValue = getMessageTimeValue(message);
+    if (!Number.isFinite(timeValue) || timeValue <= 0) return null;
+    const date = new Date(timeValue);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const getMessageDayKey = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
+    const date = getMessageCalendarDate(message);
+    if (!date) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const isSameCalendarDay = (left: Date, right: Date) =>
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+
+  const formatDaySeparatorLabel = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
+    const date = getMessageCalendarDate(message);
+    if (!date) return '';
+
+    const today = new Date();
+    if (isSameCalendarDay(date, today)) return 'Hoje';
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (isSameCalendarDay(date, yesterday)) return 'Ontem';
+
+    const formatted = date.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  };
 
   const openNextUnreadChat = () => {
     const unreadChats = chatsRef.current
@@ -944,9 +1069,24 @@ export default function WhatsAppTab() {
             }
 
             if (eventType === 'INSERT') {
-              let didAppend = false;
+              let didApplyInsert = false;
               setMessages((prev) => {
-                if (prev.some((item) => item.id === message.id)) return prev;
+                const existingByIdIndex = prev.findIndex((item) => item.id === message.id);
+                if (existingByIdIndex >= 0) {
+                  const next = [...prev];
+                  next[existingByIdIndex] = mergeMessageForDisplay(next[existingByIdIndex], message);
+                  didApplyInsert = true;
+                  return next.sort(sortMessagesChronologically);
+                }
+
+                const likelyDuplicateIndex = prev.findIndex((item) => isLikelyOutboundDuplicateMessage(item, message));
+                if (likelyDuplicateIndex >= 0) {
+                  const next = [...prev];
+                  next[likelyDuplicateIndex] = mergeMessageForDisplay(next[likelyDuplicateIndex], message);
+                  didApplyInsert = true;
+                  return next.sort(sortMessagesChronologically);
+                }
+
                 const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
                 const now = Date.now();
                 if (messageTime && now - messageTime > 5 * 60 * 1000) {
@@ -961,12 +1101,12 @@ export default function WhatsAppTab() {
                   return prev;
                 }
 
-                didAppend = true;
+                didApplyInsert = true;
                 const merged = [...prev, message];
                 return merged.sort(sortMessagesChronologically);
               });
 
-              if (didAppend) {
+              if (didApplyInsert) {
                 const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
                 if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
                   updateChatArchive(chatToUpdate.id, false);
@@ -1066,6 +1206,17 @@ export default function WhatsAppTab() {
     }
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const currentChat = selectedChatRef.current;
+    if (!currentChat) return;
+
+    messagesCacheRef.current.set(currentChat.id, {
+      messages,
+      loadedCount: loadedMessagesCount,
+      hasOlder: hasOlderMessages,
+    });
+  }, [messages, loadedMessagesCount, hasOlderMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1248,15 +1399,16 @@ export default function WhatsAppTab() {
         return;
       }
 
-      const baseMessages = [...(data || [])].sort(sortMessagesChronologically);
+      const fetchedCount = (data || []).length;
+      const baseMessages = dedupeMessagesForDisplay(data || []);
       setMessages(baseMessages);
-      setLoadedMessagesCount(baseMessages.length);
-      setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
+      setLoadedMessagesCount(fetchedCount);
+      setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
 
       messagesCacheRef.current.set(chat.id, {
         messages: baseMessages,
-        loadedCount: baseMessages.length,
-        hasOlder: (data || []).length === MESSAGES_PAGE_SIZE,
+        loadedCount: fetchedCount,
+        hasOlder: fetchedCount === MESSAGES_PAGE_SIZE,
       });
 
       if (userRef.current) {
@@ -1299,7 +1451,7 @@ export default function WhatsAppTab() {
         return;
       }
 
-      const olderMessages = [...(data || [])].sort(sortMessagesChronologically);
+      const olderMessages = dedupeMessagesForDisplay(data || []);
       if (olderMessages.length === 0) {
         setHasOlderMessages(false);
         return;
@@ -1314,7 +1466,7 @@ export default function WhatsAppTab() {
         const deduped = olderMessages.filter((item) => !existingIds.has(item.id));
         if (deduped.length === 0) return prev;
 
-        const nextMessages = [...deduped, ...prev];
+        const nextMessages = dedupeMessagesForDisplay([...deduped, ...prev]);
         messagesCacheRef.current.set(currentChatId, {
           messages: nextMessages,
           loadedCount: nextLoadedCount,
@@ -1478,6 +1630,14 @@ export default function WhatsAppTab() {
         if (prev.some((item) => item.id === nextMessage.id)) {
           return prev;
         }
+
+        const likelyDuplicateIndex = prev.findIndex((item) => isLikelyOutboundDuplicateMessage(item, nextMessage));
+        if (likelyDuplicateIndex >= 0) {
+          const next = [...prev];
+          next[likelyDuplicateIndex] = mergeMessageForDisplay(next[likelyDuplicateIndex], nextMessage);
+          return next.sort(sortMessagesChronologically);
+        }
+
         const merged = [...prev, nextMessage];
         return merged.sort(sortMessagesChronologically);
       });
@@ -2066,12 +2226,46 @@ export default function WhatsAppTab() {
     return formatMinutesDuration(waitingMinutes);
   };
 
+  const clearMuteMenuCloseTimeout = () => {
+    if (muteMenuCloseTimeoutRef.current !== null) {
+      window.clearTimeout(muteMenuCloseTimeoutRef.current);
+      muteMenuCloseTimeoutRef.current = null;
+    }
+  };
+
+  const openMuteSubmenu = () => {
+    clearMuteMenuCloseTimeout();
+    setChatMenuMuteOpen(true);
+  };
+
+  const closeMuteSubmenuSoon = () => {
+    clearMuteMenuCloseTimeout();
+    muteMenuCloseTimeoutRef.current = window.setTimeout(() => {
+      muteMenuCloseTimeoutRef.current = null;
+      setChatMenuMuteOpen(false);
+    }, 140);
+  };
+
+  const closeMuteSubmenuNow = () => {
+    clearMuteMenuCloseTimeout();
+    setChatMenuMuteOpen(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (muteMenuCloseTimeoutRef.current !== null) {
+        window.clearTimeout(muteMenuCloseTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const openChatContextMenu = (chatId: string, x: number, y: number) => {
     const menuWidth = 224;
     const menuHeight = 260;
     const safeX = Math.min(Math.max(8, x), Math.max(8, window.innerWidth - menuWidth - 8));
     const safeY = Math.min(Math.max(8, y), Math.max(8, window.innerHeight - menuHeight - 8));
 
+    closeMuteSubmenuNow();
     setChatMenu({ chatId, x: safeX, y: safeY });
   };
 
@@ -2299,6 +2493,7 @@ export default function WhatsAppTab() {
       <div
         className="flex h-full min-h-0 bg-slate-50"
         onClick={() => {
+          closeMuteSubmenuNow();
           setChatMenu(null);
           setIsListSettingsOpen(false);
         }}
@@ -2729,6 +2924,7 @@ export default function WhatsAppTab() {
                   if (target) {
                     updateChatArchive(target.id, !target.archived);
                   }
+                  closeMuteSubmenuNow();
                   setChatMenu(null);
                 }}
               >
@@ -2753,38 +2949,49 @@ export default function WhatsAppTab() {
                         className="w-full px-3 py-2 text-left hover:bg-slate-800"
                         onClick={() => {
                           if (target) updateChatMute(target.id, null);
+                          closeMuteSubmenuNow();
                           setChatMenu(null);
                         }}
                       >
                         Desmutar
                       </button>
                     ) : (
-                      <div className="relative group">
+                      <div
+                        className="relative"
+                        onMouseEnter={openMuteSubmenu}
+                        onMouseLeave={closeMuteSubmenuSoon}
+                      >
                         <button
                           type="button"
                           className="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center justify-between"
+                          onClick={openMuteSubmenu}
                         >
                           <span>Mutar</span>
                           <span className="text-xs text-slate-500">›</span>
                         </button>
-                        <div className="absolute left-full top-0 ml-2 hidden min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl group-hover:block">
-                          {muteOptions.map((option) => (
-                            <button
-                              key={option.label}
-                              type="button"
-                              className="w-full px-3 py-2 text-left hover:bg-slate-800"
-                              onClick={() => {
-                                if (target) {
-                                  const until = new Date(Date.now() + option.ms).toISOString();
-                                  updateChatMute(target.id, until);
-                                }
-                                setChatMenu(null);
-                              }}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
+                        {chatMenuMuteOpen && (
+                          <div className="absolute left-full top-0 z-10 pl-1">
+                            <div className="min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+                              {muteOptions.map((option) => (
+                                <button
+                                  key={option.label}
+                                  type="button"
+                                  className="w-full px-3 py-2 text-left hover:bg-slate-800"
+                                  onClick={() => {
+                                    if (target) {
+                                      const until = new Date(Date.now() + option.ms).toISOString();
+                                      updateChatMute(target.id, until);
+                                    }
+                                    closeMuteSubmenuNow();
+                                    setChatMenu(null);
+                                  }}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2940,16 +3147,30 @@ export default function WhatsAppTab() {
                     <p>{isLoadingMessages ? 'Carregando mensagens...' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
-                  messages.map((message) => {
+                  messages.map((message, index) => {
                     const payloadData = message.payload as any;
                     const isReactionOnly = payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
                     if (isReactionOnly) return null;
+
+                    const previousMessage = index > 0 ? messages[index - 1] : null;
+                    const currentDayKey = getMessageDayKey(message);
+                    const previousDayKey = previousMessage ? getMessageDayKey(previousMessage) : '';
+                    const shouldShowDaySeparator = Boolean(currentDayKey) && currentDayKey !== previousDayKey;
+                    const daySeparatorLabel = shouldShowDaySeparator ? formatDaySeparatorLabel(message) : '';
+
                     const showAuthor = selectedChatKind === 'group' && message.direction === 'inbound' && message.author;
                     const authorName = showAuthor ? formatPhone(message.author!) : undefined;
                     const reactions = reactionsByTargetId.get(message.id);
 
                     return (
                       <div key={message.id}>
+                        {shouldShowDaySeparator && daySeparatorLabel && (
+                          <div className="my-4 flex justify-center">
+                            <span className="rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
+                              {daySeparatorLabel}
+                            </span>
+                          </div>
+                        )}
                         <MessageBubble
                           id={message.id}
                           chatId={selectedChat.id}

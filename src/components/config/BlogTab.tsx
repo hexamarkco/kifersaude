@@ -6,6 +6,8 @@ import { uploadBlogImage } from '../../lib/imageUploadService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import FilterSingleSelect from '../FilterSingleSelect';
 import { BlogTabSkeletonList } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -50,6 +52,7 @@ export default function BlogTab() {
     meta_description: ''
   });
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const loadingUi = useAdaptiveLoading(loading);
 
   const modules = useMemo(() => ({
     toolbar: [
@@ -267,6 +270,7 @@ export default function BlogTab() {
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const hasPostsSnapshot = posts.length > 0;
 
   if (showEditor) {
     return (
@@ -579,16 +583,23 @@ export default function BlogTab() {
           </div>
         </div>
 
-        {loading ? (
-          <BlogTabSkeletonList />
-        ) : filteredPosts.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">Nenhum post encontrado</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredPosts.map((post) => (
+        <PanelAdaptiveLoadingFrame
+          loading={loading}
+          phase={loadingUi.phase}
+          hasContent={hasPostsSnapshot}
+          skeleton={<BlogTabSkeletonList />}
+          stageLabel="Carregando posts do blog..."
+          overlayLabel="Atualizando posts..."
+          stageClassName="min-h-[360px]"
+        >
+          {filteredPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">Nenhum post encontrado</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredPosts.map((post) => (
               <div
                 key={post.id}
                 className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all"
@@ -673,8 +684,9 @@ export default function BlogTab() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
+            </div>
+          )}
+        </PanelAdaptiveLoadingFrame>
       </div>
       {ConfirmationDialog}
     </div>

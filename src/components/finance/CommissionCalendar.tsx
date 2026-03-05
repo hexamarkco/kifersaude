@@ -8,6 +8,8 @@ import {
   DollarSign,
   Gift,
 } from 'lucide-react';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { CommissionCalendarSkeleton } from '../ui/panelSkeletons';
 
 type CommissionEvent = {
@@ -49,6 +51,7 @@ export default function CommissionCalendar() {
     return date;
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -301,11 +304,18 @@ export default function CommissionCalendar() {
     );
   };
 
-  if (loading) {
-    return <CommissionCalendarSkeleton />;
-  }
+  const hasContractsSnapshot = contracts.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasContractsSnapshot}
+      skeleton={<CommissionCalendarSkeleton />}
+      stageLabel="Carregando agenda de comissoes..."
+      overlayLabel="Atualizando agenda de comissoes..."
+      stageClassName="min-h-[560px]"
+    >
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -450,5 +460,6 @@ export default function CommissionCalendar() {
         </div>
       </div>
     </section>
+    </PanelAdaptiveLoadingFrame>
   );
 }

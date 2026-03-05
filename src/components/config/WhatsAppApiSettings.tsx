@@ -18,6 +18,8 @@ import {
 } from '../../lib/autoContactService';
 import type { IntegrationSetting } from '../../lib/supabase';
 import { WhatsAppApiSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
@@ -28,6 +30,7 @@ export default function WhatsAppApiSettings() {
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const loadingUi = useAdaptiveLoading(loading);
 
   const [enabled, setEnabled] = useState(false);
   const [token, setToken] = useState('');
@@ -107,11 +110,7 @@ export default function WhatsAppApiSettings() {
     setSaving(false);
   };
 
-  if (loading) {
-    return <WhatsAppApiSkeleton />;
-  }
-
-  if (!autoContactIntegration) {
+  if (!autoContactIntegration && !loading) {
     return (
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex items-start gap-3">
         <Info className="w-5 h-5 text-orange-600 mt-1" />
@@ -124,6 +123,15 @@ export default function WhatsAppApiSettings() {
   }
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={autoContactIntegration !== null}
+      skeleton={<WhatsAppApiSkeleton />}
+      stageLabel="Carregando configuracoes da API WhatsApp..."
+      overlayLabel="Atualizando configuracoes da API WhatsApp..."
+      stageClassName="min-h-[340px]"
+    >
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       {statusMessage && (
         <div
@@ -204,5 +212,6 @@ export default function WhatsAppApiSettings() {
         </div>
       </div>
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

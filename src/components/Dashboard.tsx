@@ -43,6 +43,8 @@ import { useConfig } from '../contexts/ConfigContext';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { DashboardPageSkeleton } from './ui/panelSkeletons';
+import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
 
 type Holder = {
   id: string;
@@ -85,7 +87,6 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
   const dashboardRootRef = useRef<HTMLDivElement | null>(null);
@@ -161,6 +162,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const [dashboardOwnerFilter, setDashboardOwnerFilter] = useState(
     () => searchParams.get('dashboardOwner') || '',
   );
+  const loadingUi = useAdaptiveLoading(loading);
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach(status => {
@@ -410,8 +412,6 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     if (isInitialLoadRef.current) {
       setIsInitialLoad(true);
-    } else {
-      setIsRefreshing(true);
     }
 
     setLoading(true);
@@ -474,7 +474,6 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       setError(`Não foi possível carregar os dados. ${message}`);
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
 
       if (isInitialLoadRef.current) {
         isInitialLoadRef.current = false;
@@ -1908,9 +1907,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     color: operadoraColors[index % operadoraColors.length],
   }));
 
-  if (isInitialLoad) {
-    return <DashboardPageSkeleton />;
-  }
+  const hasDashboardSnapshot =
+    leads.length > 0 ||
+    contracts.length > 0 ||
+    holders.length > 0 ||
+    dependents.length > 0;
 
   const formatDateInput = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
@@ -1993,15 +1994,16 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   };
 
   return (
-    <div ref={dashboardRootRef} className="panel-dashboard-immersive space-y-6">
-      {isRefreshing && (
-        <div className="pointer-events-none fixed bottom-6 right-6 z-50">
-          <div className="pointer-events-auto flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl ring-1 ring-black/5">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
-            <span className="text-sm font-medium text-slate-700">Atualizando dados...</span>
-          </div>
-        </div>
-      )}
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasDashboardSnapshot}
+      skeleton={<DashboardPageSkeleton />}
+      stageLabel="Carregando dashboard..."
+      overlayLabel="Atualizando dashboard..."
+      stageClassName="panel-dashboard-immersive"
+    >
+      <div ref={dashboardRootRef} className="panel-dashboard-immersive space-y-6">
       <div className="flex flex-col gap-4" data-panel-animate>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>
@@ -2740,6 +2742,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           }}
         />
       )}
-    </div>
+      </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

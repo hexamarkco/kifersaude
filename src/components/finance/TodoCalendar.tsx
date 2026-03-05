@@ -10,10 +10,12 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
 import Textarea from '../ui/Textarea';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { TodoCalendarSkeleton } from '../ui/panelSkeletons';
 
 const getDateKey = (date: Date) => date.toISOString().split('T')[0];
@@ -45,6 +47,7 @@ export default function TodoCalendar() {
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [reschedulingTaskId, setReschedulingTaskId] = useState<string | null>(null);
+  const loadingUi = useAdaptiveLoading(loading);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -324,11 +327,18 @@ export default function TodoCalendar() {
     );
   };
 
-  if (loading) {
-    return <TodoCalendarSkeleton />;
-  }
+  const hasTasksSnapshot = tasks.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasTasksSnapshot}
+      skeleton={<TodoCalendarSkeleton />}
+      stageLabel="Carregando agenda de tarefas..."
+      overlayLabel="Atualizando tarefas..."
+      stageClassName="min-h-[560px]"
+    >
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -609,5 +619,6 @@ export default function TodoCalendar() {
         </ModalShell>
       )}
     </section>
+    </PanelAdaptiveLoadingFrame>
   );
 }

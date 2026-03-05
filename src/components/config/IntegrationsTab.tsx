@@ -17,6 +17,8 @@ import type { IntegrationSetting } from '../../lib/supabase';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
 import FilterSingleSelect from '../FilterSingleSelect';
 import { IntegrationsSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 const GPT_INTEGRATION_SLUG = 'gpt_transcription';
 const META_PIXEL_SLUG = 'meta_pixel';
@@ -68,6 +70,7 @@ export default function IntegrationsTab() {
   const [loadingGtm, setLoadingGtm] = useState(true);
   const [savingGtm, setSavingGtm] = useState(false);
   const [gtmMessage, setGtmMessage] = useState<MessageState>(null);
+  const loadingUi = useAdaptiveLoading(loadingGpt);
 
   useEffect(() => {
     loadGptIntegration();
@@ -195,11 +198,21 @@ setSavingGpt(false);
     setSavingGtm(false);
   };
 
-  if (loadingGpt) {
-    return <IntegrationsSkeleton />;
-  }
+  const hasIntegrationSnapshot =
+    gptIntegration !== null ||
+    metaPixelIntegration !== null ||
+    gtmIntegration !== null;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loadingGpt}
+      phase={loadingUi.phase}
+      hasContent={hasIntegrationSnapshot}
+      skeleton={<IntegrationsSkeleton />}
+      stageLabel="Carregando integracoes..."
+      overlayLabel="Atualizando integracoes..."
+      stageClassName="min-h-[460px]"
+    >
     <div className="space-y-8">
       <div>
         <div className="mb-4">
@@ -448,5 +461,6 @@ setSavingGpt(false);
         </div>
       </div>
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

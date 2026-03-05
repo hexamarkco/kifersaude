@@ -10,6 +10,8 @@ import AccessControlManager from './AccessControlManager';
 import FilterSingleSelect from '../FilterSingleSelect';
 import { Skeleton } from '../ui/Skeleton';
 import { SystemSettingsSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -22,6 +24,7 @@ export default function SystemSettingsTab() {
   const [serviceRoleKeyLoading, setServiceRoleKeyLoading] = useState(true);
   const [serviceRoleKeySaving, setServiceRoleKeySaving] = useState(false);
   const [showServiceKey, setShowServiceKey] = useState(false);
+  const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
     loadSettings();
@@ -109,8 +112,19 @@ export default function SystemSettingsTab() {
     setSaving(false);
   };
 
-  if (loading) {
-    return <SystemSettingsSkeleton />;
+  if (loading && !settings) {
+    return (
+      <PanelAdaptiveLoadingFrame
+        loading
+        phase={loadingUi.phase}
+        hasContent={false}
+        skeleton={<SystemSettingsSkeleton />}
+        stageLabel="Carregando configuracoes do sistema..."
+        stageClassName="min-h-[440px]"
+      >
+        <div />
+      </PanelAdaptiveLoadingFrame>
+    );
   }
 
   if (!settings) {
@@ -123,6 +137,15 @@ export default function SystemSettingsTab() {
   }
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent
+      skeleton={<SystemSettingsSkeleton />}
+      stageLabel="Carregando configuracoes do sistema..."
+      overlayLabel="Atualizando configuracoes do sistema..."
+      stageClassName="min-h-[440px]"
+    >
     <div className="space-y-6">
       {message && (
         <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
@@ -331,5 +354,6 @@ export default function SystemSettingsTab() {
         </div>
       )}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

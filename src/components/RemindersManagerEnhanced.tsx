@@ -26,11 +26,13 @@ import FilterSingleSelect from './FilterSingleSelect';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '../lib/whatsappApiService';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
 import Button from './ui/Button';
 import DateTimePicker from './ui/DateTimePicker';
 import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 import { RemindersPageSkeleton } from './ui/panelSkeletons';
+import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -123,6 +125,7 @@ export default function RemindersManagerEnhanced() {
   const remindersRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const loadingUi = useAdaptiveLoading(loading);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
     if (!reminder) return null;
@@ -1543,11 +1546,18 @@ export default function RemindersManagerEnhanced() {
     );
   };
 
-  if (loading) {
-    return <RemindersPageSkeleton />;
-  }
+  const hasRemindersSnapshot = reminders.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasRemindersSnapshot}
+      skeleton={<RemindersPageSkeleton />}
+      stageLabel="Carregando lembretes..."
+      overlayLabel="Atualizando lembretes..."
+      stageClassName="panel-dashboard-immersive"
+    >
     <div ref={remindersRootRef} className="panel-dashboard-immersive">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
@@ -2128,6 +2138,7 @@ export default function RemindersManagerEnhanced() {
       )}
       {ConfirmationDialog}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }
 

@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus, Bell, BellOff, SkipForward } from 'lucide-react';
+import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, Info, History, Plus, Bell, BellOff, SkipForward, Settings } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
@@ -103,6 +105,7 @@ export default function WhatsAppTab() {
   const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
   const [prioritizeUnread, setPrioritizeUnread] = useState(true);
   const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
+  const [isListSettingsOpen, setIsListSettingsOpen] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
@@ -133,6 +136,7 @@ export default function WhatsAppTab() {
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
   const { user } = useAuth();
+  const loadingUi = useAdaptiveLoading(loading);
 
   function normalizePhoneNumber(phone: string | null | undefined) {
     if (!phone) return '';
@@ -461,6 +465,11 @@ export default function WhatsAppTab() {
 
       if (event.key !== 'Escape') return;
 
+      if (isListSettingsOpen) {
+        setIsListSettingsOpen(false);
+        return;
+      }
+
       if (chatMenu) {
         setChatMenu(null);
         return;
@@ -483,7 +492,7 @@ export default function WhatsAppTab() {
 
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [chatMenu, isMobileView, selectedChat, showGroupInfo, showNewChatModal]);
+  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal]);
 
   useEffect(() => {
     const loadLeadNames = async () => {
@@ -1774,12 +1783,25 @@ export default function WhatsAppTab() {
   const showChatList = !isMobileView || !selectedChat;
   const showMessageArea = !isMobileView || selectedChat;
 
-  if (loading) {
-    return <WhatsAppPageSkeleton />;
-  }
+  const hasChatSnapshot = chats.length > 0;
 
   return (
-    <div className="flex h-full min-h-0 bg-slate-50" onClick={() => setChatMenu(null)}>
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasChatSnapshot}
+      skeleton={<WhatsAppPageSkeleton />}
+      stageLabel="Conectando WhatsApp..."
+      overlayLabel="Sincronizando conversas..."
+      stageClassName="min-h-[560px]"
+    >
+      <div
+        className="flex h-full min-h-0 bg-slate-50"
+        onClick={() => {
+          setChatMenu(null);
+          setIsListSettingsOpen(false);
+        }}
+      >
       {showNewChatModal && (
         <ModalShell
           isOpen
@@ -1891,17 +1913,87 @@ export default function WhatsAppTab() {
           <div className="p-4 border-b border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-teal-600 text-white"
-                onClick={() => {
-                  setShowNewChatModal(true);
-                  setNewChatTab('leads');
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                Novo chat
-              </button>
+              <div className="relative flex items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-teal-600 text-white"
+                  onClick={() => {
+                    setShowNewChatModal(true);
+                    setNewChatTab('leads');
+                    setIsListSettingsOpen(false);
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Novo chat
+                </button>
+                <button
+                  type="button"
+                  title="Configuracoes da lista"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
+                    isListSettingsOpen
+                      ? 'border-teal-300 bg-teal-50 text-teal-700'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsListSettingsOpen((prev) => !prev);
+                  }}
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+
+                {isListSettingsOpen && (
+                  <div
+                    className="absolute right-0 top-11 z-20 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Configuracoes da lista
+                    </p>
+
+                    <div className="mt-3 space-y-2 text-xs">
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50"
+                        onClick={() => setShowArchived((prev) => !prev)}
+                      >
+                        <span>{showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{archivedCount}</span>
+                      </button>
+
+                      <label className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700">
+                        <span>Priorizar nao lidas</span>
+                        <input
+                          type="checkbox"
+                          checked={prioritizeUnread}
+                          onChange={(event) => setPrioritizeUnread(event.target.checked)}
+                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={handleToggleDesktopNotifications}
+                        disabled={notificationPermission === 'unsupported'}
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          {notificationsActive ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                          Notificacoes desktop
+                        </span>
+                        <span className="text-[11px] text-slate-500">{notificationsLabel}</span>
+                      </button>
+                    </div>
+
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[11px] font-medium text-slate-600">Atalhos</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                        Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat • Ctrl/Cmd + Shift + J proxima nao lida
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -1960,27 +2052,6 @@ export default function WhatsAppTab() {
                 Grupos ({groupInboxCount})
               </button>
             </div>
-            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-              <button
-                type="button"
-                className={`px-2 py-1 rounded-full border ${showArchived ? 'bg-slate-200 border-slate-300 text-slate-700' : 'border-slate-200'}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowArchived((prev) => !prev);
-                }}
-              >
-                {showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'} ({archivedCount})
-              </button>
-              <label className="flex items-center gap-1.5 text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={prioritizeUnread}
-                  onChange={(event) => setPrioritizeUnread(event.target.checked)}
-                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                />
-                Priorizar nao lidas
-              </label>
-            </div>
             <div className="flex items-center justify-between gap-2 text-xs">
               <button
                 type="button"
@@ -1997,17 +2068,7 @@ export default function WhatsAppTab() {
                 <SkipForward className="h-3.5 w-3.5" />
                 {nextUnreadChat ? `Proxima nao lida (${unreadQueue.length})` : 'Fila zerada'}
               </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleToggleDesktopNotifications}
-                disabled={notificationPermission === 'unsupported'}
-              >
-                {notificationsActive ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-                {notificationsLabel}
-              </button>
             </div>
-            <p className="text-[11px] text-slate-400">Atalhos: Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat • Ctrl/Cmd + Shift + J proxima nao lida</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -2414,6 +2475,7 @@ export default function WhatsAppTab() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

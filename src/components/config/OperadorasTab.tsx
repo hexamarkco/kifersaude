@@ -4,6 +4,8 @@ import { Operadora } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { OperadorasSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 export default function OperadorasTab() {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -21,6 +23,7 @@ export default function OperadorasTab() {
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
     loadOperadoras();
@@ -109,11 +112,18 @@ export default function OperadorasTab() {
     }
   };
 
-  if (loading) {
-    return <OperadorasSkeleton />;
-  }
+  const hasOperadorasSnapshot = operadoras.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasOperadorasSnapshot}
+      skeleton={<OperadorasSkeleton />}
+      stageLabel="Carregando operadoras..."
+      overlayLabel="Atualizando operadoras..."
+      stageClassName="min-h-[420px]"
+    >
     <div className="space-y-6">
       {message && (
         <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
@@ -339,5 +349,6 @@ export default function OperadorasTab() {
       </div>
       {ConfirmationDialog}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

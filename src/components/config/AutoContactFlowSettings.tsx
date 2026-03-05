@@ -57,6 +57,8 @@ import FilterSingleSelect from '../FilterSingleSelect';
 import DateTimePicker from '../ui/DateTimePicker';
 import ModalShell from '../ui/ModalShell';
 import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 type MessageState = { type: 'success' | 'error' | 'warning'; text: string } | null;
 type TemplateDraft = {
@@ -83,6 +85,7 @@ export default function AutoContactFlowSettings() {
   const [loggingDraft, setLoggingDraft] = useState<AutoContactLoggingSettings>(defaultSettings.logging);
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [loadingFlow, setLoadingFlow] = useState(true);
+  const loadingUi = useAdaptiveLoading(loadingFlow);
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
@@ -1113,11 +1116,9 @@ export default function AutoContactFlowSettings() {
     };
   }, [handleAutoSaveSettings]);
 
-  if (loadingFlow) {
-    return <AutomationFlowsSkeleton />;
-  }
+  const hasFlowSnapshot = autoContactIntegration !== null;
 
-  if (!autoContactIntegration) {
+  if (!autoContactIntegration && !loadingFlow) {
     return (
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex items-start gap-3">
         <Info className="w-5 h-5 text-orange-600 mt-1" />
@@ -1130,6 +1131,15 @@ export default function AutoContactFlowSettings() {
   }
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loadingFlow}
+      phase={loadingUi.phase}
+      hasContent={hasFlowSnapshot}
+      skeleton={<AutomationFlowsSkeleton />}
+      stageLabel="Carregando fluxos de automacao..."
+      overlayLabel="Atualizando fluxos de automacao..."
+      stageClassName="min-h-[520px]"
+    >
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="space-y-6">
         <div>
@@ -2795,5 +2805,6 @@ export default function AutoContactFlowSettings() {
         )}
       </div>
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

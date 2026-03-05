@@ -11,6 +11,8 @@ import Pagination from './Pagination';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { ContractsPageSkeleton } from './ui/panelSkeletons';
+import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -51,6 +53,7 @@ export default function ContractsManager({
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
     () => Array.from(new Set(contracts.map((contract) => contract.operadora).filter(Boolean))).sort(),
@@ -458,11 +461,18 @@ export default function ContractsManager({
     };
   }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
 
-  if (loading) {
-    return <ContractsPageSkeleton />;
-  }
+  const hasContractsSnapshot = contracts.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasContractsSnapshot}
+      skeleton={<ContractsPageSkeleton />}
+      stageLabel="Carregando contratos..."
+      overlayLabel="Atualizando contratos..."
+      stageClassName="panel-dashboard-immersive"
+    >
     <div ref={contractsRootRef} className="panel-dashboard-immersive">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
@@ -751,5 +761,6 @@ export default function ContractsManager({
       )}
       {ConfirmationDialog}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

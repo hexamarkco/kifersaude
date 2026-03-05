@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import { PanelTopLoadingBar } from '../components/ui/panelLoading';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
 export const SobrePage = lazy(() => import('../pages/public/SobrePage'));
@@ -37,10 +38,17 @@ export const FinanceiroAgendaTab = lazy(() => import('../components/finance/Fina
 
 export function RouteLoading() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-200 border-t-orange-600" />
-        <p className="mt-4 text-sm font-semibold text-slate-600">Carregando pagina...</p>
+    <div className="relative min-h-screen bg-slate-50 px-4">
+      <PanelTopLoadingBar active label="Abrindo pagina..." />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="panel-loading-pill inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">
+          <span className="panel-loading-dots" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
+          <p className="text-sm font-semibold text-slate-600">Carregando pagina...</p>
+        </div>
       </div>
     </div>
   );

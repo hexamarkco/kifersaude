@@ -45,6 +45,8 @@ import { getBadgeStyle } from '../lib/colorUtils';
 import { downloadXlsx } from '../lib/xlsxExport';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { LeadsPageSkeleton } from './ui/panelSkeletons';
+import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
 
 const isWithinDateRange = (
   dateValue: string | null | undefined,
@@ -202,6 +204,7 @@ export default function LeadsManager({
   const leadsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
   const responsavelOptions = useMemo(() => (options.lead_responsavel || []).filter(option => option.ativo), [options.lead_responsavel]);
@@ -1345,11 +1348,18 @@ export default function LeadsManager({
     };
   }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
 
-  if (loading) {
-    return <LeadsPageSkeleton />;
-  }
+  const hasLeadsSnapshot = leads.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasLeadsSnapshot}
+      skeleton={<LeadsPageSkeleton />}
+      stageLabel="Carregando leads..."
+      overlayLabel="Atualizando leads..."
+      stageClassName="panel-dashboard-immersive"
+    >
     <div ref={leadsRootRef} className="panel-dashboard-immersive">
       <ObserverBanner />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
@@ -2016,5 +2026,6 @@ export default function LeadsManager({
       )}
       {ConfirmationDialog}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

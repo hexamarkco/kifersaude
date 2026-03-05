@@ -5,6 +5,8 @@ import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import FilterSingleSelect from '../FilterSingleSelect';
 import { UsersSkeleton } from '../ui/panelSkeletons';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 export default function UsersTab() {
   const { user, refreshProfile } = useAuth();
@@ -23,6 +25,7 @@ export default function UsersTab() {
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
     loadUsers();
@@ -315,11 +318,18 @@ const handleDeleteUser = async (userId: string) => {
     }
   };
 
-  if (loading) {
-    return <UsersSkeleton />;
-  }
+  const hasUsersSnapshot = users.length > 0;
 
   return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasUsersSnapshot}
+      skeleton={<UsersSkeleton />}
+      stageLabel="Carregando usuarios..."
+      overlayLabel="Atualizando usuarios..."
+      stageClassName="min-h-[420px]"
+    >
     <div className="space-y-6">
       {message && (
         <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
@@ -590,5 +600,6 @@ const handleDeleteUser = async (userId: string) => {
       </div>
       {ConfirmationDialog}
     </div>
+    </PanelAdaptiveLoadingFrame>
   );
 }

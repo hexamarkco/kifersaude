@@ -592,7 +592,7 @@ export default function Layout({
       gsap.set(panelContent, {
         autoAlpha: 1,
         y: 0,
-        clearProps: 'filter,transform,opacity',
+        clearProps: 'transform,opacity,willChange',
       });
       return;
     }
@@ -601,17 +601,17 @@ export default function Layout({
       panelContent,
       {
         autoAlpha: 0,
-        y: 18,
-        filter: 'blur(10px)',
+        y: 10,
+        willChange: 'transform,opacity',
       },
       {
         autoAlpha: 1,
         y: 0,
-        filter: 'blur(0px)',
         duration: enterDuration,
         ease,
-        clearProps: 'filter',
+        clearProps: 'transform,opacity,willChange',
         overwrite: 'auto',
+        force3D: true,
       },
     );
 
@@ -635,7 +635,7 @@ export default function Layout({
       gsap.set(items, {
         autoAlpha: 1,
         x: 0,
-        clearProps: 'transform,opacity',
+        clearProps: 'transform,opacity,willChange',
       });
       return;
     }
@@ -645,15 +645,18 @@ export default function Layout({
         items,
         {
           autoAlpha: 0,
-          x: -12,
+          x: -8,
+          willChange: 'transform,opacity',
         },
         {
           autoAlpha: 1,
           x: 0,
-          duration: 0.46,
+          duration: 0.3,
           ease: 'power2.out',
-          stagger: Math.max(0.025, sectionStagger * 0.45),
+          stagger: Math.max(0.014, sectionStagger * 0.4),
           overwrite: 'auto',
+          clearProps: 'willChange',
+          force3D: true,
         },
       );
     }, sidebarElement);
@@ -672,45 +675,13 @@ export default function Layout({
       return;
     }
 
-    if (!motionEnabled) {
-      gsap.set([primary, secondary, tertiary], { clearProps: 'transform' });
-      return;
-    }
-
-    const animations = [
-      gsap.to(primary, {
-        xPercent: 8,
-        yPercent: -5,
-        scale: 1.06,
-        duration: 18,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      }),
-      gsap.to(secondary, {
-        xPercent: -7,
-        yPercent: 7,
-        scale: 0.94,
-        duration: 21,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      }),
-      gsap.to(tertiary, {
-        xPercent: 5,
-        yPercent: 4,
-        scale: 1.08,
-        duration: 24,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      }),
-    ];
-
-    return () => {
-      animations.forEach((animation) => animation.kill());
-    };
-  }, [motionEnabled]);
+    gsap.set([primary, secondary, tertiary], {
+      xPercent: 0,
+      yPercent: 0,
+      scale: 1,
+      clearProps: 'willChange',
+    });
+  }, []);
 
   useEffect(() => {
     if (!showNotificationsDropdown || !notificationsDropdownRef.current || !motionEnabled) {

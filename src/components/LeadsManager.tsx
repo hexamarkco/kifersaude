@@ -1313,7 +1313,7 @@ export default function LeadsManager({
       gsap.set(sections, {
         autoAlpha: 1,
         y: 0,
-        clearProps: 'transform,opacity,filter',
+        clearProps: 'transform,opacity,willChange',
       });
       hasAnimatedSectionsRef.current = true;
       return;
@@ -1324,19 +1324,18 @@ export default function LeadsManager({
         sections,
         {
           autoAlpha: 0,
-          y: 22,
-          scale: 0.985,
-          filter: 'blur(10px)',
+          y: 12,
+          willChange: 'transform,opacity',
         },
         {
           autoAlpha: 1,
           y: 0,
-          scale: 1,
-          filter: 'blur(0px)',
           duration: sectionDuration,
           ease,
           stagger: sectionStagger,
-          clearProps: 'filter',
+          clearProps: 'willChange',
+          overwrite: 'auto',
+          force3D: true,
         },
       );
     }, root);

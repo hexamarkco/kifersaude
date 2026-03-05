@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
+const getIsLowPowerDevice = () => {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const cores = navigator.hardwareConcurrency ?? 4;
+  return cores <= 4;
+};
+
 const getPrefersReducedMotion = () => {
   if (typeof window === 'undefined') {
     return false;
@@ -14,6 +23,7 @@ export function usePanelMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(
     getPrefersReducedMotion,
   );
+  const [isLowPowerDevice] = useState<boolean>(getIsLowPowerDevice);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -42,11 +52,11 @@ export function usePanelMotion() {
   return useMemo(
     () => ({
       motionEnabled: !prefersReducedMotion,
-      enterDuration: prefersReducedMotion ? 0.01 : 0.58,
-      sectionDuration: prefersReducedMotion ? 0.01 : 0.72,
-      sectionStagger: prefersReducedMotion ? 0 : 0.09,
-      ease: 'power3.out',
+      enterDuration: prefersReducedMotion ? 0.01 : isLowPowerDevice ? 0.2 : 0.28,
+      sectionDuration: prefersReducedMotion ? 0.01 : isLowPowerDevice ? 0.24 : 0.34,
+      sectionStagger: prefersReducedMotion ? 0 : isLowPowerDevice ? 0.014 : 0.028,
+      ease: 'power2.out',
     }),
-    [prefersReducedMotion],
+    [isLowPowerDevice, prefersReducedMotion],
   );
 }

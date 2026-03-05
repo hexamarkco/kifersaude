@@ -32,7 +32,7 @@ export default defineConfig({
           }
 
           if (pkg === 'react' || pkg === 'react-dom' || pkg === 'react-router-dom' || pkg === 'react-helmet') {
-            return 'react-core';
+            return 'vendor';
           }
 
           if (pkg === 'lucide-react') {
@@ -44,7 +44,7 @@ export default defineConfig({
           }
 
           if (pkg === 'react-quill' || pkg === 'quill') {
-            return 'editor';
+            return 'vendor';
           }
 
           if (pkg === 'reactflow' || pkg.startsWith('d3-')) {

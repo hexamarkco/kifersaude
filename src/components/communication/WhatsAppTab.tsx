@@ -963,11 +963,11 @@ export default function WhatsAppTab() {
         telefone: string;
         nome_completo: string;
         status?: string | null;
-        responsavel?: string | null;
+        responsavel_id?: string | null;
       }>(async (from, to) => {
         const response = await supabase
           .from('leads')
-          .select('id, telefone, nome_completo, status, responsavel')
+          .select('id, telefone, nome_completo, status, responsavel_id')
           .order('created_at', { ascending: false })
           .range(from, to);
         return { data: response.data, error: response.error };
@@ -980,7 +980,7 @@ export default function WhatsAppTab() {
             name: lead.nome_completo,
             phone: normalizePhoneNumber(lead.telefone),
             status: lead.status ?? null,
-            responsavel: lead.responsavel ?? null,
+            responsavel: lead.responsavel_id ?? null,
           }))
           .filter((lead) => Boolean(lead.phone)),
       );
@@ -1176,7 +1176,7 @@ export default function WhatsAppTab() {
               telefone?: string | null;
               nome_completo?: string | null;
               status?: string | null;
-              responsavel?: string | null;
+              responsavel_id?: string | null;
             }
           | null;
         if (!row?.id) return;
@@ -1199,7 +1199,7 @@ export default function WhatsAppTab() {
             name: row.nome_completo?.trim() || existingLead?.name || resolvedPhone,
             phone: resolvedPhone,
             status: row.status ?? existingLead?.status ?? null,
-            responsavel: row.responsavel ?? existingLead?.responsavel ?? null,
+            responsavel: row.responsavel_id ?? existingLead?.responsavel ?? null,
           };
 
           if (existingIndex === -1) {
@@ -2912,7 +2912,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       if (leadIdsToRefresh.length > 0) {
         const { data: missingLeadsData, error: missingLeadsError } = await supabase
           .from('leads')
-          .select('id, telefone, nome_completo, status, responsavel')
+          .select('id, telefone, nome_completo, status, responsavel_id')
           .in('id', leadIdsToRefresh);
 
         if (!missingLeadsError) {
@@ -2921,14 +2921,14 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             telefone: string;
             nome_completo: string;
             status?: string | null;
-            responsavel?: string | null;
+            responsavel_id?: string | null;
           }>)
             .map((lead) => ({
               id: lead.id,
               name: lead.nome_completo?.trim() || '',
               phone: normalizePhoneNumber(lead.telefone),
               status: lead.status ?? null,
-              responsavel: lead.responsavel ?? null,
+              responsavel: lead.responsavel_id ?? null,
             }));
 
           if (normalizedMissingLeads.length > 0) {
@@ -3007,7 +3007,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     if (needsRefresh) {
       const { data: leadData, error: leadError } = await supabase
         .from('leads')
-        .select('id, nome_completo, telefone, responsavel, status')
+        .select('id, nome_completo, telefone, responsavel_id, status')
         .eq('id', item.leadId)
         .maybeSingle();
 
@@ -3017,7 +3017,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           name: leadData.nome_completo?.trim() || '',
           phone: normalizePhoneNumber(leadData.telefone),
           status: leadData.status ?? leadMatch?.status ?? null,
-          responsavel: leadData.responsavel ?? leadMatch?.responsavel ?? null,
+          responsavel: leadData.responsavel_id ?? leadMatch?.responsavel ?? null,
         };
 
         if (refreshedLead.phone) {

@@ -393,12 +393,14 @@
   background-color: var(--panel-surface-soft) !important;
 }
 
+.painel-theme.theme-dark .bg-white\/95,
 .painel-theme.theme-dark .bg-white\/90,
 .painel-theme.theme-dark .bg-white\/80,
 .painel-theme.theme-dark .bg-white\/50 {
   background-color: rgba(15, 23, 42, 0.88) !important;
 }
 
+.painel-theme.theme-dark .hover\:bg-white\/95:hover,
 .painel-theme.theme-dark .hover\:bg-white\/50:hover,
 .painel-theme.theme-dark .hover\:bg-white\/80:hover,
 .painel-theme.theme-dark .hover\:bg-white\/90:hover {
@@ -584,6 +586,29 @@
 
 .painel-theme.theme-dark .hover\:bg-blue-50:hover,
 .painel-theme.theme-dark .hover\:bg-blue-100:hover {
+  background-color: var(--panel-accent-blue-bg-strong) !important;
+}
+
+.painel-theme.theme-dark .bg-sky-50,
+.painel-theme.theme-dark .bg-sky-100 {
+  background-color: var(--panel-accent-blue-bg) !important;
+}
+
+.painel-theme.theme-dark .text-sky-900,
+.painel-theme.theme-dark .text-sky-800,
+.painel-theme.theme-dark .text-sky-700,
+.painel-theme.theme-dark .text-sky-600,
+.painel-theme.theme-dark .text-sky-500 {
+  color: var(--panel-accent-blue-text) !important;
+}
+
+.painel-theme.theme-dark .border-sky-200,
+.painel-theme.theme-dark .border-sky-300 {
+  border-color: var(--panel-accent-blue-border) !important;
+}
+
+.painel-theme.theme-dark .hover\:bg-sky-50:hover,
+.painel-theme.theme-dark .hover\:bg-sky-100:hover {
   background-color: var(--panel-accent-blue-bg-strong) !important;
 }
 

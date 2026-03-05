@@ -3,6 +3,7 @@ import { supabase, fetchAllPages, type Lead } from '../../lib/supabase';
 import {
   Search,
   MessageCircle,
+  Check,
   Phone,
   MoreVertical,
   ArrowLeft,
@@ -28,7 +29,7 @@ import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
-import { getBadgeStyle } from '../../lib/colorUtils';
+import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
@@ -2589,6 +2590,21 @@ export default function WhatsAppTab() {
       className: 'border-rose-200 bg-rose-50 text-rose-700',
     };
   }, [firstResponseSla]);
+  const isDarkThemeActive =
+    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+  const getLeadStatusBadgeStyle = (hexColor: string) => {
+    if (!isDarkThemeActive) {
+      return getBadgeStyle(hexColor, 0.34);
+    }
+
+    const preferredContrast = getContrastTextColor(hexColor);
+
+    return {
+      backgroundColor: hexToRgba(hexColor, 0.2),
+      color: preferredContrast === '#ffffff' ? '#f8fafc' : hexToRgba(hexColor, 0.95),
+      borderColor: hexToRgba(hexColor, 0.58),
+    };
+  };
   const statusByName = useMemo(() => {
     const map = new Map<string, LeadStatusConfig>();
     leadStatuses.forEach((status) => map.set(status.nome, status));
@@ -2874,14 +2890,31 @@ const getReminderPriorityMeta = (priority?: string | null) => {
   const normalized = (priority || 'normal').trim().toLowerCase();
 
   if (normalized === 'alta' || normalized === 'high') {
-    return { label: 'Alta', className: 'border border-red-200 bg-red-50 text-red-700' };
+    return { label: 'Alta', className: 'border border-red-300 bg-red-100 text-red-700' };
   }
 
   if (normalized === 'baixa' || normalized === 'low') {
-    return { label: 'Baixa', className: 'border border-emerald-200 bg-emerald-50 text-emerald-700' };
+    return { label: 'Baixa', className: 'border border-emerald-300 bg-emerald-100 text-emerald-700' };
   }
 
-  return { label: 'Normal', className: 'border border-blue-200 bg-blue-50 text-blue-700' };
+  return { label: 'Normal', className: 'border border-blue-300 bg-blue-100 text-blue-700' };
+};
+
+const getReminderTypeMeta = (type?: string | null) => {
+  const normalized = (type || '').trim().toLowerCase();
+
+  if (normalized === 'retorno') {
+    return { label: 'Retorno', className: 'border border-teal-300 bg-teal-100 text-teal-700' };
+  }
+
+  if (normalized === 'follow-up' || normalized === 'follow up' || normalized === 'followup') {
+    return { label: 'Follow-up', className: 'border border-blue-300 bg-blue-100 text-blue-700' };
+  }
+
+  return {
+    label: type?.trim() || 'Outro',
+    className: 'border border-slate-300 bg-slate-100 text-slate-700',
+  };
 };
 
 const mapReminderTypeToSchedulerType = (type?: string | null): 'Retorno' | 'Follow-up' | 'Outro' => {
@@ -3563,7 +3596,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           startOfToday.setHours(0, 0, 0, 0);
                           const isOverdue = !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < startOfToday.getTime();
                           const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
-                          const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+                          const leadStatusStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
+                          const typeMeta = getReminderTypeMeta(item.type);
                           const priorityMeta = getReminderPriorityMeta(item.priority);
 
                           return (
@@ -3577,8 +3611,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                         {item.leadStatus}
                                       </span>
                                     )}
-                                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                                      {item.type}
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${typeMeta.className}`}>
+                                      {typeMeta.label}
                                     </span>
                                     <span className={`rounded-full px-2 py-0.5 text-[10px] ${priorityMeta.className}`}>
                                       {priorityMeta.label}
@@ -3596,7 +3630,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   </p>
                                 </div>
 
-                                <div className="flex w-full flex-col gap-2 sm:w-auto">
+                                <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                                   <Button
                                     type="button"
                                     onClick={() => {
@@ -3604,22 +3638,25 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                     }}
                                     loading={markingReminderReadId === item.id}
                                     disabled={Boolean(markingReminderReadId && markingReminderReadId !== item.id)}
-                                    variant="secondary"
-                                    size="sm"
-                                    className="h-9 w-full justify-center sm:w-auto"
+                                    variant="info"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    title="Marcar como lido"
+                                    aria-label="Marcar como lido"
                                   >
-                                    Marcar como lido
+                                    {markingReminderReadId !== item.id && <Check className="h-4 w-4" />}
                                   </Button>
                                   <Button
                                     type="button"
                                     onClick={() => openReminderLeadInWhatsApp(item)}
                                     disabled={!item.leadPhone || Boolean(markingReminderReadId)}
-                                    variant="soft"
-                                    size="sm"
-                                    className="h-9 w-full justify-center sm:w-auto"
+                                    variant="success"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    title="Abrir no WhatsApp"
+                                    aria-label="Abrir no WhatsApp"
                                   >
-                                    <MessageCircle className="h-3.5 w-3.5" />
-                                    Abrir no WhatsApp
+                                    <MessageCircle className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </div>
@@ -3861,7 +3898,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   .find((lead): lead is { id: string; name: string; phone: string; status?: string | null; responsavel?: string | null } => Boolean(lead)) ?? null;
                 const leadStatus = leadForChat?.status ?? null;
                 const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
-                const badgeStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+                const badgeStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
                 const chatTypeBadgeClass =
                   chatKind === 'group'
                     ? 'bg-blue-100 text-blue-700'

@@ -1091,3 +1091,68 @@
     transform: none;
   }
 }
+
+.marketing-theme {
+  --marketing-bg: #f5f3ed;
+  --marketing-line: rgba(30, 41, 59, 0.13);
+  font-family: 'Plus Jakarta Sans', 'Poppins', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(245, 174, 83, 0.22), transparent 34%),
+    radial-gradient(circle at 90% 8%, rgba(59, 130, 246, 0.16), transparent 34%),
+    radial-gradient(circle at 52% 96%, rgba(251, 146, 60, 0.14), transparent 40%),
+    var(--marketing-bg);
+}
+
+.marketing-theme .marketing-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.marketing-theme .marketing-surface {
+  border: 1px solid var(--marketing-line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 252, 247, 0.95) 100%);
+  box-shadow: 0 24px 52px -40px rgba(15, 23, 42, 0.42), 0 14px 24px -20px rgba(124, 45, 18, 0.18);
+}
+
+.marketing-theme .marketing-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: marketing-rise 0.7s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+}
+
+.marketing-theme .marketing-delay-1 {
+  animation-delay: 0.1s;
+}
+
+.marketing-theme .marketing-delay-2 {
+  animation-delay: 0.2s;
+}
+
+.marketing-theme .marketing-glow {
+  animation: marketing-float 16s ease-in-out infinite alternate;
+}
+
+@keyframes marketing-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-float {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(24px, -16px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-theme .marketing-reveal,
+  .marketing-theme .marketing-glow {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -17,6 +17,7 @@ import {
   Settings,
   Copy,
   RefreshCw,
+  ChevronDown,
 } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
@@ -278,6 +279,9 @@ export default function WhatsAppTab() {
   const [reminderQuickOpenItems, setReminderQuickOpenItems] = useState<ReminderQuickOpenItem[]>([]);
   const [isLoadingReminderQuickOpen, setIsLoadingReminderQuickOpen] = useState(false);
   const [reminderQuickOpenError, setReminderQuickOpenError] = useState<string | null>(null);
+  const [collapsedReminderQuickOpenPeriods, setCollapsedReminderQuickOpenPeriods] = useState<Set<ReminderQuickOpenPeriod>>(
+    () => new Set(),
+  );
   const [markingReminderReadId, setMarkingReminderReadId] = useState<string | null>(null);
   const [reminderSchedulerRequest, setReminderSchedulerRequest] = useState<{
     lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
@@ -952,6 +956,39 @@ export default function WhatsAppTab() {
     };
   }, []);
 
+  const loadLeadNames = async () => {
+    try {
+      const data = await fetchAllPages<{
+        id: string;
+        telefone: string;
+        nome_completo: string;
+        status?: string | null;
+        responsavel?: string | null;
+      }>(async (from, to) => {
+        const response = await supabase
+          .from('leads')
+          .select('id, telefone, nome_completo, status, responsavel')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        return { data: response.data, error: response.error };
+      });
+
+      setLeadsList(
+        (data || [])
+          .map((lead) => ({
+            id: lead.id,
+            name: lead.nome_completo,
+            phone: normalizePhoneNumber(lead.telefone),
+            status: lead.status ?? null,
+            responsavel: lead.responsavel ?? null,
+          }))
+          .filter((lead) => Boolean(lead.phone)),
+      );
+    } catch (err) {
+      console.error('Error loading lead names:', err);
+    }
+  };
+
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -966,6 +1003,9 @@ export default function WhatsAppTab() {
         event.preventDefault();
         setShowNewChatModal(true);
         setNewChatTab('leads');
+        if (leadsList.length === 0) {
+          void loadLeadNames();
+        }
         return;
       }
 
@@ -1004,41 +1044,9 @@ export default function WhatsAppTab() {
 
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal]);
+  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]);
 
   useEffect(() => {
-    const loadLeadNames = async () => {
-      try {
-        const data = await fetchAllPages<{
-          id: string;
-          telefone: string;
-          nome_completo: string;
-          status?: string | null;
-          responsavel?: string | null;
-        }>(async (from, to) => {
-          const response = await supabase
-            .from('leads')
-            .select('id, telefone, nome_completo, status, responsavel')
-            .range(from, to);
-          return { data: response.data, error: response.error };
-        });
-
-        setLeadsList(
-          (data || [])
-            .map((lead) => ({
-              id: lead.id,
-              name: lead.nome_completo,
-              phone: normalizePhoneNumber(lead.telefone),
-              status: lead.status ?? null,
-              responsavel: lead.responsavel ?? null,
-            }))
-            .filter((lead) => Boolean(lead.phone)),
-        );
-      } catch (err) {
-        console.error('Error loading lead names:', err);
-      }
-    };
-
     const loadSavedContacts = async () => {
       try {
         const pageSize = 500;
@@ -1121,10 +1129,16 @@ export default function WhatsAppTab() {
       setContactPhotosById(map);
     };
 
-    loadLeadNames();
-    loadSavedContacts();
-    loadContactPhotos();
+    void loadLeadNames();
+    void loadSavedContacts();
+    void loadContactPhotos();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (leadsList.length > 0) return;
+    void loadLeadNames();
+  }, [user?.id]);
 
   useEffect(() => {
     const loadLeadStatuses = async () => {
@@ -1173,18 +1187,19 @@ export default function WhatsAppTab() {
 
         setLeadsList((prev) => {
           const existingIndex = prev.findIndex((lead) => lead.id === leadId);
+          const existingLead = existingIndex >= 0 ? prev[existingIndex] : null;
+          const resolvedPhone = normalizedPhone || existingLead?.phone || '';
 
-          if (!normalizedPhone) {
-            if (existingIndex === -1) return prev;
-            return prev.filter((lead) => lead.id !== leadId);
+          if (!resolvedPhone) {
+            return prev;
           }
 
           const nextLead = {
             id: leadId,
-            name: row.nome_completo?.trim() || (existingIndex >= 0 ? prev[existingIndex].name : normalizedPhone),
-            phone: normalizedPhone,
-            status: row.status ?? (existingIndex >= 0 ? prev[existingIndex].status ?? null : null),
-            responsavel: row.responsavel ?? (existingIndex >= 0 ? prev[existingIndex].responsavel ?? null : null),
+            name: row.nome_completo?.trim() || existingLead?.name || resolvedPhone,
+            phone: resolvedPhone,
+            status: row.status ?? existingLead?.status ?? null,
+            responsavel: row.responsavel ?? existingLead?.responsavel ?? null,
           };
 
           if (existingIndex === -1) {
@@ -2779,16 +2794,16 @@ const mapReminderPriorityToSchedulerPriority = (priority?: string | null): 'norm
 };
 
 const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(today);
+  const referenceDate = new Date();
+  const startOfToday = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
 
-  const endOfWeek = new Date(today);
+  const endOfWeek = new Date(startOfToday);
   endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
 
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+  const endOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const grouped: Record<ReminderQuickOpenPeriod, ReminderQuickOpenItem[]> = {
     overdue: [],
@@ -2805,12 +2820,12 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       return;
     }
 
-    if (dueDate.getTime() < now.getTime()) {
+    if (dueDate.getTime() < startOfToday.getTime()) {
       grouped.overdue.push(item);
       return;
     }
 
-    if (dueDate >= today && dueDate < endOfToday) {
+    if (dueDate >= startOfToday && dueDate < endOfToday) {
       grouped.today.push(item);
       return;
     }
@@ -3222,6 +3237,17 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     [reminderQuickOpenItems],
   );
   const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
+  const toggleReminderQuickOpenPeriod = (periodId: ReminderQuickOpenPeriod) => {
+    setCollapsedReminderQuickOpenPeriods((current) => {
+      const next = new Set(current);
+      if (next.has(periodId)) {
+        next.delete(periodId);
+      } else {
+        next.add(periodId);
+      }
+      return next;
+    });
+  };
 
   return (
     <PanelAdaptiveLoadingFrame
@@ -3404,6 +3430,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 {REMINDER_QUICK_OPEN_PERIODS.map((period) => {
                   const periodItems = groupedReminderQuickOpenItems[period.id];
                   if (periodItems.length === 0) return null;
+                  const isCollapsed = collapsedReminderQuickOpenPeriods.has(period.id);
 
                   return (
                     <section key={period.id} className="space-y-2">
@@ -3411,15 +3438,24 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         <p className={`text-xs font-semibold uppercase tracking-wide ${period.accentClassName}`}>
                           {period.label}
                         </p>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
-                          {periodItems.length}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleReminderQuickOpenPeriod(period.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 transition-colors hover:bg-slate-100"
+                          title={isCollapsed ? 'Expandir seção' : 'Minimizar seção'}
+                          aria-label={isCollapsed ? `Expandir ${period.label}` : `Minimizar ${period.label}`}
+                        >
+                          <span>{periodItems.length}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                        </button>
                       </div>
 
-                      <div className="space-y-3">
+                      {!isCollapsed && <div className="space-y-3">
                         {periodItems.map((item) => {
-                          const dueTime = new Date(item.dueAt).getTime();
-                          const isOverdue = Number.isFinite(dueTime) && dueTime < Date.now();
+                          const dueDate = new Date(item.dueAt);
+                          const startOfToday = new Date();
+                          startOfToday.setHours(0, 0, 0, 0);
+                          const isOverdue = !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < startOfToday.getTime();
                           const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
                           const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
                           const priorityMeta = getReminderPriorityMeta(item.priority);
@@ -3484,7 +3520,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                             </div>
                           );
                         })}
-                      </div>
+                      </div>}
                     </section>
                   );
                 })}
@@ -3505,6 +3541,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   onClick={() => {
                     setShowNewChatModal(true);
                     setNewChatTab('leads');
+                    if (leadsList.length === 0) {
+                      void loadLeadNames();
+                    }
                     setIsListSettingsOpen(false);
                   }}
                   title="Novo chat"

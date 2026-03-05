@@ -33,7 +33,7 @@ import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
-import { shouldPromptFirstReminderAfterQuote } from '../../lib/leadReminderUtils';
+import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
@@ -105,6 +105,53 @@ type ReminderQuickOpenItem = {
   leadPhone: string;
   leadStatus?: string | null;
 };
+
+type ReminderQuickOpenPeriod = 'overdue' | 'today' | 'thisWeek' | 'thisMonth' | 'later';
+
+type ReminderQuickOpenSchedulerDefaults = {
+  defaultTitle?: string;
+  defaultDescription?: string;
+  defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
+  defaultPriority?: 'normal' | 'alta' | 'baixa';
+};
+
+const REMINDER_QUICK_OPEN_PERIODS: Array<{
+  id: ReminderQuickOpenPeriod;
+  label: string;
+  emptyLabel: string;
+  accentClassName: string;
+}> = [
+  {
+    id: 'overdue',
+    label: 'Atrasados',
+    emptyLabel: 'Sem lembretes atrasados.',
+    accentClassName: 'text-red-700',
+  },
+  {
+    id: 'today',
+    label: 'Hoje',
+    emptyLabel: 'Sem lembretes para hoje.',
+    accentClassName: 'text-teal-700',
+  },
+  {
+    id: 'thisWeek',
+    label: 'Esta semana',
+    emptyLabel: 'Sem lembretes para esta semana.',
+    accentClassName: 'text-blue-700',
+  },
+  {
+    id: 'thisMonth',
+    label: 'Este mês',
+    emptyLabel: 'Sem lembretes para este mês.',
+    accentClassName: 'text-amber-700',
+  },
+  {
+    id: 'later',
+    label: 'Mais adiante',
+    emptyLabel: 'Sem lembretes futuros.',
+    accentClassName: 'text-slate-700',
+  },
+];
 
 const COUNTRY_CALLING_CODES = new Set<string>([
   '1', '7', '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
@@ -231,8 +278,12 @@ export default function WhatsAppTab() {
   const [reminderQuickOpenItems, setReminderQuickOpenItems] = useState<ReminderQuickOpenItem[]>([]);
   const [isLoadingReminderQuickOpen, setIsLoadingReminderQuickOpen] = useState(false);
   const [reminderQuickOpenError, setReminderQuickOpenError] = useState<string | null>(null);
-  const [reminderLead, setReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
-  const [reminderPromptMessage, setReminderPromptMessage] = useState<string | undefined>(undefined);
+  const [markingReminderReadId, setMarkingReminderReadId] = useState<string | null>(null);
+  const [reminderSchedulerRequest, setReminderSchedulerRequest] = useState<{
+    lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
+    promptMessage?: string;
+    defaults?: ReminderQuickOpenSchedulerDefaults;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
@@ -268,10 +319,32 @@ export default function WhatsAppTab() {
 
   function normalizePhoneNumber(phone: string | null | undefined) {
     if (!phone) return '';
-    const digits = phone.replace(/\D/g, '');
+    let digits = phone.replace(/\D/g, '');
+    if (!digits) return '';
 
-    if (digits.startsWith('55') && digits.length >= 12) {
-      return digits.slice(-11);
+    digits = digits.replace(/^00+/, '');
+
+    if (digits.startsWith('0') && digits.length > 11) {
+      digits = digits.replace(/^0+/, '');
+    }
+
+    if (digits.startsWith('55')) {
+      const local = digits.slice(2).replace(/^0+/, '');
+      if (!local) return '';
+      if (local.length === 10 || local.length === 11) {
+        return local;
+      }
+      if (local.length > 11) {
+        return local.slice(-11);
+      }
+      return local;
+    }
+
+    if (digits.startsWith('0') && (digits.length === 11 || digits.length === 12)) {
+      const stripped = digits.replace(/^0+/, '');
+      if (stripped.length === 10 || stripped.length === 11) {
+        return stripped;
+      }
     }
 
     return digits;
@@ -323,13 +396,13 @@ export default function WhatsAppTab() {
       .filter(Boolean);
   };
 
-  const getLeadMatchKeysForChat = (chat: Pick<WhatsAppChat, 'id' | 'phone_number' | 'lid' | 'is_group'> | null): string[] => {
+  const getLeadMatchKeysForChat = (chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null): string[] => {
     if (!chat || !isDirectChat(chat)) {
       return [];
     }
 
     const keys = new Set<string>();
-    [chat.id, normalizeChatId(chat.id), chat.phone_number, chat.lid].forEach((value) => {
+    [chat.id, chat.name, normalizeChatId(chat.id), chat.phone_number, chat.lid].forEach((value) => {
       collectPhoneMatchKeys(value).forEach((key) => keys.add(key));
     });
 
@@ -507,7 +580,16 @@ export default function WhatsAppTab() {
 
   const getChatKind = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     if (chat.is_group) return 'group' as const;
-    return getWhatsAppChatKind(chat.id);
+
+    const kind = getWhatsAppChatKind(chat.id);
+    if (kind !== 'unknown') return kind;
+
+    const digits = chat.id.replace(/\D/g, '');
+    if (!chat.id.includes('@') && digits.length >= 10) {
+      return 'direct' as const;
+    }
+
+    return kind;
   };
 
   const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => getChatKind(chat) === 'direct';
@@ -2682,6 +2764,73 @@ const getReminderPriorityMeta = (priority?: string | null) => {
   return { label: 'Normal', className: 'border border-blue-200 bg-blue-50 text-blue-700' };
 };
 
+const mapReminderTypeToSchedulerType = (type?: string | null): 'Retorno' | 'Follow-up' | 'Outro' => {
+  const normalized = (type || '').trim().toLowerCase();
+  if (normalized === 'retorno') return 'Retorno';
+  if (normalized === 'follow-up' || normalized === 'follow up' || normalized === 'followup') return 'Follow-up';
+  return 'Outro';
+};
+
+const mapReminderPriorityToSchedulerPriority = (priority?: string | null): 'normal' | 'alta' | 'baixa' => {
+  const normalized = (priority || 'normal').trim().toLowerCase();
+  if (normalized === 'alta' || normalized === 'high') return 'alta';
+  if (normalized === 'baixa' || normalized === 'low') return 'baixa';
+  return 'normal';
+};
+
+const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(today);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const grouped: Record<ReminderQuickOpenPeriod, ReminderQuickOpenItem[]> = {
+    overdue: [],
+    today: [],
+    thisWeek: [],
+    thisMonth: [],
+    later: [],
+  };
+
+  items.forEach((item) => {
+    const dueDate = new Date(item.dueAt);
+    if (Number.isNaN(dueDate.getTime())) {
+      grouped.later.push(item);
+      return;
+    }
+
+    if (dueDate.getTime() < now.getTime()) {
+      grouped.overdue.push(item);
+      return;
+    }
+
+    if (dueDate >= today && dueDate < endOfToday) {
+      grouped.today.push(item);
+      return;
+    }
+
+    if (dueDate <= endOfWeek) {
+      grouped.thisWeek.push(item);
+      return;
+    }
+
+    if (dueDate <= endOfMonth) {
+      grouped.thisMonth.push(item);
+      return;
+    }
+
+    grouped.later.push(item);
+  });
+
+  return grouped;
+};
+
   const loadReminderQuickOpen = async () => {
     setIsLoadingReminderQuickOpen(true);
     setReminderQuickOpenError(null);
@@ -2823,6 +2972,110 @@ const getReminderPriorityMeta = (priority?: string | null) => {
     }
   };
 
+  const openReminderLeadInWhatsApp = (item: ReminderQuickOpenItem) => {
+    if (!item.leadPhone) return;
+
+    const params = new URLSearchParams();
+    params.set('openPhone', item.leadPhone);
+    params.set('leadName', item.leadName);
+    params.set('leadId', item.leadId);
+
+    openChatFromPhone(item.leadPhone, item.leadName);
+    navigate(`/painel/whatsapp?${params.toString()}`);
+    setShowRemindersModal(false);
+  };
+
+  const resolveReminderLeadForScheduling = async (item: ReminderQuickOpenItem) => {
+    let leadMatch = leadsList.find((lead) => lead.id === item.leadId);
+
+    const needsRefresh = !leadMatch || !leadMatch.name?.trim() || !leadMatch.phone;
+    if (needsRefresh) {
+      const { data: leadData, error: leadError } = await supabase
+        .from('leads')
+        .select('id, nome_completo, telefone, responsavel, status')
+        .eq('id', item.leadId)
+        .maybeSingle();
+
+      if (!leadError && leadData?.id) {
+        const refreshedLead = {
+          id: leadData.id,
+          name: leadData.nome_completo?.trim() || '',
+          phone: normalizePhoneNumber(leadData.telefone),
+          status: leadData.status ?? leadMatch?.status ?? null,
+          responsavel: leadData.responsavel ?? leadMatch?.responsavel ?? null,
+        };
+
+        if (refreshedLead.phone) {
+          setLeadsList((prev) => {
+            const existingIndex = prev.findIndex((lead) => lead.id === refreshedLead.id);
+            if (existingIndex === -1) {
+              return [...prev, refreshedLead];
+            }
+            const next = [...prev];
+            next[existingIndex] = refreshedLead;
+            return next;
+          });
+        }
+
+        leadMatch = refreshedLead;
+      }
+    }
+
+    const phone = leadMatch?.phone || normalizePhoneNumber(item.leadPhone);
+    if (!phone) return null;
+
+    return {
+      id: item.leadId,
+      nome_completo: resolveReminderLeadName(leadMatch?.name, item.title),
+      telefone: phone,
+      responsavel: leadMatch?.responsavel ?? null,
+    };
+  };
+
+  const handleMarkReminderAsReadAndSchedule = async (item: ReminderQuickOpenItem) => {
+    if (markingReminderReadId === item.id) return;
+
+    setMarkingReminderReadId(item.id);
+
+    try {
+      const completedAt = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('reminders')
+        .update({ lido: true, concluido_em: completedAt })
+        .eq('id', item.id);
+
+      if (updateError) throw updateError;
+
+      await syncLeadNextReturnFromUpcomingReminder(item.leadId);
+
+      setReminderQuickOpenItems((current) =>
+        current.filter((reminderItem) => reminderItem.id !== item.id),
+      );
+
+      const leadForScheduler = await resolveReminderLeadForScheduling(item);
+      if (!leadForScheduler) {
+        alert('Lembrete marcado como lido, mas não foi possível abrir o agendamento do próximo contato.');
+        return;
+      }
+
+      setShowRemindersModal(false);
+      openReminderScheduler(
+        leadForScheduler,
+        'Lembrete marcado como lido. Deseja agendar o próximo contato?',
+        {
+          defaultTitle: item.title,
+          defaultType: mapReminderTypeToSchedulerType(item.type),
+          defaultPriority: mapReminderPriorityToSchedulerPriority(item.priority),
+        },
+      );
+    } catch (error) {
+      console.error('Erro ao marcar lembrete como lido no WhatsApp:', error);
+      alert('Não foi possível marcar este lembrete como lido.');
+    } finally {
+      setMarkingReminderReadId((current) => (current === item.id ? null : current));
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const phoneParam = params.get('openPhone') || params.get('phone');
@@ -2909,14 +3162,13 @@ const getReminderPriorityMeta = (priority?: string | null) => {
   const openReminderScheduler = (
     lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>,
     promptMessage?: string,
+    defaults?: ReminderQuickOpenSchedulerDefaults,
   ) => {
-    setReminderLead(lead);
-    setReminderPromptMessage(promptMessage);
+    setReminderSchedulerRequest({ lead, promptMessage, defaults });
   };
 
   const closeReminderScheduler = () => {
-    setReminderLead(null);
-    setReminderPromptMessage(undefined);
+    setReminderSchedulerRequest(null);
   };
 
   const handleUpdateLeadStatus = async (statusName: string, leadId?: string) => {
@@ -2965,10 +3217,11 @@ const getReminderPriorityMeta = (priority?: string | null) => {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
-  const overdueReminderQuickOpenCount = reminderQuickOpenItems.reduce((count, item) => {
-    const dueTime = new Date(item.dueAt).getTime();
-    return Number.isFinite(dueTime) && dueTime < Date.now() ? count + 1 : count;
-  }, 0);
+  const groupedReminderQuickOpenItems = useMemo(
+    () => groupReminderQuickOpenItems(reminderQuickOpenItems),
+    [reminderQuickOpenItems],
+  );
+  const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
 
   return (
     <PanelAdaptiveLoadingFrame
@@ -3147,61 +3400,92 @@ const getReminderPriorityMeta = (priority?: string | null) => {
                 Nenhum lembrete pendente com lead vinculado.
               </div>
             ) : (
-              <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
-                {reminderQuickOpenItems.map((item) => {
-                  const dueTime = new Date(item.dueAt).getTime();
-                  const isOverdue = Number.isFinite(dueTime) && dueTime < Date.now();
-                  const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
-                  const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
-                  const priorityMeta = getReminderPriorityMeta(item.priority);
+              <div className="max-h-[58vh] space-y-4 overflow-y-auto pr-1">
+                {REMINDER_QUICK_OPEN_PERIODS.map((period) => {
+                  const periodItems = groupedReminderQuickOpenItems[period.id];
+                  if (periodItems.length === 0) return null;
 
                   return (
-                    <div key={item.id} className="panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="truncate text-sm font-semibold text-slate-900">{item.leadName}</p>
-                            {leadStatusStyles && item.leadStatus && (
-                              <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
-                                {item.leadStatus}
-                              </span>
-                            )}
-                            <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                              {item.type}
-                            </span>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] ${priorityMeta.className}`}>
-                              {priorityMeta.label}
-                            </span>
-                            {isOverdue && (
-                              <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] text-red-700">
-                                Atrasado
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
-                          <p className="mt-2 text-[11px] text-slate-500">
-                            {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
-                            {formatReminderDueAt(item.dueAt)}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (!item.leadPhone) return;
-                            openChatFromPhone(item.leadPhone, item.leadName);
-                            setShowRemindersModal(false);
-                          }}
-                          disabled={!item.leadPhone}
-                          variant="soft"
-                          size="sm"
-                          className="h-9 w-full justify-center sm:w-auto"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          Abrir no WhatsApp
-                        </Button>
+                    <section key={period.id} className="space-y-2">
+                      <div className="sticky top-0 z-[1] flex items-center justify-between rounded-lg border border-slate-200 bg-white/95 px-3 py-2 backdrop-blur-sm">
+                        <p className={`text-xs font-semibold uppercase tracking-wide ${period.accentClassName}`}>
+                          {period.label}
+                        </p>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
+                          {periodItems.length}
+                        </span>
                       </div>
-                    </div>
+
+                      <div className="space-y-3">
+                        {periodItems.map((item) => {
+                          const dueTime = new Date(item.dueAt).getTime();
+                          const isOverdue = Number.isFinite(dueTime) && dueTime < Date.now();
+                          const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
+                          const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+                          const priorityMeta = getReminderPriorityMeta(item.priority);
+
+                          return (
+                            <div key={item.id} className="panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="truncate text-sm font-semibold text-slate-900">{item.leadName}</p>
+                                    {leadStatusStyles && item.leadStatus && (
+                                      <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
+                                        {item.leadStatus}
+                                      </span>
+                                    )}
+                                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                                      {item.type}
+                                    </span>
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${priorityMeta.className}`}>
+                                      {priorityMeta.label}
+                                    </span>
+                                    {isOverdue && (
+                                      <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] text-red-700">
+                                        Atrasado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
+                                  <p className="mt-2 text-[11px] text-slate-500">
+                                    {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
+                                    {formatReminderDueAt(item.dueAt)}
+                                  </p>
+                                </div>
+
+                                <div className="flex w-full flex-col gap-2 sm:w-auto">
+                                  <Button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleMarkReminderAsReadAndSchedule(item);
+                                    }}
+                                    loading={markingReminderReadId === item.id}
+                                    disabled={Boolean(markingReminderReadId && markingReminderReadId !== item.id)}
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-9 w-full justify-center sm:w-auto"
+                                  >
+                                    Marcar como lido
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={() => openReminderLeadInWhatsApp(item)}
+                                    disabled={!item.leadPhone || Boolean(markingReminderReadId)}
+                                    variant="soft"
+                                    size="sm"
+                                    className="h-9 w-full justify-center sm:w-auto"
+                                  >
+                                    <MessageCircle className="h-3.5 w-3.5" />
+                                    Abrir no WhatsApp
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
                   );
                 })}
               </div>
@@ -3855,17 +4139,21 @@ const getReminderPriorityMeta = (priority?: string | null) => {
         </div>
       )}
 
-      {reminderLead && (
+      {reminderSchedulerRequest && (
         <ReminderSchedulerModal
-          lead={reminderLead}
+          lead={reminderSchedulerRequest.lead}
           onClose={closeReminderScheduler}
           onScheduled={() => {
             closeReminderScheduler();
+            void loadReminderQuickOpen();
           }}
           promptMessage={
-            reminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta/cotação enviada?'
+            reminderSchedulerRequest.promptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta/cotação enviada?'
           }
-          defaultType="Follow-up"
+          defaultTitle={reminderSchedulerRequest.defaults?.defaultTitle}
+          defaultDescription={reminderSchedulerRequest.defaults?.defaultDescription}
+          defaultType={reminderSchedulerRequest.defaults?.defaultType ?? 'Follow-up'}
+          defaultPriority={reminderSchedulerRequest.defaults?.defaultPriority}
         />
       )}
       </div>

@@ -35,13 +35,13 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     setError(null);
 
     try {
-      let finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
+      const finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
 
       const contextWindow = 10 * 60;
       const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;
       const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
 
-      const response = await getWhatsAppMessageHistory({
+      await getWhatsAppMessageHistory({
         chatId: finalChatId,
         count: 1,
         timeFrom,

@@ -1,8 +1,11 @@
-// @ts-nocheck
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+};
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
 type LinkPreviewRequest = {

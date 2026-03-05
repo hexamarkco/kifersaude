@@ -47,7 +47,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     setError(null);
 
     try {
-      let finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
+      const finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
 
       if (!chatId.includes('@')) {
         console.log('[FullMessageHistoryModal] chatId não contém @, construindo...');

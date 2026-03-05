@@ -139,19 +139,37 @@ export function MessageBubble({
   const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media || payloadData;
   const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
   const imageFullSrc =
-    payloadData?.image?.link ||
     payloadData?.image?.url ||
+    payloadData?.image?.file ||
+    payloadData?.image?.path ||
     payloadData?.media?.link ||
     payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.image?.link ||
     payloadData?.image?.preview ||
     '';
   const videoFullSrc =
-    payloadData?.video?.link ||
     payloadData?.video?.url ||
+    payloadData?.video?.file ||
+    payloadData?.video?.path ||
     payloadData?.media?.link ||
     payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.video?.link ||
     '';
-  const visualMediaId = payloadData?.image?.id || payloadData?.video?.id || payloadData?.media?.id || null;
+  const visualMediaId =
+    payloadData?.image?.id ||
+    payloadData?.image?.media_id ||
+    payloadData?.image?.mediaId ||
+    payloadData?.video?.id ||
+    payloadData?.video?.media_id ||
+    payloadData?.video?.mediaId ||
+    payloadData?.media?.id ||
+    payloadData?.media_id ||
+    payloadData?.mediaId ||
+    null;
   const visualDisplayUrl = visualMediaUrl || (normalizedType.startsWith('video') ? videoFullSrc : imageFullSrc);
   const isImageMessage = hasMedia && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
   const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
@@ -363,7 +381,15 @@ export function MessageBubble({
     }
 
     if (isImageMessage) {
-      const imageUrl = payloadData?.image?.link || payloadData?.media?.link || payloadData?.media?.url;
+      const imageUrl =
+        payloadData?.image?.url ||
+        payloadData?.image?.file ||
+        payloadData?.image?.path ||
+        payloadData?.media?.link ||
+        payloadData?.media?.url ||
+        payloadData?.media?.file ||
+        payloadData?.media?.path ||
+        payloadData?.image?.link;
       const imagePreview = payloadData?.image?.preview;
       const displayUrl = visualMediaUrl || imageUrl || imagePreview;
       const shouldShowCaption = body && body !== '[Imagem]';
@@ -372,7 +398,9 @@ export function MessageBubble({
           {displayUrl ? (
             <button
               type="button"
-              onClick={() => setMediaPreview({ type: 'image', src: displayUrl })}
+              onClick={() => {
+                void openMediaPreview('image', displayUrl);
+              }}
               className="block rounded-xl overflow-hidden"
             >
               <img
@@ -386,11 +414,8 @@ export function MessageBubble({
             <button
               type="button"
               className="bg-gray-100 rounded p-2 text-sm text-gray-600"
-              onClick={async () => {
-                const loadedUrl = await loadVisualMedia();
-                if (loadedUrl) {
-                  setMediaPreview({ type: 'image', src: loadedUrl });
-                }
+              onClick={() => {
+                void openMediaPreview('image');
               }}
               disabled={visualMediaLoading}
             >
@@ -430,7 +455,9 @@ export function MessageBubble({
               <button
                 type="button"
                 className="w-full text-xs text-white/90 bg-black/75 py-1.5 hover:bg-black/85"
-                onClick={() => setMediaPreview({ type: 'video', src: videoUrl })}
+                onClick={() => {
+                  void openMediaPreview('video', videoUrl);
+                }}
               >
                 Abrir em tela cheia
               </button>
@@ -439,11 +466,8 @@ export function MessageBubble({
             <button
               type="button"
               className="bg-gray-100 rounded p-2 text-sm text-gray-600"
-              onClick={async () => {
-                const loadedUrl = await loadVisualMedia();
-                if (loadedUrl) {
-                  setMediaPreview({ type: 'video', src: loadedUrl });
-                }
+              onClick={() => {
+                void openMediaPreview('video');
               }}
               disabled={visualMediaLoading}
             >
@@ -664,6 +688,36 @@ export function MessageBubble({
     return null;
   }
 
+  async function openMediaPreview(previewType: 'image' | 'video', fallbackSrc?: string | null) {
+    const initialSrc = fallbackSrc || visualMediaUrl || null;
+    const shouldOpenAfterLoad = !initialSrc;
+
+    if (initialSrc) {
+      setMediaPreview({ type: previewType, src: initialSrc });
+    }
+
+    if (!visualMediaId || visualMediaUrl) {
+      return;
+    }
+
+    const loadedUrl = await loadVisualMedia();
+    if (!loadedUrl) {
+      return;
+    }
+
+    setMediaPreview((current) => {
+      if (!current) {
+        return shouldOpenAfterLoad ? { type: previewType, src: loadedUrl } : current;
+      }
+
+      if (current.type !== previewType || current.src === loadedUrl) {
+        return current;
+      }
+
+      return { ...current, src: loadedUrl };
+    });
+  }
+
   return (
     <div
       className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
@@ -807,14 +861,14 @@ export function MessageBubble({
           </button>
           <div className="w-full h-full flex items-center justify-center">
             {mediaPreview.type === 'image' ? (
-              <img src={mediaPreview.src} alt="Imagem" className="max-h-full max-w-full object-contain rounded-lg" />
+              <img src={mediaPreview.src} alt="Imagem" className="h-full w-full max-h-[92vh] max-w-[92vw] object-contain rounded-lg" />
             ) : (
               <video
                 src={mediaPreview.src}
                 controls
                 autoPlay
                 playsInline
-                className="max-h-full max-w-full object-contain rounded-lg bg-black"
+                className="h-full w-full max-h-[92vh] max-w-[92vw] object-contain rounded-lg bg-black"
               />
             )}
           </div>

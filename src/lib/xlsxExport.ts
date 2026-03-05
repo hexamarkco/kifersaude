@@ -1,4 +1,5 @@
 const textEncoder = new TextEncoder();
+const INVALID_SHEET_NAME_CHARS = new Set([':', '/', '\\', '?', '*', '[', ']']);
 
 type ZipEntry = {
   path: string;
@@ -206,7 +207,10 @@ const createContentTypes = () => `<?xml version="1.0" encoding="UTF-8"?>
 </Types>`;
 
 const sanitizeSheetName = (name: string) => {
-  const cleaned = name.replace(/[:\/\\?*\[\]]/g, '_').trim();
+  const cleaned = [...name]
+    .map((character) => (INVALID_SHEET_NAME_CHARS.has(character) ? '_' : character))
+    .join('')
+    .trim();
   if (!cleaned) {
     return 'Planilha1';
   }

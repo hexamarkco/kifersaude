@@ -262,9 +262,9 @@ export default function CommissionCalendar() {
             isSelected
               ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg'
               : isToday
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : dayEvents.length > 0
-              ? 'border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100'
+              ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
               : 'border-slate-200 hover:bg-slate-50'
           }`}
         >
@@ -280,7 +280,7 @@ export default function CommissionCalendar() {
               </span>
             )}
             {hasBonus && (
-              <span className="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-0.5 text-[10px] font-semibold">
+              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-semibold">
                 <Gift className="w-3 h-3 mr-1" />
                 {dayEvents
                   .filter((event) => event.type === 'bonificacao')
@@ -335,7 +335,7 @@ export default function CommissionCalendar() {
           </div>
           <div className="text-right">
             <p className="text-xs uppercase text-slate-500 tracking-wide">Bonificação prevista</p>
-            <p className="text-lg font-semibold text-yellow-600">{formatCurrency(totals.bonus)}</p>
+            <p className="text-lg font-semibold text-amber-700">{formatCurrency(totals.bonus)}</p>
           </div>
         </div>
       </div>
@@ -391,23 +391,23 @@ export default function CommissionCalendar() {
           <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
             Destaques do mês
           </h4>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-emerald-600" />
-                <span className="text-slate-700">Total em comissões previstas</span>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <span className="text-slate-700">Total em comissões previstas</span>
+                </div>
+                <span className="font-semibold text-emerald-700">{formatCurrency(totals.commission)}</span>
               </div>
-              <span className="font-semibold text-emerald-700">{formatCurrency(totals.commission)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50">
-              <div className="flex items-center space-x-2">
-                <Gift className="w-4 h-4 text-yellow-600" />
-                <span className="text-slate-700">Total em bonificações previstas</span>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50">
+                <div className="flex items-center space-x-2">
+                  <Gift className="w-4 h-4 text-amber-700" />
+                  <span className="text-slate-700">Total em bonificações previstas</span>
+                </div>
+                <span className="font-semibold text-amber-700">{formatCurrency(totals.bonus)}</span>
               </div>
-              <span className="font-semibold text-yellow-700">{formatCurrency(totals.bonus)}</span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Os valores consideram apenas contratos ativos com previsões cadastradas para o período selecionado.
+              <p className="text-xs text-slate-500">
+                Os valores consideram apenas contratos ativos com previsões cadastradas para o período selecionado.
             </p>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function CommissionCalendar() {
                     className={`border rounded-lg p-3 flex items-start justify-between ${
                       event.type === 'comissao'
                         ? 'border-emerald-200 bg-emerald-50'
-                        : 'border-yellow-200 bg-yellow-50'
+                        : 'border-amber-200 bg-amber-50'
                     }`}
                   >
                     <div className="flex-1">
@@ -444,7 +444,7 @@ export default function CommissionCalendar() {
                     </div>
                     <span
                       className={`text-sm font-semibold ${
-                        event.type === 'comissao' ? 'text-emerald-700' : 'text-yellow-700'
+                        event.type === 'comissao' ? 'text-emerald-700' : 'text-amber-700'
                       }`}
                     >
                       {formatCurrency(event.value)}

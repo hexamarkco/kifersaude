@@ -24,6 +24,7 @@ import type { LeadStatusConfig } from '../../lib/supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
+import Button from '../ui/Button';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { getBadgeStyle } from '../../lib/colorUtils';
@@ -2634,16 +2635,52 @@ export default function WhatsAppTab() {
     setNewChatPhone('');
   };
 
-  const formatReminderDueAt = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Data indisponivel';
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+const formatReminderDueAt = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data indisponivel';
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const extractLeadNameFromReminderTitle = (title?: string | null) => {
+  const trimmed = title?.trim();
+  if (!trimmed) return null;
+
+  const explicitName = trimmed.match(/^(?:follow\s*-?\s*up|retorno|lembrete)\s*[:-]\s*(.+)$/i)?.[1]?.trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const genericName = trimmed.match(/[:-]\s*(.+)$/)?.[1]?.trim();
+  return genericName || null;
+};
+
+const resolveReminderLeadName = (leadName?: string | null, reminderTitle?: string | null) => {
+  const normalizedLeadName = leadName?.trim();
+  if (normalizedLeadName) {
+    return normalizedLeadName;
+  }
+
+  return extractLeadNameFromReminderTitle(reminderTitle) || 'Lead sem nome';
+};
+
+const getReminderPriorityMeta = (priority?: string | null) => {
+  const normalized = (priority || 'normal').trim().toLowerCase();
+
+  if (normalized === 'alta' || normalized === 'high') {
+    return { label: 'Alta', className: 'border border-red-200 bg-red-50 text-red-700' };
+  }
+
+  if (normalized === 'baixa' || normalized === 'low') {
+    return { label: 'Baixa', className: 'border border-emerald-200 bg-emerald-50 text-emerald-700' };
+  }
+
+  return { label: 'Normal', className: 'border border-blue-200 bg-blue-50 text-blue-700' };
+};
 
   const loadReminderQuickOpen = async () => {
     setIsLoadingReminderQuickOpen(true);
@@ -2699,13 +2736,20 @@ export default function WhatsAppTab() {
       const reminderLeadCandidates = reminders
         .map((reminder) => reminder.lead_id || (reminder.contract_id ? contractLeadMap.get(reminder.contract_id) ?? null : null))
         .filter((leadId): leadId is string => typeof leadId === 'string' && leadId.length > 0);
-      const missingLeadIds = Array.from(new Set(reminderLeadCandidates.filter((leadId) => !leadById.has(leadId))));
+      const leadIdsToRefresh = Array.from(
+        new Set(
+          reminderLeadCandidates.filter((leadId) => {
+            const existingLead = leadById.get(leadId);
+            return !existingLead || !existingLead.name?.trim() || !existingLead.phone;
+          }),
+        ),
+      );
 
-      if (missingLeadIds.length > 0) {
+      if (leadIdsToRefresh.length > 0) {
         const { data: missingLeadsData, error: missingLeadsError } = await supabase
           .from('leads')
           .select('id, telefone, nome_completo, status, responsavel')
-          .in('id', missingLeadIds);
+          .in('id', leadIdsToRefresh);
 
         if (!missingLeadsError) {
           const normalizedMissingLeads = ((missingLeadsData || []) as Array<{
@@ -2717,26 +2761,29 @@ export default function WhatsAppTab() {
           }>)
             .map((lead) => ({
               id: lead.id,
-              name: lead.nome_completo,
+              name: lead.nome_completo?.trim() || '',
               phone: normalizePhoneNumber(lead.telefone),
               status: lead.status ?? null,
               responsavel: lead.responsavel ?? null,
-            }))
-            .filter((lead) => Boolean(lead.phone));
+            }));
 
           if (normalizedMissingLeads.length > 0) {
-            setLeadsList((prev) => {
-              const next = [...prev];
-              normalizedMissingLeads.forEach((lead) => {
-                const existingIndex = next.findIndex((item) => item.id === lead.id);
-                if (existingIndex === -1) {
-                  next.push(lead);
-                } else {
-                  next[existingIndex] = lead;
-                }
+            const leadsWithPhone = normalizedMissingLeads.filter((lead) => Boolean(lead.phone));
+
+            if (leadsWithPhone.length > 0) {
+              setLeadsList((prev) => {
+                const next = [...prev];
+                leadsWithPhone.forEach((lead) => {
+                  const existingIndex = next.findIndex((item) => item.id === lead.id);
+                  if (existingIndex === -1) {
+                    next.push(lead);
+                  } else {
+                    next[existingIndex] = lead;
+                  }
+                });
+                return next;
               });
-              return next;
-            });
+            }
 
             normalizedMissingLeads.forEach((lead) => {
               leadById.set(lead.id, lead);
@@ -2758,7 +2805,7 @@ export default function WhatsAppTab() {
             priority: reminder.prioridade?.trim() || 'normal',
             dueAt: reminder.data_lembrete,
             leadId: resolvedLeadId,
-            leadName: lead?.name || 'Lead sem nome',
+            leadName: resolveReminderLeadName(lead?.name, reminder.titulo),
             leadPhone: lead?.phone || '',
             leadStatus: lead?.status ?? null,
           } as ReminderQuickOpenItem;
@@ -2918,6 +2965,10 @@ export default function WhatsAppTab() {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
+  const overdueReminderQuickOpenCount = reminderQuickOpenItems.reduce((count, item) => {
+    const dueTime = new Date(item.dueAt).getTime();
+    return Number.isFinite(dueTime) && dueTime < Date.now() ? count + 1 : count;
+  }, 0);
 
   return (
     <PanelAdaptiveLoadingFrame
@@ -3051,18 +3102,36 @@ export default function WhatsAppTab() {
           size="lg"
           panelClassName="max-w-3xl"
         >
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <span>Use esta lista para abrir rapidamente a conversa de leads com lembrete pendente.</span>
-              <button
-                type="button"
-                onClick={() => void loadReminderQuickOpen()}
-                disabled={isLoadingReminderQuickOpen}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingReminderQuickOpen ? 'animate-spin' : ''}`} />
-                Atualizar
-              </button>
+          <div className="space-y-4">
+            <div className="panel-glass-panel rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Abertura rapida de conversas</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Abra em um clique os chats com lembretes pendentes vinculados aos leads.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => void loadReminderQuickOpen()}
+                  disabled={isLoadingReminderQuickOpen}
+                  variant="secondary"
+                  size="sm"
+                  className="h-8"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoadingReminderQuickOpen ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-600">
+                  {reminderQuickOpenItems.length} pendente(s)
+                </span>
+                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                  {overdueReminderQuickOpenCount} atrasado(s)
+                </span>
+              </div>
             </div>
 
             {isLoadingReminderQuickOpen ? (
@@ -3078,47 +3147,60 @@ export default function WhatsAppTab() {
                 Nenhum lembrete pendente com lead vinculado.
               </div>
             ) : (
-              <div className="max-h-[58vh] overflow-y-auto rounded-lg border border-slate-200 bg-white">
+              <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
                 {reminderQuickOpenItems.map((item) => {
                   const dueTime = new Date(item.dueAt).getTime();
                   const isOverdue = Number.isFinite(dueTime) && dueTime < Date.now();
                   const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
                   const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+                  const priorityMeta = getReminderPriorityMeta(item.priority);
 
                   return (
-                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-medium text-slate-900">{item.leadName}</p>
-                          {leadStatusStyles && item.leadStatus && (
-                            <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
-                              {item.leadStatus}
+                    <div key={item.id} className="panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-slate-900">{item.leadName}</p>
+                            {leadStatusStyles && item.leadStatus && (
+                              <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
+                                {item.leadStatus}
+                              </span>
+                            )}
+                            <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                              {item.type}
                             </span>
-                          )}
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{item.type}</span>
-                          {isOverdue && (
-                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">Atrasado</span>
-                          )}
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] ${priorityMeta.className}`}>
+                              {priorityMeta.label}
+                            </span>
+                            {isOverdue && (
+                              <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] text-red-700">
+                                Atrasado
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
+                          <p className="mt-2 text-[11px] text-slate-500">
+                            {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
+                            {formatReminderDueAt(item.dueAt)}
+                          </p>
                         </div>
-                        <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
-                        <p className="mt-1 text-[11px] text-slate-500">
-                          {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
-                          {formatReminderDueAt(item.dueAt)}
-                        </p>
+
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (!item.leadPhone) return;
+                            openChatFromPhone(item.leadPhone, item.leadName);
+                            setShowRemindersModal(false);
+                          }}
+                          disabled={!item.leadPhone}
+                          variant="soft"
+                          size="sm"
+                          className="h-9 w-full justify-center sm:w-auto"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Abrir no WhatsApp
+                        </Button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!item.leadPhone) return;
-                          openChatFromPhone(item.leadPhone, item.leadName);
-                          setShowRemindersModal(false);
-                        }}
-                        disabled={!item.leadPhone}
-                        className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        Abrir no WhatsApp
-                      </button>
                     </div>
                   );
                 })}

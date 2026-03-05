@@ -134,7 +134,7 @@ type WhapiMessage = {
 
 type WhapiStatus = {
   id: string;
-  code: number;
+  code: number | string | null;
   status: string;
   recipient_id: string;
   timestamp: string;
@@ -506,16 +506,58 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   return normalized;
 }
 
-function mapStatusToAck(status: string): number {
+function mapStatusToAck(status?: string | null): number | null {
+  if (!status) return null;
+
+  const normalized = status.trim().toLowerCase();
   const statusMap: Record<string, number> = {
-    'failed': 0,
-    'pending': 1,
-    'sent': 2,
-    'delivered': 3,
-    'read': 4,
-    'played': 4,
+    failed: 0,
+    pending: 1,
+    sent: 2,
+    delivered: 3,
+    read: 4,
+    played: 4,
   };
-  return statusMap[status] ?? 1;
+
+  return statusMap[normalized] ?? null;
+}
+
+function mapStatusCodeToAck(code?: number | string | null): number | null {
+  const numericCode =
+    typeof code === 'number'
+      ? code
+      : typeof code === 'string' && code.trim() !== ''
+        ? Number(code)
+        : Number.NaN;
+
+  if (Number.isNaN(numericCode)) return null;
+
+  const codeMap: Record<number, number> = {
+    0: 1,
+    1: 2,
+    2: 3,
+    3: 4,
+    4: 4,
+  };
+
+  if (numericCode in codeMap) {
+    return codeMap[numericCode];
+  }
+
+  return numericCode <= 0 ? 0 : null;
+}
+
+function resolveStatusAck(status?: string | null, code?: number | string | null): number | null {
+  const fromStatus = mapStatusToAck(status);
+  const fromCode = mapStatusCodeToAck(code);
+
+  if (fromStatus === null && fromCode === null) {
+    return null;
+  }
+
+  if (fromStatus === null) return fromCode;
+  if (fromCode === null) return fromStatus;
+  return Math.max(fromStatus, fromCode);
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
@@ -815,15 +857,33 @@ async function upsertMessage(message: NormalizedMessage) {
 }
 
 async function updateMessageAck(messageId: string, ackStatus: number) {
+  const { data: existingMessage, error: fetchError } = await supabase
+    .from('whatsapp_messages')
+    .select('ack_status')
+    .eq('id', messageId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Erro ao buscar ACK atual: ${fetchError.message}`);
+  }
+
+  const currentAck = typeof existingMessage?.ack_status === 'number' ? existingMessage.ack_status : null;
+  const nextAck = ackStatus === 0 ? 0 : currentAck !== null ? Math.max(currentAck, ackStatus) : ackStatus;
+
+  if (currentAck !== null && currentAck === nextAck) {
+    return;
+  }
+
   console.log('whatsapp-webhook: atualizando ack da mensagem', {
     messageId,
-    ackStatus,
-    ackLabel: getAckLabel(ackStatus),
+    ackStatus: nextAck,
+    ackLabel: getAckLabel(nextAck),
+    previousAck: currentAck,
   });
 
   const { error } = await supabase
     .from('whatsapp_messages')
-    .update({ ack_status: ackStatus })
+    .update({ ack_status: nextAck })
     .eq('id', messageId);
 
   if (error) {
@@ -1262,7 +1322,6 @@ Deno.serve(async (req) => {
   }
 
   const isMessageEvent = eventName.toLowerCase().includes('messages');
-  const isStatusEvent = eventName.toLowerCase().includes('statuses');
   const isGroupEvent = eventName.toLowerCase().includes('groups');
 
   if (isMessageEvent && payload.messages && Array.isArray(payload.messages)) {
@@ -1315,14 +1374,19 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (isStatusEvent && payload.statuses && Array.isArray(payload.statuses)) {
+  if (payload.statuses && Array.isArray(payload.statuses)) {
     for (const status of payload.statuses) {
       try {
-        const ackStatus = status.code;
+        const ackStatus = resolveStatusAck(status.status, status.code);
+        if (ackStatus === null) {
+          continue;
+        }
+
         await updateMessageAck(status.id, ackStatus);
         console.log('whatsapp-webhook: status de mensagem atualizado', {
           messageId: status.id,
           status: status.status,
+          code: status.code,
           ackStatus,
         });
       } catch (error) {

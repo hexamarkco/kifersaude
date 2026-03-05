@@ -66,7 +66,7 @@ type WhatsAppMessage = {
 
 const MESSAGES_PAGE_SIZE = 120;
 
-type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct';
+type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct' | 'channels' | 'broadcasts';
 
 type FirstResponseSLA =
   | { kind: 'no-inbound' }
@@ -1674,11 +1674,15 @@ export default function WhatsAppTab() {
   const unreadInboxCount = inboxChats.filter((chat) => (chat.unread_count ?? 0) > 0).length;
   const groupInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'group').length;
   const directInboxCount = inboxChats.filter((chat) => isDirectChat(chat)).length;
+  const channelInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'newsletter').length;
+  const broadcastInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'broadcast').length;
 
   const filteredVisibleChats = inboxChats.filter((chat) => {
     if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
     if (chatFilterMode === 'groups') return getChatKind(chat) === 'group';
     if (chatFilterMode === 'direct') return isDirectChat(chat);
+    if (chatFilterMode === 'channels') return getChatKind(chat) === 'newsletter';
+    if (chatFilterMode === 'broadcasts') return getChatKind(chat) === 'broadcast';
     return true;
   });
 
@@ -2344,6 +2348,28 @@ export default function WhatsAppTab() {
                 onClick={() => setChatFilterMode('groups')}
               >
                 Grupos ({groupInboxCount})
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'channels'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('channels')}
+              >
+                Canais ({channelInboxCount})
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded-full border transition-colors ${
+                  chatFilterMode === 'broadcasts'
+                    ? 'bg-teal-600 border-teal-600 text-white'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+                onClick={() => setChatFilterMode('broadcasts')}
+              >
+                Transmissoes ({broadcastInboxCount})
               </button>
             </div>
             <div className="flex items-center justify-between gap-2 text-xs">

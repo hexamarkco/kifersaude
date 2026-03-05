@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageHistoryModal } from './MessageHistoryModal';
+import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 
@@ -49,7 +50,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
-  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'video'; src: string } | null>(null);
   const [audioMediaUrl, setAudioMediaUrl] = useState<string | null>(null);
   const [audioMediaLoading, setAudioMediaLoading] = useState(false);
   const [audioIsPlaying, setAudioIsPlaying] = useState(false);
@@ -60,6 +61,8 @@ export function MessageBubble({
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [visualMediaUrl, setVisualMediaUrl] = useState<string | null>(null);
+  const [visualMediaLoading, setVisualMediaLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasHistory = editCount > 0 || isDeleted;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -138,14 +141,27 @@ export function MessageBubble({
   };
 
   const payloadData = payload as any;
+  const normalizedType = (type || '').toLowerCase();
   const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media || payloadData;
   const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
   const imageFullSrc =
     payloadData?.image?.link ||
+    payloadData?.image?.url ||
     payloadData?.media?.link ||
     payloadData?.media?.url ||
     payloadData?.image?.preview ||
     '';
+  const videoFullSrc =
+    payloadData?.video?.link ||
+    payloadData?.video?.url ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    '';
+  const visualMediaId = payloadData?.image?.id || payloadData?.video?.id || payloadData?.media?.id || null;
+  const visualDisplayUrl = visualMediaUrl || (normalizedType.startsWith('video') ? videoFullSrc : imageFullSrc);
+  const isImageMessage = hasMedia && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
+  const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
+  const isVisualMediaMessage = !isDeleted && (isImageMessage || isVideoMessage);
   const documentPayload = payloadData?.document || payloadData?.media;
   const documentLink = documentPayload?.link || documentPayload?.url || documentPayload?.file || documentPayload?.path;
   const documentName = documentPayload?.filename || documentPayload?.name || 'Documento';
@@ -160,8 +176,11 @@ export function MessageBubble({
       if (documentUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(documentUrl);
       }
+      if (visualMediaUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(visualMediaUrl);
+      }
     };
-  }, [audioMediaUrl, documentUrl]);
+  }, [audioMediaUrl, documentUrl, visualMediaUrl]);
 
   const loadAudioMedia = async () => {
     const mediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id;
@@ -349,34 +368,142 @@ export function MessageBubble({
       );
     }
 
-    if (hasMedia && type?.startsWith('image')) {
+    if (isImageMessage) {
       const imageUrl = payloadData?.image?.link || payloadData?.media?.link || payloadData?.media?.url;
       const imagePreview = payloadData?.image?.preview;
-      const displayUrl = imageUrl || imagePreview;
+      const displayUrl = visualMediaUrl || imageUrl || imagePreview;
       const shouldShowCaption = body && body !== '[Imagem]';
       return (
         <div className="space-y-2">
           {displayUrl ? (
-            <button type="button" onClick={() => setShowImagePreview(true)} className="block">
+            <button
+              type="button"
+              onClick={() => setMediaPreview({ type: 'image', src: displayUrl })}
+              className="block rounded-xl overflow-hidden"
+            >
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="rounded max-w-[360px] w-auto h-auto"
+                className="rounded-xl max-w-[360px] w-auto h-auto max-h-[420px] object-cover"
                 loading="lazy"
               />
             </button>
           ) : (
-            <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
+            <button
+              type="button"
+              className="bg-gray-100 rounded p-2 text-sm text-gray-600"
+              onClick={async () => {
+                const loadedUrl = await loadVisualMedia();
+                if (loadedUrl) {
+                  setMediaPreview({ type: 'image', src: loadedUrl });
+                }
+              }}
+              disabled={visualMediaLoading}
+            >
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">📷</div>
                 <div>
                   <div className="font-medium">Imagem</div>
-                  <div className="text-xs">Clique para visualizar</div>
+                  <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para visualizar'}</div>
                 </div>
               </div>
-            </div>
+            </button>
           )}
-          {shouldShowCaption && <div className="text-sm">{body}</div>}
+          {shouldShowCaption && body && (
+            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
+          )}
+        </div>
+      );
+    }
+
+    if (isVideoMessage) {
+      const videoUrl = visualDisplayUrl;
+      const shouldShowCaption = body && body !== '[Vídeo]' && body !== '[Video]';
+      const poster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
+
+      return (
+        <div className="space-y-2">
+          {videoUrl ? (
+            <div className="rounded-xl overflow-hidden bg-black">
+              <video
+                src={videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                poster={poster}
+                className="max-w-[360px] w-full max-h-[420px] bg-black"
+              />
+              <button
+                type="button"
+                className="w-full text-xs text-white/90 bg-black/75 py-1.5 hover:bg-black/85"
+                onClick={() => setMediaPreview({ type: 'video', src: videoUrl })}
+              >
+                Abrir em tela cheia
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="bg-gray-100 rounded p-2 text-sm text-gray-600"
+              onClick={async () => {
+                const loadedUrl = await loadVisualMedia();
+                if (loadedUrl) {
+                  setMediaPreview({ type: 'video', src: loadedUrl });
+                }
+              }}
+              disabled={visualMediaLoading}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">🎬</div>
+                <div>
+                  <div className="font-medium">Video</div>
+                  <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para carregar'}</div>
+                </div>
+              </div>
+            </button>
+          )}
+          {shouldShowCaption && body && (
+            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
+          )}
+        </div>
+      );
+    }
+
+    if (normalizedType === 'link_preview' || payloadData?.link_preview) {
+      const linkData = payloadData?.link_preview || payloadData;
+      const previewUrl = linkData?.url || linkData?.canonical || linkData?.link || '';
+      const previewTitle = linkData?.title || (previewUrl ? previewUrl.replace(/^https?:\/\//i, '').split('/')[0] : 'Link');
+      const previewDescription = linkData?.description || '';
+      const previewImage = linkData?.preview || linkData?.image || linkData?.thumbnail || '';
+      const textBody = body && body !== previewUrl ? body : '';
+
+      return (
+        <div className="space-y-2">
+          <a
+            href={previewUrl || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-xl border border-slate-200 bg-white max-w-[360px] overflow-hidden hover:border-slate-300 transition-colors"
+          >
+            {previewImage && (
+              <img
+                src={previewImage}
+                alt={previewTitle}
+                className="w-full h-40 object-cover bg-slate-100"
+                loading="lazy"
+              />
+            )}
+            <div className="p-3 space-y-1">
+              <div className="text-xs text-slate-500 truncate">{previewUrl || 'Link'}</div>
+              <div className="text-sm font-medium text-slate-800 line-clamp-2">{previewTitle}</div>
+              {previewDescription && <div className="text-xs text-slate-600 line-clamp-3">{previewDescription}</div>}
+              <div className="pt-1 inline-flex items-center gap-1 text-xs text-emerald-700">
+                <ExternalLink className="w-3 h-3" />
+                <span>Abrir link</span>
+              </div>
+            </div>
+          </a>
+          {textBody && <WhatsAppFormattedText text={textBody} className="text-sm whitespace-pre-wrap break-words" />}
         </div>
       );
     }
@@ -437,7 +564,7 @@ export function MessageBubble({
             {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
           {body && body !== '[Mensagem de voz]' && body !== '[Áudio]' && (
-            <div className="text-sm">{body}</div>
+            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -494,7 +621,7 @@ export function MessageBubble({
               </button>
             </div>
           </div>
-          {body && <div className="text-sm">{body}</div>}
+          {body && <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />}
         </div>
       );
     }
@@ -513,13 +640,35 @@ export function MessageBubble({
               </div>
             </div>
           </div>
-          {body && <div className="text-sm">{body}</div>}
+          {body && <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />}
         </div>
       );
     }
 
-    return <div className="text-sm whitespace-pre-wrap break-words">{body || '(mensagem vazia)'}</div>;
+    return <WhatsAppFormattedText text={body || '(mensagem vazia)'} className="text-sm whitespace-pre-wrap break-words" />;
   };
+
+  async function loadVisualMedia() {
+    if (!visualMediaId || visualMediaLoading) return null;
+    setVisualMediaLoading(true);
+    try {
+      const response = await getWhatsAppMedia(visualMediaId);
+      if (response.url) {
+        setVisualMediaUrl(response.url);
+        return response.url;
+      }
+      if (response.data) {
+        const objectUrl = URL.createObjectURL(response.data);
+        setVisualMediaUrl(objectUrl);
+        return objectUrl;
+      }
+    } catch (error) {
+      console.error('Erro ao carregar midia visual:', error);
+    } finally {
+      setVisualMediaLoading(false);
+    }
+    return null;
+  }
 
   return (
     <div
@@ -527,7 +676,9 @@ export function MessageBubble({
     >
       <div className={`max-w-[70%] ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
-          className={`message-bubble rounded-lg px-3 py-2 ${
+          className={`message-bubble rounded-lg ${
+            isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
+          } ${
             isOutbound
               ? 'message-bubble-outbound bg-green-100 text-gray-900'
               : 'message-bubble-inbound bg-white text-gray-900 border border-gray-200'
@@ -651,17 +802,29 @@ export function MessageBubble({
         onClose={() => setShowHistory(false)}
       />
 
-      {showImagePreview && (
-        <ModalShell
-          isOpen
-          onClose={() => setShowImagePreview(false)}
-          size="xl"
-          panelClassName="max-w-6xl"
-          bodyClassName="flex items-center justify-center p-3"
-          showCloseButton={false}
-        >
-          <img src={imageFullSrc} alt="Imagem" className="max-h-[84vh] max-w-full rounded-xl object-contain" />
-        </ModalShell>
+      {mediaPreview && (
+        <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+            onClick={() => setMediaPreview(null)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="w-full h-full flex items-center justify-center">
+            {mediaPreview.type === 'image' ? (
+              <img src={mediaPreview.src} alt="Imagem" className="max-h-full max-w-full object-contain rounded-lg" />
+            ) : (
+              <video
+                src={mediaPreview.src}
+                controls
+                autoPlay
+                playsInline
+                className="max-h-full max-w-full object-contain rounded-lg bg-black"
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {showPdfPreview && (

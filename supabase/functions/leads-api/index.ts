@@ -1158,6 +1158,24 @@ function isValidWhatsappNumber(telefone?: string | null): boolean {
   return local.length === 10 || local.length === 11;
 }
 
+function normalizeBooleanConditionValue(value: unknown): 'true' | 'false' | null {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
+    return 'true';
+  }
+
+  if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
+    return 'false';
+  }
+
+  return null;
+}
+
 const usesWhatsappValidCondition = (flow: AutoContactFlow): boolean => {
   const conditions = Array.isArray(flow.conditions) ? flow.conditions : [];
   const exitConditions = Array.isArray(flow.exitConditions) ? flow.exitConditions : [];
@@ -1168,16 +1186,24 @@ const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null):
   const digits = toWhapiPhoneNumber(telefone);
   if (!digits) return false;
 
+  const token = sanitizeWhapiToken(apiKey);
+  if (!token) {
+    throw new Error('Token da Whapi Cloud nao configurado para validar WhatsApp.');
+  }
+
   const response = await fetch(`https://gate.whapi.cloud/contacts/${encodeURIComponent(digits)}`, {
     method: 'HEAD',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${token}`,
       Accept: 'application/json',
     },
   });
 
   if (response.status === 200) return true;
-  if (response.status === 404) return false;
+  if (response.status === 404 || response.status === 400 || response.status === 422) return false;
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('Falha de autenticacao ao validar WhatsApp na Whapi.');
+  }
   return null;
 };
 
@@ -1185,11 +1211,14 @@ const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> 
   try {
     const exists = await checkWhatsAppExistence(apiKey, lead?.telefone);
     if (exists !== null) return exists ? 'true' : 'false';
+    console.warn('Resposta inesperada ao validar WhatsApp; fallback para false', {
+      telefone: lead?.telefone ?? null,
+    });
   } catch (error) {
     console.warn('Erro ao validar WhatsApp no Whapi', error);
   }
 
-  return isValidWhatsappNumber(lead?.telefone) ? 'true' : 'false';
+  return 'false';
 };
 
 const isInvalidNumberError = (error: unknown): boolean => {
@@ -1598,14 +1627,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
   const normalizeConditionValue = (field: AutoContactFlowConditionField, value: unknown): string => {
     const rawValue = typeof value === 'string' ? value : '';
     if (field !== 'whatsapp_valid') return rawValue;
-    const normalized = rawValue.trim().toLowerCase();
-    if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
-      return 'true';
-    }
-    if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
-      return 'false';
-    }
-    return rawValue;
+    return normalizeBooleanConditionValue(rawValue) ?? rawValue;
   };
 
   const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
@@ -2034,9 +2056,12 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, even
       return lead.telefone ?? '';
     case 'whatsapp_valid':
       if (typeof lead.whatsapp_valid === 'string' && lead.whatsapp_valid.length) {
-        return lead.whatsapp_valid;
+        return normalizeBooleanConditionValue(lead.whatsapp_valid) ?? 'false';
       }
-      return isValidWhatsappNumber(lead.telefone) ? 'true' : 'false';
+      if (typeof lead.whatsapp_valid === 'boolean') {
+        return lead.whatsapp_valid ? 'true' : 'false';
+      }
+      return 'false';
     case 'data_criacao':
       return lead.data_criacao ?? '';
     case 'ultimo_contato':
@@ -2050,7 +2075,7 @@ const getLeadFieldValue = (lead: any, field: AutoContactFlowConditionField, even
   }
 };
 
-const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid', 'event', 'lead_created'];
+const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid'];
 
 const matchesFlowCondition = (
   condition: AutoContactFlowCondition,
@@ -2063,7 +2088,14 @@ const matchesFlowCondition = (
 
   if (BOOLEAN_CONDITION_FIELDS.includes(condition.field)) {
     const leadValue = getLeadFieldValue(lead, condition.field, event);
-    return leadValue === 'true';
+    const normalizedLeadValue = normalizeBooleanConditionValue(leadValue) ?? 'false';
+    const normalizedExpectedValue = normalizeBooleanConditionValue(condition.value) ?? 'true';
+
+    if (condition.operator === 'not_equals' || condition.operator === 'not_contains') {
+      return normalizedLeadValue !== normalizedExpectedValue;
+    }
+
+    return normalizedLeadValue === normalizedExpectedValue;
   }
 
   const context = buildFormulaContext(lead);
@@ -2686,6 +2718,14 @@ async function sendAutoContactMessage({
   const apiKey = sanitizeWhapiToken(settings.apiKey);
   if (!apiKey) {
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
+  }
+
+  const whatsappExists = await checkWhatsAppExistence(apiKey, lead?.telefone);
+  if (whatsappExists === false) {
+    throw new Error('Numero nao possui WhatsApp.');
+  }
+  if (whatsappExists === null) {
+    throw new Error('Nao foi possivel validar se o numero possui WhatsApp.');
   }
 
   const chatId = `${whapiPhone}@s.whatsapp.net`;

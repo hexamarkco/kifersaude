@@ -141,6 +141,7 @@ const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+
 
 const mapStatusToAck = (status?: string): number | null => {
   if (!status) return null;
+  const normalized = status.trim().toLowerCase();
   const statusMap: Record<string, number> = {
     failed: 0,
     pending: 1,
@@ -149,7 +150,7 @@ const mapStatusToAck = (status?: string): number | null => {
     read: 4,
     played: 4,
   };
-  return statusMap[status] ?? 1;
+  return statusMap[normalized] ?? null;
 };
 
 const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: boolean } => {

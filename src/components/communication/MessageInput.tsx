@@ -1,8 +1,27 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Paperclip, Mic, MapPin, Smile, X, Image as ImageIcon, File as FileIcon, StopCircle, Sparkles, Scissors, MessageSquare } from 'lucide-react';
+import {
+  Send,
+  Paperclip,
+  Mic,
+  MapPin,
+  Smile,
+  X,
+  Image as ImageIcon,
+  File as FileIcon,
+  StopCircle,
+  Sparkles,
+  Scissors,
+  MessageSquare,
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+} from 'lucide-react';
 import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 import FilterSingleSelect from '../FilterSingleSelect';
+import { WhatsAppFormattedText } from './WhatsAppFormattedText';
+import { hasWhatsAppFormatting } from '../../lib/whatsappTextFormatting';
 
 export type SentMessagePayload = {
   id: string;
@@ -75,6 +94,10 @@ export function MessageInput({
   const [linkPreviewTitle, setLinkPreviewTitle] = useState('');
   const [linkPreviewDescription, setLinkPreviewDescription] = useState('');
   const [linkPreviewCanonical, setLinkPreviewCanonical] = useState('');
+  const [linkPreviewImage, setLinkPreviewImage] = useState('');
+  const [linkPreviewSiteName, setLinkPreviewSiteName] = useState('');
+  const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+  const [linkPreviewError, setLinkPreviewError] = useState<string | null>(null);
   const [pendingLinkMessage, setPendingLinkMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +158,136 @@ export function MessageInput({
       const resolved = getRuntimeTemplateVariable(token);
       return resolved || full;
     });
+
+  const extractFirstUrl = (text: string) => text.match(/https?:\/\/\S+/i)?.[0] || null;
+
+  const normalizePreviewUrl = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+      return new URL(candidate).toString();
+    } catch {
+      return candidate;
+    }
+  };
+
+  const getUrlHostname = (value: string) => {
+    try {
+      return new URL(value).hostname.replace(/^www\./i, '');
+    } catch {
+      return value.replace(/^https?:\/\//i, '').split('/')[0] || value;
+    }
+  };
+
+  const clearLinkPreviewDraft = () => {
+    setPendingLinkMessage(null);
+    setLinkPreviewTitle('');
+    setLinkPreviewDescription('');
+    setLinkPreviewCanonical('');
+    setLinkPreviewImage('');
+    setLinkPreviewSiteName('');
+    setLinkPreviewError(null);
+    setLinkPreviewLoading(false);
+  };
+
+  const fetchLinkPreviewMetadata = async (rawUrl: string) => {
+    const normalizedUrl = normalizePreviewUrl(rawUrl);
+    if (!normalizedUrl) return;
+
+    setLinkPreviewLoading(true);
+    setLinkPreviewError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('link-preview-metadata', {
+        body: { url: normalizedUrl },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Nao foi possivel carregar metadados do link.');
+      }
+
+      const metadata = (data || {}) as {
+        url?: string;
+        title?: string;
+        description?: string;
+        canonical?: string;
+        image?: string;
+        siteName?: string;
+      };
+
+      const resolvedUrl = normalizePreviewUrl(metadata.canonical || metadata.url || normalizedUrl);
+      const hostname = getUrlHostname(resolvedUrl);
+      const resolvedTitle = (metadata.title || '').trim() || hostname;
+
+      setLinkPreviewCanonical(resolvedUrl);
+      setLinkPreviewTitle(resolvedTitle);
+      setLinkPreviewDescription((metadata.description || '').trim());
+      setLinkPreviewImage((metadata.image || '').trim());
+      setLinkPreviewSiteName((metadata.siteName || '').trim());
+    } catch (error) {
+      console.error('Erro ao buscar metadados do link:', error);
+      const normalizedUrlForFallback = normalizePreviewUrl(rawUrl);
+      const hostname = getUrlHostname(normalizedUrlForFallback);
+      setLinkPreviewCanonical(normalizedUrlForFallback);
+      setLinkPreviewTitle((prev) => prev.trim() || hostname);
+      setLinkPreviewError('Nao foi possivel carregar metadados automaticamente. Voce pode ajustar manualmente.');
+    } finally {
+      setLinkPreviewLoading(false);
+    }
+  };
+
+  const openLinkPreviewComposer = async (rawMessage: string, rawUrl: string) => {
+    const normalizedUrl = normalizePreviewUrl(rawUrl);
+    setPendingLinkMessage(rawMessage);
+    setLinkPreviewCanonical(normalizedUrl);
+    setLinkPreviewTitle(getUrlHostname(normalizedUrl));
+    setLinkPreviewDescription('');
+    setLinkPreviewImage('');
+    setLinkPreviewSiteName('');
+    setShowLinkPreviewModal(true);
+    await fetchLinkPreviewMetadata(normalizedUrl);
+  };
+
+  const formattingPreviewText = applyTemplateVariables(message);
+  const shouldShowFormattingPreview =
+    !selectedFile &&
+    !isRecording &&
+    !audioPreviewUrl &&
+    formattingPreviewText.trim().length > 0 &&
+    hasWhatsAppFormatting(formattingPreviewText);
+
+  const applyInlineFormat = (opening: string, closing: string = opening) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMessage((prev) => `${prev}${opening}${closing}`);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? message.length;
+    const end = textarea.selectionEnd ?? message.length;
+    const selectedText = message.slice(start, end);
+    const hasSelection = start !== end;
+
+    const replacement = `${opening}${selectedText}${closing}`;
+    const nextMessage = `${message.slice(0, start)}${replacement}${message.slice(end)}`;
+    setMessage(nextMessage);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      if (hasSelection) {
+        const selectionStart = start + opening.length;
+        const selectionEnd = selectionStart + selectedText.length;
+        textarea.setSelectionRange(selectionStart, selectionEnd);
+        return;
+      }
+
+      const cursorPosition = start + opening.length;
+      textarea.setSelectionRange(cursorPosition, cursorPosition);
+    });
+
+    handleTyping();
+  };
 
   const insertTemplateTokenOnDraft = (key: string) => {
     const token = `{{${key}}}`;
@@ -342,13 +495,9 @@ export function MessageInput({
     }
 
     if (!editMessage && !selectedFile) {
-      const urlMatch = resolvedMessage.match(/https?:\/\/\S+/i);
-      if (urlMatch && !showLinkPreviewModal) {
-        const url = urlMatch[0];
-        setPendingLinkMessage(resolvedMessage);
-        setLinkPreviewCanonical(url);
-        setLinkPreviewTitle(url.replace(/^https?:\/\//i, '').split('/')[0]);
-        setShowLinkPreviewModal(true);
+      const firstUrl = extractFirstUrl(resolvedMessage);
+      if (firstUrl && !showLinkPreviewModal) {
+        await openLinkPreviewComposer(resolvedMessage, firstUrl);
         return;
       }
     }
@@ -416,6 +565,7 @@ export function MessageInput({
               title: linkPreviewTitle.trim(),
               description: linkPreviewDescription.trim() || undefined,
               canonical: linkPreviewCanonical.trim() || undefined,
+              preview: linkPreviewImage.trim() || undefined,
             },
             quotedMessageId: replyToMessage?.id,
           });
@@ -453,8 +603,8 @@ export function MessageInput({
           };
 
           setMessage('');
-          setPendingLinkMessage(null);
           setShowLinkPreviewModal(false);
+          clearLinkPreviewDraft();
           if (onCancelReply) onCancelReply();
           if (onMessageSent) onMessageSent(textPayload);
         } else {
@@ -472,6 +622,33 @@ export function MessageInput({
   };
 
   const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isShortcut = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+
+    if (isShortcut && key === 'b') {
+      event.preventDefault();
+      applyInlineFormat('*');
+      return;
+    }
+
+    if (isShortcut && key === 'i') {
+      event.preventDefault();
+      applyInlineFormat('_');
+      return;
+    }
+
+    if (isShortcut && event.shiftKey && key === 'x') {
+      event.preventDefault();
+      applyInlineFormat('~');
+      return;
+    }
+
+    if (isShortcut && event.shiftKey && key === 'm') {
+      event.preventDefault();
+      applyInlineFormat('`');
+      return;
+    }
+
     if (slashCommandState.active && slashCommandState.results.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -1153,13 +1330,18 @@ export function MessageInput({
               className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               onClick={() => {
                 setShowLinkPreviewModal(false);
-                setPendingLinkMessage(null);
+                clearLinkPreviewDraft();
               }}
             >
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="p-3 space-y-2">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+              <div className="text-[11px] text-slate-500">Mensagem</div>
+              <div className="mt-0.5 text-xs text-slate-700 whitespace-pre-wrap break-words">{pendingLinkMessage}</div>
+            </div>
+
             <div>
               <label className="text-xs text-slate-500">Titulo (obrigatorio)</label>
               <input
@@ -1187,13 +1369,46 @@ export function MessageInput({
                 className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
+            <div>
+              <label className="text-xs text-slate-500">Imagem (URL)</label>
+              <input
+                type="text"
+                value={linkPreviewImage}
+                onChange={(e) => setLinkPreviewImage(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            {linkPreviewLoading && <div className="text-xs text-slate-500">Carregando metadados do link...</div>}
+            {linkPreviewError && <div className="text-xs text-amber-700">{linkPreviewError}</div>}
+
+            {(linkPreviewTitle || linkPreviewDescription || linkPreviewImage) && (
+              <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                {linkPreviewImage && (
+                  <img src={linkPreviewImage} alt={linkPreviewTitle || 'Link preview'} className="w-full h-28 object-cover bg-slate-100" />
+                )}
+                <div className="px-3 py-2 space-y-1">
+                  <div className="text-[11px] text-slate-500 truncate">{linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}</div>
+                  <div className="text-sm text-slate-800 line-clamp-2">{linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}</div>
+                  {linkPreviewDescription && <div className="text-xs text-slate-600 line-clamp-3">{linkPreviewDescription}</div>}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                onClick={() => fetchLinkPreviewMetadata(linkPreviewCanonical)}
+                disabled={isSending || linkPreviewLoading || !linkPreviewCanonical.trim()}
+              >
+                {linkPreviewLoading ? 'Atualizando...' : 'Atualizar dados'}
+              </button>
               <button
                 type="button"
                 className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
                 onClick={() => {
                   setShowLinkPreviewModal(false);
-                  setPendingLinkMessage(null);
+                  clearLinkPreviewDraft();
                 }}
               >
                 Cancelar
@@ -1341,6 +1556,50 @@ export function MessageInput({
           ))}
         </div>
       )}
+
+      <div className="px-3 py-1.5 flex flex-wrap items-center gap-1.5 border-b border-slate-100 bg-slate-50">
+        <span className="text-[11px] text-slate-500">Formatacao:</span>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+          onClick={() => applyInlineFormat('*')}
+          disabled={isSending || isRecording}
+          title="Negrito (Ctrl/Cmd + B)"
+        >
+          <Bold className="h-3 w-3" />
+          <span>*B*</span>
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+          onClick={() => applyInlineFormat('_')}
+          disabled={isSending || isRecording}
+          title="Italico (Ctrl/Cmd + I)"
+        >
+          <Italic className="h-3 w-3" />
+          <span>_I_</span>
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+          onClick={() => applyInlineFormat('~')}
+          disabled={isSending || isRecording}
+          title="Tachado (Ctrl/Cmd + Shift + X)"
+        >
+          <Strikethrough className="h-3 w-3" />
+          <span>~S~</span>
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+          onClick={() => applyInlineFormat('`')}
+          disabled={isSending || isRecording}
+          title="Monoespaco (Ctrl/Cmd + Shift + M)"
+        >
+          <Code className="h-3 w-3" />
+          <span>`M`</span>
+        </button>
+      </div>
 
       <div className="p-3 flex items-end gap-2 relative">
         <div className="relative">
@@ -1497,7 +1756,7 @@ export function MessageInput({
                 handleTyping();
               }}
               onKeyDown={handleTextareaKeyDown}
-              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
+              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos e * _ ~ ` para formatar)"}
               className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
               rows={1}
               disabled={isSending || isRecording}
@@ -1609,6 +1868,17 @@ export function MessageInput({
           </button>
         )}
       </div>
+
+      {shouldShowFormattingPreview && (
+        <div className="px-3 pb-3">
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Pre-visualizacao</p>
+            <div className="mt-1 text-xs text-slate-700">
+              <WhatsAppFormattedText text={formattingPreviewText} className="whitespace-pre-wrap break-words" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

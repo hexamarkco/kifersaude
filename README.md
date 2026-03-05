@@ -26,3 +26,34 @@ npm run dev
 ```
 
 Após configurar as variáveis e instalar as dependências, acesse o endereço informado pelo Vite (normalmente `http://localhost:5173`).
+
+## Scripts Supabase (Windows + WSL)
+
+Os scripts `.bat` executam o Supabase CLI dentro do WSL (Ubuntu).
+
+1. Instale o Supabase CLI no Ubuntu (uma vez):
+
+   ```bash
+   wsl -e bash -lc "curl -fsSL https://github.com/supabase/cli/releases/download/v2.75.0/supabase_2.75.0_linux_amd64.deb -o /tmp/supabase.deb && sudo dpkg -i /tmp/supabase.deb"
+   ```
+
+2. Crie o arquivo local de configuracao:
+
+   ```bat
+   copy supabase.local.ini.example supabase.local.ini
+   ```
+
+3. Edite `supabase.local.ini` com:
+
+   - `PROJECT_REF`
+   - `DB_PASSWORD`
+   - `SUPABASE_ACCESS_TOKEN`
+
+   Esse arquivo e ignorado pelo Git.
+
+Scripts disponiveis:
+
+- `run-migrations.bat`: aplica migrations (`supabase db push`).
+- `deploy-functions.bat`: faz deploy de todas as functions em `supabase/functions`.
+
+Observacao: os dois scripts pausam no final para voce conseguir ler o resultado ao abrir com duplo clique. Se executar via terminal e quiser sem pausa, use `--no-pause`.

@@ -561,14 +561,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   const normalizeConditionValue = (field: AutoContactFlowConditionField, value: unknown): string => {
     const rawValue = typeof value === 'string' ? value : '';
     if (field !== 'whatsapp_valid') return rawValue;
-    const normalized = normalizeText(rawValue);
-    if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
-      return 'true';
-    }
-    if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
-      return 'false';
-    }
-    return rawValue;
+    return normalizeBooleanConditionValue(rawValue) ?? rawValue;
   };
   const normalizeActionType = (value: unknown): AutoContactFlowActionType => {
     switch (value) {
@@ -901,11 +894,22 @@ export const applyTemplateVariables = (
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
-const isValidWhatsappNumber = (lead: Lead): boolean => {
-  const digits = normalizePhone(lead.telefone ?? '');
-  if (!digits) return false;
-  const local = digits.startsWith('55') ? digits.slice(2) : digits;
-  return local.length === 10 || local.length === 11;
+const normalizeBooleanConditionValue = (value: unknown): 'true' | 'false' | null => {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value !== 'string') return null;
+
+  const normalized = normalizeText(value);
+  if (!normalized) return null;
+
+  if (normalized === 'sim' || normalized === 'true' || normalized === '1' || normalized === 'yes') {
+    return 'true';
+  }
+
+  if (normalized === 'nao' || normalized === 'não' || normalized === 'false' || normalized === '0' || normalized === 'no') {
+    return 'false';
+  }
+
+  return null;
 };
 
 type DateParts = {
@@ -1379,7 +1383,7 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead, event?: strin
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
-const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid', 'event', 'lead_created'];
+const BOOLEAN_CONDITION_FIELDS = ['whatsapp_valid'];
 
 const matchesFlowCondition = (
   condition: AutoContactFlowCondition,
@@ -1392,7 +1396,14 @@ const matchesFlowCondition = (
 
   if (BOOLEAN_CONDITION_FIELDS.includes(condition.field)) {
     const leadValue = getLeadFieldValue(lead, condition.field, event);
-    return leadValue === 'true';
+    const normalizedLeadValue = normalizeBooleanConditionValue(leadValue) ?? 'false';
+    const normalizedExpectedValue = normalizeBooleanConditionValue(condition.value) ?? 'true';
+
+    if (condition.operator === 'not_equals' || condition.operator === 'not_contains') {
+      return normalizedLeadValue !== normalizedExpectedValue;
+    }
+
+    return normalizedLeadValue === normalizedExpectedValue;
   }
 
   const context = buildFormulaContext(lead, DEFAULT_SCHEDULING.timezone);
@@ -1445,7 +1456,7 @@ const getLeadFieldValue = (
     case 'telefone':
       return lead.telefone ?? '';
     case 'whatsapp_valid':
-      return isValidWhatsappNumber(lead) ? 'true' : 'false';
+      return normalizeBooleanConditionValue((lead as Lead & { whatsapp_valid?: string | boolean | null }).whatsapp_valid) ?? 'false';
     case 'data_criacao':
       return lead.data_criacao ?? '';
     case 'lead_criado':

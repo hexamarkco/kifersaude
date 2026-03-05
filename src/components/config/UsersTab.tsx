@@ -4,6 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import FilterSingleSelect from '../FilterSingleSelect';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { UsersSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -283,41 +285,6 @@ const handleDeleteUser = async (userId: string) => {
     }
   };
 
-  const handleChangeRole = async (userId: string, newRole: 'admin' | 'observer') => {
-    const confirmed = await requestConfirmation({
-      title: 'Alterar permissão',
-      description: `Tem certeza que deseja alterar este usuário para ${newRole === 'admin' ? 'Administrador' : 'Observador'}?`,
-      confirmLabel: 'Alterar permissão',
-      cancelLabel: 'Cancelar',
-    });
-
-    if (!confirmed) return;
-
-    setActionLoading(true);
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      showMessage('success', 'Permissão alterada com sucesso');
-
-      const currentProfileId = getUserManagementId(user) ?? user?.id;
-      if (currentProfileId && userId === currentProfileId) {
-        await refreshProfile();
-      }
-
-      loadUsers();
-    } catch (error: any) {
-      console.error('Erro ao alterar permissão:', error);
-      showMessage('error', 'Erro ao alterar permissão');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const hasUsersSnapshot = users.length > 0;
 
   return (
@@ -352,13 +319,13 @@ const handleDeleteUser = async (userId: string) => {
             <Users className="w-6 h-6 text-teal-600" />
             <h3 className="text-xl font-semibold text-slate-900">Usuários do Sistema</h3>
           </div>
-          <button
+          <Button
             onClick={() => setShowAddUser(!showAddUser)}
-            className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            variant="primary"
           >
             <Plus className="w-4 h-4" />
             <span>Novo Usuário</span>
-          </button>
+          </Button>
         </div>
 
         {showAddUser && (
@@ -370,12 +337,11 @@ const handleDeleteUser = async (userId: string) => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Usuário
                 </label>
-                <input
+                <Input
                   type="text"
                   value={newUserUsername}
                   onChange={(e) => setNewUserUsername(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="nome.usuario"
                 />
               </div>
@@ -384,12 +350,11 @@ const handleDeleteUser = async (userId: string) => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Email
                 </label>
-                <input
+                <Input
                   type="email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="usuario@email.com"
                 />
               </div>
@@ -398,13 +363,12 @@ const handleDeleteUser = async (userId: string) => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Senha
                 </label>
-                <input
+                <Input
                   type="password"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -428,20 +392,19 @@ const handleDeleteUser = async (userId: string) => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button
+              <Button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
                 {actionLoading ? 'Criando...' : 'Criar Usuário'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setShowAddUser(false)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                variant="secondary"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -453,36 +416,36 @@ const handleDeleteUser = async (userId: string) => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-amber-900 mb-2">Usuário</label>
-                <input
+                <Input
                   type="text"
                   value={editUserUsername}
                   onChange={(e) => setEditUserUsername(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="border-amber-200 focus:ring-amber-500"
                   placeholder="nome.usuario"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-amber-900 mb-2">Email</label>
-                <input
+                <Input
                   type="email"
                   value={editUserEmail}
                   onChange={(e) => setEditUserEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="border-amber-200 focus:ring-amber-500"
                   placeholder="usuario@email.com"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-amber-900 mb-2">Nova Senha</label>
-                <input
+                <Input
                   type="password"
                   value={editUserPassword}
                   onChange={(e) => setEditUserPassword(e.target.value)}
                   minLength={6}
-                  className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="border-amber-200 focus:ring-amber-500"
                   placeholder="Deixe em branco para manter"
                 />
                 <p className="text-xs text-amber-700 mt-1">Deixe em branco para manter a senha atual</p>
@@ -505,23 +468,24 @@ const handleDeleteUser = async (userId: string) => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button
+              <Button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+                variant="warning"
               >
                 {actionLoading ? 'Salvando...' : 'Salvar Alterações'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => {
                   setEditingUser(null);
                   setEditUserPassword('');
                 }}
-                className="px-4 py-2 text-amber-800 hover:bg-amber-100 rounded-lg transition-colors"
+                variant="secondary"
+                className="text-amber-800 hover:bg-amber-100"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -555,25 +519,29 @@ const handleDeleteUser = async (userId: string) => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => startEditingUser(userProfile)}
                     disabled={actionLoading}
-                    className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                    variant="icon"
+                    size="icon"
+                    className="h-8 w-8 text-slate-600 hover:bg-slate-200"
                     title="Editar usuário"
                   >
                     <Pencil className="w-4 h-4" />
-                  </button>
+                  </Button>
                   {userProfile.id !== user?.id && (
                     <>
-                      <button
+                      <Button
                         onClick={() => handleDeleteUser(userProfile.id)}
                         disabled={actionLoading}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        variant="icon"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:bg-red-50"
                         title="Excluir usuário"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </>
                   )}
                   {userProfile.id === user?.id && (

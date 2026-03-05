@@ -3,6 +3,9 @@ import { Building2, Plus, Edit2, Trash2, CheckCircle, AlertCircle, Save, X } fro
 import { Operadora } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import Textarea from '../ui/Textarea';
 import { OperadorasSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -146,13 +149,13 @@ export default function OperadorasTab() {
             <Building2 className="w-6 h-6 text-teal-600" />
             <h3 className="text-xl font-semibold text-slate-900">Operadoras de Saúde</h3>
           </div>
-          <button
+          <Button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            variant={showForm ? 'secondary' : 'primary'}
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             <span>{showForm ? 'Cancelar' : 'Nova Operadora'}</span>
-          </button>
+          </Button>
         </div>
 
         {showForm && (
@@ -166,12 +169,11 @@ export default function OperadorasTab() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Nome da Operadora *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="Ex: Unimed"
                 />
               </div>
@@ -180,14 +182,13 @@ export default function OperadorasTab() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Comissão Padrão (%)
                 </label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   min="0"
                   max="500"
                   value={formData.comissao_padrao}
                   onChange={(e) => setFormData({ ...formData, comissao_padrao: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Pode exceder 100% para contratos PJ
@@ -198,12 +199,11 @@ export default function OperadorasTab() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Prazo de Recebimento (dias)
                 </label>
-                <input
+                <Input
                   type="number"
                   min="0"
                   value={formData.prazo_recebimento_dias}
                   onChange={(e) => setFormData({ ...formData, prazo_recebimento_dias: parseInt(e.target.value) || 30 })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -226,13 +226,12 @@ export default function OperadorasTab() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Bônus Padrão (R$)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.bonus_padrao}
                     onChange={(e) => setFormData({ ...formData, bonus_padrao: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Valor em reais"
                   />
                   <p className="text-xs text-slate-500 mt-1">
@@ -258,30 +257,29 @@ export default function OperadorasTab() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Observações
               </label>
-              <textarea
+              <Textarea
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="min-h-[88px]"
                 placeholder="Observações sobre a operadora..."
               />
             </div>
 
             <div className="flex items-center space-x-3">
-              <button
+              <Button
                 type="submit"
-                className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
               >
                 <Save className="w-4 h-4" />
                 <span>{editingId ? 'Atualizar' : 'Criar'}</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                variant="secondary"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -327,20 +325,24 @@ export default function OperadorasTab() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
                     onClick={() => handleEdit(operadora)}
-                    className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                    variant="icon"
+                    size="icon"
+                    className="h-8 w-8 text-teal-600 hover:bg-teal-50"
                     title="Editar"
                   >
                     <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleDelete(operadora.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    variant="icon"
+                    size="icon"
+                    className="h-8 w-8 text-red-600 hover:bg-red-50"
                     title="Excluir"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))

@@ -8,6 +8,8 @@ import ContractForm from './ContractForm';
 import ContractDetails from './ContractDetails';
 import FilterSingleSelect from './FilterSingleSelect';
 import Pagination from './Pagination';
+import Button from './ui/Button';
+import Input from './ui/Input';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { ContractsPageSkeleton } from './ui/panelSkeletons';
@@ -476,29 +478,28 @@ export default function ContractsManager({
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
         {!isObserver && (
-          <button
+          <Button
             onClick={() => {
               setEditingContract(null);
               setShowForm(true);
             }}
-            className="flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors w-full sm:w-auto"
+            className="w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="h-5 w-5" />
             <span>Novo Contrato</span>
-          </button>
+          </Button>
         )}
       </div>
 
       <div className="panel-glass-panel mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-2xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
+            <Input
               type="text"
+              leftIcon={Search}
               placeholder="Buscar por código, operadora ou plano..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           <div className="w-full sm:w-auto px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
@@ -689,22 +690,24 @@ export default function ContractsManager({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4 sm:justify-start">
-                  <button
+                  <Button
                     onClick={() => setSelectedContract(contract)}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-100 px-3 py-2 text-sm text-teal-700 transition-colors hover:bg-teal-200"
+                    variant="soft"
+                    size="sm"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="h-4 w-4" />
                     <span>Abrir</span>
-                  </button>
+                  </Button>
                   {!isObserver && (
-                    <button
+                    <Button
                       onClick={() => handleDeleteContract(contract)}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 transition-colors hover:bg-red-200"
+                      variant="danger"
+                      size="sm"
                       type="button"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                       <span>Excluir</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

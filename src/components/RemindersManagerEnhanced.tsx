@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { useNavigate } from 'react-router-dom';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
   Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
@@ -64,6 +65,7 @@ const formatHistoryTimestamp = (timestamp: number) => {
 const formatInteractionDate = formatDateTimeFullBR;
 
 export default function RemindersManagerEnhanced() {
+  const navigate = useNavigate();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [filter, setFilter] = useState<'todos' | 'nao-lidos' | 'lidos'>('nao-lidos');
   const [loading, setLoading] = useState(true);
@@ -138,6 +140,24 @@ export default function RemindersManagerEnhanced() {
     }
 
     return null;
+  };
+
+  const openLeadInWhatsAppTab = (lead?: Pick<Lead, 'id' | 'nome_completo' | 'telefone'> | null) => {
+    const normalizedPhone = normalizeLeadPhone(lead?.telefone);
+    if (!normalizedPhone) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('openPhone', normalizedPhone);
+    if (lead?.nome_completo) {
+      params.set('leadName', lead.nome_completo);
+    }
+    if (lead?.id) {
+      params.set('leadId', lead.id);
+    }
+
+    navigate(`/painel/whatsapp?${params.toString()}`);
   };
 
   const closeHistoryModal = () => {
@@ -1293,7 +1313,6 @@ export default function RemindersManagerEnhanced() {
       : contract?.lead_id
         ? leadsMap.get(contract.lead_id)
         : undefined;
-    const whatsappLink = getWhatsappLink(leadInfo?.telefone);
     const leadIdForReminder = getLeadIdForReminder(reminder);
 
     return (
@@ -1405,17 +1424,20 @@ export default function RemindersManagerEnhanced() {
             >
               <MessageSquare className="w-5 h-5" />
             </Button>
-            {whatsappLink && (
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                title="Abrir conversa no WhatsApp"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </a>
-            )}
+            <Button
+              onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
+              disabled={!leadInfo?.telefone}
+              variant="icon"
+              size="icon"
+              className={`h-9 w-9 ${
+                leadInfo?.telefone
+                  ? 'text-green-700 hover:bg-green-50'
+                  : 'text-slate-400 cursor-not-allowed'
+              }`}
+              title={leadInfo?.telefone ? 'Abrir conversa na aba WhatsApp' : 'Telefone não disponível'}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </Button>
             {leadIdForReminder && (
               <Button
                 onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
@@ -1445,38 +1467,48 @@ export default function RemindersManagerEnhanced() {
                 </Button>
                 {openSnoozeMenu === reminder.id && (
                   <div className="panel-glass-panel absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
-                    <button
+                    <Button
                       onClick={() => handleSnooze(reminder, 'minutes-15')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4"
                     >
                       15 minutos
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleSnooze(reminder, 'minutes-30')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4"
                     >
                       30 minutos
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleSnooze(reminder, 'hour-1')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4"
                     >
                       1 hora
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleSnooze(reminder, 'tomorrow')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4"
                     >
                       Amanhã às 9h
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleSnooze(reminder, 'next-week')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4"
                     >
                       Próxima semana
-                    </button>
+                    </Button>
                     <div className="border-t border-slate-200 my-2"></div>
-                    <button
+                    <Button
                       onClick={() => {
                         setCustomSnoozeReminder(reminder.id);
                         setOpenSnoozeMenu(null);
@@ -1484,10 +1516,12 @@ export default function RemindersManagerEnhanced() {
                         now.setMinutes(now.getMinutes() + 30);
                         setCustomSnoozeDateTime(formatDateTimeForInput(now.toISOString()));
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors text-teal-600 font-medium"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-none px-4 text-teal-600 hover:text-teal-700"
                     >
                       Personalizado...
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1772,11 +1806,13 @@ export default function RemindersManagerEnhanced() {
 
             const isExpanded = expandedPeriods.has(period);
 
-            return (
-              <div key={period} className={`panel-interactive-glass border rounded-xl ${getPeriodColor(period)}`}>
-                <button
+          return (
+            <div key={period} className={`panel-interactive-glass border rounded-xl ${getPeriodColor(period)}`}>
+                <Button
                   onClick={() => togglePeriod(period)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/50 transition-colors rounded-xl"
+                  variant="ghost"
+                  size="md"
+                  className="w-full justify-between rounded-xl px-6 py-4 hover:bg-white/50"
                 >
                   <div className="flex items-center space-x-3">
                     <h3 className="text-lg font-semibold text-slate-900">
@@ -1791,7 +1827,7 @@ export default function RemindersManagerEnhanced() {
                   ) : (
                     <ChevronDown className="w-5 h-5 text-slate-600" />
                   )}
-                </button>
+                </Button>
 
                 {isExpanded && (
                   <div className="px-4 pb-4 space-y-3">

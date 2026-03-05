@@ -44,8 +44,9 @@ export default function ModalShell({
   const titleId = useId();
   const descriptionId = useId();
 
-  const portalTarget =
-    typeof document === 'undefined' ? null : document.querySelector('.painel-theme') ?? document.body;
+  const portalTarget = typeof document === 'undefined' ? null : document.body;
+  const isDarkThemeActive =
+    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   useEffect(() => {
     if (!isOpen || !closeOnEscape) return;
@@ -78,7 +79,7 @@ export default function ModalShell({
   }
 
   return createPortal(
-    <>
+    <div className={cx('modal-theme-host painel-theme', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
       <div
         className="fixed inset-0 z-[80] bg-slate-950/55 backdrop-blur-sm"
         aria-hidden="true"
@@ -134,7 +135,7 @@ export default function ModalShell({
           {footer && <footer className="border-t border-slate-200 px-5 py-4 sm:px-6">{footer}</footer>}
         </section>
       </div>
-    </>,
+    </div>,
     portalTarget,
   );
 }

@@ -1,9 +1,27 @@
 import { startTransition, useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchAllPages, type Lead } from '../../lib/supabase';
-import { Search, MessageCircle, Phone, MoreVertical, ArrowLeft, Users, UserCircle, Info, History, Plus, Bell, BellOff, SkipForward, Settings, Copy } from 'lucide-react';
+import {
+  Search,
+  MessageCircle,
+  Phone,
+  MoreVertical,
+  ArrowLeft,
+  Users,
+  UserCircle,
+  Info,
+  History,
+  Plus,
+  Bell,
+  BellOff,
+  SkipForward,
+  Settings,
+  Copy,
+  RefreshCw,
+} from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
+import { useLocation, useNavigate } from 'react-router-dom';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
@@ -74,6 +92,18 @@ type FirstResponseSLA =
   | { kind: 'no-inbound' }
   | { kind: 'waiting'; minutes: number }
   | { kind: 'replied'; minutes: number };
+
+type ReminderQuickOpenItem = {
+  id: string;
+  title: string;
+  type: string;
+  priority: string;
+  dueAt: string;
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  leadStatus?: string | null;
+};
 
 const COUNTRY_CALLING_CODES = new Set<string>([
   '1', '7', '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
@@ -164,7 +194,6 @@ export default function WhatsAppTab() {
     id: string;
     body: string;
   } | null>(null);
-  const [leadNamesByPhone, setLeadNamesByPhone] = useState<Map<string, string>>(new Map());
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
   const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
     [],
@@ -197,6 +226,10 @@ export default function WhatsAppTab() {
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
+  const [showRemindersModal, setShowRemindersModal] = useState(false);
+  const [reminderQuickOpenItems, setReminderQuickOpenItems] = useState<ReminderQuickOpenItem[]>([]);
+  const [isLoadingReminderQuickOpen, setIsLoadingReminderQuickOpen] = useState(false);
+  const [reminderQuickOpenError, setReminderQuickOpenError] = useState<string | null>(null);
   const [reminderLead, setReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
   const [reminderPromptMessage, setReminderPromptMessage] = useState<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -206,6 +239,8 @@ export default function WhatsAppTab() {
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
   const newsletterNameLookupAttemptsRef = useRef<Set<string>>(new Set());
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const userRef = useRef(user);
   const isWindowFocusedRef = useRef(true);
   const desktopNotificationsEnabledRef = useRef(true);
@@ -218,6 +253,7 @@ export default function WhatsAppTab() {
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
   const lastGroupNamesSyncAtRef = useRef(0);
+  const handledReminderQueryRef = useRef<string | null>(null);
   const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; loadedCount: number; hasOlder: boolean }>>(
     new Map(),
   );
@@ -239,6 +275,73 @@ export default function WhatsAppTab() {
 
     return digits;
   }
+
+  const collectPhoneMatchKeys = (value: string | null | undefined): string[] => {
+    const digitsOnly = (value || '').replace(/\D/g, '');
+    if (!digitsOnly) {
+      return [];
+    }
+
+    const keys = new Set<string>();
+    const push = (digits: string) => {
+      if (!digits) return;
+      keys.add(digits);
+      const normalized = normalizePhoneNumber(digits);
+      if (normalized) {
+        keys.add(normalized);
+      }
+
+      if (digits.startsWith('55') && digits.length > 11) {
+        keys.add(digits.slice(2));
+      }
+
+      if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+        keys.add(`55${digits}`);
+      }
+    };
+
+    push(digitsOnly);
+
+    const snapshot = Array.from(keys);
+    snapshot.forEach((digits) => {
+      const local = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits;
+
+      if (local.length === 11 && local[2] === '9') {
+        const withoutNinthDigit = `${local.slice(0, 2)}${local.slice(3)}`;
+        push(withoutNinthDigit);
+      }
+
+      if (local.length === 10) {
+        const withNinthDigit = `${local.slice(0, 2)}9${local.slice(2)}`;
+        push(withNinthDigit);
+      }
+    });
+
+    return Array.from(keys)
+      .map((digits) => normalizePhoneNumber(digits) || digits)
+      .filter(Boolean);
+  };
+
+  const getLeadMatchKeysForChat = (chat: Pick<WhatsAppChat, 'id' | 'phone_number' | 'lid' | 'is_group'> | null): string[] => {
+    if (!chat || !isDirectChat(chat)) {
+      return [];
+    }
+
+    const keys = new Set<string>();
+    [chat.id, normalizeChatId(chat.id), chat.phone_number, chat.lid].forEach((value) => {
+      collectPhoneMatchKeys(value).forEach((key) => keys.add(key));
+    });
+
+    const digitCandidates = [getPhoneDigits(chat.id), getPhoneDigits(chat.phone_number), normalizePhoneNumber(chat.id)].filter(Boolean);
+    digitCandidates.forEach((digits) => {
+      collectPhoneMatchKeys(digits).forEach((key) => keys.add(key));
+      getDirectIdVariantsFromDigits(digits).forEach((variant) => {
+        collectPhoneMatchKeys(variant).forEach((key) => keys.add(key));
+      });
+    });
+
+    return Array.from(keys);
+  };
 
   const getMessageTimeValue = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
     const primary = message.timestamp ? new Date(message.timestamp).getTime() : Number.NaN;
@@ -837,15 +940,6 @@ export default function WhatsAppTab() {
           return { data: response.data, error: response.error };
         });
 
-        const phoneMap = new Map<string, string>();
-        (data || []).forEach((lead) => {
-          const normalizedPhone = normalizePhoneNumber(lead.telefone);
-          if (normalizedPhone && !phoneMap.has(normalizedPhone)) {
-            phoneMap.set(normalizedPhone, lead.nome_completo);
-          }
-        });
-
-        setLeadNamesByPhone(phoneMap);
         setLeadsList(
           (data || [])
             .map((lead) => ({
@@ -966,6 +1060,64 @@ export default function WhatsAppTab() {
     };
 
     loadLeadStatuses();
+  }, []);
+
+  useEffect(() => {
+    const leadsSubscription = supabase
+      .channel('whatsapp_leads_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const deletedLeadId = (payload.old as { id?: string } | null)?.id;
+          if (!deletedLeadId) return;
+          setLeadsList((prev) => prev.filter((lead) => lead.id !== deletedLeadId));
+          return;
+        }
+
+        const row = payload.new as
+          | {
+              id?: string;
+              telefone?: string | null;
+              nome_completo?: string | null;
+              status?: string | null;
+              responsavel?: string | null;
+            }
+          | null;
+        if (!row?.id) return;
+
+        const leadId = row.id as string;
+
+        const normalizedPhone = normalizePhoneNumber(row.telefone ?? '');
+
+        setLeadsList((prev) => {
+          const existingIndex = prev.findIndex((lead) => lead.id === leadId);
+
+          if (!normalizedPhone) {
+            if (existingIndex === -1) return prev;
+            return prev.filter((lead) => lead.id !== leadId);
+          }
+
+          const nextLead = {
+            id: leadId,
+            name: row.nome_completo?.trim() || (existingIndex >= 0 ? prev[existingIndex].name : normalizedPhone),
+            phone: normalizedPhone,
+            status: row.status ?? (existingIndex >= 0 ? prev[existingIndex].status ?? null : null),
+            responsavel: row.responsavel ?? (existingIndex >= 0 ? prev[existingIndex].responsavel ?? null : null),
+          };
+
+          if (existingIndex === -1) {
+            return [nextLead, ...prev];
+          }
+
+          const next = [...prev];
+          next[existingIndex] = nextLead;
+          return next;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(leadsSubscription);
+    };
   }, []);
 
   useEffect(() => {
@@ -1951,6 +2103,32 @@ export default function WhatsAppTab() {
     setDesktopNotificationsEnabled((prev) => !prev);
   };
 
+  const leadByPhoneMatchKey = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; phone: string; status?: string | null; responsavel?: string | null }>();
+
+    leadsList.forEach((lead) => {
+      collectPhoneMatchKeys(lead.phone).forEach((key) => {
+        if (!map.has(key)) {
+          map.set(key, lead);
+        }
+      });
+    });
+
+    return map;
+  }, [leadsList]);
+
+  const leadNamesByPhone = useMemo(() => {
+    const map = new Map<string, string>();
+
+    leadByPhoneMatchKey.forEach((lead, key) => {
+      if (!map.has(key)) {
+        map.set(key, lead.name);
+      }
+    });
+
+    return map;
+  }, [leadByPhoneMatchKey]);
+
   function getChatDisplayName(chat: WhatsAppChat) {
     const chatKind = getChatKind(chat);
     if (chatKind === 'group') {
@@ -1966,9 +2144,13 @@ export default function WhatsAppTab() {
     }
 
     const phone = normalizePhoneNumber(chat.phone_number || chat.id);
+    const leadMatchKeys = getLeadMatchKeysForChat(chat);
 
-    if (phone && leadNamesByPhone.has(phone)) {
-      return leadNamesByPhone.get(phone)!;
+    for (const key of leadMatchKeys) {
+      const leadName = leadNamesByPhone.get(key);
+      if (leadName) {
+        return leadName;
+      }
     }
 
     const contactCandidates = new Set<string>([
@@ -2102,11 +2284,16 @@ export default function WhatsAppTab() {
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
   const selectedLead = useMemo(() => {
-    if (!selectedChat || !isDirectChat(selectedChat)) return null;
-    const phone = normalizePhoneNumber(selectedChat.phone_number || selectedChat.id);
-    if (!phone) return null;
-    return leadsList.find((lead) => lead.phone === phone) ?? null;
-  }, [leadsList, selectedChat]);
+    const matchKeys = getLeadMatchKeysForChat(selectedChat);
+    for (const key of matchKeys) {
+      const matchedLead = leadByPhoneMatchKey.get(key);
+      if (matchedLead) {
+        return matchedLead;
+      }
+    }
+
+    return null;
+  }, [leadByPhoneMatchKey, selectedChat]);
   const firstResponseSla = useMemo<FirstResponseSLA>(() => {
     const timeline = [...messages]
       .filter((message) => {
@@ -2190,11 +2377,6 @@ export default function WhatsAppTab() {
       className: 'border-rose-200 bg-rose-50 text-rose-700',
     };
   }, [firstResponseSla]);
-  const leadByPhone = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; phone: string; status?: string | null }>();
-    leadsList.forEach((lead) => map.set(lead.phone, lead));
-    return map;
-  }, [leadsList]);
   const statusByName = useMemo(() => {
     const map = new Map<string, LeadStatusConfig>();
     leadStatuses.forEach((status) => map.set(status.nome, status));
@@ -2452,6 +2634,184 @@ export default function WhatsAppTab() {
     setNewChatPhone('');
   };
 
+  const formatReminderDueAt = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Data indisponivel';
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const loadReminderQuickOpen = async () => {
+    setIsLoadingReminderQuickOpen(true);
+    setReminderQuickOpenError(null);
+
+    try {
+      const { data: remindersData, error: remindersError } = await supabase
+        .from('reminders')
+        .select('id, lead_id, contract_id, titulo, tipo, prioridade, data_lembrete, lido')
+        .eq('lido', false)
+        .order('data_lembrete', { ascending: true })
+        .limit(300);
+
+      if (remindersError) throw remindersError;
+
+      const reminders =
+        ((remindersData || []) as Array<{
+          id: string;
+          lead_id?: string | null;
+          contract_id?: string | null;
+          titulo?: string | null;
+          tipo?: string | null;
+          prioridade?: string | null;
+          data_lembrete: string;
+          lido?: boolean | null;
+        }>) || [];
+
+      const contractIds = Array.from(
+        new Set(
+          reminders
+            .filter((reminder) => !reminder.lead_id && reminder.contract_id)
+            .map((reminder) => reminder.contract_id as string),
+        ),
+      );
+
+      const contractLeadMap = new Map<string, string>();
+      if (contractIds.length > 0) {
+        const { data: contractsData, error: contractsError } = await supabase
+          .from('contracts')
+          .select('id, lead_id')
+          .in('id', contractIds);
+
+        if (!contractsError) {
+          ((contractsData || []) as Array<{ id: string; lead_id?: string | null }>).forEach((contract) => {
+            if (contract.id && contract.lead_id) {
+              contractLeadMap.set(contract.id, contract.lead_id);
+            }
+          });
+        }
+      }
+
+      const leadById = new Map(leadsList.map((lead) => [lead.id, lead]));
+      const reminderLeadCandidates = reminders
+        .map((reminder) => reminder.lead_id || (reminder.contract_id ? contractLeadMap.get(reminder.contract_id) ?? null : null))
+        .filter((leadId): leadId is string => typeof leadId === 'string' && leadId.length > 0);
+      const missingLeadIds = Array.from(new Set(reminderLeadCandidates.filter((leadId) => !leadById.has(leadId))));
+
+      if (missingLeadIds.length > 0) {
+        const { data: missingLeadsData, error: missingLeadsError } = await supabase
+          .from('leads')
+          .select('id, telefone, nome_completo, status, responsavel')
+          .in('id', missingLeadIds);
+
+        if (!missingLeadsError) {
+          const normalizedMissingLeads = ((missingLeadsData || []) as Array<{
+            id: string;
+            telefone: string;
+            nome_completo: string;
+            status?: string | null;
+            responsavel?: string | null;
+          }>)
+            .map((lead) => ({
+              id: lead.id,
+              name: lead.nome_completo,
+              phone: normalizePhoneNumber(lead.telefone),
+              status: lead.status ?? null,
+              responsavel: lead.responsavel ?? null,
+            }))
+            .filter((lead) => Boolean(lead.phone));
+
+          if (normalizedMissingLeads.length > 0) {
+            setLeadsList((prev) => {
+              const next = [...prev];
+              normalizedMissingLeads.forEach((lead) => {
+                const existingIndex = next.findIndex((item) => item.id === lead.id);
+                if (existingIndex === -1) {
+                  next.push(lead);
+                } else {
+                  next[existingIndex] = lead;
+                }
+              });
+              return next;
+            });
+
+            normalizedMissingLeads.forEach((lead) => {
+              leadById.set(lead.id, lead);
+            });
+          }
+        }
+      }
+
+      const items = reminders
+        .map((reminder) => {
+          const resolvedLeadId = reminder.lead_id || (reminder.contract_id ? contractLeadMap.get(reminder.contract_id) : null);
+          if (!resolvedLeadId) return null;
+
+          const lead = leadById.get(resolvedLeadId);
+          return {
+            id: reminder.id,
+            title: reminder.titulo?.trim() || 'Lembrete sem titulo',
+            type: reminder.tipo?.trim() || 'Outro',
+            priority: reminder.prioridade?.trim() || 'normal',
+            dueAt: reminder.data_lembrete,
+            leadId: resolvedLeadId,
+            leadName: lead?.name || 'Lead sem nome',
+            leadPhone: lead?.phone || '',
+            leadStatus: lead?.status ?? null,
+          } as ReminderQuickOpenItem;
+        })
+        .filter((item): item is ReminderQuickOpenItem => Boolean(item))
+        .sort((left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime());
+
+      setReminderQuickOpenItems(items);
+    } catch (error) {
+      console.error('Erro ao carregar lembretes para o WhatsApp:', error);
+      setReminderQuickOpenError('Nao foi possivel carregar os lembretes agora.');
+      setReminderQuickOpenItems([]);
+    } finally {
+      setIsLoadingReminderQuickOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const phoneParam = params.get('openPhone') || params.get('phone');
+    if (!phoneParam) {
+      return;
+    }
+
+    const digits = phoneParam.replace(/\D/g, '');
+    if (!digits) {
+      return;
+    }
+
+    if (handledReminderQueryRef.current === location.search) {
+      return;
+    }
+    handledReminderQueryRef.current = location.search;
+
+    const leadName = params.get('leadName') || undefined;
+    openChatFromPhone(digits, leadName);
+    setShowRemindersModal(false);
+
+    params.delete('openPhone');
+    params.delete('phone');
+    params.delete('leadName');
+    params.delete('leadId');
+
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate]);
+
   const isChatMuted = (chat: WhatsAppChat) =>
     chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
 
@@ -2683,6 +3043,90 @@ export default function WhatsAppTab() {
             </div>
         </ModalShell>
       )}
+      {showRemindersModal && (
+        <ModalShell
+          isOpen
+          onClose={() => setShowRemindersModal(false)}
+          title="Lembretes pendentes"
+          size="lg"
+          panelClassName="max-w-3xl"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <span>Use esta lista para abrir rapidamente a conversa de leads com lembrete pendente.</span>
+              <button
+                type="button"
+                onClick={() => void loadReminderQuickOpen()}
+                disabled={isLoadingReminderQuickOpen}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingReminderQuickOpen ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
+
+            {isLoadingReminderQuickOpen ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+                Carregando lembretes...
+              </div>
+            ) : reminderQuickOpenError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-4 text-sm text-red-700">
+                {reminderQuickOpenError}
+              </div>
+            ) : reminderQuickOpenItems.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+                Nenhum lembrete pendente com lead vinculado.
+              </div>
+            ) : (
+              <div className="max-h-[58vh] overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                {reminderQuickOpenItems.map((item) => {
+                  const dueTime = new Date(item.dueAt).getTime();
+                  const isOverdue = Number.isFinite(dueTime) && dueTime < Date.now();
+                  const statusConfig = item.leadStatus ? statusByName.get(item.leadStatus) : null;
+                  const leadStatusStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;
+
+                  return (
+                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-medium text-slate-900">{item.leadName}</p>
+                          {leadStatusStyles && item.leadStatus && (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
+                              {item.leadStatus}
+                            </span>
+                          )}
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{item.type}</span>
+                          {isOverdue && (
+                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-700">Atrasado</span>
+                          )}
+                        </div>
+                        <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
+                          {formatReminderDueAt(item.dueAt)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!item.leadPhone) return;
+                          openChatFromPhone(item.leadPhone, item.leadName);
+                          setShowRemindersModal(false);
+                        }}
+                        disabled={!item.leadPhone}
+                        className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Abrir no WhatsApp
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </ModalShell>
+      )}
       {showChatList && (
         <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>
           <div className="p-4 border-b border-slate-200 space-y-3">
@@ -2700,6 +3144,23 @@ export default function WhatsAppTab() {
                 >
                   <Plus className="w-4 h-4" />
                   Novo chat
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                  onClick={() => {
+                    setShowRemindersModal(true);
+                    void loadReminderQuickOpen();
+                    setIsListSettingsOpen(false);
+                  }}
+                >
+                  <Bell className="h-4 w-4" />
+                  <span>Lembretes</span>
+                  {reminderQuickOpenItems.length > 0 && (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {reminderQuickOpenItems.length}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -2880,8 +3341,10 @@ export default function WhatsAppTab() {
                 const chatDisplayName = getChatDisplayName(chat);
                 const chatKind = getChatKind(chat);
                 const chatTypeLabel = getChatTypeLabel(chat);
-                const chatPhone = isDirectChat(chat) ? normalizePhoneNumber(chat.phone_number || chat.id) : null;
-                const leadForChat = chatPhone ? leadByPhone.get(chatPhone) : null;
+                const leadMatchKeys = getLeadMatchKeysForChat(chat);
+                const leadForChat = leadMatchKeys
+                  .map((key) => leadByPhoneMatchKey.get(key))
+                  .find((lead): lead is { id: string; name: string; phone: string; status?: string | null; responsavel?: string | null } => Boolean(lead)) ?? null;
                 const leadStatus = leadForChat?.status ?? null;
                 const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
                 const badgeStyles = statusConfig ? getBadgeStyle(statusConfig.cor || '#94a3b8', 0.3) : null;

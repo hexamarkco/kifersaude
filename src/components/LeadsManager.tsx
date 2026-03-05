@@ -39,6 +39,10 @@ import FilterMultiSelect from './FilterMultiSelect';
 import FilterDateRange from './FilterDateRange';
 import FilterSingleSelect from './FilterSingleSelect';
 import DateTimePicker from './ui/DateTimePicker';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Tabs, { type TabItem } from './ui/Tabs';
+import { getPanelButtonClass } from './ui/standards';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { mapLeadRelations } from '../lib/leadRelations';
 import { getBadgeStyle } from '../lib/colorUtils';
@@ -143,6 +147,11 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'origem', label: 'Origem (A-Z)' },
   { value: 'tipo_contratacao', label: 'Tipo (A-Z)' },
   { value: 'telefone', label: 'Telefone (0-9)' },
+];
+
+const VIEW_MODE_TABS: TabItem<'list' | 'kanban'>[] = [
+  { id: 'list', label: 'Lista', icon: List },
+  { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
 ];
 
 export default function LeadsManager({
@@ -1368,105 +1377,92 @@ export default function LeadsManager({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="panel-glass-panel flex w-full rounded-lg border border-slate-200 p-1 sm:w-auto">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center justify-center space-x-2 flex-1 sm:flex-initial px-3 py-2 rounded-md transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white text-teal-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              <span className="text-sm font-medium">Lista</span>
-            </button>
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center justify-center space-x-2 flex-1 sm:flex-initial px-3 py-2 rounded-md transition-colors ${
-                viewMode === 'kanban'
-                  ? 'bg-white text-teal-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              <span className="text-sm font-medium">Kanban</span>
-            </button>
-          </div>
+          <Tabs
+            items={VIEW_MODE_TABS}
+            value={viewMode}
+            onChange={setViewMode}
+            variant="panel"
+            listClassName="w-full sm:w-auto"
+            triggerClassName="flex-1 sm:flex-initial"
+          />
           <a
             href="/api-docs.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+            className={getPanelButtonClass({
+              variant: 'info',
+              size: 'md',
+              className: 'w-full sm:w-auto',
+            })}
             title="Documentação da API"
           >
-            <BookOpen className="w-5 h-5" />
+            <BookOpen className="h-5 w-5" />
             <span>API Docs</span>
           </a>
-          <button
+          <Button
             onClick={() => setShowArchived((current) => !current)}
-            className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto ${
-              showArchived
-                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            variant={showArchived ? 'warning' : 'secondary'}
+            className="w-full sm:w-auto"
             aria-pressed={showArchived}
             type="button"
           >
-            <Archive className="w-5 h-5" />
+            <Archive className="h-5 w-5" />
             <span>{showArchived ? 'Ver Leads Ativos' : 'Ver Leads Arquivados'}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               setEditingLead(null);
               setShowForm(true);
             }}
             disabled={isObserver}
-            className="flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto"
             title={isObserver ? 'Você não tem permissão para criar leads' : 'Criar novo lead'}
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="h-5 w-5" />
             <span>Novo Lead</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="panel-glass-panel mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-panel-animate>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-2xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
+            <Input
               type="text"
+              leftIcon={Search}
               placeholder="Buscar por nome, telefone, e-mail ou use status:origem:responsavel:tag:canal..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-            <button
+            <Button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors whitespace-nowrap"
+              variant="soft"
+              className="whitespace-nowrap"
             >
-              <Filter className="w-4 h-4" />
+              <Filter className="h-4 w-4" />
               Limpar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleExportFilteredLeads}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors whitespace-nowrap"
+              variant="success"
+              className="whitespace-nowrap"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               Exportar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleExportCurrentPage}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap"
+              variant="secondary"
+              className="whitespace-nowrap"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               Página
-            </button>
+            </Button>
             <div className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-1.5 border border-slate-200 whitespace-nowrap">
               <span className="font-semibold text-teal-700">{filteredLeads.length}</span>
               <span>leads</span>
@@ -1728,42 +1724,42 @@ export default function LeadsManager({
                       />
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <button
+                      <Button
                         type="button"
                         onClick={handleBulkStatusApply}
                         disabled={!bulkStatus || isBulkUpdating}
-                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        variant="primary"
                       >
                         {isBulkUpdating ? 'Atualizando...' : 'Aplicar Status'}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={handleBulkDetailsApply}
                         disabled={
                           isBulkUpdating ||
                           (!bulkResponsavel && !bulkProximoRetorno && bulkArchiveAction === 'none')
                         }
-                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        variant="info"
                       >
                         {isBulkUpdating ? 'Aplicando...' : 'Aplicar dados'}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={handleExportSelectedLeads}
                         disabled={isBulkUpdating}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        variant="success"
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="h-4 w-4" />
                         <span>Exportar XLSX</span>
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={clearSelection}
                         disabled={isBulkUpdating}
-                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                        variant="secondary"
                       >
                         Limpar
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1834,15 +1830,17 @@ export default function LeadsManager({
                       </div>
                       {lead.email && (
                         <div className="flex items-center gap-2 truncate">
-                          <button
+                          <Button
                             type="button"
                             onClick={() => handleEmailContact(lead)}
-                            className="text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded-full p-1"
+                            variant="icon"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
                             title="Enviar e-mail"
                             aria-label={`Enviar e-mail para ${lead.nome_completo}`}
                           >
-                            <Mail className="w-4 h-4" />
-                          </button>
+                            <Mail className="h-4 w-4" />
+                          </Button>
                           <span className="truncate">{lead.email}</span>
                         </div>
                       )}
@@ -1877,59 +1875,71 @@ export default function LeadsManager({
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
-              <button
+              <Button
                 onClick={() => setSelectedLead(lead)}
-                className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                variant="secondary"
+                size="sm"
+                className="space-x-0 sm:space-x-2"
                 aria-label={isObserver ? 'Ver detalhes do lead' : 'Ver e editar lead'}
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="h-4 w-4" />
                 <span className="hidden sm:inline">{isObserver ? 'Ver Detalhes' : 'Ver/Editar'}</span>
-              </button>
+              </Button>
               {!isObserver && (
                 <>
-                  <button
+                  <Button
                     onClick={() => handleConvertToContract(lead)}
-                    className="hidden md:inline-flex items-center space-x-2 px-3 py-2 text-sm bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
+                    variant="soft"
+                    size="sm"
+                    className="hidden md:inline-flex space-x-2"
                   >
-                    <FileText className="w-4 h-4" />
+                    <FileText className="h-4 w-4" />
                     <span>Converter em Contrato</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => openReminderScheduler(lead)}
-                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                    variant="warning"
+                    size="sm"
+                    className="space-x-0 sm:space-x-2"
                     aria-label="Agendar lembrete"
                     type="button"
                   >
-                    <Bell className="w-4 h-4" />
+                    <Bell className="h-4 w-4" />
                     <span className="hidden sm:inline">Agendar Lembrete</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleDeleteLead(lead)}
-                    className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    variant="danger"
+                    size="sm"
+                    className="space-x-0 sm:space-x-2"
                     aria-label="Excluir lead"
                     type="button"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Excluir</span>
-                  </button>
+                  </Button>
                   {!showArchived ? (
-                    <button
+                    <Button
                       onClick={() => handleArchive(lead.id)}
-                      className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors sm:ml-auto"
+                      variant="warning"
+                      size="sm"
+                      className="space-x-0 sm:space-x-2 sm:ml-auto"
                       aria-label="Arquivar lead"
                     >
-                      <Archive className="w-4 h-4" />
+                      <Archive className="h-4 w-4" />
                       <span className="hidden sm:inline">Arquivar</span>
-                    </button>
+                    </Button>
                   ) : (
-                    <button
+                    <Button
                       onClick={() => handleUnarchive(lead.id)}
-                      className="flex items-center justify-center space-x-0 sm:space-x-2 px-3 py-2 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors sm:ml-auto"
+                      variant="success"
+                      size="sm"
+                      className="space-x-0 sm:space-x-2 sm:ml-auto"
                       aria-label="Reativar lead"
                     >
-                      <Users className="w-4 h-4" />
+                      <Users className="h-4 w-4" />
                       <span className="hidden sm:inline">Reativar</span>
-                    </button>
+                    </Button>
                   )}
                 </>
               )}

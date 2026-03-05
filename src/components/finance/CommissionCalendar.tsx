@@ -11,6 +11,7 @@ import {
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { CommissionCalendarSkeleton } from '../ui/panelSkeletons';
+import Button from '../ui/Button';
 
 type CommissionEvent = {
   id: string;
@@ -341,23 +342,27 @@ export default function CommissionCalendar() {
 
       <div className="mt-6 border rounded-xl border-slate-200 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50">
-          <button
+          <Button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-lg hover:bg-white transition-colors"
+            variant="icon"
+            size="icon"
+            className="h-9 w-9"
             aria-label="Mês anterior"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
-          </button>
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
           <h3 className="text-lg font-semibold text-slate-900 capitalize">
             {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </h3>
-          <button
+          <Button
             onClick={goToNextMonth}
-            className="p-2 rounded-lg hover:bg-white transition-colors"
+            variant="icon"
+            size="icon"
+            className="h-9 w-9"
             aria-label="Próximo mês"
           >
-            <ChevronRight className="w-5 h-5 text-slate-600" />
-          </button>
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
 
         <div className="p-4">

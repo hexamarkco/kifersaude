@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { generateTextWithRouting } from '../_shared/ai-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,75 +89,25 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-    const { data: integration, error: integrationError } = await supabaseAdmin
-      .from('integration_settings')
-      .select('settings')
-      .eq('slug', 'gpt_transcription')
-      .maybeSingle();
-
-    if (integrationError) {
-      console.error('[generate-follow-up] Erro ao carregar integração GPT:', integrationError);
-      return new Response(
-        JSON.stringify({ error: 'Não foi possível acessar a configuração do GPT.' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
-    const apiKey = integration?.settings?.apiKey;
-    const model = integration?.settings?.textModel || 'gpt-4o-mini';
-
-    if (!apiKey || typeof apiKey !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Chave de API do GPT não configurada.' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
-    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.7,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt({
-            leadName,
-            conversationHistory,
-            leadContext: payload.leadContext,
-          }) },
-        ],
+    const generationResult = await generateTextWithRouting({
+      supabaseAdmin,
+      task: 'follow_up_generation',
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: buildUserPrompt({
+        leadName,
+        conversationHistory,
+        leadContext: payload.leadContext,
       }),
+      temperature: 0.7,
+      maxTokens: 900,
     });
 
-    if (!openAiResponse.ok) {
-      const errorText = await openAiResponse.text();
-      console.error('[generate-follow-up] OpenAI error:', errorText);
-      return new Response(
-        JSON.stringify({ error: 'Falha ao gerar follow-up.', details: errorText }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
-    const completion = await openAiResponse.json();
-    const followUpText = completion?.choices?.[0]?.message?.content?.trim();
+    const followUpText = generationResult.text.trim();
 
     if (!followUpText) {
-      console.error('[generate-follow-up] Resposta inesperada da OpenAI', completion);
+      console.error('[generate-follow-up] Resposta inesperada do provedor de IA', generationResult);
       return new Response(
-        JSON.stringify({ error: 'Resposta do GPT vazia.' }),
+          JSON.stringify({ error: 'Resposta da IA vazia.' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -164,10 +115,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ followUp: followUpText }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.log('[generate-follow-up] Follow-up gerado', {
+      provider: generationResult.provider,
+      model: generationResult.model,
+      fallbackUsed: generationResult.fallbackUsed,
     });
+
+    return new Response(
+      JSON.stringify({
+        followUp: followUpText,
+        provider: generationResult.provider,
+        model: generationResult.model,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     console.error('[generate-follow-up] Erro inesperado:', error);
     return new Response(

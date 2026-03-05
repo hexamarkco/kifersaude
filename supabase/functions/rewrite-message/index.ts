@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { generateTextWithRouting } from '../_shared/ai-router.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,69 +72,33 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-    const { data: integration, error: integrationError } = await supabaseAdmin
-      .from('integration_settings')
-      .select('settings')
-      .eq('slug', 'gpt_transcription')
-      .maybeSingle();
-
-    if (integrationError) {
-      console.error('[rewrite-message] Erro ao carregar integracao GPT:', integrationError);
-      return new Response(JSON.stringify({ error: 'Nao foi possivel acessar a configuracao do GPT.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const apiKey = integration?.settings?.apiKey;
-    const model = integration?.settings?.textModel || 'gpt-4o-mini';
-
-    if (!apiKey || typeof apiKey !== 'string') {
-      return new Response(JSON.stringify({ error: 'Chave de API do GPT nao configurada.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const tonePrompt = TONE_PROMPTS[tone] || TONE_PROMPTS.claro;
-    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'system', content: tonePrompt },
-          { role: 'user', content: text },
-        ],
-      }),
+    const rewriteResult = await generateTextWithRouting({
+      supabaseAdmin,
+      task: 'rewrite_message',
+      systemPrompt: `${SYSTEM_PROMPT}\n${tonePrompt}`,
+      userPrompt: text,
+      temperature: 0.4,
+      maxTokens: 800,
     });
 
-    if (!openAiResponse.ok) {
-      const errorText = await openAiResponse.text();
-      console.error('[rewrite-message] OpenAI error:', errorText);
-      return new Response(JSON.stringify({ error: 'Falha ao reescrever texto.', details: errorText }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const completion = await openAiResponse.json();
-    const rewriteText = completion?.choices?.[0]?.message?.content?.trim();
+    const rewriteText = rewriteResult.text.trim();
 
     if (!rewriteText) {
-      console.error('[rewrite-message] Resposta inesperada da OpenAI', completion);
-      return new Response(JSON.stringify({ error: 'Resposta do GPT vazia.' }), {
+      console.error('[rewrite-message] Resposta inesperada do provedor de IA', rewriteResult);
+      return new Response(JSON.stringify({ error: 'Resposta da IA vazia.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ rewrite: rewriteText }), {
+    console.log('[rewrite-message] Reescrita gerada', {
+      provider: rewriteResult.provider,
+      model: rewriteResult.model,
+      fallbackUsed: rewriteResult.fallbackUsed,
+    });
+
+    return new Response(JSON.stringify({ rewrite: rewriteText, provider: rewriteResult.provider, model: rewriteResult.model }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

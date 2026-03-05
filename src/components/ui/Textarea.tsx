@@ -1,5 +1,6 @@
 import { forwardRef, type TextareaHTMLAttributes } from 'react';
 import { cx } from '../../lib/cx';
+import { panelInputBaseClass, panelInputStateClasses } from './standards';
 
 export type TextareaSize = 'default' | 'compact';
 
@@ -22,11 +23,10 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       ref={ref}
       disabled={disabled}
       className={cx(
-        'panel-ui-input w-full rounded-lg border bg-white px-3 py-2.5 shadow-sm transition-all',
-        'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        panelInputBaseClass,
+        'py-2.5',
         sizeClasses[size],
-        invalid ? 'border-red-400 text-red-700 placeholder:text-red-300' : 'border-slate-300 text-slate-700 placeholder:text-slate-400',
+        invalid ? panelInputStateClasses.invalid : panelInputStateClasses.valid,
         className,
       )}
       {...props}

@@ -34,6 +34,9 @@ import ContractDetails from './ContractDetails';
 import LeadDetails from './LeadDetails';
 import LeadForm from './LeadForm';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Tabs, { type TabItem } from './ui/Tabs';
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -74,6 +77,12 @@ type DashboardProps = {
   onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
   onCreateReminder?: (options: ReminderRequest) => void;
 };
+
+const METRIC_TABS: TabItem<'leads' | 'contratos' | 'comissoes'>[] = [
+  { id: 'leads', label: 'Leads' },
+  { id: 'contratos', label: 'Contratos' },
+  { id: 'comissoes', label: 'Comissões' },
+];
 
 export default function Dashboard({ onNavigateToTab, onCreateReminder }: DashboardProps) {
   const { isObserver } = useAuth();
@@ -2035,31 +2044,25 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </div>
             {periodFilter === 'personalizado' && (
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-                <input
+                <Input
                   type="text"
                   value={customStartDate}
                   onChange={handleStartDateChange}
                   placeholder="DD/MM/AAAA"
                   maxLength={10}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-32 ${
-                    customStartDate && !validateDate(customStartDate)
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-slate-300'
-                  }`}
+                  className="sm:w-32"
+                  invalid={Boolean(customStartDate && !validateDate(customStartDate))}
                 />
                 <span className="text-center text-xs text-slate-500 sm:hidden">até</span>
                 <span className="hidden text-sm text-slate-500 sm:inline">até</span>
-                <input
+                <Input
                   type="text"
                   value={customEndDate}
                   onChange={handleEndDateChange}
                   placeholder="DD/MM/AAAA"
                   maxLength={10}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-teal-500 sm:w-32 ${
-                    customEndDate && !validateDate(customEndDate)
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-slate-300'
-                  }`}
+                  className="sm:w-32"
+                  invalid={Boolean(customEndDate && !validateDate(customEndDate))}
                 />
               </div>
             )}
@@ -2099,15 +2102,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               <Clock className="h-4 w-4 text-slate-500" />
               <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
             </div>
-            <button
+            <Button
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               <span>Atualizar agora</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -2118,14 +2120,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             <div className="mt-1 h-2 w-2 rounded-full bg-red-500"></div>
             <p className="text-sm text-red-800">{error}</p>
           </div>
-          <button
-            type="button"
-            onClick={loadData}
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
+          <Button type="button" onClick={loadData} variant="danger" disabled={loading}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       )}
 
@@ -2239,28 +2236,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               />
             </div>
 
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm">
-              {(
-                [
-                  { key: 'leads', label: 'Leads' },
-                  { key: 'contratos', label: 'Contratos' },
-                  { key: 'comissoes', label: 'Comissões' },
-                ] as const
-              ).map((metric) => (
-                <button
-                  key={metric.key}
-                  type="button"
-                  onClick={() => setSelectedMetric(metric.key)}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-                    selectedMetric === metric.key
-                      ? 'bg-white text-teal-700 shadow-sm ring-1 ring-teal-100'
-                      : 'text-slate-600 hover:bg-white'
-                  }`}
-                >
-                  {metric.label}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              items={METRIC_TABS}
+              value={selectedMetric}
+              onChange={setSelectedMetric}
+              variant="panel"
+              listClassName="w-full sm:w-auto"
+            />
 
             <div className="w-full sm:w-48">
               <FilterSingleSelect
@@ -2400,38 +2382,42 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
               <div className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <button
+                  <Button
                     type="button"
                     onClick={() =>
                       setCalendarMonth(
                         new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1),
                       )
                     }
-                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    variant="icon"
+                    size="icon"
+                    className="h-8 w-8"
                     aria-label="Mês anterior"
                   >
-                    <ChevronLeft className="w-4 h-4 text-slate-500" />
-                  </button>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
                   <h4 className="text-sm font-semibold text-slate-800 capitalize">
                     {calendarMonthLabel}
                   </h4>
-                  <button
+                  <Button
                     type="button"
                     onClick={() =>
                       setCalendarMonth(
                         new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1),
                       )
                     }
-                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    variant="icon"
+                    size="icon"
+                    className="h-8 w-8"
                     aria-label="Próximo mês"
                   >
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
-                  </button>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-3">
                   <span>Navegue os meses para consultar reajustes e aniversários.</span>
                   <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => {
                         const today = new Date();
@@ -2440,15 +2426,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                         setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1));
                         setSelectedCalendarDate(today);
                       }}
-                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
-                        calendarView === 'day'
-                          ? 'bg-teal-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
+                      variant={calendarView === 'day' ? 'primary' : 'secondary'}
+                      size="sm"
+                      className="h-7 rounded-full px-3 text-[11px]"
                     >
                       Hoje
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() => {
                         if (!selectedCalendarDate) {
@@ -2458,25 +2442,21 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                         }
                         setCalendarView('week');
                       }}
-                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
-                        calendarView === 'week'
-                          ? 'bg-teal-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
+                      variant={calendarView === 'week' ? 'primary' : 'secondary'}
+                      size="sm"
+                      className="h-7 rounded-full px-3 text-[11px]"
                     >
                       Semana
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() => setCalendarView('month')}
-                      className={`px-3 py-1 text-[11px] font-semibold rounded-full transition-colors ${
-                        calendarView === 'month'
-                          ? 'bg-teal-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
+                      variant={calendarView === 'month' ? 'primary' : 'secondary'}
+                      size="sm"
+                      className="h-7 rounded-full px-3 text-[11px]"
                     >
                       Mês
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 gap-2">
@@ -2571,23 +2551,27 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                               </div>
                             </div>
                             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() => handleNavigateToContract(adjustment.contract)}
-                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 rounded-md px-3 text-xs"
                               >
                                 Ver contrato
-                              </button>
+                              </Button>
                               {adjustment.contract?.lead_id && (
-                                <button
+                                <Button
                                   type="button"
                                   onClick={() => handleNavigateToLead(adjustment.contract?.lead_id)}
-                                  className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-8 rounded-md px-3 text-xs"
                                 >
                                   Abrir lead
-                                </button>
+                                </Button>
                               )}
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() =>
                                   handleCreateReminderRequest({
@@ -2600,10 +2584,12 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                                     description: `Data: ${adjustment.date.toLocaleDateString('pt-BR')}`,
                                   })
                                 }
-                                className="inline-flex items-center rounded-md border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 shadow-sm transition-colors hover:bg-white"
+                                variant="soft"
+                                size="sm"
+                                className="h-8 rounded-md px-3 text-xs"
                               >
                                 Criar lembrete
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         );
@@ -2650,24 +2636,28 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                           )}
                           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                             {birthday.contract && (
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() => handleNavigateToContract(birthday.contract)}
-                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 rounded-md px-3 text-xs"
                               >
                                 Ver contrato
-                              </button>
+                              </Button>
                             )}
                             {birthday.contract?.lead_id && (
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() => handleNavigateToLead(birthday.contract?.lead_id)}
-                                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 rounded-md px-3 text-xs"
                               >
                                 Abrir lead
-                              </button>
+                              </Button>
                             )}
-                            <button
+                            <Button
                               type="button"
                               onClick={() =>
                                 handleCreateReminderRequest({
@@ -2677,10 +2667,12 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                                   description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
                                 })
                               }
-                              className="inline-flex items-center rounded-md border border-pink-200 bg-pink-50 px-3 py-1.5 text-xs font-semibold text-pink-700 shadow-sm transition-colors hover:bg-white"
+                              variant="warning"
+                              size="sm"
+                              className="h-8 rounded-md px-3 text-xs"
                             >
                               Criar lembrete
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       );

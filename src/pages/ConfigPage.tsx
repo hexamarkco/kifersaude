@@ -43,7 +43,7 @@ export default function ConfigPage() {
       </div>
 
       <Card variant="glass" padding="none" className="mb-6 overflow-hidden">
-        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} />
+        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" listClassName="rounded-none border-x-0 border-t-0" />
 
         <div className="p-6">
           {activeTab === 'system' && <SystemSettingsTab />}

@@ -8,6 +8,8 @@ import LeadOriginsManager from './LeadOriginsManager';
 import ConfigOptionManager from './ConfigOptionManager';
 import AccessControlManager from './AccessControlManager';
 import FilterSingleSelect from '../FilterSingleSelect';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { Skeleton } from '../ui/Skeleton';
 import { SystemSettingsSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
@@ -173,11 +175,10 @@ export default function SystemSettingsTab() {
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Nome da Empresa
             </label>
-            <input
+            <Input
               type="text"
               value={settings.company_name}
               onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               placeholder="Nome da sua empresa"
             />
           </div>
@@ -243,13 +244,12 @@ export default function SystemSettingsTab() {
               <Clock className="w-4 h-4" />
               <span>Intervalo de Verificação de Notificações (segundos)</span>
             </label>
-            <input
+            <Input
               type="number"
               min="10"
               max="300"
               value={settings.notification_interval_seconds}
               onChange={(e) => setSettings({ ...settings, notification_interval_seconds: parseInt(e.target.value) || 30 })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <p className="text-xs text-slate-500 mt-1">
               Recomendado: 30 segundos
@@ -261,13 +261,12 @@ export default function SystemSettingsTab() {
               <Calendar className="w-4 h-4" />
               <span>Tempo de Sessão (minutos)</span>
             </label>
-            <input
+            <Input
               type="number"
               min="30"
               max="1440"
               value={settings.session_timeout_minutes}
               onChange={(e) => setSettings({ ...settings, session_timeout_minutes: parseInt(e.target.value) || 480 })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <p className="text-xs text-slate-500 mt-1">
               Tempo antes do logout automático (padrão: 480 minutos / 8 horas)
@@ -276,14 +275,13 @@ export default function SystemSettingsTab() {
         </div>
 
         <div className="mt-6 flex justify-end">
-          <button
+          <Button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center space-x-2 px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 

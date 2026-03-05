@@ -126,33 +126,39 @@ const REMINDER_QUICK_OPEN_PERIODS: Array<{
     id: 'overdue',
     label: 'Atrasados',
     emptyLabel: 'Sem lembretes atrasados.',
-    accentClassName: 'text-red-700',
+    accentClassName: 'border-red-200 bg-red-50 text-red-700',
   },
   {
     id: 'today',
     label: 'Hoje',
     emptyLabel: 'Sem lembretes para hoje.',
-    accentClassName: 'text-teal-700',
+    accentClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
   {
     id: 'thisWeek',
     label: 'Esta semana',
     emptyLabel: 'Sem lembretes para esta semana.',
-    accentClassName: 'text-blue-700',
+    accentClassName: 'border-sky-200 bg-sky-50 text-sky-700',
   },
   {
     id: 'thisMonth',
     label: 'Este mês',
     emptyLabel: 'Sem lembretes para este mês.',
-    accentClassName: 'text-amber-700',
+    accentClassName: 'border-amber-200 bg-amber-50 text-amber-700',
   },
   {
     id: 'later',
     label: 'Mais adiante',
     emptyLabel: 'Sem lembretes futuros.',
-    accentClassName: 'text-slate-700',
+    accentClassName: 'border-slate-300 bg-slate-100 text-slate-700',
   },
 ];
+
+const PERSON_FALLBACK_NOTIFICATION_ICON =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='#d1fae5'/><circle cx='32' cy='24' r='10' fill='#0f766e'/><path d='M14 50c3-9 12-14 18-14s15 5 18 14' fill='none' stroke='#0f766e' stroke-width='6' stroke-linecap='round'/></svg>",
+  );
 
 const COUNTRY_CALLING_CODES = new Set<string>([
   '1', '7', '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
@@ -2163,13 +2169,88 @@ export default function WhatsAppTab() {
     if (notificationPermissionRef.current !== 'granted' || typeof window === 'undefined') return;
 
     const resolvedChat = matchedChat ?? chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id));
+    const title = (() => {
+      const preferredName = resolvedChat ? getChatDisplayName(resolvedChat) : '';
+      if (preferredName && !isPhoneLikeLabel(preferredName)) {
+        return preferredName;
+      }
 
-    const title = resolvedChat ? getChatDisplayName(resolvedChat) : getChatDisplayNameFromId(message.chat_id);
+      const candidateKeys = new Set<string>();
+      [message.chat_id, message.from_number, resolvedChat?.phone_number].forEach((value) => {
+        collectPhoneMatchKeys(value).forEach((key) => candidateKeys.add(key));
+      });
+
+      for (const key of candidateKeys) {
+        const lead = leadByPhoneMatchKey.get(key);
+        if (lead?.name?.trim()) {
+          return lead.name.trim();
+        }
+      }
+
+      const contactCandidates = new Set<string>();
+      [message.chat_id, message.from_number, resolvedChat?.phone_number].forEach((value) => {
+        if (!value) return;
+        if (value.includes('@')) {
+          const normalized = normalizeChatId(value);
+          if (normalized) {
+            contactCandidates.add(normalized);
+          }
+        }
+
+        const digits = getPhoneDigits(value);
+        if (digits) {
+          getDirectIdVariantsFromDigits(digits).forEach((variant) => contactCandidates.add(variant));
+        }
+      });
+
+      for (const candidate of contactCandidates) {
+        const contact = contactsById.get(candidate);
+        if (contact?.name?.trim() && !isPhoneLikeLabel(contact.name)) {
+          return contact.name.trim();
+        }
+      }
+
+      return preferredName || getChatDisplayNameFromId(message.chat_id);
+    })();
+
+    const icon = (() => {
+      const variants = new Set<string>();
+
+      if (resolvedChat) {
+        getChatIdVariants(resolvedChat).forEach((variant) => variants.add(variant));
+      }
+
+      [message.chat_id, message.from_number, resolvedChat?.phone_number].forEach((value) => {
+        if (!value) return;
+
+        if (value.includes('@')) {
+          const normalized = normalizeChatId(value);
+          if (normalized) {
+            variants.add(normalized);
+          }
+        }
+
+        const digits = getPhoneDigits(value);
+        if (digits) {
+          getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
+        }
+      });
+
+      for (const variant of variants) {
+        const photo = contactPhotosById.get(variant);
+        if (photo) {
+          return photo;
+        }
+      }
+
+      return PERSON_FALLBACK_NOTIFICATION_ICON;
+    })();
 
     activeDesktopNotificationRef.current?.close();
     const desktopNotification = new Notification(title, {
       body: preview,
       tag: `whatsapp-${resolvedChat?.id || message.chat_id}`,
+      icon,
     });
     activeDesktopNotificationRef.current = desktopNotification;
 

@@ -1889,18 +1889,18 @@ export default function LeadsManager({
                 <>
                   <Button
                     onClick={() => handleConvertToContract(lead)}
-                    variant="secondary"
+                    variant="info"
                     size="sm"
-                    className="hidden md:inline-flex space-x-2 border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 hover:text-teal-800"
+                    className="hidden md:inline-flex space-x-2"
                   >
                     <FileText className="h-4 w-4" />
                     <span>Converter em Contrato</span>
                   </Button>
                   <Button
                     onClick={() => openReminderScheduler(lead)}
-                    variant="secondary"
+                    variant="soft"
                     size="sm"
-                    className="space-x-0 sm:space-x-2 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                    className="space-x-0 sm:space-x-2"
                     aria-label="Agendar lembrete"
                     type="button"
                   >
@@ -1909,9 +1909,9 @@ export default function LeadsManager({
                   </Button>
                   <Button
                     onClick={() => handleDeleteLead(lead)}
-                    variant="secondary"
+                    variant="danger"
                     size="sm"
-                    className="space-x-0 sm:space-x-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
+                    className="space-x-0 sm:space-x-2"
                     aria-label="Excluir lead"
                     type="button"
                   >
@@ -1921,9 +1921,9 @@ export default function LeadsManager({
                   {!showArchived ? (
                     <Button
                       onClick={() => handleArchive(lead.id)}
-                      variant="secondary"
+                      variant="warning"
                       size="sm"
-                      className="space-x-0 sm:space-x-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 sm:ml-auto"
+                      className="space-x-0 sm:space-x-2 sm:ml-auto"
                       aria-label="Arquivar lead"
                     >
                       <Archive className="h-4 w-4" />
@@ -1932,9 +1932,9 @@ export default function LeadsManager({
                   ) : (
                     <Button
                       onClick={() => handleUnarchive(lead.id)}
-                      variant="secondary"
+                      variant="success"
                       size="sm"
-                      className="space-x-0 sm:space-x-2 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 sm:ml-auto"
+                      className="space-x-0 sm:space-x-2 sm:ml-auto"
                       aria-label="Reativar lead"
                     >
                       <Users className="h-4 w-4" />

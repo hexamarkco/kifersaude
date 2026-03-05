@@ -1527,7 +1527,7 @@ export default function AutoContactFlowSettings() {
                 isOpen
                 onClose={() => setActiveFlowId(null)}
                 size="xl"
-                panelClassName="max-w-6xl 2xl:max-w-7xl"
+                panelClassName="config-transparent-buttons max-w-6xl 2xl:max-w-7xl"
                 bodyClassName="p-6"
                 showCloseButton={false}
               >
@@ -2609,7 +2609,7 @@ export default function AutoContactFlowSettings() {
             onClose={handleCloseTemplateModal}
             title={templateModalMode === 'create' ? 'Novo template' : 'Editar template'}
             size="lg"
-            panelClassName="max-w-3xl"
+            panelClassName="config-transparent-buttons max-w-3xl"
           >
               <div className="space-y-6">
                 <div>

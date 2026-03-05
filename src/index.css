@@ -800,6 +800,136 @@
   color: var(--panel-text) !important;
 }
 
+.config-transparent-buttons button.bg-white,
+.config-transparent-buttons button.bg-slate-50,
+.config-transparent-buttons button.bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.52) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.34),
+    0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.config-transparent-buttons button.bg-white:hover:not(:disabled),
+.config-transparent-buttons button.bg-slate-50:hover:not(:disabled),
+.config-transparent-buttons button.bg-slate-100:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.44),
+    0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.config-transparent-buttons button.bg-teal-600,
+.config-transparent-buttons button.bg-teal-700 {
+  background-color: rgba(20, 184, 166, 0.18) !important;
+  color: #0f766e !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(45, 212, 191, 0.66),
+    0 1px 2px rgba(13, 148, 136, 0.18);
+}
+
+.config-transparent-buttons button.bg-teal-600:hover:not(:disabled),
+.config-transparent-buttons button.bg-teal-700:hover:not(:disabled) {
+  background-color: rgba(20, 184, 166, 0.3) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(45, 212, 191, 0.82),
+    0 1px 2px rgba(13, 148, 136, 0.24);
+}
+
+.config-transparent-buttons button.bg-orange-600,
+.config-transparent-buttons button.bg-orange-700 {
+  background-color: rgba(249, 115, 22, 0.2) !important;
+  color: #9a3412 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.76),
+    0 1px 2px rgba(194, 65, 12, 0.18);
+}
+
+.config-transparent-buttons button.bg-orange-600:hover:not(:disabled),
+.config-transparent-buttons button.bg-orange-700:hover:not(:disabled) {
+  background-color: rgba(249, 115, 22, 0.3) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.88),
+    0 1px 2px rgba(194, 65, 12, 0.24);
+}
+
+.config-transparent-buttons button.bg-slate-900,
+.config-transparent-buttons button.bg-slate-800 {
+  background-color: rgba(30, 41, 59, 0.16) !important;
+  color: #334155 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(100, 116, 139, 0.52),
+    0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
+.config-transparent-buttons button.bg-slate-900:hover:not(:disabled),
+.config-transparent-buttons button.bg-slate-800:hover:not(:disabled) {
+  background-color: rgba(30, 41, 59, 0.24) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(100, 116, 139, 0.64),
+    0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-white,
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-50,
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-100 {
+  background-color: rgba(15, 23, 42, 0.62) !important;
+  color: #cbd5e1 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(71, 85, 105, 0.64),
+    0 1px 2px rgba(2, 6, 23, 0.34);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-white:hover:not(:disabled),
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-50:hover:not(:disabled),
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-100:hover:not(:disabled) {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(100, 116, 139, 0.7),
+    0 1px 2px rgba(2, 6, 23, 0.45);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-600,
+.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-700 {
+  background-color: rgba(20, 184, 166, 0.24) !important;
+  color: #99f6e4 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(45, 212, 191, 0.5),
+    0 1px 2px rgba(6, 78, 59, 0.4);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-600:hover:not(:disabled),
+.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-700:hover:not(:disabled) {
+  background-color: rgba(20, 184, 166, 0.36) !important;
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-600,
+.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-700 {
+  background-color: rgba(234, 88, 12, 0.26) !important;
+  color: #fdba74 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.52),
+    0 1px 2px rgba(124, 45, 18, 0.42);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-600:hover:not(:disabled),
+.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-700:hover:not(:disabled) {
+  background-color: rgba(234, 88, 12, 0.38) !important;
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-900,
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-800 {
+  background-color: rgba(15, 23, 42, 0.72) !important;
+  color: #e2e8f0 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(100, 116, 139, 0.72),
+    0 1px 2px rgba(2, 6, 23, 0.42);
+}
+
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-900:hover:not(:disabled),
+.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-800:hover:not(:disabled) {
+  background-color: rgba(30, 41, 59, 0.82) !important;
+}
+
 .painel-theme.theme-dark .panel-ui-input {
   background-color: var(--panel-surface) !important;
   border-color: var(--panel-border-strong) !important;

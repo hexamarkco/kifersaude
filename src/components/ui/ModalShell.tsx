@@ -1,4 +1,5 @@
 import { useEffect, useId, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cx } from '../../lib/cx';
 
@@ -69,11 +70,11 @@ export default function ModalShell({
     };
   }, [isOpen]);
 
-  if (!isOpen) {
+  if (!isOpen || typeof document === 'undefined') {
     return null;
   }
 
-  return (
+  return createPortal(
     <>
       <div
         className="fixed inset-0 z-[80] bg-slate-950/55 backdrop-blur-sm"
@@ -130,6 +131,7 @@ export default function ModalShell({
           {footer && <footer className="border-t border-slate-200 px-5 py-4 sm:px-6">{footer}</footer>}
         </section>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

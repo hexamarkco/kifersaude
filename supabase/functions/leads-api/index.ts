@@ -93,6 +93,65 @@ const getBearerToken = (authHeader: string | null): string | null => {
   return token || null;
 };
 
+const collectCredentialCandidates = (value: unknown, target: Set<string>, depth = 0): void => {
+  if (depth > 6 || value == null) return;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    target.add(trimmed);
+
+    const looksJsonLike =
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'));
+
+    if (looksJsonLike) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        collectCredentialCandidates(parsed, target, depth + 1);
+      } catch {
+        // no-op
+      }
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectCredentialCandidates(item, target, depth + 1));
+    return;
+  }
+
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const preferredKeys = [
+      'value',
+      'token',
+      'apiKey',
+      'apikey',
+      'key',
+      'secret',
+      'supabase_service_role_key',
+      'service_role_key',
+    ];
+
+    preferredKeys.forEach((key) => {
+      if (key in record) {
+        collectCredentialCandidates(record[key], target, depth + 1);
+      }
+    });
+
+    Object.values(record).forEach((nested) => collectCredentialCandidates(nested, target, depth + 1));
+  }
+};
+
+const extractCredentialCandidates = (value: unknown): string[] => {
+  const candidates = new Set<string>();
+  collectCredentialCandidates(value, candidates);
+  return Array.from(candidates);
+};
+
 const getUserManagementId = (user: any): string | null => {
   if (!user || typeof user !== 'object') {
     return null;
@@ -152,13 +211,21 @@ const resolveRoleFromMetadata = (user: any): DashboardRole | null => {
 };
 
 const isServiceRoleRequest = (req: Request, serviceRoleKey: string): boolean => {
+  const expectedCandidates = new Set(extractCredentialCandidates(serviceRoleKey));
+  if (expectedCandidates.size === 0) {
+    return false;
+  }
+
+  const matchesExpected = (candidate: string | null | undefined) =>
+    extractCredentialCandidates(candidate).some((value) => expectedCandidates.has(value));
+
   const bearerToken = getBearerToken(req.headers.get('Authorization'));
-  if (bearerToken && bearerToken === serviceRoleKey) {
+  if (matchesExpected(bearerToken)) {
     return true;
   }
 
   const apiKeyHeader = req.headers.get('apikey')?.trim() ?? req.headers.get('x-api-key')?.trim();
-  return apiKeyHeader === serviceRoleKey;
+  return matchesExpected(apiKeyHeader);
 };
 
 const assertInternalServiceRole = (req: Request, serviceRoleKey: string): Response | null => {
@@ -3058,14 +3125,6 @@ Deno.serve(async (req: Request) => {
       }
 
       const lookups = await getLookups();
-      const settings = await loadAutoContactFlowSettings(supabase);
-
-      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
-        return new Response(JSON.stringify({ success: true, skipped: true }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
 
       const mapLeadForMatch = (lead: any) => {
         const mapped = mapLeadRelationsForResponse(lead, lookups);
@@ -3075,6 +3134,37 @@ Deno.serve(async (req: Request) => {
         mapped.status = mapped.status || 'Novo';
         return mapped;
       };
+
+      const settings = await loadAutoContactFlowSettings(supabase);
+
+      const tryLegacyFallback = async (reason: string) => {
+        if (event !== 'lead_created') {
+          return false;
+        }
+
+        logWithContext('Flow engine indisponível, tentando fallback legado', {
+          leadId: record.id,
+          reason,
+        });
+
+        const mappedRecord = mapLeadForMatch(record);
+        await triggerAutoContactForLead({
+          supabase,
+          lead: mappedRecord,
+          lookups,
+          logWithContext,
+        });
+
+        return true;
+      };
+
+      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
+        const fallbackUsed = await tryLegacyFallback('flow_settings_unavailable');
+        return new Response(JSON.stringify({ success: true, skipped: !fallbackUsed, fallback: 'legacy' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       const mappedLead = mapLeadForMatch(record);
       if (settings.flows.some(usesWhatsappValidCondition)) {
@@ -3179,6 +3269,8 @@ Deno.serve(async (req: Request) => {
           leadId: record.id,
           error: automationError instanceof Error ? automationError.message : String(automationError),
         });
+
+        await tryLegacyFallback('flow_engine_error');
       }
 
       return new Response(JSON.stringify({ success: true }), {

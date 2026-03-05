@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
@@ -33,7 +33,8 @@ export default function AnimatedStatCard({
 }: AnimatedStatCardProps) {
   const [displayValue, setDisplayValue] = useState<number | string>(0);
   const isNumeric = typeof value === 'number';
-  const { motionEnabled } = usePanelMotion();
+  const counterRef = useRef<{ current: number }>({ current: isNumeric ? value : 0 });
+  const { motionEnabled, microDuration } = usePanelMotion();
 
   useEffect(() => {
     if (!isNumeric) {
@@ -43,16 +44,25 @@ export default function AnimatedStatCard({
 
     if (!motionEnabled) {
       setDisplayValue(value);
+      counterRef.current.current = value;
       return;
     }
 
-    const counter = { current: 0 };
+    const counter = counterRef.current;
     const animation = gsap.to(counter, {
       current: value,
-      duration: prefix === 'R$' ? 1.1 : 0.9,
+      duration: prefix === 'R$' ? Math.max(0.45, microDuration + 0.48) : Math.max(0.38, microDuration + 0.36),
       ease: 'power2.out',
+      overwrite: 'auto',
       onUpdate: () => {
-        setDisplayValue(counter.current);
+        if (prefix === 'R$') {
+          const nextValue = Math.round(counter.current * 100) / 100;
+          setDisplayValue((current) => (current === nextValue ? current : nextValue));
+          return;
+        }
+
+        const nextValue = Math.round(counter.current);
+        setDisplayValue((current) => (current === nextValue ? current : nextValue));
       },
       onComplete: () => {
         setDisplayValue(value);
@@ -62,7 +72,7 @@ export default function AnimatedStatCard({
     return () => {
       animation.kill();
     };
-  }, [isNumeric, motionEnabled, prefix, value]);
+  }, [isNumeric, microDuration, motionEnabled, prefix, value]);
 
   const formattedValue = useMemo(() => {
     if (!isNumeric || typeof displayValue !== 'number') {

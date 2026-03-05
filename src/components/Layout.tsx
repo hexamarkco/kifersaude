@@ -115,7 +115,15 @@ export default function Layout({
     side: 'right' | 'left';
     caretTop: number;
   } | null>(null);
-  const { motionEnabled, enterDuration, sectionStagger, ease } = usePanelMotion();
+  const {
+    motionEnabled,
+    ambientMotionEnabled,
+    enterDuration,
+    sectionStagger,
+    microDuration,
+    revealDistance,
+    ease,
+  } = usePanelMotion();
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -592,6 +600,7 @@ export default function Layout({
       gsap.set(panelContent, {
         autoAlpha: 1,
         y: 0,
+        scale: 1,
         clearProps: 'transform,opacity,willChange',
       });
       return;
@@ -601,12 +610,14 @@ export default function Layout({
       panelContent,
       {
         autoAlpha: 0,
-        y: 10,
+        y: revealDistance,
+        scale: 0.997,
         willChange: 'transform,opacity',
       },
       {
         autoAlpha: 1,
         y: 0,
+        scale: 1,
         duration: enterDuration,
         ease,
         clearProps: 'transform,opacity,willChange',
@@ -618,7 +629,7 @@ export default function Layout({
     return () => {
       animation.kill();
     };
-  }, [activeTab, ease, enterDuration, motionEnabled]);
+  }, [activeTab, ease, enterDuration, motionEnabled, revealDistance]);
 
   useEffect(() => {
     const sidebarElement = sidebarRef.current;
@@ -645,13 +656,13 @@ export default function Layout({
         items,
         {
           autoAlpha: 0,
-          x: -8,
+          x: -Math.max(6, Math.round(revealDistance * 0.55)),
           willChange: 'transform,opacity',
         },
         {
           autoAlpha: 1,
           x: 0,
-          duration: 0.3,
+          duration: Math.max(microDuration + 0.08, 0.24),
           ease: 'power2.out',
           stagger: Math.max(0.014, sectionStagger * 0.4),
           overwrite: 'auto',
@@ -664,7 +675,7 @@ export default function Layout({
     return () => {
       context.revert();
     };
-  }, [isMenuCollapsed, motionEnabled, sectionStagger, tabs.length]);
+  }, [isMenuCollapsed, microDuration, motionEnabled, revealDistance, sectionStagger, tabs.length]);
 
   useEffect(() => {
     const primary = auroraPrimaryRef.current;
@@ -675,13 +686,65 @@ export default function Layout({
       return;
     }
 
-    gsap.set([primary, secondary, tertiary], {
-      xPercent: 0,
-      yPercent: 0,
-      scale: 1,
-      clearProps: 'willChange',
+    if (!motionEnabled || !ambientMotionEnabled) {
+      gsap.set([primary, secondary, tertiary], {
+        xPercent: 0,
+        yPercent: 0,
+        scale: 1,
+        clearProps: 'transform,willChange',
+      });
+      return;
+    }
+
+    const timeline = gsap.timeline({
+      repeat: -1,
+      yoyo: true,
+      defaults: {
+        ease: 'sine.inOut',
+        force3D: true,
+      },
     });
-  }, []);
+
+    timeline
+      .to(
+        primary,
+        {
+          xPercent: 5,
+          yPercent: -3,
+          scale: 1.04,
+          duration: 20,
+          willChange: 'transform',
+        },
+        0,
+      )
+      .to(
+        secondary,
+        {
+          xPercent: -4,
+          yPercent: 5,
+          scale: 0.97,
+          duration: 24,
+          willChange: 'transform',
+        },
+        0,
+      )
+      .to(
+        tertiary,
+        {
+          xPercent: 4,
+          yPercent: 3,
+          scale: 1.05,
+          duration: 27,
+          willChange: 'transform',
+        },
+        0,
+      );
+
+    return () => {
+      timeline.kill();
+      gsap.set([primary, secondary, tertiary], { clearProps: 'willChange' });
+    };
+  }, [ambientMotionEnabled, motionEnabled]);
 
   useEffect(() => {
     if (!showNotificationsDropdown || !notificationsDropdownRef.current || !motionEnabled) {
@@ -700,15 +763,17 @@ export default function Layout({
         autoAlpha: 1,
         y: 0,
         scale: 1,
-        duration: 0.32,
+        duration: Math.max(microDuration + 0.08, 0.24),
         ease: 'power2.out',
+        overwrite: 'auto',
+        force3D: true,
       },
     );
 
     return () => {
       animation.kill();
     };
-  }, [isMenuCollapsed, motionEnabled, showNotificationsDropdown]);
+  }, [isMenuCollapsed, microDuration, motionEnabled, showNotificationsDropdown]);
 
   useEffect(() => {
     if (!activeDropdownTab || !motionEnabled || (isMenuCollapsed && !collapsedDropdownPosition)) {
@@ -735,15 +800,17 @@ export default function Layout({
         x: 0,
         y: 0,
         scale: 1,
-        duration: 0.24,
+        duration: microDuration,
         ease: 'power2.out',
+        overwrite: 'auto',
+        force3D: true,
       },
     );
 
     return () => {
       animation.kill();
     };
-  }, [activeDropdownTab, collapsedDropdownPosition, isMenuCollapsed, motionEnabled]);
+  }, [activeDropdownTab, collapsedDropdownPosition, isMenuCollapsed, microDuration, motionEnabled]);
 
   const toggleThemeMode = () => {
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
@@ -882,7 +949,7 @@ export default function Layout({
 
   return (
     <div
-      className={`painel-theme theme-${themeMode} relative isolate flex min-h-screen bg-slate-50`}
+      className={`painel-theme theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen bg-slate-50`}
     >
       <div className="panel-shell-bg" aria-hidden="true">
         <div ref={auroraPrimaryRef} className="panel-aurora panel-aurora-primary" />

@@ -10,9 +10,6 @@ import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import type { TabNavigationOptions } from '../types/navigation';
-import { PanelBootSkeleton } from '../components/ui/panelSkeletons';
-import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
-import { PanelTopLoadingBar } from '../components/ui/panelLoading';
 
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
@@ -52,7 +49,6 @@ export default function PainelWrapper() {
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
   const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
-  const configLoadingUi = useAdaptiveLoading(configLoading);
 
   const activeTab = useMemo(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -159,17 +155,9 @@ export default function PainelWrapper() {
   };
 
   if (configLoading) {
-    if (configLoadingUi.showSkeleton) {
-      return <PanelBootSkeleton />;
-    }
-
     return (
-      <div className="min-h-screen bg-slate-50">
-        <PanelTopLoadingBar
-          active={configLoadingUi.showBar}
-          fixed
-          label="Preparando painel..."
-        />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
       </div>
     );
   }

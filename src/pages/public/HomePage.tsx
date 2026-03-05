@@ -13,29 +13,28 @@ import {
   Stethoscope,
   Users,
 } from 'lucide-react';
-import PublicBreadcrumbs from '../../components/public/PublicBreadcrumbs';
 import PublicLayout from '../../components/public/PublicLayout';
 import PublicSeo from '../../components/public/PublicSeo';
 
-const highlights = [
+const credibilityCards = [
   {
     title: '+3.200 familias orientadas',
-    description: 'Atendimento consultivo para contratacao nova, portabilidade e revisao de contrato.',
+    description: 'Historico de atendimentos consultivos em contratacao, revisao e migracao de plano.',
     Icon: Users,
   },
   {
-    title: 'Resposta em minutos',
-    description: 'Contato rapido no WhatsApp para triagem inicial e organizacao da cotacao.',
+    title: 'Retorno no mesmo dia util',
+    description: 'Triagem agil para entender perfil, urgencia, territorio de uso e faixa de investimento.',
     Icon: Clock3,
   },
   {
-    title: 'Rede e carencia explicadas',
-    description: 'Traduzimos regras de cobertura, coparticipacao e reajuste de forma objetiva.',
+    title: 'Comparativo tecnico e claro',
+    description: 'Rede, carencia, coparticipacao e reajuste apresentados em linguagem objetiva.',
     Icon: FileSearch,
   },
   {
-    title: 'Pos-venda ativo',
-    description: 'Suporte depois da assinatura para segunda via, ajuste e orientacoes de uso.',
+    title: 'Pos-venda de verdade',
+    description: 'Acompanhamento operacional depois da assinatura para manter tranquilidade no uso.',
     Icon: ShieldCheck,
   },
 ];
@@ -95,6 +94,21 @@ const journeySteps = [
   },
 ];
 
+const premiumPillars = [
+  {
+    title: 'Decisao guiada por contexto real',
+    text: 'Cada recomendacao considera o seu comportamento de uso, cidade de atendimento e previsibilidade financeira.',
+  },
+  {
+    title: 'Comunicacao transparente desde o inicio',
+    text: 'Mostramos vantagens e limitacoes de cada alternativa antes da assinatura, sem letra miuda.',
+  },
+  {
+    title: 'Relacao de longo prazo',
+    text: 'Seguimos disponiveis no pos-venda para ajustes, orientacoes e manutencao da qualidade de atendimento.',
+  },
+];
+
 const cityGroups = [
   {
     region: 'Capital e Zona Sul',
@@ -132,73 +146,98 @@ export default function HomePage() {
         canonicalPath="/"
         breadcrumbs={[{ name: 'Inicio', path: '/' }]}
       />
-      <PublicBreadcrumbs items={[{ name: 'Inicio', path: '/' }]} />
 
-      <section className="relative overflow-hidden px-4 pb-20 pt-12 sm:px-6 lg:px-8">
-        <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-orange-200/40 blur-3xl" />
-        <div className="absolute -right-16 top-24 h-72 w-72 rounded-full bg-amber-200/50 blur-3xl" />
-
+      <section className="relative overflow-hidden px-4 pb-20 pt-8 sm:px-6 lg:px-8">
         <div className="relative mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div>
-              <span className="inline-flex items-center rounded-full border border-orange-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-orange-600">
-                Atendimento consultivo no estado do RJ
-              </span>
-              <h1 className="mt-6 text-4xl font-black leading-tight text-slate-900 md:text-5xl">
-                Um portal completo para escolher seu plano de saude com seguranca.
+          <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div className="public-fade-up">
+              <p className="public-kicker">Consultoria premium no Rio de Janeiro</p>
+              <h1 className="public-display mt-5 text-5xl font-semibold leading-tight text-slate-900 md:text-6xl">
+                Um novo nivel de clareza para escolher seu plano de saude.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
-                A Kifer Saude deixou de ser apenas uma landing page e passou a reunir conteudo aprofundado por tema,
-                comparativos praticos e orientacao real para quem precisa contratar, revisar ou migrar plano de saude.
-                Aqui voce encontra criterio tecnico e linguagem humana na mesma medida.
+                A Kifer Saude evoluiu para uma experiencia completa: conteudo aprofundado, comparativo tecnico e
+                atendimento consultivo para quem quer decidir com seguranca, sem improviso e sem discurso comercial vazio.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   to="/cotacao"
-                  className="inline-flex items-center rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-lg shadow-orange-200 transition hover:from-orange-600 hover:to-amber-600"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-700 to-orange-600 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-lg shadow-amber-900/25 transition hover:from-amber-800 hover:to-orange-700"
                 >
-                  Quero minha cotacao
+                  Quero minha consultoria
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   to="/como-funciona"
-                  className="inline-flex items-center rounded-2xl border border-orange-200 bg-white px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="inline-flex items-center rounded-2xl border border-amber-900/20 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-white"
                 >
-                  Entender o processo
+                  Conhecer o metodo
                 </Link>
+              </div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-amber-900/15 bg-white/85 p-4 text-sm font-semibold text-slate-700">
+                  Rede por territorio
+                </div>
+                <div className="rounded-2xl border border-amber-900/15 bg-white/85 p-4 text-sm font-semibold text-slate-700">
+                  Custo anual projetado
+                </div>
+                <div className="rounded-2xl border border-amber-900/15 bg-white/85 p-4 text-sm font-semibold text-slate-700">
+                  Suporte no pos-venda
+                </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-orange-100 bg-white/95 p-8 shadow-2xl shadow-orange-100">
-              <p className="text-sm font-black uppercase tracking-[0.14em] text-orange-600">Foco da consultoria</p>
-              <h2 className="mt-3 text-2xl font-black text-slate-900">Decisao certa antes da assinatura</h2>
-              <p className="mt-4 text-slate-600">
-                Nosso trabalho nao e empurrar o plano mais caro. E montar o melhor equilibrio entre rede, cobertura,
-                previsibilidade de custo e objetivo de uso da sua familia ou empresa.
+            <article className="public-surface-card public-fade-up public-fade-up-delay-2 rounded-[2rem] p-8">
+              <p className="public-kicker">Diagnostico estrategico</p>
+              <h2 className="public-display mt-3 text-4xl font-semibold text-slate-900">Decisao premium, com criterio.</h2>
+              <p className="mt-4 text-sm leading-relaxed text-slate-600">
+                Nosso papel nao e vender o plano mais caro. E desenhar a escolha mais inteligente entre cobertura,
+                rede, previsibilidade e objetivo real de uso da sua familia ou empresa.
               </p>
+
               <ul className="mt-6 space-y-4">
                 <li className="flex gap-3 text-sm text-slate-700">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                  Explicacao clara de carencia, coparticipacao, reajuste e abrangencia sem jargao tecnico.
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  Explicacao clara de carencia, coparticipacao e reajuste, sem jargao tecnico.
                 </li>
                 <li className="flex gap-3 text-sm text-slate-700">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                  Comparativos orientados por perfil de uso e nao apenas por preco de entrada.
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  Comparativo orientado por perfil de uso, e nao por preco de entrada.
                 </li>
                 <li className="flex gap-3 text-sm text-slate-700">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                  Acompanhamento durante proposta, pendencias documentais e ativacao do plano.
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  Acompanhamento de proposta, pendencias e ativacao com suporte continuo.
                 </li>
               </ul>
-            </div>
+
+              <div className="mt-7 grid grid-cols-3 gap-3 border-t border-amber-900/15 pt-5 text-center">
+                <div>
+                  <p className="text-2xl font-black text-slate-900">98%</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Aderencia de rede</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-slate-900">4.9</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Avaliacao media</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-slate-900">24h</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Primeiro retorno</p>
+                </div>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
       <section className="px-4 pb-20 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {highlights.map(({ title, description, Icon }) => (
-            <article key={title} className="rounded-2xl border border-orange-100 bg-white p-6 shadow-lg shadow-orange-50">
-              <span className="mb-4 inline-flex rounded-xl bg-orange-100 p-3 text-orange-600">
+          {credibilityCards.map(({ title, description, Icon }, index) => (
+            <article
+              key={title}
+              className={`public-surface-card public-fade-up rounded-2xl p-6 ${index === 1 ? 'public-fade-up-delay-1' : ''} ${index === 2 ? 'public-fade-up-delay-2' : ''} ${index === 3 ? 'public-fade-up-delay-3' : ''}`}
+            >
+              <span className="mb-4 inline-flex rounded-xl bg-amber-100 p-3 text-amber-700">
                 <Icon className="h-5 w-5" />
               </span>
               <h3 className="text-lg font-black text-slate-900">{title}</h3>
@@ -208,27 +247,30 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-slate-900 px-4 py-20 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-300">Navegacao por necessidade</p>
-            <h2 className="mt-4 text-3xl font-black leading-tight md:text-4xl">
-              Explore as paginas do novo site e aprofunde o que realmente importa para sua decisao.
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.2rem] bg-slate-950 px-8 py-12 text-white shadow-[0_40px_80px_-52px_rgba(15,23,42,0.9)] md:px-12">
+          <div className="max-w-3xl public-fade-up">
+            <p className="public-kicker text-amber-200">Navegacao por necessidade</p>
+            <h2 className="public-display mt-4 text-4xl font-semibold leading-tight md:text-5xl">
+              Explore paginas estrategicas para cada tipo de decisao.
             </h2>
+            <p className="mt-4 text-sm leading-relaxed text-slate-300">
+              Estruturamos o site por dores reais de contratacao. Assim, voce aprofunda apenas o que importa para o seu contexto.
+            </p>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {solutionCards.map(({ title, description, to, Icon }) => (
+            {solutionCards.map(({ title, description, to, Icon }, index) => (
               <Link
                 key={title}
                 to={to}
-                className="group rounded-2xl border border-slate-700 bg-slate-800/80 p-6 transition hover:border-amber-300/60 hover:bg-slate-800"
+                className={`group rounded-2xl border border-white/15 bg-white/5 p-6 transition hover:border-amber-200/45 hover:bg-white/10 public-fade-up ${index === 1 ? 'public-fade-up-delay-1' : ''} ${index === 2 ? 'public-fade-up-delay-2' : ''} ${index === 3 ? 'public-fade-up-delay-3' : ''}`}
               >
-                <span className="inline-flex rounded-xl bg-amber-300/15 p-3 text-amber-200">
+                <span className="inline-flex rounded-xl bg-amber-200/10 p-3 text-amber-200">
                   <Icon className="h-5 w-5" />
                 </span>
                 <h3 className="mt-4 text-xl font-black">{title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">{description}</p>
-                <span className="mt-5 inline-flex items-center text-sm font-black uppercase tracking-[0.12em] text-amber-200">
+                <span className="mt-5 inline-flex items-center text-xs font-black uppercase tracking-[0.14em] text-amber-200">
                   Acessar pagina
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
@@ -240,24 +282,28 @@ export default function HomePage() {
 
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1fr]">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-600">Jornada completa</p>
-            <h2 className="mt-4 text-3xl font-black text-slate-900 md:text-4xl">Como conduzimos cada atendimento</h2>
+          <div className="public-fade-up">
+            <p className="public-kicker">Metodo concierge</p>
+            <h2 className="public-display mt-4 text-5xl font-semibold text-slate-900">Como conduzimos cada etapa da sua decisao.</h2>
             <p className="mt-4 text-slate-600">
-              Nosso metodo combina triagem objetiva com consultoria personalizada. Cada etapa existe para reduzir risco
-              de arrependimento e evitar contratacao desalinhada com o uso real do plano.
+              O processo foi desenhado para reduzir incerteza, eliminar comparacoes rasas e elevar a qualidade da sua escolha.
+              Voce entende o que esta contratando antes de assinar.
             </p>
             <Link
               to="/como-funciona"
-              className="mt-8 inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-orange-700"
+              className="mt-8 inline-flex items-center gap-2 rounded-full border border-amber-900/25 bg-white px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-slate-50"
             >
               Ver o processo detalhado
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="space-y-4">
             {journeySteps.map((step, index) => (
-              <article key={step.title} className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-500">Etapa {index + 1}</p>
+              <article
+                key={step.title}
+                className={`public-surface-card public-fade-up rounded-2xl p-6 ${index === 1 ? 'public-fade-up-delay-1' : ''} ${index >= 2 ? 'public-fade-up-delay-2' : ''}`}
+              >
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Etapa {index + 1}</p>
                 <h3 className="mt-2 text-lg font-black text-slate-900">{step.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{step.description}</p>
               </article>
@@ -270,8 +316,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-600">Cobertura de atendimento</p>
-              <h2 className="mt-3 text-3xl font-black text-slate-900 md:text-4xl">Regioes com maior demanda no RJ</h2>
+              <p className="public-kicker">Inteligencia regional</p>
+              <h2 className="public-display mt-3 text-5xl font-semibold text-slate-900">Regioes com maior demanda no RJ</h2>
             </div>
             <p className="max-w-xl text-sm leading-relaxed text-slate-600">
               Atendemos clientes em todo o estado, com foco especial nas regioes onde comparativo de rede hospitalar e
@@ -280,18 +326,18 @@ export default function HomePage() {
           </div>
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
-            {cityGroups.map((city) => (
+            {cityGroups.map((city, index) => (
               <Link
                 key={city.region}
                 to={city.path}
-                className="group rounded-2xl border border-orange-100 bg-orange-50/50 p-6 transition hover:border-orange-300 hover:bg-orange-50"
+                className={`group public-surface-card public-fade-up rounded-2xl p-6 transition hover:-translate-y-1 ${index === 1 ? 'public-fade-up-delay-1' : ''} ${index === 2 ? 'public-fade-up-delay-2' : ''} ${index >= 3 ? 'public-fade-up-delay-3' : ''}`}
               >
                 <h3 className="flex items-center gap-2 text-lg font-black text-slate-900">
-                  <MapPin className="h-4 w-4 text-orange-500" />
+                  <MapPin className="h-4 w-4 text-amber-700" />
                   {city.region}
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{city.areas}</p>
-                <span className="mt-4 inline-flex items-center text-xs font-black uppercase tracking-[0.12em] text-orange-700">
+                <span className="mt-4 inline-flex items-center text-xs font-black uppercase tracking-[0.12em] text-amber-800">
                   Ver guia da regiao
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
@@ -301,13 +347,33 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl public-fade-up">
+            <p className="public-kicker">Padrao de atendimento</p>
+            <h2 className="public-display mt-3 text-5xl font-semibold text-slate-900">O que voce encontra em uma consultoria premium</h2>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {premiumPillars.map((pillar, index) => (
+              <article
+                key={pillar.title}
+                className={`public-surface-card public-fade-up rounded-2xl p-7 ${index === 1 ? 'public-fade-up-delay-1' : ''} ${index === 2 ? 'public-fade-up-delay-2' : ''}`}
+              >
+                <h3 className="text-xl font-black text-slate-900">{pillar.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">{pillar.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="px-4 pb-24 pt-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl rounded-[2rem] bg-gradient-to-r from-orange-500 to-amber-500 p-10 text-white shadow-2xl shadow-orange-200 md:p-14">
+        <div className="mx-auto max-w-7xl rounded-[2rem] bg-gradient-to-r from-amber-700 via-orange-600 to-amber-500 p-10 text-white shadow-[0_32px_70px_-42px_rgba(131,83,26,0.72)] md:p-14">
           <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-100">Pronto para decidir com clareza?</p>
-              <h2 className="mt-3 text-3xl font-black leading-tight md:text-4xl">
-                Receba um comparativo orientado para seu perfil e avance com seguranca.
+              <p className="public-kicker text-amber-100">Pronto para elevar o padrao da sua escolha?</p>
+              <h2 className="public-display mt-3 text-5xl font-semibold leading-tight md:text-6xl">
+                Receba um comparativo estrategico para o seu perfil.
               </h2>
               <p className="mt-4 max-w-2xl text-orange-50">
                 Se voce ja sabe o que precisa ou ainda esta no inicio, nossa equipe organiza sua analise e explica as
@@ -317,7 +383,7 @@ export default function HomePage() {
             <div className="space-y-3">
               <Link
                 to="/cotacao"
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-amber-800 transition hover:bg-orange-50"
               >
                 Solicitar cotacao personalizada
               </Link>

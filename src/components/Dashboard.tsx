@@ -94,7 +94,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   const isInitialLoadRef = useRef(true);
   const lastBirthdayReminderSync = useRef<string | null>(null);
   const lastAdjustmentReminderSync = useRef<string | null>(null);
-  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
   const [periodFilter, setPeriodFilter] = useState<'mes-atual' | 'todo-periodo' | 'personalizado'>(() => {
     const urlValue = searchParams.get('periodFilter');
     const validValues = ['mes-atual', 'todo-periodo', 'personalizado'];
@@ -810,7 +810,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         sections,
         {
           autoAlpha: 0,
-          y: 12,
+          y: revealDistance,
           willChange: 'transform,opacity',
         },
         {
@@ -831,7 +831,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     return () => {
       context.revert();
     };
-  }, [ease, isInitialLoad, loading, motionEnabled, sectionDuration, sectionStagger]);
+  }, [ease, isInitialLoad, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
   const getStartOfMonth = () => {
     const now = new Date();

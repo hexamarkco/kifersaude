@@ -2,6 +2,13 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as Reac
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { cx } from '../lib/cx';
+import {
+  getDropdownMenuClass,
+  getDropdownOptionClass,
+  getDropdownTriggerClass,
+  isPanelDarkTheme,
+} from './ui/dropdownStyles';
 
 type Option = {
   value: string;
@@ -159,9 +166,8 @@ export default function FilterSingleSelect({
   const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
   const iconOffsetClass = isCompact ? 'left-2.5' : 'left-3';
   const chevronSizeClass = isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4';
-  const buttonPaddingClass = isCompact ? 'pl-8 pr-8 h-8' : 'pl-10 pr-10 h-11';
   const labelTextClass = isCompact ? 'text-xs' : 'text-sm';
-  const optionTextClass = isCompact ? 'text-xs py-1.5' : 'text-sm py-2';
+  const isDarkTheme = isPanelDarkTheme();
 
   return (
     <div className="relative" ref={containerRef}>
@@ -169,7 +175,10 @@ export default function FilterSingleSelect({
         ref={buttonRef}
         type="button"
         onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
-        className={`panel-glass-panel panel-interactive-glass relative w-full rounded-lg border border-slate-300 bg-white text-left transition-shadow focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 ${buttonPaddingClass}`}
+        className={getDropdownTriggerClass({
+          isDark: isDarkTheme,
+          compact: isCompact,
+        })}
         aria-haspopup="listbox"
         aria-controls={isOpen ? listboxId : undefined}
         aria-expanded={isOpen}
@@ -179,14 +188,36 @@ export default function FilterSingleSelect({
         disabled={disabled}
         onKeyDown={handleKeyDown}
       >
-        <Icon className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${iconOffsetClass} ${iconSizeClass}`} />
-        <span className={`block truncate ${labelTextClass} ${value ? 'font-medium text-slate-700' : 'text-slate-500'}`}>
+        <Icon
+          className={cx(
+            'absolute top-1/2 -translate-y-1/2',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            iconOffsetClass,
+            iconSizeClass,
+          )}
+        />
+        <span
+          className={cx(
+            'block truncate',
+            labelTextClass,
+            value
+              ? isDarkTheme
+                ? 'font-medium text-slate-100'
+                : 'font-medium text-slate-700'
+              : isDarkTheme
+                ? 'text-slate-400'
+                : 'text-slate-500',
+          )}
+        >
           {selectedLabel}
         </span>
         <ChevronDown
-          className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${chevronSizeClass} ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+          className={cx(
+            'absolute right-3 top-1/2 -translate-y-1/2 transition-transform',
+            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            chevronSizeClass,
+            isOpen && 'rotate-180',
+          )}
         />
       </button>
 
@@ -194,7 +225,10 @@ export default function FilterSingleSelect({
         <div
           id={listboxId}
           ref={dropdownRef}
-          className="panel-glass-panel fixed z-[70] max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+          className={getDropdownMenuClass({
+            isDark: isDarkTheme,
+            className: 'max-h-72',
+          })}
           style={{ top: pos.top, left: pos.left, width: pos.width }}
           role="listbox"
         >
@@ -212,16 +246,22 @@ export default function FilterSingleSelect({
                 ref={(element) => { optionRefs.current[index] = element; }}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onClick={() => selectOptionByIndex(index)}
-                className={`flex w-full items-center justify-between px-3 text-left transition-colors ${optionTextClass} ${
-                  isSelected
-                    ? 'bg-teal-50 font-medium text-teal-700'
-                    : isHighlighted
-                      ? 'bg-slate-100 text-slate-700'
-                      : 'text-slate-700 hover:bg-slate-100'
-                }`}
+                className={getDropdownOptionClass({
+                  isDark: isDarkTheme,
+                  selected: isSelected,
+                  highlighted: isHighlighted,
+                  compact: isCompact,
+                })}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && <Check className="h-4 w-4 flex-shrink-0" />}
+                {isSelected && (
+                  <Check
+                    className={cx(
+                      'h-4 w-4 flex-shrink-0',
+                      isDarkTheme ? 'text-teal-300' : 'text-teal-700',
+                    )}
+                  />
+                )}
               </button>
             );
           })}

@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
+import { gsap } from 'gsap';
 import { Calendar, Clock, ChevronRight, ArrowLeft, Heart, Mail, Instagram, MapPin, Eye, Facebook, Linkedin, Link as LinkIcon } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { supabase } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
 import { skeletonSurfaces } from '../components/ui/skeletonStyles';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 interface BlogPost {
   id: string;
@@ -103,6 +105,7 @@ export default function BlogPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
 
   const showShareFeedback = (type: 'success' | 'error', message: string) => {
     if (feedbackTimeoutRef.current) {
@@ -121,6 +124,53 @@ export default function BlogPage() {
       window.clearTimeout(feedbackTimeoutRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>('[data-blog-page]');
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(root.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    );
+
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'transform,opacity,willChange',
+      });
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      sections,
+      {
+        autoAlpha: 0,
+        y: revealDistance,
+        willChange: 'transform,opacity',
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: sectionDuration,
+        ease,
+        stagger: Math.min(0.05, Math.max(0.018, sectionStagger)),
+        clearProps: 'willChange',
+        overwrite: 'auto',
+        force3D: true,
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [ease, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger, selectedPost?.id, slug]);
 
   const incrementViewCount = useCallback(async (postId: string) => {
     await supabase.rpc('increment', {
@@ -395,7 +445,7 @@ export default function BlogPage() {
 
   if (isLoadingPost) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div data-blog-page className="min-h-screen bg-slate-50">
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
@@ -479,7 +529,7 @@ export default function BlogPage() {
 
   if (error && slug) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div data-blog-page className="min-h-screen bg-slate-50">
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
@@ -518,7 +568,7 @@ export default function BlogPage() {
 
   if (selectedPost) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div data-blog-page className="min-h-screen bg-slate-50">
         <Helmet>
           <title>{selectedPost.meta_title || selectedPost.title} | Kifer Saúde Blog</title>
           <meta name="description" content={selectedPost.meta_description || selectedPost.excerpt} />
@@ -720,7 +770,7 @@ export default function BlogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div data-blog-page className="min-h-screen bg-slate-50">
       <Helmet>
         <title>Blog Kifer Saúde | Dicas e Guias sobre Planos de Saúde</title>
         <meta name="description" content="Aprenda tudo sobre planos de saúde com nossos artigos especializados. Dicas, guias e informações para escolher o melhor plano para você e sua família." />

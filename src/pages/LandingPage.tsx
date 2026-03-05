@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
+import { gsap } from 'gsap';
 import { Heart, Phone, Mail, CheckCircle, Shield, Zap, Search, MessageCircle, Star, TrendingUp, ChevronRight, X, ChevronDown, Calendar, FileText, ThumbsUp, MapPin, Instagram } from 'lucide-react';
 import { supabase, LeadOrigem, LeadStatusConfig, ConfigOption } from '../lib/supabase';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -11,6 +12,7 @@ import {
   resolveTipoContratacaoIdByLabel,
   resolveResponsavelIdByLabel,
 } from '../lib/leadRelations';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 interface BlogPost {
   id: string;
@@ -55,6 +57,8 @@ export default function LandingPage() {
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [tipoContratacaoOptions, setTipoContratacaoOptions] = useState<ConfigOption[]>([]);
   const [responsavelOptions, setResponsavelOptions] = useState<ConfigOption[]>([]);
+  const landingRootRef = useRef<HTMLDivElement | null>(null);
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,6 +73,53 @@ export default function LandingPage() {
     loadBlogPosts();
     loadLeadConfigurations();
   }, []);
+
+  useEffect(() => {
+    const root = landingRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(root.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    );
+
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: 'transform,opacity,willChange',
+      });
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      sections,
+      {
+        autoAlpha: 0,
+        y: revealDistance,
+        willChange: 'transform,opacity',
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: sectionDuration,
+        ease,
+        stagger: Math.min(0.05, Math.max(0.018, sectionStagger)),
+        clearProps: 'willChange',
+        overwrite: 'auto',
+        force3D: true,
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [ease, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
   const loadLeadConfigurations = async () => {
     const [originsRes, statusesRes, tipoContratacaoRes, responsaveisRes] = await Promise.all([
@@ -223,7 +274,7 @@ export default function LandingPage() {
       <Helmet>
         <title>Cotacao de Plano de Saude | Kifer Saude</title>
       </Helmet>
-      <div className="min-h-screen bg-white">
+      <div ref={landingRootRef} className="min-h-screen bg-white">
       <nav className={`fixed top-0 w-full z-40 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/98 backdrop-blur-md shadow-lg shadow-orange-100/50'

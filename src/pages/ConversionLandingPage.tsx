@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
-gsap.registerPlugin(ScrollToPlugin);
+gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 import { 
   MessageCircle, Star, ChevronDown, X, Users, Briefcase, UserMinus, 
   CheckCircle, AlertTriangle, Shield, Award, ArrowRight, Heart, 
@@ -53,12 +55,15 @@ export default function ConversionLandingPage() {
   const [metaPixelId, setMetaPixelId] = useState('');
   const [gtmId, setGtmId] = useState('');
 
+  const pageRootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const statsRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
   const testimonialsRef = useRef<HTMLDivElement>(null);
+  const exitPopupContentRef = useRef<HTMLDivElement>(null);
+  const faqAnswerRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const { motionEnabled, sectionDuration, sectionStagger, microDuration, revealDistance, ease } = usePanelMotion();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -82,65 +87,167 @@ export default function ConversionLandingPage() {
     loadTrackingSettings();
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      animateOnLoad();
+  const animateOnLoad = useCallback(() => {
+    const root = pageRootRef.current;
+    if (!root) {
+      return undefined;
     }
-  }, []);
 
-  const animateOnLoad = () => {
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    
-    tl.fromTo('.hero-badge', 
-      { opacity: 0, y: -30 }, 
-      { opacity: 1, y: 0, duration: 0.6 }
-    )
-    .fromTo('.hero-title', 
-      { opacity: 0, y: 40 }, 
-      { opacity: 1, y: 0, duration: 0.8 }, 
-      '-=0.3'
-    )
-    .fromTo('.hero-subtitle', 
-      { opacity: 0, y: 30 }, 
-      { opacity: 1, y: 0, duration: 0.6 }, 
-      '-=0.4'
-    )
-    .fromTo('.hero-stats', 
-      { opacity: 0, x: -30 }, 
-      { opacity: 1, x: 0, duration: 0.6 }, 
-      '-=0.3'
-    )
-    .fromTo('.hero-logos', 
-      { opacity: 0, y: 20 }, 
-      { opacity: 1, y: 0, duration: 0.5 }, 
-      '-=0.2'
-    )
-    .fromTo('.hero-form', 
-      { opacity: 0, x: 30, scale: 0.95 }, 
-      { opacity: 1, x: 0, scale: 1, duration: 0.8 }, 
-      '-=0.5'
-    );
+    const introTargets = [
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-badge')),
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-title')),
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-subtitle')),
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-stats')),
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-logos')),
+      ...Array.from(root.querySelectorAll<HTMLElement>('.hero-form')),
+    ];
 
-    gsap.fromTo('.step-card', 
-      { opacity: 0, y: 50 },
-      { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, scrollTrigger: { trigger: stepsRef.current, start: 'top 80%' } }
-    );
+    if (!motionEnabled) {
+      gsap.set(introTargets, {
+        autoAlpha: 1,
+        y: 0,
+        x: 0,
+        scale: 1,
+        clearProps: 'transform,opacity,willChange',
+      });
+      return undefined;
+    }
 
-    gsap.fromTo('.target-card', 
-      { opacity: 0, y: 40 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, scrollTrigger: { trigger: cardsRef.current, start: 'top 85%' } }
-    );
+    const context = gsap.context(() => {
+      const introTimeline = gsap.timeline({
+        defaults: {
+          ease,
+          overwrite: 'auto',
+        },
+      });
 
-    gsap.fromTo('.testimonial-card', 
-      { opacity: 0, y: 30 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, scrollTrigger: { trigger: testimonialsRef.current, start: 'top 85%' } }
-    );
+      introTimeline
+        .fromTo(
+          '.hero-badge',
+          { autoAlpha: 0, y: -Math.max(8, revealDistance * 0.75), willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: Math.max(0.28, microDuration + 0.12),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+        )
+        .fromTo(
+          '.hero-title',
+          { autoAlpha: 0, y: revealDistance, willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: Math.max(0.34, sectionDuration),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+          '-=0.18',
+        )
+        .fromTo(
+          '.hero-subtitle',
+          { autoAlpha: 0, y: Math.max(8, revealDistance * 0.85), willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: Math.max(0.24, microDuration + 0.1),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+          '-=0.2',
+        )
+        .fromTo(
+          '.hero-stats',
+          { autoAlpha: 0, x: -Math.max(8, revealDistance * 0.8), willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            x: 0,
+            duration: Math.max(0.24, microDuration + 0.1),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+          '-=0.16',
+        )
+        .fromTo(
+          '.hero-logos',
+          { autoAlpha: 0, y: Math.max(6, revealDistance * 0.7), willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: Math.max(0.22, microDuration + 0.08),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+          '-=0.14',
+        )
+        .fromTo(
+          '.hero-form',
+          { autoAlpha: 0, x: Math.max(10, revealDistance), scale: 0.985, willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            x: 0,
+            scale: 1,
+            duration: Math.max(0.32, sectionDuration),
+            clearProps: 'willChange',
+            force3D: true,
+          },
+          '-=0.26',
+        );
 
-    gsap.fromTo('.stat-number', 
-      { opacity: 0, scale: 0.5 },
-      { opacity: 1, scale: 1, duration: 0.8, stagger: 0.2, scrollTrigger: { trigger: statsRef.current, start: 'top 80%' } }
-    );
-  };
+      const revealBatch = (selector: string, trigger: Element | null, options?: { scale?: boolean }) => {
+        if (!trigger) {
+          return;
+        }
+
+        const elements = Array.from(root.querySelectorAll<HTMLElement>(selector));
+        if (elements.length === 0) {
+          return;
+        }
+
+        gsap.fromTo(
+          elements,
+          {
+            autoAlpha: 0,
+            y: revealDistance,
+            scale: options?.scale ? 0.985 : 1,
+            willChange: 'transform,opacity',
+          },
+          {
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            duration: sectionDuration,
+            ease,
+            stagger: Math.min(0.08, Math.max(0.024, sectionStagger * 1.8)),
+            clearProps: 'willChange',
+            overwrite: 'auto',
+            force3D: true,
+            scrollTrigger: {
+              trigger,
+              start: 'top 82%',
+              once: true,
+            },
+          },
+        );
+      };
+
+      revealBatch('.step-card', stepsRef.current);
+      revealBatch('.target-card', cardsRef.current);
+      revealBatch('.testimonial-card', testimonialsRef.current);
+    }, root);
+
+    return () => {
+      context.revert();
+    };
+  }, [ease, microDuration, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
+
+  useEffect(() => {
+    const cleanup = animateOnLoad();
+    return () => {
+      cleanup?.();
+    };
+  }, [animateOnLoad]);
 
   const loadConfigurations = async () => {
     const [originsRes, statusesRes, tipoRes] = await Promise.all([
@@ -221,64 +328,91 @@ export default function ConversionLandingPage() {
       if (isExitPopup) setShowExitPopup(false);
       setFormData({ nome: '', whatsapp: '', tipo: 'pf' });
       setExitFormData({ nome: '', whatsapp: '' });
-      
-      gsap.fromTo('.success-message', 
-        { opacity: 0, y: 10, scale: 0.9 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.4 }
-      );
+
+      const successTarget = isExitPopup ? exitPopupContentRef.current : formRef.current;
+      if (successTarget && motionEnabled) {
+        gsap.fromTo(
+          successTarget,
+          { autoAlpha: 0.86, y: 10, scale: 0.992, willChange: 'transform,opacity' },
+          {
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            duration: Math.max(0.2, microDuration + 0.08),
+            ease: 'power2.out',
+            clearProps: 'willChange',
+            overwrite: 'auto',
+            force3D: true,
+          },
+        );
+      }
     }
     
     setIsSubmitting(false);
   };
 
   const handleButtonHover = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!motionEnabled) {
+      return;
+    }
+
     gsap.to(e.currentTarget, {
-      scale: 1.02,
-      duration: 0.2,
-      ease: 'power2.out'
+      y: -1.5,
+      scale: 1.01,
+      duration: microDuration,
+      ease: 'power2.out',
+      overwrite: 'auto',
+      force3D: true,
     });
   };
 
   const handleButtonLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!motionEnabled) {
+      return;
+    }
+
     gsap.to(e.currentTarget, {
+      y: 0,
       scale: 1,
-      duration: 0.2,
-      ease: 'power2.out'
+      duration: microDuration,
+      ease: 'power2.out',
+      overwrite: 'auto',
+      force3D: true,
     });
   };
 
   const handleCardHover = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!motionEnabled) {
+      return;
+    }
+
     gsap.to(e.currentTarget, {
-      y: -8,
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-      duration: 0.3,
-      ease: 'power2.out'
+      y: -6,
+      scale: 1.008,
+      duration: Math.max(0.2, microDuration + 0.05),
+      ease: 'power2.out',
+      overwrite: 'auto',
+      force3D: true,
     });
   };
 
   const handleCardLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!motionEnabled) {
+      return;
+    }
+
     gsap.to(e.currentTarget, {
       y: 0,
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-      duration: 0.3,
-      ease: 'power2.out'
+      scale: 1,
+      duration: Math.max(0.2, microDuration + 0.05),
+      ease: 'power2.out',
+      overwrite: 'auto',
+      force3D: true,
     });
   };
 
   const handleFaqClick = (index: number) => {
-    if (openFaq === index) {
-      gsap.to('.faq-answer', {
-        height: 0,
-        duration: 0.3,
-        ease: 'power2.out'
-      });
-    } else {
-      gsap.fromTo('.faq-answer', 
-        { height: 0, opacity: 0 },
-        { height: 'auto', opacity: 1, duration: 0.4, ease: 'power2.out' }
-      );
-    }
-    setOpenFaq(openFaq === index ? null : index);
+    setOpenFaq((current) => (current === index ? null : index));
   };
 
   const faqs = [
@@ -290,6 +424,55 @@ export default function ConversionLandingPage() {
     { q: 'Vocês cobram alguma taxa de corretagem?', a: 'Não! Nosso atendimento é 100% gratuito. Você paga apenas a mensalidade do plano escolhido.', icon: Wallet },
   ];
 
+  useEffect(() => {
+    Object.entries(faqAnswerRefs.current).forEach(([indexKey, element]) => {
+      if (!element) {
+        return;
+      }
+
+      const index = Number(indexKey);
+      const isOpen = openFaq === index;
+
+      if (!motionEnabled) {
+        gsap.set(element, {
+          height: isOpen ? 'auto' : 0,
+          autoAlpha: isOpen ? 1 : 0,
+          clearProps: 'willChange',
+        });
+        return;
+      }
+
+      gsap.killTweensOf(element);
+
+      if (isOpen) {
+        gsap.fromTo(
+          element,
+          {
+            height: 0,
+            autoAlpha: 0,
+            willChange: 'transform,opacity',
+          },
+          {
+            height: 'auto',
+            autoAlpha: 1,
+            duration: Math.max(0.22, microDuration + 0.1),
+            ease: 'power2.out',
+            clearProps: 'willChange',
+            overwrite: 'auto',
+          },
+        );
+      } else {
+        gsap.to(element, {
+          height: 0,
+          autoAlpha: 0,
+          duration: Math.max(0.16, microDuration),
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      }
+    });
+  }, [microDuration, motionEnabled, openFaq]);
+
   const testimonials = [
     { name: 'Rafael Silva', city: 'Rio de Janeiro', plan: 'Amil - Família', text: 'Economizei mais de R$200/mês com a ajuda da Luiza. Processo super rápido!', stars: 5, icon: ThumbsUp },
     { name: 'Carla Oliveira', city: 'Niterói', plan: 'SulAmérica - MEI', text: 'Atendimento excelente. Ela explicou tudo sem letra miúda.', stars: 5, icon: Heart },
@@ -299,7 +482,7 @@ export default function ConversionLandingPage() {
   const scrollToForm = () => {
     gsap.to(window, {
       scrollTo: { y: '#formulario', offsetY: 100 },
-      duration: 1,
+      duration: motionEnabled ? 0.72 : 0.01,
       ease: 'power3.inOut'
     });
   };
@@ -333,6 +516,7 @@ export default function ConversionLandingPage() {
         {renderGTM()}
       </Helmet>
 
+      <div ref={pageRootRef}>
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -701,11 +885,15 @@ export default function ConversionLandingPage() {
                       </span>
                       <ChevronDown className={`w-5 h-5 text-orange-500 transition-transform flex-shrink-0 duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
                     </button>
-                    {openFaq === i && (
-                      <div className="faq-answer px-6 pb-4 text-slate-600">
-                        {faq.a}
-                      </div>
-                    )}
+                    <div
+                      ref={(element) => {
+                        faqAnswerRefs.current[i] = element;
+                      }}
+                      className="faq-answer overflow-hidden px-6 text-slate-600"
+                      style={{ height: 0, opacity: 0 }}
+                    >
+                      <div className="pb-4">{faq.a}</div>
+                    </div>
                   </div>
                 );
               })}
@@ -799,7 +987,7 @@ export default function ConversionLandingPage() {
 
       <a 
         href="https://wa.me/5521979302389" 
-        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-xl z-50 transition-all hover:scale-110 hover:shadow-2xl animate-bounce"
+        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-xl z-50 transition-all hover:scale-110 hover:shadow-2xl"
       >
         <MessageCircle className="w-8 h-8" />
       </a>
@@ -817,7 +1005,24 @@ export default function ConversionLandingPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div 
             className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full relative animate-in zoom-in-95 duration-200"
-            onMouseEnter={() => gsap.fromTo('.popup-content', { scale: 0.9 }, { scale: 1, duration: 0.3 })}
+            onMouseEnter={() => {
+              if (!motionEnabled || !exitPopupContentRef.current) {
+                return;
+              }
+
+              gsap.fromTo(
+                exitPopupContentRef.current,
+                { scale: 0.985, willChange: 'transform' },
+                {
+                  scale: 1,
+                  duration: Math.max(0.2, microDuration + 0.08),
+                  ease: 'power2.out',
+                  clearProps: 'willChange',
+                  overwrite: 'auto',
+                  force3D: true,
+                },
+              );
+            }}
           >
             <button 
               onClick={() => {
@@ -828,7 +1033,7 @@ export default function ConversionLandingPage() {
             >
               <X className="w-6 h-6" />
             </button>
-            <div className="popup-content text-center mb-6">
+            <div ref={exitPopupContentRef} className="popup-content text-center mb-6">
               <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <AlertTriangle className="w-10 h-10 text-white" />
               </div>
@@ -878,6 +1083,7 @@ export default function ConversionLandingPage() {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }

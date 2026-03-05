@@ -52,7 +52,7 @@ export default function ContractsManager({
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
-  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
@@ -437,7 +437,7 @@ export default function ContractsManager({
         sections,
         {
           autoAlpha: 0,
-          y: 12,
+          y: revealDistance,
           willChange: 'transform,opacity',
         },
         {
@@ -458,7 +458,7 @@ export default function ContractsManager({
     return () => {
       context.revert();
     };
-  }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
+  }, [ease, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
   const hasContractsSnapshot = contracts.length > 0;
 
@@ -600,7 +600,7 @@ export default function ContractsManager({
             return (
               <div
                 key={contract.id}
-                className="panel-glass-panel panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
+                className="panel-glass-lite panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
                   <div className="flex-1 space-y-3">

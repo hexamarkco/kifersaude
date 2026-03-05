@@ -203,7 +203,7 @@ export default function LeadsManager({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const leadsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
-  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(() => leadStatuses.filter(status => status.ativo), [leadStatuses]);
@@ -1324,7 +1324,7 @@ export default function LeadsManager({
         sections,
         {
           autoAlpha: 0,
-          y: 12,
+          y: revealDistance,
           willChange: 'transform,opacity',
         },
         {
@@ -1345,7 +1345,7 @@ export default function LeadsManager({
     return () => {
       context.revert();
     };
-  }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
+  }, [ease, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
   const hasLeadsSnapshot = leads.length > 0;
 
@@ -1777,7 +1777,7 @@ export default function LeadsManager({
           {paginatedLeads.map((lead) => (
           <div
             key={lead.id}
-            className="panel-glass-panel panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
+            className="panel-glass-lite panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex-1 space-y-3">

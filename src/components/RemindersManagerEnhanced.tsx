@@ -124,7 +124,7 @@ export default function RemindersManagerEnhanced() {
   } | null>(null);
   const remindersRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
-  const { motionEnabled, sectionDuration, sectionStagger, ease } = usePanelMotion();
+  const { motionEnabled, sectionDuration, sectionStagger, revealDistance, ease } = usePanelMotion();
   const loadingUi = useAdaptiveLoading(loading);
 
   const getLeadIdForReminder = (reminder?: Reminder | null) => {
@@ -1197,7 +1197,7 @@ export default function RemindersManagerEnhanced() {
         sections,
         {
           autoAlpha: 0,
-          y: 12,
+          y: revealDistance,
           willChange: 'transform,opacity',
         },
         {
@@ -1218,7 +1218,7 @@ export default function RemindersManagerEnhanced() {
     return () => {
       context.revert();
     };
-  }, [ease, loading, motionEnabled, sectionDuration, sectionStagger]);
+  }, [ease, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
   useEffect(() => {
     if (!openSnoozeMenu) {
@@ -1282,7 +1282,7 @@ export default function RemindersManagerEnhanced() {
     return (
       <div
         key={reminder.id}
-        className={`panel-glass-panel panel-interactive-glass rounded-xl border bg-white p-5 shadow-sm transition-all ${
+        className={`panel-glass-lite panel-interactive-glass rounded-xl border bg-white p-5 shadow-sm transition-all ${
           reminder.lido
             ? 'border-slate-200 opacity-60'
             : `${getUrgencyStyles(urgency)}`

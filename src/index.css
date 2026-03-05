@@ -1093,14 +1093,14 @@
 }
 
 .marketing-theme {
-  --marketing-bg: #f6f8fb;
-  --marketing-line: rgba(15, 23, 42, 0.1);
+  --marketing-bg: #f8fafc;
+  --marketing-line: rgba(194, 65, 12, 0.14);
   font-family: 'Poppins', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
   color: #0f172a;
   background:
-    radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.14), transparent 36%),
-    radial-gradient(circle at 92% 9%, rgba(14, 165, 233, 0.12), transparent 34%),
-    radial-gradient(circle at 50% 96%, rgba(15, 23, 42, 0.06), transparent 42%),
+    radial-gradient(circle at 10% 0%, rgba(251, 146, 60, 0.2), transparent 36%),
+    radial-gradient(circle at 92% 10%, rgba(249, 115, 22, 0.17), transparent 34%),
+    radial-gradient(circle at 52% 96%, rgba(15, 23, 42, 0.07), transparent 42%),
     var(--marketing-bg);
 }
 
@@ -1121,14 +1121,14 @@
 
 .marketing-theme .marketing-surface {
   border: 1px solid var(--marketing-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 251, 245, 0.92) 100%);
   box-shadow: 0 28px 58px -46px rgba(15, 23, 42, 0.28), 0 14px 26px -24px rgba(15, 23, 42, 0.12);
 }
 
 .marketing-theme .marketing-chip {
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.8);
-  color: #0f172a;
+  border: 1px solid rgba(194, 65, 12, 0.2);
+  background: rgba(255, 247, 237, 0.86);
+  color: #9a3412;
 }
 
 .marketing-theme .marketing-reveal {

@@ -103,7 +103,7 @@ export default function WhatsAppTab() {
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
-  const [prioritizeUnread, setPrioritizeUnread] = useState(true);
+  const [prioritizeUnread, setPrioritizeUnread] = useState(false);
   const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
   const [isListSettingsOpen, setIsListSettingsOpen] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -111,6 +111,7 @@ export default function WhatsAppTab() {
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
   const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
@@ -137,6 +138,11 @@ export default function WhatsAppTab() {
   const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
+  const activeChatsLoadIdRef = useRef(0);
+  const lastGroupNamesSyncAtRef = useRef(0);
+  const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; loadedCount: number; hasOlder: boolean }>>(
+    new Map(),
+  );
   const loadingUi = useAdaptiveLoading(loading);
 
   function normalizePhoneNumber(phone: string | null | undefined) {
@@ -257,8 +263,27 @@ export default function WhatsAppTab() {
   };
 
   const loadGroupNames = async (currentChats: WhatsAppChat[]) => {
-    const groupIds = new Set(currentChats.filter((chat) => getChatKind(chat) === 'group').map((chat) => chat.id));
+    const now = Date.now();
+    const syncIntervalMs = 10 * 60 * 1000;
+    const shouldRunFullSync = now - lastGroupNamesSyncAtRef.current > syncIntervalMs;
+
+    const groupIds = new Set(
+      currentChats
+        .filter((chat) => getChatKind(chat) === 'group')
+        .filter((chat) => {
+          if (shouldRunFullSync) return true;
+          const knownName = groupNamesById.get(chat.id) || chat.name;
+          const trimmed = knownName?.trim();
+          return !trimmed || trimmed === chat.id || isPhoneLikeLabel(trimmed);
+        })
+        .map((chat) => chat.id),
+    );
+
     if (groupIds.size === 0) return;
+
+    if (shouldRunFullSync) {
+      lastGroupNamesSyncAtRef.current = now;
+    }
 
     try {
       const namesById = new Map<string, string>();
@@ -642,12 +667,69 @@ export default function WhatsAppTab() {
   }, []);
 
   useEffect(() => {
-    loadChats();
+    void loadChats();
 
     const chatsSubscription = supabase
       .channel('whatsapp_chats_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_chats' }, () => {
-        loadChats();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_chats' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const deletedChatId = (payload.old as { id?: string } | null)?.id;
+          if (!deletedChatId) return;
+
+          setChats((prev) => prev.filter((chat) => chat.id !== deletedChatId));
+          setSelectedChat((current) => (current?.id === deletedChatId ? null : current));
+          return;
+        }
+
+        const row = payload.new as Partial<WhatsAppChat> | null;
+        if (!row?.id) return;
+
+        const incomingChat: WhatsAppChat = {
+          id: row.id,
+          name: row.name ?? null,
+          is_group: row.is_group ?? getWhatsAppChatKind(row.id) === 'group',
+          phone_number: row.phone_number ?? null,
+          lid: row.lid ?? null,
+          last_message_at: row.last_message_at ?? null,
+          created_at: row.created_at ?? new Date().toISOString(),
+          updated_at: row.updated_at ?? new Date().toISOString(),
+          last_message: row.last_message,
+          unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
+          archived: row.archived ?? false,
+          mute_until: row.mute_until ?? null,
+        };
+
+        setChats((prev) => {
+          const existingIndex = prev.findIndex((chat) => chat.id === incomingChat.id);
+          if (existingIndex === -1) {
+            const next = [
+              {
+                ...incomingChat,
+                last_message: incomingChat.last_message ?? '',
+                unread_count: incomingChat.unread_count ?? 0,
+              },
+              ...prev,
+            ];
+            return next.sort(sortChatsByLatest);
+          }
+
+          const existingChat = prev[existingIndex];
+          const mergedChat: WhatsAppChat = {
+            ...existingChat,
+            ...incomingChat,
+            last_message: incomingChat.last_message ?? existingChat.last_message,
+            unread_count:
+              typeof incomingChat.unread_count === 'number'
+                ? incomingChat.unread_count
+                : existingChat.unread_count,
+            archived: incomingChat.archived ?? existingChat.archived,
+            mute_until: incomingChat.mute_until ?? existingChat.mute_until,
+          };
+
+          const next = [...prev];
+          next[existingIndex] = mergedChat;
+          return next.sort(sortChatsByLatest);
+        });
       })
       .subscribe();
 
@@ -661,7 +743,10 @@ export default function WhatsAppTab() {
         scheduleUnreadCountsRefresh();
 
         if (eventType === 'INSERT') {
-          loadChats();
+          const hasChatInMemory = chatsRef.current.some((chat) => getChatIdVariants(chat).includes(message.chat_id));
+          if (!hasChatInMemory) {
+            void loadChats();
+          }
         }
 
         const chatToAutoUnarchive = chatsRef.current.find((chat) => {
@@ -733,7 +818,7 @@ export default function WhatsAppTab() {
         }
 
         if (eventType === 'DELETE') {
-          loadChats();
+          void loadChats();
           return;
         }
 
@@ -772,13 +857,23 @@ export default function WhatsAppTab() {
       setShowGroupInfo(false);
       setReplyToMessage(null);
       setEditMessage(null);
-      setMessages([]);
-      setHasOlderMessages(false);
-      setLoadedMessagesCount(0);
-      loadMessages(selectedChat);
+
+      const cachedState = messagesCacheRef.current.get(selectedChat.id);
+      if (cachedState) {
+        setMessages(cachedState.messages);
+        setLoadedMessagesCount(cachedState.loadedCount);
+        setHasOlderMessages(cachedState.hasOlder);
+      } else {
+        setMessages([]);
+        setHasOlderMessages(false);
+        setLoadedMessagesCount(0);
+      }
+
+      void loadMessages(selectedChat, { silent: Boolean(cachedState) });
       return;
     }
 
+    setIsLoadingMessages(false);
     setMessages([]);
     setHasOlderMessages(false);
     setLoadedMessagesCount(0);
@@ -824,7 +919,89 @@ export default function WhatsAppTab() {
     }, delayMs);
   };
 
+  const mergeChatsWithCurrentState = (incomingChats: WhatsAppChat[]) => {
+    const previousById = new Map(chatsRef.current.map((chat) => [chat.id, chat]));
+
+    return incomingChats
+      .map((incoming) => {
+        const previous = previousById.get(incoming.id);
+        return {
+          ...incoming,
+          last_message: incoming.last_message ?? previous?.last_message ?? '',
+          unread_count:
+            typeof incoming.unread_count === 'number'
+              ? incoming.unread_count
+              : typeof previous?.unread_count === 'number'
+                ? previous.unread_count
+                : 0,
+          archived: incoming.archived ?? previous?.archived ?? false,
+          mute_until: incoming.mute_until ?? previous?.mute_until ?? null,
+        };
+      })
+      .sort(sortChatsByLatest);
+  };
+
+  const hydrateMissingChatPreviews = async (snapshot: WhatsAppChat[], loadId: number) => {
+    const chatsToHydrate = snapshot.filter((chat) => Boolean(chat.last_message_at) && !chat.last_message).slice(0, 120);
+    if (chatsToHydrate.length === 0) return;
+
+    const previewsById = new Map<string, string>();
+    const chunkSize = 20;
+
+    for (let index = 0; index < chatsToHydrate.length; index += chunkSize) {
+      const chunk = chatsToHydrate.slice(index, index + chunkSize);
+
+      const chunkResults = await Promise.all(
+        chunk.map(async (chat) => {
+          const variants = getChatIdVariants(chat);
+          const { data: lastMessages, error } = await supabase
+            .from('whatsapp_messages')
+            .select('body, type, has_media, payload, timestamp, created_at, is_deleted')
+            .in('chat_id', variants)
+            .order('timestamp', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (error || !lastMessages || lastMessages.length === 0) {
+            return null;
+          }
+
+          const preview = lastMessages
+            .map((message) => getMessagePreview(message as WhatsAppMessage))
+            .find((value): value is string => Boolean(value));
+
+          if (!preview) return null;
+          return { chatId: chat.id, preview };
+        }),
+      );
+
+      if (activeChatsLoadIdRef.current !== loadId) {
+        return;
+      }
+
+      chunkResults.forEach((result) => {
+        if (!result) return;
+        previewsById.set(result.chatId, result.preview);
+      });
+    }
+
+    if (activeChatsLoadIdRef.current !== loadId || previewsById.size === 0) {
+      return;
+    }
+
+    setChats((prev) =>
+      prev.map((chat) => {
+        const preview = previewsById.get(chat.id);
+        if (!preview || chat.last_message) return chat;
+        return { ...chat, last_message: preview };
+      }),
+    );
+  };
+
   const loadChats = async () => {
+    activeChatsLoadIdRef.current += 1;
+    const currentLoadId = activeChatsLoadIdRef.current;
+
     try {
       const { data, error } = await supabase
         .from('whatsapp_chats')
@@ -834,9 +1011,11 @@ export default function WhatsAppTab() {
 
       if (error) throw error;
 
+      let incomingChats: WhatsAppChat[] = [];
+
       if (!data || data.length === 0) {
         const response = await getWhatsAppChats(200, 0);
-        const mappedChats: WhatsAppChat[] = response.chats.map((chat: WhapiChat) => {
+        incomingChats = response.chats.map((chat: WhapiChat) => {
           const isGroup = getWhatsAppChatKind(chat.id) === 'group';
           const lastMessageAt = chat.last_message?.timestamp
             ? new Date(chat.last_message.timestamp * 1000).toISOString()
@@ -849,53 +1028,44 @@ export default function WhatsAppTab() {
             last_message_at: lastMessageAt,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            last_message: undefined,
+            last_message: '',
             unread_count: chat.unread_count ?? 0,
             archived: chat.archived ?? false,
             mute_until: muteUntil,
           };
         });
+      } else {
+        incomingChats = data as WhatsAppChat[];
+      }
 
-        setChats(mappedChats);
-        await loadUnreadCounts();
-        await loadGroupNames(mappedChats);
-        await loadNewsletterNames(mappedChats);
+      if (activeChatsLoadIdRef.current !== currentLoadId) {
         return;
       }
 
-      const chatsWithLastMessage = await Promise.all(
-        (data || []).map(async (chat) => {
-          const variants = getChatIdVariants(chat as WhatsAppChat);
-          const { data: lastMsg } = await supabase
-            .from('whatsapp_messages')
-            .select('body, type, has_media, payload, timestamp, created_at')
-            .in('chat_id', variants)
-            .order('timestamp', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      const mergedChats = mergeChatsWithCurrentState(incomingChats);
+      setChats(mergedChats);
 
-          return {
-            ...chat,
-            last_message: lastMsg ? getMessagePreview(lastMsg as WhatsAppMessage) : null,
-          };
-        })
-      );
-
-      setChats(chatsWithLastMessage);
-      await loadUnreadCounts();
-      await loadGroupNames(chatsWithLastMessage);
-      await loadNewsletterNames(chatsWithLastMessage);
+      void loadUnreadCounts();
+      void loadGroupNames(mergedChats);
+      void loadNewsletterNames(mergedChats);
+      void hydrateMissingChatPreviews(mergedChats, currentLoadId);
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
-      setLoading(false);
+      if (activeChatsLoadIdRef.current === currentLoadId) {
+        setLoading(false);
+      }
     }
   };
 
-  const loadMessages = async (chat: WhatsAppChat) => {
+  const loadMessages = async (chat: WhatsAppChat, options?: { silent?: boolean }) => {
     activeMessagesLoadIdRef.current += 1;
     const currentLoadId = activeMessagesLoadIdRef.current;
+    const silent = options?.silent ?? false;
+
+    if (!silent) {
+      setIsLoadingMessages(true);
+    }
 
     try {
       const variants = getChatIdVariants(chat);
@@ -920,12 +1090,25 @@ export default function WhatsAppTab() {
       setLoadedMessagesCount(baseMessages.length);
       setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
 
+      messagesCacheRef.current.set(chat.id, {
+        messages: baseMessages,
+        loadedCount: baseMessages.length,
+        hasOlder: (data || []).length === MESSAGES_PAGE_SIZE,
+      });
+
       if (userRef.current) {
-        await markChatAsRead(chat, baseMessages);
-        await loadUnreadCounts();
+        void markChatAsRead(chat, baseMessages).then(() => {
+          scheduleUnreadCountsRefresh(50);
+        });
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+    } finally {
+      const stillActiveLoad =
+        activeMessagesLoadIdRef.current === currentLoadId && selectedChatRef.current?.id === chat.id;
+      if (stillActiveLoad) {
+        setIsLoadingMessages(false);
+      }
     }
   };
 
@@ -960,15 +1143,25 @@ export default function WhatsAppTab() {
       }
 
       skipNextAutoScrollRef.current = true;
+      const nextHasOlder = (data || []).length === MESSAGES_PAGE_SIZE;
+      const nextLoadedCount = loadedMessagesCount + (data || []).length;
+
       setMessages((prev) => {
         const existingIds = new Set(prev.map((item) => item.id));
         const deduped = olderMessages.filter((item) => !existingIds.has(item.id));
         if (deduped.length === 0) return prev;
-        return [...deduped, ...prev];
+
+        const nextMessages = [...deduped, ...prev];
+        messagesCacheRef.current.set(currentChatId, {
+          messages: nextMessages,
+          loadedCount: nextLoadedCount,
+          hasOlder: nextHasOlder,
+        });
+        return nextMessages;
       });
 
-      setLoadedMessagesCount((current) => current + (data || []).length);
-      setHasOlderMessages((data || []).length === MESSAGES_PAGE_SIZE);
+      setLoadedMessagesCount(nextLoadedCount);
+      setHasOlderMessages(nextHasOlder);
     } catch (error) {
       console.error('Error loading older messages:', error);
     } finally {
@@ -1743,6 +1936,13 @@ export default function WhatsAppTab() {
     ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
     : '';
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
+  const effectiveFirstResponseSlaBadge =
+    selectedChatIsDirect && isLoadingMessages && messages.length === 0
+      ? {
+          label: 'SLA 1a resposta: carregando...',
+          className: 'border-slate-200 bg-slate-100 text-slate-600',
+        }
+      : firstResponseSlaBadge;
 
   const handleCopySelectedChatPhone = async () => {
     if (!selectedChatPhone) return;
@@ -2427,8 +2627,8 @@ export default function WhatsAppTab() {
                               : 'Conversa'}
                   </p>
                   {selectedChatIsDirect && (
-                    <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${firstResponseSlaBadge.className}`}>
-                      {firstResponseSlaBadge.label}
+                    <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${effectiveFirstResponseSlaBadge.className}`}>
+                      {effectiveFirstResponseSlaBadge.label}
                     </div>
                   )}
                 </div>
@@ -2491,7 +2691,7 @@ export default function WhatsAppTab() {
                 )}
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
-                    <p>Nenhuma mensagem ainda</p>
+                    <p>{isLoadingMessages ? 'Carregando mensagens...' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
                   messages.map((message) => {

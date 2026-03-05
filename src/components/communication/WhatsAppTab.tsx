@@ -3135,29 +3135,31 @@ export default function WhatsAppTab() {
               <div className="relative flex items-center gap-2">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-teal-600 text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-white transition-colors hover:bg-teal-700"
                   onClick={() => {
                     setShowNewChatModal(true);
                     setNewChatTab('leads');
                     setIsListSettingsOpen(false);
                   }}
+                  title="Novo chat"
+                  aria-label="Novo chat"
                 >
                   <Plus className="w-4 h-4" />
-                  Novo chat
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
                   onClick={() => {
                     setShowRemindersModal(true);
                     void loadReminderQuickOpen();
                     setIsListSettingsOpen(false);
                   }}
+                  title="Lembretes"
+                  aria-label="Lembretes"
                 >
                   <Bell className="h-4 w-4" />
-                  <span>Lembretes</span>
                   {reminderQuickOpenItems.length > 0 && (
-                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
                       {reminderQuickOpenItems.length}
                     </span>
                   )}
@@ -3165,6 +3167,7 @@ export default function WhatsAppTab() {
                 <button
                   type="button"
                   title="Configuracoes da lista"
+                  aria-label="Configuracoes da lista"
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
                     isListSettingsOpen
                       ? 'border-teal-300 bg-teal-50 text-teal-700'

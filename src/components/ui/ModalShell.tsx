@@ -44,6 +44,9 @@ export default function ModalShell({
   const titleId = useId();
   const descriptionId = useId();
 
+  const portalTarget =
+    typeof document === 'undefined' ? null : document.querySelector('.painel-theme') ?? document.body;
+
   useEffect(() => {
     if (!isOpen || !closeOnEscape) return;
 
@@ -70,7 +73,7 @@ export default function ModalShell({
     };
   }, [isOpen]);
 
-  if (!isOpen || typeof document === 'undefined') {
+  if (!isOpen || !portalTarget) {
     return null;
   }
 
@@ -132,6 +135,6 @@ export default function ModalShell({
         </section>
       </div>
     </>,
-    document.body,
+    portalTarget,
   );
 }

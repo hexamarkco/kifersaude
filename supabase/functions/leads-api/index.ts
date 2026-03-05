@@ -2148,7 +2148,12 @@ const matchesFlowCondition = (
   condition: AutoContactFlowCondition,
   lead: any,
   event?: AutoContactFlowEvent,
+  options: { ignoreEventConditions?: boolean } = {},
 ): boolean => {
+  if (options.ignoreEventConditions && (condition.field === 'lead_created' || condition.field === 'event')) {
+    return true;
+  }
+
   if (condition.field === 'lead_created') {
     return event === 'lead_created';
   }
@@ -2183,23 +2188,32 @@ const matchesFlowCondition = (
   return matchTextCondition(leadValue, value, condition.operator);
 };
 
-const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any, event?: AutoContactFlowEvent): boolean => {
-  const triggerType = flow.triggerType ?? 'lead_created';
-  
-  if (triggerType === 'lead_created') {
-    if (event !== 'lead_created') return false;
-  }
-  
-  if (triggerType === 'status_changed') {
-    if (event !== 'status_changed') return false;
-    const triggerStatuses = flow.triggerStatuses ?? [];
-    if (triggerStatuses.length > 0 && !triggerStatuses.includes(lead.status ?? '')) {
+const matchesAutoContactFlow = (
+  flow: AutoContactFlow,
+  lead: any,
+  event?: AutoContactFlowEvent,
+  options: { enforceTrigger?: boolean; ignoreEventConditions?: boolean } = {},
+): boolean => {
+  const enforceTrigger = options.enforceTrigger !== false;
+
+  if (enforceTrigger) {
+    const triggerType = flow.triggerType ?? 'lead_created';
+
+    if (triggerType === 'lead_created') {
+      if (event !== 'lead_created') return false;
+    }
+
+    if (triggerType === 'status_changed') {
+      if (event !== 'status_changed') return false;
+      const triggerStatuses = flow.triggerStatuses ?? [];
+      if (triggerStatuses.length > 0 && !triggerStatuses.includes(lead.status ?? '')) {
+        return false;
+      }
+    }
+
+    if (triggerType === 'status_duration') {
       return false;
     }
-  }
-  
-  if (triggerType === 'status_duration') {
-    return false;
   }
 
   const rawConditions = flow.conditions ?? [];
@@ -2216,7 +2230,8 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: any, event?: AutoCo
 
   if (conditions.length === 0) return true;
 
-  const isMatch = (condition: AutoContactFlowCondition) => matchesFlowCondition(condition, lead, event);
+  const isMatch = (condition: AutoContactFlowCondition) =>
+    matchesFlowCondition(condition, lead, event, { ignoreEventConditions: options.ignoreEventConditions });
   return flow.conditionLogic === 'any' ? conditions.some(isMatch) : conditions.every(isMatch);
 };
 
@@ -2464,11 +2479,17 @@ async function processFlowJobs({
         leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
       }
 
-      if (shouldExitFlow(flow, leadWithRelations) || !matchesAutoContactFlow(flow, leadWithRelations)) {
-      await supabase
-        .from('auto_contact_flow_jobs')
-        .update({ status: 'skipped', last_error: 'Condições não atendidas' })
-        .eq('id', job.id);
+      if (
+        shouldExitFlow(flow, leadWithRelations) ||
+        !matchesAutoContactFlow(flow, leadWithRelations, undefined, {
+          enforceTrigger: false,
+          ignoreEventConditions: true,
+        })
+      ) {
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'skipped', last_error: 'Condições não atendidas' })
+          .eq('id', job.id);
       continue;
     }
 
@@ -3107,14 +3128,34 @@ Deno.serve(async (req: Request) => {
       }
 
       const payload = await req.json().catch(() => null);
+      const payloadType = typeof payload?.type === 'string' ? payload.type.trim().toLowerCase() : '';
       const record = payload?.record ?? null;
       const oldRecord = payload?.old_record ?? null;
-      const isStatusChange = payload?.is_status_change === true;
+      const hasOldRecord = Boolean(oldRecord && typeof oldRecord === 'object');
+      const toComparableValue = (value: unknown): string => {
+        if (typeof value === 'string') {
+          return value.trim();
+        }
+
+        if (value == null) {
+          return '';
+        }
+
+        return String(value).trim();
+      };
+
+      const inferredStatusChange =
+        hasOldRecord &&
+        (toComparableValue((oldRecord as Record<string, unknown>).status_id) !==
+          toComparableValue((record as Record<string, unknown> | null)?.status_id) ||
+          toComparableValue((oldRecord as Record<string, unknown>).status) !==
+            toComparableValue((record as Record<string, unknown> | null)?.status));
+      const isStatusChange = payload?.is_status_change === true || payloadType === 'status_changed' || inferredStatusChange;
       const event: AutoContactFlowEvent | undefined =
-        payload?.type === 'INSERT' || !oldRecord 
-          ? 'lead_created' 
-          : isStatusChange 
-            ? 'status_changed' 
+        payloadType === 'insert' || payloadType === 'lead_created' || !hasOldRecord
+          ? 'lead_created'
+          : isStatusChange
+            ? 'status_changed'
             : undefined;
 
       if (!record || typeof record !== 'object' || !record.id) {
@@ -3167,11 +3208,39 @@ Deno.serve(async (req: Request) => {
       }
 
       const mappedLead = mapLeadForMatch(record);
+      const mappedOldLead = oldRecord && typeof oldRecord === 'object' ? mapLeadForMatch(oldRecord) : null;
       if (settings.flows.some(usesWhatsappValidCondition)) {
         mappedLead.whatsapp_valid = await resolveWhatsappValid(mappedLead, settings.apiKey);
+        if (mappedOldLead) {
+          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead, settings.apiKey);
+        }
       }
-      const newMatchingFlow =
-        settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, event)) ?? null;
+
+      let eventForExecution = event;
+      let isForcedNovoReentry = false;
+      let newMatchingFlow = settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, eventForExecution)) ?? null;
+
+      if (!newMatchingFlow && event === 'status_changed' && mappedOldLead) {
+        const novoNormalized = normalizeText('Novo');
+        const currentStatusNormalized = normalizeText(mappedLead.status ?? '');
+        const previousStatusNormalized = normalizeText(mappedOldLead.status ?? '');
+
+        if (currentStatusNormalized === novoNormalized && previousStatusNormalized !== novoNormalized) {
+          const reentryFlow =
+            settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedLead, 'lead_created')) ?? null;
+
+          if (reentryFlow) {
+            newMatchingFlow = reentryFlow;
+            eventForExecution = 'lead_created';
+            isForcedNovoReentry = true;
+            logWithContext('Reentrada automática ao retornar para status Novo', {
+              leadId: record.id,
+              flowId: reentryFlow.id,
+              flowName: reentryFlow.name,
+            });
+          }
+        }
+      }
 
       if (!newMatchingFlow) {
         await cancelFlowJobs({
@@ -3186,13 +3255,9 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      if (oldRecord && typeof oldRecord === 'object') {
-        const mappedOldLead = mapLeadForMatch(oldRecord);
-        if (settings.flows.some(usesWhatsappValidCondition)) {
-          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead, settings.apiKey);
-        }
+      if (mappedOldLead) {
         const oldMatchingFlow =
-          settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedOldLead)) ?? null;
+          settings.flows.find((flow) => matchesAutoContactFlow(flow, mappedOldLead, eventForExecution)) ?? null;
 
         if (oldMatchingFlow?.id === newMatchingFlow.id) {
           const { data: activeJobs } = await supabase
@@ -3218,19 +3283,21 @@ Deno.serve(async (req: Request) => {
             });
           }
 
-          const { data: completedJobs } = await supabase
-            .from('auto_contact_flow_jobs')
-            .select('id')
-            .eq('lead_id', record.id)
-            .eq('flow_id', newMatchingFlow.id)
-            .eq('status', 'completed')
-            .limit(1);
+          if (!isForcedNovoReentry) {
+            const { data: completedJobs } = await supabase
+              .from('auto_contact_flow_jobs')
+              .select('id')
+              .eq('lead_id', record.id)
+              .eq('flow_id', newMatchingFlow.id)
+              .eq('status', 'completed')
+              .limit(1);
 
-          if (completedJobs && completedJobs.length > 0) {
-            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'already_completed' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            if (completedJobs && completedJobs.length > 0) {
+              return new Response(JSON.stringify({ success: true, skipped: true, reason: 'already_completed' }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
           }
 
           await runAutoContactFlowEngine({
@@ -3239,7 +3306,7 @@ Deno.serve(async (req: Request) => {
             lookups,
             logWithContext,
             settings,
-            event,
+            event: eventForExecution,
           });
 
           return new Response(JSON.stringify({ success: true, recovered: true, source: 'rescheduled' }), {
@@ -3262,7 +3329,7 @@ Deno.serve(async (req: Request) => {
           lookups,
           logWithContext,
           settings,
-          event,
+          event: eventForExecution,
         });
       } catch (automationError) {
         logWithContext('Erro ao executar automação automática via trigger', {

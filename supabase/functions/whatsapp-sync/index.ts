@@ -30,7 +30,7 @@ type WhapiMessage = {
   contact?: { name: string };
   contact_list?: { list: Array<{ name: string }> };
   sticker?: Record<string, unknown>;
-  action?: { type: string; emoji?: string };
+  action?: { type: string; emoji?: string; target?: string };
   reply?: { buttons_reply?: { title: string } };
   group_invite?: Record<string, unknown>;
   poll?: { title: string };
@@ -311,11 +311,13 @@ Deno.serve(async (req) => {
     const normalized = messages.map((message) => {
       const direction = message.from_me ? 'outbound' : 'inbound';
       const { body, hasMedia } = buildMessageBody(message);
+      const messageChatId =
+        message.action?.type === 'reaction' && message.action?.target ? chatId : message.chat_id;
       return {
         id: message.id,
-        chat_id: message.chat_id,
-        from_number: direction === 'inbound' ? message.from || message.chat_id : null,
-        to_number: direction === 'outbound' ? message.chat_id : null,
+        chat_id: messageChatId,
+        from_number: direction === 'inbound' ? message.from || messageChatId : null,
+        to_number: direction === 'outbound' ? messageChatId : null,
         type: message.type,
         body,
         has_media: hasMedia,

@@ -14,24 +14,27 @@ export type PanelButtonVariant =
 export type PanelButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 export const panelButtonBaseClass =
-  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
-  primary: 'bg-teal-600 text-white shadow-sm hover:bg-teal-700 focus-visible:ring-teal-500 disabled:hover:bg-teal-600',
+  primary:
+    'border-teal-300/65 bg-teal-500/18 text-teal-700 shadow-sm hover:border-teal-300/85 hover:bg-teal-500/30 focus-visible:ring-teal-500 disabled:hover:bg-teal-500/18',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 focus-visible:ring-teal-500 disabled:hover:bg-white',
+    'border-slate-300/70 bg-white/55 text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white/75 focus-visible:ring-teal-500 disabled:hover:bg-white/55',
   ghost:
-    'text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500 disabled:hover:bg-red-600',
+    'border-transparent bg-transparent text-slate-600 hover:border-slate-200/85 hover:bg-white/45 hover:text-slate-900 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
+  danger:
+    'border-red-300/70 bg-red-500/18 text-red-700 shadow-sm hover:border-red-300/85 hover:bg-red-500/30 focus-visible:ring-red-500 disabled:hover:bg-red-500/18',
   icon:
-    'text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
-  info: 'bg-blue-600 text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-500 disabled:hover:bg-blue-600',
+    'border-transparent bg-transparent text-slate-500 hover:border-slate-200/85 hover:bg-white/45 hover:text-slate-800 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
+  info:
+    'border-blue-300/70 bg-blue-500/18 text-blue-700 shadow-sm hover:border-blue-300/85 hover:bg-blue-500/30 focus-visible:ring-blue-500 disabled:hover:bg-blue-500/18',
   success:
-    'border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 focus-visible:ring-emerald-500 disabled:hover:bg-emerald-50',
+    'border-emerald-300/70 bg-emerald-500/18 text-emerald-700 shadow-sm hover:border-emerald-300/85 hover:bg-emerald-500/30 focus-visible:ring-emerald-500 disabled:hover:bg-emerald-500/18',
   warning:
-    'border border-amber-200 bg-amber-100 text-amber-700 shadow-sm hover:bg-amber-200 focus-visible:ring-amber-500 disabled:hover:bg-amber-100',
+    'border-amber-300/75 bg-amber-500/24 text-amber-800 shadow-sm hover:border-amber-300/90 hover:bg-amber-500/36 focus-visible:ring-amber-500 disabled:hover:bg-amber-500/24',
   soft:
-    'border border-teal-200 bg-teal-50 text-teal-700 shadow-sm hover:bg-teal-100 focus-visible:ring-teal-500 disabled:hover:bg-teal-50',
+    'border-teal-300/70 bg-teal-500/16 text-teal-700 shadow-sm hover:border-teal-300/85 hover:bg-teal-500/26 focus-visible:ring-teal-500 disabled:hover:bg-teal-500/16',
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {

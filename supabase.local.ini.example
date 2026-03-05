@@ -1,6 +1,0 @@
-; Copie este arquivo para supabase.local.ini e preencha os valores reais.
-; O arquivo supabase.local.ini e ignorado pelo Git.
-
-PROJECT_REF=eaxvvhamkmovkoqssahj
-DB_PASSWORD=coloque_sua_senha_aqui
-SUPABASE_ACCESS_TOKEN=sbp_coloque_seu_token_aqui

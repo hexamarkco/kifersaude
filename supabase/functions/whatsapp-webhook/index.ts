@@ -1021,6 +1021,34 @@ async function processMessageDelete(message: WhapiMessage) {
   });
 }
 
+async function resolveReactionTargetChatId(message: WhapiMessage): Promise<string | null> {
+  if (message.action?.type !== 'reaction') return null;
+
+  const targetMessageId = message.action.target?.trim();
+  if (!targetMessageId) return null;
+
+  const { data: targetMessage, error } = await supabase
+    .from('whatsapp_messages')
+    .select('chat_id')
+    .eq('id', targetMessageId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('whatsapp-webhook: erro ao resolver chat de reacao pelo alvo', {
+      targetMessageId,
+      error: error.message,
+    });
+    return null;
+  }
+
+  const targetChatId =
+    typeof targetMessage?.chat_id === 'string' && targetMessage.chat_id.trim()
+      ? targetMessage.chat_id.trim()
+      : null;
+
+  return targetChatId;
+}
+
 async function processGroupCreation(group: WhapiGroup) {
   console.log('whatsapp-webhook: processando criação de grupo', {
     groupId: group.id,
@@ -1346,6 +1374,41 @@ Deno.serve(async (req) => {
           await processMessageDelete(message);
         } else {
           const normalized = normalizeWhapiMessage(message);
+
+          if (message.action?.type === 'reaction') {
+            const targetChatId = await resolveReactionTargetChatId(message);
+
+            if (!targetChatId) {
+              console.warn('whatsapp-webhook: reacao ignorada por nao localizar mensagem alvo', {
+                reactionMessageId: message.id,
+                targetMessageId: message.action?.target,
+                incomingChatId: normalized.chatId,
+              });
+              continue;
+            }
+
+            if (targetChatId !== normalized.chatId) {
+              const originalChatId = normalized.chatId;
+              normalized.chatId = targetChatId;
+              normalized.isGroup = targetChatId.endsWith('@g.us');
+
+              if (normalized.direction === 'outbound') {
+                normalized.toNumber = targetChatId;
+              }
+
+              if (normalized.direction === 'inbound' && (!normalized.fromNumber || normalized.fromNumber === originalChatId)) {
+                normalized.fromNumber = message.from || targetChatId;
+              }
+
+              console.log('whatsapp-webhook: chat da reacao corrigido com base na mensagem alvo', {
+                reactionMessageId: message.id,
+                targetMessageId: message.action?.target,
+                originalChatId,
+                resolvedChatId: targetChatId,
+              });
+            }
+          }
+
           await upsertChat(normalized);
           await upsertMessage(normalized);
         }

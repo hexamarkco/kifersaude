@@ -319,6 +319,7 @@ export default function WhatsAppTab() {
   const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; loadedCount: number; hasOlder: boolean }>>(
     new Map(),
   );
+  const messageByIdRef = useRef<Map<string, WhatsAppMessage>>(new Map());
   const loadingUi = useAdaptiveLoading(loading);
 
   const selectChat = (chat: WhatsAppChat | null) => {
@@ -534,6 +535,29 @@ export default function WhatsAppTab() {
     });
 
     return deduped.sort(sortMessagesChronologically);
+  };
+
+  const resolveReactionTargetChatId = (message: WhatsAppMessage) => {
+    const payloadData = message.payload as any;
+    const action = payloadData?.action;
+    if (action?.type !== 'reaction' || !action?.target) return null;
+
+    const targetMessageId = String(action.target);
+    if (!targetMessageId) return null;
+
+    const targetInCurrentScope = messageByIdRef.current.get(targetMessageId);
+    if (targetInCurrentScope?.chat_id) {
+      return targetInCurrentScope.chat_id;
+    }
+
+    for (const cachedState of messagesCacheRef.current.values()) {
+      const targetInCache = cachedState.messages.find((item) => item.id === targetMessageId);
+      if (targetInCache?.chat_id) {
+        return targetInCache.chat_id;
+      }
+    }
+
+    return null;
   };
 
   const getMessageCalendarDate = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
@@ -1295,8 +1319,31 @@ export default function WhatsAppTab() {
       .channel('whatsapp_messages_global')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
         const eventType = payload.eventType;
-        const message = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
-        if (!message?.id || !message.chat_id) return;
+        const incomingMessage = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
+        if (!incomingMessage?.id || !incomingMessage.chat_id) return;
+
+        const reactionTargetChatId = eventType === 'DELETE' ? null : resolveReactionTargetChatId(incomingMessage);
+        const message =
+          reactionTargetChatId && reactionTargetChatId !== incomingMessage.chat_id
+            ? {
+                ...incomingMessage,
+                chat_id: reactionTargetChatId,
+                from_number:
+                  incomingMessage.direction === 'inbound' &&
+                  (!incomingMessage.from_number || incomingMessage.from_number === incomingMessage.chat_id)
+                    ? reactionTargetChatId
+                    : incomingMessage.from_number,
+                to_number:
+                  incomingMessage.direction === 'outbound' ? reactionTargetChatId : incomingMessage.to_number,
+              }
+            : incomingMessage;
+
+        if (eventType === 'INSERT' && isReactionOnlyMessage(message) && !reactionTargetChatId) {
+          const hasChatInMemory = chatsRef.current.some((chat) => getChatIdVariants(chat).includes(message.chat_id));
+          if (!hasChatInMemory) {
+            return;
+          }
+        }
 
         scheduleUnreadCountsRefresh();
 
@@ -1339,13 +1386,11 @@ export default function WhatsAppTab() {
             }
 
             if (eventType === 'INSERT') {
-              let didApplyInsert = false;
               setMessages((prev) => {
                 const existingByIdIndex = prev.findIndex((item) => item.id === message.id);
                 if (existingByIdIndex >= 0) {
                   const next = [...prev];
                   next[existingByIdIndex] = mergeMessageForDisplay(next[existingByIdIndex], message);
-                  didApplyInsert = true;
                   return next.sort(sortMessagesChronologically);
                 }
 
@@ -1353,38 +1398,20 @@ export default function WhatsAppTab() {
                 if (likelyDuplicateIndex >= 0) {
                   const next = [...prev];
                   next[likelyDuplicateIndex] = mergeMessageForDisplay(next[likelyDuplicateIndex], message);
-                  didApplyInsert = true;
                   return next.sort(sortMessagesChronologically);
                 }
 
-                const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : 0;
-                const now = Date.now();
-                if (messageTime && now - messageTime > 5 * 60 * 1000) {
-                  return prev;
-                }
-                const latestTime = prev.reduce((max, item) => {
-                  const time = item.timestamp ? new Date(item.timestamp).getTime() : 0;
-                  return Math.max(max, time);
-                }, 0);
-
-                if (messageTime && latestTime && messageTime < latestTime) {
-                  return prev;
-                }
-
-                didApplyInsert = true;
                 const merged = [...prev, message];
-                return merged.sort(sortMessagesChronologically);
+                return dedupeMessagesForDisplay(merged);
               });
 
-              if (didApplyInsert) {
-                const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
-                if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
-                  updateChatArchive(chatToUpdate.id, false);
-                }
-                scrollToBottom();
-                if (message.direction === 'inbound' && userRef.current) {
-                  void markMessagesRead([message]);
-                }
+              const chatToUpdate = chatsRef.current.find((chat) => chat.id === currentChat.id);
+              if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
+                updateChatArchive(chatToUpdate.id, false);
+              }
+              scrollToBottom();
+              if (message.direction === 'inbound' && userRef.current) {
+                void markMessagesRead([message]);
               }
             }
           }
@@ -1478,6 +1505,12 @@ export default function WhatsAppTab() {
   }, [messages]);
 
   useEffect(() => {
+    const indexedMessages = new Map<string, WhatsAppMessage>();
+    messages.forEach((message) => {
+      indexedMessages.set(message.id, message);
+    });
+    messageByIdRef.current = indexedMessages;
+
     const currentChat = selectedChatRef.current;
     if (!currentChat) return;
 
@@ -2779,24 +2812,7 @@ export default function WhatsAppTab() {
 
     const { chatId, phoneNumber } = target;
     const now = new Date().toISOString();
-    setChats((prev) => {
-      if (prev.some((chat) => chat.id === chatId)) return prev;
-      return [
-        {
-          id: chatId,
-          name: name ?? null,
-          is_group: false,
-          phone_number: phoneNumber,
-          last_message_at: null,
-          created_at: now,
-          updated_at: now,
-          last_message: '',
-          unread_count: 0,
-        },
-        ...prev,
-      ];
-    });
-    setSelectedChat({
+    const nextChat: WhatsAppChat = {
       id: chatId,
       name: name ?? null,
       is_group: false,
@@ -2806,11 +2822,19 @@ export default function WhatsAppTab() {
       updated_at: now,
       last_message: '',
       unread_count: 0,
+    };
+
+    startTransition(() => {
+      setChats((prev) => {
+        if (prev.some((chat) => chat.id === chatId)) return prev;
+        return [nextChat, ...prev];
+      });
+      setSelectedChat(nextChat);
+      setChatFilterMode('all');
+      setShowNewChatModal(false);
+      setNewChatSearch('');
+      setNewChatPhone('');
     });
-    setChatFilterMode('all');
-    setShowNewChatModal(false);
-    setNewChatSearch('');
-    setNewChatPhone('');
   };
 
 const formatReminderDueAt = (value: string) => {
@@ -3076,9 +3100,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     params.set('leadName', item.leadName);
     params.set('leadId', item.leadId);
 
-    openChatFromPhone(item.leadPhone, item.leadName);
-    navigate(`/painel/whatsapp?${params.toString()}`);
-    setShowRemindersModal(false);
+    startTransition(() => {
+      setShowRemindersModal(false);
+      navigate(`/painel/whatsapp?${params.toString()}`);
+    });
   };
 
   const resolveReminderLeadForScheduling = async (item: ReminderQuickOpenItem) => {
@@ -3878,7 +3903,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       ) : (
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
                           chatKind === 'group'
-                            ? 'bg-blue-500'
+                            ? 'bg-blue-100 text-blue-700'
                             : chatKind === 'newsletter'
                               ? 'bg-indigo-500'
                               : chatKind === 'status' || chatKind === 'broadcast'
@@ -3886,7 +3911,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                 : 'bg-teal-100 text-teal-700'
                         }`}>
                           {chatKind === 'group' ? (
-                            <Users className="w-6 h-6" />
+                            <Users className="w-5 h-5" />
                           ) : isDirectChat(chat) ? (
                             <UserCircle className="w-5 h-5" />
                           ) : (
@@ -4051,7 +4076,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 ) : (
                   <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
                     selectedChatKind === 'group'
-                      ? 'bg-blue-500'
+                      ? 'bg-blue-100 text-blue-700'
                       : selectedChatKind === 'newsletter'
                         ? 'bg-indigo-500'
                         : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
@@ -4193,7 +4218,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       <div key={message.id}>
                         {shouldShowDaySeparator && daySeparatorLabel && (
                           <div className="my-4 flex justify-center">
-                            <span className="rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
+                            <span className="message-day-separator rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
                               {daySeparatorLabel}
                             </span>
                           </div>

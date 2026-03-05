@@ -309,6 +309,10 @@
   background-color: var(--panel-surface-soft-2) !important;
 }
 
+.painel-theme.theme-dark .bg-slate-200\/80 {
+  background-color: rgba(39, 52, 73, 0.9) !important;
+}
+
 .painel-theme.theme-dark .bg-gray-50 {
   background-color: var(--panel-surface-soft) !important;
 }
@@ -342,6 +346,12 @@
 }
 
 .painel-theme.theme-dark .text-slate-700 {
+  color: var(--panel-text-soft) !important;
+}
+
+.painel-theme.theme-dark .message-day-separator {
+  background-color: rgba(39, 52, 73, 0.9) !important;
+  border-color: var(--panel-border-strong) !important;
   color: var(--panel-text-soft) !important;
 }
 
@@ -683,14 +693,24 @@
   --tw-ring-offset-color: var(--panel-bg);
 }
 
+.painel-theme.theme-dark .panel-ui-button-primary {
+  background-color: rgba(20, 184, 166, 0.22) !important;
+  border-color: rgba(45, 212, 191, 0.45) !important;
+  color: #99f6e4 !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-primary:hover {
+  background-color: rgba(20, 184, 166, 0.34) !important;
+}
+
 .painel-theme.theme-dark .panel-ui-button-secondary {
-  background-color: var(--panel-surface) !important;
+  background-color: rgba(15, 23, 42, 0.5) !important;
   border-color: var(--panel-border-strong) !important;
   color: var(--panel-text-soft) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-secondary:hover {
-  background-color: var(--panel-surface-soft) !important;
+  background-color: rgba(30, 41, 59, 0.75) !important;
   color: var(--panel-text) !important;
 }
 
@@ -700,42 +720,53 @@
 }
 
 .painel-theme.theme-dark .panel-ui-button-info {
-  background-color: #1d4ed8 !important;
-  color: #eff6ff !important;
+  background-color: rgba(37, 99, 235, 0.24) !important;
+  border-color: rgba(96, 165, 250, 0.5) !important;
+  color: #bfdbfe !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-info:hover {
-  background-color: #1e40af !important;
+  background-color: rgba(37, 99, 235, 0.36) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-success {
-  background-color: var(--panel-accent-emerald-bg) !important;
-  border-color: var(--panel-accent-emerald-border) !important;
-  color: var(--panel-accent-emerald-text) !important;
+  background-color: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+  color: #a7f3d0 !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-success:hover {
-  background-color: var(--panel-accent-emerald-bg-strong) !important;
+  background-color: rgba(16, 185, 129, 0.34) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-warning {
-  background-color: var(--panel-accent-amber-bg) !important;
-  border-color: var(--panel-accent-amber-border) !important;
-  color: var(--panel-accent-amber-text) !important;
+  background-color: rgba(245, 158, 11, 0.24) !important;
+  border-color: rgba(251, 191, 36, 0.46) !important;
+  color: #fde68a !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-warning:hover {
-  background-color: var(--panel-accent-amber-bg-strong) !important;
+  background-color: rgba(245, 158, 11, 0.36) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-soft {
-  background-color: var(--panel-accent-teal-bg) !important;
-  border-color: var(--panel-accent-teal-border) !important;
-  color: var(--panel-accent-teal-text) !important;
+  background-color: rgba(20, 184, 166, 0.2) !important;
+  border-color: rgba(45, 212, 191, 0.44) !important;
+  color: #99f6e4 !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-soft:hover {
-  background-color: var(--panel-accent-teal-bg-strong) !important;
+  background-color: rgba(20, 184, 166, 0.32) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-danger {
+  background-color: rgba(239, 68, 68, 0.22) !important;
+  border-color: rgba(248, 113, 113, 0.48) !important;
+  color: #fecaca !important;
+}
+
+.painel-theme.theme-dark .panel-ui-button-danger:hover {
+  background-color: rgba(239, 68, 68, 0.34) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-ghost:hover,

@@ -107,9 +107,11 @@ export function MessageInput({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingCancelledRef = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSignalAtRef = useRef(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const textareaResizeFrameRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const analyserDataRef = useRef<Uint8Array | null>(null);
@@ -564,22 +566,58 @@ export function MessageInput({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (textareaResizeFrameRef.current) {
+        cancelAnimationFrame(textareaResizeFrameRef.current);
+      }
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
   }, [previewUrl, audioPreviewUrl]);
 
+  useEffect(() => {
+    lastTypingSignalAtRef.current = 0;
+  }, [chatId]);
+
+  const scheduleTextareaResize = () => {
+    if (textareaResizeFrameRef.current !== null) return;
+
+    textareaResizeFrameRef.current = requestAnimationFrame(() => {
+      textareaResizeFrameRef.current = null;
+
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      textarea.style.height = 'auto';
+      const nextHeight = Math.min(textarea.scrollHeight, 128);
+      textarea.style.height = `${nextHeight}px`;
+    });
+  };
+
+  useEffect(() => {
+    scheduleTextareaResize();
+  }, [message]);
+
   const handleTyping = () => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    sendTypingState(chatId).catch(console.error);
+    const now = Date.now();
+    if (now - lastTypingSignalAtRef.current >= 2500) {
+      lastTypingSignalAtRef.current = now;
+      sendTypingState(chatId).catch(console.error);
+    }
 
     typingTimeoutRef.current = setTimeout(() => {
       typingTimeoutRef.current = null;
     }, 3000);
+  };
+
+  const toggleEmojiPicker = () => {
+    setShowEmojiPicker((prev) => !prev);
+    setShowAttachMenu(false);
+    setShowQuickReplies(false);
   };
 
   const handleSendMessage = async () => {
@@ -1652,7 +1690,7 @@ export function MessageInput({
       )}
 
       {selectedFile && (
-        <div className="px-4 py-3 bg-gray-50 border-b">
+        <div className="bg-gray-50 border-b border-slate-200 px-4 py-3">
           <div className="flex items-start gap-3">
             {previewUrl ? (
               selectedFile.type.startsWith('video/') ? (
@@ -1669,13 +1707,13 @@ export function MessageInput({
                 />
               )
             ) : (
-              <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
-                <FileIcon className="w-8 h-8 text-gray-400" />
+              <div className="flex h-20 w-20 items-center justify-center rounded bg-gray-200">
+                <FileIcon className="h-8 w-8 text-slate-400" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{selectedFile.name}</div>
-              <div className="text-xs text-gray-500">
+              <div className="truncate text-sm font-medium text-slate-900">{selectedFile.name}</div>
+              <div className="text-xs text-slate-500">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
               {(selectedFile.type.startsWith('image/') || selectedFile.type.startsWith('video/')) && (
@@ -1686,7 +1724,7 @@ export function MessageInput({
             </div>
             <button
               onClick={clearFile}
-              className="p-1 hover:bg-gray-200 rounded"
+              className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
               disabled={isSending}
             >
               <X className="w-4 h-4" />
@@ -1706,7 +1744,7 @@ export function MessageInput({
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-slate-200 p-2 min-w-[220px] z-20">
+            <div className="absolute bottom-full left-0 z-[110] mb-2 min-w-[220px] rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
               <button
                 onClick={() => {
                   imageInputRef.current?.click();
@@ -1774,19 +1812,21 @@ export function MessageInput({
           />
         </div>
 
-        <div className="flex-1 bg-white border rounded-lg flex items-end overflow-hidden">
-          <div className="relative">
+        <div className="flex flex-1 items-end overflow-visible rounded-lg border border-slate-200 bg-white">
+          <div className="relative z-[90]">
           <button
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
             disabled={isSending}
-            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            onClick={toggleEmojiPicker}
             type="button"
+            aria-label="Abrir emojis"
+            aria-expanded={showEmojiPicker}
           >
             <Smile className="w-5 h-5" />
           </button>
 
           <button
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
             disabled={isSending}
             onClick={() => setShowQuickReplies((prev) => !prev)}
             type="button"
@@ -1796,7 +1836,7 @@ export function MessageInput({
           </button>
 
           <button
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
             disabled={isSending || isRecording || showLinkPreviewModal}
             onClick={handleOpenRewrite}
             type="button"
@@ -1806,7 +1846,7 @@ export function MessageInput({
           </button>
 
             {showEmojiPicker && (
-              <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">
+              <div className="absolute bottom-full left-0 z-[120] mb-2 grid w-56 grid-cols-8 gap-1 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
                 {emojiList.map((emoji) => (
                   <button
                     key={emoji}
@@ -1846,29 +1886,28 @@ export function MessageInput({
               ref={textareaRef}
               value={message}
               onChange={(e) => {
-                setMessage(e.target.value);
-                handleTyping();
+                const nextValue = e.target.value;
+                setMessage(nextValue);
+                scheduleTextareaResize();
+                if (nextValue.trim()) {
+                  handleTyping();
+                }
               }}
               onKeyDown={handleTextareaKeyDown}
               placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
-              className="flex-1 px-2 py-2 resize-none focus:outline-none max-h-32 min-h-[40px]"
+              className="flex-1 max-h-32 min-h-[40px] resize-none px-2 py-2 text-slate-900 placeholder:text-slate-500 focus:outline-none"
               rows={1}
               disabled={isSending || isRecording}
               style={{
                 height: 'auto',
                 minHeight: '40px',
               }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-              }}
             />
           )}
         </div>
 
         {slashCommandState.active && (
-          <div className="absolute bottom-full left-14 right-14 mb-2 rounded-lg border border-slate-200 bg-white shadow-xl z-20 overflow-hidden">
+          <div className="absolute bottom-full left-14 right-14 z-[95] mb-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
             <div className="px-3 py-2 text-[11px] text-slate-500 border-b border-slate-100 flex items-center justify-between gap-2">
               {slashCommandState.query
                 ? `Atalho rapido: "${slashCommandState.query}"`

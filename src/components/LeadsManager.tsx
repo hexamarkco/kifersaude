@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { supabase, Lead, fetchAllPages } from '../lib/supabase';
 import {
@@ -289,19 +289,21 @@ export default function LeadsManager({
   }, [leads]);
 
   const resetFilters = useCallback(() => {
-    setSearchTerm('');
-    setFilterStatus(initialStatusFilter ?? []);
-    setFilterResponsavel([]);
-    setFilterOrigem([]);
-    setFilterTipoContratacao([]);
-    setFilterTags([]);
-    setFilterCanais([]);
-    setFilterCreatedFrom('');
-    setFilterCreatedTo('');
-    setFilterUltimoContatoFrom('');
-    setFilterUltimoContatoTo('');
-    setFilterProximoRetornoFrom('');
-    setFilterProximoRetornoTo('');
+    startTransition(() => {
+      setSearchTerm('');
+      setFilterStatus(initialStatusFilter ?? []);
+      setFilterResponsavel([]);
+      setFilterOrigem([]);
+      setFilterTipoContratacao([]);
+      setFilterTags([]);
+      setFilterCanais([]);
+      setFilterCreatedFrom('');
+      setFilterCreatedTo('');
+      setFilterUltimoContatoFrom('');
+      setFilterUltimoContatoTo('');
+      setFilterProximoRetornoFrom('');
+      setFilterProximoRetornoTo('');
+    });
   }, [initialStatusFilter]);
 
   const chunkArray = useCallback(<T,>(items: T[], chunkSize: number): T[][] => {

@@ -119,6 +119,12 @@ type ReminderQuickOpenSchedulerDefaults = {
   defaultPriority?: 'normal' | 'alta' | 'baixa';
 };
 
+type SyncAllChatsProgress = {
+  total: number;
+  completed: number;
+  failed: number;
+};
+
 const REMINDER_QUICK_OPEN_PERIODS: Array<{
   id: ReminderQuickOpenPeriod;
   label: string;
@@ -275,6 +281,12 @@ export default function WhatsAppTab() {
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
   const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
+  const [isSyncingAllChats, setIsSyncingAllChats] = useState(false);
+  const [syncAllChatsProgress, setSyncAllChatsProgress] = useState<SyncAllChatsProgress>({
+    total: 0,
+    completed: 0,
+    failed: 0,
+  });
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -2041,19 +2053,71 @@ export default function WhatsAppTab() {
   };
 
   const handleSyncFromWhapi = async () => {
-    if (!selectedChat || syncingChatId === selectedChat.id) return;
+    if (!selectedChat || syncingChatId === selectedChat.id || isSyncingAllChats) return;
 
     setSyncingChatId(selectedChat.id);
     try {
-      await supabase.functions.invoke('whatsapp-sync', {
+      const { error } = await supabase.functions.invoke('whatsapp-sync', {
         body: { chatId: selectedChat.id, count: 200 },
       });
+
+      if (error) {
+        throw error;
+      }
+
       await loadMessages(selectedChat);
       scheduleUnreadCountsRefresh();
     } catch (error) {
       console.error('Error syncing from Whapi:', error);
     } finally {
       setSyncingChatId(null);
+    }
+  };
+
+  const handleSyncAllChatsFromListSettings = async () => {
+    if (isSyncingAllChats || syncingChatId) return;
+
+    const chatIds = Array.from(new Set(chatsRef.current.map((chat) => chat.id).filter(Boolean)));
+    if (chatIds.length === 0) {
+      return;
+    }
+
+    setIsSyncingAllChats(true);
+    setSyncAllChatsProgress({ total: chatIds.length, completed: 0, failed: 0 });
+
+    let failed = 0;
+
+    try {
+      for (let index = 0; index < chatIds.length; index += 1) {
+        const chatId = chatIds[index];
+        const { error } = await supabase.functions.invoke('whatsapp-sync', {
+          body: { chatId, count: 200 },
+        });
+
+        if (error) {
+          failed += 1;
+          console.error('Erro ao sincronizar chat:', chatId, error);
+        }
+
+        setSyncAllChatsProgress({
+          total: chatIds.length,
+          completed: index + 1,
+          failed,
+        });
+      }
+
+      await loadChats();
+
+      const currentSelectedChat = selectedChatRef.current;
+      if (currentSelectedChat) {
+        await loadMessages(currentSelectedChat, { silent: true });
+      }
+
+      scheduleUnreadCountsRefresh();
+    } catch (error) {
+      console.error('Erro ao sincronizar todos os chats:', error);
+    } finally {
+      setIsSyncingAllChats(false);
     }
   };
 
@@ -3552,6 +3616,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
+  const syncAllChatsProgressPercentage =
+    syncAllChatsProgress.total > 0
+      ? Math.round((syncAllChatsProgress.completed / syncAllChatsProgress.total) * 100)
+      : 0;
   const groupedReminderQuickOpenItems = useMemo(
     () => groupReminderQuickOpenItems(reminderQuickOpenItems),
     [reminderQuickOpenItems],
@@ -3920,7 +3988,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     setIsListSettingsOpen((prev) => !prev);
                   }}
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
                 </button>
 
                 {isListSettingsOpen && (
@@ -3933,6 +4001,40 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     </p>
 
                     <div className="mt-3 space-y-2 text-xs">
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          void handleSyncAllChatsFromListSettings();
+                        }}
+                        disabled={isSyncingAllChats || Boolean(syncingChatId) || chats.length === 0}
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          <RefreshCw className={`h-3.5 w-3.5 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
+                          {isSyncingAllChats ? 'Sincronizando todos os chats' : 'Sincronizar todos os chats'}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {isSyncingAllChats
+                            ? `${syncAllChatsProgress.completed}/${syncAllChatsProgress.total}`
+                            : `${chats.length} chats`}
+                        </span>
+                      </button>
+
+                      {isSyncingAllChats && (
+                        <div className="rounded-lg border border-teal-100 bg-teal-50 px-2.5 py-2">
+                          <div className="flex items-center justify-between text-[11px] text-teal-700">
+                            <span>{syncAllChatsProgressPercentage}% concluido</span>
+                            {syncAllChatsProgress.failed > 0 && <span>{syncAllChatsProgress.failed} com falha</span>}
+                          </div>
+                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-teal-100">
+                            <div
+                              className="h-full rounded-full bg-teal-500 transition-all duration-300"
+                              style={{ width: `${syncAllChatsProgressPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50"
@@ -4388,9 +4490,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Sincronizar mensagens"
                     onClick={handleSyncFromWhapi}
-                    disabled={syncingChatId === selectedChat.id}
+                    disabled={isSyncingAllChats || syncingChatId === selectedChat.id}
                   >
-                    <History className={`w-5 h-5 text-slate-600 ${syncingChatId === selectedChat.id ? 'animate-spin' : ''}`} />
+                    <History
+                      className={`w-5 h-5 text-slate-600 ${isSyncingAllChats || syncingChatId === selectedChat.id ? 'animate-spin' : ''}`}
+                    />
                   </button>
                   <button
                     type="button"

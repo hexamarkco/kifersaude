@@ -18,7 +18,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase, Reminder, Contract } from '../lib/supabase';
@@ -27,7 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
-import { MOTION_PRESET_OPTIONS, usePanelMotion } from '../hooks/usePanelMotion';
+import { usePanelMotion } from '../hooks/usePanelMotion';
 
 type TabConfig = {
   id: string;
@@ -106,6 +105,7 @@ export default function Layout({
   const collapsedDropdownRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const panelContentRef = useRef<HTMLDivElement | null>(null);
+  const themeSwitchFrameRef = useRef<number | null>(null);
   const auroraPrimaryRef = useRef<HTMLDivElement | null>(null);
   const auroraSecondaryRef = useRef<HTMLDivElement | null>(null);
   const auroraTertiaryRef = useRef<HTMLDivElement | null>(null);
@@ -119,8 +119,6 @@ export default function Layout({
   const {
     motionEnabled,
     ambientMotionEnabled,
-    motionPreset,
-    setMotionPreset,
     enterDuration,
     sectionStagger,
     microDuration,
@@ -594,6 +592,18 @@ export default function Layout({
   }, [themeMode]);
 
   useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && themeSwitchFrameRef.current !== null) {
+        window.cancelAnimationFrame(themeSwitchFrameRef.current);
+      }
+
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.remove('theme-switching');
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const panelContent = panelContentRef.current;
     if (!panelContent) {
       return;
@@ -816,16 +826,22 @@ export default function Layout({
   }, [activeDropdownTab, collapsedDropdownPosition, isMenuCollapsed, microDuration, motionEnabled]);
 
   const toggleThemeMode = () => {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      document.documentElement.classList.add('theme-switching');
+
+      if (themeSwitchFrameRef.current !== null) {
+        window.cancelAnimationFrame(themeSwitchFrameRef.current);
+      }
+
+      themeSwitchFrameRef.current = window.requestAnimationFrame(() => {
+        themeSwitchFrameRef.current = window.requestAnimationFrame(() => {
+          document.documentElement.classList.remove('theme-switching');
+          themeSwitchFrameRef.current = null;
+        });
+      });
+    }
+
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
-  };
-
-  const activeMotionPreset =
-    MOTION_PRESET_OPTIONS.find((option) => option.value === motionPreset) ?? MOTION_PRESET_OPTIONS[1];
-
-  const cycleMotionPreset = () => {
-    const currentIndex = MOTION_PRESET_OPTIONS.findIndex((option) => option.value === motionPreset);
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % MOTION_PRESET_OPTIONS.length;
-    setMotionPreset(MOTION_PRESET_OPTIONS[nextIndex].value);
   };
 
   const renderSidebarItem = (tab: TabConfig) => {
@@ -1131,45 +1147,6 @@ export default function Layout({
                   </div>
                 )}
               </div>
-            {isMenuCollapsed ? (
-              <button
-                type="button"
-                onClick={cycleMotionPreset}
-                data-sidebar-item
-                className="flex w-full items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100"
-                title={`Animação: ${activeMotionPreset.label}`}
-                aria-label={`Alternar animação. Modo atual: ${activeMotionPreset.label}`}
-              >
-                <SlidersHorizontal className="h-5 w-5" />
-              </button>
-            ) : (
-              <div
-                data-sidebar-item
-                className="rounded-lg border border-slate-200/80 bg-white/65 p-2"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Animação</p>
-                  <span className="text-[11px] font-semibold text-slate-700">{activeMotionPreset.label}</span>
-                </div>
-                <div className="mt-2 grid grid-cols-3 gap-1">
-                  {MOTION_PRESET_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setMotionPreset(option.value)}
-                      className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-                        motionPreset === option.value
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                      title={option.hint}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             <button
               type="button"
               onClick={toggleThemeMode}

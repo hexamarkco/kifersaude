@@ -6,11 +6,12 @@ export type MotionPreset = 'premium' | 'balanced' | 'ultra-smooth';
 
 type MotionProfile = 'full' | 'eco' | 'ultra' | 'minimal';
 
-const MOTION_PRESET_STORAGE_KEY = 'painel.motion.preset.v1';
+const MOTION_PRESET_STORAGE_KEY = 'painel.motion.preset.v2';
 const MOTION_PRESET_QUERY_KEY = 'motion';
 const MOTION_PRESET_EVENT = 'painel:motion-preset-change';
 
-const DEFAULT_MOTION_PRESET: MotionPreset = 'balanced';
+const DEFAULT_MOTION_PRESET: MotionPreset = 'ultra-smooth';
+const PANEL_ROUTE_PREFIXES = ['/painel', '/app'] as const;
 
 export const MOTION_PRESET_OPTIONS: ReadonlyArray<{
   value: MotionPreset;
@@ -45,6 +46,14 @@ const getMotionPresetFromQuery = (): MotionPreset | null => {
   const params = new URLSearchParams(window.location.search);
   const value = params.get(MOTION_PRESET_QUERY_KEY);
   return isMotionPreset(value) ? value : null;
+};
+
+const isPanelWorkspaceRoute = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return PANEL_ROUTE_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix));
 };
 
 const getStoredMotionPreset = (): MotionPreset => {
@@ -119,9 +128,18 @@ const resolveMotionProfile = (
   isLowPowerDevice: boolean,
   prefersSaveData: boolean,
   motionPreset: MotionPreset,
+  inPanelWorkspace: boolean,
 ): MotionProfile => {
   if (prefersReducedMotion) {
     return 'minimal';
+  }
+
+  if (inPanelWorkspace) {
+    if (prefersSaveData || isLowPowerDevice) {
+      return 'minimal';
+    }
+
+    return 'ultra';
   }
 
   const baseProfile = getPresetBaseProfile(motionPreset);
@@ -153,6 +171,7 @@ export function usePanelMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(
     getPrefersReducedMotion,
   );
+  const [inPanelWorkspace] = useState<boolean>(isPanelWorkspaceRoute);
   const [isLowPowerDevice] = useState<boolean>(getIsLowPowerDevice);
   const [prefersSaveData, setPrefersSaveData] = useState<boolean>(getPrefersSaveData);
   const [motionPreset, setMotionPresetState] = useState<MotionPreset>(getStoredMotionPreset);
@@ -240,8 +259,15 @@ export function usePanelMotion() {
   }, []);
 
   const profile = useMemo(
-    () => resolveMotionProfile(prefersReducedMotion, isLowPowerDevice, prefersSaveData, motionPreset),
-    [isLowPowerDevice, motionPreset, prefersReducedMotion, prefersSaveData],
+    () =>
+      resolveMotionProfile(
+        prefersReducedMotion,
+        isLowPowerDevice,
+        prefersSaveData,
+        motionPreset,
+        inPanelWorkspace,
+      ),
+    [inPanelWorkspace, isLowPowerDevice, motionPreset, prefersReducedMotion, prefersSaveData],
   );
 
   useEffect(() => {

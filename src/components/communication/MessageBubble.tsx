@@ -722,9 +722,9 @@ export function MessageBubble({
     <div
       className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
     >
-      <div className={`max-w-[70%] ${isOutbound ? 'order-2' : 'order-1'}`}>
+      <div className={`max-w-[70%] min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
-          className={`message-bubble rounded-lg ${
+          className={`message-bubble break-words [overflow-wrap:anywhere] rounded-lg ${
             isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
           } ${
             isOutbound

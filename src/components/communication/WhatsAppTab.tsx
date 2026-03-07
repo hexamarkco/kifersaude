@@ -3648,7 +3648,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       stageClassName="min-h-[560px]"
     >
       <div
-        className="flex h-full min-h-0 bg-slate-50"
+        className="flex h-full min-h-0 overflow-hidden bg-slate-50"
         onClick={() => {
           closeMuteSubmenuNow();
           setChatMenu(null);
@@ -3939,7 +3939,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         </ModalShell>
       )}
       {showChatList && (
-        <div className={`${isMobileView ? 'w-full' : 'w-96'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>
+        <div className={`${isMobileView ? 'w-full' : 'w-96 shrink-0'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>
           <div className="p-4 border-b border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
@@ -4392,7 +4392,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       )}
 
       {showMessageArea && (
-        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex flex-col bg-slate-100 relative min-h-0`}>
+        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex min-w-0 flex-col bg-slate-100 relative min-h-0`}>
           {selectedChat ? (
             <>
               <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
@@ -4520,7 +4520,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4">
                 {hasOlderMessages && (
                   <div className="mb-4 flex justify-center">
                     <button

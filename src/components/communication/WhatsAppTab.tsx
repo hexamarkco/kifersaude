@@ -38,6 +38,7 @@ import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
+import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
@@ -2192,8 +2193,12 @@ export default function WhatsAppTab() {
   ) => {
     if (message.is_deleted) return 'Mensagem apagada';
 
-    const body = message.body?.trim();
-    if (body) return body;
+    const resolvedBody = resolveWhatsAppMessageBody({
+      body: message.body,
+      type: message.type,
+      payload: message.payload,
+    });
+    if (resolvedBody) return resolvedBody;
 
     if (isReactionOnlyMessage(message)) return null;
 

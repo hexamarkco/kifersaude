@@ -7,6 +7,7 @@ import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 import { formatPhoneDisplay } from '../../lib/phoneFormatting';
+import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
 
 interface MessageBubbleProps {
   id: string;
@@ -135,6 +136,7 @@ export function MessageBubble({
   };
 
   const payloadData = payload as any;
+  const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
   const normalizedType = (type || '').toLowerCase();
   const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media || payloadData;
   const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
@@ -663,7 +665,7 @@ export function MessageBubble({
       );
     }
 
-    return <WhatsAppFormattedText text={body || '(mensagem vazia)'} className="text-sm whitespace-pre-wrap break-words" />;
+    return <WhatsAppFormattedText text={resolvedBody || '(mensagem vazia)'} className="text-sm whitespace-pre-wrap break-words" />;
   };
 
   async function loadVisualMedia() {

@@ -110,6 +110,30 @@ type WhapiMessage = {
       id: string;
       title: string;
     };
+    list_reply?: {
+      id?: string;
+      title?: string;
+      description?: string;
+    };
+  };
+  interactive?: {
+    body?: { text?: string } | string;
+    footer?: { text?: string } | string;
+    header?: { text?: string } | string;
+    action?: {
+      buttons?: Array<{ title?: string; text?: string; id?: string; type?: string }>;
+      list?: {
+        label?: string;
+        button?: string;
+        sections?: Array<{ title?: string; rows?: Array<{ title?: string; description?: string; id?: string }> }>;
+      };
+    };
+  };
+  hsm?: {
+    body?: string;
+    footer?: string;
+    header?: { text?: string } | string;
+    buttons?: Array<{ text?: string; title?: string; type?: string; id?: string; url?: string; phone_number?: string }>;
   };
   group_invite?: {
     body: string;
@@ -397,76 +421,203 @@ function toIsoString(timestamp: number): string {
   return new Date(timestamp * 1000).toISOString();
 }
 
+function toCleanText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function extractInteractiveBody(message: WhapiMessage): string | null {
+  const interactive = message.interactive;
+  if (!interactive) return null;
+
+  const bodyText =
+    typeof interactive.body === 'string' ? toCleanText(interactive.body) : toCleanText(interactive.body?.text);
+  if (bodyText) return bodyText;
+
+  const headerText =
+    typeof interactive.header === 'string' ? toCleanText(interactive.header) : toCleanText(interactive.header?.text);
+  const footerText =
+    typeof interactive.footer === 'string' ? toCleanText(interactive.footer) : toCleanText(interactive.footer?.text);
+
+  const buttonTitles = (interactive.action?.buttons || [])
+    .map((button) => toCleanText(button.title || button.text))
+    .filter(Boolean);
+
+  const listLabel = toCleanText(interactive.action?.list?.label || interactive.action?.list?.button);
+  const listRows = (interactive.action?.list?.sections || [])
+    .flatMap((section) => section.rows || [])
+    .map((row) => toCleanText(row.title))
+    .filter(Boolean);
+
+  const summaryParts = [headerText, footerText, listLabel, ...buttonTitles.slice(0, 2), ...listRows.slice(0, 2)]
+    .filter(Boolean);
+
+  if (summaryParts.length > 0) {
+    return `Interativo: ${summaryParts.join(' • ')}`;
+  }
+
+  return null;
+}
+
+function extractHsmBody(message: WhapiMessage): string | null {
+  const hsm = message.hsm;
+  if (!hsm) return null;
+
+  const bodyText = toCleanText(hsm.body);
+  if (bodyText) return bodyText;
+
+  const headerText = typeof hsm.header === 'string' ? toCleanText(hsm.header) : toCleanText(hsm.header?.text);
+  const footerText = toCleanText(hsm.footer);
+  const buttonTexts = (hsm.buttons || [])
+    .map((button) => toCleanText(button.text || button.title))
+    .filter(Boolean);
+
+  const summaryParts = [headerText, footerText, ...buttonTexts.slice(0, 2)].filter(Boolean);
+  if (summaryParts.length > 0) {
+    return `Template: ${summaryParts.join(' • ')}`;
+  }
+
+  return null;
+}
+
+function extractReplyBody(message: WhapiMessage): string | null {
+  const buttonsReplyTitle = toCleanText(message.reply?.buttons_reply?.title);
+  if (buttonsReplyTitle) {
+    return `Resposta: ${buttonsReplyTitle}`;
+  }
+
+  const listReplyTitle = toCleanText(message.reply?.list_reply?.title);
+  const listReplyDescription = toCleanText(message.reply?.list_reply?.description);
+
+  if (listReplyTitle && listReplyDescription) {
+    return `Resposta: ${listReplyTitle} - ${listReplyDescription}`;
+  }
+
+  if (listReplyTitle) {
+    return `Resposta: ${listReplyTitle}`;
+  }
+
+  return null;
+}
+
+function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: boolean } {
+  if (message.text?.body) {
+    return { body: message.text.body, hasMedia: false };
+  }
+
+  if (message.link_preview) {
+    return { body: message.link_preview.body, hasMedia: true };
+  }
+
+  if (message.image) {
+    return { body: message.image.caption || '[Imagem]', hasMedia: true };
+  }
+
+  if (message.video) {
+    return { body: message.video.caption || '[Vídeo]', hasMedia: true };
+  }
+
+  if (message.audio) {
+    return { body: '[Áudio]', hasMedia: true };
+  }
+
+  if (message.voice) {
+    return { body: '[Mensagem de voz]', hasMedia: true };
+  }
+
+  if (message.document) {
+    const fileName = message.document.filename || '';
+    const caption = message.document.caption;
+    return {
+      body: caption ? `${caption} [Documento: ${fileName}]` : `[Documento${fileName ? ': ' + fileName : ''}]`,
+      hasMedia: true,
+    };
+  }
+
+  if (message.location) {
+    return { body: `[Localização${message.location.address ? ': ' + message.location.address : ''}]`, hasMedia: true };
+  }
+
+  if (message.live_location) {
+    return { body: `[Localização ao vivo${message.live_location.caption ? ': ' + message.live_location.caption : ''}]`, hasMedia: true };
+  }
+
+  if (message.contact) {
+    return { body: `[Contato: ${message.contact.name}]`, hasMedia: false };
+  }
+
+  if (message.contact_list) {
+    const count = message.contact_list.list.length;
+    return { body: `[${count} contato${count > 1 ? 's' : ''}]`, hasMedia: false };
+  }
+
+  if (message.sticker) {
+    return { body: message.sticker.animated ? '[Sticker animado]' : '[Sticker]', hasMedia: true };
+  }
+
+  if (message.action) {
+    if (message.action.type === 'reaction') {
+      return { body: `Reagiu com ${message.action.emoji || ''}`, hasMedia: false };
+    }
+    if (message.action.type === 'delete') {
+      return { body: '[Mensagem apagada]', hasMedia: false };
+    }
+    if (message.action.type === 'vote') {
+      return { body: '[Votou em enquete]', hasMedia: false };
+    }
+    if (message.action.type === 'edit') {
+      return { body: message.text?.body || '', hasMedia: false };
+    }
+    return { body: `[Ação: ${message.action.type}]`, hasMedia: false };
+  }
+
+  const replyBody = extractReplyBody(message);
+  if (replyBody) {
+    return { body: replyBody, hasMedia: false };
+  }
+
+  const interactiveBody = extractInteractiveBody(message);
+  if (interactiveBody) {
+    return { body: interactiveBody, hasMedia: false };
+  }
+
+  const hsmBody = extractHsmBody(message);
+  if (hsmBody) {
+    return { body: hsmBody, hasMedia: false };
+  }
+
+  if (message.type === 'interactive') {
+    return { body: '[Mensagem interativa]', hasMedia: false };
+  }
+
+  if (message.type === 'hsm') {
+    return { body: '[Template WhatsApp]', hasMedia: false };
+  }
+
+  if (message.group_invite) {
+    return { body: `[Convite para grupo: ${message.group_invite.url}]`, hasMedia: false };
+  }
+
+  if (message.poll) {
+    return { body: `[Enquete: ${message.poll.title}]`, hasMedia: false };
+  }
+
+  if (message.product) {
+    return { body: '[Produto do catálogo]', hasMedia: false };
+  }
+
+  if (message.order) {
+    return { body: `[Pedido #${message.order.order_id}]`, hasMedia: false };
+  }
+
+  return { body: `[${message.type}]`, hasMedia: false };
+}
+
 function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const messageId = message.id;
   const direction: 'inbound' | 'outbound' = message.from_me ? 'outbound' : 'inbound';
   const chatId = message.chat_id;
   const isGroup = chatId.endsWith('@g.us');
-
-  let body = '';
-  let hasMedia = false;
-
-  if (message.text?.body) {
-    body = message.text.body;
-  } else if (message.link_preview) {
-    body = message.link_preview.body;
-    hasMedia = true;
-  } else if (message.image) {
-    body = message.image.caption || '[Imagem]';
-    hasMedia = true;
-  } else if (message.video) {
-    body = message.video.caption || '[Vídeo]';
-    hasMedia = true;
-  } else if (message.audio) {
-    body = '[Áudio]';
-    hasMedia = true;
-  } else if (message.voice) {
-    body = '[Mensagem de voz]';
-    hasMedia = true;
-  } else if (message.document) {
-    const fileName = message.document.filename || '';
-    const caption = message.document.caption;
-    body = caption ? `${caption} [Documento: ${fileName}]` : `[Documento${fileName ? ': ' + fileName : ''}]`;
-    hasMedia = true;
-  } else if (message.location) {
-    body = `[Localização${message.location.address ? ': ' + message.location.address : ''}]`;
-    hasMedia = true;
-  } else if (message.live_location) {
-    body = `[Localização ao vivo${message.live_location.caption ? ': ' + message.live_location.caption : ''}]`;
-    hasMedia = true;
-  } else if (message.contact) {
-    body = `[Contato: ${message.contact.name}]`;
-  } else if (message.contact_list) {
-    const count = message.contact_list.list.length;
-    body = `[${count} contato${count > 1 ? 's' : ''}]`;
-  } else if (message.sticker) {
-    body = message.sticker.animated ? '[Sticker animado]' : '[Sticker]';
-    hasMedia = true;
-  } else if (message.action) {
-    if (message.action.type === 'reaction') {
-      body = `Reagiu com ${message.action.emoji || ''}`;
-    } else if (message.action.type === 'delete') {
-      body = '[Mensagem apagada]';
-    } else if (message.action.type === 'vote') {
-      body = '[Votou em enquete]';
-    } else if (message.action.type === 'edit') {
-      body = message.text?.body || '';
-    } else {
-      body = `[Ação: ${message.action.type}]`;
-    }
-  } else if (message.reply?.buttons_reply) {
-    body = `Resposta: ${message.reply.buttons_reply.title}`;
-  } else if (message.group_invite) {
-    body = `[Convite para grupo: ${message.group_invite.url}]`;
-  } else if (message.poll) {
-    body = `[Enquete: ${message.poll.title}]`;
-  } else if (message.product) {
-    body = '[Produto do catálogo]';
-  } else if (message.order) {
-    body = `[Pedido #${message.order.order_id}]`;
-  } else {
-    body = `[${message.type}]`;
-  }
+  const { body, hasMedia } = buildMessageBody(message);
 
   const fromNumber = direction === 'inbound' ? (message.from || chatId) : null;
   const toNumber = direction === 'outbound' ? chatId : null;
@@ -568,6 +719,14 @@ function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter'
   if (normalized.endsWith('@broadcast')) return 'broadcast';
   if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net')) return 'phone';
   if (normalized.endsWith('@lid')) return 'lid';
+
+  if (!normalized.includes('@')) {
+    const digits = normalized.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      return 'phone';
+    }
+  }
+
   return 'unknown';
 }
 
@@ -577,12 +736,59 @@ function extractPhoneNumber(chatId: string): string | null {
   return phone || null;
 }
 
+function buildPhoneLookupVariants(phoneNumber: string): string[] {
+  const rawDigits = phoneNumber.replace(/\D/g, '');
+  if (!rawDigits) return [];
+
+  const variants = new Set<string>();
+  const push = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return;
+    variants.add(digits);
+
+    if (digits.startsWith('55') && digits.length > 11) {
+      variants.add(digits.slice(2));
+    }
+
+    if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+      variants.add(`55${digits}`);
+    }
+  };
+
+  push(rawDigits);
+
+  const snapshot = Array.from(variants);
+  snapshot.forEach((value) => {
+    const local = value.startsWith('55') && (value.length === 12 || value.length === 13) ? value.slice(2) : value;
+
+    if (local.length === 11 && local[2] === '9') {
+      const withoutNinthDigit = `${local.slice(0, 2)}${local.slice(3)}`;
+      push(withoutNinthDigit);
+      push(`55${withoutNinthDigit}`);
+    }
+
+    if (local.length === 10) {
+      const withNinthDigit = `${local.slice(0, 2)}9${local.slice(2)}`;
+      push(withNinthDigit);
+      push(`55${withNinthDigit}`);
+    }
+  });
+
+  return Array.from(variants);
+}
+
 async function findExistingChatByPhone(phoneNumber: string, currentChatId: string): Promise<string | null> {
+  const phoneVariants = buildPhoneLookupVariants(phoneNumber);
+  if (phoneVariants.length === 0) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('whatsapp_chats')
     .select('id, phone_number, lid')
-    .eq('phone_number', phoneNumber)
+    .in('phone_number', phoneVariants)
     .neq('id', currentChatId)
+    .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -620,12 +826,15 @@ async function mergeChatMessages(fromChatId: string, toChatId: string) {
 }
 
 async function findLeadByPhone(phoneNumber: string): Promise<string | null> {
-  const cleanPhone = phoneNumber.replace(/\D/g, '');
+  const phoneVariants = buildPhoneLookupVariants(phoneNumber);
+  if (phoneVariants.length === 0) {
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('leads')
     .select('nome_completo, telefone')
-    .or(`telefone.eq.${phoneNumber},telefone.eq.${cleanPhone}`)
+    .in('telefone', phoneVariants)
     .limit(1)
     .maybeSingle();
 

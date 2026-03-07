@@ -31,7 +31,29 @@ type WhapiMessage = {
   contact_list?: { list: Array<{ name: string }> };
   sticker?: Record<string, unknown>;
   action?: { type: string; emoji?: string; target?: string };
-  reply?: { buttons_reply?: { title: string } };
+  reply?: {
+    buttons_reply?: { title?: string };
+    list_reply?: { title?: string; description?: string };
+  };
+  interactive?: {
+    body?: { text?: string } | string;
+    footer?: { text?: string } | string;
+    header?: { text?: string } | string;
+    action?: {
+      buttons?: Array<{ title?: string; text?: string; id?: string; type?: string }>;
+      list?: {
+        label?: string;
+        button?: string;
+        sections?: Array<{ title?: string; rows?: Array<{ title?: string; description?: string; id?: string }> }>;
+      };
+    };
+  };
+  hsm?: {
+    body?: string;
+    footer?: string;
+    header?: { text?: string } | string;
+    buttons?: Array<{ text?: string; title?: string; type?: string; id?: string; url?: string; phone_number?: string }>;
+  };
   group_invite?: Record<string, unknown>;
   poll?: { title: string };
   product?: Record<string, unknown>;
@@ -76,6 +98,14 @@ const getChatIdKind = (chatId: string): ChatIdKind => {
   if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net') || normalized.endsWith('@lid')) {
     return 'direct';
   }
+
+  if (!normalized.includes('@')) {
+    const digits = normalized.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      return 'direct';
+    }
+  }
+
   return 'unknown';
 };
 
@@ -153,6 +183,80 @@ const mapStatusToAck = (status?: string): number | null => {
   return statusMap[normalized] ?? null;
 };
 
+const toCleanText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const extractInteractiveBody = (message: WhapiMessage): string | null => {
+  const interactive = message.interactive;
+  if (!interactive) return null;
+
+  const bodyText =
+    typeof interactive.body === 'string' ? toCleanText(interactive.body) : toCleanText(interactive.body?.text);
+  if (bodyText) return bodyText;
+
+  const headerText =
+    typeof interactive.header === 'string' ? toCleanText(interactive.header) : toCleanText(interactive.header?.text);
+  const footerText =
+    typeof interactive.footer === 'string' ? toCleanText(interactive.footer) : toCleanText(interactive.footer?.text);
+
+  const buttonTitles = (interactive.action?.buttons || [])
+    .map((button) => toCleanText(button.title || button.text))
+    .filter(Boolean);
+
+  const listLabel = toCleanText(interactive.action?.list?.label || interactive.action?.list?.button);
+  const listRows = (interactive.action?.list?.sections || [])
+    .flatMap((section) => section.rows || [])
+    .map((row) => toCleanText(row.title))
+    .filter(Boolean);
+
+  const summaryParts = [headerText, footerText, listLabel, ...buttonTitles.slice(0, 2), ...listRows.slice(0, 2)]
+    .filter(Boolean);
+
+  if (summaryParts.length > 0) {
+    return `Interativo: ${summaryParts.join(' • ')}`;
+  }
+
+  return null;
+};
+
+const extractHsmBody = (message: WhapiMessage): string | null => {
+  const hsm = message.hsm;
+  if (!hsm) return null;
+
+  const bodyText = toCleanText(hsm.body);
+  if (bodyText) return bodyText;
+
+  const headerText = typeof hsm.header === 'string' ? toCleanText(hsm.header) : toCleanText(hsm.header?.text);
+  const footerText = toCleanText(hsm.footer);
+  const buttonTexts = (hsm.buttons || [])
+    .map((button) => toCleanText(button.text || button.title))
+    .filter(Boolean);
+
+  const summaryParts = [headerText, footerText, ...buttonTexts.slice(0, 2)].filter(Boolean);
+  if (summaryParts.length > 0) {
+    return `Template: ${summaryParts.join(' • ')}`;
+  }
+
+  return null;
+};
+
+const extractReplyBody = (message: WhapiMessage): string | null => {
+  const buttonReplyTitle = toCleanText(message.reply?.buttons_reply?.title);
+  if (buttonReplyTitle) {
+    return `Resposta: ${buttonReplyTitle}`;
+  }
+
+  const listReplyTitle = toCleanText(message.reply?.list_reply?.title);
+  const listReplyDescription = toCleanText(message.reply?.list_reply?.description);
+  if (listReplyTitle && listReplyDescription) {
+    return `Resposta: ${listReplyTitle} - ${listReplyDescription}`;
+  }
+  if (listReplyTitle) {
+    return `Resposta: ${listReplyTitle}`;
+  }
+
+  return null;
+};
+
 const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: boolean } => {
   if (message.text?.body) return { body: message.text.body, hasMedia: false };
   if (message.image) return { body: message.image.caption || '[Imagem]', hasMedia: true };
@@ -175,12 +279,35 @@ const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: bool
   if (message.action?.type === 'reaction') return { body: `Reagiu com ${message.action.emoji || ''}`, hasMedia: false };
   if (message.action?.type === 'delete') return { body: '[Mensagem apagada]', hasMedia: false };
   if (message.action?.type === 'edit') return { body: message.text?.body || '', hasMedia: false };
-  if (message.reply?.buttons_reply) return { body: `Resposta: ${message.reply.buttons_reply.title}`, hasMedia: false };
+  const replyBody = extractReplyBody(message);
+  if (replyBody) return { body: replyBody, hasMedia: false };
+  const interactiveBody = extractInteractiveBody(message);
+  if (interactiveBody) return { body: interactiveBody, hasMedia: false };
+  const hsmBody = extractHsmBody(message);
+  if (hsmBody) return { body: hsmBody, hasMedia: false };
+  if (message.type === 'interactive') return { body: '[Mensagem interativa]', hasMedia: false };
+  if (message.type === 'hsm') return { body: '[Template WhatsApp]', hasMedia: false };
   if (message.group_invite) return { body: '[Convite para grupo]', hasMedia: false };
   if (message.poll) return { body: `[Enquete: ${message.poll.title}]`, hasMedia: false };
   if (message.product) return { body: '[Produto do catálogo]', hasMedia: false };
   if (message.order) return { body: `[Pedido #${message.order.order_id}]`, hasMedia: false };
   return { body: `[${message.type}]`, hasMedia: false };
+};
+
+const extractChatPhoneNumber = (chatId: string): string | null => {
+  const normalized = chatId.trim();
+  if (!normalized) return null;
+  if (normalized.toLowerCase().endsWith('@lid')) return null;
+
+  const withoutSuffix = normalized.replace(/@c\.us$|@s\.whatsapp\.net$/i, '');
+  const digits = withoutSuffix.replace(/\D/g, '');
+  return digits || null;
+};
+
+const extractChatLid = (chatId: string): string | null => {
+  const normalized = chatId.trim();
+  if (!normalized) return null;
+  return normalized.toLowerCase().endsWith('@lid') ? normalized : null;
 };
 
 const toIsoString = (timestamp?: number): string | null =>
@@ -295,6 +422,8 @@ Deno.serve(async (req) => {
         id: chatId,
         name: chatName,
         is_group: isGroup,
+        phone_number: chatKind === 'direct' ? extractChatPhoneNumber(chatId) : null,
+        lid: chatKind === 'direct' ? extractChatLid(chatId) : null,
         last_message_at: lastMessageAt,
         updated_at: new Date().toISOString(),
       },

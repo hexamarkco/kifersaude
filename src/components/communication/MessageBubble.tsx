@@ -394,7 +394,7 @@ export function MessageBubble({
         payloadData?.image?.link;
       const imagePreview = payloadData?.image?.preview;
       const displayUrl = visualMediaUrl || imageUrl || imagePreview;
-      const shouldShowCaption = body && body !== '[Imagem]';
+      const shouldShowCaption = Boolean(resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]');
       return (
         <div className="space-y-2">
           {displayUrl ? (
@@ -430,8 +430,8 @@ export function MessageBubble({
               </div>
             </button>
           )}
-          {shouldShowCaption && body && (
-            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
+          {shouldShowCaption && resolvedBody && (
+            <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -439,7 +439,12 @@ export function MessageBubble({
 
     if (isVideoMessage) {
       const videoUrl = visualDisplayUrl;
-      const shouldShowCaption = body && body !== '[Vídeo]' && body !== '[Video]';
+      const shouldShowCaption = Boolean(
+        resolvedBody &&
+        resolvedBody !== '[Vídeo]' &&
+        resolvedBody !== '[Video]' &&
+        resolvedBody !== '[Vídeo de status]',
+      );
       const poster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
 
       return (
@@ -482,8 +487,8 @@ export function MessageBubble({
               </div>
             </button>
           )}
-          {shouldShowCaption && body && (
-            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
+          {shouldShowCaption && resolvedBody && (
+            <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -495,7 +500,7 @@ export function MessageBubble({
       const previewTitle = linkData?.title || (previewUrl ? previewUrl.replace(/^https?:\/\//i, '').split('/')[0] : 'Link');
       const previewDescription = linkData?.description || '';
       const previewImage = linkData?.preview || linkData?.image || linkData?.thumbnail || '';
-      const textBody = body && body !== previewUrl ? body : '';
+      const textBody = resolvedBody && resolvedBody !== previewUrl && resolvedBody !== '[Link]' ? resolvedBody : '';
 
       return (
         <div className="space-y-2">
@@ -583,8 +588,8 @@ export function MessageBubble({
             </div>
             {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
-          {body && body !== '[Mensagem de voz]' && body !== '[Áudio]' && (
-            <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />
+          {resolvedBody && resolvedBody !== '[Mensagem de voz]' && resolvedBody !== '[Áudio]' && (
+            <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -641,7 +646,7 @@ export function MessageBubble({
               </button>
             </div>
           </div>
-          {body && <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />}
+          {resolvedBody && <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />}
         </div>
       );
     }
@@ -660,7 +665,7 @@ export function MessageBubble({
               </div>
             </div>
           </div>
-          {body && <WhatsAppFormattedText text={body} className="text-sm whitespace-pre-wrap break-words" />}
+          {resolvedBody && <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />}
         </div>
       );
     }

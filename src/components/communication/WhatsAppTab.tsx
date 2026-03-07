@@ -2188,19 +2188,38 @@ export default function WhatsAppTab() {
     return payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
   };
 
+  const isEditActionMessage = (message: Pick<WhatsAppMessage, 'payload' | 'type'>) => {
+    const type = (message.type || '').toLowerCase();
+    if (type !== 'action') return false;
+
+    const payloadData = message.payload as any;
+    const actionType = String(payloadData?.action?.type || '').toLowerCase();
+    return (actionType === 'edit' || actionType === 'edited') && Boolean(payloadData?.action?.target);
+  };
+
   const getMessagePreview = (
     message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
   ) => {
     if (message.is_deleted) return 'Mensagem apagada';
+    if (isEditActionMessage(message)) return null;
+    if (isReactionOnlyMessage(message)) return null;
 
     const resolvedBody = resolveWhatsAppMessageBody({
       body: message.body,
       type: message.type,
       payload: message.payload,
     });
-    if (resolvedBody) return resolvedBody;
-
-    if (isReactionOnlyMessage(message)) return null;
+    if (resolvedBody) {
+      const normalizedResolved = resolvedBody.trim().toLowerCase();
+      if (
+        normalizedResolved === '[evento do whatsapp]' ||
+        normalizedResolved === '[atualização do whatsapp]' ||
+        normalizedResolved === '[mensagem não suportada]'
+      ) {
+        return null;
+      }
+      return resolvedBody;
+    }
 
     const type = (message.type || '').toLowerCase();
     if (type === 'image') return '[Imagem]';
@@ -2570,7 +2589,7 @@ export default function WhatsAppTab() {
   }, [messages]);
 
   const renderedMessages = useMemo(
-    () => messages.filter((message) => !isReactionOnlyMessage(message)),
+    () => messages.filter((message) => !isReactionOnlyMessage(message) && !isEditActionMessage(message)),
     [messages],
   );
 
@@ -2591,7 +2610,10 @@ export default function WhatsAppTab() {
       .filter((message) => {
         if (!message.direction) return false;
         const payloadData = message.payload as any;
-        return !(payloadData?.action?.type === 'reaction' && payloadData?.action?.target);
+        const actionType = String(payloadData?.action?.type || '').toLowerCase();
+        if (actionType === 'reaction' && payloadData?.action?.target) return false;
+        if ((actionType === 'edit' || actionType === 'edited') && payloadData?.action?.target) return false;
+        return true;
       })
       .sort(sortMessagesChronologically);
 
@@ -3010,6 +3032,36 @@ const mapReminderPriorityToSchedulerPriority = (priority?: string | null): 'norm
   return 'normal';
 };
 
+const reminderQuickOpenNameCollator = new Intl.Collator('pt-BR', {
+  sensitivity: 'base',
+  usage: 'sort',
+});
+
+const compareReminderQuickOpenItems = (left: ReminderQuickOpenItem, right: ReminderQuickOpenItem) => {
+  const leftDueAt = new Date(left.dueAt).getTime();
+  const rightDueAt = new Date(right.dueAt).getTime();
+  const leftHasValidDate = Number.isFinite(leftDueAt);
+  const rightHasValidDate = Number.isFinite(rightDueAt);
+
+  if (leftHasValidDate && rightHasValidDate && leftDueAt !== rightDueAt) {
+    return leftDueAt - rightDueAt;
+  }
+
+  if (leftHasValidDate !== rightHasValidDate) {
+    return leftHasValidDate ? -1 : 1;
+  }
+
+  const leftLabel = (left.leadName || left.title || '').trim();
+  const rightLabel = (right.leadName || right.title || '').trim();
+  const labelComparison = reminderQuickOpenNameCollator.compare(leftLabel, rightLabel);
+
+  if (labelComparison !== 0) {
+    return labelComparison;
+  }
+
+  return reminderQuickOpenNameCollator.compare(left.id, right.id);
+};
+
 const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   const referenceDate = new Date();
   const startOfToday = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
@@ -3058,6 +3110,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     }
 
     grouped.later.push(item);
+  });
+
+  (Object.keys(grouped) as ReminderQuickOpenPeriod[]).forEach((period) => {
+    grouped[period].sort(compareReminderQuickOpenItems);
   });
 
   return grouped;
@@ -3197,7 +3253,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           } as ReminderQuickOpenItem;
         })
         .filter((item): item is ReminderQuickOpenItem => Boolean(item))
-        .sort((left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime());
+        .sort(compareReminderQuickOpenItems);
 
       setReminderQuickOpenItems(items);
       reminderQuickOpenLastLoadedAtRef.current = Date.now();
@@ -3625,10 +3681,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     syncAllChatsProgress.total > 0
       ? Math.round((syncAllChatsProgress.completed / syncAllChatsProgress.total) * 100)
       : 0;
-  const groupedReminderQuickOpenItems = useMemo(
-    () => groupReminderQuickOpenItems(reminderQuickOpenItems),
-    [reminderQuickOpenItems],
-  );
+  const groupedReminderQuickOpenItems = groupReminderQuickOpenItems(reminderQuickOpenItems);
   const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
   const toggleReminderQuickOpenPeriod = (periodId: ReminderQuickOpenPeriod) => {
     setCollapsedReminderQuickOpenPeriods((current) => {

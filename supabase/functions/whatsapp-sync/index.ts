@@ -9,6 +9,7 @@ const corsHeaders = {
 type WhapiMessage = {
   id: string;
   type: string;
+  subtype?: string;
   chat_id: string;
   chat_name?: string;
   from?: string;
@@ -25,12 +26,20 @@ type WhapiMessage = {
   audio?: Record<string, unknown>;
   voice?: Record<string, unknown>;
   document?: { filename?: string; caption?: string };
+  link_preview?: { body?: string; title?: string; description?: string; url?: string };
   location?: Record<string, unknown>;
   live_location?: Record<string, unknown>;
   contact?: { name: string };
   contact_list?: { list: Array<{ name: string }> };
   sticker?: Record<string, unknown>;
-  action?: { type: string; emoji?: string; target?: string };
+  action?: {
+    type: string;
+    emoji?: string;
+    target?: string;
+    edited_type?: string;
+    edited_content?: Record<string, unknown>;
+    ephemeral?: number;
+  };
   reply?: {
     buttons_reply?: { title?: string };
     list_reply?: { title?: string; description?: string };
@@ -53,6 +62,9 @@ type WhapiMessage = {
     footer?: string;
     header?: { text?: string } | string;
     buttons?: Array<{ text?: string; title?: string; type?: string; id?: string; url?: string; phone_number?: string }>;
+  };
+  system?: {
+    body?: string;
   };
   group_invite?: Record<string, unknown>;
   poll?: { title: string };
@@ -92,7 +104,7 @@ const getChatIdKind = (chatId: string): ChatIdKind => {
   const normalized = chatId.trim().toLowerCase();
   if (!normalized) return 'unknown';
   if (normalized.endsWith('@g.us')) return 'group';
-  if (normalized === 'status@broadcast') return 'status';
+  if (normalized === 'status@broadcast' || normalized === 'stories') return 'status';
   if (normalized.endsWith('@newsletter')) return 'newsletter';
   if (normalized.endsWith('@broadcast')) return 'broadcast';
   if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net') || normalized.endsWith('@lid')) {
@@ -185,6 +197,123 @@ const mapStatusToAck = (status?: string): number | null => {
 
 const toCleanText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const toPayloadObject = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const extractContentBody = (content: unknown): string | null => {
+  const payload = toPayloadObject(content);
+  if (!payload) return null;
+
+  const bodyText = toCleanText(payload.body);
+  if (bodyText) return bodyText;
+
+  const captionText = toCleanText(payload.caption);
+  if (captionText) return captionText;
+
+  const textValue = toCleanText(payload.text);
+  if (textValue) return textValue;
+
+  const titleText = toCleanText(payload.title);
+  if (titleText) return titleText;
+
+  const descriptionText = toCleanText(payload.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = toCleanText(payload.url);
+  if (urlText) return urlText;
+
+  return null;
+};
+
+const normalizeActionType = (actionType: unknown): string => toCleanText(actionType).toLowerCase();
+
+const extractLinkPreviewBody = (message: WhapiMessage): string | null => {
+  const linkPreview = toPayloadObject(message.link_preview);
+  if (!linkPreview) return null;
+
+  const bodyText = toCleanText(linkPreview.body);
+  if (bodyText && bodyText !== '[link_preview]') return bodyText;
+
+  const titleText = toCleanText(linkPreview.title);
+  if (titleText) return titleText;
+
+  const descriptionText = toCleanText(linkPreview.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = toCleanText(linkPreview.url);
+  if (urlText) return urlText;
+
+  return '[Link]';
+};
+
+const extractSystemBody = (message: WhapiMessage): string | null => {
+  const directBody = toCleanText(message.system?.body);
+  if (directBody) {
+    return directBody;
+  }
+
+  const subtype = toCleanText(message.subtype).toLowerCase();
+  if (subtype === 'revoke') {
+    return '[Mensagem apagada]';
+  }
+  if (subtype === 'ciphertext') {
+    return '[Mensagem criptografada]';
+  }
+  if (subtype === 'ephemeral') {
+    return '[Mensagem temporária]';
+  }
+  if (subtype) {
+    return `[Sistema: ${subtype}]`;
+  }
+
+  return '[Evento do WhatsApp]';
+};
+
+const extractEditedActionBody = (message: WhapiMessage): string | null => {
+  const action = message.action;
+  if (!action) return null;
+
+  const actionType = normalizeActionType(action.type);
+  if (actionType !== 'edit' && actionType !== 'edited') {
+    return null;
+  }
+
+  const editedType = normalizeActionType(action.edited_type);
+  const editedContentBody = extractContentBody(action.edited_content);
+  if (editedContentBody) {
+    return editedContentBody;
+  }
+
+  const fallbackLabelByType: Record<string, string> = {
+    image: '[Imagem editada]',
+    video: '[Vídeo editado]',
+    short: '[Vídeo editado]',
+    gif: '[GIF editado]',
+    audio: '[Áudio editado]',
+    voice: '[Mensagem de voz editada]',
+    document: '[Documento editado]',
+    link_preview: '[Link editado]',
+    location: '[Localização editada]',
+    live_location: '[Localização ao vivo editada]',
+    contact: '[Contato editado]',
+    contact_list: '[Lista de contatos editada]',
+    sticker: '[Sticker editado]',
+    hsm: '[Template editado]',
+    interactive: '[Mensagem interativa editada]',
+    poll: '[Enquete editada]',
+    order: '[Pedido editado]',
+    product: '[Produto editado]',
+    story: '[Status editado]',
+    text: '[Mensagem editada]',
+  };
+
+  if (editedType && fallbackLabelByType[editedType]) {
+    return fallbackLabelByType[editedType];
+  }
+
+  return '[Mensagem editada]';
+};
+
 const extractInteractiveBody = (message: WhapiMessage): string | null => {
   const interactive = message.interactive;
   if (!interactive) return null;
@@ -259,8 +388,17 @@ const extractReplyBody = (message: WhapiMessage): string | null => {
 
 const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: boolean } => {
   if (message.text?.body) return { body: message.text.body, hasMedia: false };
-  if (message.image) return { body: message.image.caption || '[Imagem]', hasMedia: true };
-  if (message.video) return { body: message.video.caption || '[Vídeo]', hasMedia: true };
+  const linkPreviewBody = extractLinkPreviewBody(message);
+  if (message.link_preview) return { body: linkPreviewBody || '[Link]', hasMedia: true };
+  if (message.image) {
+    const fallback = message.type === 'story' ? '[Imagem de status]' : '[Imagem]';
+    return { body: message.image.caption || fallback, hasMedia: true };
+  }
+  if (message.video) {
+    const fallback = message.type === 'story' ? '[Vídeo de status]' : '[Vídeo]';
+    return { body: message.video.caption || fallback, hasMedia: true };
+  }
+  if (message.type === 'short' || message.type === 'gif') return { body: '[Vídeo]', hasMedia: true };
   if (message.audio) return { body: '[Áudio]', hasMedia: true };
   if (message.voice) return { body: '[Mensagem de voz]', hasMedia: true };
   if (message.document) {
@@ -276,17 +414,36 @@ const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: bool
   if (message.contact) return { body: `[Contato: ${message.contact.name}]`, hasMedia: false };
   if (message.contact_list) return { body: `[${message.contact_list.list.length} contato(s)]`, hasMedia: false };
   if (message.sticker) return { body: '[Sticker]', hasMedia: true };
-  if (message.action?.type === 'reaction') return { body: `Reagiu com ${message.action.emoji || ''}`, hasMedia: false };
-  if (message.action?.type === 'delete') return { body: '[Mensagem apagada]', hasMedia: false };
-  if (message.action?.type === 'edit') return { body: message.text?.body || '', hasMedia: false };
+  if (message.action) {
+    const actionType = normalizeActionType(message.action.type);
+    if (actionType === 'reaction') {
+      const emoji = toCleanText(message.action.emoji);
+      if (emoji) return { body: `Reagiu com ${emoji}`, hasMedia: false };
+      return { body: '[Reação removida]', hasMedia: false };
+    }
+    if (actionType === 'delete') return { body: '[Mensagem apagada]', hasMedia: false };
+    if (actionType === 'vote') return { body: '[Votou em enquete]', hasMedia: false };
+    if (actionType === 'ephemeral') return { body: '[Configuração de mensagens temporárias]', hasMedia: false };
+
+    const editedBody = extractEditedActionBody(message);
+    if (editedBody) return { body: editedBody, hasMedia: false };
+
+    return { body: `[Ação: ${message.action.type}]`, hasMedia: false };
+  }
   const replyBody = extractReplyBody(message);
   if (replyBody) return { body: replyBody, hasMedia: false };
   const interactiveBody = extractInteractiveBody(message);
   if (interactiveBody) return { body: interactiveBody, hasMedia: false };
   const hsmBody = extractHsmBody(message);
   if (hsmBody) return { body: hsmBody, hasMedia: false };
+  if (message.type === 'system') return { body: extractSystemBody(message) || '[Evento do WhatsApp]', hasMedia: false };
   if (message.type === 'interactive') return { body: '[Mensagem interativa]', hasMedia: false };
   if (message.type === 'hsm') return { body: '[Template WhatsApp]', hasMedia: false };
+  if (message.type === 'link_preview') return { body: linkPreviewBody || '[Link]', hasMedia: true };
+  if (message.type === 'story') return { body: '[Status]', hasMedia: false };
+  if (message.type === 'call') return { body: '[Ligação do WhatsApp]', hasMedia: false };
+  if (message.type === 'revoked') return { body: '[Mensagem apagada]', hasMedia: false };
+  if (message.type === 'unknown') return { body: '[Mensagem não suportada]', hasMedia: false };
   if (message.group_invite) return { body: '[Convite para grupo]', hasMedia: false };
   if (message.poll) return { body: `[Enquete: ${message.poll.title}]`, hasMedia: false };
   if (message.product) return { body: '[Produto do catálogo]', hasMedia: false };
@@ -437,7 +594,13 @@ Deno.serve(async (req) => {
         .eq('id', chatId);
     }
 
-    const normalized = messages.map((message) => {
+    const normalized = messages
+      .filter((message) => {
+        if (message.type !== 'action') return true;
+        const actionType = normalizeActionType(message.action?.type);
+        return actionType !== 'edit' && actionType !== 'edited';
+      })
+      .map((message) => {
       const direction = message.from_me ? 'outbound' : 'inbound';
       const { body, hasMedia } = buildMessageBody(message);
       const messageChatId =

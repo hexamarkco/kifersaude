@@ -22,10 +22,18 @@ export function getWhatsAppChatKind(chatId: string): WhatsAppChatKind {
   if (!normalized) return 'unknown';
 
   if (normalized.endsWith(GROUP_CHAT_SUFFIX)) return 'group';
-  if (normalized === STATUS_CHAT_ID) return 'status';
+  if (normalized === STATUS_CHAT_ID || normalized === 'stories') return 'status';
   if (normalized.endsWith(NEWSLETTER_CHAT_SUFFIX)) return 'newsletter';
   if (normalized.endsWith(BROADCAST_CHAT_SUFFIX)) return 'broadcast';
   if (DIRECT_CHAT_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return 'direct';
+
+  if (!normalized.includes('@')) {
+    const digits = normalized.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      return 'direct';
+    }
+  }
+
   return 'unknown';
 }
 

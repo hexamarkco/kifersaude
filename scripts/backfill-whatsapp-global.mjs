@@ -56,9 +56,51 @@ const cleanText = (value) => (typeof value === 'string' ? value.trim() : '');
 const isPlaceholderBody = (body, type) => {
   const normalized = cleanText(body).toLowerCase();
   if (!normalized) return false;
-  if (normalized === '[hsm]' || normalized === '[interactive]' || normalized === '[reply]') return true;
+
+  if (
+    normalized === '[hsm]' ||
+    normalized === '[interactive]' ||
+    normalized === '[reply]' ||
+    normalized === '[system]' ||
+    normalized === '[unknown]' ||
+    normalized === '[story]' ||
+    normalized === '[link_preview]' ||
+    normalized === '[call]'
+  ) {
+    return true;
+  }
+
   return Boolean(type) && normalized === `[${type}]`;
 };
+
+const toRecord = (value) => (value && typeof value === 'object' ? value : null);
+
+const extractContentBody = (content) => {
+  const payload = toRecord(content);
+  if (!payload) return null;
+
+  const bodyText = cleanText(payload.body);
+  if (bodyText) return bodyText;
+
+  const captionText = cleanText(payload.caption);
+  if (captionText) return captionText;
+
+  const textValue = cleanText(payload.text);
+  if (textValue) return textValue;
+
+  const titleText = cleanText(payload.title);
+  if (titleText) return titleText;
+
+  const descriptionText = cleanText(payload.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = cleanText(payload.url);
+  if (urlText) return urlText;
+
+  return null;
+};
+
+const normalizeActionType = (value) => cleanText(value).toLowerCase();
 
 const extractReplyBody = (payload) => {
   const buttonTitle = cleanText(payload?.reply?.buttons_reply?.title);
@@ -123,6 +165,104 @@ const extractHsmBody = (payload) => {
   return summary.length > 0 ? `Template: ${summary.join(' - ')}` : null;
 };
 
+const extractLinkPreviewBody = (payload) => {
+  const linkPreview =
+    payload?.link_preview && typeof payload.link_preview === 'object'
+      ? payload.link_preview
+      : payload?.type === 'link_preview'
+        ? payload
+        : null;
+
+  if (!linkPreview) return null;
+
+  const bodyText = cleanText(linkPreview.body);
+  if (bodyText && bodyText !== '[link_preview]') return bodyText;
+
+  const titleText = cleanText(linkPreview.title);
+  if (titleText) return titleText;
+
+  const descriptionText = cleanText(linkPreview.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = cleanText(linkPreview.url || linkPreview.link || linkPreview.canonical);
+  if (urlText) return urlText;
+
+  return '[Link]';
+};
+
+const extractEditedActionBody = (payload) => {
+  const actionType = normalizeActionType(payload?.action?.type);
+  if (actionType !== 'edit' && actionType !== 'edited') {
+    return null;
+  }
+
+  const editedType = normalizeActionType(payload?.action?.edited_type);
+  const editedContentBody = extractContentBody(payload?.action?.edited_content);
+  if (editedContentBody) {
+    return editedContentBody;
+  }
+
+  const fallbackLabelByType = {
+    image: '[Imagem editada]',
+    video: '[Vídeo editado]',
+    short: '[Vídeo editado]',
+    gif: '[GIF editado]',
+    audio: '[Áudio editado]',
+    voice: '[Mensagem de voz editada]',
+    document: '[Documento editado]',
+    link_preview: '[Link editado]',
+    location: '[Localização editada]',
+    live_location: '[Localização ao vivo editada]',
+    contact: '[Contato editado]',
+    contact_list: '[Lista de contatos editada]',
+    sticker: '[Sticker editado]',
+    hsm: '[Template editado]',
+    interactive: '[Mensagem interativa editada]',
+    poll: '[Enquete editada]',
+    order: '[Pedido editado]',
+    product: '[Produto editado]',
+    story: '[Status editado]',
+    text: '[Mensagem editada]',
+  };
+
+  if (editedType && fallbackLabelByType[editedType]) {
+    return fallbackLabelByType[editedType];
+  }
+
+  return '[Mensagem editada]';
+};
+
+const extractSystemBody = (payload) => {
+  const directBody = cleanText(payload?.system?.body);
+  if (directBody) return directBody;
+
+  const subtype = cleanText(payload?.subtype).toLowerCase();
+  if (subtype === 'revoke') return '[Mensagem apagada]';
+  if (subtype === 'ciphertext') return '[Mensagem criptografada]';
+  if (subtype === 'ephemeral') return '[Mensagem temporária]';
+  if (subtype) return `[Sistema: ${subtype}]`;
+
+  return '[Evento do WhatsApp]';
+};
+
+const extractStoryBody = (payload) => {
+  if (cleanText(payload?.type).toLowerCase() !== 'story') {
+    return null;
+  }
+
+  const textBody = cleanText(payload?.text?.body);
+  if (textBody) return textBody;
+
+  const linkPreviewBody = extractLinkPreviewBody(payload);
+  if (linkPreviewBody) return linkPreviewBody;
+
+  if (normalizeActionType(payload?.action?.type) === 'delete') {
+    return '[Status apagado]';
+  }
+
+  return '[Status]';
+};
+
 const resolveBodyFromPayload = (row) => {
   const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
 
@@ -135,9 +275,30 @@ const resolveBodyFromPayload = (row) => {
   const hsmBody = extractHsmBody(payload);
   if (hsmBody) return hsmBody;
 
+  const editedActionBody = extractEditedActionBody(payload);
+  if (editedActionBody) return editedActionBody;
+
+  const linkPreviewBody = extractLinkPreviewBody(payload);
+  if (linkPreviewBody) return linkPreviewBody;
+
+  const systemBody = extractSystemBody(payload);
+
+  const storyBody = extractStoryBody(payload);
+  if (storyBody) return storyBody;
+
   const type = cleanText(row?.type).toLowerCase();
+  if (type === 'system') return systemBody;
   if (type === 'interactive') return '[Mensagem interativa]';
   if (type === 'hsm') return '[Template WhatsApp]';
+  if (type === 'link_preview') return linkPreviewBody || '[Link]';
+  if (type === 'story') return '[Status]';
+  if (type === 'call') return '[Ligação do WhatsApp]';
+  if (type === 'revoked') return '[Mensagem apagada]';
+  if (type === 'unknown') return '[Mensagem não suportada]';
+
+  if (normalizeActionType(payload?.action?.type) === 'reaction' && !cleanText(payload?.action?.emoji)) {
+    return '[Reação removida]';
+  }
 
   return null;
 };
@@ -150,7 +311,10 @@ const shouldUpdateBody = (row, nextBody) => {
 
   if (!currentBody) return true;
   if (isPlaceholderBody(currentBody, type)) return true;
-  if (type === 'hsm' || type === 'interactive' || type === 'reply') return true;
+  if (/^reagiu com\s*$/i.test(currentBody)) return true;
+  if (['hsm', 'interactive', 'reply', 'action', 'system', 'unknown', 'story', 'link_preview'].includes(type)) {
+    return true;
+  }
 
   return false;
 };

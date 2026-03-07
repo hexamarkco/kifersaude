@@ -869,33 +869,64 @@ export default function RemindersManagerEnhanced() {
     setExpandedPeriods(newExpanded);
   };
 
-  const filteredReminders = reminders.filter(reminder => {
-    if (filter === 'nao-lidos' && reminder.lido) {
-      return false;
-    }
-    if (filter === 'lidos' && !reminder.lido) {
-      return false;
+  const compareRemindersByDueAtThenAlphabetical = (left: Reminder, right: Reminder) => {
+    const leftDueAt = new Date(left.data_lembrete).getTime();
+    const rightDueAt = new Date(right.data_lembrete).getTime();
+    const leftHasValidDate = Number.isFinite(leftDueAt);
+    const rightHasValidDate = Number.isFinite(rightDueAt);
+    const leftLeadId = getLeadIdForReminder(left);
+    const rightLeadId = getLeadIdForReminder(right);
+
+    if (leftHasValidDate && rightHasValidDate && leftDueAt !== rightDueAt) {
+      return leftDueAt - rightDueAt;
     }
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        reminder.titulo.toLowerCase().includes(query) ||
-        (reminder.descricao && reminder.descricao.toLowerCase().includes(query)) ||
-        reminder.tipo.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
+    if (leftHasValidDate !== rightHasValidDate) {
+      return leftHasValidDate ? -1 : 1;
     }
 
-    if (typeFilter !== 'all' && reminder.tipo !== typeFilter) {
-      return false;
+    const leftLeadName = leftLeadId ? leadsMap.get(leftLeadId)?.nome_completo : '';
+    const rightLeadName = rightLeadId ? leadsMap.get(rightLeadId)?.nome_completo : '';
+    const leftLabel = (leftLeadName || left.titulo || '').trim();
+    const rightLabel = (rightLeadName || right.titulo || '').trim();
+    const labelComparison = leftLabel.localeCompare(rightLabel, 'pt-BR', { sensitivity: 'base' });
+
+    if (labelComparison !== 0) {
+      return labelComparison;
     }
 
-    if (priorityFilter !== 'all' && reminder.prioridade !== priorityFilter) {
-      return false;
-    }
+    return left.id.localeCompare(right.id, 'pt-BR', { sensitivity: 'base' });
+  };
 
-    return true;
-  });
+  const filteredReminders = reminders
+    .filter(reminder => {
+      if (filter === 'nao-lidos' && reminder.lido) {
+        return false;
+      }
+      if (filter === 'lidos' && !reminder.lido) {
+        return false;
+      }
+
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          reminder.titulo.toLowerCase().includes(query) ||
+          (reminder.descricao && reminder.descricao.toLowerCase().includes(query)) ||
+          reminder.tipo.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      if (typeFilter !== 'all' && reminder.tipo !== typeFilter) {
+        return false;
+      }
+
+      if (priorityFilter !== 'all' && reminder.prioridade !== priorityFilter) {
+        return false;
+      }
+
+      return true;
+    })
+    .sort(compareRemindersByDueAtThenAlphabetical);
 
   const groupedReminders = groupRemindersByPeriod(filteredReminders);
 
@@ -1088,23 +1119,23 @@ export default function RemindersManagerEnhanced() {
             <Button
               onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
               variant="info"
-              size="sm"
-              className="h-9 border-sky-600 bg-sky-600 text-white hover:border-sky-700 hover:bg-sky-700"
+              size="icon"
+              className="h-9 w-9 border-sky-600 bg-sky-600 text-white hover:border-sky-700 hover:bg-sky-700"
               title="Abrir /painel/whatsapp"
+              aria-label="Abrir /painel/whatsapp"
             >
               <MessageCircle className="h-4 w-4" />
-              <span>Painel WhatsApp</span>
             </Button>
             <Button
               onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
               disabled={!hasLeadPhone}
               variant="success"
-              size="sm"
-              className="h-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+              size="icon"
+              className="h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
               title={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone não disponível'}
+              aria-label={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone não disponível'}
             >
               <ExternalLink className="h-4 w-4" />
-              <span>WhatsApp oficial</span>
             </Button>
             {!reminder.lido && (
               <>
@@ -1112,71 +1143,77 @@ export default function RemindersManagerEnhanced() {
                   onClick={() => handleQuickSchedule(reminder, 1)}
                   disabled={isQuickSchedulingCurrentReminder}
                   variant="soft"
-                  size="sm"
-                  className="h-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
-                  title="Agendar para 1 dia e marcar atual como lido"
+                  size="icon"
+                  className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
+                  title="Agendar +1 dia e marcar atual como lido"
+                  aria-label="Agendar +1 dia e marcar atual como lido"
                 >
                   {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <CalendarPlus className="h-4 w-4" />
+                    <span className="relative inline-flex">
+                      <CalendarPlus className="h-4 w-4" />
+                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                        1
+                      </span>
+                    </span>
                   )}
-                  <span>Agendar +1 dia</span>
                 </Button>
                 <Button
                   onClick={() => handleQuickSchedule(reminder, 2)}
                   disabled={isQuickSchedulingCurrentReminder}
                   variant="soft"
-                  size="sm"
-                  className="h-9 border-cyan-500 bg-cyan-500 text-white hover:border-cyan-600 hover:bg-cyan-600"
-                  title="Agendar para 2 dias e marcar atual como lido"
+                  size="icon"
+                  className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
+                  title="Agendar +2 dias e marcar atual como lido"
+                  aria-label="Agendar +2 dias e marcar atual como lido"
                 >
                   {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <CalendarPlus className="h-4 w-4" />
+                    <span className="relative inline-flex">
+                      <CalendarPlus className="h-4 w-4" />
+                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                        2
+                      </span>
+                    </span>
                   )}
-                  <span>Agendar +2 dias</span>
                 </Button>
               </>
             )}
             <Button
               onClick={() => handleMarkAsRead(reminder.id, reminder.lido)}
-              variant={reminder.lido ? 'secondary' : 'success'}
-              size="sm"
-              className={`h-9 ${
-                reminder.lido
-                  ? 'border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-slate-200'
-                  : 'border-lime-600 bg-lime-600 text-white hover:border-lime-700 hover:bg-lime-700'
-              }`}
+              variant="soft"
+              size="icon"
+              className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
               title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
+              aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
             >
               <Check className="h-4 w-4" />
-              <span>{reminder.lido ? 'Marcar não lido' : 'Marcar lido'}</span>
             </Button>
             {leadIdForReminder && (
               <Button
                 onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
                 variant="danger"
-                size="sm"
-                className="h-9 border-rose-600 bg-rose-600 text-white hover:border-rose-700 hover:bg-rose-700"
+                size="icon"
+                className="h-9 w-9 border-rose-600 bg-rose-600 text-white hover:border-rose-700 hover:bg-rose-700"
                 title="Marcar lead como perdido e limpar lembretes"
+                aria-label="Marcar lead como perdido e limpar lembretes"
                 disabled={markingLostLeadId === leadIdForReminder}
                 loading={markingLostLeadId === leadIdForReminder}
               >
                 {markingLostLeadId !== leadIdForReminder && <X className="h-4 w-4" />}
-                <span>Perdido + limpar</span>
               </Button>
             )}
             <Button
               onClick={() => handleDelete(reminder.id)}
               variant="danger"
-              size="sm"
-              className="h-9 border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+              size="icon"
+              className="h-9 w-9 border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
               title="Excluir lembrete"
+              aria-label="Excluir lembrete"
             >
               <Trash2 className="h-4 w-4" />
-              <span>Excluir</span>
             </Button>
           </div>
         </div>

@@ -432,6 +432,125 @@ function toCleanText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function toPayloadObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function extractContentBody(content: unknown): string | null {
+  const payload = toPayloadObject(content);
+  if (!payload) return null;
+
+  const bodyText = toCleanText(payload.body);
+  if (bodyText) return bodyText;
+
+  const captionText = toCleanText(payload.caption);
+  if (captionText) return captionText;
+
+  const textValue = toCleanText(payload.text);
+  if (textValue) return textValue;
+
+  const titleText = toCleanText(payload.title);
+  if (titleText) return titleText;
+
+  const descriptionText = toCleanText(payload.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = toCleanText(payload.url);
+  if (urlText) return urlText;
+
+  return null;
+}
+
+function normalizeActionType(actionType: unknown): string {
+  return toCleanText(actionType).toLowerCase();
+}
+
+function extractLinkPreviewBody(message: WhapiMessage): string | null {
+  if (!message.link_preview) return null;
+
+  const bodyText = toCleanText(message.link_preview.body);
+  if (bodyText && bodyText !== '[link_preview]') return bodyText;
+
+  const titleText = toCleanText(message.link_preview.title);
+  if (titleText) return titleText;
+
+  const descriptionText = toCleanText(message.link_preview.description);
+  if (descriptionText) return descriptionText;
+
+  const urlText = toCleanText(message.link_preview.url);
+  if (urlText) return urlText;
+
+  return '[Link]';
+}
+
+function extractSystemBody(message: WhapiMessage): string | null {
+  const directBody = toCleanText(message.system?.body);
+  if (directBody) {
+    return directBody;
+  }
+
+  const subtype = toCleanText(message.subtype).toLowerCase();
+  if (subtype === 'revoke') {
+    return '[Mensagem apagada]';
+  }
+  if (subtype === 'ciphertext') {
+    return '[Mensagem criptografada]';
+  }
+  if (subtype === 'ephemeral') {
+    return '[Mensagem temporária]';
+  }
+  if (subtype) {
+    return `[Sistema: ${subtype}]`;
+  }
+
+  return '[Evento do WhatsApp]';
+}
+
+function extractEditedActionBody(message: WhapiMessage): string | null {
+  const action = message.action;
+  if (!action) return null;
+
+  const actionType = normalizeActionType(action.type);
+  if (actionType !== 'edit' && actionType !== 'edited') {
+    return null;
+  }
+
+  const editedType = normalizeActionType(action.edited_type);
+  const editedContentBody = extractContentBody(action.edited_content);
+  if (editedContentBody) {
+    return editedContentBody;
+  }
+
+  const fallbackLabelByType: Record<string, string> = {
+    image: '[Imagem editada]',
+    video: '[Vídeo editado]',
+    short: '[Vídeo editado]',
+    gif: '[GIF editado]',
+    audio: '[Áudio editado]',
+    voice: '[Mensagem de voz editada]',
+    document: '[Documento editado]',
+    link_preview: '[Link editado]',
+    location: '[Localização editada]',
+    live_location: '[Localização ao vivo editada]',
+    contact: '[Contato editado]',
+    contact_list: '[Lista de contatos editada]',
+    sticker: '[Sticker editado]',
+    hsm: '[Template editado]',
+    interactive: '[Mensagem interativa editada]',
+    poll: '[Enquete editada]',
+    order: '[Pedido editado]',
+    product: '[Produto editado]',
+    story: '[Status editado]',
+    text: '[Mensagem editada]',
+  };
+
+  if (editedType && fallbackLabelByType[editedType]) {
+    return fallbackLabelByType[editedType];
+  }
+
+  return '[Mensagem editada]';
+}
+
 function extractInteractiveBody(message: WhapiMessage): string | null {
   const interactive = message.interactive;
   if (!interactive) return null;
@@ -511,16 +630,23 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
     return { body: message.text.body, hasMedia: false };
   }
 
+  const linkPreviewBody = extractLinkPreviewBody(message);
   if (message.link_preview) {
-    return { body: message.link_preview.body, hasMedia: true };
+    return { body: linkPreviewBody || '[Link]', hasMedia: true };
   }
 
   if (message.image) {
-    return { body: message.image.caption || '[Imagem]', hasMedia: true };
+    const fallback = message.type === 'story' ? '[Imagem de status]' : '[Imagem]';
+    return { body: message.image.caption || fallback, hasMedia: true };
   }
 
   if (message.video) {
-    return { body: message.video.caption || '[Vídeo]', hasMedia: true };
+    const fallback = message.type === 'story' ? '[Vídeo de status]' : '[Vídeo]';
+    return { body: message.video.caption || fallback, hasMedia: true };
+  }
+
+  if (message.type === 'short' || message.type === 'gif') {
+    return { body: '[Vídeo]', hasMedia: true };
   }
 
   if (message.audio) {
@@ -562,18 +688,33 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
   }
 
   if (message.action) {
-    if (message.action.type === 'reaction') {
-      return { body: `Reagiu com ${message.action.emoji || ''}`, hasMedia: false };
+    const actionType = normalizeActionType(message.action.type);
+
+    if (actionType === 'reaction') {
+      const emoji = toCleanText(message.action.emoji);
+      if (emoji) {
+        return { body: `Reagiu com ${emoji}`, hasMedia: false };
+      }
+      return { body: '[Reação removida]', hasMedia: false };
     }
-    if (message.action.type === 'delete') {
+
+    if (actionType === 'delete') {
       return { body: '[Mensagem apagada]', hasMedia: false };
     }
-    if (message.action.type === 'vote') {
+
+    if (actionType === 'vote') {
       return { body: '[Votou em enquete]', hasMedia: false };
     }
-    if (message.action.type === 'edit') {
-      return { body: message.text?.body || '', hasMedia: false };
+
+    if (actionType === 'ephemeral') {
+      return { body: '[Configuração de mensagens temporárias]', hasMedia: false };
     }
+
+    const editedBody = extractEditedActionBody(message);
+    if (editedBody) {
+      return { body: editedBody, hasMedia: false };
+    }
+
     return { body: `[Ação: ${message.action.type}]`, hasMedia: false };
   }
 
@@ -592,12 +733,36 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
     return { body: hsmBody, hasMedia: false };
   }
 
+  if (message.type === 'system') {
+    return { body: extractSystemBody(message) || '[Evento do WhatsApp]', hasMedia: false };
+  }
+
   if (message.type === 'interactive') {
     return { body: '[Mensagem interativa]', hasMedia: false };
   }
 
   if (message.type === 'hsm') {
     return { body: '[Template WhatsApp]', hasMedia: false };
+  }
+
+  if (message.type === 'link_preview') {
+    return { body: linkPreviewBody || '[Link]', hasMedia: true };
+  }
+
+  if (message.type === 'story') {
+    return { body: '[Status]', hasMedia: false };
+  }
+
+  if (message.type === 'call') {
+    return { body: '[Ligação do WhatsApp]', hasMedia: false };
+  }
+
+  if (message.type === 'revoked') {
+    return { body: '[Mensagem apagada]', hasMedia: false };
+  }
+
+  if (message.type === 'unknown') {
+    return { body: '[Mensagem não suportada]', hasMedia: false };
   }
 
   if (message.group_invite) {
@@ -721,7 +886,7 @@ function resolveStatusAck(status?: string | null, code?: number | string | null)
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
   const normalized = chatId.trim().toLowerCase();
   if (normalized.endsWith('@g.us')) return 'group';
-  if (normalized === 'status@broadcast') return 'status';
+  if (normalized === 'status@broadcast' || normalized === 'stories') return 'status';
   if (normalized.endsWith('@newsletter')) return 'newsletter';
   if (normalized.endsWith('@broadcast')) return 'broadcast';
   if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net')) return 'phone';
@@ -895,6 +1060,10 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
   }
 
   if (chatType === 'newsletter' || chatType === 'broadcast' || chatType === 'status') {
+    if (chatType === 'status') {
+      return 'Status';
+    }
+
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
       .select('name')
@@ -908,10 +1077,6 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
     const channelName = message.chatName?.trim() || message.contactName?.trim();
     if (channelName && channelName !== message.chatId) {
       return channelName;
-    }
-
-    if (chatType === 'status') {
-      return 'Status';
     }
 
     if (chatType === 'newsletter') {

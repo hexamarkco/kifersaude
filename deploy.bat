@@ -25,6 +25,8 @@ if "%DB_PASSWORD%"=="" (
 )
 
 echo === Deploy Edge Functions ===
+supabase functions deploy whatsapp-webhook --no-verify-jwt
+supabase functions deploy create-initial-admin --no-verify-jwt
 supabase functions deploy leads-api
 supabase functions deploy whatsapp-sync
 supabase functions deploy whatsapp-sync-contact-photos

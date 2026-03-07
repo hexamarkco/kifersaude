@@ -3400,7 +3400,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     }
   };
 
-  const handleMarkLeadAsLostAndDeleteFutureReminders = async (item: ReminderQuickOpenItem) => {
+  const handleMarkLeadAsLostAndClearPendingReminders = async (item: ReminderQuickOpenItem) => {
     if (markingLostLeadId === item.leadId) return;
 
     const leadFromList = leadsList.find((lead) => lead.id === item.leadId);
@@ -3409,7 +3409,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
     const confirmed = await requestConfirmation({
       title: 'Marcar lead como perdido',
-      description: `Deseja marcar ${leadName} como perdido e deletar todos os lembretes futuros?`,
+      description: `Deseja marcar ${leadName} como perdido e limpar todos os lembretes pendentes?`,
       confirmLabel: 'Marcar como perdido',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -3421,9 +3421,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
     try {
       const nowIso = new Date().toISOString();
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const cutoffIso = startOfToday.toISOString();
 
       const { error: updateLeadError } = await supabase
         .from('leads')
@@ -3456,7 +3453,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         .select('id')
         .eq('lido', false)
         .eq('lead_id', item.leadId)
-        .gte('data_lembrete', cutoffIso)
         .limit(1000);
 
       if (leadRemindersError) throw leadRemindersError;
@@ -3486,7 +3482,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             .select('id')
             .eq('lido', false)
             .in('contract_id', contractChunk)
-            .gte('data_lembrete', cutoffIso)
             .limit(1000);
 
           if (contractRemindersError) throw contractRemindersError;
@@ -3970,15 +3965,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   <Button
                                     type="button"
                                     onClick={() => {
-                                      void handleMarkLeadAsLostAndDeleteFutureReminders(item);
+                                      void handleMarkLeadAsLostAndClearPendingReminders(item);
                                     }}
                                     loading={markingLostLeadId === item.leadId}
                                     disabled={Boolean((markingLostLeadId && markingLostLeadId !== item.leadId) || markingReminderReadId)}
                                     variant="danger"
                                     size="icon"
                                     className="h-9 w-9"
-                                    title="Marcar como perdido e deletar lembretes futuros"
-                                    aria-label="Marcar como perdido e deletar lembretes futuros"
+                                    title="Marcar como perdido e limpar lembretes pendentes"
+                                    aria-label="Marcar como perdido e limpar lembretes pendentes"
                                   >
                                     {markingLostLeadId !== item.leadId && <X className="h-4 w-4" />}
                                   </Button>

@@ -86,10 +86,29 @@ if (( ${#function_paths[@]} == 0 )); then
 fi
 
 deployed_count=0
+NO_VERIFY_JWT_FUNCTIONS=(
+  "whatsapp-webhook"
+  "create-initial-admin"
+)
+
 for function_path in "${function_paths[@]}"; do
   function_name="$(basename "$function_path")"
-  echo "=== Deploy da function: $function_name ==="
-  supabase functions deploy "$function_name"
+  deploy_args=()
+
+  for no_verify_name in "${NO_VERIFY_JWT_FUNCTIONS[@]}"; do
+    if [[ "$function_name" == "$no_verify_name" ]]; then
+      deploy_args+=("--no-verify-jwt")
+      break
+    fi
+  done
+
+  if (( ${#deploy_args[@]} > 0 )); then
+    echo "=== Deploy da function: $function_name (JWT sem verificacao) ==="
+  else
+    echo "=== Deploy da function: $function_name (JWT padrao) ==="
+  fi
+
+  supabase functions deploy "$function_name" "${deploy_args[@]}"
   deployed_count=$((deployed_count + 1))
 done
 

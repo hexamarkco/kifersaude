@@ -39,11 +39,11 @@ loadEnvFile('.env');
 loadEnvFile('.env.local');
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error(
-    'Variaveis ausentes. Defina SUPABASE_URL (ou VITE_SUPABASE_URL) e SUPABASE_SERVICE_ROLE_KEY para executar o backfill.',
+    'Variaveis ausentes. Defina SUPABASE_URL (ou VITE_SUPABASE_URL) e SUPABASE_SERVICE_ROLE_KEY (ou VITE_SUPABASE_SERVICE_ROLE_KEY) para executar o backfill.',
   );
 }
 
@@ -229,9 +229,12 @@ async function backfillMessages() {
     });
 
     if (updates.length > 0 && !dryRun) {
-      const { error: updateError } = await supabase.from('whatsapp_messages').upsert(updates, { onConflict: 'id' });
-      if (updateError) {
-        throw new Error(`Erro ao atualizar lote de mensagens no offset ${offset}: ${updateError.message}`);
+      for (const update of updates) {
+        const { id, ...fields } = update;
+        const { error: updateError } = await supabase.from('whatsapp_messages').update(fields).eq('id', id);
+        if (updateError) {
+          throw new Error(`Erro ao atualizar mensagem ${id} no offset ${offset}: ${updateError.message}`);
+        }
       }
     }
 
@@ -295,9 +298,12 @@ async function backfillChats() {
     });
 
     if (updates.length > 0 && !dryRun) {
-      const { error: updateError } = await supabase.from('whatsapp_chats').upsert(updates, { onConflict: 'id' });
-      if (updateError) {
-        throw new Error(`Erro ao atualizar lote de chats no offset ${offset}: ${updateError.message}`);
+      for (const update of updates) {
+        const { id, ...fields } = update;
+        const { error: updateError } = await supabase.from('whatsapp_chats').update(fields).eq('id', id);
+        if (updateError) {
+          throw new Error(`Erro ao atualizar chat ${id} no offset ${offset}: ${updateError.message}`);
+        }
       }
     }
 

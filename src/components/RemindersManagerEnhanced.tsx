@@ -3,18 +3,16 @@ import { gsap } from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
 import {
-  Bell, Check, Trash2, AlertCircle, Calendar, Clock, Search,
+  Bell, Check, Trash2, AlertCircle, Calendar, Search,
   CheckSquare, Square, Timer, ExternalLink, BarChart3,
-  ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2, MessageSquare,
-  RefreshCw, Sparkles, Copy, CalendarPlus,
+  ChevronDown, ChevronUp, Tag, X, MessageCircle, Loader2, CalendarPlus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
+import { formatDateTimeFullBR, isOverdue } from '../lib/dateUtils';
 import {
   groupRemindersByPeriod,
   getPeriodLabel,
   getPeriodColor,
-  calculateSnoozeTime,
   getUrgencyLevel,
   getUrgencyStyles,
   formatEstimatedTime,
@@ -26,11 +24,9 @@ import ReminderSchedulerModal from './ReminderSchedulerModal';
 import LeadForm from './LeadForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
-import { getWhatsAppMessageHistory, normalizeChatId, type WhapiMessage } from '../lib/whatsappApiService';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
 import Button from './ui/Button';
-import DateTimePicker from './ui/DateTimePicker';
 import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 import { RemindersPageSkeleton } from './ui/panelSkeletons';
@@ -40,29 +36,13 @@ const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
 
   const normalized = phone.replace(/\D/g, '');
-  return normalized ? `https://wa.me/55${normalized}` : null;
+  if (!normalized) return null;
+
+  const phoneWithCountryCode = normalized.startsWith('55') ? normalized : `55${normalized}`;
+  return `https://wa.me/${phoneWithCountryCode}`;
 };
 
 const normalizeLeadPhone = (phone: string | null | undefined) => phone?.replace(/\D/g, '') ?? '';
-
-const formatHistoryTimestamp = (timestamp: number) => {
-  const parsedTimestamp = String(timestamp).length <= 10 ? timestamp * 1000 : timestamp;
-  const date = new Date(parsedTimestamp);
-
-  if (Number.isNaN(date.getTime())) {
-    return 'Data indisponível';
-  }
-
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatInteractionDate = formatDateTimeFullBR;
 
 export default function RemindersManagerEnhanced() {
   const navigate = useNavigate();
@@ -78,9 +58,6 @@ export default function RemindersManagerEnhanced() {
   const [expandedPeriods, setExpandedPeriods] = useState<Set<ReminderPeriod>>(
     new Set(['overdue', 'today', 'tomorrow'])
   );
-  const [openSnoozeMenu, setOpenSnoozeMenu] = useState<string | null>(null);
-  const [customSnoozeReminder, setCustomSnoozeReminder] = useState<string | null>(null);
-  const [customSnoozeDateTime, setCustomSnoozeDateTime] = useState('');
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [showCalendar, setShowCalendar] = useState(false);
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
@@ -100,26 +77,6 @@ export default function RemindersManagerEnhanced() {
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
-  const snoozeMenuRef = useRef<HTMLDivElement | null>(null);
-  const [historyModalData, setHistoryModalData] = useState<{
-    phone: string;
-    leadName?: string;
-    leadId?: string;
-  } | null>(null);
-  const [historyMessages, setHistoryMessages] = useState<{
-    id: string;
-    body: string;
-    timestamp: number;
-    fromMe: boolean;
-  }[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
-  const [generatedFollowUp, setGeneratedFollowUp] = useState<string | null>(null);
-  const [followUpError, setFollowUpError] = useState<string | null>(null);
-  const [followUpCopied, setFollowUpCopied] = useState(false);
-  const [followUpApproved, setFollowUpApproved] = useState(false);
-  const [followUpBlocks, setFollowUpBlocks] = useState<string[]>([]);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
   const [quickSchedulingAction, setQuickSchedulingAction] = useState<{
     reminderId: string;
@@ -145,6 +102,7 @@ export default function RemindersManagerEnhanced() {
   const openLeadInWhatsAppTab = (lead?: Pick<Lead, 'id' | 'nome_completo' | 'telefone'> | null) => {
     const normalizedPhone = normalizeLeadPhone(lead?.telefone);
     if (!normalizedPhone) {
+      navigate('/painel/whatsapp');
       return;
     }
 
@@ -160,185 +118,14 @@ export default function RemindersManagerEnhanced() {
     navigate(`/painel/whatsapp?${params.toString()}`);
   };
 
-  const closeHistoryModal = () => {
-    setHistoryModalData(null);
-    setHistoryMessages([]);
-    setHistoryError(null);
-    setHistoryLoading(false);
-    setGeneratedFollowUp(null);
-    setFollowUpError(null);
-    setFollowUpCopied(false);
-    setGeneratingFollowUp(false);
-    setFollowUpApproved(false);
-    setFollowUpBlocks([]);
-  };
+  const openLeadInOfficialWhatsApp = (lead?: Pick<Lead, 'telefone'> | null) => {
+    const whatsappLink = getWhatsappLink(lead?.telefone);
 
-  const fetchHistoryMessages = async (phone: string) => {
-    setHistoryLoading(true);
-    setHistoryError(null);
-
-    const normalizedPhone = phone.replace(/\D/g, '');
-    const chatId = normalizeChatId(normalizedPhone);
-
-    try {
-      const response = await getWhatsAppMessageHistory({
-        chatId,
-        count: 100,
-        sort: 'asc',
-      });
-
-      const normalizedMessages = response.messages.map((message: WhapiMessage) => ({
-        id: message.id,
-        body: message.text?.body || '[Mídia]',
-        timestamp: message.timestamp * 1000,
-        fromMe: message.from_me,
-      }));
-
-      setHistoryMessages(normalizedMessages);
-    } catch (error) {
-      console.error('Erro ao buscar histórico de mensagens do lead:', error);
-      setHistoryMessages([]);
-      setHistoryError('Não foi possível carregar o histórico de mensagens.');
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const openHistoryModal = (leadName?: string, phone?: string | null, leadId?: string | null) => {
-    const normalizedPhone = normalizeLeadPhone(phone);
-    setHistoryModalData({
-      phone: normalizedPhone,
-      leadName,
-      leadId: leadId ?? undefined,
-    });
-    setHistoryMessages([]);
-
-    if (!normalizedPhone) {
-      setHistoryError('Telefone do lead não disponível para buscar o histórico.');
+    if (!whatsappLink) {
       return;
     }
 
-    setGeneratedFollowUp(null);
-    setFollowUpError(null);
-    setFollowUpCopied(false);
-    setGeneratingFollowUp(false);
-
-    void fetchHistoryMessages(normalizedPhone);
-  };
-
-  const buildConversationHistory = () => {
-    if (historyMessages.length === 0) {
-      return 'Nenhuma mensagem encontrada no histórico recente.';
-    }
-
-    const participantName = historyModalData?.leadName ?? 'Lead';
-
-    return historyMessages
-      .map(message => {
-        const sender = message.fromMe ? 'Você' : participantName;
-        return `- [${formatHistoryTimestamp(message.timestamp)}] ${sender}: ${message.body}`;
-      })
-      .join('\n');
-  };
-
-  const buildLeadContext = () => {
-    if (!historyModalData?.leadId) return '';
-
-    const leadData = leadsMap.get(historyModalData.leadId);
-
-    if (!leadData) return '';
-
-    return [
-      `Telefone: ${leadData.telefone ?? 'Indisponível'}`,
-      leadData.email ? `E-mail: ${leadData.email}` : null,
-      `Status: ${leadData.status ?? 'Sem status'}`,
-      leadData.responsavel ? `Responsável: ${leadData.responsavel}` : null,
-      leadData.ultimo_contato
-        ? `Último contato: ${formatInteractionDate(leadData.ultimo_contato)}`
-        : null,
-    ]
-      .filter(Boolean)
-      .join('\n');
-  };
-
-  const handleGenerateFollowUp = async () => {
-    if (!historyModalData) return;
-
-    setGeneratingFollowUp(true);
-    setFollowUpError(null);
-    setGeneratedFollowUp(null);
-    setFollowUpCopied(false);
-    setFollowUpApproved(false);
-    setFollowUpBlocks([]);
-
-    try {
-      const conversationHistory = buildConversationHistory();
-      const leadContext = buildLeadContext();
-
-      const { data, error } = await supabase.functions.invoke<{ followUp?: string }>('generate-follow-up', {
-        body: {
-          leadName: historyModalData.leadName ?? 'Lead',
-          conversationHistory,
-          leadContext,
-        },
-      });
-
-      if (error) throw error;
-
-      if (!data?.followUp) {
-        throw new Error('Resposta vazia do gerador de follow-up.');
-      }
-
-      setGeneratedFollowUp(data.followUp.trim());
-    } catch (error) {
-      console.error('Erro ao gerar follow-up:', error);
-      setFollowUpError('Não foi possível gerar o follow-up automaticamente. Tente novamente em instantes.');
-    } finally {
-      setGeneratingFollowUp(false);
-    }
-  };
-
-  const splitFollowUpIntoBlocks = (text: string) => {
-    const normalized = text.trim().replace(/\r\n/g, '\n');
-    const paragraphBlocks = normalized
-      .split(/\n\s*\n/)
-      .map(block => block.trim())
-      .filter(Boolean);
-
-    if (paragraphBlocks.length > 0) return paragraphBlocks;
-
-    return normalized
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean);
-  };
-
-  const handleApproveFollowUp = () => {
-    if (!generatedFollowUp) return;
-
-    const blocks = splitFollowUpIntoBlocks(generatedFollowUp);
-    setFollowUpBlocks(blocks);
-    setFollowUpApproved(true);
-  };
-
-  const handleUpdateBlock = (index: number, value: string) => {
-    setFollowUpBlocks(prev => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  };
-
-  const handleCopyFollowUp = async () => {
-    if (!generatedFollowUp) return;
-
-    try {
-      await navigator.clipboard.writeText(generatedFollowUp);
-      setFollowUpCopied(true);
-      setTimeout(() => setFollowUpCopied(false), 2000);
-    } catch (error) {
-      console.error('Erro ao copiar follow-up:', error);
-    }
+    window.open(whatsappLink, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -537,7 +324,7 @@ export default function RemindersManagerEnhanced() {
 
     const confirmed = await requestConfirmation({
       title: 'Marcar lead como perdido',
-      description: `Deseja marcar ${leadName} como perdido e remover os follow-ups pendentes?`,
+      description: `Deseja marcar ${leadName} como perdido e remover os lembretes pendentes?`,
       confirmLabel: 'Marcar como perdido',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -823,90 +610,6 @@ export default function RemindersManagerEnhanced() {
     } finally {
       setIsDeletingReminder(false);
       setReminderPendingDeletion(null);
-    }
-  };
-
-  const handleSnooze = async (reminder: Reminder, option: 'minutes-15' | 'minutes-30' | 'hour-1' | 'tomorrow' | 'next-week') => {
-    try {
-      const newDate = calculateSnoozeTime(option);
-      const currentSnoozeCount = reminder.snooze_count || 0;
-
-      const { error } = await supabase
-        .from('reminders')
-        .update({
-          data_lembrete: newDate,
-          snooze_count: currentSnoozeCount + 1
-        })
-        .eq('id', reminder.id);
-
-      if (error) throw error;
-      {
-        const leadId = getLeadIdForReminder(reminder);
-        if (leadId) {
-          await updateLeadNextReturnDate(leadId, newDate);
-        }
-      }
-      setOpenSnoozeMenu(null);
-      setReminders(current =>
-        current.map(item =>
-          item.id === reminder.id
-            ? {
-                ...item,
-                data_lembrete: newDate,
-                snooze_count: currentSnoozeCount + 1,
-              }
-            : item
-        )
-      );
-    } catch (error) {
-      console.error('Erro ao adiar lembrete:', error);
-      alert('Erro ao adiar lembrete');
-    }
-  };
-
-  const handleCustomSnooze = async () => {
-    if (!customSnoozeReminder || !customSnoozeDateTime) return;
-
-    try {
-      const reminder = reminders.find(r => r.id === customSnoozeReminder);
-      if (!reminder) return;
-
-      const currentSnoozeCount = reminder.snooze_count || 0;
-
-      const newDate = new Date(customSnoozeDateTime).toISOString();
-
-      const { error } = await supabase
-        .from('reminders')
-        .update({
-          data_lembrete: newDate,
-          snooze_count: currentSnoozeCount + 1
-        })
-        .eq('id', customSnoozeReminder);
-
-      if (error) throw error;
-      {
-        const leadId = getLeadIdForReminder(reminder);
-        if (leadId) {
-          await updateLeadNextReturnDate(leadId, newDate);
-        }
-      }
-      setCustomSnoozeReminder(null);
-      setCustomSnoozeDateTime('');
-      setOpenSnoozeMenu(null);
-      setReminders(current =>
-        current.map(item =>
-          item.id === reminder.id
-            ? {
-                ...item,
-                data_lembrete: newDate,
-                snooze_count: currentSnoozeCount + 1,
-              }
-            : item
-        )
-      );
-    } catch (error) {
-      console.error('Erro ao adiar lembrete:', error);
-      alert('Erro ao adiar lembrete');
     }
   };
 
@@ -1257,31 +960,6 @@ export default function RemindersManagerEnhanced() {
     };
   }, [ease, loading, motionEnabled, revealDistance, sectionDuration, sectionStagger]);
 
-  useEffect(() => {
-    if (!openSnoozeMenu) {
-      return;
-    }
-
-    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (snoozeMenuRef.current && !snoozeMenuRef.current.contains(target)) {
-        setOpenSnoozeMenu(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('touchstart', handleOutsideClick);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('touchstart', handleOutsideClick);
-    };
-  }, [openSnoozeMenu]);
-
   const getPriorityColor = (prioridade: string) => {
     const colors: Record<string, string> = {
       'baixa': 'bg-blue-100 text-blue-700',
@@ -1314,6 +992,8 @@ export default function RemindersManagerEnhanced() {
         ? leadsMap.get(contract.lead_id)
         : undefined;
     const leadIdForReminder = getLeadIdForReminder(reminder);
+    const hasLeadPhone = Boolean(leadInfo?.telefone);
+    const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
 
     return (
       <div
@@ -1391,11 +1071,6 @@ export default function RemindersManagerEnhanced() {
                 {overdue && !reminder.lido && (
                   <span className="text-red-600 font-medium">Atrasado </span>
                 )}
-                {typeof reminder.snooze_count === 'number' && reminder.snooze_count > 0 && (
-                  <span className="text-orange-600 text-xs">
-                    Adiado {reminder.snooze_count}x
-                  </span>
-                )}
                 {(reminder.lead_id || reminder.contract_id) && (
                   <ReminderContextLink
                     leadId={reminder.lead_id ?? contract?.lead_id}
@@ -1411,184 +1086,97 @@ export default function RemindersManagerEnhanced() {
 
           <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:ml-4 xl:w-auto">
             <Button
-              onClick={() => openHistoryModal(leadInfo?.nome_completo, leadInfo?.telefone, reminder.lead_id ?? contract?.lead_id ?? null)}
-              disabled={!leadInfo?.telefone}
-              variant="icon"
-              size="icon"
-              className={`h-9 w-9 ${
-                leadInfo?.telefone
-                  ? 'text-slate-700 hover:bg-slate-100'
-                  : 'text-slate-400 cursor-not-allowed'
-              }`}
-              title={leadInfo?.telefone ? 'Ver histórico de mensagens' : 'Telefone não disponível'}
+              onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
+              variant="info"
+              size="sm"
+              className="h-9 border-sky-600 bg-sky-600 text-white hover:border-sky-700 hover:bg-sky-700"
+              title="Abrir /painel/whatsapp"
             >
-              <MessageSquare className="w-5 h-5" />
+              <MessageCircle className="h-4 w-4" />
+              <span>Painel WhatsApp</span>
             </Button>
             <Button
-              onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
-              disabled={!leadInfo?.telefone}
-              variant="icon"
-              size="icon"
-              className={`h-9 w-9 ${
-                leadInfo?.telefone
-                  ? 'text-green-700 hover:bg-green-50'
-                  : 'text-slate-400 cursor-not-allowed'
-              }`}
-              title={leadInfo?.telefone ? 'Abrir conversa na aba WhatsApp' : 'Telefone não disponível'}
+              onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
+              disabled={!hasLeadPhone}
+              variant="success"
+              size="sm"
+              className="h-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+              title={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone não disponível'}
             >
-              <MessageCircle className="w-5 h-5" />
+              <ExternalLink className="h-4 w-4" />
+              <span>WhatsApp oficial</span>
             </Button>
-            {leadIdForReminder && (
-              <Button
-                onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
-                variant="icon"
-                size="icon"
-                className="h-9 w-9 text-red-700 hover:bg-red-50"
-                title="Marcar lead como perdido e limpar follow-ups"
-                disabled={markingLostLeadId === leadIdForReminder}
-                loading={markingLostLeadId === leadIdForReminder}
-              >
-                {markingLostLeadId !== leadIdForReminder && <X className="w-5 h-5" />}
-              </Button>
-            )}
-            {!reminder.lido && (
-              <div
-                className="relative"
-                ref={openSnoozeMenu === reminder.id ? snoozeMenuRef : null}
-              >
-                <Button
-                  onClick={() => setOpenSnoozeMenu(openSnoozeMenu === reminder.id ? null : reminder.id)}
-                  variant="icon"
-                  size="icon"
-                  className="h-9 w-9 text-orange-600 hover:bg-orange-50"
-                  title="Adiar"
-                >
-                  <Clock className="w-5 h-5" />
-                </Button>
-                {openSnoozeMenu === reminder.id && (
-                  <div className="panel-glass-panel absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
-                    <Button
-                      onClick={() => handleSnooze(reminder, 'minutes-15')}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4"
-                    >
-                      15 minutos
-                    </Button>
-                    <Button
-                      onClick={() => handleSnooze(reminder, 'minutes-30')}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4"
-                    >
-                      30 minutos
-                    </Button>
-                    <Button
-                      onClick={() => handleSnooze(reminder, 'hour-1')}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4"
-                    >
-                      1 hora
-                    </Button>
-                    <Button
-                      onClick={() => handleSnooze(reminder, 'tomorrow')}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4"
-                    >
-                      Amanhã às 9h
-                    </Button>
-                    <Button
-                      onClick={() => handleSnooze(reminder, 'next-week')}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4"
-                    >
-                      Próxima semana
-                    </Button>
-                    <div className="border-t border-slate-200 my-2"></div>
-                    <Button
-                      onClick={() => {
-                        setCustomSnoozeReminder(reminder.id);
-                        setOpenSnoozeMenu(null);
-                        const now = new Date();
-                        now.setMinutes(now.getMinutes() + 30);
-                        setCustomSnoozeDateTime(formatDateTimeForInput(now.toISOString()));
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start rounded-none px-4 text-teal-600 hover:text-teal-700"
-                    >
-                      Personalizado...
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
             {!reminder.lido && (
               <>
                 <Button
                   onClick={() => handleQuickSchedule(reminder, 1)}
-                  disabled={quickSchedulingAction?.reminderId === reminder.id}
-                  variant="icon"
-                  size="icon"
-                  className="h-9 w-9 text-teal-600 hover:bg-teal-50"
+                  disabled={isQuickSchedulingCurrentReminder}
+                  variant="soft"
+                  size="sm"
+                  className="h-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
                   title="Agendar para 1 dia e marcar atual como lido"
                 >
-                  {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 1 ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span className="relative inline-flex">
-                      <CalendarPlus className="w-5 h-5" />
-                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
-                        1
-                      </span>
-                    </span>
+                    <CalendarPlus className="h-4 w-4" />
                   )}
+                  <span>Agendar +1 dia</span>
                 </Button>
                 <Button
                   onClick={() => handleQuickSchedule(reminder, 2)}
-                  disabled={quickSchedulingAction?.reminderId === reminder.id}
-                  variant="icon"
-                  size="icon"
-                  className="h-9 w-9 text-teal-600 hover:bg-teal-50"
+                  disabled={isQuickSchedulingCurrentReminder}
+                  variant="soft"
+                  size="sm"
+                  className="h-9 border-cyan-500 bg-cyan-500 text-white hover:border-cyan-600 hover:bg-cyan-600"
                   title="Agendar para 2 dias e marcar atual como lido"
                 >
-                  {quickSchedulingAction?.reminderId === reminder.id && quickSchedulingAction.daysAhead === 2 ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span className="relative inline-flex">
-                      <CalendarPlus className="w-5 h-5" />
-                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
-                        2
-                      </span>
-                    </span>
+                    <CalendarPlus className="h-4 w-4" />
                   )}
+                  <span>Agendar +2 dias</span>
                 </Button>
               </>
             )}
             <Button
               onClick={() => handleMarkAsRead(reminder.id, reminder.lido)}
-              variant="icon"
-              size="icon"
-              className={`h-9 w-9 ${
+              variant={reminder.lido ? 'secondary' : 'success'}
+              size="sm"
+              className={`h-9 ${
                 reminder.lido
-                  ? 'text-slate-600 hover:bg-slate-100'
-                  : 'text-green-600 hover:bg-green-50'
+                  ? 'border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-slate-200'
+                  : 'border-lime-600 bg-lime-600 text-white hover:border-lime-700 hover:bg-lime-700'
               }`}
               title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
             >
-              <Check className="w-5 h-5" />
+              <Check className="h-4 w-4" />
+              <span>{reminder.lido ? 'Marcar não lido' : 'Marcar lido'}</span>
             </Button>
+            {leadIdForReminder && (
+              <Button
+                onClick={() => leadIdForReminder && handleMarkLeadAsLost(reminder)}
+                variant="danger"
+                size="sm"
+                className="h-9 border-rose-600 bg-rose-600 text-white hover:border-rose-700 hover:bg-rose-700"
+                title="Marcar lead como perdido e limpar lembretes"
+                disabled={markingLostLeadId === leadIdForReminder}
+                loading={markingLostLeadId === leadIdForReminder}
+              >
+                {markingLostLeadId !== leadIdForReminder && <X className="h-4 w-4" />}
+                <span>Perdido + limpar</span>
+              </Button>
+            )}
             <Button
               onClick={() => handleDelete(reminder.id)}
-              variant="icon"
-              size="icon"
-              className="h-9 w-9 text-red-600 hover:bg-red-50"
-              title="Remover"
+              variant="danger"
+              size="sm"
+              className="h-9 border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+              title="Excluir lembrete"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="h-4 w-4" />
+              <span>Excluir</span>
             </Button>
           </div>
         </div>
@@ -1844,206 +1432,6 @@ export default function RemindersManagerEnhanced() {
         </div>
       )}
 
-      {historyModalData && (
-        <ModalShell
-          isOpen
-          onClose={closeHistoryModal}
-          title="Historico de mensagens"
-          description={`${historyModalData.leadName ?? 'Lead sem nome'} · ${historyModalData.phone || 'Telefone indisponivel'}`}
-          size="xl"
-          panelClassName="max-w-4xl"
-          bodyClassName="p-0"
-        >
-            <div className="flex items-center justify-end border-b border-slate-200 px-5 py-3">
-              <Button
-                onClick={() => historyModalData.phone && fetchHistoryMessages(historyModalData.phone)}
-                disabled={!historyModalData.phone || historyLoading}
-                variant="secondary"
-                size="sm"
-              >
-                <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
-                Atualizar
-              </Button>
-            </div>
-
-            <div className="modal-panel-content flex-1 min-h-0 overflow-y-auto bg-slate-50 p-5 space-y-3">
-              {historyLoading ? (
-                <div className="flex h-full items-center justify-center text-slate-600">
-                  <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
-                  <span className="ml-2 text-sm">Carregando histórico...</span>
-                </div>
-              ) : historyError ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  {historyError}
-                </div>
-              ) : historyMessages.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
-                  <MessageSquare className="h-10 w-10 text-slate-300" />
-                  <p className="mt-2 text-sm font-semibold text-slate-700">Nenhuma mensagem encontrada.</p>
-                  <p className="text-xs">As últimas 50 mensagens enviadas e recebidas aparecerão aqui.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {historyMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-2xl border px-4 py-3 shadow-sm ${
-                            message.fromMe
-                              ? 'bg-teal-50 border-teal-100 text-slate-800'
-                              : 'bg-white border-slate-200 text-slate-800'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
-                          <p className="mt-2 text-[11px] text-slate-500 text-right">
-                            {message.fromMe ? 'Você · ' : ''}
-                            {formatHistoryTimestamp(message.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 text-slate-900">
-                          <Sparkles className="h-5 w-5 text-teal-600" />
-                          <span className="font-semibold">Gerar follow-up com IA</span>
-                        </div>
-                        <p className="text-sm text-slate-600">
-                          Use o histórico acima para criar uma resposta rápida de retorno.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleGenerateFollowUp}
-                        disabled={generatingFollowUp}
-                        loading={generatingFollowUp}
-                        variant="primary"
-                        size="md"
-                        className="w-full sm:w-auto"
-                      >
-                        {!generatingFollowUp && <Sparkles className="h-4 w-4" />}
-                        <span>{generatingFollowUp ? 'Gerando...' : 'Gerar follow-up'}</span>
-                      </Button>
-                    </div>
-
-                    {followUpError && (
-                      <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{followUpError}</p>
-                    )}
-
-                    {generatedFollowUp && (
-                      <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <span className="text-sm font-semibold text-slate-900">Sugestão pronta para envio</span>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              onClick={handleGenerateFollowUp}
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 rounded-md px-3 text-xs"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                              <span>Gerar outro</span>
-                            </Button>
-                            <Button
-                              onClick={handleCopyFollowUp}
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 rounded-md px-3 text-xs"
-                            >
-                              {followUpCopied ? (
-                                <>
-                                  <Check className="h-4 w-4 text-teal-600" />
-                                  <span>Copiado</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4" />
-                                  <span>Copiar</span>
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              onClick={handleApproveFollowUp}
-                              variant="primary"
-                              size="sm"
-                              className="h-7 rounded-md px-3 text-xs"
-                            >
-                              <Check className="h-4 w-4" />
-                              <span>Aprovar e dividir em blocos</span>
-                            </Button>
-                          </div>
-                        </div>
-
-                        <p className="whitespace-pre-wrap text-sm text-slate-800">{generatedFollowUp}</p>
-
-                        {followUpApproved && followUpBlocks.length > 0 && (
-                          <div className="space-y-3 rounded-lg border border-teal-100 bg-white p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">Enviar em blocos sequenciais</p>
-                                <p className="text-xs text-slate-600">Revise os textos abaixo e envie no WhatsApp seguindo a ordem.</p>
-                              </div>
-                              {!historyModalData?.phone && (
-                                <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">Telefone indisponível</span>
-                              )}
-                            </div>
-
-                            <div className="space-y-2">
-                              {followUpBlocks.map((block, index) => {
-                                const whatsappBase = historyModalData?.phone ? getWhatsappLink(historyModalData.phone) : null;
-                                const whatsappLink = whatsappBase
-                                  ? `${whatsappBase}?text=${encodeURIComponent(block)}`
-                                  : null;
-
-                                return (
-                                  <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-xs font-semibold text-slate-800">Mensagem {index + 1}</span>
-                                      {whatsappLink ? (
-                                        <a
-                                          href={whatsappLink}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-green-700"
-                                        >
-                                          <MessageCircle className="h-4 w-4" />
-                                          <span>Enviar no WhatsApp</span>
-                                        </a>
-                                      ) : (
-                                        <span className="text-[11px] text-slate-500">Telefone não disponível</span>
-                                      )}
-                                    </div>
-
-                                    <textarea
-                                      value={block}
-                                      onChange={(event) => handleUpdateBlock(index, event.target.value)}
-                                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
-                                      rows={3}
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-              Mensagens exibidas conforme retorno da integração externa.
-            </div>
-        </ModalShell>
-      )}
-
       {reminderPendingDeletion && (
         <ModalShell
           isOpen
@@ -2090,46 +1478,6 @@ export default function RemindersManagerEnhanced() {
                 )}
               </div>
             </div>
-        </ModalShell>
-      )}
-
-      {customSnoozeReminder && (
-        <ModalShell
-          isOpen
-          onClose={() => {
-            setCustomSnoozeReminder(null);
-            setCustomSnoozeDateTime('');
-          }}
-          title="Adiar para data/hora personalizada"
-          size="sm"
-          panelClassName="max-w-md"
-          footer={
-            <div className="flex items-center justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setCustomSnoozeReminder(null);
-                  setCustomSnoozeDateTime('');
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button variant="primary" onClick={handleCustomSnooze} disabled={!customSnoozeDateTime}>
-                Adiar
-              </Button>
-            </div>
-          }
-        >
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Data e Hora</label>
-            <DateTimePicker
-              type="datetime-local"
-              value={customSnoozeDateTime}
-              onChange={setCustomSnoozeDateTime}
-              min={formatDateTimeForInput(new Date().toISOString())}
-              placeholder="Selecionar data e hora"
-            />
-          </div>
         </ModalShell>
       )}
 

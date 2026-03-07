@@ -17,6 +17,7 @@ type WhapiMessage = {
   id: string;
   from_me: boolean;
   type: string;
+  subtype?: string;
   chat_id: string;
   chat_name?: string;
   timestamp: number;
@@ -97,6 +98,9 @@ type WhapiMessage = {
     type: string;
     emoji?: string;
     votes?: string[];
+    ephemeral?: number;
+    edited_type?: string;
+    edited_content?: Record<string, unknown>;
   };
   context?: {
     quoted_id?: string;
@@ -134,6 +138,9 @@ type WhapiMessage = {
     footer?: string;
     header?: { text?: string } | string;
     buttons?: Array<{ text?: string; title?: string; type?: string; id?: string; url?: string; phone_number?: string }>;
+  };
+  system?: {
+    body?: string;
   };
   group_invite?: {
     body: string;

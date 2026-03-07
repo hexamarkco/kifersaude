@@ -82,18 +82,30 @@ if not exist "supabase\functions" (
 set /a TOTAL=0
 set /a SUCCESS=0
 set /a FAIL=0
+set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook create-initial-admin"
 
 for /d %%D in ("supabase\functions\*") do (
   if exist "%%~fD\index.ts" (
     set /a TOTAL+=1
     set "FUNCTION_NAME=%%~nxD"
+    set "DEPLOY_ARGS="
+
+    for %%F in (!NO_VERIFY_JWT_FUNCTIONS!) do (
+      if /I "%%~F"=="!FUNCTION_NAME!" set "DEPLOY_ARGS=--no-verify-jwt"
+    )
 
     echo.
     echo Deploy da function "!FUNCTION_NAME!"...
-    if "!SUPABASE_USE_NPX!"=="1" (
-      call "!NPX_BIN!" --yes supabase functions deploy "!FUNCTION_NAME!"
+    if defined DEPLOY_ARGS (
+      echo Verificacao de JWT: desativada ^(!DEPLOY_ARGS!^)
     ) else (
-      call "!SUPABASE_BIN!" functions deploy "!FUNCTION_NAME!"
+      echo Verificacao de JWT: padrao da plataforma
+    )
+
+    if "!SUPABASE_USE_NPX!"=="1" (
+      call "!NPX_BIN!" --yes supabase functions deploy "!FUNCTION_NAME!" !DEPLOY_ARGS!
+    ) else (
+      call "!SUPABASE_BIN!" functions deploy "!FUNCTION_NAME!" !DEPLOY_ARGS!
     )
 
     if errorlevel 1 (

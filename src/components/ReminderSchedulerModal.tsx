@@ -40,11 +40,26 @@ const formatDateTimeLocal = (date: Date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const isWeekend = (date: Date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
+
+const moveToNextBusinessDay = (date: Date) => {
+  const adjusted = new Date(date);
+
+  while (isWeekend(adjusted)) {
+    adjusted.setDate(adjusted.getDate() + 1);
+  }
+
+  return adjusted;
+};
+
 const getDefaultDateTime = () => {
-  const now = new Date();
-  now.setDate(now.getDate() + 1);
-  now.setHours(10, 0, 0, 0);
-  return formatDateTimeLocal(now);
+  const suggested = new Date();
+  suggested.setDate(suggested.getDate() + 1);
+  suggested.setHours(10, 0, 0, 0);
+  return formatDateTimeLocal(moveToNextBusinessDay(suggested));
 };
 
 export default function ReminderSchedulerModal({

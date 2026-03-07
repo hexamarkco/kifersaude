@@ -20,7 +20,7 @@ type WhapiMessage = {
   subtype?: string;
   chat_id: string;
   chat_name?: string;
-  timestamp: number;
+  timestamp: number | string | null;
   source?: string;
   status?: string;
   edited_at?: number;
@@ -213,6 +213,8 @@ type WhapiMessageUpdate = {
 type WhapiWebhook = {
   messages?: WhapiMessage[];
   messages_updates?: WhapiMessageUpdate[];
+  messages_removed?: Array<string | { id?: string; message_id?: string; chat_id?: string }>;
+  messages_removed_all?: string;
   statuses?: WhapiStatus[];
   groups?: WhapiGroup[];
   groups_participants?: WhapiGroupParticipants[];
@@ -424,12 +426,90 @@ async function storeEvent(event: StoredEvent) {
   }
 }
 
-function toIsoString(timestamp: number): string {
-  return new Date(timestamp * 1000).toISOString();
+function toIsoString(timestamp: unknown): string | null {
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+    const milliseconds = timestamp > 10_000_000_000 ? timestamp : timestamp * 1000;
+    const parsed = new Date(milliseconds);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  if (typeof timestamp === 'string') {
+    const trimmed = timestamp.trim();
+    if (!trimmed) return null;
+
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) {
+      const milliseconds = numeric > 10_000_000_000 ? numeric : numeric * 1000;
+      const parsed = new Date(milliseconds);
+      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    }
+
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  return null;
 }
 
 function toCleanText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function toArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function getLatestIsoTimestamp(...values: Array<string | null | undefined>): string | null {
+  let bestTimestamp: number | null = null;
+  let bestIso: string | null = null;
+
+  values.forEach((value) => {
+    if (!value) return;
+    const parsed = new Date(value);
+    const timestamp = parsed.getTime();
+    if (Number.isNaN(timestamp)) return;
+
+    if (bestTimestamp === null || timestamp > bestTimestamp) {
+      bestTimestamp = timestamp;
+      bestIso = parsed.toISOString();
+    }
+  });
+
+  return bestIso;
+}
+
+function normalizeDirectChatId(chatId: string): string {
+  const trimmed = chatId.trim();
+  if (!trimmed) return trimmed;
+
+  if (/@c\.us$/i.test(trimmed)) {
+    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
+  }
+
+  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
+    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+  }
+
+  if (!trimmed.includes('@')) {
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      return `${digits}@s.whatsapp.net`;
+    }
+  }
+
+  return trimmed;
+}
+
+function normalizeMaybeDirectId(value: string | null | undefined): string | null {
+  const cleaned = toCleanText(value);
+  if (!cleaned) return null;
+
+  const type = getChatIdType(cleaned);
+  if (type === 'phone') {
+    return normalizeDirectChatId(cleaned);
+  }
+
+  return cleaned;
 }
 
 function toPayloadObject(value: unknown): Record<string, unknown> | null {
@@ -564,13 +644,13 @@ function extractInteractiveBody(message: WhapiMessage): string | null {
   const footerText =
     typeof interactive.footer === 'string' ? toCleanText(interactive.footer) : toCleanText(interactive.footer?.text);
 
-  const buttonTitles = (interactive.action?.buttons || [])
+  const buttonTitles = toArray<{ title?: string; text?: string }>(interactive.action?.buttons)
     .map((button) => toCleanText(button.title || button.text))
     .filter(Boolean);
 
   const listLabel = toCleanText(interactive.action?.list?.label || interactive.action?.list?.button);
-  const listRows = (interactive.action?.list?.sections || [])
-    .flatMap((section) => section.rows || [])
+  const listRows = toArray<{ rows?: Array<{ title?: string }> }>(interactive.action?.list?.sections)
+    .flatMap((section) => toArray<{ title?: string }>(section.rows))
     .map((row) => toCleanText(row.title))
     .filter(Boolean);
 
@@ -593,7 +673,7 @@ function extractHsmBody(message: WhapiMessage): string | null {
 
   const headerText = typeof hsm.header === 'string' ? toCleanText(hsm.header) : toCleanText(hsm.header?.text);
   const footerText = toCleanText(hsm.footer);
-  const buttonTexts = (hsm.buttons || [])
+  const buttonTexts = toArray<{ text?: string; title?: string }>(hsm.buttons)
     .map((button) => toCleanText(button.text || button.title))
     .filter(Boolean);
 
@@ -679,7 +759,7 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
   }
 
   if (message.contact_list) {
-    const count = message.contact_list.list.length;
+    const count = toArray(message.contact_list.list).length;
     return { body: `[${count} contato${count > 1 ? 's' : ''}]`, hasMedia: false };
   }
 
@@ -787,11 +867,13 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
 function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const messageId = message.id;
   const direction: 'inbound' | 'outbound' = message.from_me ? 'outbound' : 'inbound';
-  const chatId = message.chat_id;
-  const isGroup = chatId.endsWith('@g.us');
+  const chatId = normalizeDirectChatId(message.chat_id || '');
+  const chatIdType = getChatIdType(chatId);
+  const isGroup = chatIdType === 'group';
   const { body, hasMedia } = buildMessageBody(message);
 
-  const fromNumber = direction === 'inbound' ? (message.from || chatId) : null;
+  const normalizedFrom = normalizeMaybeDirectId(message.from);
+  const fromNumber = direction === 'inbound' ? (normalizedFrom || chatId) : null;
   const toNumber = direction === 'outbound' ? chatId : null;
   const contactName = message.from_name || null;
   const chatName = message.chat_name || null;
@@ -903,8 +985,9 @@ function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter'
 }
 
 function extractPhoneNumber(chatId: string): string | null {
-  if (getChatIdType(chatId) !== 'phone') return null;
-  const phone = chatId.replace(/@c\.us$|@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
+  const normalizedChatId = normalizeDirectChatId(chatId);
+  if (getChatIdType(normalizedChatId) !== 'phone') return null;
+  const phone = normalizedChatId.replace(/@c\.us$|@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
   return phone || null;
 }
 

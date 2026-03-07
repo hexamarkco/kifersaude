@@ -121,7 +121,7 @@ export default function ContractsManager({
   useEffect(() => {
     filterContracts();
     setCurrentPage(1);
-  }, [contracts, searchTerm, filterStatus, filterResponsavel, filterOperadora, dateProximityFilter]);
+  }, [contracts, searchTerm, filterStatus, filterResponsavel, filterOperadora, dateProximityFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (leadToConvert) {

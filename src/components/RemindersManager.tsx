@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, Reminder } from '../lib/supabase';
-import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus } from 'lucide-react';
+import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus, type LucideIcon } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
 import { createAdditionalFollowUps } from '../lib/followUpService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
@@ -72,7 +72,7 @@ export default function RemindersManager() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filter]);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReminders = async () => {
     setLoading(true);
@@ -182,7 +182,7 @@ export default function RemindersManager() {
   };
 
   const getTipoIcon = (tipo: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, LucideIcon> = {
       'Documentos pendentes': AlertCircle,
       'Assinatura': AlertCircle,
       'Ativação': Calendar,

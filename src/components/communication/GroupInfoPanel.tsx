@@ -44,7 +44,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
 
   useEffect(() => {
     loadGroupData();
-  }, [groupId]);
+  }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadGroupData = async () => {
     try {

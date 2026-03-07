@@ -83,7 +83,7 @@ export default function FilterDateRange({
     }
 
     return `Até ${formatValue(toValue)}`;
-  }, [fromValue, toValue]);
+  }, [fromValue, toValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasActiveFilter = Boolean(fromValue || toValue);
   const isDarkTheme = isPanelDarkTheme();

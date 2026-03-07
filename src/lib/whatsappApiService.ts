@@ -57,31 +57,36 @@ type WhapiContactResponse = {
   }>;
 };
 
-function formatApiError(errorObj: any): string {
+function formatApiError(errorObj: unknown): string {
+  if (typeof errorObj === 'object' && errorObj !== null) {
+    const record = errorObj as Record<string, unknown>;
+
+    if (typeof record.error === 'string') {
+      return record.error;
+    }
+
+    if (record.error && typeof record.error === 'object') {
+      const nestedError = record.error as Record<string, unknown>;
+      if (typeof nestedError.message === 'string') {
+        return nestedError.message;
+      }
+    }
+
+    if (typeof record.message === 'string') {
+      return record.message;
+    }
+
+    if (typeof record.details === 'string') {
+      return record.details;
+    }
+
+    if (Array.isArray(record.details)) {
+      return record.details.join(', ');
+    }
+  }
+
   if (typeof errorObj === 'string') {
     return errorObj;
-  }
-
-  if (errorObj?.error) {
-    if (typeof errorObj.error === 'string') {
-      return errorObj.error;
-    }
-    if (errorObj.error.message) {
-      return errorObj.error.message;
-    }
-  }
-
-  if (errorObj?.message) {
-    return errorObj.message;
-  }
-
-  if (errorObj?.details) {
-    if (typeof errorObj.details === 'string') {
-      return errorObj.details;
-    }
-    if (Array.isArray(errorObj.details)) {
-      return errorObj.details.join(', ');
-    }
   }
 
   try {
@@ -102,8 +107,17 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
     throw new Error('Integração de mensagens automáticas não configurada.');
   }
 
-  const rawSettings = data.settings as any;
-  const token = sanitizeWhapiToken(rawSettings.apiKey || rawSettings.token || '');
+  const rawSettings =
+    data.settings && typeof data.settings === 'object'
+      ? (data.settings as Record<string, unknown>)
+      : {};
+  const token = sanitizeWhapiToken(
+    typeof rawSettings.apiKey === 'string'
+      ? rawSettings.apiKey
+      : typeof rawSettings.token === 'string'
+        ? rawSettings.token
+        : '',
+  );
 
   if (!token) {
     throw new Error('Token da Whapi Cloud não configurado. Verifique as configurações em Automação do WhatsApp.');
@@ -111,7 +125,7 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
 
   return {
     token,
-    enabled: rawSettings.enabled,
+    enabled: typeof rawSettings.enabled === 'boolean' ? rawSettings.enabled : undefined,
   };
 }
 
@@ -886,7 +900,14 @@ export async function getWhatsAppMedia(mediaId: string): Promise<{ url?: string;
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
     const json = await response.json().catch(() => ({} as Record<string, unknown>));
-    const url = (json as any)?.url || (json as any)?.link || (json as any)?.media || undefined;
+    const url =
+      typeof json.url === 'string'
+        ? json.url
+        : typeof json.link === 'string'
+          ? json.link
+          : typeof json.media === 'string'
+            ? json.media
+            : undefined;
     return { url };
   }
 

@@ -470,7 +470,7 @@ export default function IntegrationsTab() {
     setLoadingMetaPixel(true);
     const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
     setMetaPixelIntegration(data);
-    setMetaPixelId(data?.settings?.pixelId || '');
+    setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
     setLoadingMetaPixel(false);
   };
 
@@ -478,7 +478,7 @@ export default function IntegrationsTab() {
     setLoadingGtm(true);
     const data = await configService.getIntegrationSetting(GTM_SLUG);
     setGtmIntegration(data);
-    setGtmId(data?.settings?.gtmId || '');
+    setGtmId(toTrimmedString(data?.settings?.gtmId));
     setLoadingGtm(false);
   };
 

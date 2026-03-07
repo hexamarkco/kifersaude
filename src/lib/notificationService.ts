@@ -1,4 +1,5 @@
 import { supabase, Reminder, Lead } from './supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { isReminderDue } from './dateUtils';
 
 export type NotificationCallback = (reminder: Reminder) => void;
@@ -13,7 +14,7 @@ class NotificationService {
   private notifiedLeads: Set<string> = new Set();
   private intervalId: number | null = null;
   private isChecking = false;
-  private leadChannelSubscription: any = null;
+  private leadChannelSubscription: RealtimeChannel | null = null;
   private lastUnreadCount = 0;
 
   start(intervalMs: number = 30000) {

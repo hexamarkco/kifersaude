@@ -258,13 +258,7 @@ export default function FlowBuilder({
   onChangeGraph,
   onTriggerChange,
 }: FlowBuilderProps) {
-  const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [
-    flow.id, 
-    flow.flowGraph, 
-    flow.triggerType, 
-    flow.triggerStatuses, 
-    flow.triggerDurationHours,
-  ]);
+  const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow]);
   const [nodes, setNodes, onNodesChange] = useNodesState(baseGraph.nodes.map(toReactFlowNode));
   const [edges, setEdges, onEdgesChange] = useEdgesState(baseGraph.edges.map(toReactFlowEdge));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

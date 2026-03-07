@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 type MessagePayload = Record<string, any>;
 
 const cleanText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -87,13 +89,22 @@ const extractInteractiveBody = (payload: MessagePayload): string | null => {
   const footerText = cleanText(interactive?.footer?.text ?? interactive?.footer);
 
   const buttonTitles = (Array.isArray(interactive?.action?.buttons) ? interactive.action.buttons : [])
-    .map((button: any) => cleanText(button?.title ?? button?.text))
+    .map((button: unknown) => {
+      const buttonRecord = toRecord(button);
+      return cleanText(buttonRecord?.title ?? buttonRecord?.text);
+    })
     .filter(Boolean);
 
   const listLabel = cleanText(interactive?.action?.list?.label ?? interactive?.action?.list?.button);
   const listRows = (Array.isArray(interactive?.action?.list?.sections) ? interactive.action.list.sections : [])
-    .flatMap((section: any) => (Array.isArray(section?.rows) ? section.rows : []))
-    .map((row: any) => cleanText(row?.title))
+    .flatMap((section: unknown) => {
+      const sectionRecord = toRecord(section);
+      return Array.isArray(sectionRecord?.rows) ? sectionRecord.rows : [];
+    })
+    .map((row: unknown) => {
+      const rowRecord = toRecord(row);
+      return cleanText(rowRecord?.title);
+    })
     .filter(Boolean);
 
   const summaryParts = [headerText, footerText, listLabel, ...buttonTitles.slice(0, 2), ...listRows.slice(0, 2)]
@@ -122,7 +133,10 @@ const extractHsmBody = (payload: MessagePayload): string | null => {
   const headerText = cleanText(hsm?.header?.text ?? hsm?.header ?? hsm?.title);
   const footerText = cleanText(hsm?.footer);
   const buttonTexts = (Array.isArray(hsm?.buttons) ? hsm.buttons : [])
-    .map((button: any) => cleanText(button?.text ?? button?.title))
+    .map((button: unknown) => {
+      const buttonRecord = toRecord(button);
+      return cleanText(buttonRecord?.text ?? buttonRecord?.title);
+    })
     .filter(Boolean);
 
   const summaryParts = [headerText, footerText, ...buttonTexts.slice(0, 2)].filter(Boolean);

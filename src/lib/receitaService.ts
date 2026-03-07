@@ -26,6 +26,8 @@ export type ReceitaEmpresaData = {
 
 const RECEITA_API_BASE_URL = import.meta.env.VITE_RECEITA_API_BASE_URL || 'https://brasilapi.com.br/api';
 
+type ReceitaResponseMap = Record<string, string | undefined>;
+
 const sanitizeDocument = (value: string): string => value.replace(/\D/g, '');
 
 const normalizeDate = (value?: string): string | undefined => {
@@ -72,7 +74,7 @@ export const consultarPessoaPorCPF = async (
     url.searchParams.set('data_nascimento', normalizedBirthDate);
   }
 
-  const data = await fetchFromReceita<any>(url, 'Não foi possível consultar CPF na Receita');
+  const data = await fetchFromReceita<ReceitaResponseMap>(url, 'Não foi possível consultar CPF na Receita');
 
   return {
     nome: data.nome || data.name,
@@ -97,7 +99,7 @@ export const consultarEmpresaPorCNPJ = async (cnpj: string): Promise<ReceitaEmpr
   }
 
   const url = `${RECEITA_API_BASE_URL}/cnpj/v1/${cleanCnpj}`;
-  const data = await fetchFromReceita<any>(url, 'Não foi possível consultar CNPJ na Receita');
+  const data = await fetchFromReceita<ReceitaResponseMap>(url, 'Não foi possível consultar CNPJ na Receita');
 
   return {
     razao_social: data.razao_social || data.nome,

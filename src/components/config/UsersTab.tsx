@@ -31,7 +31,7 @@ export default function UsersTab() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUsers = async () => {
     setLoading(true);
@@ -119,9 +119,9 @@ export default function UsersTab() {
       setNewUserRole('observer');
       setShowAddUser(false);
       loadUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao criar usuário:', error);
-      showMessage('error', error.message || 'Erro ao criar usuário');
+      showMessage('error', error instanceof Error ? error.message : 'Erro ao criar usuário');
     } finally {
       setActionLoading(false);
     }
@@ -230,7 +230,7 @@ export default function UsersTab() {
       }
 
       await loadUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao atualizar usuário:', error);
       if (profileUpdated) {
         try {
@@ -245,7 +245,7 @@ export default function UsersTab() {
           console.error('Erro ao reverter alterações do usuário:', revertError);
         }
       }
-      showMessage('error', error.message || 'Erro ao atualizar usuário');
+      showMessage('error', error instanceof Error ? error.message : 'Erro ao atualizar usuário');
   } finally {
     setActionLoading(false);
   }
@@ -277,7 +277,7 @@ const handleDeleteUser = async (userId: string) => {
 
       showMessage('success', 'Usuário excluído com sucesso');
       loadUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao excluir usuário:', error);
       showMessage('error', 'Erro ao excluir usuário. Você precisa de permissões de admin.');
     } finally {

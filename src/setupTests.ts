@@ -20,5 +20,5 @@ if (!navigator.mediaDevices) {
     configurable: true,
   });
 } else if (!navigator.mediaDevices.getUserMedia) {
-  navigator.mediaDevices.getUserMedia = vi.fn();
+  navigator.mediaDevices.getUserMedia = vi.fn() as unknown as typeof navigator.mediaDevices.getUserMedia;
 }

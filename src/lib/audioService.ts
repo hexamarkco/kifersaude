@@ -4,7 +4,13 @@ class AudioService {
 
   private initAudioContext() {
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContextConstructor =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!audioContextConstructor) {
+        return;
+      }
+      this.audioContext = new audioContextConstructor();
     }
   }
 

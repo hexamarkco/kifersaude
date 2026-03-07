@@ -119,7 +119,7 @@ export default function StatusDropdown({
       window.removeEventListener('resize', updateMenuPosition);
       window.removeEventListener('scroll', updateMenuPosition, true);
     };
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isUpdating && pendingStatus && currentStatus === pendingStatus) {

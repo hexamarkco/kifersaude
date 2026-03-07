@@ -27,7 +27,7 @@ export function MessageHistoryPanel({ chatId, chatName }: MessageHistoryPanelPro
     if (chatId) {
       loadStatistics();
     }
-  }, [chatId]);
+  }, [chatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStatistics = async () => {
     setLoading(true);

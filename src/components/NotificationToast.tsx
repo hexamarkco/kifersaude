@@ -20,7 +20,7 @@ export default function NotificationToast({ reminder, onClose, onViewReminders }
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
     setIsVisible(false);

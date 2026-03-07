@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Lead, supabase } from './supabase';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
 import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';

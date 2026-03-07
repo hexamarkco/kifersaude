@@ -489,7 +489,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         setIsInitialLoad(false);
       }
     }
-  }, [configLoading, isObserver, isOriginVisibleToObserver]);
+  }, [areSetsEqual, configLoading, isObserver, isOriginVisibleToObserver, mapLeadWithRelations]);
 
   useEffect(() => {
     if (configLoading) {
@@ -722,7 +722,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(contractsChannel);
     };
-  }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData]);
+  }, [configLoading, isContractVisibleToObserver, isObserver, isOriginVisibleToObserver, loadData, mapLeadWithRelations]);
 
   useEffect(() => {
     if (!selectedContract) return;
@@ -1044,7 +1044,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         parseDateValue(contract.created_at)
       );
     });
-  }, [dashboardScopedContracts, periodFilter, customStartDate, customEndDate]);
+  }, [dashboardScopedContracts, periodFilter, customStartDate, customEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const calendarScopedContractIds = useMemo(
     () => new Set(dashboardScopedContracts.map((contract) => contract.id)),
@@ -1110,7 +1110,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           parseDateValue(lead.data_criacao || lead.created_at),
         ),
       ),
-    [addVariationToSeries, filteredLeads],
+    [addVariationToSeries, filteredLeads], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const monthlyContractSeries = useMemo(
@@ -1120,7 +1120,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           parseDateValue(contract.data_inicio || contract.previsao_recebimento_comissao || contract.created_at),
         ),
       ),
-    [addVariationToSeries, filteredContracts],
+    [addVariationToSeries, filteredContracts], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const monthlyCommissionSeries = useMemo(
@@ -1133,7 +1133,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           (contract) => contract.comissao_prevista || 0,
         ),
       ),
-    [addVariationToSeries, filteredContracts],
+    [addVariationToSeries, filteredContracts], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const selectedMonthlySeries = useMemo(() => {

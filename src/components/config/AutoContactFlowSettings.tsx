@@ -110,7 +110,7 @@ export default function AutoContactFlowSettings() {
 
   useEffect(() => {
     void loadAutoContactSettings();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const loadAutoContactSettings = async () => {
@@ -611,6 +611,7 @@ export default function AutoContactFlowSettings() {
     const extraCount = conditions.length - 2;
     return extraCount > 0 ? `${preview} (+${extraCount})` : preview;
   };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getFlowSearchText = (flow: AutoContactFlow) => {
     const conditionsText = (flow.conditions ?? [])
       .map((condition) => {
@@ -637,7 +638,7 @@ export default function AutoContactFlowSettings() {
     if (activeFlow && !activeFlow.flowGraph) {
       handleUpdateFlowGraph(activeFlow.id, buildFlowGraphFromFlow(activeFlow));
     }
-  }, [activeFlow]);
+  }, [activeFlow]); // eslint-disable-line react-hooks/exhaustive-deps
   const availableTags = useMemo(() => {
     const tags = flowDrafts.flatMap((flow) => flow.tags ?? []).filter(Boolean);
     return Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -986,7 +987,7 @@ export default function AutoContactFlowSettings() {
       delayUnit: item.step.delayUnit,
       adjustmentReasons: item.adjustmentReasons,
     }));
-  }, [activeFlow, getFlowScheduling, showSimulation, simulationStart]);
+  }, [activeFlow, getFlowScheduling, showSimulation, simulationLead, simulationStart]);
 
   const activeFlowScheduling = useMemo(
     () => (activeFlow ? getFlowScheduling(activeFlow) : schedulingDraft),

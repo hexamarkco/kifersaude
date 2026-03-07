@@ -44,6 +44,9 @@ const getWhatsappLink = (phone: string | null | undefined) => {
 
 const normalizeLeadPhone = (phone: string | null | undefined) => phone?.replace(/\D/g, '') ?? '';
 
+const isReminderPriority = (value: string): value is 'normal' | 'alta' | 'baixa' =>
+  value === 'normal' || value === 'alta' || value === 'baixa';
+
 export default function RemindersManagerEnhanced() {
   const navigate = useNavigate();
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -470,8 +473,8 @@ export default function RemindersManagerEnhanced() {
                 defaultTitle: reminder.titulo,
                 defaultDescription: reminder.descricao ?? undefined,
                 defaultType: 'Follow-up',
-                defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
-                  ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+                defaultPriority: isReminderPriority(reminder.prioridade)
+                  ? reminder.prioridade
                   : 'normal',
               },
             ]);
@@ -730,8 +733,8 @@ export default function RemindersManagerEnhanced() {
             defaultTitle: reminder.titulo,
             defaultDescription: reminder.descricao ?? undefined,
             defaultType: 'Follow-up',
-            defaultPriority: (['normal', 'alta', 'baixa'] as const).includes(reminder.prioridade as any)
-              ? (reminder.prioridade as 'normal' | 'alta' | 'baixa')
+            defaultPriority: isReminderPriority(reminder.prioridade)
+              ? reminder.prioridade
               : 'normal',
           } as ManualReminderPrompt;
         })

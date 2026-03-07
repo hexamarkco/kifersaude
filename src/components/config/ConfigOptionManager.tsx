@@ -41,7 +41,10 @@ export default function ConfigOptionManager({ category, title, description, plac
     setSaving(false);
   };
 
-  const handleUpdate = async (id: string, updates: Record<string, any>) => {
+  const handleUpdate = async (
+    id: string,
+    updates: Partial<{ label: string; ordem: number; ativo: boolean }>,
+  ) => {
     const { error } = await configService.updateConfigOption(category, id, updates);
     if (error) {
       alert('Erro ao atualizar opção');

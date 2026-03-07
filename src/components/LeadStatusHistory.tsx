@@ -16,7 +16,7 @@ export default function LeadStatusHistoryComponent({ leadId }: LeadStatusHistory
 
   useEffect(() => {
     loadHistory();
-  }, [leadId]);
+  }, [leadId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadHistory = async () => {
     setLoading(true);

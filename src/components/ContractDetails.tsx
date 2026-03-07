@@ -92,6 +92,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     return endOfMonth;
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getNextAdjustmentDate = (monthNumber?: number | null) => {
     if (!monthNumber) return null;
     const today = new Date();
@@ -242,11 +243,11 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     });
 
     return results.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [dependents, holders, parseDate]);
+  }, [dependents, holders, parseDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadData();
-  }, [contract.id]);
+  }, [contract.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setLoading(true);

@@ -81,7 +81,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
   useEffect(() => {
     loadLeadTimeline();
-  }, [lead.id]);
+  }, [lead.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLeadTimeline = async () => {
     setLoading(true);

@@ -49,7 +49,7 @@ const normalizeConfigOption = (category: ConfigCategory, option: RawConfigOption
   const normalizedOrdem = typeof option.ordem === 'number' && Number.isFinite(option.ordem) ? option.ordem : 0;
   const ativoValue = option?.ativo ?? option?.active;
   const metadata =
-    option?.metadata && isRecord(option.metadata) ? (option.metadata as Record<string, any>) : null;
+    option?.metadata && isRecord(option.metadata) ? (option.metadata as Record<string, unknown>) : null;
 
   const createdAt = option?.created_at ?? new Date().toISOString();
   const updatedAt = option?.updated_at ?? createdAt;
@@ -106,10 +106,10 @@ const fetchLegacyConfigOptions = async (category: ConfigCategory): Promise<Confi
 
 const createLegacyConfigOption = async (
   category: ConfigCategory,
-  option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
-): Promise<{ data: ConfigOption | null; error: any }> => {
+  option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, unknown> },
+): Promise<{ data: ConfigOption | null; error: unknown }> => {
   try {
-    const basePayload: Record<string, any> = {
+    const basePayload: Record<string, unknown> = {
       category,
       label: option.label,
       value: option.value || option.label,
@@ -119,10 +119,10 @@ const createLegacyConfigOption = async (
     };
     const ativoValue = option.ativo ?? true;
 
-    const insert = async (payload: Record<string, any>) =>
+    const insert = async (payload: Record<string, unknown>) =>
       supabase.from('system_configurations').insert([payload]).select().single();
 
-    let payload: Record<string, any> = { ...basePayload, ativo: ativoValue };
+    let payload: Record<string, unknown> = { ...basePayload, ativo: ativoValue };
     let { data, error } = await insert(payload);
     const triedColumns = new Set<string>();
 
@@ -174,17 +174,17 @@ const createLegacyConfigOption = async (
 const updateLegacyConfigOption = async (
   id: string,
   updates: Partial<Pick<ConfigOption, 'label' | 'value' | 'description' | 'ordem' | 'ativo' | 'metadata'>>,
-): Promise<{ error: any }> => {
+): Promise<{ error: unknown }> => {
   try {
     const { ativo, ...rest } = updates;
     const timestamp = new Date().toISOString();
-    let payload: Record<string, any> = { ...rest, updated_at: timestamp };
+    let payload: Record<string, unknown> = { ...rest, updated_at: timestamp };
 
     if (ativo !== undefined) {
       payload.ativo = ativo;
     }
 
-    const performUpdate = (data: Record<string, any>) =>
+    const performUpdate = (data: Record<string, unknown>) =>
       supabase.from('system_configurations').update(data).eq('id', id);
 
     let { error } = await performUpdate(payload);
@@ -229,7 +229,7 @@ const updateLegacyConfigOption = async (
   }
 };
 
-const deleteLegacyConfigOption = async (id: string): Promise<{ error: any }> => {
+const deleteLegacyConfigOption = async (id: string): Promise<{ error: unknown }> => {
   try {
     const { error } = await supabase
       .from('system_configurations')
@@ -298,7 +298,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const normalizeIntegrationSetting = (row: IntegrationSetting): IntegrationSetting => {
-  const settings = isRecord(row.settings) ? (row.settings as Record<string, any>) : {};
+  const settings = isRecord(row.settings) ? (row.settings as Record<string, unknown>) : {};
   return { ...row, settings };
 };
 
@@ -404,7 +404,7 @@ export const configService = {
     }
   },
 
-  async updateSystemSettings(settings: Partial<SystemSettings>): Promise<{ error: any }> {
+  async updateSystemSettings(settings: Partial<SystemSettings>): Promise<{ error: unknown }> {
     try {
       const { data: existing } = await supabase
         .from('system_settings')
@@ -443,7 +443,7 @@ export const configService = {
     }
   },
 
-  async createOperadora(operadora: Omit<Operadora, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Operadora | null; error: any }> {
+  async createOperadora(operadora: Omit<Operadora, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Operadora | null; error: unknown }> {
     try {
       const { data, error } = await supabase
         .from('operadoras')
@@ -458,7 +458,7 @@ export const configService = {
     }
   },
 
-  async updateOperadora(id: string, updates: Partial<Operadora>): Promise<{ error: any }> {
+  async updateOperadora(id: string, updates: Partial<Operadora>): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('operadoras')
@@ -472,7 +472,7 @@ export const configService = {
     }
   },
 
-  async deleteOperadora(id: string): Promise<{ error: any }> {
+  async deleteOperadora(id: string): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('operadoras')
@@ -501,7 +501,7 @@ export const configService = {
     }
   },
 
-  async createProdutoPlano(produto: Omit<ProdutoPlano, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: ProdutoPlano | null; error: any }> {
+  async createProdutoPlano(produto: Omit<ProdutoPlano, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: ProdutoPlano | null; error: unknown }> {
     try {
       const { data, error } = await supabase
         .from('produtos_planos')
@@ -516,7 +516,7 @@ export const configService = {
     }
   },
 
-  async updateProdutoPlano(id: string, updates: Partial<ProdutoPlano>): Promise<{ error: any }> {
+  async updateProdutoPlano(id: string, updates: Partial<ProdutoPlano>): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('produtos_planos')
@@ -530,7 +530,7 @@ export const configService = {
     }
   },
 
-  async deleteProdutoPlano(id: string): Promise<{ error: any }> {
+  async deleteProdutoPlano(id: string): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('produtos_planos')
@@ -559,7 +559,7 @@ export const configService = {
     }
   },
 
-  async createLeadStatus(status: Omit<LeadStatusConfig, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: LeadStatusConfig | null; error: any }> {
+  async createLeadStatus(status: Omit<LeadStatusConfig, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: LeadStatusConfig | null; error: unknown }> {
     try {
       const { data, error } = await supabase
         .from('lead_status_config')
@@ -574,7 +574,7 @@ export const configService = {
     }
   },
 
-  async updateLeadStatus(id: string, updates: Partial<LeadStatusConfig>): Promise<{ error: any }> {
+  async updateLeadStatus(id: string, updates: Partial<LeadStatusConfig>): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('lead_status_config')
@@ -588,7 +588,7 @@ export const configService = {
     }
   },
 
-  async deleteLeadStatus(id: string): Promise<{ error: any }> {
+  async deleteLeadStatus(id: string): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('lead_status_config')
@@ -623,7 +623,7 @@ export const configService = {
     }
   },
 
-  async createLeadOrigem(origem: Omit<LeadOrigem, 'id' | 'created_at'>): Promise<{ data: LeadOrigem | null; error: any }> {
+  async createLeadOrigem(origem: Omit<LeadOrigem, 'id' | 'created_at'>): Promise<{ data: LeadOrigem | null; error: unknown }> {
     try {
       const payload = {
         ...origem,
@@ -656,7 +656,7 @@ export const configService = {
     }
   },
 
-  async updateLeadOrigem(id: string, updates: Partial<LeadOrigem>): Promise<{ error: any }> {
+  async updateLeadOrigem(id: string, updates: Partial<LeadOrigem>): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('lead_origens')
@@ -670,7 +670,7 @@ export const configService = {
     }
   },
 
-  async deleteLeadOrigem(id: string): Promise<{ error: any }> {
+  async deleteLeadOrigem(id: string): Promise<{ error: unknown }> {
     try {
       const { error } = await supabase
         .from('lead_origens')
@@ -717,13 +717,13 @@ export const configService = {
 
   async createConfigOption(
     category: ConfigCategory,
-    option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, any> },
-  ): Promise<{ data: ConfigOption | null; error: any }> {
+    option: { label: string; value?: string; description?: string; ordem?: number; ativo?: boolean; metadata?: Record<string, unknown> },
+  ): Promise<{ data: ConfigOption | null; error: unknown }> {
     const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
     if (table) {
       try {
-        const payload: Record<string, any> = {
+        const payload: Record<string, unknown> = {
           label: option.label,
           value: option.value || option.label,
           description: option.description ?? null,
@@ -758,11 +758,11 @@ export const configService = {
     category: ConfigCategory,
     id: string,
     updates: Partial<Pick<ConfigOption, 'label' | 'value' | 'description' | 'ordem' | 'ativo' | 'metadata'>>,
-  ): Promise<{ error: any }> {
+  ): Promise<{ error: unknown }> {
     const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
     if (table) {
-      const payload: Record<string, any> = {};
+      const payload: Record<string, unknown> = {};
 
       if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
         payload.label = updates.label ?? '';
@@ -812,7 +812,7 @@ export const configService = {
     return await updateLegacyConfigOption(id, updates);
   },
 
-  async deleteConfigOption(category: ConfigCategory, id: string): Promise<{ error: any }> {
+  async deleteConfigOption(category: ConfigCategory, id: string): Promise<{ error: unknown }> {
     const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
     if (table) {
@@ -1001,13 +1001,13 @@ export const configService = {
 
   async createIntegrationSetting(
     payload: Pick<IntegrationSetting, 'slug' | 'name'> & Partial<Pick<IntegrationSetting, 'description' | 'settings'>>,
-  ): Promise<{ data: IntegrationSetting | null; error: any }> {
+  ): Promise<{ data: IntegrationSetting | null; error: unknown }> {
     try {
       const insertPayload = {
         ...payload,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      } as Record<string, any>;
+      } as Record<string, unknown>;
 
       const { data, error } = await supabase
         .from('integration_settings')
@@ -1039,9 +1039,9 @@ export const configService = {
   async updateIntegrationSetting(
     id: string,
     updates: Partial<Pick<IntegrationSetting, 'name' | 'description' | 'settings'>>,
-  ): Promise<{ data: IntegrationSetting | null; error: any }> {
+  ): Promise<{ data: IntegrationSetting | null; error: unknown }> {
     try {
-      const payload: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+      const payload: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() };
       const { data, error } = await supabase
         .from('integration_settings')
         .update(payload)

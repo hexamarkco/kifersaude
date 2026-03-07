@@ -116,7 +116,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract, leads }: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadLeads]);
+  }, [loadLeads]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (leads) {

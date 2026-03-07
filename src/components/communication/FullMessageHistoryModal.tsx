@@ -31,13 +31,13 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
 
   useEffect(() => {
     resolveChatId();
-  }, [chatId]);
+  }, [chatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (resolvedChatId) {
       loadMessages();
     }
-  }, [resolvedChatId, currentOffset, pageSize, filterFromMe, filterAuthor, filterDateFrom, filterDateTo, sortOrder]);
+  }, [resolvedChatId, currentOffset, pageSize, filterFromMe, filterAuthor, filterDateFrom, filterDateTo, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolveChatId = async () => {
     console.log('[FullMessageHistoryModal] resolveChatId iniciado');

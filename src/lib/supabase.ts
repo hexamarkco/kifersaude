@@ -208,9 +208,9 @@ export type Reminder = {
   responsavel?: string;
   tags?: string[];
   recorrencia?: string;
-  recorrencia_config?: any;
+  recorrencia_config?: unknown;
   tempo_estimado_minutos?: number;
-  anexos?: any[];
+  anexos?: unknown[];
   concluido_em?: string;
   snooze_count?: number;
   ultima_modificacao?: string;
@@ -263,7 +263,7 @@ export type IntegrationSetting = {
   slug: string;
   name: string;
   description?: string | null;
-  settings: Record<string, any> | null;
+  settings: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
@@ -323,7 +323,7 @@ export type ConfigOption = {
   ordem: number;
   ativo: boolean;
   active?: boolean;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

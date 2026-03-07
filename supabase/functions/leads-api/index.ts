@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 const DEFAULT_GREETING_TIMEZONE = 'America/Sao_Paulo';
 

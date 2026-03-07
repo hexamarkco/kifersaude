@@ -18,10 +18,10 @@ export default function DonutChart({ data, size = 200, strokeWidth = 30, onSegme
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
 
-  let currentAngle = -90;
-
   const segments = useMemo(() => {
     if (total === 0) return [];
+
+    let currentAngle = -90;
 
     return data.map((item) => {
       const percentage = (item.value / total) * 100;

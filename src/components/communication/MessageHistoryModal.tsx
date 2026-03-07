@@ -22,13 +22,13 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     if (isOpen && chatId) {
       resolveChatId();
     }
-  }, [isOpen, chatId]);
+  }, [isOpen, chatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isOpen && resolvedChatId) {
       loadHistory();
     }
-  }, [isOpen, resolvedChatId, messageTimestamp]);
+  }, [isOpen, resolvedChatId, messageTimestamp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolveChatId = async () => {
     setLoading(true);

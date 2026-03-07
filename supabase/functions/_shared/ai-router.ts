@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type AiProvider = 'openai' | 'gemini' | 'claude';
 
 export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription';

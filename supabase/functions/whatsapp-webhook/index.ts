@@ -1213,7 +1213,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
   let chatIdType = getChatIdType(message.chatId);
   let lid = chatIdType === 'lid' ? message.chatId : null;
-  let phoneNumber =
+  const phoneNumber =
     chatIdType === 'phone'
       ? extractPhoneNumber(message.chatId)
       : extractPhoneNumber(message.fromNumber || '') || extractPhoneNumber(message.toNumber || '');

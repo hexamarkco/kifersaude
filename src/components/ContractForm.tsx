@@ -156,10 +156,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     if (contract?.id) {
       loadAdjustments(contract.id);
     }
-  }, [contract?.id, convertibleLeadStatuses]);
+  }, [contract?.id, convertibleLeadStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const calculateAdjustedValue = (baseValue: number): number => {
-    let total = baseValue;
+  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
+
+  const adjustedMensalidade = useMemo(() => {
+    let total = baseMensalidade;
     adjustments.forEach(adj => {
       if (adj.tipo === 'acrescimo') {
         total += adj.valor;
@@ -168,14 +170,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       }
     });
     return total;
-  };
-
-  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
-
-  const adjustedMensalidade = useMemo(
-    () => calculateAdjustedValue(baseMensalidade),
-    [baseMensalidade, adjustments]
-  );
+  }, [baseMensalidade, adjustments]);
 
   const totalCommissionFromInstallments = useMemo(
     () =>
@@ -930,9 +925,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                         <span className="font-medium text-slate-700">Mensalidade Final:</span>
                         <span className="font-bold text-teal-700 text-lg">
                           R${' '}
-                          {calculateAdjustedValue(
-                            parseFloat(formData.mensalidade_total)
-                          ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {adjustedMensalidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>

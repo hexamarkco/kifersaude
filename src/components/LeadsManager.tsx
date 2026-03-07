@@ -429,7 +429,7 @@ export default function LeadsManager({
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions]);
+  }, [chunkArray, isObserver, isOriginVisibleToObserver, leadOrigins, leadStatuses, tipoContratacaoOptions, responsavelOptions]);
 
   useEffect(() => {
     void fetchContractsForLeads(leads.map((lead) => lead.id));
@@ -662,6 +662,7 @@ export default function LeadsManager({
     filterProximoRetornoTo,
     isObserver,
     isOriginVisibleToObserver,
+    parseSearchQuery,
     showArchived,
     sortDirection,
     sortField,
@@ -741,17 +742,17 @@ export default function LeadsManager({
     setBulkArchiveAction('none');
   }, []);
 
-  const normalizePhoneNumber = (phone: string | null | undefined) => {
+  const normalizePhoneNumber = useCallback((phone: string | null | undefined) => {
     if (!phone) return '';
     return phone.replace(/\D/g, '');
-  };
+  }, []);
 
-  const formatDateForExport = (value: string | null | undefined) => {
+  const formatDateForExport = useCallback((value: string | null | undefined) => {
     if (!value) return '';
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return '';
     return parsed.toLocaleString('pt-BR');
-  };
+  }, []);
 
   const exportLeadsList = useCallback((leadsToExport: Lead[], fileLabel: string) => {
     if (leadsToExport.length === 0) {

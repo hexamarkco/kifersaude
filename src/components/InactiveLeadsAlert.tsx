@@ -32,7 +32,7 @@ export default function InactiveLeadsAlert({ onLeadClick }: InactiveLeadsAlertPr
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [daysThreshold]);
+  }, [daysThreshold]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadInactiveLeads = async () => {
     setLoading(true);

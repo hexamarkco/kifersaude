@@ -23,7 +23,7 @@ const resolveHourInTimeZone = (date: Date, timeZone: string, fallbackTimeZone: s
 
   try {
     return getHourFromFormatter(buildHourFormatter(normalizedTimeZone), date);
-  } catch (error) {
+  } catch {
     if (normalizedTimeZone !== fallbackTimeZone) {
       try {
         return getHourFromFormatter(buildHourFormatter(fallbackTimeZone), date);

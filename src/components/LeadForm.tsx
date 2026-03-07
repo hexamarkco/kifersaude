@@ -204,7 +204,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           regiao: data.uf,
         }));
       }
-    } catch (error) {
+    } catch {
       alert('Erro ao consultar CEP. Verifique o CEP informado.');
     } finally {
       setLoadingCep(false);
@@ -279,7 +279,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         endereco: normalizeTitleCase(dataToSave.endereco),
       };
 
-      const leadDataForDb: any = {
+      const leadDataForDb: Record<string, unknown> = {
         ...normalizedLeadData,
         origem_id: resolveOrigemIdByName(leadOrigins, normalizedLeadData.origem),
         status_id: resolveStatusIdByName(leadStatuses, normalizedLeadData.status),

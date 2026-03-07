@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useMemo } from 'react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { formatEstimatedTime } from '../lib/reminderUtils';

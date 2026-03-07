@@ -55,5 +55,15 @@ Scripts disponiveis:
 
 - `run-migrations.bat`: aplica migrations (`supabase db push`).
 - `deploy-functions.bat`: faz deploy de todas as functions em `supabase/functions`.
+- `npm run migrations:report`: audita o diretorio `supabase/migrations` (duplicidades, wrappers e distribuicao por mes).
+- `npm run migrations:report:write`: atualiza `supabase/migrations/INDEX.md`.
+- `npm run migrations:baseline:write`: grava baseline atual da auditoria.
+- `npm run migrations:check`: valida que nao surgiram novas duplicidades/wrappers alem do baseline.
+
+Boas praticas para migrations:
+
+- Nao editar migrations antigas ja aplicadas.
+- Nao renomear prefixos de versao (`YYYYMMDDHHMMSS`) de migrations existentes.
+- Fazer ajustes via nova migration corretiva.
 
 Observacao: os dois scripts pausam no final para voce conseguir ler o resultado ao abrir com duplo clique. Se executar via terminal e quiser sem pausa, use `--no-pause`.

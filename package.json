@@ -11,6 +11,10 @@
     "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "backfill:whatsapp:global": "node scripts/backfill-whatsapp-global.mjs",
+    "migrations:report": "node scripts/audit-migrations.mjs",
+    "migrations:report:write": "node scripts/audit-migrations.mjs --write",
+    "migrations:baseline:write": "node scripts/audit-migrations.mjs --write-baseline",
+    "migrations:check": "node scripts/audit-migrations.mjs --check-baseline",
     "patch-react-side-effect": "node scripts/patch-react-side-effect.js",
     "postinstall": "npm run patch-react-side-effect"
   },

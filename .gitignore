@@ -23,3 +23,5 @@ dist-ssr
 *.sw?
 .env
 supabase.local.ini
+supabase/.temp/
+supabase/supabase/.temp/

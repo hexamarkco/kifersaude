@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import { Lead } from '../lib/supabase';
-import { useConfig } from '../contexts/ConfigContext';
 
 type LeadNotificationToastProps = {
   lead: Lead;

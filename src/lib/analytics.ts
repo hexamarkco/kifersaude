@@ -55,7 +55,7 @@ export function calculateConversionRate(leads: Lead[], _contracts: Contract[]): 
 
 export function calculateWinRate(leads: Lead[]): number {
   const activeLeads = leads.filter(l => !l.arquivado);
-  const closedOrLost = activeLeads.filter(l => ['Fechado', 'Perdido'].includes(l.status));
+  const closedOrLost = activeLeads.filter(l => ['Fechado', 'Perdido'].includes(l.status ?? ''));
 
   if (closedOrLost.length === 0) return 0;
 
@@ -65,7 +65,7 @@ export function calculateWinRate(leads: Lead[]): number {
 
 export function calculateLossRate(leads: Lead[]): number {
   const activeLeads = leads.filter(l => !l.arquivado);
-  const closedOrLost = activeLeads.filter(l => ['Fechado', 'Perdido'].includes(l.status));
+  const closedOrLost = activeLeads.filter(l => ['Fechado', 'Perdido'].includes(l.status ?? ''));
 
   if (closedOrLost.length === 0) return 0;
 
@@ -102,7 +102,8 @@ export function getLeadStatusDistribution(leads: Lead[]): LeadStatusDistribution
   if (total === 0) return [];
 
   const statusCount = activeLeads.reduce((acc, lead) => {
-    acc[lead.status] = (acc[lead.status] || 0) + 1;
+    const status = lead.status ?? 'Sem status';
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -233,7 +234,7 @@ export function getOverdueLeads(leads: Lead[]): Lead[] {
   const hoje = new Date();
 
   return leads.filter(l => {
-    if (l.arquivado || ['Fechado', 'Perdido'].includes(l.status)) return false;
+    if (l.arquivado || ['Fechado', 'Perdido'].includes(l.status ?? '')) return false;
 
     if (l.proximo_retorno) {
       const proximoRetorno = new Date(l.proximo_retorno);

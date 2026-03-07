@@ -255,20 +255,6 @@ const isMissingColumnError = (error: PostgrestError | null | undefined, column: 
   );
 };
 
-const isColumnTypeError = (error: PostgrestError | null | undefined, column: string) => {
-  if (!error) return false;
-  const normalizedCode = typeof error.code === 'string' ? error.code.toUpperCase() : '';
-  if (!['22P02', '42804', '23502', '22007', '42883'].includes(normalizedCode)) {
-    return false;
-  }
-
-  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
-  const normalizedMessage = message.replace(/"/g, "'");
-  const columnLower = column.toLowerCase();
-
-  return normalizedMessage.includes(`'${columnLower}'`) || normalizedMessage.includes(columnLower);
-};
-
 const PROFILE_PERMISSIONS_TABLE = 'profile_permissions';
 
 const isTableMissingError = (error: unknown, table: string) => {

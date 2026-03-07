@@ -44,8 +44,8 @@ const normalizeDate = (value?: string): string | undefined => {
   return value;
 };
 
-const fetchFromReceita = async <T>(url: string, errorMessage: string): Promise<T> => {
-  const response = await fetch(url);
+const fetchFromReceita = async <T>(url: string | URL, errorMessage: string): Promise<T> => {
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     const errorText = await response.text();

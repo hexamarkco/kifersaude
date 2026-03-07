@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, Reminder, Lead } from '../lib/supabase';
+import { supabase, Reminder } from '../lib/supabase';
 import { Bell, Check, Trash2, AlertCircle, Calendar, Clock, UserCheck, Plus } from 'lucide-react';
 import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateUtils';
 import { createAdditionalFollowUps } from '../lib/followUpService';
@@ -12,7 +12,6 @@ export default function RemindersManager() {
   const [loading, setLoading] = useState(true);
   const [reschedulingReminder, setReschedulingReminder] = useState<string | null>(null);
   const [newReminderDate, setNewReminderDate] = useState('');
-  const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [respondingReminder, setRespondingReminder] = useState<string | null>(null);
   const [additionalFollowUps, setAdditionalFollowUps] = useState({ count: 3, intervalDays: 2 });
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -92,20 +91,6 @@ export default function RemindersManager() {
       const { data, error } = await query;
       if (error) throw error;
       setReminders(data || []);
-
-      const leadIds = [...new Set((data || []).map(r => r.lead_id).filter(Boolean))];
-      if (leadIds.length > 0) {
-        const { data: leadsData } = await supabase
-          .from('leads')
-          .select('id, nome_completo, telefone')
-          .in('id', leadIds);
-
-        if (leadsData) {
-          const newLeadsMap = new Map();
-          leadsData.forEach(lead => newLeadsMap.set(lead.id, lead));
-          setLeadsMap(newLeadsMap);
-        }
-      }
     } catch (error) {
       console.error('Erro ao carregar lembretes:', error);
     } finally {

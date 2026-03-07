@@ -58,7 +58,7 @@ export default function InactiveLeadsAlert({ onLeadClick }: InactiveLeadsAlertPr
     }
   };
 
-  const getDaysInactive = (lastContact?: string): number => {
+  const getDaysInactive = (lastContact?: string | null): number => {
     if (!lastContact) return 999;
     const lastContactDate = new Date(lastContact);
     const now = new Date();

@@ -6,11 +6,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabaseFunctionsUrl =
   import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${supabaseUrl}/functions/v1`;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const supabaseClientOptions = {
   functions: {
     url: supabaseFunctionsUrl,
   },
-});
+} as unknown as Parameters<typeof createClient>[2];
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseClientOptions);
 
 export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
   if (!user) {
@@ -66,6 +68,8 @@ export type Lead = {
   nome_completo: string;
   telefone: string;
   email?: string;
+  cep?: string;
+  endereco?: string;
   cidade?: string;
   regiao?: string;
   estado?: string;

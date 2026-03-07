@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Volume2, VolumeX, Clock, Calendar, Save, CheckCircle, AlertCircle, Key, AlertTriangle } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Clock, Calendar, Save, CheckCircle, AlertCircle } from 'lucide-react';
 import { SystemSettings, supabase } from '../../lib/supabase';
 import { configService } from '../../lib/configService';
 import { useConfig } from '../../contexts/ConfigContext';
@@ -27,6 +27,12 @@ export default function SystemSettingsTab() {
   const [serviceRoleKeySaving, setServiceRoleKeySaving] = useState(false);
   const [showServiceKey, setShowServiceKey] = useState(false);
   const loadingUi = useAdaptiveLoading(loading);
+
+  void serviceRoleKey;
+  void serviceRoleKeyLoading;
+  void serviceRoleKeySaving;
+  void showServiceKey;
+  void setShowServiceKey;
 
   useEffect(() => {
     loadSettings();
@@ -94,6 +100,8 @@ export default function SystemSettingsTab() {
 
     setServiceRoleKeySaving(false);
   };
+
+  void saveServiceRoleKey;
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });

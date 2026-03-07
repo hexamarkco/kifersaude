@@ -212,7 +212,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   const loadLeads = async () => {
     try {
-      const data = await fetchAllPages<Lead>((from, to) => {
+      const data = await fetchAllPages<Lead>(async (from, to) => {
         let query = supabase
           .from('leads')
           .select('*')
@@ -222,7 +222,8 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
           query = query.in('status', convertibleLeadStatuses);
         }
 
-        return query.order('nome_completo').range(from, to);
+        const response = await query.order('nome_completo').range(from, to);
+        return { data: response.data, error: response.error };
       });
 
       setLeads(data || []);
@@ -300,7 +301,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     ? Math.max(0, parseFloat(formData.vidas_elegiveis_bonus || '0') || 0)
     : vidasNumber;
   const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
-  const bonusTotal = bonusPorVidaValor * vidasNumber;
+  const bonusTotal = bonusPorVidaValor * eligibleLivesNumber;
 
   const handleAddInstallment = () => {
     setCommissionInstallments([

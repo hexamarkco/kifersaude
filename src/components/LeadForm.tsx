@@ -47,7 +47,21 @@ type LeadFormState = {
   daily_send_limit: string;
 };
 
-type LeadPayload = LeadFormState;
+type LeadPayload = Omit<
+  LeadFormState,
+  'proximo_retorno' | 'blackout_dates' | 'daily_send_limit' | 'email' | 'cidade' | 'estado' | 'regiao' | 'operadora_atual' | 'endereco'
+> & {
+  proximo_retorno: string | null;
+  ultimo_contato: string;
+  blackout_dates: string[] | null;
+  daily_send_limit: number | null;
+  email: string | null;
+  cidade: string | null;
+  estado: string | null;
+  regiao: string | null;
+  operadora_atual: string | null;
+  endereco: string | null;
+};
 
 const normalizePhoneNumber = (value: string) => value.replace(/\D/g, '');
 

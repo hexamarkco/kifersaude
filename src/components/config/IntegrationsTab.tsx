@@ -247,7 +247,7 @@ const normalizeRoutingSettings = (
   const tasks = isRecord(settings.tasks) ? settings.tasks : {};
 
   return AI_TASKS.reduce((accumulator, task) => {
-    const rawTask = isRecord(tasks[task.key]) ? tasks[task.key] : {};
+    const rawTask: Record<string, unknown> = isRecord(tasks[task.key]) ? (tasks[task.key] as Record<string, unknown>) : {};
     const providerCandidate = toTrimmedString(rawTask.provider).toLowerCase();
     const provider = isAiProvider(providerCandidate) ? providerCandidate : defaults[task.key].provider;
 

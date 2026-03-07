@@ -17,7 +17,7 @@ interface MessageBubbleProps {
   timestamp: string | null;
   ackStatus: number | null;
   hasMedia: boolean;
-  payload?: any;
+  payload?: MessagePayload | null;
   reactions?: Array<{ emoji: string; count: number }>;
   fromName?: string;
   isDeleted?: boolean;
@@ -29,6 +29,58 @@ interface MessageBubbleProps {
   onEdit?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
 }
+
+type MediaPayload = {
+  id?: string;
+  media_id?: string;
+  mediaId?: string;
+  link?: string;
+  url?: string;
+  file?: string;
+  path?: string;
+  preview?: string;
+  filename?: string;
+  name?: string;
+  mime_type?: string;
+  mimetype?: string;
+  seconds?: number;
+  [key: string]: unknown;
+};
+
+type MessagePayload = MediaPayload & {
+  audio?: MediaPayload;
+  voice?: MediaPayload;
+  media?: MediaPayload;
+  image?: MediaPayload;
+  video?: MediaPayload;
+  document?: MediaPayload;
+  contact?: {
+    name?: string;
+    vcard?: string;
+    phone?: string;
+    [key: string]: unknown;
+  };
+  contact_list?: {
+    list?: Array<{
+      name?: string;
+      vcard?: string;
+      [key: string]: unknown;
+    }>;
+    [key: string]: unknown;
+  };
+  link_preview?: {
+    url?: string;
+    canonical?: string;
+    link?: string;
+    title?: string;
+    description?: string;
+    preview?: string;
+    image?: string;
+    thumbnail?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
 
 const MESSAGE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
   timeZone: SAO_PAULO_TIMEZONE,
@@ -166,11 +218,11 @@ export function MessageBubble({
     return formatPhoneDisplay(phone);
   };
 
-  const payloadData = payload as any;
+  const payloadData: MessagePayload = payload && typeof payload === 'object' ? payload : {};
   const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
   const normalizedType = (type || '').toLowerCase();
-  const audioPayload = payloadData?.audio || payloadData?.voice || payloadData?.media || payloadData;
-  const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path;
+  const audioPayload: MediaPayload | null = payloadData.audio || payloadData.voice || payloadData.media || payloadData;
+  const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path || null;
   const imageFullSrc =
     payloadData?.image?.url ||
     payloadData?.image?.file ||
@@ -526,11 +578,20 @@ export function MessageBubble({
     }
 
     if (normalizedType === 'link_preview' || payloadData?.link_preview) {
-      const linkData = payloadData?.link_preview || payloadData;
-      const previewUrl = linkData?.url || linkData?.canonical || linkData?.link || '';
-      const previewTitle = linkData?.title || (previewUrl ? previewUrl.replace(/^https?:\/\//i, '').split('/')[0] : 'Link');
-      const previewDescription = linkData?.description || '';
-      const previewImage = linkData?.preview || linkData?.image || linkData?.thumbnail || '';
+      const linkData = (payloadData.link_preview || payloadData) as {
+        url?: string;
+        canonical?: string;
+        link?: string;
+        title?: string;
+        description?: string;
+        preview?: string;
+        image?: string;
+        thumbnail?: string;
+      };
+      const previewUrl = linkData.url || linkData.canonical || linkData.link || '';
+      const previewTitle = linkData.title || (previewUrl ? previewUrl.replace(/^https?:\/\//i, '').split('/')[0] : 'Link');
+      const previewDescription = linkData.description || '';
+      const previewImage = linkData.preview || linkData.image || linkData.thumbnail || '';
       const textBody = resolvedBody && resolvedBody !== previewUrl && resolvedBody !== '[Link]' ? resolvedBody : '';
 
       return (

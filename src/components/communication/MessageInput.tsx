@@ -33,7 +33,7 @@ export type SentMessagePayload = {
   timestamp: string;
   direction: 'outbound';
   created_at: string;
-  payload?: any;
+  payload?: Record<string, unknown> | null;
 };
 
 interface MessageInputProps {
@@ -543,7 +543,7 @@ export function MessageInput({
   };
 
   const persistOutboundMessage = async (params: {
-    response: any;
+    response: unknown;
     chatId: string;
     type: string;
     body: string;
@@ -554,8 +554,12 @@ export function MessageInput({
     const normalizedChatId = normalizeChatId(rawChatId);
     await ensureOutboundChatExists(normalizedChatId, sentAt);
 
+    const responsePayload = response && typeof response === 'object'
+      ? (response as Record<string, unknown>)
+      : null;
+
     const persistedMessageId =
-      response && typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
+      typeof responsePayload?.id === 'string' && responsePayload.id.trim() ? responsePayload.id.trim() : null;
     const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     if (persistedMessageId) {
@@ -569,7 +573,7 @@ export function MessageInput({
         has_media: hasMedia,
         timestamp: sentAt,
         direction: 'outbound',
-        payload: response,
+        payload: responsePayload,
       });
 
       if (insertError) {

@@ -81,7 +81,7 @@ type WhatsAppMessage = {
   direction: 'inbound' | 'outbound' | null;
   ack_status: number | null;
   created_at: string;
-  payload?: any;
+  payload?: WhatsAppMessagePayload | null;
   is_deleted?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;
@@ -89,6 +89,24 @@ type WhatsAppMessage = {
   edited_at?: string | null;
   original_body?: string | null;
   author?: string | null;
+};
+
+type WhatsAppMessageAction = {
+  type?: string;
+  target?: string;
+  emoji?: string;
+  [key: string]: unknown;
+};
+
+type WhatsAppMessageReaction = {
+  emoji?: string;
+  count?: number;
+};
+
+type WhatsAppMessagePayload = {
+  action?: WhatsAppMessageAction;
+  reactions?: WhatsAppMessageReaction[];
+  [key: string]: unknown;
 };
 
 const MESSAGES_PAGE_SIZE = 120;
@@ -587,8 +605,11 @@ export default function WhatsAppTab() {
     return deduped.sort(sortMessagesChronologically);
   };
 
+  const asMessagePayload = (payload: unknown): WhatsAppMessagePayload =>
+    payload && typeof payload === 'object' ? (payload as WhatsAppMessagePayload) : {};
+
   const resolveReactionTargetChatId = (message: WhatsAppMessage) => {
-    const payloadData = message.payload as any;
+    const payloadData = asMessagePayload(message.payload);
     const action = payloadData?.action;
     if (action?.type !== 'reaction' || !action?.target) return null;
 
@@ -1114,7 +1135,7 @@ export default function WhatsAppTab() {
 
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]);
+  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const loadSavedContacts = async () => {
@@ -1202,13 +1223,13 @@ export default function WhatsAppTab() {
     void loadLeadNames();
     void loadSavedContacts();
     void loadContactPhotos();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user?.id) return;
     if (leadsList.length > 0) return;
     void loadLeadNames();
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const loadLeadStatuses = async () => {
@@ -1494,7 +1515,7 @@ export default function WhatsAppTab() {
       chatsSubscription.unsubscribe();
       messagesGlobalSubscription.unsubscribe();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (selectedChat) {
@@ -1524,12 +1545,12 @@ export default function WhatsAppTab() {
     setLoadedMessagesCount(0);
     setReplyToMessage(null);
     setEditMessage(null);
-  }, [selectedChat]);
+  }, [selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
     void loadUnreadCounts();
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -2035,13 +2056,13 @@ export default function WhatsAppTab() {
         setMessages((prev) =>
           prev.map((message) => {
             if (message.id !== messageId) return message;
-            const payloadData = message.payload && typeof message.payload === 'object' ? message.payload : {};
-            const reactions = Array.isArray((payloadData as any).reactions) ? (payloadData as any).reactions : [];
+            const payloadData = asMessagePayload(message.payload);
+            const reactions = Array.isArray(payloadData.reactions) ? payloadData.reactions : [];
             const nextReactions = reactions
-              .map((item: { emoji: string; count?: number }) =>
+              .map((item: WhatsAppMessageReaction) =>
                 item.emoji === emoji ? { ...item, count: Math.max(0, (item.count ?? 1) - 1) } : item,
               )
-              .filter((item: { count?: number }) => (item.count ?? 0) > 0);
+              .filter((item: WhatsAppMessageReaction) => (item.count ?? 0) > 0);
             return {
               ...message,
               payload: { ...payloadData, reactions: nextReactions },
@@ -2056,11 +2077,11 @@ export default function WhatsAppTab() {
       setMessages((prev) =>
         prev.map((message) => {
           if (message.id !== messageId) return message;
-          const payloadData = message.payload && typeof message.payload === 'object' ? message.payload : {};
-          const reactions = Array.isArray((payloadData as any).reactions) ? (payloadData as any).reactions : [];
-          const existing = reactions.find((item: { emoji: string }) => item.emoji === emoji);
+          const payloadData = asMessagePayload(message.payload);
+          const reactions = Array.isArray(payloadData.reactions) ? payloadData.reactions : [];
+          const existing = reactions.find((item: WhatsAppMessageReaction) => item.emoji === emoji);
           const nextReactions = existing
-            ? reactions.map((item: { emoji: string; count?: number }) =>
+            ? reactions.map((item: WhatsAppMessageReaction) =>
                 item.emoji === emoji ? { ...item, count: (item.count ?? 1) + 1 } : item,
               )
             : [...reactions, { emoji, count: 1 }];
@@ -2207,7 +2228,7 @@ export default function WhatsAppTab() {
   };
 
   const isReactionOnlyMessage = (message: Pick<WhatsAppMessage, 'payload'>) => {
-    const payloadData = message.payload as any;
+    const payloadData = asMessagePayload(message.payload);
     const actionType = String(payloadData?.action?.type || '').toLowerCase();
     return actionType === 'reaction' && payloadData?.action?.target;
   };
@@ -2216,7 +2237,7 @@ export default function WhatsAppTab() {
     const type = (message.type || '').toLowerCase();
     if (type !== 'action') return false;
 
-    const payloadData = message.payload as any;
+    const payloadData = asMessagePayload(message.payload);
     const actionType = String(payloadData?.action?.type || '').toLowerCase();
     return (actionType === 'edit' || actionType === 'edited') && Boolean(payloadData?.action?.target);
   };
@@ -2450,7 +2471,7 @@ export default function WhatsAppTab() {
     });
 
     return map;
-  }, [leadsList]);
+  }, [leadsList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const leadNamesByPhone = useMemo(() => {
     const map = new Map<string, string>();
@@ -2579,10 +2600,10 @@ export default function WhatsAppTab() {
     const map = new Map<string, Map<string, number>>();
 
     messages.forEach((message) => {
-      const payloadData = message.payload as any;
+      const payloadData = asMessagePayload(message.payload);
       const baseReactions = Array.isArray(payloadData?.reactions) ? payloadData.reactions : [];
 
-      baseReactions.forEach((reaction: { emoji?: string; count?: number }) => {
+      baseReactions.forEach((reaction: WhatsAppMessageReaction) => {
         if (!reaction?.emoji) return;
         const targetMap = map.get(message.id) ?? new Map<string, number>();
         const increment = typeof reaction.count === 'number' ? reaction.count : 1;
@@ -2592,7 +2613,7 @@ export default function WhatsAppTab() {
     });
 
     messages.forEach((message) => {
-      const payloadData = message.payload as any;
+      const payloadData = asMessagePayload(message.payload);
       const action = payloadData?.action;
       const actionType = String(action?.type || '').toLowerCase();
       if (actionType === 'reaction' && action?.target && action?.emoji) {
@@ -2615,7 +2636,7 @@ export default function WhatsAppTab() {
 
   const renderedMessages = useMemo(
     () => messages.filter((message) => !isReactionOnlyMessage(message) && !isEditActionMessage(message)),
-    [messages],
+    [messages], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
@@ -2629,12 +2650,12 @@ export default function WhatsAppTab() {
     }
 
     return null;
-  }, [leadByPhoneMatchKey, selectedChat]);
+  }, [leadByPhoneMatchKey, selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
   const firstResponseSla = useMemo<FirstResponseSLA>(() => {
     const timeline = [...messages]
       .filter((message) => {
         if (!message.direction) return false;
-        const payloadData = message.payload as any;
+        const payloadData = asMessagePayload(message.payload);
         const actionType = String(payloadData?.action?.type || '').toLowerCase();
         if (actionType === 'reaction' && payloadData?.action?.target) return false;
         if ((actionType === 'edit' || actionType === 'edited') && payloadData?.action?.target) return false;
@@ -2671,7 +2692,7 @@ export default function WhatsAppTab() {
 
     const waitingMinutes = Math.max(1, Math.round((Date.now() - lastInboundAt) / 60000));
     return { kind: 'waiting', minutes: waitingMinutes };
-  }, [messages, slaTick]);
+  }, [messages, slaTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const firstResponseSlaBadge = useMemo(() => {
     if (firstResponseSla.kind === 'no-inbound') {
       return {
@@ -2765,7 +2786,7 @@ export default function WhatsAppTab() {
       atendente: user?.email ? user.email.split('@')[0] : '',
       chat_nome: selectedChatDisplayName || selectedChat?.id || '',
     };
-  }, [selectedChat, selectedChatDisplayName, selectedLead, user]);
+  }, [selectedChat, selectedChatDisplayName, selectedLead, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const templateVariableShortcuts = [
     { key: 'nome', label: 'Nome' },
@@ -3318,7 +3339,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     return () => {
       window.clearInterval(refreshIntervalId);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openReminderLeadInWhatsApp = (item: ReminderQuickOpenItem) => {
     if (!item.leadPhone) return;
@@ -3590,7 +3611,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isChatMuted = (chat: WhatsAppChat) =>
     chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;

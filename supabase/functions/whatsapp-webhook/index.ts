@@ -1203,14 +1203,44 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
   return phoneNumber || message.chatId;
 }
 
-async function upsertChat(message: NormalizedMessage) {
-  const lastMessageAt = message.timestamp ?? new Date().toISOString();
-  const chatName = await resolveChatName(message);
-  const chatIdType = getChatIdType(message.chatId);
-  const isDirectChat = chatIdType === 'phone' || chatIdType === 'lid';
+type UpsertChatOptions = {
+  touchLastMessageAt?: boolean;
+};
 
-  const phoneNumber = chatIdType === 'phone' ? extractPhoneNumber(message.chatId) : null;
-  const lid = chatIdType === 'lid' ? message.chatId : null;
+async function upsertChat(message: NormalizedMessage, options?: UpsertChatOptions) {
+  const touchLastMessageAt = options?.touchLastMessageAt !== false;
+  const nowIso = new Date().toISOString();
+
+  let chatIdType = getChatIdType(message.chatId);
+  let lid = chatIdType === 'lid' ? message.chatId : null;
+  let phoneNumber =
+    chatIdType === 'phone'
+      ? extractPhoneNumber(message.chatId)
+      : extractPhoneNumber(message.fromNumber || '') || extractPhoneNumber(message.toNumber || '');
+
+  if (chatIdType === 'lid') {
+    const { data: chatByLid, error: chatByLidError } = await supabase
+      .from('whatsapp_chats')
+      .select('id, last_message_at, lid')
+      .eq('lid', message.chatId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (chatByLidError) {
+      console.warn('whatsapp-webhook: erro ao buscar chat por LID', {
+        lid: message.chatId,
+        error: chatByLidError.message,
+      });
+    } else if (chatByLid?.id && chatByLid.id !== message.chatId) {
+      message.chatId = chatByLid.id;
+      chatIdType = getChatIdType(message.chatId);
+      lid = chatByLid.lid || lid;
+    }
+  }
+
+  const chatName = await resolveChatName(message);
+  const isDirectChat = chatIdType === 'phone' || chatIdType === 'lid';
 
   console.log('whatsapp-webhook: upsert chat', {
     chatId: message.chatId,
@@ -1220,7 +1250,18 @@ async function upsertChat(message: NormalizedMessage) {
     lid,
     direction: message.direction,
     contactName: message.contactName,
+    touchLastMessageAt,
   });
+
+  const { data: existingChatById, error: existingChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('id, lid, phone_number, last_message_at')
+    .eq('id', message.chatId)
+    .maybeSingle();
+
+  if (existingChatError) {
+    throw new Error(`Erro ao consultar chat existente: ${existingChatError.message}`);
+  }
 
   if (phoneNumber && isDirectChat) {
     const existingChatId = await findExistingChatByPhone(phoneNumber, message.chatId);
@@ -1236,14 +1277,19 @@ async function upsertChat(message: NormalizedMessage) {
 
       const { data: existingChat } = await supabase
         .from('whatsapp_chats')
-        .select('lid')
+        .select('lid, last_message_at')
         .eq('id', existingChatId)
         .maybeSingle();
 
-      const updateData: any = {
+      const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
+      const nextLastMessageAt =
+        getLatestIsoTimestamp(existingChat?.last_message_at, incomingActivityAt) ?? existingChat?.last_message_at ?? nowIso;
+
+      const updateData: Record<string, unknown> = {
         name: chatName,
-        last_message_at: lastMessageAt,
-        updated_at: new Date().toISOString(),
+        phone_number: phoneNumber,
+        last_message_at: nextLastMessageAt,
+        updated_at: nowIso,
       };
 
       if (lid && !existingChat?.lid) {
@@ -1268,15 +1314,22 @@ async function upsertChat(message: NormalizedMessage) {
     }
   }
 
+  const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
+  const nextLastMessageAt =
+    getLatestIsoTimestamp(existingChatById?.last_message_at, incomingActivityAt) ??
+    existingChatById?.last_message_at ??
+    message.timestamp ??
+    nowIso;
+
   const { error } = await supabase.from('whatsapp_chats').upsert(
     {
       id: message.chatId,
       name: chatName,
       is_group: message.isGroup,
-      phone_number: phoneNumber,
-      lid: lid,
-      last_message_at: lastMessageAt,
-      updated_at: new Date().toISOString(),
+      phone_number: isDirectChat ? phoneNumber ?? existingChatById?.phone_number ?? null : null,
+      lid: chatIdType === 'lid' ? lid : existingChatById?.lid ?? null,
+      last_message_at: nextLastMessageAt,
+      updated_at: nowIso,
     },
     { onConflict: 'id' },
   );
@@ -1288,35 +1341,94 @@ async function upsertChat(message: NormalizedMessage) {
   if (chatIdType === 'group' && chatName && chatName !== message.chatId) {
     await supabase
       .from('whatsapp_groups')
-      .update({ name: chatName, last_updated_at: new Date().toISOString() })
+      .update({ name: chatName, last_updated_at: nowIso })
       .eq('id', message.chatId);
   }
 }
 
-async function upsertMessage(message: NormalizedMessage) {
-  const { error } = await supabase.from('whatsapp_messages').upsert(
-    {
-      id: message.messageId,
-      chat_id: message.chatId,
-      from_number: message.fromNumber,
-      to_number: message.toNumber,
-      type: message.type,
-      body: message.body,
-      original_body: message.body,
-      has_media: message.hasMedia,
-      timestamp: message.timestamp,
-      payload: message.payload,
-      direction: message.direction,
-      author: message.author,
-      ack_status: message.ackStatus,
-      is_deleted: false,
-      edit_count: 0,
-    },
-    { onConflict: 'id' },
-  );
+function mergeAckStatus(currentAck: number | null | undefined, incomingAck: number | null | undefined): number | null {
+  if (incomingAck === null || incomingAck === undefined) {
+    return typeof currentAck === 'number' ? currentAck : null;
+  }
 
-  if (error) {
-    throw new Error(`Erro ao salvar mensagem: ${error.message}`);
+  if (incomingAck === 0) {
+    return 0;
+  }
+
+  if (typeof currentAck === 'number') {
+    return Math.max(currentAck, incomingAck);
+  }
+
+  return incomingAck;
+}
+
+async function upsertMessage(message: NormalizedMessage) {
+  const { data: existingMessage, error: fetchError } = await supabase
+    .from('whatsapp_messages')
+    .select('id, body, timestamp, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status')
+    .eq('id', message.messageId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`Erro ao consultar mensagem existente: ${fetchError.message}`);
+  }
+
+  const mergedAckStatus = mergeAckStatus(existingMessage?.ack_status, message.ackStatus);
+
+  if (existingMessage?.id) {
+    const { error: updateError } = await supabase
+      .from('whatsapp_messages')
+      .update({
+        chat_id: message.chatId,
+        from_number: message.fromNumber,
+        to_number: message.toNumber,
+        type: message.type,
+        body: message.body ?? existingMessage.body,
+        original_body: existingMessage.original_body ?? existingMessage.body ?? message.body,
+        has_media: message.hasMedia,
+        timestamp: message.timestamp ?? existingMessage.timestamp,
+        payload: message.payload,
+        direction: message.direction,
+        author: message.author,
+        ack_status: mergedAckStatus,
+        is_deleted: Boolean(existingMessage.is_deleted),
+        deleted_at: existingMessage.deleted_at ?? null,
+        deleted_by: existingMessage.deleted_by ?? null,
+        edit_count: existingMessage.edit_count ?? 0,
+        edited_at: existingMessage.edited_at ?? null,
+      })
+      .eq('id', message.messageId);
+
+    if (updateError) {
+      throw new Error(`Erro ao atualizar mensagem existente: ${updateError.message}`);
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabase.from('whatsapp_messages').insert({
+    id: message.messageId,
+    chat_id: message.chatId,
+    from_number: message.fromNumber,
+    to_number: message.toNumber,
+    type: message.type,
+    body: message.body,
+    original_body: message.body,
+    has_media: message.hasMedia,
+    timestamp: message.timestamp,
+    payload: message.payload,
+    direction: message.direction,
+    author: message.author,
+    ack_status: mergedAckStatus,
+    is_deleted: false,
+    edit_count: 0,
+    edited_at: null,
+    deleted_at: null,
+    deleted_by: null,
+  });
+
+  if (insertError) {
+    throw new Error(`Erro ao salvar mensagem: ${insertError.message}`);
   }
 }
 
@@ -1430,19 +1542,19 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
   });
 }
 
-async function processMessageDelete(message: WhapiMessage) {
-  const targetMessageId = message.action?.target || message.id;
-
-  console.log('whatsapp-webhook: processando deleção de mensagem', {
-    messageId: targetMessageId,
-    eventId: message.id,
-    chatId: message.chat_id,
-  });
+async function processMessageDeleteById(
+  targetMessageId: string,
+  options?: { deletedBy?: string | null; deleteEvent?: unknown; eventId?: string | null },
+) {
+  const normalizedTargetMessageId = toCleanText(targetMessageId);
+  if (!normalizedTargetMessageId) {
+    return;
+  }
 
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
     .select('payload')
-    .eq('id', targetMessageId)
+    .eq('id', normalizedTargetMessageId)
     .maybeSingle();
 
   if (fetchError) {
@@ -1452,13 +1564,14 @@ async function processMessageDelete(message: WhapiMessage) {
 
   if (!existingMessage) {
     console.log('whatsapp-webhook: mensagem não encontrada para deleção', {
-      messageId: targetMessageId,
-      eventId: message.id,
+      messageId: normalizedTargetMessageId,
+      eventId: options?.eventId || null,
     });
     return;
   }
 
-  const deletedBy = message.from_me ? 'outbound_user' : (message.from || 'unknown');
+  const deletedBy = toCleanText(options?.deletedBy) || 'unknown';
+  const deleteEvent = options?.deleteEvent;
 
   const { error: updateError } = await supabase
     .from('whatsapp_messages')
@@ -1468,10 +1581,10 @@ async function processMessageDelete(message: WhapiMessage) {
       deleted_by: deletedBy,
       payload: {
         ...(existingMessage?.payload && typeof existingMessage.payload === 'object' ? existingMessage.payload : {}),
-        delete_event: JSON.parse(JSON.stringify(message)),
+        ...(deleteEvent ? { delete_event: JSON.parse(JSON.stringify(deleteEvent)) } : {}),
       },
     })
-    .eq('id', targetMessageId);
+    .eq('id', normalizedTargetMessageId);
 
   if (updateError) {
     console.error('whatsapp-webhook: erro ao marcar mensagem como deletada', updateError);
@@ -1479,16 +1592,33 @@ async function processMessageDelete(message: WhapiMessage) {
   }
 
   console.log('whatsapp-webhook: mensagem marcada como deletada', {
-    messageId: targetMessageId,
-    eventId: message.id,
+    messageId: normalizedTargetMessageId,
+    eventId: options?.eventId || null,
     deletedBy,
   });
 }
 
-async function resolveReactionTargetChatId(message: WhapiMessage): Promise<string | null> {
-  if (message.action?.type !== 'reaction') return null;
+async function processMessageDelete(message: WhapiMessage) {
+  const targetMessageId = message.action?.target || message.id;
 
-  const targetMessageId = message.action.target?.trim();
+  console.log('whatsapp-webhook: processando deleção de mensagem', {
+    messageId: targetMessageId,
+    eventId: message.id,
+    chatId: message.chat_id,
+  });
+
+  const deletedBy = message.from_me ? 'outbound_user' : message.from || 'unknown';
+  await processMessageDeleteById(targetMessageId, {
+    deletedBy,
+    deleteEvent: message,
+    eventId: message.id,
+  });
+}
+
+async function resolveReactionTargetChatId(message: WhapiMessage): Promise<string | null> {
+  if (normalizeActionType(message.action?.type) !== 'reaction') return null;
+
+  const targetMessageId = message.action?.target?.trim();
   if (!targetMessageId) return null;
 
   const { data: targetMessage, error } = await supabase
@@ -1527,7 +1657,7 @@ async function processGroupCreation(group: WhapiGroup) {
       type: group.type,
       chat_pic: group.chat_pic || null,
       chat_pic_full: group.chat_pic_full || null,
-      created_at: toIsoString(group.created_at),
+      created_at: toIsoString(group.created_at) || new Date().toISOString(),
       created_by: group.created_by,
       name_at: group.name_at ? toIsoString(group.name_at) : null,
       admin_add_member_mode: group.adminAddMemberMode ?? true,
@@ -1567,7 +1697,7 @@ async function processGroupCreation(group: WhapiGroup) {
     event_type: 'created',
     participants: group.participants.map((p) => p.id),
     triggered_by: group.created_by,
-    occurred_at: toIsoString(group.created_at),
+    occurred_at: toIsoString(group.created_at) || new Date().toISOString(),
     created_at: new Date().toISOString(),
   });
 
@@ -1582,7 +1712,7 @@ async function processGroupCreation(group: WhapiGroup) {
       is_group: true,
       phone_number: null,
       lid: null,
-      last_message_at: toIsoString(group.created_at),
+      last_message_at: toIsoString(group.created_at) || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' },
@@ -1813,14 +1943,13 @@ Deno.serve(async (req) => {
     console.error('whatsapp-webhook: erro ao salvar evento', message, { eventName, payload });
   }
 
-  const isMessageEvent = eventName.toLowerCase().includes('messages');
-  const isGroupEvent = eventName.toLowerCase().includes('groups');
-
-  if (isMessageEvent && payload.messages && Array.isArray(payload.messages)) {
+  if (Array.isArray(payload.messages)) {
     for (const message of payload.messages) {
       try {
-        const isDeleted = message.action?.type === 'delete' || message.type === 'revoked';
-        const isEditAction = message.type === 'action' && message.action?.type === 'edit';
+        const messageType = toCleanText(message.type).toLowerCase();
+        const actionType = normalizeActionType(message.action?.type);
+        const isDeleted = actionType === 'delete' || messageType === 'revoked';
+        const isEditAction = messageType === 'action' && (actionType === 'edit' || actionType === 'edited');
 
         if (isEditAction) {
           console.log('whatsapp-webhook: ignorando ação de edição (será processada via messages_updates)', {
@@ -1838,8 +1967,9 @@ Deno.serve(async (req) => {
           await processMessageDelete(message);
         } else {
           const normalized = normalizeWhapiMessage(message);
+          const isReactionAction = actionType === 'reaction';
 
-          if (message.action?.type === 'reaction') {
+          if (isReactionAction) {
             const targetChatId = await resolveReactionTargetChatId(message);
 
             if (!targetChatId) {
@@ -1853,27 +1983,29 @@ Deno.serve(async (req) => {
 
             if (targetChatId !== normalized.chatId) {
               const originalChatId = normalized.chatId;
-              normalized.chatId = targetChatId;
-              normalized.isGroup = targetChatId.endsWith('@g.us');
+              const resolvedTargetChatId = normalizeDirectChatId(targetChatId);
+              normalized.chatId = resolvedTargetChatId;
+              normalized.isGroup = resolvedTargetChatId.endsWith('@g.us');
 
               if (normalized.direction === 'outbound') {
-                normalized.toNumber = targetChatId;
+                normalized.toNumber = resolvedTargetChatId;
               }
 
               if (normalized.direction === 'inbound' && (!normalized.fromNumber || normalized.fromNumber === originalChatId)) {
-                normalized.fromNumber = message.from || targetChatId;
+                normalized.fromNumber = normalizeMaybeDirectId(message.from) || resolvedTargetChatId;
               }
 
               console.log('whatsapp-webhook: chat da reacao corrigido com base na mensagem alvo', {
                 reactionMessageId: message.id,
                 targetMessageId: message.action?.target,
                 originalChatId,
-                resolvedChatId: targetChatId,
+                resolvedChatId: resolvedTargetChatId,
               });
             }
           }
 
-          await upsertChat(normalized);
+          const shouldTouchLastMessageAt = !isReactionAction && !['system'].includes(messageType);
+          await upsertChat(normalized, { touchLastMessageAt: shouldTouchLastMessageAt });
           await upsertMessage(normalized);
         }
       } catch (error) {
@@ -1883,7 +2015,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (payload.messages_updates && Array.isArray(payload.messages_updates)) {
+  if (Array.isArray(payload.messages_updates)) {
     for (const update of payload.messages_updates) {
       try {
         console.log('whatsapp-webhook: processando atualização de mensagem', {
@@ -1892,7 +2024,7 @@ Deno.serve(async (req) => {
         });
 
         const normalized = normalizeWhapiMessage(update.after_update);
-        await upsertChat(normalized);
+        await upsertChat(normalized, { touchLastMessageAt: false });
         await processMessageEdit(update.after_update, normalized);
       } catch (error) {
         const update_error = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -1901,7 +2033,33 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (payload.statuses && Array.isArray(payload.statuses)) {
+  if (Array.isArray(payload.messages_removed)) {
+    for (const removed of payload.messages_removed) {
+      const removedMessageId =
+        typeof removed === 'string'
+          ? toCleanText(removed)
+          : toCleanText(removed.id || removed.message_id);
+
+      if (!removedMessageId) {
+        continue;
+      }
+
+      await processMessageDeleteById(removedMessageId, {
+        deletedBy: 'messages_removed_event',
+        deleteEvent: removed,
+        eventId: removedMessageId,
+      });
+    }
+  }
+
+  if (typeof payload.messages_removed_all === 'string' && payload.messages_removed_all.trim()) {
+    console.log('whatsapp-webhook: evento messages_removed_all recebido', {
+      chatId: payload.messages_removed_all,
+      note: 'evento registrado para auditoria; sem deleção em massa automática',
+    });
+  }
+
+  if (Array.isArray(payload.statuses)) {
     for (const status of payload.statuses) {
       try {
         const ackStatus = resolveStatusAck(status.status, status.code);
@@ -1923,54 +2081,52 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (isGroupEvent) {
-    if (payload.groups && Array.isArray(payload.groups)) {
-      for (const group of payload.groups) {
-        try {
-          await processGroupCreation(group);
-          console.log('whatsapp-webhook: grupo criado/atualizado', {
-            groupId: group.id,
-            groupName: group.name,
-          });
-        } catch (error) {
-          const group_error = error instanceof Error ? error.message : 'Erro desconhecido';
-          console.error('whatsapp-webhook: erro ao processar grupo', group_error, { groupId: group.id });
-        }
+  if (Array.isArray(payload.groups)) {
+    for (const group of payload.groups) {
+      try {
+        await processGroupCreation(group);
+        console.log('whatsapp-webhook: grupo criado/atualizado', {
+          groupId: group.id,
+          groupName: group.name,
+        });
+      } catch (error) {
+        const group_error = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error('whatsapp-webhook: erro ao processar grupo', group_error, { groupId: group.id });
       }
     }
+  }
 
-    if (payload.groups_participants && Array.isArray(payload.groups_participants)) {
-      for (const change of payload.groups_participants) {
-        try {
-          await processGroupParticipantChange(change);
-          console.log('whatsapp-webhook: participantes do grupo atualizados', {
-            groupId: change.group_id,
-            action: change.action,
-            participants: change.participants,
-          });
-        } catch (error) {
-          const participant_error = error instanceof Error ? error.message : 'Erro desconhecido';
-          console.error('whatsapp-webhook: erro ao processar participantes', participant_error, {
-            groupId: change.group_id,
-          });
-        }
+  if (Array.isArray(payload.groups_participants)) {
+    for (const change of payload.groups_participants) {
+      try {
+        await processGroupParticipantChange(change);
+        console.log('whatsapp-webhook: participantes do grupo atualizados', {
+          groupId: change.group_id,
+          action: change.action,
+          participants: change.participants,
+        });
+      } catch (error) {
+        const participant_error = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error('whatsapp-webhook: erro ao processar participantes', participant_error, {
+          groupId: change.group_id,
+        });
       }
     }
+  }
 
-    if (payload.groups_updates && Array.isArray(payload.groups_updates)) {
-      for (const update of payload.groups_updates) {
-        try {
-          await processGroupUpdate(update);
-          console.log('whatsapp-webhook: grupo atualizado', {
-            groupId: update.after_update.id,
-            changes: update.changes,
-          });
-        } catch (error) {
-          const update_error = error instanceof Error ? error.message : 'Erro desconhecido';
-          console.error('whatsapp-webhook: erro ao processar atualização de grupo', update_error, {
-            groupId: update.after_update.id,
-          });
-        }
+  if (Array.isArray(payload.groups_updates)) {
+    for (const update of payload.groups_updates) {
+      try {
+        await processGroupUpdate(update);
+        console.log('whatsapp-webhook: grupo atualizado', {
+          groupId: update.after_update.id,
+          changes: update.changes,
+        });
+      } catch (error) {
+        const update_error = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error('whatsapp-webhook: erro ao processar atualização de grupo', update_error, {
+          groupId: update.after_update.id,
+        });
       }
     }
   }
@@ -1978,6 +2134,8 @@ Deno.serve(async (req) => {
   const processed =
     (payload.messages?.length || 0) +
     (payload.messages_updates?.length || 0) +
+    (payload.messages_removed?.length || 0) +
+    (payload.messages_removed_all ? 1 : 0) +
     (payload.statuses?.length || 0) +
     (payload.groups?.length || 0) +
     (payload.groups_participants?.length || 0) +

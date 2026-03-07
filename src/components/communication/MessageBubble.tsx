@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X } from 'lucide-react';
-import { format, isToday, isYesterday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
+import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
 
 interface MessageBubbleProps {
   id: string;
@@ -30,6 +29,23 @@ interface MessageBubbleProps {
   onEdit?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
 }
+
+const MESSAGE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+const MESSAGE_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 
 export function MessageBubble({
   id,
@@ -73,14 +89,29 @@ export function MessageBubble({
     if (!ts) return '';
 
     const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return '';
 
-    if (isToday(date)) {
-      return format(date, 'HH:mm', { locale: ptBR });
-    } else if (isYesterday(date)) {
-      return `Ontem ${format(date, 'HH:mm', { locale: ptBR })}`;
-    } else {
-      return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
+    const currentDayKey = getDateKey(date, SAO_PAULO_TIMEZONE);
+    const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
+    const timeLabel = MESSAGE_TIME_FORMATTER.format(date);
+
+    if (currentDayKey === todayKey) {
+      return timeLabel;
     }
+
+    const yesterdayKey = getDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000), SAO_PAULO_TIMEZONE);
+    if (currentDayKey === yesterdayKey) {
+      return `Ontem ${timeLabel}`;
+    }
+
+    return MESSAGE_DATE_TIME_FORMATTER.format(date).replace(',', '');
+  };
+
+  const formatDateTimeInSaoPaulo = (value: string | null | undefined) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return MESSAGE_DATE_TIME_FORMATTER.format(parsed).replace(',', '');
   };
 
   const getAckIcon = () => {
@@ -308,7 +339,7 @@ export function MessageBubble({
             <span className="line-through">Mensagem apagada</span>
             {deletedAt && (
               <span className="block text-xs mt-1">
-                em {format(new Date(deletedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                em {formatDateTimeInSaoPaulo(deletedAt)}
               </span>
             )}
           </div>

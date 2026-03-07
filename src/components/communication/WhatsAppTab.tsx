@@ -39,6 +39,7 @@ import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
+import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
 import {
   buildChatIdFromPhone,
   getWhatsAppChatKind,
@@ -91,6 +92,14 @@ type WhatsAppMessage = {
 };
 
 const MESSAGES_PAGE_SIZE = 120;
+
+const DAY_SEPARATOR_LABEL_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: SAO_PAULO_TIMEZONE,
+  weekday: 'long',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
 
 type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct' | 'channels' | 'broadcasts';
 
@@ -459,10 +468,27 @@ export default function WhatsAppTab() {
     return Number.isNaN(fallback) ? 0 : fallback;
   };
 
+  const getMessageCreatedAtValue = (message: Pick<WhatsAppMessage, 'created_at'>) => {
+    const parsed = new Date(message.created_at).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
   const sortMessagesChronologically = (
-    left: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>,
-    right: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>,
-  ) => getMessageTimeValue(left) - getMessageTimeValue(right);
+    left: Pick<WhatsAppMessage, 'timestamp' | 'created_at'> & Partial<Pick<WhatsAppMessage, 'id'>>,
+    right: Pick<WhatsAppMessage, 'timestamp' | 'created_at'> & Partial<Pick<WhatsAppMessage, 'id'>>,
+  ) => {
+    const timeDelta = getMessageTimeValue(left) - getMessageTimeValue(right);
+    if (timeDelta !== 0) {
+      return timeDelta;
+    }
+
+    const createdAtDelta = getMessageCreatedAtValue(left) - getMessageCreatedAtValue(right);
+    if (createdAtDelta !== 0) {
+      return createdAtDelta;
+    }
+
+    return (left.id || '').localeCompare(right.id || '');
+  };
 
   const getChatTimeValue = (chat: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>) => {
     const primary = chat.last_message_at ? new Date(chat.last_message_at).getTime() : Number.NaN;
@@ -594,31 +620,21 @@ export default function WhatsAppTab() {
   const getMessageDayKey = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
     const date = getMessageCalendarDate(message);
     if (!date) return '';
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return getDateKey(date, SAO_PAULO_TIMEZONE);
   };
-
-  const isSameCalendarDay = (left: Date, right: Date) =>
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate();
 
   const formatDaySeparatorLabel = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
     const date = getMessageCalendarDate(message);
     if (!date) return '';
 
-    const today = new Date();
-    if (isSameCalendarDay(date, today)) return 'Hoje';
+    const currentDayKey = getDateKey(date, SAO_PAULO_TIMEZONE);
+    const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
+    if (currentDayKey === todayKey) return 'Hoje';
 
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    if (isSameCalendarDay(date, yesterday)) return 'Ontem';
+    const yesterdayKey = getDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000), SAO_PAULO_TIMEZONE);
+    if (currentDayKey === yesterdayKey) return 'Ontem';
 
-    const formatted = date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const formatted = DAY_SEPARATOR_LABEL_FORMATTER.format(date);
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
@@ -1450,16 +1466,21 @@ export default function WhatsAppTab() {
           const updated = prev.map((chat) => {
             const variantsForChat = getChatIdVariants(chat);
             if (!variantsForChat.includes(message.chat_id)) return chat;
+
+            const preview = getMessagePreview(message);
+            if (!preview && eventType === 'INSERT') {
+              return chat;
+            }
+
             const messageTimestamp = message.timestamp || message.created_at || null;
             const messageTime = messageTimestamp ? new Date(messageTimestamp).getTime() : 0;
             const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
             if (messageTime && currentTime && messageTime < currentTime) return chat;
             const shouldUnarchive = eventType === 'INSERT' && chat.archived && !isChatMuted(chat);
-            const preview = getMessagePreview(message);
             return {
               ...chat,
-              last_message: preview ?? chat.last_message,
-              last_message_at: messageTimestamp || chat.last_message_at,
+              last_message: preview || chat.last_message,
+              last_message_at: preview ? messageTimestamp || chat.last_message_at : chat.last_message_at,
               archived: shouldUnarchive ? false : chat.archived,
             };
           });
@@ -1728,15 +1749,17 @@ export default function WhatsAppTab() {
 
       const fetchedCount = (data || []).length;
       const baseMessages = dedupeMessagesForDisplay(data || []);
-      setMessages(baseMessages);
+      setMessages((prev) => {
+        const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
+        messagesCacheRef.current.set(chat.id, {
+          messages: mergedMessages,
+          loadedCount: fetchedCount,
+          hasOlder: fetchedCount === MESSAGES_PAGE_SIZE,
+        });
+        return mergedMessages;
+      });
       setLoadedMessagesCount(fetchedCount);
       setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
-
-      messagesCacheRef.current.set(chat.id, {
-        messages: baseMessages,
-        loadedCount: fetchedCount,
-        hasOlder: fetchedCount === MESSAGES_PAGE_SIZE,
-      });
 
       if (userRef.current) {
         void markChatAsRead(chat, baseMessages).then(() => {
@@ -2185,7 +2208,8 @@ export default function WhatsAppTab() {
 
   const isReactionOnlyMessage = (message: Pick<WhatsAppMessage, 'payload'>) => {
     const payloadData = message.payload as any;
-    return payloadData?.action?.type === 'reaction' && payloadData?.action?.target;
+    const actionType = String(payloadData?.action?.type || '').toLowerCase();
+    return actionType === 'reaction' && payloadData?.action?.target;
   };
 
   const isEditActionMessage = (message: Pick<WhatsAppMessage, 'payload' | 'type'>) => {
@@ -2570,7 +2594,8 @@ export default function WhatsAppTab() {
     messages.forEach((message) => {
       const payloadData = message.payload as any;
       const action = payloadData?.action;
-      if (action?.type === 'reaction' && action?.target && action?.emoji) {
+      const actionType = String(action?.type || '').toLowerCase();
+      if (actionType === 'reaction' && action?.target && action?.emoji) {
         const existingTarget = map.get(action.target);
         if (existingTarget?.has(action.emoji)) return;
         const targetMap = existingTarget ?? new Map<string, number>();

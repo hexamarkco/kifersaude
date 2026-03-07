@@ -16,7 +16,7 @@ type WhapiMessage = {
   from_me: boolean;
   from_name?: string;
   source?: string;
-  timestamp: number;
+  timestamp: number | string | null;
   status?: string;
   edited_at?: number;
   edit_history?: Array<{ body?: string; timestamp?: number }>;
@@ -197,6 +197,65 @@ const mapStatusToAck = (status?: string): number | null => {
 
 const toCleanText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const toArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
+const getLatestIsoTimestamp = (...values: Array<string | null | undefined>): string | null => {
+  let bestTimestamp: number | null = null;
+  let bestIso: string | null = null;
+
+  values.forEach((value) => {
+    if (!value) return;
+    const parsed = new Date(value);
+    const timestamp = parsed.getTime();
+    if (Number.isNaN(timestamp)) return;
+
+    if (bestTimestamp === null || timestamp > bestTimestamp) {
+      bestTimestamp = timestamp;
+      bestIso = parsed.toISOString();
+    }
+  });
+
+  return bestIso;
+};
+
+const normalizeDirectChatId = (chatId: string): string => {
+  const trimmed = chatId.trim();
+  if (!trimmed) return trimmed;
+
+  if (/@c\.us$/i.test(trimmed)) {
+    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
+  }
+
+  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
+    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+  }
+
+  if (!trimmed.includes('@')) {
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length >= 7 && digits.length <= 15) {
+      return `${digits}@s.whatsapp.net`;
+    }
+  }
+
+  return trimmed;
+};
+
+const mergeAckStatus = (currentAck: number | null | undefined, incomingAck: number | null | undefined): number | null => {
+  if (incomingAck === null || incomingAck === undefined) {
+    return typeof currentAck === 'number' ? currentAck : null;
+  }
+
+  if (incomingAck === 0) {
+    return 0;
+  }
+
+  if (typeof currentAck === 'number') {
+    return Math.max(currentAck, incomingAck);
+  }
+
+  return incomingAck;
+};
+
 const toPayloadObject = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
@@ -327,13 +386,13 @@ const extractInteractiveBody = (message: WhapiMessage): string | null => {
   const footerText =
     typeof interactive.footer === 'string' ? toCleanText(interactive.footer) : toCleanText(interactive.footer?.text);
 
-  const buttonTitles = (interactive.action?.buttons || [])
+  const buttonTitles = toArray<{ title?: string; text?: string }>(interactive.action?.buttons)
     .map((button) => toCleanText(button.title || button.text))
     .filter(Boolean);
 
   const listLabel = toCleanText(interactive.action?.list?.label || interactive.action?.list?.button);
-  const listRows = (interactive.action?.list?.sections || [])
-    .flatMap((section) => section.rows || [])
+  const listRows = toArray<{ rows?: Array<{ title?: string }> }>(interactive.action?.list?.sections)
+    .flatMap((section) => toArray<{ title?: string }>(section.rows))
     .map((row) => toCleanText(row.title))
     .filter(Boolean);
 
@@ -356,7 +415,7 @@ const extractHsmBody = (message: WhapiMessage): string | null => {
 
   const headerText = typeof hsm.header === 'string' ? toCleanText(hsm.header) : toCleanText(hsm.header?.text);
   const footerText = toCleanText(hsm.footer);
-  const buttonTexts = (hsm.buttons || [])
+  const buttonTexts = toArray<{ text?: string; title?: string }>(hsm.buttons)
     .map((button) => toCleanText(button.text || button.title))
     .filter(Boolean);
 
@@ -412,7 +471,7 @@ const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: bool
   if (message.location) return { body: '[Localização]', hasMedia: true };
   if (message.live_location) return { body: '[Localização ao vivo]', hasMedia: true };
   if (message.contact) return { body: `[Contato: ${message.contact.name}]`, hasMedia: false };
-  if (message.contact_list) return { body: `[${message.contact_list.list.length} contato(s)]`, hasMedia: false };
+  if (message.contact_list) return { body: `[${toArray(message.contact_list.list).length} contato(s)]`, hasMedia: false };
   if (message.sticker) return { body: '[Sticker]', hasMedia: true };
   if (message.action) {
     const actionType = normalizeActionType(message.action.type);
@@ -467,8 +526,30 @@ const extractChatLid = (chatId: string): string | null => {
   return normalized.toLowerCase().endsWith('@lid') ? normalized : null;
 };
 
-const toIsoString = (timestamp?: number): string | null =>
-  timestamp ? new Date(timestamp * 1000).toISOString() : null;
+const toIsoString = (timestamp: unknown): string | null => {
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+    const milliseconds = timestamp > 10_000_000_000 ? timestamp : timestamp * 1000;
+    const parsed = new Date(milliseconds);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  if (typeof timestamp === 'string') {
+    const trimmed = timestamp.trim();
+    if (!trimmed) return null;
+
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) {
+      const milliseconds = numeric > 10_000_000_000 ? numeric : numeric * 1000;
+      const parsed = new Date(milliseconds);
+      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    }
+
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  return null;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -513,12 +594,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const requestedChatId = normalizeDirectChatId(chatId);
+
     const queryParams = new URLSearchParams();
     queryParams.append('count', String(typeof count === 'number' ? count : 200));
     queryParams.append('offset', '0');
     queryParams.append('sort', 'desc');
 
-    const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(chatId)}?${queryParams}`, {
+    const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(requestedChatId)}?${queryParams}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
@@ -543,26 +626,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    const chatKind = getChatIdKind(chatId);
+    const chatKind = getChatIdKind(requestedChatId);
     const isGroup = chatKind === 'group';
     const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast' || chatKind === 'status';
-    const lastMessageAt = toIsoString(messages[0]?.timestamp) ?? new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    const latestMessageAt = messages
+      .map((message) => toIsoString(message.timestamp))
+      .reduce<string | null>((latest, current) => getLatestIsoTimestamp(latest, current), null);
+    const lastMessageAt = latestMessageAt ?? nowIso;
     const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
-    const messageChatName = messageChatNameRaw && messageChatNameRaw !== chatId ? messageChatNameRaw : null;
+    const messageChatName = messageChatNameRaw && messageChatNameRaw !== requestedChatId ? messageChatNameRaw : null;
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
-      .select('name')
-      .eq('id', chatId)
+      .select('name, last_message_at, phone_number, lid')
+      .eq('id', requestedChatId)
       .maybeSingle();
 
     const existingChatName = existingChat?.name?.trim() || null;
 
     let chatName = existingChatName;
     if (isGroup) {
-      const canonicalGroupName = await fetchGroupName(token, chatId);
-      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? chatId;
+      const canonicalGroupName = await fetchGroupName(token, requestedChatId);
+      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? requestedChatId;
     } else if (isChannelChat) {
-      const channelName = messageChatName ?? (await fetchNewsletterName(token, chatId));
+      const channelName = messageChatName ?? (await fetchNewsletterName(token, requestedChatId));
       if (chatKind === 'status') {
         chatName = 'Status';
       } else if (channelName) {
@@ -574,15 +661,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    const nextLastMessageAt =
+      getLatestIsoTimestamp(existingChat?.last_message_at ?? null, lastMessageAt) ??
+      existingChat?.last_message_at ??
+      lastMessageAt;
+
     await supabase.from('whatsapp_chats').upsert(
       {
-        id: chatId,
+        id: requestedChatId,
         name: chatName,
         is_group: isGroup,
-        phone_number: chatKind === 'direct' ? extractChatPhoneNumber(chatId) : null,
-        lid: chatKind === 'direct' ? extractChatLid(chatId) : null,
-        last_message_at: lastMessageAt,
-        updated_at: new Date().toISOString(),
+        phone_number:
+          chatKind === 'direct' ? extractChatPhoneNumber(requestedChatId) ?? existingChat?.phone_number ?? null : null,
+        lid: chatKind === 'direct' ? extractChatLid(requestedChatId) ?? existingChat?.lid ?? null : null,
+        last_message_at: nextLastMessageAt,
+        updated_at: nowIso,
       },
       { onConflict: 'id' },
     );
@@ -590,8 +683,8 @@ Deno.serve(async (req) => {
     if (isGroup && chatName) {
       await supabase
         .from('whatsapp_groups')
-        .update({ name: chatName, last_updated_at: new Date().toISOString() })
-        .eq('id', chatId);
+        .update({ name: chatName, last_updated_at: nowIso })
+        .eq('id', requestedChatId);
     }
 
     const normalized = messages
@@ -601,39 +694,90 @@ Deno.serve(async (req) => {
         return actionType !== 'edit' && actionType !== 'edited';
       })
       .map((message) => {
-      const direction = message.from_me ? 'outbound' : 'inbound';
-      const { body, hasMedia } = buildMessageBody(message);
-      const messageChatId =
-        message.action?.type === 'reaction' && message.action?.target ? chatId : message.chat_id;
+        const direction = message.from_me ? 'outbound' : 'inbound';
+        const { body, hasMedia } = buildMessageBody(message);
+        const actionType = normalizeActionType(message.action?.type);
+        const messageChatIdRaw = actionType === 'reaction' && message.action?.target ? requestedChatId : message.chat_id;
+        const messageChatId = normalizeDirectChatId(messageChatIdRaw || requestedChatId);
+        const normalizedFrom = toCleanText(message.from);
+        const normalizedFromNumber =
+          direction === 'inbound' ? (normalizedFrom ? normalizeDirectChatId(normalizedFrom) : messageChatId) : null;
+        const normalizedToNumber = direction === 'outbound' ? messageChatId : null;
+        const incomingTimestamp = toIsoString(message.timestamp);
+
+        return {
+          id: message.id,
+          chat_id: messageChatId,
+          from_number: normalizedFromNumber,
+          to_number: normalizedToNumber,
+          type: message.type,
+          body,
+          has_media: hasMedia,
+          timestamp: incomingTimestamp,
+          payload: message,
+          direction,
+          ack_status: mapStatusToAck(message.status),
+          author: message.from_name ?? null,
+          is_deleted: actionType === 'delete' || message.type === 'revoked',
+          edit_count: message.edit_history?.length ?? 0,
+          edited_at: toIsoString(message.edited_at),
+          original_body: message.text?.body ?? body,
+        };
+      });
+
+    const messageIds = normalized.map((message) => message.id);
+    type ExistingMessageSnapshot = {
+      id: string;
+      is_deleted: boolean | null;
+      deleted_at: string | null;
+      deleted_by: string | null;
+      edit_count: number | null;
+      edited_at: string | null;
+      original_body: string | null;
+      ack_status: number | null;
+    };
+
+    const { data: existingMessages, error: existingMessagesError } = await supabase
+      .from('whatsapp_messages')
+      .select('id, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status')
+      .in('id', messageIds);
+
+    if (existingMessagesError) {
+      throw new Error(existingMessagesError.message);
+    }
+
+    const existingById = new Map<string, ExistingMessageSnapshot>(
+      ((existingMessages as ExistingMessageSnapshot[] | null) || []).map((row) => [row.id, row]),
+    );
+
+    const mergedMessages = normalized.map((message) => {
+      const existing = existingById.get(message.id);
+      if (!existing) {
+        return message;
+      }
+
+      const mergedIsDeleted = Boolean(existing.is_deleted) || Boolean(message.is_deleted);
       return {
-        id: message.id,
-        chat_id: messageChatId,
-        from_number: direction === 'inbound' ? message.from || messageChatId : null,
-        to_number: direction === 'outbound' ? messageChatId : null,
-        type: message.type,
-        body,
-        has_media: hasMedia,
-        timestamp: toIsoString(message.timestamp),
-        payload: message,
-        direction,
-        ack_status: mapStatusToAck(message.status),
-        author: message.from_name ?? null,
-        is_deleted: message.action?.type === 'delete' || message.type === 'revoked',
-        edit_count: message.edit_history?.length ?? 0,
-        edited_at: toIsoString(message.edited_at),
-        original_body: message.text?.body ?? body,
+        ...message,
+        is_deleted: mergedIsDeleted,
+        deleted_at: mergedIsDeleted ? existing.deleted_at ?? message.timestamp ?? nowIso : null,
+        deleted_by: mergedIsDeleted ? existing.deleted_by ?? 'unknown' : null,
+        edit_count: Math.max(existing.edit_count ?? 0, message.edit_count ?? 0),
+        edited_at: existing.edited_at ?? message.edited_at,
+        original_body: existing.original_body ?? message.original_body ?? message.body,
+        ack_status: mergeAckStatus(existing.ack_status, message.ack_status),
       };
     });
 
     const { error: insertError } = await supabase
       .from('whatsapp_messages')
-      .upsert(normalized, { onConflict: 'id' });
+      .upsert(mergedMessages, { onConflict: 'id' });
 
     if (insertError) {
       throw new Error(insertError.message);
     }
 
-    return new Response(JSON.stringify({ success: true, count: normalized.length }), {
+    return new Response(JSON.stringify({ success: true, count: mergedMessages.length }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

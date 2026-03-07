@@ -13,7 +13,14 @@ import {
   Scissors,
   MessageSquare,
 } from 'lucide-react';
-import { sendWhatsAppMessage, sendMediaMessage, sendTypingState, sendRecordingState, normalizeChatId } from '../../lib/whatsappApiService';
+import {
+  sendWhatsAppMessage,
+  sendMediaMessage,
+  sendTypingState,
+  sendRecordingState,
+  normalizeChatId,
+  getWhatsAppChatKind,
+} from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 import FilterSingleSelect from '../FilterSingleSelect';
 
@@ -491,19 +498,64 @@ export function MessageInput({
     [rewriteResult, rewriteOriginal],
   );
 
-  const sendPlainTextMessage = async (text: string) => {
-    const resolvedText = applyTemplateVariables(text).trim() || text.trim();
+  const resolveOutgoingFileMessageType = (file: File): 'image' | 'video' | 'audio' | 'document' => {
+    const mimeType = file.type.toLowerCase();
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'document';
+  };
 
-    const response = await sendWhatsAppMessage({
-      chatId,
-      contentType: 'string',
-      content: resolvedText,
-      quotedMessageId: replyToMessage?.id,
-    });
+  const extractDirectPhoneNumber = (normalizedChatId: string): string | null => {
+    const trimmed = normalizedChatId.trim();
+    if (!trimmed) return null;
+    if (trimmed.toLowerCase().endsWith('@lid')) return null;
+    const withoutSuffix = trimmed.replace(/@c\.us$|@s\.whatsapp\.net$/i, '');
+    const digits = withoutSuffix.replace(/\D/g, '');
+    return digits || null;
+  };
 
-    const normalizedChatId = normalizeChatId(chatId);
-    const sentAt = new Date().toISOString();
-    const persistedMessageId = typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
+  const extractChatLid = (normalizedChatId: string): string | null => {
+    const trimmed = normalizedChatId.trim();
+    if (!trimmed) return null;
+    return trimmed.toLowerCase().endsWith('@lid') ? trimmed : null;
+  };
+
+  const ensureOutboundChatExists = async (normalizedChatId: string, sentAt: string) => {
+    const chatKind = getWhatsAppChatKind(normalizedChatId);
+    const isGroup = chatKind === 'group';
+
+    const { error } = await supabase.from('whatsapp_chats').upsert(
+      {
+        id: normalizedChatId,
+        is_group: isGroup,
+        phone_number: chatKind === 'direct' ? extractDirectPhoneNumber(normalizedChatId) : null,
+        lid: chatKind === 'direct' ? extractChatLid(normalizedChatId) : null,
+        last_message_at: sentAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+
+    if (error) {
+      console.warn('Erro ao garantir chat antes de salvar mensagem:', error);
+    }
+  };
+
+  const persistOutboundMessage = async (params: {
+    response: any;
+    chatId: string;
+    type: string;
+    body: string;
+    hasMedia: boolean;
+    sentAt: string;
+  }): Promise<{ normalizedChatId: string; messageId: string; persistedMessageId: string | null }> => {
+    const { response, chatId: rawChatId, type, body, hasMedia, sentAt } = params;
+    const normalizedChatId = normalizeChatId(rawChatId);
+    await ensureOutboundChatExists(normalizedChatId, sentAt);
+
+    const persistedMessageId =
+      response && typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
     const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     if (persistedMessageId) {
@@ -512,9 +564,9 @@ export function MessageInput({
         chat_id: normalizedChatId,
         from_number: null,
         to_number: normalizedChatId,
-        type: 'text',
-        body: resolvedText,
-        has_media: false,
+        type,
+        body,
+        has_media: hasMedia,
         timestamp: sentAt,
         direction: 'outbound',
         payload: response,
@@ -526,6 +578,29 @@ export function MessageInput({
     } else {
       console.warn('Resposta sem ID da mensagem; salvando apenas no estado local até sincronizar.', response);
     }
+
+    return { normalizedChatId, messageId, persistedMessageId };
+  };
+
+  const sendPlainTextMessage = async (text: string) => {
+    const resolvedText = applyTemplateVariables(text).trim() || text.trim();
+
+    const response = await sendWhatsAppMessage({
+      chatId,
+      contentType: 'string',
+      content: resolvedText,
+      quotedMessageId: replyToMessage?.id,
+    });
+
+    const sentAt = new Date().toISOString();
+    const { normalizedChatId, messageId } = await persistOutboundMessage({
+      response,
+      chatId,
+      type: 'text',
+      body: resolvedText,
+      hasMedia: false,
+      sentAt,
+    });
 
     const textPayload: SentMessagePayload = {
       id: messageId,
@@ -661,6 +736,7 @@ export function MessageInput({
 
         const sentAt = new Date().toISOString();
         const caption = resolvedMessage;
+        const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
         const fallbackBody = selectedFile.type.startsWith('audio/')
           ? '[Áudio]'
           : selectedFile.type.startsWith('image/')
@@ -668,15 +744,26 @@ export function MessageInput({
             : selectedFile.type.startsWith('video/')
               ? '[Vídeo]'
               : '[Arquivo]';
+        const resolvedBody = caption || fallbackBody;
+        const { normalizedChatId, messageId } = await persistOutboundMessage({
+          response,
+          chatId,
+          type: mediaMessageType,
+          body: resolvedBody,
+          hasMedia: true,
+          sentAt,
+        });
+
         const mediaPayload: SentMessagePayload = {
-          id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          chat_id: chatId,
-          body: caption || fallbackBody,
-          type: selectedFile.type || 'document',
+          id: messageId,
+          chat_id: normalizedChatId,
+          body: resolvedBody,
+          type: mediaMessageType,
           has_media: true,
           timestamp: sentAt,
           direction: 'outbound',
           created_at: sentAt,
+          payload: response,
         };
 
         clearFile();
@@ -707,32 +794,16 @@ export function MessageInput({
             quotedMessageId: replyToMessage?.id,
           });
 
-          const normalizedChatId = normalizeChatId(chatId);
           const bodyText = pendingLinkMessage;
           const sentAt = new Date().toISOString();
-          const persistedMessageId = typeof response.id === 'string' && response.id.trim() ? response.id.trim() : null;
-          const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-          if (persistedMessageId) {
-            const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
-              id: persistedMessageId,
-              chat_id: normalizedChatId,
-              from_number: null,
-              to_number: normalizedChatId,
-              type: 'link_preview',
-              body: bodyText,
-              has_media: true,
-              timestamp: sentAt,
-              direction: 'outbound',
-              payload: response,
-            });
-
-            if (insertError) {
-              console.warn('Erro ao salvar mensagem no banco:', insertError);
-            }
-          } else {
-            console.warn('Resposta sem ID da mensagem de link; salvando apenas no estado local até sincronizar.', response);
-          }
+          const { normalizedChatId, messageId } = await persistOutboundMessage({
+            response,
+            chatId,
+            type: 'link_preview',
+            body: bodyText,
+            hasMedia: true,
+            sentAt,
+          });
 
           const textPayload: SentMessagePayload = {
             id: messageId,
@@ -1014,9 +1085,18 @@ export function MessageInput({
       });
 
       const sentAt = new Date().toISOString();
+      const { normalizedChatId, messageId } = await persistOutboundMessage({
+        response,
+        chatId,
+        type: 'voice',
+        body: '[Mensagem de voz]',
+        hasMedia: true,
+        sentAt,
+      });
+
       const audioPayload: SentMessagePayload = {
-        id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        chat_id: chatId,
+        id: messageId,
+        chat_id: normalizedChatId,
         body: '[Mensagem de voz]',
         type: 'voice',
         has_media: true,
@@ -1219,7 +1299,7 @@ export function MessageInput({
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          await sendWhatsAppMessage({
+          const response = await sendWhatsAppMessage({
             chatId,
             contentType: 'Location',
             content: {
@@ -1229,7 +1309,29 @@ export function MessageInput({
             },
           });
 
-          if (onMessageSent) onMessageSent();
+          const sentAt = new Date().toISOString();
+          const { normalizedChatId, messageId } = await persistOutboundMessage({
+            response,
+            chatId,
+            type: 'location',
+            body: '[Localização]',
+            hasMedia: true,
+            sentAt,
+          });
+
+          if (onMessageSent) {
+            onMessageSent({
+              id: messageId,
+              chat_id: normalizedChatId,
+              body: '[Localização]',
+              type: 'location',
+              has_media: true,
+              timestamp: sentAt,
+              direction: 'outbound',
+              created_at: sentAt,
+              payload: response,
+            });
+          }
         } catch (error) {
           console.error('Erro ao enviar localização:', error);
           alert('Erro ao enviar localização');
@@ -1270,15 +1372,26 @@ export function MessageInput({
       });
 
       const sentAt = new Date().toISOString();
+      const body = `[Contato: ${contact.name}]`;
+      const { normalizedChatId, messageId } = await persistOutboundMessage({
+        response,
+        chatId,
+        type: 'contact',
+        body,
+        hasMedia: false,
+        sentAt,
+      });
+
       const contactPayload: SentMessagePayload = {
-        id: response?.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        chat_id: chatId,
-        body: `[Contato: ${contact.name}]`,
+        id: messageId,
+        chat_id: normalizedChatId,
+        body,
         type: 'contact',
         has_media: false,
         timestamp: sentAt,
         direction: 'outbound',
         created_at: sentAt,
+        payload: response,
       };
 
       setShowContactPicker(false);

@@ -14,7 +14,6 @@ import {
   History,
   Plus,
   Bell,
-  BellOff,
   SkipForward,
   Settings,
   Copy,
@@ -34,6 +33,7 @@ import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorU
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
+import WhatsAppSettingsModal from './WhatsAppSettingsModal';
 import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
@@ -3718,10 +3718,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
-  const syncAllChatsProgressPercentage =
-    syncAllChatsProgress.total > 0
-      ? Math.round((syncAllChatsProgress.completed / syncAllChatsProgress.total) * 100)
-      : 0;
   const groupedReminderQuickOpenItems = groupReminderQuickOpenItems(reminderQuickOpenItems);
   const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
   const toggleReminderQuickOpenPeriod = (periodId: ReminderQuickOpenPeriod) => {
@@ -3754,6 +3750,28 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           setIsListSettingsOpen(false);
         }}
       >
+      <WhatsAppSettingsModal
+        isOpen={isListSettingsOpen}
+        onClose={() => setIsListSettingsOpen(false)}
+        isSyncingAllChats={isSyncingAllChats}
+        syncingChatId={syncingChatId}
+        chatsCount={chats.length}
+        syncAllChatsProgress={syncAllChatsProgress}
+        onSyncAllChats={() => {
+          void handleSyncAllChatsFromListSettings();
+        }}
+        showArchived={showArchived}
+        archivedCount={archivedCount}
+        onToggleShowArchived={() => setShowArchived((prev) => !prev)}
+        prioritizeUnread={prioritizeUnread}
+        onTogglePrioritizeUnread={setPrioritizeUnread}
+        notificationPermission={notificationPermission}
+        notificationsActive={notificationsActive}
+        notificationsLabel={notificationsLabel}
+        onToggleDesktopNotifications={() => {
+          void handleToggleDesktopNotifications();
+        }}
+      />
       {showNewChatModal && (
         <ModalShell
           isOpen
@@ -4075,8 +4093,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 </button>
                 <button
                   type="button"
-                  title="Configuracoes da lista"
-                  aria-label="Configuracoes da lista"
+                  title="Configuracoes do WhatsApp"
+                  aria-label="Configuracoes do WhatsApp"
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
                     isListSettingsOpen
                       ? 'border-teal-300 bg-teal-50 text-teal-700'
@@ -4089,92 +4107,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 >
                   <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
                 </button>
-
-                {isListSettingsOpen && (
-                  <div
-                    className="absolute right-0 top-11 z-20 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Configuracoes da lista
-                    </p>
-
-                    <div className="mt-3 space-y-2 text-xs">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => {
-                          void handleSyncAllChatsFromListSettings();
-                        }}
-                        disabled={isSyncingAllChats || Boolean(syncingChatId) || chats.length === 0}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          <RefreshCw className={`h-3.5 w-3.5 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
-                          {isSyncingAllChats ? 'Sincronizando todos os chats' : 'Sincronizar todos os chats'}
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          {isSyncingAllChats
-                            ? `${syncAllChatsProgress.completed}/${syncAllChatsProgress.total}`
-                            : `${chats.length} chats`}
-                        </span>
-                      </button>
-
-                      {isSyncingAllChats && (
-                        <div className="rounded-lg border border-teal-100 bg-teal-50 px-2.5 py-2">
-                          <div className="flex items-center justify-between text-[11px] text-teal-700">
-                            <span>{syncAllChatsProgressPercentage}% concluido</span>
-                            {syncAllChatsProgress.failed > 0 && <span>{syncAllChatsProgress.failed} com falha</span>}
-                          </div>
-                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-teal-100">
-                            <div
-                              className="h-full rounded-full bg-teal-500 transition-all duration-300"
-                              style={{ width: `${syncAllChatsProgressPercentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50"
-                        onClick={() => setShowArchived((prev) => !prev)}
-                      >
-                        <span>{showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{archivedCount}</span>
-                      </button>
-
-                      <label className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700">
-                        <span>Priorizar nao lidas</span>
-                        <input
-                          type="checkbox"
-                          checked={prioritizeUnread}
-                          onChange={(event) => setPrioritizeUnread(event.target.checked)}
-                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={handleToggleDesktopNotifications}
-                        disabled={notificationPermission === 'unsupported'}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          {notificationsActive ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-                          Notificacoes desktop
-                        </span>
-                        <span className="text-[11px] text-slate-500">{notificationsLabel}</span>
-                      </button>
-                    </div>
-
-                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
-                      <p className="text-[11px] font-medium text-slate-600">Atalhos</p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                        Ctrl/Cmd + K busca • Ctrl/Cmd + N novo chat • Ctrl/Cmd + Shift + J proxima nao lida
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <div className="relative">

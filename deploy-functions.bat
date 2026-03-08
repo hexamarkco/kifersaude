@@ -82,7 +82,7 @@ if not exist "supabase\functions" (
 set /a TOTAL=0
 set /a SUCCESS=0
 set /a FAIL=0
-set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook create-initial-admin"
+set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook create-initial-admin whatsapp-broadcast"
 
 for /d %%D in ("supabase\functions\*") do (
   if exist "%%~fD\index.ts" (

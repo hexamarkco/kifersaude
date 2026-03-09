@@ -1002,6 +1002,13 @@
 .painel-theme.theme-dark .message-bubble-outbound {
   background-color: var(--panel-accent-amber-bg-strong) !important;
   color: #fef3c7 !important;
+  border-color: transparent !important;
+}
+
+.painel-theme.theme-dark .message-bubble-inbound {
+  background-color: var(--panel-surface) !important;
+  color: var(--panel-text) !important;
+  border-color: transparent !important;
 }
 
 .painel-theme.theme-dark .message-bubble-outbound .text-gray-500,
@@ -1027,6 +1034,22 @@
 .painel-theme.theme-dark .message-bubble-outbound .bg-white\/80,
 .painel-theme.theme-dark .message-bubble-outbound .bg-white {
   background-color: #4a3418 !important;
+}
+
+.painel-theme.theme-dark .message-bubble-inbound .text-slate-900,
+.painel-theme.theme-dark .message-bubble-inbound .text-slate-800,
+.painel-theme.theme-dark .message-bubble-inbound .text-slate-700,
+.painel-theme.theme-dark .message-bubble-inbound .text-gray-900,
+.painel-theme.theme-dark .message-bubble-inbound .text-gray-800,
+.painel-theme.theme-dark .message-bubble-inbound .text-gray-700 {
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .message-bubble-inbound .text-slate-600,
+.painel-theme.theme-dark .message-bubble-inbound .text-slate-500,
+.painel-theme.theme-dark .message-bubble-inbound .text-gray-600,
+.painel-theme.theme-dark .message-bubble-inbound .text-gray-500 {
+  color: var(--panel-text-muted) !important;
 }
 
 .painel-theme.theme-dark .react-flow__controls {

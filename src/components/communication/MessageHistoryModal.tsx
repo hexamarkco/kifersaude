@@ -132,14 +132,14 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
       <div className="space-y-4">
         {!loading && !error && messages.length > 0 && (
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <MessageSquare className="h-4 w-4 text-teal-600" />
+            <MessageSquare className="h-4 w-4 text-amber-600" />
             <span>{messages.length} mensagens carregadas no contexto</span>
           </div>
         )}
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-amber-600"></div>
           </div>
         )}
 
@@ -169,14 +169,14 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
                   key={message.id}
                   className={`rounded-lg p-4 transition-all ${
                     isTarget
-                      ? 'border-2 border-blue-500 bg-blue-100 shadow-md'
+                      ? 'border-2 border-amber-500 bg-amber-100 shadow-md'
                       : message.from_me
-                        ? 'ml-8 border border-teal-200 bg-teal-50'
+                        ? 'ml-8 border border-amber-200 bg-amber-50'
                         : 'mr-8 border border-slate-200 bg-slate-50'
                   }`}
                 >
                   {isTarget && (
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">
                       Esta mensagem
                     </div>
                   )}
@@ -184,12 +184,12 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
                     <div className="flex items-center gap-2">
                       <User
                         className={`h-4 w-4 ${
-                          isTarget ? 'text-blue-600' : message.from_me ? 'text-teal-600' : 'text-slate-600'
+                          isTarget ? 'text-amber-600' : message.from_me ? 'text-amber-600' : 'text-slate-600'
                         }`}
                       />
                       <span
                         className={`text-sm font-medium ${
-                          isTarget ? 'text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-900'
+                          isTarget ? 'text-amber-900' : message.from_me ? 'text-amber-900' : 'text-slate-900'
                         }`}
                       >
                         {message.from_me ? 'Voce' : message.from_name || message.from || 'Desconhecido'}
@@ -203,7 +203,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
 
                   <div
                     className={`text-sm ${
-                      isTarget ? 'font-medium text-blue-900' : message.from_me ? 'text-teal-900' : 'text-slate-700'
+                      isTarget ? 'font-medium text-amber-900' : message.from_me ? 'text-amber-900' : 'text-slate-700'
                     }`}
                   >
                     {getMessageBody(message)}

@@ -909,8 +909,8 @@ export function MessageBubble({
             isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
           } ${
             isOutbound
-              ? 'message-bubble-outbound border border-amber-200 bg-amber-100 text-stone-900'
-              : 'message-bubble-inbound border border-stone-200 bg-white text-stone-900'
+              ? 'message-bubble-outbound border border-amber-200 bg-amber-100 text-slate-900'
+              : 'message-bubble-inbound border border-slate-200 bg-white text-slate-900'
           }`}
         >
           {!isOutbound && fromName && (

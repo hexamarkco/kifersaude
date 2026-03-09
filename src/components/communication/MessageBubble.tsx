@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
@@ -129,6 +129,7 @@ export function MessageBubble({
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioRateIndex, setAudioRateIndex] = useState(0);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [actionMenuOpenUpward, setActionMenuOpenUpward] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
@@ -150,6 +151,21 @@ export function MessageBubble({
   const closeActionMenu = useCallback(() => {
     setShowActionMenu(false);
     setShowReactionPicker(false);
+  }, []);
+
+  const repositionActionMenu = useCallback(() => {
+    const menu = actionMenuRef.current;
+    const trigger = actionMenuButtonRef.current;
+    if (!menu || !trigger) return;
+
+    const spacing = 8;
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight;
+    const spaceBelow = window.innerHeight - triggerRect.bottom;
+    const spaceAbove = triggerRect.top;
+    const shouldOpenUpward = spaceBelow < menuHeight + spacing && spaceAbove > spaceBelow;
+
+    setActionMenuOpenUpward((previous) => (previous === shouldOpenUpward ? previous : shouldOpenUpward));
   }, []);
 
   const formatTimestamp = (ts: string | null) => {
@@ -194,7 +210,7 @@ export function MessageBubble({
       case 3:
         return <CheckCheck className="w-3 h-3 text-gray-400" />;
       case 4:
-        return <CheckCheck className="w-3 h-3 text-blue-500" />;
+        return <CheckCheck className="w-3 h-3 text-amber-600" />;
       default:
         return <Check className="w-3 h-3 text-gray-400" />;
     }
@@ -321,7 +337,12 @@ export function MessageBubble({
   }, [audioMediaLoading, audioUrl, isAudioMessage, loadAudioMedia]);
 
   useEffect(() => {
-    if (!showActionMenu) return;
+    if (!showActionMenu) {
+      setActionMenuOpenUpward(false);
+      return;
+    }
+
+    const rafId = window.requestAnimationFrame(repositionActionMenu);
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -339,12 +360,17 @@ export function MessageBubble({
 
     window.addEventListener('mousedown', handlePointerDown);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', repositionActionMenu);
+    window.addEventListener('scroll', repositionActionMenu, true);
 
     return () => {
+      window.cancelAnimationFrame(rafId);
       window.removeEventListener('mousedown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', repositionActionMenu);
+      window.removeEventListener('scroll', repositionActionMenu, true);
     };
-  }, [closeActionMenu, showActionMenu]);
+  }, [closeActionMenu, repositionActionMenu, showActionMenu, showReactionPicker]);
 
   const loadDocumentMedia = async () => {
     const mediaId = documentPayload?.id || payloadData?.media?.id || payloadData?.document?.id;
@@ -504,7 +530,7 @@ export function MessageBubble({
               href={`https://maps.google.com/?q=${body}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-500 hover:underline text-xs"
+              className="text-xs text-amber-700 hover:text-amber-800 hover:underline"
             >
               Ver no mapa
             </a>
@@ -527,7 +553,7 @@ export function MessageBubble({
       const displayUrl = visualMediaUrl || imageUrl || imagePreview;
       const shouldShowCaption = Boolean(resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]');
       return (
-        <div className="space-y-2">
+        <div className="w-[min(420px,85vw)] max-w-full space-y-2">
           {displayUrl ? (
             <Button
               variant="ghost"
@@ -535,12 +561,12 @@ export function MessageBubble({
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="block h-auto w-[min(420px,85vw)] max-w-full overflow-hidden rounded-xl border-0 p-0 shadow-none hover:bg-transparent"
+              className="h-auto w-full overflow-hidden rounded-xl border-0 p-0 shadow-none hover:bg-transparent"
             >
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="block w-full h-auto max-h-[420px] object-cover"
+                className="block w-full h-auto max-h-[520px] object-cover"
                 loading="lazy"
               />
             </Button>
@@ -548,7 +574,7 @@ export function MessageBubble({
             <Button
               variant="secondary"
               size="sm"
-              className="h-auto rounded p-2 text-sm text-gray-600"
+              className="h-auto w-full rounded p-2 text-sm text-gray-600"
               onClick={() => {
                 void openMediaPreview('image');
               }}
@@ -564,7 +590,7 @@ export function MessageBubble({
             </Button>
           )}
           {shouldShowCaption && resolvedBody && (
-            <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
+            <WhatsAppFormattedText text={resolvedBody} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -581,16 +607,16 @@ export function MessageBubble({
       const poster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
 
       return (
-        <div className="space-y-2">
+        <div className="w-[min(420px,85vw)] max-w-full space-y-2">
           {videoUrl ? (
-            <div className="w-[min(420px,85vw)] max-w-full rounded-xl overflow-hidden bg-black">
+            <div className="w-full rounded-xl overflow-hidden bg-black">
               <video
                 src={videoUrl}
                 controls
                 playsInline
                 preload="metadata"
                 poster={poster}
-                className="block w-full h-auto max-h-[420px] bg-black"
+                className="block w-full h-auto max-h-[520px] bg-black"
               />
               <Button
                 variant="ghost"
@@ -607,7 +633,7 @@ export function MessageBubble({
             <Button
               variant="secondary"
               size="sm"
-              className="h-auto rounded p-2 text-sm text-gray-600"
+              className="h-auto w-full rounded p-2 text-sm text-gray-600"
               onClick={() => {
                 void openMediaPreview('video');
               }}
@@ -623,7 +649,7 @@ export function MessageBubble({
             </Button>
           )}
           {shouldShowCaption && resolvedBody && (
-            <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
+            <WhatsAppFormattedText text={resolvedBody} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -666,7 +692,7 @@ export function MessageBubble({
               <div className="text-xs text-slate-500 truncate">{previewUrl || 'Link'}</div>
               <div className="text-sm font-medium text-slate-800 line-clamp-2">{previewTitle}</div>
               {previewDescription && <div className="text-xs text-slate-600 line-clamp-3">{previewDescription}</div>}
-              <div className="pt-1 inline-flex items-center gap-1 text-xs text-emerald-700">
+              <div className="pt-1 inline-flex items-center gap-1 text-xs text-amber-700">
                 <ExternalLink className="w-3 h-3" />
                 <span>Abrir link</span>
               </div>
@@ -924,7 +950,7 @@ export function MessageBubble({
             </div>
 
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-slate-500">
                 {formatTimestamp(timestamp)}
               </span>
               {isOutbound && (
@@ -948,7 +974,7 @@ export function MessageBubble({
                       return next;
                     });
                   }}
-                  className={`message-bubble-action-trigger h-4 w-4 rounded border-0 p-0 text-gray-500 shadow-none transition-colors transition-opacity ${
+                  className={`message-bubble-action-trigger h-4 w-4 rounded border-0 p-0 text-slate-500 shadow-none transition-colors transition-opacity ${
                     showActionMenu
                       ? 'opacity-100 pointer-events-auto bg-black/5'
                       : 'opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-black/5'
@@ -964,7 +990,9 @@ export function MessageBubble({
         {showActionMenu && hasActionMenu && (
           <div
             ref={actionMenuRef}
-            className="message-bubble-action-menu absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
+            className={`message-bubble-action-menu absolute right-0 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl ${
+              actionMenuOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+            }`}
           >
             {canReact && (
               <Button
@@ -1009,7 +1037,8 @@ export function MessageBubble({
                 }}
                 className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
-                Responder
+                <CornerUpLeft className="h-4 w-4 text-slate-500" />
+                <span>Responder</span>
               </Button>
             )}
 

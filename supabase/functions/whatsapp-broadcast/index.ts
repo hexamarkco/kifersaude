@@ -466,7 +466,7 @@ const sendCampaignStep = async ({
   };
 
   const caption = (step.caption || '').trim();
-  if (caption) {
+  if (caption && (step.type === 'image' || step.type === 'video' || step.type === 'document')) {
     payload.caption = caption;
   }
 

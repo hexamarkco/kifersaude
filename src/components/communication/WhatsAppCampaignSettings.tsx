@@ -13,12 +13,14 @@ import {
   Send,
   Square,
   Trash2,
+  Upload,
   Video,
 } from 'lucide-react';
 import ReactFlow, { Background, Controls, MarkerType, MiniMap, Position, type Edge, type Node } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
 import { fetchAllPages, getUserManagementId, supabase } from '../../lib/supabase';
+import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
@@ -42,7 +44,7 @@ type LeadPreviewRow = {
   status_id: string | null;
   responsavel_id: string | null;
   origem_id: string | null;
-  canal: string | null;
+  canal?: string | null;
 };
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
@@ -147,7 +149,7 @@ const summarizeStep = (step: WhatsAppCampaignFlowStep): string => {
 
   const media = (step.mediaUrl || '').trim();
   if (!media) {
-    return 'URL de midia pendente';
+    return 'Arquivo pendente';
   }
   return media.length > 64 ? `${media.slice(0, 61)}...` : media;
 };
@@ -273,6 +275,18 @@ const toSortedOptions = (input: Set<string>): string[] =>
     .filter(Boolean)
     .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }));
 
+const isMissingLeadsCanalColumnError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  const code = typeof record.code === 'string' ? record.code : '';
+  const message = typeof record.message === 'string' ? record.message.toLowerCase() : '';
+
+  return code === '42703' && message.includes('leads.canal');
+};
+
 export default function WhatsAppCampaignSettings() {
   const { user } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
@@ -283,6 +297,7 @@ export default function WhatsAppCampaignSettings() {
   const [campaignName, setCampaignName] = useState('');
   const [filters, setFilters] = useState<CampaignFilters>(DEFAULT_FILTERS);
   const [canalOptions, setCanalOptions] = useState<string[]>([]);
+  const [hasCanalColumn, setHasCanalColumn] = useState(true);
 
   const [flowSteps, setFlowSteps] = useState<WhatsAppCampaignFlowStep[]>(() => [createFlowStep('text')]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -292,6 +307,7 @@ export default function WhatsAppCampaignSettings() {
   const [loadingFilters, setLoadingFilters] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [creatingCampaign, setCreatingCampaign] = useState(false);
+  const [uploadingStepId, setUploadingStepId] = useState<string | null>(null);
   const [processingCampaignId, setProcessingCampaignId] = useState<string | null>(null);
   const [actionCampaignId, setActionCampaignId] = useState<string | null>(null);
   const [messageState, setMessageState] = useState<MessageState>(null);
@@ -409,8 +425,17 @@ export default function WhatsAppCampaignSettings() {
           canais.add(row.canal);
         }
       });
+
+      setHasCanalColumn(true);
       setCanalOptions(toSortedOptions(canais));
     } catch (error) {
+      if (isMissingLeadsCanalColumnError(error)) {
+        setHasCanalColumn(false);
+        setCanalOptions([]);
+        setFilters((current) => ({ ...current, canal: '' }));
+        return;
+      }
+
       console.error('Erro ao carregar canais para filtro de campanha:', error);
       setMessageState({ type: 'error', text: 'Nao foi possivel carregar os canais de leads.' });
     } finally {
@@ -545,6 +570,36 @@ export default function WhatsAppCampaignSettings() {
     });
   };
 
+  const handleUploadFileToSelectedStep = async (file: File) => {
+    if (!selectedStep || selectedStep.type === 'text') {
+      return;
+    }
+
+    setUploadingStepId(selectedStep.id);
+    setMessageState(null);
+
+    try {
+      const result = await uploadWhatsAppCampaignMedia(selectedStep.type, file);
+
+      if (!result.success || !result.url) {
+        setMessageState({
+          type: 'error',
+          text: result.error || 'Nao foi possivel enviar o arquivo da etapa.',
+        });
+        return;
+      }
+
+      updateSelectedStep({
+        mediaUrl: result.url,
+        filename: selectedStep.type === 'document' ? result.filename || selectedStep.filename || '' : undefined,
+      });
+
+      setMessageState({ type: 'success', text: 'Arquivo enviado com sucesso para a etapa.' });
+    } finally {
+      setUploadingStepId(null);
+    }
+  };
+
   const validateFlowSteps = (steps: WhatsAppCampaignFlowStep[]): string | null => {
     if (steps.length === 0) {
       return 'Adicione ao menos uma etapa no fluxo da campanha.';
@@ -556,7 +611,7 @@ export default function WhatsAppCampaignSettings() {
           return 'Toda etapa de mensagem precisa ter texto preenchido.';
         }
       } else if (!(step.mediaUrl || '').trim()) {
-        return `A etapa ${FLOW_STEP_LABELS[step.type]} precisa de URL de midia.`;
+        return `A etapa ${FLOW_STEP_LABELS[step.type]} precisa de arquivo enviado.`;
       }
     }
 
@@ -568,6 +623,41 @@ export default function WhatsAppCampaignSettings() {
     setMessageState(null);
 
     try {
+      const queryWithoutCanal = async (): Promise<LeadPreviewRow[]> => {
+        let fallbackQuery = supabase
+          .from('leads')
+          .select('id, nome_completo, telefone, status_id, responsavel_id, origem_id')
+          .eq('arquivado', false)
+          .not('telefone', 'is', null)
+          .neq('telefone', '')
+          .limit(400);
+
+        if (filters.statusId) {
+          fallbackQuery = fallbackQuery.eq('status_id', filters.statusId);
+        }
+        if (filters.responsavelId) {
+          fallbackQuery = fallbackQuery.eq('responsavel_id', filters.responsavelId);
+        }
+        if (filters.origemId) {
+          fallbackQuery = fallbackQuery.eq('origem_id', filters.origemId);
+        }
+
+        const { data, error } = await fallbackQuery;
+        if (error) {
+          throw error;
+        }
+
+        return ((data ?? []) as LeadPreviewRow[]).map((lead) => ({
+          ...lead,
+          canal: null,
+        }));
+      };
+
+      if (!hasCanalColumn) {
+        setPreviewLeads(await queryWithoutCanal());
+        return;
+      }
+
       let query = supabase
         .from('leads')
         .select('id, nome_completo, telefone, status_id, responsavel_id, origem_id, canal')
@@ -592,6 +682,14 @@ export default function WhatsAppCampaignSettings() {
       const { data, error } = await query;
 
       if (error) {
+        if (isMissingLeadsCanalColumnError(error)) {
+          setHasCanalColumn(false);
+          setCanalOptions([]);
+          setFilters((current) => ({ ...current, canal: '' }));
+          setPreviewLeads(await queryWithoutCanal());
+          return;
+        }
+
         throw error;
       }
 
@@ -656,7 +754,7 @@ export default function WhatsAppCampaignSettings() {
             responsavel_label: responsavelNameById.get(filters.responsavelId) ?? null,
             origem_id: filters.origemId || null,
             origem_label: origemNameById.get(filters.origemId) ?? null,
-            canal: filters.canal || null,
+            canal: hasCanalColumn ? filters.canal || null : null,
           },
           total_targets: uniqueTargets.size,
           pending_targets: uniqueTargets.size,
@@ -881,7 +979,7 @@ export default function WhatsAppCampaignSettings() {
           </label>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className={`mt-4 grid gap-3 md:grid-cols-2 ${hasCanalColumn ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
           <label className="text-xs font-medium text-slate-600">
             Status
             <select
@@ -933,22 +1031,24 @@ export default function WhatsAppCampaignSettings() {
             </select>
           </label>
 
-          <label className="text-xs font-medium text-slate-600">
-            Canal
-            <select
-              value={filters.canal}
-              onChange={(event) => setFilters((current) => ({ ...current, canal: event.target.value }))}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-              disabled={loadingFilters}
-            >
-              <option value="">Todos</option>
-              {canalOptions.map((canal) => (
-                <option key={canal} value={canal}>
-                  {canal}
-                </option>
-              ))}
-            </select>
-          </label>
+          {hasCanalColumn && (
+            <label className="text-xs font-medium text-slate-600">
+              Canal
+              <select
+                value={filters.canal}
+                onChange={(event) => setFilters((current) => ({ ...current, canal: event.target.value }))}
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={loadingFilters}
+              >
+                <option value="">Todos</option>
+                {canalOptions.map((canal) => (
+                  <option key={canal} value={canal}>
+                    {canal}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -1026,15 +1126,38 @@ export default function WhatsAppCampaignSettings() {
                   ) : (
                     <>
                       <label className="text-xs font-medium text-slate-600">
-                        URL da midia
+                        Arquivo da etapa
                         <input
-                          type="url"
-                          value={selectedStep.mediaUrl ?? ''}
-                          onChange={(event) => updateSelectedStep({ mediaUrl: event.target.value })}
+                          type="file"
+                          accept={getAcceptedFileTypesByStepType(selectedStep.type)}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.currentTarget.value = '';
+                            if (!file) {
+                              return;
+                            }
+
+                            void handleUploadFileToSelectedStep(file);
+                          }}
                           className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-                          placeholder="https://..."
+                          disabled={uploadingStepId === selectedStep.id}
                         />
                       </label>
+
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        {selectedStep.mediaUrl ? (
+                          <span>
+                            Arquivo pronto para envio: <strong>{selectedStep.filename || selectedStep.mediaUrl.split('/').pop() || 'arquivo'}</strong>
+                          </span>
+                        ) : (
+                          <span>Nenhum arquivo enviado nesta etapa.</span>
+                        )}
+                      </div>
+
+                      <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600">
+                        <Upload className={`h-3.5 w-3.5 ${uploadingStepId === selectedStep.id ? 'animate-pulse' : ''}`} />
+                        {uploadingStepId === selectedStep.id ? 'Enviando arquivo...' : 'Selecione um arquivo para upload'}
+                      </div>
 
                       <label className="text-xs font-medium text-slate-600">
                         Legenda (opcional)

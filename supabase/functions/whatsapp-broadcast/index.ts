@@ -15,6 +15,19 @@ type CampaignRecord = {
   id: string;
   status: CampaignStatus;
   message: string;
+  flow_steps: unknown;
+};
+
+type CampaignStepType = 'text' | 'image' | 'video' | 'audio' | 'document';
+
+type CampaignFlowStep = {
+  id: string;
+  type: CampaignStepType;
+  order: number;
+  text?: string;
+  mediaUrl?: string;
+  caption?: string;
+  filename?: string;
 };
 
 type TargetRecord = {
@@ -146,6 +159,71 @@ const parseWhapiError = (payload: unknown): string => {
   } catch {
     return 'Erro ao processar resposta da Whapi.';
   }
+};
+
+const normalizeCampaignStepType = (value: unknown): CampaignStepType => {
+  if (value === 'image' || value === 'video' || value === 'audio' || value === 'document') {
+    return value;
+  }
+  return 'text';
+};
+
+const normalizeCampaignFlowSteps = (flowSteps: unknown, fallbackMessage: string): CampaignFlowStep[] => {
+  if (!Array.isArray(flowSteps)) {
+    const fallback = fallbackMessage.trim();
+    if (!fallback) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'step-1',
+        type: 'text',
+        order: 0,
+        text: fallback,
+      },
+    ];
+  }
+
+  const parsed: CampaignFlowStep[] = [];
+
+  flowSteps.forEach((item, index) => {
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+
+    const row = item as Record<string, unknown>;
+    const type = normalizeCampaignStepType(row.type);
+
+    parsed.push({
+      id: typeof row.id === 'string' && row.id.trim() ? row.id : `step-${index + 1}`,
+      type,
+      order: typeof row.order === 'number' ? row.order : index,
+      text: typeof row.text === 'string' ? row.text : undefined,
+      mediaUrl: typeof row.mediaUrl === 'string' ? row.mediaUrl : undefined,
+      caption: typeof row.caption === 'string' ? row.caption : undefined,
+      filename: typeof row.filename === 'string' ? row.filename : undefined,
+    });
+  });
+
+  parsed.sort((left, right) => left.order - right.order);
+
+  if (parsed.length === 0) {
+    const fallback = fallbackMessage.trim();
+    if (!fallback) {
+      return [];
+    }
+    return [
+      {
+        id: 'step-1',
+        type: 'text',
+        order: 0,
+        text: fallback,
+      },
+    ];
+  }
+
+  return parsed;
 };
 
 const isInvalidRecipientError = (message: string): boolean => {
@@ -327,21 +405,83 @@ const resolveWhapiRecipient = async ({
   return normalizeChatId(contact.wa_id);
 };
 
-const sendTextMessage = async ({ token, to, body }: { token: string; to: string; body: string }): Promise<void> => {
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+const sendWhapiRequest = async ({ token, endpoint, body }: { token: string; endpoint: string; body: Record<string, unknown> }): Promise<void> => {
+  const response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
     },
-    body: JSON.stringify({ to, body }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(parseWhapiError(payload));
   }
+};
+
+const sendCampaignStep = async ({
+  token,
+  to,
+  step,
+}: {
+  token: string;
+  to: string;
+  step: CampaignFlowStep;
+}): Promise<void> => {
+  if (step.type === 'text') {
+    const body = (step.text || '').trim();
+    if (!body) {
+      throw new Error('Etapa de texto sem conteudo.');
+    }
+
+    await sendWhapiRequest({
+      token,
+      endpoint: '/messages/text',
+      body: {
+        to,
+        body,
+      },
+    });
+    return;
+  }
+
+  const mediaUrl = (step.mediaUrl || '').trim();
+  if (!mediaUrl) {
+    throw new Error(`Etapa ${step.type} sem URL de midia.`);
+  }
+
+  const endpointMap: Record<Exclude<CampaignStepType, 'text'>, string> = {
+    image: '/messages/image',
+    video: '/messages/video',
+    audio: '/messages/audio',
+    document: '/messages/document',
+  };
+
+  const payload: Record<string, unknown> = {
+    to,
+    media: mediaUrl,
+  };
+
+  const caption = (step.caption || '').trim();
+  if (caption) {
+    payload.caption = caption;
+  }
+
+  if (step.type === 'document') {
+    const filename = (step.filename || '').trim();
+    if (filename) {
+      payload.filename = filename;
+    }
+  }
+
+  await sendWhapiRequest({
+    token,
+    endpoint: endpointMap[step.type],
+    body: payload,
+  });
 };
 
 const claimTarget = async (
@@ -452,7 +592,7 @@ const loadPendingTargets = async (
 ): Promise<TargetRecord[]> => {
   let query = supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .select('id, campaign_id, phone, chat_id, attempts, campaign:whatsapp_campaigns!inner(id, status, message)')
+    .select('id, campaign_id, phone, chat_id, attempts, campaign:whatsapp_campaigns!inner(id, status, message, flow_steps)')
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
     .limit(limit);
@@ -507,9 +647,9 @@ const processCampaignTargets = async ({
       continue;
     }
 
-    const campaignMessage = target.campaign?.message?.trim() || '';
-    if (!campaignMessage) {
-      await updateTargetResult(supabaseAdmin, target.id, 'failed', 'Mensagem da campanha vazia.', false);
+    const campaignSteps = normalizeCampaignFlowSteps(target.campaign?.flow_steps, target.campaign?.message ?? '');
+    if (campaignSteps.length === 0) {
+      await updateTargetResult(supabaseAdmin, target.id, 'failed', 'Fluxo da campanha vazio.', false);
       summary.failed += 1;
       summary.processed += 1;
       continue;
@@ -522,7 +662,9 @@ const processCampaignTargets = async ({
         phone: target.phone,
       });
 
-      await sendTextMessage({ token, to: recipient, body: campaignMessage });
+      for (const step of campaignSteps) {
+        await sendCampaignStep({ token, to: recipient, step });
+      }
 
       await updateTargetResult(supabaseAdmin, target.id, 'sent', null, true);
       summary.sent += 1;

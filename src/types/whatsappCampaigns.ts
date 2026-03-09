@@ -8,10 +8,23 @@ export type WhatsAppCampaignTargetStatus =
   | 'invalid'
   | 'cancelled';
 
+export type WhatsAppCampaignFlowStepType = 'text' | 'image' | 'video' | 'audio' | 'document';
+
+export type WhatsAppCampaignFlowStep = {
+  id: string;
+  type: WhatsAppCampaignFlowStepType;
+  order?: number;
+  text?: string;
+  mediaUrl?: string;
+  caption?: string;
+  filename?: string;
+};
+
 export type WhatsAppCampaign = {
   id: string;
   name: string;
   message: string;
+  flow_steps: WhatsAppCampaignFlowStep[];
   status: WhatsAppCampaignStatus;
   audience_filter: Record<string, unknown>;
   total_targets: number;

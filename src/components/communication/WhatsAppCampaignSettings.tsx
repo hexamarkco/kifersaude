@@ -1,14 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Loader2, Pause, Play, RefreshCw, Send, Square } from 'lucide-react';
+import {
+  AlertCircle,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  MessageCircle,
+  Music,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  Send,
+  Square,
+  Trash2,
+  Video,
+} from 'lucide-react';
+import ReactFlow, { Background, Controls, MarkerType, MiniMap, Position, type Edge, type Node } from 'reactflow';
+import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
 import { fetchAllPages, getUserManagementId, supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import type { WhatsAppCampaign, WhatsAppCampaignStatus } from '../../types/whatsappCampaigns';
+import { useConfig } from '../../contexts/ConfigContext';
+import type {
+  WhatsAppCampaign,
+  WhatsAppCampaignFlowStep,
+  WhatsAppCampaignFlowStepType,
+  WhatsAppCampaignStatus,
+} from '../../types/whatsappCampaigns';
 
 type CampaignFilters = {
-  status: string;
-  responsavel: string;
-  origem: string;
+  statusId: string;
+  responsavelId: string;
+  origemId: string;
   canal: string;
 };
 
@@ -16,18 +39,28 @@ type LeadPreviewRow = {
   id: string;
   nome_completo: string;
   telefone: string;
-  status: string | null;
-  responsavel: string | null;
-  origem: string | null;
+  status_id: string | null;
+  responsavel_id: string | null;
+  origem_id: string | null;
   canal: string | null;
 };
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
+type FlowNodeData = {
+  label: string;
+  description: string;
+};
+
+type SelectOption = {
+  id: string;
+  label: string;
+};
+
 const DEFAULT_FILTERS: CampaignFilters = {
-  status: '',
-  responsavel: '',
-  origem: '',
+  statusId: '',
+  responsavelId: '',
+  origemId: '',
   canal: '',
 };
 
@@ -46,6 +79,41 @@ const STATUS_CLASSNAMES: Record<WhatsAppCampaignStatus, string> = {
   completed: 'bg-blue-100 text-blue-700',
   cancelled: 'bg-red-100 text-red-700',
 };
+
+const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
+  text: 'Mensagem',
+  image: 'Imagem',
+  video: 'Video',
+  audio: 'Audio',
+  document: 'PDF / Documento',
+};
+
+const FLOW_STEP_ICONS: Record<WhatsAppCampaignFlowStepType, typeof MessageCircle> = {
+  text: MessageCircle,
+  image: ImageIcon,
+  video: Video,
+  audio: Music,
+  document: FileText,
+};
+
+const FLOW_STEP_NODE_COLORS: Record<WhatsAppCampaignFlowStepType, string> = {
+  text: '#0f766e',
+  image: '#0284c7',
+  video: '#7c3aed',
+  audio: '#4338ca',
+  document: '#b45309',
+};
+
+const createUniqueStepId = (): string => `step-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const createFlowStep = (type: WhatsAppCampaignFlowStepType = 'text'): WhatsAppCampaignFlowStep => ({
+  id: createUniqueStepId(),
+  type,
+  text: type === 'text' ? '' : undefined,
+  mediaUrl: type === 'text' ? undefined : '',
+  caption: type === 'text' ? undefined : '',
+  filename: type === 'document' ? '' : undefined,
+});
 
 const normalizePhoneForCampaign = (value: string | null | undefined): string => {
   const digitsOnly = (value || '').replace(/\D/g, '');
@@ -71,6 +139,134 @@ const formatDateTime = (value: string | null): string => {
   return parsed.toLocaleString('pt-BR');
 };
 
+const summarizeStep = (step: WhatsAppCampaignFlowStep): string => {
+  if (step.type === 'text') {
+    const content = (step.text || '').trim();
+    return content ? content.slice(0, 64) : 'Mensagem vazia';
+  }
+
+  const media = (step.mediaUrl || '').trim();
+  if (!media) {
+    return 'URL de midia pendente';
+  }
+  return media.length > 64 ? `${media.slice(0, 61)}...` : media;
+};
+
+const normalizeFlowStepType = (value: unknown): WhatsAppCampaignFlowStepType => {
+  if (value === 'image' || value === 'video' || value === 'audio' || value === 'document') {
+    return value;
+  }
+  return 'text';
+};
+
+const normalizeFlowSteps = (value: unknown, fallbackMessage: string): WhatsAppCampaignFlowStep[] => {
+  if (!Array.isArray(value)) {
+    return [
+      {
+        id: createUniqueStepId(),
+        type: 'text',
+        text: fallbackMessage || '',
+        order: 0,
+      },
+    ];
+  }
+
+  const parsed: WhatsAppCampaignFlowStep[] = [];
+
+  value.forEach((item, index) => {
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+
+    const row = item as Record<string, unknown>;
+    const type = normalizeFlowStepType(row.type);
+    const id = typeof row.id === 'string' && row.id.trim() ? row.id : createUniqueStepId();
+
+    parsed.push({
+      id,
+      type,
+      order: typeof row.order === 'number' ? row.order : index,
+      text: typeof row.text === 'string' ? row.text : undefined,
+      mediaUrl: typeof row.mediaUrl === 'string' ? row.mediaUrl : undefined,
+      caption: typeof row.caption === 'string' ? row.caption : undefined,
+      filename: typeof row.filename === 'string' ? row.filename : undefined,
+    });
+  });
+
+  parsed.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+
+  if (parsed.length === 0) {
+    return [
+      {
+        id: createUniqueStepId(),
+        type: 'text',
+        text: fallbackMessage || '',
+        order: 0,
+      },
+    ];
+  }
+
+  return parsed.map((step, index) => ({ ...step, order: index }));
+};
+
+const composeFallbackMessage = (steps: WhatsAppCampaignFlowStep[]): string => {
+  const firstText = steps.find((step) => step.type === 'text' && step.text?.trim());
+  if (firstText?.text?.trim()) {
+    return firstText.text.trim();
+  }
+
+  const labels = steps.map((step) => FLOW_STEP_LABELS[step.type]);
+  return labels.length > 0 ? `Fluxo: ${labels.join(' -> ')}` : 'Fluxo sem mensagem';
+};
+
+const buildFlowNodes = (steps: WhatsAppCampaignFlowStep[], selectedStepId: string | null): Node<FlowNodeData>[] => {
+  return steps.map((step, index) => {
+    const nodeColor = FLOW_STEP_NODE_COLORS[step.type];
+    const selected = selectedStepId === step.id;
+
+    return {
+      id: step.id,
+      position: {
+        x: 80 + index * 250,
+        y: 90,
+      },
+      data: {
+        label: `${index + 1}. ${FLOW_STEP_LABELS[step.type]}`,
+        description: summarizeStep(step),
+      },
+      draggable: false,
+      selectable: true,
+      style: {
+        width: 220,
+        borderRadius: 14,
+        border: `2px solid ${selected ? nodeColor : '#d1d5db'}`,
+        background: selected ? `${nodeColor}14` : '#ffffff',
+        color: '#0f172a',
+        boxShadow: selected ? '0 0 0 3px rgba(13, 148, 136, 0.15)' : '0 1px 2px rgba(15, 23, 42, 0.06)',
+        padding: 8,
+      },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    };
+  });
+};
+
+const buildFlowEdges = (steps: WhatsAppCampaignFlowStep[]): Edge[] => {
+  if (steps.length <= 1) {
+    return [];
+  }
+
+  return steps.slice(0, -1).map((step, index) => ({
+    id: `edge-${step.id}-${steps[index + 1].id}`,
+    source: step.id,
+    target: steps[index + 1].id,
+    type: 'smoothstep',
+    markerEnd: { type: MarkerType.ArrowClosed },
+    animated: false,
+    style: { stroke: '#94a3b8', strokeWidth: 2 },
+  }));
+};
+
 const toSortedOptions = (input: Set<string>): string[] =>
   Array.from(input)
     .map((value) => value.trim())
@@ -79,17 +275,17 @@ const toSortedOptions = (input: Set<string>): string[] =>
 
 export default function WhatsAppCampaignSettings() {
   const { user } = useAuth();
+  const { leadStatuses, leadOrigins, options } = useConfig();
 
   const [campaigns, setCampaigns] = useState<WhatsAppCampaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [campaignName, setCampaignName] = useState('');
-  const [campaignMessage, setCampaignMessage] = useState('');
-  const [filters, setFilters] = useState<CampaignFilters>(DEFAULT_FILTERS);
 
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
-  const [responsavelOptions, setResponsavelOptions] = useState<string[]>([]);
-  const [origemOptions, setOrigemOptions] = useState<string[]>([]);
+  const [campaignName, setCampaignName] = useState('');
+  const [filters, setFilters] = useState<CampaignFilters>(DEFAULT_FILTERS);
   const [canalOptions, setCanalOptions] = useState<string[]>([]);
+
+  const [flowSteps, setFlowSteps] = useState<WhatsAppCampaignFlowStep[]>(() => [createFlowStep('text')]);
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
   const [previewLeads, setPreviewLeads] = useState<LeadPreviewRow[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
@@ -105,10 +301,57 @@ export default function WhatsAppCampaignSettings() {
     [campaigns, selectedCampaignId],
   );
 
+  const selectedStep = useMemo(
+    () => flowSteps.find((step) => step.id === selectedStepId) ?? flowSteps[0] ?? null,
+    [flowSteps, selectedStepId],
+  );
+
   const hasRunningCampaign = useMemo(
     () => campaigns.some((campaign) => campaign.status === 'running'),
     [campaigns],
   );
+
+  const statusOptions = useMemo<SelectOption[]>(
+    () =>
+      leadStatuses
+        .filter((status) => status.ativo)
+        .map((status) => ({ id: status.id, label: status.nome }))
+        .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR', { sensitivity: 'base' })),
+    [leadStatuses],
+  );
+
+  const responsavelOptions = useMemo<SelectOption[]>(
+    () =>
+      options.lead_responsavel
+        .filter((option) => option.ativo)
+        .map((option) => ({ id: option.id, label: option.label }))
+        .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR', { sensitivity: 'base' })),
+    [options.lead_responsavel],
+  );
+
+  const origemOptions = useMemo<SelectOption[]>(
+    () =>
+      leadOrigins
+        .filter((origin) => origin.ativo)
+        .map((origin) => ({ id: origin.id, label: origin.nome }))
+        .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR', { sensitivity: 'base' })),
+    [leadOrigins],
+  );
+
+  const statusNameById = useMemo(() => {
+    return new Map(statusOptions.map((option) => [option.id, option.label]));
+  }, [statusOptions]);
+
+  const responsavelNameById = useMemo(() => {
+    return new Map(responsavelOptions.map((option) => [option.id, option.label]));
+  }, [responsavelOptions]);
+
+  const origemNameById = useMemo(() => {
+    return new Map(origemOptions.map((option) => [option.id, option.label]));
+  }, [origemOptions]);
+
+  const flowNodes = useMemo<Node<FlowNodeData>[]>(() => buildFlowNodes(flowSteps, selectedStep?.id ?? null), [flowSteps, selectedStep?.id]);
+  const flowEdges = useMemo<Edge[]>(() => buildFlowEdges(flowSteps), [flowSteps]);
 
   const loadCampaigns = useCallback(async (silent = false) => {
     if (!silent) {
@@ -120,13 +363,17 @@ export default function WhatsAppCampaignSettings() {
         .from('whatsapp_campaigns')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(40);
+        .limit(50);
 
       if (error) {
         throw error;
       }
 
-      const nextCampaigns = (data ?? []) as WhatsAppCampaign[];
+      const nextCampaigns = ((data ?? []) as WhatsAppCampaign[]).map((campaign) => ({
+        ...campaign,
+        flow_steps: normalizeFlowSteps((campaign as WhatsAppCampaign & { flow_steps?: unknown }).flow_steps, campaign.message),
+      }));
+
       setCampaigns(nextCampaigns);
       setSelectedCampaignId((current) => {
         if (current && nextCampaigns.some((campaign) => campaign.id === current)) {
@@ -144,42 +391,28 @@ export default function WhatsAppCampaignSettings() {
     }
   }, []);
 
-  const loadFilterOptions = useCallback(async () => {
+  const loadCanalOptions = useCallback(async () => {
     setLoadingFilters(true);
     try {
-      const rows = await fetchAllPages(async (from, to) => {
+      const rows = await fetchAllPages<{ canal: string | null }>(async (from, to) => {
         const response = await supabase
           .from('leads')
-          .select('status, responsavel, origem, canal')
+          .select('canal')
           .eq('arquivado', false)
           .range(from, to);
         return { data: response.data, error: response.error };
       }, 1000);
 
-      const statuses = new Set<string>();
-      const responsaveis = new Set<string>();
-      const origens = new Set<string>();
       const canais = new Set<string>();
-
       rows.forEach((row) => {
-        const status = typeof row.status === 'string' ? row.status : '';
-        const responsavel = typeof row.responsavel === 'string' ? row.responsavel : '';
-        const origem = typeof row.origem === 'string' ? row.origem : '';
-        const canal = typeof row.canal === 'string' ? row.canal : '';
-
-        if (status.trim()) statuses.add(status);
-        if (responsavel.trim()) responsaveis.add(responsavel);
-        if (origem.trim()) origens.add(origem);
-        if (canal.trim()) canais.add(canal);
+        if (typeof row.canal === 'string' && row.canal.trim()) {
+          canais.add(row.canal);
+        }
       });
-
-      setStatusOptions(toSortedOptions(statuses));
-      setResponsavelOptions(toSortedOptions(responsaveis));
-      setOrigemOptions(toSortedOptions(origens));
       setCanalOptions(toSortedOptions(canais));
     } catch (error) {
-      console.error('Erro ao carregar opcoes de filtros das campanhas:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel carregar os filtros de leads.' });
+      console.error('Erro ao carregar canais para filtro de campanha:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel carregar os canais de leads.' });
     } finally {
       setLoadingFilters(false);
     }
@@ -220,8 +453,14 @@ export default function WhatsAppCampaignSettings() {
 
   useEffect(() => {
     void loadCampaigns();
-    void loadFilterOptions();
-  }, [loadCampaigns, loadFilterOptions]);
+    void loadCanalOptions();
+  }, [loadCampaigns, loadCanalOptions]);
+
+  useEffect(() => {
+    if (!selectedStepId && flowSteps[0]) {
+      setSelectedStepId(flowSteps[0].id);
+    }
+  }, [flowSteps, selectedStepId]);
 
   useEffect(() => {
     if (!hasRunningCampaign) {
@@ -237,6 +476,93 @@ export default function WhatsAppCampaignSettings() {
     };
   }, [hasRunningCampaign, loadCampaigns]);
 
+  const addFlowStep = (type: WhatsAppCampaignFlowStepType) => {
+    const newStep = createFlowStep(type);
+    setFlowSteps((current) => [...current, { ...newStep, order: current.length }]);
+    setSelectedStepId(newStep.id);
+  };
+
+  const updateSelectedStep = (updates: Partial<WhatsAppCampaignFlowStep>) => {
+    if (!selectedStep) {
+      return;
+    }
+
+    setFlowSteps((current) =>
+      current.map((step) => {
+        if (step.id !== selectedStep.id) {
+          return step;
+        }
+
+        const nextType = normalizeFlowStepType(updates.type ?? step.type);
+        const nextStep: WhatsAppCampaignFlowStep = {
+          ...step,
+          ...updates,
+          type: nextType,
+        };
+
+        if (nextType === 'text') {
+          nextStep.mediaUrl = undefined;
+          nextStep.caption = undefined;
+          nextStep.filename = undefined;
+        } else {
+          if (typeof nextStep.mediaUrl !== 'string') {
+            nextStep.mediaUrl = '';
+          }
+          if (typeof nextStep.caption !== 'string') {
+            nextStep.caption = '';
+          }
+          if (nextType === 'document') {
+            if (typeof nextStep.filename !== 'string') {
+              nextStep.filename = '';
+            }
+          } else {
+            nextStep.filename = undefined;
+          }
+
+          nextStep.text = undefined;
+        }
+
+        return nextStep;
+      }),
+    );
+  };
+
+  const removeSelectedStep = () => {
+    if (!selectedStep) {
+      return;
+    }
+
+    setFlowSteps((current) => {
+      if (current.length <= 1) {
+        const replacement = createFlowStep('text');
+        setSelectedStepId(replacement.id);
+        return [replacement];
+      }
+
+      const remaining = current.filter((step) => step.id !== selectedStep.id).map((step, index) => ({ ...step, order: index }));
+      setSelectedStepId(remaining[0]?.id ?? null);
+      return remaining;
+    });
+  };
+
+  const validateFlowSteps = (steps: WhatsAppCampaignFlowStep[]): string | null => {
+    if (steps.length === 0) {
+      return 'Adicione ao menos uma etapa no fluxo da campanha.';
+    }
+
+    for (const step of steps) {
+      if (step.type === 'text') {
+        if (!(step.text || '').trim()) {
+          return 'Toda etapa de mensagem precisa ter texto preenchido.';
+        }
+      } else if (!(step.mediaUrl || '').trim()) {
+        return `A etapa ${FLOW_STEP_LABELS[step.type]} precisa de URL de midia.`;
+      }
+    }
+
+    return null;
+  };
+
   const handlePreviewAudience = async () => {
     setLoadingPreview(true);
     setMessageState(null);
@@ -244,20 +570,20 @@ export default function WhatsAppCampaignSettings() {
     try {
       let query = supabase
         .from('leads')
-        .select('id, nome_completo, telefone, status, responsavel, origem, canal')
+        .select('id, nome_completo, telefone, status_id, responsavel_id, origem_id, canal')
         .eq('arquivado', false)
         .not('telefone', 'is', null)
         .neq('telefone', '')
-        .limit(300);
+        .limit(400);
 
-      if (filters.status) {
-        query = query.eq('status', filters.status);
+      if (filters.statusId) {
+        query = query.eq('status_id', filters.statusId);
       }
-      if (filters.responsavel) {
-        query = query.eq('responsavel', filters.responsavel);
+      if (filters.responsavelId) {
+        query = query.eq('responsavel_id', filters.responsavelId);
       }
-      if (filters.origem) {
-        query = query.eq('origem', filters.origem);
+      if (filters.origemId) {
+        query = query.eq('origem_id', filters.origemId);
       }
       if (filters.canal) {
         query = query.eq('canal', filters.canal);
@@ -279,9 +605,9 @@ export default function WhatsAppCampaignSettings() {
   };
 
   const handleCreateCampaign = async () => {
-    const normalizedMessage = campaignMessage.trim();
-    if (!normalizedMessage) {
-      setMessageState({ type: 'error', text: 'Informe a mensagem da campanha.' });
+    const validationError = validateFlowSteps(flowSteps);
+    if (validationError) {
+      setMessageState({ type: 'error', text: validationError });
       return;
     }
 
@@ -314,17 +640,22 @@ export default function WhatsAppCampaignSettings() {
 
       const campaignTitle = campaignName.trim() || `Campanha ${new Date().toLocaleDateString('pt-BR')}`;
       const createdBy = getUserManagementId(user);
+      const normalizedSteps = flowSteps.map((step, index) => ({ ...step, order: index }));
 
       const { data: createdCampaign, error: campaignError } = await supabase
         .from('whatsapp_campaigns')
         .insert({
           name: campaignTitle,
-          message: normalizedMessage,
+          message: composeFallbackMessage(normalizedSteps),
+          flow_steps: normalizedSteps,
           status: 'draft',
           audience_filter: {
-            status: filters.status || null,
-            responsavel: filters.responsavel || null,
-            origem: filters.origem || null,
+            status_id: filters.statusId || null,
+            status_label: statusNameById.get(filters.statusId) ?? null,
+            responsavel_id: filters.responsavelId || null,
+            responsavel_label: responsavelNameById.get(filters.responsavelId) ?? null,
+            origem_id: filters.origemId || null,
+            origem_label: origemNameById.get(filters.origemId) ?? null,
             canal: filters.canal || null,
           },
           total_targets: uniqueTargets.size,
@@ -361,9 +692,10 @@ export default function WhatsAppCampaignSettings() {
       await loadCampaigns();
 
       setSelectedCampaignId(createdCampaign.id);
-      setMessageState({ type: 'success', text: 'Campanha criada com sucesso.' });
+      setFlowSteps([createFlowStep('text')]);
+      setSelectedStepId(null);
       setCampaignName('');
-      setCampaignMessage('');
+      setMessageState({ type: 'success', text: 'Campanha criada com sucesso.' });
     } catch (error) {
       console.error('Erro ao criar campanha do WhatsApp:', error);
       setMessageState({ type: 'error', text: 'Nao foi possivel criar a campanha.' });
@@ -382,9 +714,7 @@ export default function WhatsAppCampaignSettings() {
 
     try {
       const nowIso = new Date().toISOString();
-      const payload: Record<string, unknown> = {
-        status,
-      };
+      const payload: Record<string, unknown> = { status };
 
       if (status === 'running') {
         payload.started_at = campaign.started_at ?? nowIso;
@@ -441,7 +771,6 @@ export default function WhatsAppCampaignSettings() {
         .update({
           status: 'cancelled',
           error_message: 'Campanha cancelada manualmente.',
-          updated_at: nowIso,
         })
         .eq('campaign_id', campaign.id)
         .in('status', ['pending', 'processing']);
@@ -471,7 +800,7 @@ export default function WhatsAppCampaignSettings() {
         body: {
           action: 'process',
           campaignId: campaignId || null,
-          limit: 60,
+          limit: 50,
           source: 'manual-ui',
         },
       });
@@ -480,7 +809,7 @@ export default function WhatsAppCampaignSettings() {
         throw error;
       }
 
-      const responseData = (data ?? null) as { error?: string; processed?: number; success?: boolean } | null;
+      const responseData = (data ?? null) as { error?: string; processed?: number } | null;
       if (responseData?.error) {
         throw new Error(responseData.error);
       }
@@ -524,7 +853,7 @@ export default function WhatsAppCampaignSettings() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Nova campanha</h3>
-            <p className="text-xs text-slate-500">Crie um disparo em massa com mensagem de texto e publico filtrado.</p>
+            <p className="text-xs text-slate-500">Monte o fluxo de mensagens com React Flow e dispare em lote para leads filtrados.</p>
           </div>
           <Button
             variant="secondary"
@@ -540,25 +869,14 @@ export default function WhatsAppCampaignSettings() {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="text-xs font-medium text-slate-600">
+          <label className="text-xs font-medium text-slate-600 md:col-span-2">
             Nome da campanha
             <input
               type="text"
               value={campaignName}
               onChange={(event) => setCampaignName(event.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Ex: Follow-up de cotacao"
-            />
-          </label>
-
-          <label className="text-xs font-medium text-slate-600 md:col-span-2">
-            Mensagem
-            <textarea
-              value={campaignMessage}
-              onChange={(event) => setCampaignMessage(event.target.value)}
-              rows={4}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Mensagem que sera enviada para todos os leads filtrados"
+              placeholder="Ex: Reengajamento de cotacao"
             />
           </label>
         </div>
@@ -567,15 +885,15 @@ export default function WhatsAppCampaignSettings() {
           <label className="text-xs font-medium text-slate-600">
             Status
             <select
-              value={filters.status}
-              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+              value={filters.statusId}
+              onChange={(event) => setFilters((current) => ({ ...current, statusId: event.target.value }))}
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loadingFilters}
             >
               <option value="">Todos</option>
               {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+                <option key={status.id} value={status.id}>
+                  {status.label}
                 </option>
               ))}
             </select>
@@ -584,15 +902,15 @@ export default function WhatsAppCampaignSettings() {
           <label className="text-xs font-medium text-slate-600">
             Responsavel
             <select
-              value={filters.responsavel}
-              onChange={(event) => setFilters((current) => ({ ...current, responsavel: event.target.value }))}
+              value={filters.responsavelId}
+              onChange={(event) => setFilters((current) => ({ ...current, responsavelId: event.target.value }))}
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loadingFilters}
             >
               <option value="">Todos</option>
               {responsavelOptions.map((responsavel) => (
-                <option key={responsavel} value={responsavel}>
-                  {responsavel}
+                <option key={responsavel.id} value={responsavel.id}>
+                  {responsavel.label}
                 </option>
               ))}
             </select>
@@ -601,15 +919,15 @@ export default function WhatsAppCampaignSettings() {
           <label className="text-xs font-medium text-slate-600">
             Origem
             <select
-              value={filters.origem}
-              onChange={(event) => setFilters((current) => ({ ...current, origem: event.target.value }))}
+              value={filters.origemId}
+              onChange={(event) => setFilters((current) => ({ ...current, origemId: event.target.value }))}
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loadingFilters}
             >
               <option value="">Todas</option>
               {origemOptions.map((origem) => (
-                <option key={origem} value={origem}>
-                  {origem}
+                <option key={origem.id} value={origem.id}>
+                  {origem.label}
                 </option>
               ))}
             </select>
@@ -633,6 +951,124 @@ export default function WhatsAppCampaignSettings() {
           </label>
         </div>
 
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fluxo da campanha</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {(['text', 'image', 'document', 'video', 'audio'] as WhatsAppCampaignFlowStepType[]).map((type) => {
+                const Icon = FLOW_STEP_ICONS[type];
+                return (
+                  <Button key={type} size="sm" variant="ghost" onClick={() => addFlowStep(type)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    <Icon className="h-3.5 w-3.5" />
+                    {FLOW_STEP_LABELS[type]}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="h-[320px] overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <ReactFlow
+                nodes={flowNodes}
+                edges={flowEdges}
+                fitView
+                nodesDraggable={false}
+                nodesConnectable={false}
+                elementsSelectable
+                onNodeClick={(_, node) => setSelectedStepId(node.id)}
+                proOptions={{ hideAttribution: true }}
+              >
+                <MiniMap pannable zoomable nodeStrokeWidth={3} />
+                <Controls showInteractive={false} />
+                <Background gap={18} size={1} color="#e2e8f0" />
+              </ReactFlow>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              {selectedStep ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Etapa selecionada</p>
+                    <Button size="sm" variant="danger" onClick={removeSelectedStep}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remover
+                    </Button>
+                  </div>
+
+                  <label className="text-xs font-medium text-slate-600">
+                    Tipo de envio
+                    <select
+                      value={selectedStep.type}
+                      onChange={(event) => updateSelectedStep({ type: event.target.value as WhatsAppCampaignFlowStepType })}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {Object.entries(FLOW_STEP_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {selectedStep.type === 'text' ? (
+                    <label className="text-xs font-medium text-slate-600">
+                      Texto da mensagem
+                      <textarea
+                        value={selectedStep.text ?? ''}
+                        onChange={(event) => updateSelectedStep({ text: event.target.value })}
+                        rows={6}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        placeholder="Digite a mensagem desta etapa"
+                      />
+                    </label>
+                  ) : (
+                    <>
+                      <label className="text-xs font-medium text-slate-600">
+                        URL da midia
+                        <input
+                          type="url"
+                          value={selectedStep.mediaUrl ?? ''}
+                          onChange={(event) => updateSelectedStep({ mediaUrl: event.target.value })}
+                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          placeholder="https://..."
+                        />
+                      </label>
+
+                      <label className="text-xs font-medium text-slate-600">
+                        Legenda (opcional)
+                        <textarea
+                          value={selectedStep.caption ?? ''}
+                          onChange={(event) => updateSelectedStep({ caption: event.target.value })}
+                          rows={3}
+                          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          placeholder="Legenda para acompanhar a midia"
+                        />
+                      </label>
+
+                      {selectedStep.type === 'document' && (
+                        <label className="text-xs font-medium text-slate-600">
+                          Nome do arquivo (opcional)
+                          <input
+                            type="text"
+                            value={selectedStep.filename ?? ''}
+                            onChange={(event) => updateSelectedStep({ filename: event.target.value })}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            placeholder="proposta.pdf"
+                          />
+                        </label>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">Selecione uma etapa no fluxo para editar.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={() => void handlePreviewAudience()} loading={loadingPreview}>
             <Send className="h-4 w-4" />
@@ -648,11 +1084,15 @@ export default function WhatsAppCampaignSettings() {
 
         {previewLeads.length > 0 && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leads no preview (max. 300)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leads no preview (max. 400)</p>
             <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-xs text-slate-700">
-              {previewLeads.slice(0, 60).map((lead) => (
+              {previewLeads.slice(0, 80).map((lead) => (
                 <li key={lead.id} className="rounded-md border border-slate-200 bg-white px-2 py-1">
                   {lead.nome_completo} - {lead.telefone}
+                  <span className="ml-1 text-slate-500">
+                    ({statusNameById.get(lead.status_id || '') || 'Sem status'} / {responsavelNameById.get(lead.responsavel_id || '') || 'Sem responsavel'} /{' '}
+                    {origemNameById.get(lead.origem_id || '') || 'Sem origem'})
+                  </span>
                 </li>
               ))}
             </ul>
@@ -721,7 +1161,7 @@ export default function WhatsAppCampaignSettings() {
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Invalidos: {campaign.invalid_targets}</div>
                   </div>
 
-                  <p className="mt-2 line-clamp-2 text-xs text-slate-600">{campaign.message}</p>
+                  <p className="mt-2 text-xs text-slate-600">Etapas do fluxo: {campaign.flow_steps.length}</p>
 
                   {campaign.last_error && (
                     <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
@@ -791,6 +1231,7 @@ export default function WhatsAppCampaignSettings() {
               <span>Selecionada: {selectedCampaign.name}</span>
               <span>Inicio: {formatDateTime(selectedCampaign.started_at)}</span>
               <span>Fim: {formatDateTime(selectedCampaign.completed_at)}</span>
+              <span>Etapas: {selectedCampaign.flow_steps.length}</span>
             </div>
           </div>
         )}

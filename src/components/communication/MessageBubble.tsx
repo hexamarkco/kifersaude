@@ -553,28 +553,27 @@ export function MessageBubble({
       const displayUrl = visualMediaUrl || imageUrl || imagePreview;
       const shouldShowCaption = Boolean(resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]');
       return (
-        <div className="w-[min(420px,85vw)] max-w-full space-y-2">
+        <div className="flex w-fit max-w-[min(420px,85vw)] flex-col gap-2">
           {displayUrl ? (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="h-auto w-full overflow-hidden rounded-xl border-0 p-0 shadow-none hover:bg-transparent"
+              className="block w-fit max-w-full overflow-hidden rounded-xl"
             >
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="block w-full h-auto max-h-[520px] object-cover"
+                className="block h-auto w-auto max-h-[520px] max-w-full"
                 loading="lazy"
               />
-            </Button>
+            </button>
           ) : (
             <Button
               variant="secondary"
               size="sm"
-              className="h-auto w-full rounded p-2 text-sm text-gray-600"
+              className="h-auto w-[320px] max-w-full rounded p-2 text-sm text-gray-600"
               onClick={() => {
                 void openMediaPreview('image');
               }}
@@ -590,7 +589,7 @@ export function MessageBubble({
             </Button>
           )}
           {shouldShowCaption && resolvedBody && (
-            <WhatsAppFormattedText text={resolvedBody} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
+            <WhatsAppFormattedText text={resolvedBody} className="block w-full px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );

@@ -2594,51 +2594,146 @@ export default function WhatsAppTab() {
     return chat.id;
   }
 
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const chatsMatchingSearch = chats.filter((chat) => {
-    if (!normalizedSearchQuery) return true;
-
-    const displayName = getChatDisplayName(chat).toLowerCase();
-    const preview = (chat.last_message || '').toLowerCase();
-    return (
-      displayName.includes(normalizedSearchQuery) ||
-      chat.id.toLowerCase().includes(normalizedSearchQuery) ||
-      preview.includes(normalizedSearchQuery)
-    );
-  });
-
-  const archivedCount = chatsMatchingSearch.filter((chat) => chat.archived).length;
-  const inboxChats = showArchived ? chatsMatchingSearch : chatsMatchingSearch.filter((chat) => !chat.archived);
-  const unreadInboxCount = inboxChats.filter((chat) => (chat.unread_count ?? 0) > 0).length;
-  const groupInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'group').length;
-  const directInboxCount = inboxChats.filter((chat) => isDirectChat(chat)).length;
-  const channelInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'newsletter').length;
-  const broadcastInboxCount = inboxChats.filter((chat) => getChatKind(chat) === 'broadcast').length;
-
-  const filteredVisibleChats = inboxChats.filter((chat) => {
-    if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
-    if (chatFilterMode === 'groups') return getChatKind(chat) === 'group';
-    if (chatFilterMode === 'direct') return isDirectChat(chat);
-    if (chatFilterMode === 'channels') return getChatKind(chat) === 'newsletter';
-    if (chatFilterMode === 'broadcasts') return getChatKind(chat) === 'broadcast';
-    return true;
-  });
-
-  const sortedVisibleChats = [...filteredVisibleChats].sort((left, right) => {
-    if (prioritizeUnread) {
-      const leftUnread = left.unread_count ?? 0;
-      const rightUnread = right.unread_count ?? 0;
-      if (leftUnread !== rightUnread) {
-        return rightUnread - leftUnread;
+  const chatListPresentationById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        displayName: string;
+        kind: ReturnType<typeof getChatKind>;
+        typeLabel: string | null;
+        typeBadgeClass: string;
+        leadStatus: string | null;
+        photo: string | null;
       }
-    }
+    >();
 
-    return sortChatsByLatest(left, right);
-  });
+    chats.forEach((chat) => {
+      const chatDisplayName = getChatDisplayName(chat);
+      const chatKind = getChatKind(chat);
+      const chatTypeLabel = getChatTypeLabel(chat);
+      const leadStatus =
+        getLeadMatchKeysForChat(chat)
+          .map((key) => leadByPhoneMatchKey.get(key))
+          .find(Boolean)?.status ?? null;
 
-  const visibleChats = sortedVisibleChats;
-  const unreadQueue = visibleChats.filter((chat) => (chat.unread_count ?? 0) > 0);
-  const nextUnreadChat = unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null;
+      const chatTypeBadgeClass =
+        chatKind === 'group'
+          ? 'bg-blue-100 text-blue-700'
+          : chatKind === 'newsletter'
+            ? 'bg-indigo-100 text-indigo-700'
+            : chatKind === 'status'
+              ? 'bg-amber-100 text-amber-700'
+              : chatKind === 'broadcast'
+                ? 'bg-orange-100 text-orange-700'
+                : 'bg-slate-100 text-slate-700';
+
+      const chatPhoto = (() => {
+        const variants = getChatIdVariants(chat);
+        for (const variant of variants) {
+          const photo = contactPhotosById.get(variant);
+          if (photo) return photo;
+        }
+        return null;
+      })();
+
+      map.set(chat.id, {
+        displayName: chatDisplayName,
+        kind: chatKind,
+        typeLabel: chatTypeLabel,
+        typeBadgeClass: chatTypeBadgeClass,
+        leadStatus,
+        photo: chatPhoto,
+      });
+    });
+
+    return map;
+  }, [chats, contactPhotosById, contactsById, groupNamesById, leadByPhoneMatchKey, leadNamesByPhone, newsletterNamesById]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const {
+    archivedCount,
+    inboxCount,
+    unreadInboxCount,
+    groupInboxCount,
+    directInboxCount,
+    channelInboxCount,
+    broadcastInboxCount,
+    visibleChats,
+    unreadQueue,
+  } = useMemo(() => {
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+    const chatsMatchingSearch = chats.filter((chat) => {
+      if (!normalizedSearchQuery) return true;
+
+      const displayName = (chatListPresentationById.get(chat.id)?.displayName || chat.id).toLowerCase();
+      const preview = (chat.last_message || '').toLowerCase();
+      return (
+        displayName.includes(normalizedSearchQuery) ||
+        chat.id.toLowerCase().includes(normalizedSearchQuery) ||
+        preview.includes(normalizedSearchQuery)
+      );
+    });
+
+    const archivedCount = chatsMatchingSearch.filter((chat) => chat.archived).length;
+    const inboxChats = showArchived ? chatsMatchingSearch : chatsMatchingSearch.filter((chat) => !chat.archived);
+
+    let unreadInboxCount = 0;
+    let groupInboxCount = 0;
+    let directInboxCount = 0;
+    let channelInboxCount = 0;
+    let broadcastInboxCount = 0;
+
+    inboxChats.forEach((chat) => {
+      const chatKind = chatListPresentationById.get(chat.id)?.kind ?? getChatKind(chat);
+
+      if ((chat.unread_count ?? 0) > 0) unreadInboxCount += 1;
+      if (chatKind === 'group') groupInboxCount += 1;
+      if (chatKind === 'direct') directInboxCount += 1;
+      if (chatKind === 'newsletter') channelInboxCount += 1;
+      if (chatKind === 'broadcast') broadcastInboxCount += 1;
+    });
+
+    const filteredVisibleChats = inboxChats.filter((chat) => {
+      const chatKind = chatListPresentationById.get(chat.id)?.kind ?? getChatKind(chat);
+
+      if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
+      if (chatFilterMode === 'groups') return chatKind === 'group';
+      if (chatFilterMode === 'direct') return chatKind === 'direct';
+      if (chatFilterMode === 'channels') return chatKind === 'newsletter';
+      if (chatFilterMode === 'broadcasts') return chatKind === 'broadcast';
+      return true;
+    });
+
+    const visibleChats = [...filteredVisibleChats].sort((left, right) => {
+      if (prioritizeUnread) {
+        const leftUnread = left.unread_count ?? 0;
+        const rightUnread = right.unread_count ?? 0;
+        if (leftUnread !== rightUnread) {
+          return rightUnread - leftUnread;
+        }
+      }
+
+      return sortChatsByLatest(left, right);
+    });
+
+    const unreadQueue = visibleChats.filter((chat) => (chat.unread_count ?? 0) > 0);
+
+    return {
+      archivedCount,
+      inboxCount: inboxChats.length,
+      unreadInboxCount,
+      groupInboxCount,
+      directInboxCount,
+      channelInboxCount,
+      broadcastInboxCount,
+      visibleChats,
+      unreadQueue,
+    };
+  }, [chatFilterMode, chatListPresentationById, chats, prioritizeUnread, searchQuery, showArchived]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nextUnreadChat = useMemo(
+    () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
+    [unreadQueue, selectedChat?.id],
+  );
   const notificationsActive = notificationPermission === 'granted' && desktopNotificationsEnabled;
   const notificationsLabel =
     notificationPermission === 'unsupported'
@@ -4205,7 +4300,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('all')}
               >
-                Todas ({inboxChats.length})
+                Todas ({inboxCount})
               </Button>
               <Button
                 variant={chatFilterMode === 'unread' ? 'warning' : 'secondary'}
@@ -4277,35 +4372,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               </div>
             ) : (
               visibleChats.map((chat) => {
-                const chatDisplayName = getChatDisplayName(chat);
-                const chatKind = getChatKind(chat);
-                const chatTypeLabel = getChatTypeLabel(chat);
-                const leadMatchKeys = getLeadMatchKeysForChat(chat);
-                const leadForChat = leadMatchKeys
-                  .map((key) => leadByPhoneMatchKey.get(key))
-                  .find((lead): lead is { id: string; name: string; phone: string; status?: string | null; responsavel?: string | null } => Boolean(lead)) ?? null;
-                const leadStatus = leadForChat?.status ?? null;
+                const chatPresentation = chatListPresentationById.get(chat.id);
+                const chatDisplayName = chatPresentation?.displayName || getChatDisplayName(chat);
+                const chatKind = chatPresentation?.kind ?? getChatKind(chat);
+                const chatTypeLabel = chatPresentation?.typeLabel ?? getChatTypeLabel(chat);
+                const leadStatus = chatPresentation?.leadStatus ?? null;
                 const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
                 const badgeStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
-                const chatTypeBadgeClass =
-                  chatKind === 'group'
-                    ? 'bg-blue-100 text-blue-700'
-                    : chatKind === 'newsletter'
-                      ? 'bg-indigo-100 text-indigo-700'
-                      : chatKind === 'status'
-                        ? 'bg-amber-100 text-amber-700'
-                        : chatKind === 'broadcast'
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-slate-100 text-slate-700';
-
-                const chatPhoto = (() => {
-                  const variants = getChatIdVariants(chat);
-                  for (const variant of variants) {
-                    const photo = contactPhotosById.get(variant);
-                    if (photo) return photo;
-                  }
-                  return null;
-                })();
+                const chatTypeBadgeClass = chatPresentation?.typeBadgeClass ?? 'bg-slate-100 text-slate-700';
+                const chatPhoto = chatPresentation?.photo ?? null;
 
                 const muted = isChatMuted(chat);
                 const unreadWaitingLabel = getUnreadWaitingLabel(chat);

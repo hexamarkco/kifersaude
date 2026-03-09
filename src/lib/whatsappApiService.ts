@@ -418,44 +418,49 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
   return response.json();
 }
 
-export async function sendTypingState(chatId: string) {
-  const settings = await getWhatsAppSettings();
+type WhapiPresenceState = 'typing' | 'recording';
 
-  const response = await fetch(`${WHAPI_BASE_URL}/chats/${chatId}/typing`, {
-    method: 'POST',
+function normalizePresenceEntryId(chatId: string): string {
+  const normalizedChatId = normalizeChatId(chatId);
+  if (/@s\.whatsapp\.net$/i.test(normalizedChatId)) {
+    return normalizedChatId.replace(/@s\.whatsapp\.net$/i, '@c.us');
+  }
+
+  return normalizedChatId;
+}
+
+async function sendPresenceState(chatId: string, presence: WhapiPresenceState) {
+  const settings = await getWhatsAppSettings();
+  const entryId = normalizePresenceEntryId(chatId);
+
+  const response = await fetch(`${WHAPI_BASE_URL}/presences/${encodeURIComponent(entryId)}`, {
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${settings.token}`,
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ typing: true }),
+    body: JSON.stringify({
+      presence,
+      delay: 3,
+    }),
   });
 
   if (!response.ok) {
-    console.error('Erro ao enviar estado de digitação');
+    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+    const presenceLabel = presence === 'typing' ? 'digitação' : 'gravação';
+    console.error(`Erro ao enviar estado de ${presenceLabel}: ${formatApiError(error)}`);
   }
 
   return response.ok;
 }
 
+export async function sendTypingState(chatId: string) {
+  return sendPresenceState(chatId, 'typing');
+}
+
 export async function sendRecordingState(chatId: string) {
-  const settings = await getWhatsAppSettings();
-
-  const response = await fetch(`${WHAPI_BASE_URL}/chats/${chatId}/recording`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${settings.token}`,
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ recording: true }),
-  });
-
-  if (!response.ok) {
-    console.error('Erro ao enviar estado de gravação');
-  }
-
-  return response.ok;
+  return sendPresenceState(chatId, 'recording');
 }
 
 export function fileToBase64(file: File): Promise<string> {

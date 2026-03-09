@@ -153,7 +153,7 @@ export default function AccessControlManager() {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-start space-x-3">
-        <ShieldCheck className="h-6 w-6 text-teal-600" />
+        <ShieldCheck className="h-6 w-6 text-amber-600" />
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Permissões por Perfil</h3>
           <p className="text-sm text-slate-600">
@@ -214,7 +214,7 @@ export default function AccessControlManager() {
                             type="checkbox"
                             checked={canView}
                             onChange={() => void handleToggleView(role, module.id, canView)}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             disabled={isUpdating}
                           />
                           <span>Ver</span>
@@ -224,7 +224,7 @@ export default function AccessControlManager() {
                             type="checkbox"
                             checked={canEdit}
                             onChange={() => void handleToggleEdit(role, module.id, canEdit)}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             disabled={!canView || isUpdating}
                           />
                           <span>Editar</span>

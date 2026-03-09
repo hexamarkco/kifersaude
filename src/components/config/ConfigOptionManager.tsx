@@ -3,6 +3,8 @@ import { AlertCircle, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService, type ConfigCategory } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -209,24 +211,24 @@ export default function ConfigOptionManager({
               <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="flex flex-col text-xs text-slate-600">
                   Rótulo
-                  <input
+                  <Input
                     type="text"
                     value={drafts[item.id]?.label ?? item.label}
                     onChange={(event) => updateDraft(item.id, { label: event.target.value })}
                     onBlur={() => void handleLabelBlur(item.id, item.label)}
-                    className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                    className="mt-1"
                     disabled={isBusy}
                   />
                 </label>
 
                 <label className="flex flex-col text-xs text-slate-600">
                   Ordem
-                  <input
+                  <Input
                     type="number"
                     value={drafts[item.id]?.ordem ?? String(item.ordem)}
                     onChange={(event) => updateDraft(item.id, { ordem: event.target.value })}
                     onBlur={() => void handleOrderBlur(item.id, item.ordem)}
-                    className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                    className="mt-1"
                     disabled={isBusy}
                   />
                 </label>
@@ -246,14 +248,16 @@ export default function ConfigOptionManager({
                   <span>Ativo</span>
                 </label>
 
-                <button
+                <Button
                   onClick={() => void handleDelete(item.id)}
-                  className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                  variant="danger"
+                  size="icon"
+                  className="h-9 w-9"
                   title="Remover opção"
                   disabled={isBusy}
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
           );
@@ -271,25 +275,23 @@ export default function ConfigOptionManager({
         <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">Rótulo</label>
-            <input
+            <Input
               type="text"
               value={newLabel}
               onChange={(event) => setNewLabel(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-teal-500"
               placeholder={placeholder || 'Ex: Valor visível para o usuário'}
             />
           </div>
         </div>
 
         <div className="mt-4">
-          <button
+          <Button
             onClick={() => void handleCreate()}
-            disabled={saving}
-            className="inline-flex items-center space-x-2 rounded-lg bg-teal-600 px-4 py-2 text-white hover:bg-teal-700 disabled:opacity-50"
+            loading={saving}
           >
-            <Plus className="h-4 w-4" />
+            {!saving && <Plus className="h-4 w-4" />}
             <span>{saving ? 'Salvando...' : 'Adicionar opção'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -558,8 +558,27 @@ export function MessageInput({
       ? (response as Record<string, unknown>)
       : null;
 
+    const extractResponseMessageId = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      return trimmed || null;
+    };
+
+    const nestedMessageId =
+      responsePayload?.message && typeof responsePayload.message === 'object'
+        ? extractResponseMessageId((responsePayload.message as Record<string, unknown>).id)
+        : null;
+
+    const firstArrayMessageId =
+      Array.isArray(responsePayload?.messages) &&
+      responsePayload.messages.length > 0 &&
+      responsePayload.messages[0] &&
+      typeof responsePayload.messages[0] === 'object'
+        ? extractResponseMessageId((responsePayload.messages[0] as Record<string, unknown>).id)
+        : null;
+
     const persistedMessageId =
-      typeof responsePayload?.id === 'string' && responsePayload.id.trim() ? responsePayload.id.trim() : null;
+      extractResponseMessageId(responsePayload?.id) || nestedMessageId || firstArrayMessageId;
     const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     if (persistedMessageId) {

@@ -881,13 +881,15 @@ export default function FlowBuilder({
             className="fixed z-50 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
-            <button
-              type="button"
-              className="block w-full px-3 py-2 text-left text-red-600 hover:bg-red-50"
+            <Button
+              variant="danger"
+              size="sm"
+              fullWidth
+              className="h-auto justify-start rounded-lg border-0 bg-transparent px-3 py-2 text-left text-red-600 shadow-none hover:bg-red-50 hover:text-red-700"
               onClick={() => handleDeleteNode(contextMenu.nodeId)}
             >
               Excluir bloco
-            </button>
+            </Button>
           </div>
         )}
       </div>

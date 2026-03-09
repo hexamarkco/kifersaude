@@ -3,6 +3,7 @@ import { Bell, BellOff, RefreshCw, Settings } from 'lucide-react';
 import ModalShell from '../ui/ModalShell';
 import Tabs, { type TabItem } from '../ui/Tabs';
 import Button from '../ui/Button';
+import Checkbox from '../ui/Checkbox';
 import WhatsAppCampaignSettings from './WhatsAppCampaignSettings';
 
 type SettingsTab = 'general' | 'campaigns';
@@ -126,19 +127,19 @@ export default function WhatsAppSettingsModal({
               </div>
 
               {isSyncingAllChats && (
-                <div className="mt-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2">
-                  <div className="flex items-center justify-between text-xs text-teal-700">
+                <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                  <div className="flex items-center justify-between text-xs text-amber-700">
                     <span>
                       {syncAllChatsProgress.completed}/{syncAllChatsProgress.total} concluido(s)
                     </span>
                     {syncAllChatsProgress.failed > 0 && <span>{syncAllChatsProgress.failed} com falha</span>}
                   </div>
-                  <div className="mt-1 truncate text-[11px] text-teal-800/90">
+                  <div className="mt-1 truncate text-[11px] text-amber-800/90">
                     {syncingChatLabel ? `Sincronizando agora: ${syncingChatLabel}` : 'Preparando proximo chat...'}
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-teal-100">
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-100">
                     <div
-                      className="h-full rounded-full bg-teal-500 transition-all duration-300"
+                      className="h-full rounded-full bg-amber-500 transition-all duration-300"
                       style={{ width: `${syncProgressPercentage}%` }}
                     />
                   </div>
@@ -152,11 +153,9 @@ export default function WhatsAppSettingsModal({
 
                 <label className="flex h-9 items-center justify-between rounded-lg border border-slate-200 px-3 text-xs text-slate-700">
                   <span>Priorizar nao lidas</span>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={prioritizeUnread}
                     onChange={(event) => onTogglePrioritizeUnread(event.target.checked)}
-                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                   />
                 </label>
 

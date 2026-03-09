@@ -27,6 +27,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorUtils';
@@ -3127,7 +3128,7 @@ const getReminderTypeMeta = (type?: string | null) => {
   const normalized = (type || '').trim().toLowerCase();
 
   if (normalized === 'retorno') {
-    return { label: 'Retorno', className: 'border border-teal-300 bg-teal-100 text-teal-700' };
+    return { label: 'Retorno', className: 'border border-amber-300 bg-amber-100 text-amber-700' };
   }
 
   if (normalized === 'follow-up' || normalized === 'follow up' || normalized === 'followup') {
@@ -3857,38 +3858,40 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           panelClassName="max-w-lg"
         >
             <div className="flex gap-2">
-              <button
-                type="button"
-                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'leads' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+              <Button
                 onClick={() => setNewChatTab('leads')}
+                variant={newChatTab === 'leads' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-3 py-1 text-xs"
               >
                 Leads
-              </button>
-              <button
-                type="button"
-                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'contacts' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+              </Button>
+              <Button
                 onClick={() => setNewChatTab('contacts')}
+                variant={newChatTab === 'contacts' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-3 py-1 text-xs"
               >
                 Contatos
-              </button>
-              <button
-                type="button"
-                className={`px-3 py-1 rounded-full text-xs ${newChatTab === 'manual' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+              </Button>
+              <Button
                 onClick={() => setNewChatTab('manual')}
+                variant={newChatTab === 'manual' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-3 py-1 text-xs"
               >
                 Numero
-              </button>
+              </Button>
             </div>
             <div className="pt-3">
               {(newChatTab === 'leads' || newChatTab === 'contacts') && (
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
+                <div className="mb-3">
+                  <Input
                     type="text"
+                    leftIcon={Search}
                     placeholder={newChatTab === 'leads' ? 'Buscar lead...' : 'Buscar contato...'}
                     value={newChatSearch}
                     onChange={(e) => setNewChatSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
               )}
@@ -3899,15 +3902,17 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     <div className="p-3 text-sm text-slate-500">Nenhum lead encontrado.</div>
                   ) : (
                     filteredLeads.map((lead, index) => (
-                      <button
+                      <Button
                         key={`${lead.phone}-${index}`}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-b-0"
+                        variant="ghost"
+                        size="sm"
+                        fullWidth
+                        className="h-auto justify-start rounded-none border-b border-slate-200 px-3 py-2 text-left font-normal shadow-none hover:bg-slate-50 hover:text-slate-900 last:border-b-0"
                         onClick={() => openChatFromPhone(lead.phone, lead.name)}
                       >
                         <div className="text-sm font-medium text-slate-800">{lead.name}</div>
                         <div className="text-xs text-slate-500">{formatPhone(lead.phone)}</div>
-                      </button>
+                      </Button>
                     ))
                   )}
                 </div>
@@ -3919,15 +3924,17 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     <div className="p-3 text-sm text-slate-500">Nenhum contato encontrado.</div>
                   ) : (
                     filteredContacts.map((contact) => (
-                      <button
+                      <Button
                         key={contact.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-b-0"
+                        variant="ghost"
+                        size="sm"
+                        fullWidth
+                        className="h-auto justify-start rounded-none border-b border-slate-200 px-3 py-2 text-left font-normal shadow-none hover:bg-slate-50 hover:text-slate-900 last:border-b-0"
                         onClick={() => openChatFromPhone(contact.id, contact.name || contact.id)}
                       >
                         <div className="text-sm font-medium text-slate-800">{contact.name || contact.id}</div>
                         <div className="text-xs text-slate-500">{formatPhone(contact.id)}</div>
-                      </button>
+                      </Button>
                     ))
                   )}
                 </div>
@@ -3935,20 +3942,18 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
               {newChatTab === 'manual' && (
                 <div className="space-y-3">
-                  <input
+                  <Input
                     type="text"
                     placeholder="DDD + telefone"
                     value={newChatPhone}
                     onChange={(e) => setNewChatPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 rounded-lg bg-teal-600 text-white text-sm"
+                  <Button
+                    fullWidth
                     onClick={() => openChatFromPhone(newChatPhone)}
                   >
                     Iniciar conversa
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -4021,16 +4026,17 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         <p className={`text-xs font-semibold uppercase tracking-wide ${period.accentClassName}`}>
                           {period.label}
                         </p>
-                        <button
-                          type="button"
+                        <Button
                           onClick={() => toggleReminderQuickOpenPeriod(period.id)}
-                          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 transition-colors hover:bg-slate-100"
+                          variant="secondary"
+                          size="sm"
+                          className="h-auto rounded-full px-2 py-0.5 text-[11px]"
                           title={isCollapsed ? 'Expandir seção' : 'Minimizar seção'}
                           aria-label={isCollapsed ? `Expandir ${period.label}` : `Minimizar ${period.label}`}
                         >
                           <span>{periodItems.length}</span>
                           <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                        </button>
+                        </Button>
                       </div>
 
                       {!isCollapsed && <div className="space-y-3">
@@ -4137,9 +4143,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
               <div className="relative flex items-center gap-2">
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-white transition-colors hover:bg-teal-700"
+                <Button
+                  variant="primary"
+                  size="icon"
+                  className="h-9 w-9"
                   onClick={() => {
                     setShowNewChatModal(true);
                     setNewChatTab('leads');
@@ -4152,10 +4159,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   aria-label="Novo chat"
                 >
                   <Plus className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="relative h-9 w-9"
                   onClick={handleOpenRemindersModal}
                   title="Lembretes"
                   aria-label="Lembretes"
@@ -4166,108 +4174,85 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       {reminderQuickOpenItems.length}
                     </span>
                   )}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   title="Configuracoes do WhatsApp"
                   aria-label="Configuracoes do WhatsApp"
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
-                    isListSettingsOpen
-                      ? 'border-teal-300 bg-teal-50 text-teal-700'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
+                  variant={isListSettingsOpen ? 'warning' : 'secondary'}
+                  size="icon"
+                  className="h-9 w-9"
                   onClick={(event) => {
                     event.stopPropagation();
                     setIsListSettingsOpen((prev) => !prev);
                   }}
                 >
                   <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Pesquisar conversas..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
+            <Input
+              ref={searchInputRef}
+              type="text"
+              leftIcon={Search}
+              placeholder="Pesquisar conversas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'all'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              <Button
+                variant={chatFilterMode === 'all' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('all')}
               >
                 Todas ({inboxChats.length})
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'unread'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              </Button>
+              <Button
+                variant={chatFilterMode === 'unread' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('unread')}
               >
                 Nao lidas ({unreadInboxCount})
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'direct'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              </Button>
+              <Button
+                variant={chatFilterMode === 'direct' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('direct')}
               >
                 Diretas ({directInboxCount})
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'groups'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              </Button>
+              <Button
+                variant={chatFilterMode === 'groups' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('groups')}
               >
                 Grupos ({groupInboxCount})
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'channels'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              </Button>
+              <Button
+                variant={chatFilterMode === 'channels' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('channels')}
               >
                 Canais ({channelInboxCount})
-              </button>
-              <button
-                type="button"
-                className={`px-2.5 py-1 rounded-full border transition-colors ${
-                  chatFilterMode === 'broadcasts'
-                    ? 'bg-teal-600 border-teal-600 text-white'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
+              </Button>
+              <Button
+                variant={chatFilterMode === 'broadcasts' ? 'warning' : 'secondary'}
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('broadcasts')}
               >
                 Transmissoes ({broadcastInboxCount})
-              </button>
+              </Button>
             </div>
             <div className="flex items-center justify-between gap-2 text-xs">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => {
                   if (nextUnreadChat) {
                     selectChat(nextUnreadChat);
@@ -4279,7 +4264,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               >
                 <SkipForward className="h-3.5 w-3.5" />
                 {nextUnreadChat ? `Proxima nao lida (${unreadQueue.length})` : 'Fila zerada'}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -4326,15 +4311,18 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 const unreadWaitingLabel = getUnreadWaitingLabel(chat);
 
                 return (
-                  <button
+                  <Button
                     key={chat.id}
+                    variant="ghost"
+                    size="sm"
+                    fullWidth
                     onClick={() => selectChat(chat)}
                     onContextMenu={(event) => {
                       event.preventDefault();
                       openChatContextMenu(chat.id, event.clientX, event.clientY);
                     }}
-                    className={`w-full p-4 flex items-start gap-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                      selectedChat?.id === chat.id ? 'bg-teal-50' : ''
+                    className={`h-auto justify-start rounded-none border-b border-slate-100 p-4 text-left font-normal shadow-none transition-colors hover:bg-slate-50 hover:text-slate-900 ${
+                      selectedChat?.id === chat.id ? 'bg-amber-50' : ''
                     }`}
                   >
                     <div className="relative flex-shrink-0">
@@ -4346,9 +4334,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                             ? 'bg-blue-100 text-blue-700'
                             : chatKind === 'newsletter'
                               ? 'bg-indigo-500'
-                              : chatKind === 'status' || chatKind === 'broadcast'
+                            : chatKind === 'status' || chatKind === 'broadcast'
                                 ? 'bg-amber-500'
-                                : 'bg-teal-100 text-teal-700'
+                                : 'bg-amber-100 text-amber-700'
                         }`}>
                           {chatKind === 'group' ? (
                             <Users className="w-5 h-5" />
@@ -4395,13 +4383,13 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           <span className="text-[10px] text-slate-400">Silenciado</span>
                         )}
                         {(chat.unread_count ?? 0) > 0 && (
-                          <span className="flex-shrink-0 rounded-full bg-teal-600 text-white text-[11px] px-2 py-0.5">
+                          <span className="flex-shrink-0 rounded-full bg-amber-600 text-white text-[11px] px-2 py-0.5">
                             {chat.unread_count}
                           </span>
                         )}
                       </div>
                     </div>
-                  </button>
+                  </Button>
                 );
               })
             )}
@@ -4412,9 +4400,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               style={{ left: chatMenu.x, top: chatMenu.y }}
               onClick={(event) => event.stopPropagation()}
             >
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-left hover:bg-slate-800"
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                 onClick={() => {
                   const target = chats.find((item) => item.id === chatMenu.chatId);
                   if (target) {
@@ -4425,7 +4415,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 }}
               >
                 {chats.find((item) => item.id === chatMenu.chatId)?.archived ? 'Desarquivar' : 'Arquivar'}
-              </button>
+              </Button>
               <div className="border-t border-slate-800" />
               {(() => {
                 const target = chats.find((item) => item.id === chatMenu.chatId);
@@ -4440,9 +4430,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 return (
                   <div className="py-1">
                     {muted ? (
-                      <button
-                        type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-slate-800"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        fullWidth
+                        className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                         onClick={() => {
                           if (target) updateChatMute(target.id, null);
                           closeMuteSubmenuNow();
@@ -4450,29 +4442,33 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         }}
                       >
                         Desmutar
-                      </button>
+                      </Button>
                     ) : (
                       <div
                         className="relative"
                         onMouseEnter={openMuteSubmenu}
                         onMouseLeave={closeMuteSubmenuSoon}
                       >
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center justify-between"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          fullWidth
+                          className="h-auto justify-between rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                           onClick={openMuteSubmenu}
                         >
                           <span>Mutar</span>
                           <span className="text-xs text-slate-500">›</span>
-                        </button>
+                        </Button>
                         {chatMenuMuteOpen && (
                           <div className="absolute left-full top-0 z-10 pl-1">
                             <div className="min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
                               {muteOptions.map((option) => (
-                                <button
+                                <Button
                                   key={option.label}
-                                  type="button"
-                                  className="w-full px-3 py-2 text-left hover:bg-slate-800"
+                                  variant="ghost"
+                                  size="sm"
+                                  fullWidth
+                                  className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                                   onClick={() => {
                                     if (target) {
                                       const until = new Date(Date.now() + option.ms).toISOString();
@@ -4483,7 +4479,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   }}
                                 >
                                   {option.label}
-                                </button>
+                                </Button>
                               ))}
                             </div>
                           </div>
@@ -4504,12 +4500,14 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             <>
               <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
                 {isMobileView && (
-                  <button
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
                     onClick={() => selectChat(null)}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                   >
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
-                  </button>
+                  </Button>
                 )}
                 {selectedChatPhoto ? (
                   <img src={selectedChatPhoto} alt={selectedChatDisplayName || selectedChat.id} className="flex-shrink-0 w-10 h-10 rounded-full object-cover" />
@@ -4519,9 +4517,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       ? 'bg-blue-100 text-blue-700'
                       : selectedChatKind === 'newsletter'
                         ? 'bg-indigo-500'
-                        : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
+                      : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
                           ? 'bg-amber-500'
-                          : 'bg-teal-100 text-teal-700'
+                          : 'bg-amber-100 text-amber-700'
                   }`}>
                     {selectedChatKind === 'group' ? (
                       <Users className="w-5 h-5" />
@@ -4574,27 +4572,30 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedChatKind === 'group' ? (
-                    <button
-                      type="button"
+                    <Button
+                      variant="icon"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
                       onClick={() => setShowGroupInfo(!showGroupInfo)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                       title="Informações do grupo"
                     >
                       <Info className="w-5 h-5 text-slate-600" />
-                    </button>
+                    </Button>
                   ) : selectedChatIsDirect ? (
-                    <button
-                      type="button"
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                    <Button
+                      variant="icon"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
                       title={copiedPhone === selectedChatPhone ? 'Telefone copiado' : 'Copiar telefone'}
                       onClick={handleCopySelectedChatPhone}
                     >
                       <Phone className="w-5 h-5 text-slate-600" />
-                    </button>
+                    </Button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
                     title="Sincronizar mensagens"
                     onClick={handleSyncFromWhapi}
                     disabled={isSyncingAllChats || syncingChatId === selectedChat.id}
@@ -4602,19 +4603,21 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     <History
                       className={`w-5 h-5 text-slate-600 ${isSyncingAllChats || syncingChatId === selectedChat.id ? 'animate-spin' : ''}`}
                     />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  </Button>
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
                     title={chatCopiedAt ? 'Chat copiado' : 'Copiar chat'}
                     onClick={handleCopyFullChat}
                     disabled={messages.length === 0}
                   >
                     <Copy className={`w-5 h-5 ${chatCopiedAt ? 'text-emerald-600' : 'text-slate-600'}`} />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                  </Button>
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
                     title="Ações da conversa"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -4623,21 +4626,22 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     }}
                   >
                     <MoreVertical className="w-5 h-5 text-slate-600" />
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4">
                 {hasOlderMessages && (
                   <div className="mb-4 flex justify-center">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={loadOlderMessages}
                       disabled={isLoadingOlderMessages}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="h-auto rounded-full px-3 py-1.5 text-xs"
                     >
                       {isLoadingOlderMessages ? 'Carregando mensagens antigas...' : 'Carregar mensagens antigas'}
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {renderedMessages.length === 0 ? (

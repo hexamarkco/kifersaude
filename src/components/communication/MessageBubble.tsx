@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
@@ -134,6 +134,7 @@ export function MessageBubble({
   const [visualMediaUrl, setVisualMediaUrl] = useState<string | null>(null);
   const [visualMediaLoading, setVisualMediaLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioAutoLoadTriggeredRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -222,6 +223,7 @@ export function MessageBubble({
   const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
   const normalizedType = (type || '').toLowerCase();
   const audioPayload: MediaPayload | null = payloadData.audio || payloadData.voice || payloadData.media || payloadData;
+  const audioMediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id || null;
   const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path || null;
   const imageFullSrc =
     payloadData?.image?.url ||
@@ -259,6 +261,7 @@ export function MessageBubble({
   const isImageMessage = hasMedia && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
   const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
   const isVisualMediaMessage = !isDeleted && (isImageMessage || isVideoMessage);
+  const isAudioMessage = hasMedia && (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice');
   const documentPayload = payloadData?.document || payloadData?.media;
   const documentLink = documentPayload?.link || documentPayload?.url || documentPayload?.file || documentPayload?.path;
   const documentName = documentPayload?.filename || documentPayload?.name || 'Documento';
@@ -279,12 +282,11 @@ export function MessageBubble({
     };
   }, [audioMediaUrl, documentUrl, visualMediaUrl]);
 
-  const loadAudioMedia = async () => {
-    const mediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id;
-    if (!mediaId || audioMediaLoading) return;
+  const loadAudioMedia = useCallback(async () => {
+    if (!audioMediaId || audioMediaLoading) return;
     setAudioMediaLoading(true);
     try {
-      const response = await getWhatsAppMedia(mediaId);
+      const response = await getWhatsAppMedia(audioMediaId);
       if (response.url) {
         setAudioMediaUrl(response.url);
       } else if (response.data) {
@@ -296,7 +298,13 @@ export function MessageBubble({
     } finally {
       setAudioMediaLoading(false);
     }
-  };
+  }, [audioMediaId, audioMediaLoading]);
+
+  useEffect(() => {
+    if (!isAudioMessage || audioUrl || audioMediaLoading || audioAutoLoadTriggeredRef.current) return;
+    audioAutoLoadTriggeredRef.current = true;
+    void loadAudioMedia();
+  }, [audioMediaLoading, audioUrl, isAudioMessage, loadAudioMedia]);
 
   const loadDocumentMedia = async () => {
     const mediaId = documentPayload?.id || payloadData?.media?.id || payloadData?.document?.id;
@@ -486,12 +494,12 @@ export function MessageBubble({
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="block rounded-xl overflow-hidden"
+              className="block w-[min(360px,72vw)] max-w-full rounded-xl overflow-hidden"
             >
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="rounded-xl max-w-[360px] w-auto h-auto max-h-[420px] object-cover"
+                className="block w-full h-auto max-h-[420px] object-cover"
                 loading="lazy"
               />
             </button>
@@ -533,14 +541,14 @@ export function MessageBubble({
       return (
         <div className="space-y-2">
           {videoUrl ? (
-            <div className="rounded-xl overflow-hidden bg-black">
+            <div className="w-[min(360px,72vw)] max-w-full rounded-xl overflow-hidden bg-black">
               <video
                 src={videoUrl}
                 controls
                 playsInline
                 preload="metadata"
                 poster={poster}
-                className="max-w-[360px] w-full max-h-[420px] bg-black"
+                className="block w-full h-auto max-h-[420px] bg-black"
               />
               <button
                 type="button"
@@ -625,10 +633,10 @@ export function MessageBubble({
       );
     }
 
-    if (hasMedia && (type?.startsWith('audio') || type === 'ptt' || type === 'voice')) {
+    if (isAudioMessage) {
       return (
         <div className="space-y-2">
-          <div className="bg-gray-100 rounded p-2 text-sm text-gray-600 w-[360px] max-w-full">
+          <div className="rounded p-2 text-sm w-[360px] max-w-full">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -821,7 +829,7 @@ export function MessageBubble({
     <div
       className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
     >
-      <div className={`max-w-[70%] min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
+      <div className={`${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
           className={`message-bubble break-words [overflow-wrap:anywhere] rounded-lg ${
             isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
@@ -880,13 +888,13 @@ export function MessageBubble({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           {onReact && !isDeleted && (
-            <div className="relative">
+            <div className={`relative ${showReactionPicker ? 'block' : 'hidden group-hover:block group-focus-within:block'}`}>
               <button
                 type="button"
                 onClick={() => setShowReactionPicker((prev) => !prev)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 hover:text-gray-700 px-2 flex items-center gap-1"
+                className="inline-flex items-center gap-1 px-2 text-xs text-gray-500 hover:text-gray-700"
               >
                 <Smile className="w-3 h-3" />
                 <span>Reagir</span>
@@ -913,7 +921,7 @@ export function MessageBubble({
           {onReply && !isDeleted && (
             <button
               onClick={() => onReply(id, body || '', fromName || 'Contato')}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 hover:text-gray-700 px-2"
+              className="hidden px-2 text-xs text-gray-500 hover:text-gray-700 group-hover:inline-flex group-focus-within:inline-flex"
             >
               Responder
             </button>
@@ -922,7 +930,7 @@ export function MessageBubble({
           {onEdit && isOutbound && !isDeleted && !hasMedia && (
             <button
               onClick={() => onEdit(id, body || '')}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 hover:text-gray-700 px-2 flex items-center gap-1"
+              className="hidden items-center gap-1 px-2 text-xs text-gray-500 hover:text-gray-700 group-hover:inline-flex group-focus-within:inline-flex"
             >
               <Edit3 className="w-3 h-3" />
               <span>Editar</span>
@@ -932,7 +940,7 @@ export function MessageBubble({
           {hasHistory && (
             <button
               onClick={() => setShowHistory(true)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 hover:text-blue-700 px-2 flex items-center gap-1"
+              className="hidden items-center gap-1 px-2 text-xs text-blue-600 hover:text-blue-700 group-hover:inline-flex group-focus-within:inline-flex"
             >
               <History className="w-3 h-3" />
               <span>Ver histórico</span>

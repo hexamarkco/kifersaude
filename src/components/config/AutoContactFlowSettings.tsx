@@ -57,6 +57,7 @@ import FilterSingleSelect from '../FilterSingleSelect';
 import DateTimePicker from '../ui/DateTimePicker';
 import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
+import Checkbox from '../ui/Checkbox';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
@@ -1253,11 +1254,9 @@ export default function AutoContactFlowSettings() {
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={autoSendEnabled}
                     onChange={(event) => setAutoSendEnabled(event.target.checked)}
-                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                   />
                 </label>
               </div>
@@ -1285,13 +1284,11 @@ export default function AutoContactFlowSettings() {
                 A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.
               </p>
               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={schedulingDraft.skipHolidays}
                   onChange={(event) =>
                     setSchedulingDraft((previous) => ({ ...previous, skipHolidays: event.target.checked }))
                   }
-                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                 />
                 Pausar envios em feriados configurados
               </label>
@@ -1310,13 +1307,12 @@ export default function AutoContactFlowSettings() {
                       Atualiza o painel automaticamente com status das execuções.
                     </p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={monitoringDraft.realtimeEnabled}
                     onChange={(event) =>
                       setMonitoringDraft((previous) => ({ ...previous, realtimeEnabled: event.target.checked }))
                     }
-                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 mt-1"
+                    className="mt-1"
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1349,13 +1345,12 @@ export default function AutoContactFlowSettings() {
                     <div className="text-sm font-semibold text-slate-800">Logs estruturados e auditoria</div>
                     <p className="text-xs text-slate-500">Registre eventos, payloads e ações por usuário.</p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={loggingDraft.enabled}
                     onChange={(event) =>
                       setLoggingDraft((previous) => ({ ...previous, enabled: event.target.checked }))
                     }
-                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 mt-1"
+                    className="mt-1"
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1375,13 +1370,11 @@ export default function AutoContactFlowSettings() {
                     />
                   </div>
                   <label className="inline-flex items-center gap-2 text-sm text-slate-600 mt-6">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={loggingDraft.includePayloads}
                       onChange={(event) =>
                         setLoggingDraft((previous) => ({ ...previous, includePayloads: event.target.checked }))
                       }
-                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     />
                     Salvar payloads completos
                   </label>
@@ -1477,7 +1470,7 @@ export default function AutoContactFlowSettings() {
                       type="button"
                       key={flow.id}
                       onClick={() => setActiveFlowId(flow.id)}
-                      className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-200 hover:shadow-md"
+                      className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1655,9 +1648,8 @@ export default function AutoContactFlowSettings() {
                             {weekdayLabels.map((day) => {
                               const isActive = activeFlowScheduling.allowedWeekdays.includes(day.value);
                               return (
-                                <button
+                                <Button
                                   key={day.value}
-                                  type="button"
                                   onClick={() =>
                                     handleUpdateFlowScheduling(activeFlow.id, {
                                       allowedWeekdays: isActive
@@ -1665,14 +1657,12 @@ export default function AutoContactFlowSettings() {
                                         : [...activeFlowScheduling.allowedWeekdays, day.value].sort((a, b) => a - b),
                                     })
                                   }
-                                  className={`px-3 py-1 text-xs rounded-full border ${
-                                    isActive
-                                      ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                      : 'bg-white border-slate-200 text-slate-500'
-                                  }`}
+                                  variant={isActive ? 'warning' : 'secondary'}
+                                  size="sm"
+                                  className="h-auto rounded-full px-3 py-1 text-xs"
                                 >
                                   {day.label}
-                                </button>
+                                </Button>
                               );
                             })}
                           </div>

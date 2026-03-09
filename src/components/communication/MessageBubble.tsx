@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
@@ -128,6 +128,7 @@ export function MessageBubble({
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioRateIndex, setAudioRateIndex] = useState(0);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
@@ -135,9 +136,21 @@ export function MessageBubble({
   const [visualMediaUrl, setVisualMediaUrl] = useState<string | null>(null);
   const [visualMediaLoading, setVisualMediaLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+  const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const audioAutoLoadTriggeredRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
+  const canReact = Boolean(onReact && !isDeleted);
+  const canReply = Boolean(onReply && !isDeleted);
+  const canEditMessage = Boolean(onEdit && isOutbound && !isDeleted && !hasMedia);
+  const canViewHistory = hasHistory;
+  const hasActionMenu = canReact || canReply || canEditMessage || canViewHistory;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+  const closeActionMenu = useCallback(() => {
+    setShowActionMenu(false);
+    setShowReactionPicker(false);
+  }, []);
 
   const formatTimestamp = (ts: string | null) => {
     if (!ts) return '';
@@ -306,6 +319,32 @@ export function MessageBubble({
     audioAutoLoadTriggeredRef.current = true;
     void loadAudioMedia();
   }, [audioMediaLoading, audioUrl, isAudioMessage, loadAudioMedia]);
+
+  useEffect(() => {
+    if (!showActionMenu) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (actionMenuRef.current?.contains(target) || actionMenuButtonRef.current?.contains(target)) {
+        return;
+      }
+      closeActionMenu();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeActionMenu();
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeActionMenu, showActionMenu]);
 
   const loadDocumentMedia = async () => {
     const mediaId = documentPayload?.id || payloadData?.media?.id || payloadData?.document?.id;
@@ -844,12 +883,12 @@ export function MessageBubble({
             isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
           } ${
             isOutbound
-              ? 'message-bubble-outbound bg-green-100 text-gray-900'
-              : 'message-bubble-inbound bg-white text-gray-900 border border-gray-200'
+              ? 'message-bubble-outbound border border-amber-200 bg-amber-100 text-stone-900'
+              : 'message-bubble-inbound border border-stone-200 bg-white text-stone-900'
           }`}
         >
           {!isOutbound && fromName && (
-            <div className="text-xs font-semibold text-green-600 mb-1">
+            <div className="mb-1 text-xs font-semibold text-amber-700">
               {fromName}
             </div>
           )}
@@ -893,85 +932,112 @@ export function MessageBubble({
                   {getAckIcon()}
                 </span>
               )}
+              {hasActionMenu && (
+                <button
+                  ref={actionMenuButtonRef}
+                  type="button"
+                  aria-label="Abrir menu da mensagem"
+                  aria-expanded={showActionMenu}
+                  onClick={() => {
+                    setShowActionMenu((previous) => {
+                      const next = !previous;
+                      if (!next) {
+                        setShowReactionPicker(false);
+                      }
+                      return next;
+                    });
+                  }}
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded text-gray-500 transition-colors transition-opacity ${
+                    showActionMenu
+                      ? 'opacity-100 pointer-events-auto bg-black/5'
+                      : 'opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-black/5'
+                  }`}
+                >
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showActionMenu ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        <div
-          className={`absolute top-full z-10 mt-1 flex flex-wrap items-center gap-2 transition-opacity ${
-            isOutbound ? 'right-0 justify-end' : 'left-0'
-          } ${
-            showReactionPicker
-              ? 'pointer-events-auto opacity-100'
-              : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
-          }`}
-        >
-          {onReact && !isDeleted && (
-            <div className="relative pointer-events-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowReactionPicker((prev) => !prev)}
-                className="h-auto gap-1 border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
+        {showActionMenu && hasActionMenu && (
+          <div
+            ref={actionMenuRef}
+            className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
+          >
+            {canReact && (
+              <button
+                type="button"
+                onClick={() => setShowReactionPicker((previous) => !previous)}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
               >
-                <Smile className="w-3 h-3" />
+                <Smile className="h-4 w-4 text-slate-500" />
                 <span>Reagir</span>
-              </Button>
-              {showReactionPicker && (
-                <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-full shadow px-2 py-1 flex gap-1 z-10">
+              </button>
+            )}
+
+            {canReact && showReactionPicker && (
+              <div className="mx-1 mb-1 mt-0.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-1">
+                <div className="flex items-center justify-between gap-0.5">
                   {quickReactions.map((emoji) => (
-                    <Button
+                    <button
                       key={`${id}-${emoji}`}
-                      variant="icon"
-                      size="icon"
-                      className="h-7 w-7 rounded-full border-0 p-0 shadow-none"
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-white"
                       onClick={() => {
-                        onReact(id, emoji);
-                        setShowReactionPicker(false);
+                        onReact?.(id, emoji);
+                        closeActionMenu();
                       }}
                     >
-                      <span className="text-sm">{emoji}</span>
-                    </Button>
+                      {emoji}
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-          {onReply && !isDeleted && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onReply(id, body || '', fromName || 'Contato')}
-              className="pointer-events-auto h-auto border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
-            >
-              Responder
-            </Button>
-          )}
+              </div>
+            )}
 
-          {onEdit && isOutbound && !isDeleted && !hasMedia && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(id, body || '')}
-              className="pointer-events-auto h-auto items-center gap-1 border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
-            >
-              <Edit3 className="w-3 h-3" />
-              <span>Editar</span>
-            </Button>
-          )}
+            {canReply && (
+              <button
+                type="button"
+                onClick={() => {
+                  onReply?.(id, body || '', fromName || 'Contato');
+                  closeActionMenu();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                Responder
+              </button>
+            )}
 
-          {hasHistory && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHistory(true)}
-              className="pointer-events-auto h-auto items-center gap-1 border-0 px-2 text-xs font-normal text-amber-700 shadow-none hover:bg-transparent hover:text-amber-800"
-            >
-              <History className="w-3 h-3" />
-              <span>Ver histórico</span>
-            </Button>
-          )}
-        </div>
+            {canEditMessage && (
+              <button
+                type="button"
+                onClick={() => {
+                  onEdit?.(id, body || '');
+                  closeActionMenu();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <Edit3 className="h-4 w-4 text-slate-500" />
+                <span>Editar</span>
+              </button>
+            )}
+
+            {canViewHistory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHistory(true);
+                  closeActionMenu();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-amber-700 hover:bg-amber-50"
+              >
+                <History className="h-4 w-4 text-amber-700" />
+                <span>Ver histórico</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <MessageHistoryModal

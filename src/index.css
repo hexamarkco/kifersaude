@@ -929,8 +929,8 @@
 }
 
 .painel-theme.theme-dark .message-bubble-outbound {
-  background-color: var(--panel-accent-green-bg-strong) !important;
-  color: #dcfce7 !important;
+  background-color: var(--panel-accent-amber-bg-strong) !important;
+  color: #fef3c7 !important;
 }
 
 .painel-theme.theme-dark .message-bubble-outbound .text-gray-500,
@@ -938,24 +938,24 @@
 .painel-theme.theme-dark .message-bubble-outbound .text-gray-700,
 .painel-theme.theme-dark .message-bubble-outbound .text-slate-500,
 .painel-theme.theme-dark .message-bubble-outbound .text-slate-600 {
-  color: #bbf7d0 !important;
+  color: #fde68a !important;
 }
 
 .painel-theme.theme-dark .message-bubble-outbound .bg-gray-100,
 .painel-theme.theme-dark .message-bubble-outbound .bg-gray-200,
 .painel-theme.theme-dark .message-bubble-outbound .bg-slate-50,
 .painel-theme.theme-dark .message-bubble-outbound .bg-slate-100 {
-  background-color: #1f4030 !important;
+  background-color: #4a3418 !important;
 }
 
 .painel-theme.theme-dark .message-bubble-outbound .border-gray-200,
 .painel-theme.theme-dark .message-bubble-outbound .border-slate-200 {
-  border-color: #2f5f47 !important;
+  border-color: #7c5b2f !important;
 }
 
 .painel-theme.theme-dark .message-bubble-outbound .bg-white\/80,
 .painel-theme.theme-dark .message-bubble-outbound .bg-white {
-  background-color: #1f4030 !important;
+  background-color: #4a3418 !important;
 }
 
 .painel-theme.theme-dark .react-flow__controls {
@@ -990,13 +990,13 @@
 }
 
 .painel-theme.theme-dark .panel-ui-button-primary {
-  background-color: rgba(20, 184, 166, 0.22) !important;
-  border-color: rgba(45, 212, 191, 0.45) !important;
-  color: #99f6e4 !important;
+  background-color: rgba(245, 158, 11, 0.24) !important;
+  border-color: rgba(251, 191, 36, 0.5) !important;
+  color: #fcd34d !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-primary:hover {
-  background-color: rgba(20, 184, 166, 0.34) !important;
+  background-color: rgba(245, 158, 11, 0.36) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-secondary {
@@ -1046,13 +1046,13 @@
 }
 
 .painel-theme.theme-dark .panel-ui-button-soft {
-  background-color: rgba(20, 184, 166, 0.2) !important;
-  border-color: rgba(45, 212, 191, 0.44) !important;
-  color: #99f6e4 !important;
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(251, 191, 36, 0.44) !important;
+  color: #fde68a !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-soft:hover {
-  background-color: rgba(20, 184, 166, 0.32) !important;
+  background-color: rgba(245, 158, 11, 0.32) !important;
 }
 
 .painel-theme.theme-dark .panel-ui-button-danger {
@@ -1091,19 +1091,19 @@
 
 .config-transparent-buttons button.bg-teal-600,
 .config-transparent-buttons button.bg-teal-700 {
-  background-color: rgba(20, 184, 166, 0.18) !important;
-  color: #0f766e !important;
+  background-color: rgba(202, 138, 4, 0.18) !important;
+  color: #854d0e !important;
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.66),
-    0 1px 2px rgba(13, 148, 136, 0.18);
+    inset 0 0 0 1px rgba(217, 119, 6, 0.66),
+    0 1px 2px rgba(146, 64, 14, 0.2);
 }
 
 .config-transparent-buttons button.bg-teal-600:hover:not(:disabled),
 .config-transparent-buttons button.bg-teal-700:hover:not(:disabled) {
-  background-color: rgba(20, 184, 166, 0.3) !important;
+  background-color: rgba(202, 138, 4, 0.3) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.82),
-    0 1px 2px rgba(13, 148, 136, 0.24);
+    inset 0 0 0 1px rgba(217, 119, 6, 0.82),
+    0 1px 2px rgba(146, 64, 14, 0.26);
 }
 
 .config-transparent-buttons button.bg-orange-600,

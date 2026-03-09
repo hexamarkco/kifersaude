@@ -3743,7 +3743,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       stageClassName="min-h-[560px]"
     >
       <div
-        className="flex h-full min-h-0 overflow-hidden bg-slate-50"
+        className="panel-page-shell flex h-full min-h-0 overflow-hidden bg-slate-50"
         onClick={() => {
           closeMuteSubmenuNow();
           setChatMenu(null);

@@ -1236,7 +1236,7 @@ const normalizeWhapiChatId = (value: unknown): string | null => {
   if (!trimmed) return null;
 
   if (trimmed.includes('@')) {
-    if (/\@c\.us$/i.test(trimmed)) {
+    if (/@c\.us$/i.test(trimmed)) {
       return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
     }
     return trimmed;

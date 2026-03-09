@@ -274,7 +274,7 @@ export default function BlogTab() {
 
   if (showEditor) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="panel-page-shell bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-slate-900">
             {editingPost ? 'Editar Post' : 'Novo Post'}
@@ -557,7 +557,7 @@ export default function BlogTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="panel-page-shell space-y-6">
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Blog</h2>

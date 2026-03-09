@@ -104,7 +104,7 @@ const normalizeChatId = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return '';
 
-  if (/\@c\.us$/i.test(trimmed)) {
+  if (/@c\.us$/i.test(trimmed)) {
     return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
   }
 

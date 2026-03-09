@@ -109,7 +109,7 @@ const faqItems = [
 
 export default function HomePage() {
   return (
-    <div className="clinic-theme min-h-screen text-slate-900">
+    <div className="clinic-theme kifer-ds kifer-home-theme min-h-screen text-slate-900">
       <Helmet>
         <title>Kifer Saude | Site institucional</title>
         <meta
@@ -148,7 +148,7 @@ export default function HomePage() {
 
           <Link
             to="/lp"
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+            className="ks-btn-primary inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white"
           >
             Quero cotar
             <ArrowRight className="h-4 w-4" />
@@ -175,27 +175,27 @@ export default function HomePage() {
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   to="/lp"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-600 to-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-orange-900/20 transition hover:from-orange-700 hover:to-orange-600"
+                  className="ks-btn-primary inline-flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white"
                 >
                   Receber comparativo
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   to="/planos"
-                  className="inline-flex items-center rounded-2xl border border-orange-200 bg-white/90 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-orange-50"
+                  className="ks-btn-secondary inline-flex items-center rounded-2xl px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
                 >
                   Explorar planos
                 </Link>
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">+3.200 clientes orientados</div>
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia util</div>
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pos-venda</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">+3.200 clientes orientados</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia util</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pos-venda</div>
               </div>
             </div>
 
-            <article className="clinic-card clinic-reveal clinic-delay-1 rounded-[2rem] p-7">
+            <article className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-[2rem] p-7">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-700">sua consultora</p>
               <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Atendimento com rosto e responsabilidade</h2>
 
@@ -261,7 +261,7 @@ export default function HomePage() {
               {serviceProfiles.map((profile, index) => (
                 <article
                   key={profile.id}
-                  className={`clinic-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
+                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
                 >
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">{profile.id}</p>
                   <h3 className="mt-2 text-2xl font-black text-slate-900">{profile.title}</h3>
@@ -300,7 +300,7 @@ export default function HomePage() {
               {testimonials.map((testimonial, index) => (
                 <article
                   key={testimonial.name}
-                  className={`clinic-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
+                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
                 >
                   <div className="flex items-center gap-1 text-orange-500">
                     <Sparkles className="h-4 w-4" />
@@ -326,7 +326,7 @@ export default function HomePage() {
               </p>
               <Link
                 to="/lp"
-                className="mt-8 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-orange-50"
+                className="ks-btn-secondary mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
               >
                 Quero meu comparativo
                 <ArrowRight className="h-4 w-4" />
@@ -337,7 +337,7 @@ export default function HomePage() {
               {faqItems.map((faq, index) => (
                 <details
                   key={faq.question}
-                  className={`clinic-card clinic-reveal rounded-2xl p-5 ${index === 1 ? 'clinic-delay-1' : ''} ${index >= 2 ? 'clinic-delay-2' : ''}`}
+                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-5 ${index === 1 ? 'clinic-delay-1' : ''} ${index >= 2 ? 'clinic-delay-2' : ''}`}
                 >
                   <summary className="cursor-pointer list-none text-sm font-black text-slate-900">
                     <span className="inline-flex items-center gap-2">
@@ -368,7 +368,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <Link
                   to="/lp"
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700"
                 >
                   Iniciar atendimento
                 </Link>
@@ -412,7 +412,7 @@ export default function HomePage() {
         href="https://wa.me/5521979302389"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-orange-600 text-white shadow-2xl shadow-orange-900/30 transition hover:scale-105"
+        className="ks-btn-primary fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full text-white"
         aria-label="Abrir WhatsApp"
       >
         <MessageCircle className="h-7 w-7" />

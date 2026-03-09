@@ -381,7 +381,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="clinic-theme min-h-screen text-slate-900">
+    <div className="clinic-theme kifer-ds kifer-landing-theme min-h-screen text-slate-900">
       <Helmet>
         <title>Landing Kifer | Cotacao para PME, PF e Adesao</title>
         <meta
@@ -405,13 +405,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <a
               href="tel:+5521979302389"
-              className="hidden rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-orange-50 sm:inline-flex"
+              className="ks-btn-secondary hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-700 sm:inline-flex"
             >
               (21) 97930-2389
             </a>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+              className="ks-btn-primary inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white"
             >
               Ver institucional
               <ArrowRight className="h-4 w-4" />
@@ -454,12 +454,12 @@ export default function LandingPage() {
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Briefing em minutos</div>
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Comparativo consultivo</div>
-                <div className="clinic-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Apoio ate ativacao</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Briefing em minutos</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Comparativo consultivo</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Apoio ate ativacao</div>
               </div>
 
-              <div className="mt-8 rounded-2xl border border-orange-200 bg-white/80 p-5">
+              <div className="ks-card mt-8 rounded-2xl p-5">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">espaco para foto da corretora</p>
                 <div className="clinic-photo-slot mt-3 aspect-[5/3] rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-white p-4">
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-orange-300 text-center text-slate-600">
@@ -470,7 +470,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <article id="lead-form" className="clinic-card clinic-reveal clinic-delay-1 rounded-[2rem] p-8 lg:sticky lg:top-24">
+            <article id="lead-form" className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-[2rem] p-8 lg:sticky lg:top-24">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-700">formulario de lead</p>
               <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Receber comparativo personalizado</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
@@ -488,7 +488,7 @@ export default function LandingPage() {
                     required
                     value={formData.nome}
                     onChange={(event) => setFormData((current) => ({ ...current, nome: event.target.value }))}
-                    className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                     placeholder="Como podemos te chamar?"
                   />
                 </div>
@@ -508,7 +508,7 @@ export default function LandingPage() {
                         whatsapp: formatPhone(event.target.value),
                       }))
                     }
-                    className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                     placeholder="(21) 99999-9999"
                   />
                 </div>
@@ -527,7 +527,7 @@ export default function LandingPage() {
                           perfil: event.target.value as ProfileSlug,
                         }))
                       }
-                      className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                     >
                       {profileConfigs.map((option) => (
                         <option key={option.slug} value={option.slug}>
@@ -546,7 +546,7 @@ export default function LandingPage() {
                       type="text"
                       value={formData.vidas}
                       onChange={(event) => setFormData((current) => ({ ...current, vidas: event.target.value }))}
-                      className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                       placeholder="Ex: 3"
                     />
                   </div>
@@ -562,7 +562,7 @@ export default function LandingPage() {
                       type="text"
                       value={formData.cidade}
                       onChange={(event) => setFormData((current) => ({ ...current, cidade: event.target.value }))}
-                      className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                       placeholder="Rio de Janeiro"
                     />
                   </div>
@@ -576,7 +576,7 @@ export default function LandingPage() {
                       type="email"
                       value={formData.email}
                       onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
-                      className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
                       placeholder="voce@empresa.com"
                     />
                   </div>
@@ -597,7 +597,7 @@ export default function LandingPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-orange-900/20 transition hover:from-orange-700 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ks-btn-primary inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? 'Enviando...' : 'Quero meu comparativo'}
                   <ArrowRight className="h-4 w-4" />
@@ -622,7 +622,7 @@ export default function LandingPage() {
               {profileConfigs.map((profile, index) => (
                 <article
                   key={profile.slug}
-                  className={`clinic-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
+                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
                 >
                   <span className="inline-flex rounded-xl bg-orange-100 p-3 text-orange-700">
                     <profile.Icon className="h-5 w-5" />
@@ -641,7 +641,7 @@ export default function LandingPage() {
                   <button
                     type="button"
                     onClick={() => handleProfileSelection(profile.slug)}
-                    className="mt-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-orange-700 hover:text-orange-800"
+                    className="ks-btn-ghost mt-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em]"
                   >
                     Selecionar perfil
                     <ArrowRight className="h-4 w-4" />
@@ -678,7 +678,7 @@ export default function LandingPage() {
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_1fr]">
-            <article className="clinic-card clinic-reveal rounded-2xl p-7">
+            <article className="clinic-card ks-card clinic-reveal rounded-2xl p-7">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">guia da jornada</p>
               <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Espaco premium para foto da corretora</h2>
               <div className="clinic-photo-slot mt-6 aspect-[4/5] rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-100/55 to-white p-6">
@@ -690,7 +690,7 @@ export default function LandingPage() {
               </div>
             </article>
 
-            <article className="clinic-card clinic-reveal clinic-delay-1 rounded-2xl p-7">
+            <article className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-2xl p-7">
               <h2 className="text-2xl font-black text-slate-900">FAQ de objecoes</h2>
               <div className="mt-6 space-y-3">
                 {objectionFaq.map((item) => (
@@ -721,7 +721,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={scrollToForm}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700 transition hover:bg-orange-50"
+                  className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700"
                 >
                   Ir para formulario
                 </button>

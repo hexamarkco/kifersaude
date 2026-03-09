@@ -43,3 +43,11 @@
 ## Recommendations
 
 - Effects: Morphing elements (SVG/CSS), fluid animations (400-600ms curves), dynamic blur (backdrop-filter), color transitions
+
+---
+
+## Code Scope
+
+- Primary shell files: `src/components/Layout.tsx`, `src/pages/PainelWrapper.tsx`
+- Shared theme tokens: `src/index.css`
+- Preserve all routing, tabs, permissions, notifications and data interactions

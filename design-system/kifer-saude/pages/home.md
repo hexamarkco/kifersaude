@@ -43,3 +43,11 @@
 ## Recommendations
 
 - Effects: Morphing elements (SVG/CSS), fluid animations (400-600ms curves), dynamic blur (backdrop-filter), color transitions
+
+---
+
+## Code Scope
+
+- Primary files: `src/pages/public/HomePage.tsx`, `src/pages/public/PlanosPage.tsx`
+- Shared tokens: `src/index.css`
+- Keep route behavior untouched and limit this scope to visual system updates

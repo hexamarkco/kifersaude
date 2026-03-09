@@ -45,3 +45,11 @@
 
 - Effects: Badge hover effects, metric pulse animations, certificate carousel, smooth stat reveal
 - CTA Placement: Context-aware placement based on user segment
+
+---
+
+## Code Scope
+
+- Primary file: `src/pages/LandingPage.tsx`
+- Shared tokens: `src/index.css`
+- Non-negotiable: preserve lead flow logic (URL profile, Supabase insertion, Meta Pixel, GTM, WhatsApp redirect)

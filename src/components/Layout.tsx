@@ -977,7 +977,7 @@ export default function Layout({
 
   return (
     <div
-      className={`painel-theme theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen bg-slate-50`}
+      className={`painel-theme kifer-ds kifer-panel-theme theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen bg-slate-50`}
     >
       <div className="panel-shell-bg" aria-hidden="true">
         <div ref={auroraPrimaryRef} className="panel-aurora panel-aurora-primary" />

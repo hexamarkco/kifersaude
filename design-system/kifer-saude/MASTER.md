@@ -200,3 +200,38 @@ Before delivering any UI code, verify:
 - [ ] Responsive: 375px, 768px, 1024px, 1440px
 - [ ] No content hidden behind fixed navbars
 - [ ] No horizontal scroll on mobile
+
+---
+
+## Execution Backlog
+
+### Phase 1 - Foundation Tokens
+
+- Update global tokens and utility classes in `src/index.css`
+- Standardize typography tokens for heading/body and interaction states
+- Keep legacy classes compatible while introducing design-system classes
+
+### Phase 2 - Institutional Site
+
+- Apply design-system wrappers and component classes in `src/pages/public/HomePage.tsx`
+- Apply same visual language in `src/pages/public/PlanosPage.tsx`
+- Validate sticky header, hero CTAs and card hierarchy across breakpoints
+
+### Phase 3 - Conversion Landing
+
+- Apply landing-specific wrapper and components in `src/pages/LandingPage.tsx`
+- Keep lead capture logic unchanged (tracking, URL params, Supabase inserts)
+- Prioritize form readability, CTA emphasis and conversion flow clarity
+
+### Phase 4 - Panel Shell
+
+- Apply panel wrapper classes in `src/components/Layout.tsx`
+- Rebalance panel theme tokens (light + dark) in `src/index.css`
+- Preserve route behavior, permissions and notifications
+
+### Phase 5 - Verification
+
+- Run `npm run lint`
+- Run `npm run typecheck`
+- Run `npm run build`
+- Smoke test `/`, `/planos`, `/lp`, `/painel`

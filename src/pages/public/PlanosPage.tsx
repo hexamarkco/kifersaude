@@ -95,7 +95,7 @@ const financialModels = [
 
 export default function PlanosPage() {
   return (
-    <div className="marketing-theme min-h-screen text-slate-900">
+    <div className="marketing-theme kifer-ds kifer-home-theme min-h-screen text-slate-900">
       <Helmet>
         <title>Planos de saude | Kifer Saude</title>
         <meta
@@ -131,7 +131,7 @@ export default function PlanosPage() {
 
           <Link
             to="/lp"
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
+            className="ks-btn-primary inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white"
           >
             Falar com especialista
             <ArrowRight className="h-4 w-4" />
@@ -158,7 +158,7 @@ export default function PlanosPage() {
             {planTypes.map(({ title, description, bestFor, Icon }, index) => (
               <article
                 key={title}
-                className={`marketing-surface marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index >= 2 ? 'marketing-delay-2' : ''}`}
+                className={`marketing-surface ks-card marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index >= 2 ? 'marketing-delay-2' : ''}`}
               >
                 <span className="inline-flex rounded-xl bg-slate-100 p-3 text-slate-700">
                   <Icon className="h-5 w-5" />
@@ -188,7 +188,7 @@ export default function PlanosPage() {
               {operatorProfiles.map((operator, index) => (
                 <article
                   key={operator.name}
-                  className={`marketing-surface marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index >= 2 ? 'marketing-delay-2' : ''}`}
+                  className={`marketing-surface ks-card marketing-reveal rounded-2xl p-7 ${index === 1 ? 'marketing-delay-1' : ''} ${index >= 2 ? 'marketing-delay-2' : ''}`}
                 >
                   <div className="flex h-14 items-center">
                     <img src={operator.logo} alt={`Logo ${operator.name}`} className="max-h-10 w-auto object-contain" loading="lazy" />
@@ -226,7 +226,7 @@ export default function PlanosPage() {
 
         <section id="criterios" className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_1fr]">
-            <article className="marketing-surface marketing-reveal rounded-2xl p-7">
+            <article className="marketing-surface ks-card marketing-reveal rounded-2xl p-7">
               <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900">
                 <Building2 className="h-6 w-6 text-sky-700" />
                 Checklist antes de assinar
@@ -241,7 +241,7 @@ export default function PlanosPage() {
               </ul>
             </article>
 
-            <article className="marketing-surface marketing-reveal marketing-delay-1 rounded-2xl p-7">
+            <article className="marketing-surface ks-card marketing-reveal marketing-delay-1 rounded-2xl p-7">
               <h2 className="text-2xl font-black text-slate-900">Como usamos esses criterios na consultoria</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 Primeiro entendemos seu objetivo real de uso. Depois filtramos opcoes viaveis, comparamos custo anual e
@@ -274,7 +274,7 @@ export default function PlanosPage() {
               <div className="space-y-3">
                 <Link
                   to="/lp"
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 transition hover:bg-slate-100"
+                  className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
                 >
                   Solicitar cotacao
                 </Link>

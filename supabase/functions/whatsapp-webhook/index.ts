@@ -915,13 +915,21 @@ function mapStatusToAck(status?: string | null): number | null {
   if (!status) return null;
 
   const normalized = status.trim().toLowerCase();
-  const statusMap: Record<string, number> = {
+  const statusMap: Record<string, number | null> = {
     failed: 0,
+    error: 0,
     pending: 1,
+    queued: 1,
+    sending: 1,
     sent: 2,
+    server: 2,
     delivered: 3,
+    device: 3,
+    received: 3,
     read: 4,
     played: 4,
+    viewed: 4,
+    deleted: null,
   };
 
   return statusMap[normalized] ?? null;
@@ -956,13 +964,7 @@ function resolveStatusAck(status?: string | null, code?: number | string | null)
   const fromStatus = mapStatusToAck(status);
   const fromCode = mapStatusCodeToAck(code);
 
-  if (fromStatus === null && fromCode === null) {
-    return null;
-  }
-
-  if (fromStatus === null) return fromCode;
-  if (fromCode === null) return fromStatus;
-  return Math.max(fromStatus, fromCode);
+  return fromStatus ?? fromCode;
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
@@ -1351,15 +1353,19 @@ function mergeAckStatus(currentAck: number | null | undefined, incomingAck: numb
     return typeof currentAck === 'number' ? currentAck : null;
   }
 
+  if (typeof currentAck !== 'number') {
+    return incomingAck;
+  }
+
   if (incomingAck === 0) {
-    return 0;
+    return currentAck <= 1 ? 0 : currentAck;
   }
 
-  if (typeof currentAck === 'number') {
-    return Math.max(currentAck, incomingAck);
+  if (currentAck === 0 && incomingAck > 0) {
+    return incomingAck;
   }
 
-  return incomingAck;
+  return Math.max(currentAck, incomingAck);
 }
 
 async function upsertMessage(message: NormalizedMessage) {
@@ -1444,9 +1450,9 @@ async function updateMessageAck(messageId: string, ackStatus: number) {
   }
 
   const currentAck = typeof existingMessage?.ack_status === 'number' ? existingMessage.ack_status : null;
-  const nextAck = ackStatus === 0 ? 0 : currentAck !== null ? Math.max(currentAck, ackStatus) : ackStatus;
+  const nextAck = mergeAckStatus(currentAck, ackStatus);
 
-  if (currentAck !== null && currentAck === nextAck) {
+  if (nextAck === null || (currentAck !== null && currentAck === nextAck)) {
     return;
   }
 

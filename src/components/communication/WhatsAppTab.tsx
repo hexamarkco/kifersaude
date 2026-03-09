@@ -560,6 +560,27 @@ export default function WhatsAppTab() {
     return score;
   };
 
+  const mergeAckStatusForDisplay = (
+    currentAck: number | null | undefined,
+    incomingAck: number | null | undefined,
+  ): number | null => {
+    const current = typeof currentAck === 'number' ? currentAck : null;
+    const incoming = typeof incomingAck === 'number' ? incomingAck : null;
+
+    if (incoming === null) return current;
+    if (current === null) return incoming;
+
+    if (incoming === 0 && current > 1) {
+      return current;
+    }
+
+    if (current === 0 && incoming > 0) {
+      return incoming;
+    }
+
+    return Math.max(current, incoming);
+  };
+
   const mergeMessageForDisplay = (left: WhatsAppMessage, right: WhatsAppMessage): WhatsAppMessage => {
     const leftScore = getMessageMergeScore(left);
     const rightScore = getMessageMergeScore(right);
@@ -574,7 +595,7 @@ export default function WhatsAppTab() {
       ...fallback,
       ...preferred,
       id: preferred.id,
-      ack_status: preferred.ack_status ?? fallback.ack_status,
+      ack_status: mergeAckStatusForDisplay(fallback.ack_status, preferred.ack_status),
       body: preferred.body ?? fallback.body,
       timestamp: preferred.timestamp ?? fallback.timestamp,
       payload: preferred.payload ?? fallback.payload,
@@ -1437,7 +1458,7 @@ export default function WhatsAppTab() {
                 const targetIndex = prev.findIndex((item) => item.id === message.id);
                 if (targetIndex === -1) return prev;
                 const next = [...prev];
-                next[targetIndex] = { ...next[targetIndex], ...message };
+                next[targetIndex] = mergeMessageForDisplay(next[targetIndex], message);
                 return next.sort(sortMessagesChronologically);
               });
             }

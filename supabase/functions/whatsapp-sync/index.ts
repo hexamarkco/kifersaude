@@ -184,13 +184,21 @@ const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+
 const mapStatusToAck = (status?: string): number | null => {
   if (!status) return null;
   const normalized = status.trim().toLowerCase();
-  const statusMap: Record<string, number> = {
+  const statusMap: Record<string, number | null> = {
     failed: 0,
+    error: 0,
     pending: 1,
+    queued: 1,
+    sending: 1,
     sent: 2,
+    server: 2,
     delivered: 3,
+    device: 3,
+    received: 3,
     read: 4,
     played: 4,
+    viewed: 4,
+    deleted: null,
   };
   return statusMap[normalized] ?? null;
 };
@@ -244,15 +252,6 @@ const mergeAckStatus = (currentAck: number | null | undefined, incomingAck: numb
   if (incomingAck === null || incomingAck === undefined) {
     return typeof currentAck === 'number' ? currentAck : null;
   }
-
-  if (incomingAck === 0) {
-    return 0;
-  }
-
-  if (typeof currentAck === 'number') {
-    return Math.max(currentAck, incomingAck);
-  }
-
   return incomingAck;
 };
 

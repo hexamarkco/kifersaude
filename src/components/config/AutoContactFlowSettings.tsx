@@ -58,6 +58,7 @@ import DateTimePicker from '../ui/DateTimePicker';
 import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import Textarea from '../ui/Textarea';
 import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -2506,14 +2507,14 @@ export default function AutoContactFlowSettings() {
                   Crie e edite templates pré-fabricados para usar na automação ou em disparos manuais.
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={handleAddTemplate}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                variant="secondary"
+                size="sm"
               >
                 <Plus className="w-4 h-4" />
                 Novo modelo
-              </button>
+              </Button>
             </div>
 
             {messageTemplatesDraft.length === 0 ? (
@@ -2541,22 +2542,23 @@ export default function AutoContactFlowSettings() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
+                          <Button
                             onClick={() => handleEditTemplate(template.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                            variant="secondary"
+                            size="sm"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                             Editar
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
                             onClick={() => handleRemoveTemplate(template.id)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            variant="danger"
+                            size="icon"
+                            className="h-8 w-8"
                             title="Remover modelo"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -2609,11 +2611,10 @@ export default function AutoContactFlowSettings() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Nome do template</label>
-                  <input
+                  <Input
                     type="text"
                     value={templateDraft.name}
                     onChange={(event) => handleUpdateTemplateDraft({ name: event.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                     placeholder="Ex.: Boas-vindas VIP"
                   />
                 </div>
@@ -2627,46 +2628,46 @@ export default function AutoContactFlowSettings() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <Button
                         onClick={() => handleAddDraftMessage('text')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                         Texto
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => handleAddDraftMessage('image')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         <ImageIcon className="w-3.5 h-3.5" />
                         Imagem
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => handleAddDraftMessage('video')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         <Film className="w-3.5 h-3.5" />
                         Vídeo
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => handleAddDraftMessage('audio')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         <Mic className="w-3.5 h-3.5" />
                         Áudio
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => handleAddDraftMessage('document')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         <File className="w-3.5 h-3.5" />
                         Documento
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -2710,21 +2711,21 @@ export default function AutoContactFlowSettings() {
                                 />
                               </div>
                             </div>
-                            <button
-                              type="button"
+                            <Button
                               onClick={() => handleRemoveDraftMessage(message.id)}
-                              className="text-xs text-red-600 hover:text-red-700"
+                              variant="danger"
+                              size="sm"
                             >
                               Remover
-                            </button>
+                            </Button>
                           </div>
 
                           {message.type === 'text' ? (
-                            <textarea
+                            <Textarea
                               value={message.text ?? ''}
                               onChange={(event) => handleUpdateDraftMessage(message.id, { text: event.target.value })}
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                               rows={3}
+                              size="compact"
                               placeholder="Digite a mensagem..."
                             />
                           ) : (
@@ -2733,13 +2734,13 @@ export default function AutoContactFlowSettings() {
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                                   {mediaLabel}
                                 </label>
-                                <input
+                                <Input
                                   type="text"
                                   value={message.mediaUrl ?? ''}
                                   onChange={(event) =>
                                     handleUpdateDraftMessage(message.id, { mediaUrl: event.target.value })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  size="compact"
                                   placeholder="https://..."
                                 />
                               </div>
@@ -2747,13 +2748,13 @@ export default function AutoContactFlowSettings() {
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                                   Legenda ou descrição
                                 </label>
-                                <input
+                                <Input
                                   type="text"
                                   value={message.caption ?? ''}
                                   onChange={(event) =>
                                     handleUpdateDraftMessage(message.id, { caption: event.target.value })
                                   }
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                  size="compact"
                                   placeholder="Ex.: Guia em PDF, áudio de explicação..."
                                 />
                               </div>
@@ -2773,28 +2774,21 @@ export default function AutoContactFlowSettings() {
                 com "Salvar automação".
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
+                <Button
                   onClick={handleCloseTemplateModal}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   onClick={handleSaveTemplateDraft}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-60"
-                  disabled={savingTemplate}
+                  loading={savingTemplate}
+                  className="w-full sm:w-auto"
                 >
-                  {savingTemplate ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Salvando...
-                    </span>
-                  ) : (
-                    'Salvar template'
-                  )}
-                </button>
+                  {!savingTemplate && 'Salvar template'}
+                  {savingTemplate && 'Salvando...'}
+                </Button>
               </div>
           </ModalShell>
         )}

@@ -3,6 +3,7 @@ import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, E
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
+import Button from '../ui/Button';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
@@ -489,12 +490,13 @@ export function MessageBubble({
       return (
         <div className="space-y-2">
           {displayUrl ? (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="block w-[min(420px,85vw)] max-w-full rounded-xl overflow-hidden"
+              className="block h-auto w-[min(420px,85vw)] max-w-full overflow-hidden rounded-xl border-0 p-0 shadow-none hover:bg-transparent"
             >
               <img
                 src={displayUrl}
@@ -502,11 +504,12 @@ export function MessageBubble({
                 className="block w-full h-auto max-h-[420px] object-cover"
                 loading="lazy"
               />
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="bg-gray-100 rounded p-2 text-sm text-gray-600"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-auto rounded p-2 text-sm text-gray-600"
               onClick={() => {
                 void openMediaPreview('image');
               }}
@@ -519,7 +522,7 @@ export function MessageBubble({
                   <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para visualizar'}</div>
                 </div>
               </div>
-            </button>
+            </Button>
           )}
           {shouldShowCaption && resolvedBody && (
             <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
@@ -550,20 +553,22 @@ export function MessageBubble({
                 poster={poster}
                 className="block w-full h-auto max-h-[420px] bg-black"
               />
-              <button
-                type="button"
-                className="w-full text-xs text-white/90 bg-black/75 py-1.5 hover:bg-black/85"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto w-full rounded-none border-0 bg-black/75 py-1.5 text-xs text-white/90 shadow-none hover:bg-black/85 hover:text-white"
                 onClick={() => {
                   void openMediaPreview('video', videoUrl);
                 }}
               >
                 Abrir em tela cheia
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              className="bg-gray-100 rounded p-2 text-sm text-gray-600"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-auto rounded p-2 text-sm text-gray-600"
               onClick={() => {
                 void openMediaPreview('video');
               }}
@@ -576,7 +581,7 @@ export function MessageBubble({
                   <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para carregar'}</div>
                 </div>
               </div>
-            </button>
+            </Button>
           )}
           {shouldShowCaption && resolvedBody && (
             <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
@@ -638,14 +643,15 @@ export function MessageBubble({
         <div className="space-y-2">
           <div className="rounded p-2 text-sm w-[360px] max-w-full">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-lg"
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gray-200 p-0 text-lg"
                 onClick={toggleAudioPlayback}
                 disabled={audioMediaLoading}
               >
                 {audioIsPlaying ? '⏸' : '▶'}
-              </button>
+              </Button>
               <div className="flex-1">
                 {audioUrl ? (
                   <div className="flex items-center gap-2">
@@ -663,7 +669,7 @@ export function MessageBubble({
                       }}
                     >
                       <div
-                        className="h-full bg-green-500"
+                        className="h-full bg-amber-500"
                         style={{ width: audioDuration ? `${(audioCurrentTime / audioDuration) * 100}%` : '0%' }}
                       />
                     </div>
@@ -677,14 +683,15 @@ export function MessageBubble({
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                className="text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-1"
+              <Button
+                variant="warning"
+                size="sm"
+                className="h-auto rounded-full px-2 py-1 text-xs"
                 onClick={cycleAudioRate}
                 disabled={!audioUrl}
               >
                 {[1, 1.5, 2, 3][audioRateIndex]}x
-              </button>
+              </Button>
             </div>
             {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
@@ -711,9 +718,10 @@ export function MessageBubble({
             </div>
             <div className="mt-2 flex items-center gap-2">
               {isPdf && (
-                <button
-                  type="button"
-                  className="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50"
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-auto px-2 py-1 text-xs"
                   onClick={() => {
                     if (!resolvedDocumentUrl) {
                       loadDocumentMedia();
@@ -725,11 +733,12 @@ export function MessageBubble({
                   disabled={documentLoading}
                 >
                   {documentLoading ? 'Carregando...' : 'Abrir'}
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
-                className="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-auto px-2 py-1 text-xs"
                 onClick={() => {
                   if (!resolvedDocumentUrl) {
                     loadDocumentMedia();
@@ -743,7 +752,7 @@ export function MessageBubble({
                 disabled={documentLoading}
               >
                 {documentLoading ? 'Carregando...' : 'Baixar'}
-              </button>
+              </Button>
             </div>
           </div>
           {resolvedBody && <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />}
@@ -829,7 +838,7 @@ export function MessageBubble({
     <div
       className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
     >
-      <div className={`${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
+      <div className={`relative ${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
           className={`message-bubble break-words [overflow-wrap:anywhere] rounded-lg ${
             isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
@@ -865,7 +874,7 @@ export function MessageBubble({
             <div className="flex items-center gap-2">
               {editCount > 0 && !isDeleted && (
                 <div
-                  className="flex items-center gap-1 text-xs text-blue-600 cursor-pointer hover:text-blue-700"
+                  className="flex cursor-pointer items-center gap-1 text-xs text-amber-700 hover:text-amber-800"
                   title={`Editada ${editCount} vez${editCount > 1 ? 'es' : ''}`}
                   onClick={() => setShowHistory(true)}
                 >
@@ -888,63 +897,79 @@ export function MessageBubble({
           </div>
         </div>
 
-        <div className="mt-1 flex flex-wrap items-center gap-2">
+        <div
+          className={`absolute top-full z-10 mt-1 flex flex-wrap items-center gap-2 transition-opacity ${
+            isOutbound ? 'right-0 justify-end' : 'left-0'
+          } ${
+            showReactionPicker
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
+          }`}
+        >
           {onReact && !isDeleted && (
-            <div className={`relative ${showReactionPicker ? 'block' : 'hidden group-hover:block group-focus-within:block'}`}>
-              <button
-                type="button"
+            <div className="relative pointer-events-auto">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowReactionPicker((prev) => !prev)}
-                className="inline-flex items-center gap-1 px-2 text-xs text-gray-500 hover:text-gray-700"
+                className="h-auto gap-1 border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
               >
                 <Smile className="w-3 h-3" />
                 <span>Reagir</span>
-              </button>
+              </Button>
               {showReactionPicker && (
                 <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-full shadow px-2 py-1 flex gap-1 z-10">
                   {quickReactions.map((emoji) => (
-                    <button
+                    <Button
                       key={`${id}-${emoji}`}
-                      type="button"
-                      className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100"
+                      variant="icon"
+                      size="icon"
+                      className="h-7 w-7 rounded-full border-0 p-0 shadow-none"
                       onClick={() => {
                         onReact(id, emoji);
                         setShowReactionPicker(false);
                       }}
                     >
                       <span className="text-sm">{emoji}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
             </div>
           )}
           {onReply && !isDeleted && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onReply(id, body || '', fromName || 'Contato')}
-              className="hidden px-2 text-xs text-gray-500 hover:text-gray-700 group-hover:inline-flex group-focus-within:inline-flex"
+              className="pointer-events-auto h-auto border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
             >
               Responder
-            </button>
+            </Button>
           )}
 
           {onEdit && isOutbound && !isDeleted && !hasMedia && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onEdit(id, body || '')}
-              className="hidden items-center gap-1 px-2 text-xs text-gray-500 hover:text-gray-700 group-hover:inline-flex group-focus-within:inline-flex"
+              className="pointer-events-auto h-auto items-center gap-1 border-0 px-2 text-xs font-normal text-gray-500 shadow-none hover:bg-transparent hover:text-gray-700"
             >
               <Edit3 className="w-3 h-3" />
               <span>Editar</span>
-            </button>
+            </Button>
           )}
 
           {hasHistory && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowHistory(true)}
-              className="hidden items-center gap-1 px-2 text-xs text-blue-600 hover:text-blue-700 group-hover:inline-flex group-focus-within:inline-flex"
+              className="pointer-events-auto h-auto items-center gap-1 border-0 px-2 text-xs font-normal text-amber-700 shadow-none hover:bg-transparent hover:text-amber-800"
             >
               <History className="w-3 h-3" />
               <span>Ver histórico</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -959,13 +984,14 @@ export function MessageBubble({
 
       {mediaPreview && (
         <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+          <Button
+            variant="icon"
+            size="icon"
+            className="absolute right-4 top-4 h-10 w-10 rounded-full border-0 bg-white/10 text-white shadow-none hover:bg-white/20 hover:text-white"
             onClick={() => setMediaPreview(null)}
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
           <div className="w-full h-full flex items-center justify-center">
             {mediaPreview.type === 'image' ? (
               <img src={mediaPreview.src} alt="Imagem" className="h-full w-full max-h-[92vh] max-w-[92vw] object-contain rounded-lg" />

@@ -136,7 +136,7 @@ export default function AnimatedStatCard({
         type="button"
         onClick={onClick}
         className={`panel-glass-panel panel-interactive-glass relative w-full overflow-hidden rounded-2xl border border-slate-200 text-left shadow-lg
-        hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500`}
+        hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500`}
       >
         {cardContent}
       </button>

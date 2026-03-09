@@ -1236,7 +1236,7 @@ export default function RemindersManagerEnhanced() {
       overlayLabel="Atualizando lembretes..."
       stageClassName="panel-dashboard-immersive"
     >
-    <div ref={remindersRootRef} className="panel-dashboard-immersive">
+    <div ref={remindersRootRef} className="panel-dashboard-immersive panel-page-shell">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
         <div className="flex flex-wrap items-center gap-2">

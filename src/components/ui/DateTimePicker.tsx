@@ -223,7 +223,7 @@ export default function DateTimePicker({
         onClick={() => setIsOpen((current) => !current)}
         className={cx(
           'panel-ui-input panel-interactive-glass relative flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 text-left shadow-sm transition-all',
-          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500',
+          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500',
           'disabled:cursor-not-allowed disabled:opacity-60',
           type === 'date' ? 'h-11' : 'h-11',
           triggerClassName,
@@ -298,8 +298,8 @@ export default function DateTimePicker({
                   disabled={isDisabledDay}
                   className={cx(
                     'h-9 rounded-lg text-sm font-medium transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-teal-500',
-                    isSelected && 'bg-teal-600 text-white hover:bg-teal-700',
+                    'focus:outline-none focus:ring-2 focus:ring-amber-500',
+                    isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
                     !isSelected && isToday && 'bg-slate-100 text-slate-800',
                     !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
                     !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',

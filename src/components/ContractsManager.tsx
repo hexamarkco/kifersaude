@@ -474,7 +474,7 @@ export default function ContractsManager({
       overlayLabel="Atualizando contratos..."
       stageClassName="panel-dashboard-immersive"
     >
-    <div ref={contractsRootRef} className="panel-dashboard-immersive">
+    <div ref={contractsRootRef} className="panel-dashboard-immersive panel-page-shell">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
         {!isObserver && (

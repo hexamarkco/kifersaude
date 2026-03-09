@@ -2011,7 +2011,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       overlayLabel="Atualizando dashboard..."
       stageClassName="panel-dashboard-immersive"
     >
-      <div ref={dashboardRootRef} className="panel-dashboard-immersive space-y-6">
+      <div ref={dashboardRootRef} className="panel-dashboard-immersive panel-page-shell space-y-6">
       <div className="flex flex-col gap-4" data-panel-animate>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>

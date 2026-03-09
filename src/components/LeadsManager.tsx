@@ -1368,7 +1368,7 @@ export default function LeadsManager({
       overlayLabel="Atualizando leads..."
       stageClassName="panel-dashboard-immersive"
     >
-    <div ref={leadsRootRef} className="panel-dashboard-immersive">
+    <div ref={leadsRootRef} className="panel-dashboard-immersive panel-page-shell">
       <ObserverBanner />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

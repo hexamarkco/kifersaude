@@ -18,15 +18,15 @@ export const panelButtonBaseClass =
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary:
-    'border-teal-200/92 bg-teal-950/16 text-teal-800 shadow-sm hover:border-teal-100/96 hover:bg-teal-950/24 hover:text-teal-900 focus-visible:ring-teal-500 disabled:hover:bg-teal-950/16',
+    'border-amber-200/92 bg-amber-950/16 text-amber-800 shadow-sm hover:border-amber-100/96 hover:bg-amber-950/24 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/16',
   secondary:
-    'border-slate-300/90 bg-white/85 text-slate-800 shadow-sm hover:border-slate-400/75 hover:bg-white hover:text-slate-900 focus-visible:ring-teal-500 disabled:hover:bg-white/85',
+    'border-slate-300/90 bg-white/85 text-slate-800 shadow-sm hover:border-slate-400/75 hover:bg-white hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-white/85',
   ghost:
-    'border-transparent bg-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
+    'border-transparent bg-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
   danger:
     'border-red-200/92 bg-red-950/16 text-red-800 shadow-sm hover:border-red-100/96 hover:bg-red-950/24 hover:text-red-900 focus-visible:ring-red-500 disabled:hover:bg-red-950/16',
   icon:
-    'border-transparent bg-transparent text-slate-600 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-teal-500 disabled:hover:bg-transparent',
+    'border-transparent bg-transparent text-slate-600 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
   info:
     'border-blue-200/92 bg-blue-950/16 text-blue-800 shadow-sm hover:border-blue-100/96 hover:bg-blue-950/24 hover:text-blue-900 focus-visible:ring-blue-500 disabled:hover:bg-blue-950/16',
   success:
@@ -34,7 +34,7 @@ export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   warning:
     'border-amber-200/92 bg-amber-950/18 text-amber-900 shadow-sm hover:border-amber-100/96 hover:bg-amber-950/28 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/18',
   soft:
-    'border-teal-200/90 bg-teal-950/12 text-teal-800 shadow-sm hover:border-teal-100/95 hover:bg-teal-950/20 hover:text-teal-900 focus-visible:ring-teal-500 disabled:hover:bg-teal-950/12',
+    'border-amber-200/90 bg-amber-950/12 text-amber-800 shadow-sm hover:border-amber-100/95 hover:bg-amber-950/20 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/12',
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
@@ -95,7 +95,7 @@ export const panelCardPaddingClasses: Record<PanelCardPadding, string> = {
 export type PanelInputSize = 'default' | 'compact';
 
 export const panelInputBaseClass =
-  'panel-ui-input w-full rounded-lg border bg-white px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-input w-full rounded-lg border bg-white px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelInputStateClasses = {
   valid: 'border-slate-300 text-slate-700 placeholder:text-slate-400',
@@ -123,11 +123,11 @@ const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
 };
 
 const tabsTriggerBaseClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {
-    active: 'rounded-none border-b-2 border-teal-600 bg-teal-50/70 px-3 py-4 text-teal-700',
+    active: 'rounded-none border-b-2 border-amber-600 bg-amber-50/70 px-3 py-4 text-amber-700',
     idle: 'rounded-none border-b-2 border-transparent px-3 py-4 text-slate-600 hover:bg-slate-100 hover:text-slate-900',
   },
   pill: {
@@ -135,7 +135,7 @@ const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle
     idle: 'text-slate-600 hover:bg-white/70 hover:text-slate-900',
   },
   panel: {
-    active: 'h-9 bg-slate-100 px-3 py-0 text-teal-700 shadow-sm',
+    active: 'h-9 bg-slate-100 px-3 py-0 text-amber-700 shadow-sm',
     idle: 'h-9 px-3 py-0 text-slate-500 hover:bg-white/70 hover:text-slate-900',
   },
 };
@@ -153,4 +153,4 @@ export const getPanelTabsTriggerClass = ({ variant, isActive, className }: Panel
   cx(tabsTriggerBaseClass, tabsTriggerVariantClasses[variant][isActive ? 'active' : 'idle'], className);
 
 export const panelTabsBadgeClass =
-  'inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-teal-100 px-1.5 text-xs font-semibold text-teal-700';
+  'inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-700';

@@ -36,7 +36,7 @@ export default function ConfigPage() {
   ];
 
   return (
-    <div className="config-transparent-buttons w-full">
+    <div className="config-transparent-buttons panel-page-shell w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Configurações</h1>
         <p className="text-slate-600">Gerencie as configurações do sistema</p>

@@ -52,7 +52,7 @@ export const getDropdownTriggerClass = ({
 }: TriggerOptions) =>
   cx(
     'panel-glass-panel panel-interactive-glass relative w-full rounded-lg border text-left transition-shadow',
-    'focus:border-transparent focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60',
+    'focus:border-transparent focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60',
     compact ? 'h-8 pl-8 pr-8 text-xs' : 'h-11 pl-10 pr-10 text-sm',
     isDark ? 'border-slate-600 bg-slate-900 text-slate-100' : 'border-slate-300 bg-white text-slate-700',
     className,
@@ -84,8 +84,8 @@ export const getDropdownOptionClass = ({
     compact ? 'py-1.5 text-xs' : 'py-2 text-sm',
     selected
       ? isDark
-        ? 'bg-teal-500/20 font-medium text-teal-200'
-        : 'bg-teal-50 font-medium text-teal-700'
+        ? 'bg-amber-500/20 font-medium text-amber-200'
+        : 'bg-amber-50 font-medium text-amber-700'
       : highlighted
         ? isDark
           ? 'bg-slate-800 text-slate-100'
@@ -99,5 +99,5 @@ export const getDropdownOptionClass = ({
 export const getDropdownActionClass = (isDark: boolean) =>
   cx(
     'w-full px-3 py-2 text-left text-sm font-medium transition-colors',
-    isDark ? 'text-teal-300 hover:bg-slate-800' : 'text-teal-600 hover:bg-slate-50',
+    isDark ? 'text-amber-300 hover:bg-slate-800' : 'text-amber-600 hover:bg-slate-50',
   );

@@ -109,6 +109,100 @@
   --ks-color-border: #ded3c2;
 }
 
+.painel-theme.kifer-ds .panel-page-shell h1,
+.painel-theme.kifer-ds .panel-page-shell h2,
+.painel-theme.kifer-ds .panel-page-shell h3,
+.painel-theme.kifer-ds .panel-page-shell h4 {
+  font-family: var(--ks-font-heading);
+  letter-spacing: -0.012em;
+}
+
+.painel-theme.kifer-ds .panel-page-shell .panel-glass-panel,
+.painel-theme.kifer-ds .panel-page-shell .panel-glass-lite,
+.painel-theme.kifer-ds .panel-page-shell .panel-glass-strong {
+  border-color: rgba(161, 98, 7, 0.24) !important;
+}
+
+.painel-theme.kifer-ds .text-teal-900,
+.painel-theme.kifer-ds .text-teal-800,
+.painel-theme.kifer-ds .text-teal-700,
+.painel-theme.kifer-ds .text-teal-600,
+.painel-theme.kifer-ds .text-teal-500 {
+  color: #a16207 !important;
+}
+
+.painel-theme.kifer-ds .bg-teal-50 {
+  background-color: rgba(202, 138, 4, 0.1) !important;
+}
+
+.painel-theme.kifer-ds .bg-teal-50\/50,
+.painel-theme.kifer-ds .bg-teal-50\/70 {
+  background-color: rgba(202, 138, 4, 0.14) !important;
+}
+
+.painel-theme.kifer-ds .bg-teal-100 {
+  background-color: rgba(202, 138, 4, 0.18) !important;
+}
+
+.painel-theme.kifer-ds .bg-teal-500,
+.painel-theme.kifer-ds .bg-teal-600 {
+  background-color: #ca8a04 !important;
+  color: #fff !important;
+}
+
+.painel-theme.kifer-ds .bg-teal-700 {
+  background-color: #a16207 !important;
+  color: #fff !important;
+}
+
+.painel-theme.kifer-ds .hover\:bg-teal-50:hover {
+  background-color: rgba(202, 138, 4, 0.16) !important;
+}
+
+.painel-theme.kifer-ds .hover\:bg-teal-600:hover,
+.painel-theme.kifer-ds .hover\:bg-teal-700:hover {
+  background-color: #854d0e !important;
+}
+
+.painel-theme.kifer-ds .hover\:text-teal-700:hover {
+  color: #854d0e !important;
+}
+
+.painel-theme.kifer-ds .border-teal-100,
+.painel-theme.kifer-ds .border-teal-200,
+.painel-theme.kifer-ds .border-teal-300,
+.painel-theme.kifer-ds .border-teal-400,
+.painel-theme.kifer-ds .border-teal-500,
+.painel-theme.kifer-ds .border-teal-600 {
+  border-color: rgba(161, 98, 7, 0.38) !important;
+}
+
+.painel-theme.kifer-ds .ring-teal-500,
+.painel-theme.kifer-ds .ring-teal-200,
+.painel-theme.kifer-ds .focus\:ring-teal-500:focus,
+.painel-theme.kifer-ds .focus\:ring-teal-500\/40:focus,
+.painel-theme.kifer-ds .focus-visible\:ring-teal-500:focus-visible {
+  --tw-ring-color: rgba(202, 138, 4, 0.5) !important;
+}
+
+.painel-theme.kifer-ds .accent-teal-600 {
+  accent-color: #ca8a04;
+}
+
+.painel-theme.kifer-ds .from-teal-600 {
+  --tw-gradient-from: #ca8a04 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(202 138 4 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.painel-theme.kifer-ds .via-teal-600 {
+  --tw-gradient-to: #a16207 var(--tw-gradient-to-position);
+}
+
+.painel-theme.kifer-ds .to-teal-500 {
+  --tw-gradient-to: #d4a017 var(--tw-gradient-to-position);
+}
+
 .kifer-ds .text-orange-700,
 .kifer-ds .hover\:text-orange-700:hover {
   color: var(--ks-color-cta-strong);

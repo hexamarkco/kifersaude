@@ -1206,6 +1206,111 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
+const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const WHAPI_REQUEST_TIMEOUT_MS = 15000;
+const MAX_WHAPI_TEMPORARY_RETRIES = 3;
+const WHAPI_RETRY_DELAYS_MS = [2 * 60 * 1000, 10 * 60 * 1000, 30 * 60 * 1000];
+
+type WhapiContactCheckResult = {
+  exists: boolean;
+  chatId: string | null;
+};
+
+class TemporaryWhapiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TemporaryWhapiError';
+  }
+}
+
+const isRetryableWhapiStatus = (status: number): boolean => status === 408 || status === 429 || status >= 500;
+
+const getWhapiRetryDelayMs = (previousAttempts: number): number => {
+  const index = Math.min(Math.max(previousAttempts, 0), WHAPI_RETRY_DELAYS_MS.length - 1);
+  return WHAPI_RETRY_DELAYS_MS[index];
+};
+
+const normalizeWhapiChatId = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.includes('@')) {
+    if (/\@c\.us$/i.test(trimmed)) {
+      return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
+    }
+    return trimmed;
+  }
+
+  const digits = normalizeTelefone(trimmed);
+  if (!digits) return null;
+  return `${digits}@s.whatsapp.net`;
+};
+
+const parseWhapiError = (payload: unknown): string => {
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+
+    if (typeof record.error === 'string') {
+      return record.error;
+    }
+
+    if (record.error && typeof record.error === 'object') {
+      const nested = record.error as Record<string, unknown>;
+      if (typeof nested.message === 'string') {
+        return nested.message;
+      }
+    }
+
+    if (typeof record.message === 'string') {
+      return record.message;
+    }
+
+    if (typeof record.details === 'string') {
+      return record.details;
+    }
+  }
+
+  try {
+    return JSON.stringify(payload);
+  } catch {
+    return 'Erro ao processar resposta da Whapi.';
+  }
+};
+
+const readWhapiPayload = async (response: Response): Promise<unknown> => {
+  const raw = await response.text();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+};
+
+const isTemporaryWhapiError = (error: unknown): boolean => {
+  if (error instanceof TemporaryWhapiError) return true;
+
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes('timeout') ||
+    message.includes('timed out') ||
+    message.includes('temporar') ||
+    message.includes('temporary') ||
+    message.includes('rate limit') ||
+    message.includes('429') ||
+    message.includes('502') ||
+    message.includes('503') ||
+    message.includes('504') ||
+    message.includes('network')
+  );
+};
+
 function normalizeBrazilianPhoneLocal(telefone?: string | null): string {
   const digits = normalizeTelefone(telefone ?? '');
   if (!digits) return '';
@@ -1251,38 +1356,85 @@ const usesWhatsappValidCondition = (flow: AutoContactFlow): boolean => {
   return [...conditions, ...exitConditions].some((condition) => condition.field === 'whatsapp_valid');
 };
 
-const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<boolean | null> => {
+const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<WhapiContactCheckResult> => {
   const digits = toWhapiPhoneNumber(telefone);
-  if (!digits) return false;
+  if (!digits || !isValidWhatsappNumber(telefone)) {
+    return { exists: false, chatId: null };
+  }
 
   const token = sanitizeWhapiToken(apiKey);
   if (!token) {
     throw new Error('Token da Whapi Cloud nao configurado para validar WhatsApp.');
   }
 
-  const response = await fetch(`https://gate.whapi.cloud/contacts/${encodeURIComponent(digits)}`, {
-    method: 'HEAD',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), WHAPI_REQUEST_TIMEOUT_MS);
 
-  if (response.status === 200) return true;
-  if (response.status === 404 || response.status === 400 || response.status === 422) return false;
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('Falha de autenticacao ao validar WhatsApp na Whapi.');
+  let response: Response;
+  try {
+    response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        contacts: [digits],
+        force_check: true,
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new TemporaryWhapiError('Timeout ao validar numero na Whapi.');
+    }
+    throw new TemporaryWhapiError('Falha de conexao ao validar numero na Whapi.');
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return null;
+
+  const payload = await readWhapiPayload(response);
+
+  if (!response.ok) {
+    const errorText = parseWhapiError(payload);
+    if (response.status === 400 || response.status === 404 || response.status === 422) {
+      return { exists: false, chatId: null };
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Falha de autenticacao ao validar WhatsApp na Whapi.');
+    }
+    if (isRetryableWhapiStatus(response.status)) {
+      throw new TemporaryWhapiError(
+        `Whapi temporariamente indisponivel ao validar numero (${response.status}): ${errorText || 'sem detalhes'}`,
+      );
+    }
+    throw new Error(errorText || 'Falha ao validar numero na Whapi.');
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return { exists: false, chatId: null };
+  }
+
+  const contacts = (payload as Record<string, unknown>).contacts;
+  const firstContact = Array.isArray(contacts) && contacts.length > 0 && contacts[0] && typeof contacts[0] === 'object'
+    ? (contacts[0] as Record<string, unknown>)
+    : null;
+
+  const status = typeof firstContact?.status === 'string' ? firstContact.status.trim().toLowerCase() : '';
+  const chatId = normalizeWhapiChatId(firstContact?.wa_id);
+
+  if (status === 'valid' && chatId) {
+    return { exists: true, chatId };
+  }
+
+  return { exists: false, chatId: null };
 };
 
 const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> => {
   try {
-    const exists = await checkWhatsAppExistence(apiKey, lead?.telefone);
-    if (exists !== null) return exists ? 'true' : 'false';
-    console.warn('Resposta inesperada ao validar WhatsApp; fallback para false', {
-      telefone: lead?.telefone ?? null,
-    });
+    const result = await checkWhatsAppExistence(apiKey, lead?.telefone);
+    return result.exists ? 'true' : 'false';
   } catch (error) {
     console.warn('Erro ao validar WhatsApp no Whapi', error);
   }
@@ -2409,11 +2561,13 @@ async function processFlowJobs({
 
   for (const job of jobs) {
     const previousAttempts = job.attempts ?? 0;
+    const currentAttempt = previousAttempts + 1;
     const { data: updatedJob } = await supabase
       .from('auto_contact_flow_jobs')
-      .update({ status: 'processing', attempts: previousAttempts + 1 })
+      .update({ status: 'processing', attempts: currentAttempt })
       .eq('id', job.id)
       .eq('status', 'pending')
+      .lte('scheduled_at', nowIso)
       .select('id')
       .maybeSingle();
 
@@ -2781,10 +2935,68 @@ async function processFlowJobs({
         }
       }
 
+      if (job.action_type === 'send_message' && isTemporaryWhapiError(error)) {
+        if (previousAttempts < MAX_WHAPI_TEMPORARY_RETRIES) {
+          const retryDelayMs = getWhapiRetryDelayMs(previousAttempts);
+          const retryAt = new Date(Date.now() + retryDelayMs);
+          const followUpAt = new Date(retryAt.getTime() + 60000);
+          const retryReason =
+            `temporary_whapi_error: tentativa ${currentAttempt}/${MAX_WHAPI_TEMPORARY_RETRIES + 1}. ` +
+            `${message}`;
+
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({
+              status: 'pending',
+              scheduled_at: retryAt.toISOString(),
+              last_error: retryReason,
+            })
+            .eq('id', job.id);
+
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({
+              scheduled_at: followUpAt.toISOString(),
+              last_error: `Aguardando reprocessamento do envio ${job.id}.`,
+            })
+            .eq('lead_id', lead.id)
+            .eq('flow_id', flow.id)
+            .eq('status', 'pending')
+            .neq('id', job.id);
+
+          continue;
+        }
+
+        const exhaustedReason =
+          `temporary_whapi_error: limite de tentativas excedido (${MAX_WHAPI_TEMPORARY_RETRIES + 1}). ${message}`;
+
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'failed', last_error: exhaustedReason })
+          .eq('id', job.id);
+
+        await cancelFlowJobs({
+          supabase,
+          leadId: lead.id,
+          flowId: flow.id,
+          reason: exhaustedReason,
+        });
+        continue;
+      }
+
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'failed', last_error: message })
         .eq('id', job.id);
+
+      if (job.action_type === 'send_message') {
+        await cancelFlowJobs({
+          supabase,
+          leadId: lead.id,
+          flowId: flow.id,
+          reason: `send_failed: ${message}`,
+        });
+      }
     }
   }
 }
@@ -2810,15 +3022,12 @@ async function sendAutoContactMessage({
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
-  const whatsappExists = await checkWhatsAppExistence(apiKey, lead?.telefone);
-  if (whatsappExists === false) {
+  const whatsappCheck = await checkWhatsAppExistence(apiKey, lead?.telefone);
+  if (!whatsappCheck.exists) {
     throw new Error('Numero nao possui WhatsApp.');
   }
-  if (whatsappExists === null) {
-    throw new Error('Nao foi possivel validar se o numero possui WhatsApp.');
-  }
 
-  const chatId = `${whapiPhone}@s.whatsapp.net`;
+  const chatId = whatsappCheck.chatId ?? `${whapiPhone}@s.whatsapp.net`;
   let endpoint = '';
   const body: Record<string, unknown> = { to: chatId };
 
@@ -2833,19 +3042,47 @@ async function sendAutoContactMessage({
     if (media.filename && contentType === 'document') body.filename = media.filename;
   }
 
-  const response = await fetch(`https://gate.whapi.cloud${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), WHAPI_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new TemporaryWhapiError('Timeout ao enviar mensagem na Whapi.');
+    }
+    throw new TemporaryWhapiError('Falha de conexao ao enviar mensagem na Whapi.');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const responsePayload = await readWhapiPayload(response);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || 'Falha ao enviar mensagem automática');
+    const errorText = parseWhapiError(responsePayload);
+    if (isRetryableWhapiStatus(response.status)) {
+      throw new TemporaryWhapiError(
+        `Whapi temporariamente indisponivel ao enviar mensagem (${response.status}): ${errorText || 'sem detalhes'}`,
+      );
+    }
+    throw new Error(errorText || 'Falha ao enviar mensagem automatica');
+  }
+
+  if (responsePayload && typeof responsePayload === 'object' && !Array.isArray(responsePayload)) {
+    const sent = (responsePayload as Record<string, unknown>).sent;
+    if (sent === false) {
+      throw new Error('Whapi nao confirmou o envio da mensagem (sent=false).');
+    }
   }
 }
 

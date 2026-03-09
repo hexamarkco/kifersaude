@@ -35,6 +35,7 @@ import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import FilterSingleSelect from '../FilterSingleSelect';
+import Button from '../ui/Button';
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -784,7 +785,7 @@ export default function FlowBuilder({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="panel-page-shell grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
       <div
         ref={reactFlowWrapperRef}
         className="flex h-[520px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 sm:h-[560px] lg:h-[680px]"
@@ -796,49 +797,49 @@ export default function FlowBuilder({
             <div className="text-[11px] text-slate-500 mt-1">Clique em uma linha para remover.</div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
               onClick={addConditionNode}
-              className="px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100"
+              variant="secondary"
+              size="sm"
             >
               + Condicao
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={addActionNode}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800"
+              size="sm"
             >
               + Acao
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={exportFlowAsImage}
               disabled={isExporting}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-60"
+              variant="secondary"
+              size="sm"
               title="Exportar como imagem"
             >
               <Download className="h-4 w-4" />
               PNG
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={exportFlowAsTxt}
               disabled={isExporting}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-60"
+              variant="secondary"
+              size="sm"
               title="Exportar detalhes do fluxo em TXT"
             >
               <Download className="h-4 w-4" />
               TXT
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={reorganizeLayout}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-100"
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9"
               title="Reorganizar"
               aria-label="Reorganizar"
             >
               <RefreshCcw className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
         {totalIssueCount > 0 && (

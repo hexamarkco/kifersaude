@@ -4,7 +4,6 @@ import {
   EyeOff,
   Info,
   Key,
-  Loader2,
   Save,
   Settings,
   ShieldCheck,
@@ -17,6 +16,8 @@ import {
   type AutoContactSettings,
 } from '../../lib/autoContactService';
 import type { IntegrationSetting } from '../../lib/supabase';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { WhatsAppApiSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -132,7 +133,7 @@ export default function WhatsAppApiSettings() {
       overlayLabel="Atualizando configuracoes da API WhatsApp..."
       stageClassName="min-h-[340px]"
     >
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="panel-page-shell bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       {statusMessage && (
         <div
           className={`p-4 rounded-lg border flex items-center space-x-3 mb-4 ${
@@ -179,11 +180,11 @@ export default function WhatsAppApiSettings() {
               Token da Whapi Cloud
             </label>
             <div className="relative">
-              <input
+              <Input
                 type={showApiKey ? 'text' : 'password'}
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm font-mono"
+                className="pr-10 font-mono"
                 placeholder="Token da Whapi Cloud (sem incluir 'Bearer')"
               />
               <button
@@ -201,14 +202,13 @@ export default function WhatsAppApiSettings() {
         </div>
 
         <div className="flex items-center justify-end pt-4 border-t border-slate-200">
-          <button
+          <Button
             onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center space-x-2 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            loading={saving}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {!saving && <Save className="w-4 h-4" />}
             <span>{saving ? 'Salvando...' : 'Salvar configuração'}</span>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

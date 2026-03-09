@@ -134,16 +134,16 @@ export default function MultiSelectDropdown({
                   isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
                 )}
               >
-                <span
-                  className={cx(
-                    'flex h-4 w-4 items-center justify-center rounded border',
-                    isSelected
-                      ? 'border-teal-500 bg-teal-500'
-                      : isDarkTheme
-                        ? 'border-slate-600'
-                        : 'border-slate-300',
-                  )}
-                >
+                  <span
+                    className={cx(
+                      'flex h-4 w-4 items-center justify-center rounded border',
+                      isSelected
+                        ? 'border-amber-500 bg-amber-500'
+                        : isDarkTheme
+                          ? 'border-slate-600'
+                          : 'border-slate-300',
+                    )}
+                  >
                   {isSelected && <Check className="w-3 h-3 text-white" />}
                 </span>
                 <input

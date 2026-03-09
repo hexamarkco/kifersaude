@@ -56,6 +56,8 @@ import FlowBuilder from './FlowBuilder';
 import FilterSingleSelect from '../FilterSingleSelect';
 import DateTimePicker from '../ui/DateTimePicker';
 import ModalShell from '../ui/ModalShell';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -1141,7 +1143,7 @@ export default function AutoContactFlowSettings() {
       overlayLabel="Atualizando fluxos de automacao..."
       stageClassName="min-h-[520px]"
     >
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="panel-page-shell bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="space-y-6">
         <div>
           <div className="flex items-start justify-between gap-4">
@@ -1267,13 +1269,13 @@ export default function AutoContactFlowSettings() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Fuso horário</label>
-                  <input
+                  <Input
                     type="text"
                     value={schedulingDraft.timezone}
                     onChange={(event) =>
                       setSchedulingDraft((previous) => ({ ...previous, timezone: event.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    size="compact"
                     placeholder="America/Sao_Paulo"
                   />
                 </div>
@@ -1319,7 +1321,7 @@ export default function AutoContactFlowSettings() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-1">Atualização (segundos)</label>
-                    <input
+                    <Input
                       type="number"
                       min={5}
                       value={monitoringDraft.refreshSeconds}
@@ -1329,7 +1331,7 @@ export default function AutoContactFlowSettings() {
                           refreshSeconds: Number(event.target.value),
                         }))
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      size="compact"
                     />
                   </div>
                   <div>
@@ -1358,7 +1360,7 @@ export default function AutoContactFlowSettings() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-1">Retenção (dias)</label>
-                    <input
+                    <Input
                       type="number"
                       min={7}
                       value={loggingDraft.retentionDays}
@@ -1368,7 +1370,7 @@ export default function AutoContactFlowSettings() {
                           retentionDays: Number(event.target.value),
                         }))
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      size="compact"
                     />
                   </div>
                   <label className="inline-flex items-center gap-2 text-sm text-slate-600 mt-6">
@@ -1422,14 +1424,14 @@ export default function AutoContactFlowSettings() {
                   condição de encerramento.
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={handleAddFlow}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+                variant="secondary"
+                size="sm"
               >
                 <Plus className="w-4 h-4" />
                 Novo fluxo
-              </button>
+              </Button>
             </div>
 
             {flowDrafts.length === 0 ? (
@@ -1439,16 +1441,14 @@ export default function AutoContactFlowSettings() {
             ) : (
               <div className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_auto]">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={flowSearch}
-                      onChange={(event) => setFlowSearch(event.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                      placeholder="Buscar fluxo por nome, condição ou tag"
-                    />
-                  </div>
+                  <Input
+                    type="text"
+                    value={flowSearch}
+                    onChange={(event) => setFlowSearch(event.target.value)}
+                    leftIcon={Search}
+                    className="bg-white"
+                    placeholder="Buscar fluxo por nome, condição ou tag"
+                  />
                   <div>
                     <FilterSingleSelect
                       icon={Tag}
@@ -1476,7 +1476,7 @@ export default function AutoContactFlowSettings() {
                       type="button"
                       key={flow.id}
                       onClick={() => setActiveFlowId(flow.id)}
-                      className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal-200 hover:shadow-md"
+                      className="text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-200 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1543,47 +1543,42 @@ export default function AutoContactFlowSettings() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
+                      <Button
                         onClick={() => {
                           setShowSimulation((previous) => !previous);
                           if (!simulationStart) {
                             setSimulationStart(getLocalDateTimeValue());
                           }
                         }}
-                        className="inline-flex items-center gap-2 text-xs text-slate-600 hover:text-slate-700"
+                        variant="ghost"
+                        size="sm"
                       >
                         <Timer className="w-4 h-4" />
                         {showSimulation ? 'Ocultar simulação' : 'Simular fluxo'}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={handleSaveFlow}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-60"
-                        disabled={savingFlow}
+                        loading={savingFlow}
+                        size="sm"
                       >
-                        {savingFlow ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
+                        {!savingFlow && <Save className="w-4 h-4" />}
                         {savingFlow ? 'Salvando...' : 'Salvar fluxo'}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => handleRemoveFlow(activeFlow.id)}
-                        className="inline-flex items-center gap-2 text-xs text-red-600 hover:text-red-700"
+                        variant="danger"
+                        size="sm"
                       >
                         <Trash2 className="w-4 h-4" />
                         Remover fluxo
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
                         onClick={() => setActiveFlowId(null)}
-                        className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                        variant="secondary"
+                        size="sm"
                       >
                         Fechar
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -1594,11 +1589,10 @@ export default function AutoContactFlowSettings() {
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
                           Nome do fluxo
                         </label>
-                        <input
+                        <Input
                           type="text"
                           value={activeFlow.name}
                           onChange={(event) => handleUpdateFlow(activeFlow.id, { name: event.target.value })}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           placeholder="Ex.: Follow-up de contato inicial"
                         />
                         </div>

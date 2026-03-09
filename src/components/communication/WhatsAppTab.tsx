@@ -197,6 +197,16 @@ const REMINDER_QUICK_OPEN_PERIODS: Array<{
 const REMINDER_QUICK_OPEN_AUTO_REFRESH_MS = 60_000;
 const REMINDER_QUICK_OPEN_STALE_MS = 45_000;
 
+const TEMPLATE_VARIABLE_SHORTCUTS: Array<{ key: string; label: string }> = [
+  { key: 'nome', label: 'Nome' },
+  { key: 'primeiro_nome', label: 'Primeiro nome' },
+  { key: 'telefone', label: 'Telefone' },
+  { key: 'status', label: 'Status' },
+  { key: 'atendente', label: 'Atendente' },
+  { key: 'data_hoje', label: 'Data de hoje' },
+  { key: 'hora_agora', label: 'Hora atual' },
+];
+
 const PERSON_FALLBACK_NOTIFICATION_ICON =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -2960,16 +2970,6 @@ export default function WhatsAppTab() {
     };
   }, [selectedChat, selectedChatDisplayName, selectedLead, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const templateVariableShortcuts = [
-    { key: 'nome', label: 'Nome' },
-    { key: 'primeiro_nome', label: 'Primeiro nome' },
-    { key: 'telefone', label: 'Telefone' },
-    { key: 'status', label: 'Status' },
-    { key: 'atendente', label: 'Atendente' },
-    { key: 'data_hoje', label: 'Data de hoje' },
-    { key: 'hora_agora', label: 'Hora atual' },
-  ];
-
   const getUnreadWaitingLabel = (chat: WhatsAppChat) => {
     if ((chat.unread_count ?? 0) <= 0 || !chat.last_message_at) return null;
     const messageTime = new Date(chat.last_message_at).getTime();
@@ -3890,7 +3890,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
-  const groupedReminderQuickOpenItems = groupReminderQuickOpenItems(reminderQuickOpenItems);
+  const groupedReminderQuickOpenItems = useMemo(
+    () => groupReminderQuickOpenItems(reminderQuickOpenItems),
+    [reminderQuickOpenItems],
+  );
   const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
   const toggleReminderQuickOpenPeriod = (periodId: ReminderQuickOpenPeriod) => {
     setCollapsedReminderQuickOpenPeriods((current) => {
@@ -4402,16 +4405,16 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   >
                     <div className="relative flex-shrink-0">
                       {chatPhoto && isDirectChat(chat) ? (
-                        <img src={chatPhoto} alt={chatDisplayName} className="w-12 h-12 rounded-full object-cover" />
+                        <img src={chatPhoto} alt={chatDisplayName} className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200" />
                       ) : (
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-full font-semibold ring-1 ring-slate-200 ${
                           chatKind === 'group'
                             ? 'bg-blue-100 text-blue-700'
                             : chatKind === 'newsletter'
-                              ? 'bg-indigo-500'
+                              ? 'bg-indigo-600 text-white'
                             : chatKind === 'status' || chatKind === 'broadcast'
-                                ? 'bg-amber-500'
-                                : 'bg-amber-100 text-amber-700'
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-amber-200 text-amber-900'
                         }`}>
                           {chatKind === 'group' ? (
                             <Users className="w-5 h-5" />
@@ -4585,16 +4588,16 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   </Button>
                 )}
                 {selectedChatPhoto ? (
-                  <img src={selectedChatPhoto} alt={selectedChatDisplayName || selectedChat.id} className="flex-shrink-0 w-10 h-10 rounded-full object-cover" />
+                  <img src={selectedChatPhoto} alt={selectedChatDisplayName || selectedChat.id} className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-1 ring-slate-200" />
                 ) : (
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-slate-200 ${
                     selectedChatKind === 'group'
                       ? 'bg-blue-100 text-blue-700'
                       : selectedChatKind === 'newsletter'
-                        ? 'bg-indigo-500'
+                        ? 'bg-indigo-600 text-white'
                       : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
-                          ? 'bg-amber-500'
-                          : 'bg-amber-100 text-amber-700'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-amber-200 text-amber-900'
                   }`}>
                     {selectedChatKind === 'group' ? (
                       <Users className="w-5 h-5" />
@@ -4778,7 +4781,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 chatId={selectedChat.id}
                 contacts={contactsList}
                 templateVariables={templateVariablesForInput}
-                templateVariableShortcuts={templateVariableShortcuts}
+                templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
                 onMessageSent={handleMessageSent}
                 replyToMessage={replyToMessage}
                 onCancelReply={handleCancelReply}

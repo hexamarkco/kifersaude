@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useMemo } from 'react';
 import {
   Send,
   Paperclip,
@@ -61,7 +61,7 @@ type QuickReplyItem = {
   message: string;
 };
 
-export function MessageInput({
+function MessageInputComponent({
   chatId,
   onMessageSent,
   contacts = [],
@@ -2141,3 +2141,14 @@ export function MessageInput({
     </div>
   );
 }
+
+const areMessageInputPropsEqual = (prev: MessageInputProps, next: MessageInputProps) => (
+  prev.chatId === next.chatId &&
+  prev.contacts === next.contacts &&
+  prev.templateVariables === next.templateVariables &&
+  prev.templateVariableShortcuts === next.templateVariableShortcuts &&
+  prev.replyToMessage === next.replyToMessage &&
+  prev.editMessage === next.editMessage
+);
+
+export const MessageInput = memo(MessageInputComponent, areMessageInputPropsEqual);

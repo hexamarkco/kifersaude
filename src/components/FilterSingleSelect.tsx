@@ -191,7 +191,7 @@ export default function FilterSingleSelect({
         <Icon
           className={cx(
             'absolute top-1/2 -translate-y-1/2',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isDarkTheme ? 'text-stone-400' : 'text-slate-400',
             iconOffsetClass,
             iconSizeClass,
           )}
@@ -202,10 +202,10 @@ export default function FilterSingleSelect({
             labelTextClass,
             value
               ? isDarkTheme
-                ? 'font-medium text-slate-100'
+                ? 'font-medium text-stone-100'
                 : 'font-medium text-slate-700'
               : isDarkTheme
-                ? 'text-slate-100'
+                ? 'text-stone-300'
                 : 'text-slate-500',
           )}
         >
@@ -214,7 +214,7 @@ export default function FilterSingleSelect({
         <ChevronDown
           className={cx(
             'absolute right-3 top-1/2 -translate-y-1/2 transition-transform',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isDarkTheme ? 'text-stone-400' : 'text-slate-400',
             chevronSizeClass,
             isOpen && 'rotate-180',
           )}
@@ -258,7 +258,7 @@ export default function FilterSingleSelect({
                   <Check
                     className={cx(
                       'h-4 w-4 flex-shrink-0',
-                      isDarkTheme ? 'text-teal-300' : 'text-teal-700',
+                      isDarkTheme ? 'text-amber-300' : 'text-amber-700',
                     )}
                   />
                 )}

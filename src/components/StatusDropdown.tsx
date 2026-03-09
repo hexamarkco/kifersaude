@@ -193,10 +193,10 @@ export default function StatusDropdown({
                     'w-full px-3 py-2 text-left text-sm transition-colors',
                     status.nome === currentStatus
                       ? isDarkTheme
-                        ? 'bg-slate-800 font-medium text-slate-100'
+                        ? 'bg-stone-800 font-medium text-stone-100'
                         : 'bg-slate-100 font-medium text-slate-900'
                       : isDarkTheme
-                        ? 'text-slate-200 hover:bg-slate-800'
+                        ? 'text-stone-200 hover:bg-stone-800'
                         : 'text-slate-700 hover:bg-slate-50',
                   )}
                 >

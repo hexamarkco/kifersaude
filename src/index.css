@@ -757,14 +757,14 @@
 .painel-theme.theme-dark .bg-white\/90,
 .painel-theme.theme-dark .bg-white\/80,
 .painel-theme.theme-dark .bg-white\/50 {
-  background-color: rgba(15, 23, 42, 0.88) !important;
+  background-color: rgba(44, 32, 21, 0.92) !important;
 }
 
 .painel-theme.theme-dark .hover\:bg-white\/95:hover,
 .painel-theme.theme-dark .hover\:bg-white\/50:hover,
 .painel-theme.theme-dark .hover\:bg-white\/80:hover,
 .painel-theme.theme-dark .hover\:bg-white\/90:hover {
-  background-color: rgba(30, 41, 59, 0.95) !important;
+  background-color: rgba(63, 45, 28, 0.95) !important;
 }
 
 .modal-theme-host.theme-dark .bg-white\/95,
@@ -1497,7 +1497,7 @@
 
 .panel-dropdown-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.72) transparent;
+  scrollbar-color: rgba(161, 98, 7, 0.56) transparent;
 }
 
 .panel-dropdown-scrollbar::-webkit-scrollbar {
@@ -1510,39 +1510,42 @@
 }
 
 .panel-dropdown-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.72);
+  background-color: rgba(161, 98, 7, 0.56);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .panel-dropdown-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(71, 85, 105, 0.86);
+  background-color: rgba(146, 64, 14, 0.74);
 }
 
 .painel-theme.theme-dark .panel-dropdown-scrollbar {
-  scrollbar-color: rgba(71, 85, 105, 0.92) transparent;
+  scrollbar-color: rgba(217, 119, 6, 0.72) transparent;
 }
 
 .painel-theme.theme-dark .panel-dropdown-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(71, 85, 105, 0.92);
+  background-color: rgba(217, 119, 6, 0.72);
 }
 
 .painel-theme.theme-dark .panel-dropdown-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.96);
+  background-color: rgba(245, 158, 11, 0.86);
 }
 
 .panel-dropdown-dark {
   color-scheme: dark;
-  scrollbar-color: rgba(71, 85, 105, 0.92) transparent;
+  background-color: #1b1611;
+  border-color: rgba(161, 98, 7, 0.36);
+  color: #f5f1e8;
+  scrollbar-color: rgba(217, 119, 6, 0.72) transparent;
 }
 
 .panel-dropdown-dark::-webkit-scrollbar-thumb {
-  background-color: rgba(71, 85, 105, 0.92);
+  background-color: rgba(217, 119, 6, 0.72);
 }
 
 .panel-dropdown-dark:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.96);
+  background-color: rgba(245, 158, 11, 0.86);
 }
 
 .panel-skeleton {

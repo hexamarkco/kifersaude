@@ -75,7 +75,7 @@ export default function MultiSelectDropdown({
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-stone-400' : 'text-slate-500')}>
           {label}
         </label>
       )}
@@ -90,13 +90,13 @@ export default function MultiSelectDropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={selectedOptions.length === 0 ? 'text-slate-400' : isDarkTheme ? 'text-slate-100' : 'text-slate-700'}>
+        <span className={selectedOptions.length === 0 ? (isDarkTheme ? 'text-stone-400' : 'text-slate-400') : isDarkTheme ? 'text-stone-100' : 'text-slate-700'}>
           {displayText}
         </span>
         <ChevronDown
           className={cx(
             'h-4 w-4 transition-transform',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            isDarkTheme ? 'text-stone-400' : 'text-slate-400',
             isOpen && 'rotate-180',
           )}
         />
@@ -115,7 +115,7 @@ export default function MultiSelectDropdown({
             className={cx(
               getDropdownActionClass(isDarkTheme),
               'border-b text-xs',
-              isDarkTheme ? 'border-slate-700' : 'border-slate-100',
+              isDarkTheme ? 'border-amber-700/60' : 'border-slate-100',
             )}
             onClick={() => {
               onChange([]);
@@ -131,7 +131,7 @@ export default function MultiSelectDropdown({
                 key={option.value}
                 className={cx(
                   'flex cursor-pointer items-center gap-2 px-3 py-2 text-xs',
-                  isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+                  isDarkTheme ? 'text-stone-200 hover:bg-stone-800' : 'text-slate-700 hover:bg-slate-100',
                 )}
               >
                   <span
@@ -140,7 +140,7 @@ export default function MultiSelectDropdown({
                       isSelected
                         ? 'border-amber-500 bg-amber-500'
                         : isDarkTheme
-                          ? 'border-slate-600'
+                          ? 'border-stone-600'
                           : 'border-slate-300',
                     )}
                   >
@@ -157,7 +157,7 @@ export default function MultiSelectDropdown({
             );
           })}
           {options.length === 0 && (
-            <div className={cx('px-3 py-2 text-xs', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+            <div className={cx('px-3 py-2 text-xs', isDarkTheme ? 'text-stone-400' : 'text-slate-500')}>
               Nenhuma opção disponível
             </div>
           )}

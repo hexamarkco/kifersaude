@@ -18,23 +18,23 @@ export const panelButtonBaseClass =
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary:
-    'border-amber-200/92 bg-amber-950/16 text-amber-800 shadow-sm hover:border-amber-100/96 hover:bg-amber-950/24 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/16',
+    'border-amber-300/90 bg-amber-100/80 text-amber-900 shadow-sm hover:border-amber-400/90 hover:bg-amber-200/75 hover:text-amber-950 focus-visible:ring-amber-500 disabled:hover:bg-amber-100/80',
   secondary:
     'border-slate-300/90 bg-white/85 text-slate-800 shadow-sm hover:border-slate-400/75 hover:bg-white hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-white/85',
   ghost:
     'border-transparent bg-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
   danger:
-    'border-red-200/92 bg-red-950/16 text-red-800 shadow-sm hover:border-red-100/96 hover:bg-red-950/24 hover:text-red-900 focus-visible:ring-red-500 disabled:hover:bg-red-950/16',
+    'border-red-300/90 bg-red-100/80 text-red-900 shadow-sm hover:border-red-400/90 hover:bg-red-200/75 hover:text-red-950 focus-visible:ring-red-500 disabled:hover:bg-red-100/80',
   icon:
     'border-transparent bg-transparent text-slate-600 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
   info:
-    'border-blue-200/92 bg-blue-950/16 text-blue-800 shadow-sm hover:border-blue-100/96 hover:bg-blue-950/24 hover:text-blue-900 focus-visible:ring-blue-500 disabled:hover:bg-blue-950/16',
+    'border-blue-300/90 bg-blue-100/80 text-blue-900 shadow-sm hover:border-blue-400/90 hover:bg-blue-200/75 hover:text-blue-950 focus-visible:ring-blue-500 disabled:hover:bg-blue-100/80',
   success:
-    'border-emerald-200/92 bg-emerald-950/16 text-emerald-800 shadow-sm hover:border-emerald-100/96 hover:bg-emerald-950/24 hover:text-emerald-900 focus-visible:ring-emerald-500 disabled:hover:bg-emerald-950/16',
+    'border-emerald-300/90 bg-emerald-100/80 text-emerald-900 shadow-sm hover:border-emerald-400/90 hover:bg-emerald-200/75 hover:text-emerald-950 focus-visible:ring-emerald-500 disabled:hover:bg-emerald-100/80',
   warning:
-    'border-amber-200/92 bg-amber-950/18 text-amber-900 shadow-sm hover:border-amber-100/96 hover:bg-amber-950/28 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/18',
+    'border-amber-400/90 bg-amber-200/80 text-amber-950 shadow-sm hover:border-amber-500/85 hover:bg-amber-300/75 focus-visible:ring-amber-500 disabled:hover:bg-amber-200/80',
   soft:
-    'border-amber-200/90 bg-amber-950/12 text-amber-800 shadow-sm hover:border-amber-100/95 hover:bg-amber-950/20 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-950/12',
+    'border-amber-300/88 bg-amber-50/95 text-amber-800 shadow-sm hover:border-amber-400/85 hover:bg-amber-100/85 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-50/95',
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {

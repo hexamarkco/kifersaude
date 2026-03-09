@@ -127,7 +127,7 @@ export default function OperadorasTab() {
       overlayLabel="Atualizando operadoras..."
       stageClassName="min-h-[420px]"
     >
-    <div className="space-y-6">
+    <div className="panel-page-shell space-y-6">
       {message && (
         <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
           message.type === 'success'
@@ -146,7 +146,7 @@ export default function OperadorasTab() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <Building2 className="w-6 h-6 text-teal-600" />
+            <Building2 className="w-6 h-6 text-amber-600" />
             <h3 className="text-xl font-semibold text-slate-900">Operadoras de Saúde</h3>
           </div>
           <Button
@@ -329,7 +329,7 @@ export default function OperadorasTab() {
                     onClick={() => handleEdit(operadora)}
                     variant="icon"
                     size="icon"
-                    className="h-8 w-8 text-teal-600 hover:bg-teal-50"
+                    className="h-8 w-8 text-amber-600 hover:bg-amber-50"
                     title="Editar"
                   >
                     <Edit2 className="w-4 h-4" />

@@ -297,7 +297,7 @@ const handleDeleteUser = async (userId: string) => {
       overlayLabel="Atualizando usuarios..."
       stageClassName="min-h-[420px]"
     >
-    <div className="space-y-6">
+    <div className="panel-page-shell space-y-6">
       {message && (
         <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
           message.type === 'success'
@@ -316,7 +316,7 @@ const handleDeleteUser = async (userId: string) => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <Users className="w-6 h-6 text-teal-600" />
+            <Users className="w-6 h-6 text-amber-600" />
             <h3 className="text-xl font-semibold text-slate-900">Usuários do Sistema</h3>
           </div>
           <Button
@@ -503,7 +503,7 @@ const handleDeleteUser = async (userId: string) => {
                 className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
                     <UserIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>

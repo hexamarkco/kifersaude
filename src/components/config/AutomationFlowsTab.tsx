@@ -2,7 +2,7 @@ import AutoContactFlowSettings from './AutoContactFlowSettings';
 
 export default function AutomationFlowsTab() {
   return (
-    <div className="space-y-6">
+    <div className="panel-page-shell space-y-6">
       <div>
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-slate-900">Fluxos de automacao</h2>

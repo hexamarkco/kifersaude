@@ -4,7 +4,6 @@ import {
   EyeOff,
   Info,
   KeyRound,
-  Loader2,
   Plug,
   Save,
   ShieldCheck,
@@ -16,6 +15,8 @@ import { configService } from '../../lib/configService';
 import type { IntegrationSetting } from '../../lib/supabase';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
 import FilterSingleSelect from '../FilterSingleSelect';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { IntegrationsSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -562,7 +563,7 @@ export default function IntegrationsTab() {
       overlayLabel="Atualizando integracoes..."
       stageClassName="min-h-[460px]"
     >
-      <div className="space-y-8">
+      <div className="panel-page-shell space-y-8">
         <div>
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-slate-900">Integracoes de IA</h2>
@@ -680,7 +681,7 @@ export default function IntegrationsTab() {
 
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Modelo padrao (transcricao)</label>
-                      <input
+                      <Input
                         type="text"
                         value={formState.defaultModelTranscription}
                         onChange={(event) =>
@@ -692,21 +693,19 @@ export default function IntegrationsTab() {
                             },
                           }))
                         }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="Modelo para transcricao"
                       />
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
-                    <button
+                    <Button
                       onClick={() => handleSaveProvider(provider)}
-                      disabled={savingAiProvider[provider]}
-                      className="inline-flex items-center space-x-2 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                      loading={savingAiProvider[provider]}
                     >
-                      {savingAiProvider[provider] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {!savingAiProvider[provider] && <Save className="w-4 h-4" />}
                       <span>{savingAiProvider[provider] ? 'Salvando...' : `Salvar ${providerMeta.name}`}</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -756,7 +755,7 @@ export default function IntegrationsTab() {
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">Modelo</label>
-                          <input
+                          <Input
                             type="text"
                             value={routeState.model}
                             onChange={(event) =>
@@ -768,7 +767,7 @@ export default function IntegrationsTab() {
                                 },
                               }))
                             }
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                            size="compact"
                             placeholder="Modelo para esta funcionalidade"
                           />
                         </div>
@@ -797,14 +796,13 @@ export default function IntegrationsTab() {
               </div>
 
               <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
-                <button
+                <Button
                   onClick={handleSaveRouting}
-                  disabled={savingAiRouting}
-                  className="inline-flex items-center space-x-2 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                  loading={savingAiRouting}
                 >
-                  {savingAiRouting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {!savingAiRouting && <Save className="w-4 h-4" />}
                   <span>{savingAiRouting ? 'Salvando...' : 'Salvar roteamento de IA'}</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -856,24 +854,25 @@ export default function IntegrationsTab() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Pixel ID</label>
-                <input
+                <Input
                   type="text"
                   value={metaPixelId}
                   onChange={(event) => setMetaPixelId(event.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="focus:ring-orange-500"
                   placeholder="1234567890"
                 />
                 <p className="text-xs text-slate-500 mt-2">Ex: 1234567890 (somente numeros)</p>
               </div>
 
-              <button
+              <Button
                 onClick={handleSaveMetaPixel}
-                disabled={savingMetaPixel}
-                className="mt-4 w-full inline-flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                loading={savingMetaPixel}
+                fullWidth
+                className="mt-4 border-amber-500 bg-amber-600 text-white hover:border-amber-600 hover:bg-amber-700"
               >
-                <Save className="w-4 h-4" />
+                {!savingMetaPixel && <Save className="w-4 h-4" />}
                 <span>{savingMetaPixel ? 'Salvando...' : 'Salvar Meta Pixel'}</span>
-              </button>
+              </Button>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -901,24 +900,25 @@ export default function IntegrationsTab() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">GTM ID</label>
-                <input
+                <Input
                   type="text"
                   value={gtmId}
                   onChange={(event) => setGtmId(event.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="focus:ring-orange-500"
                   placeholder="GTM-XXXXXXX"
                 />
                 <p className="text-xs text-slate-500 mt-2">Ex: GTM-ABC123D</p>
               </div>
 
-              <button
+              <Button
                 onClick={handleSaveGtm}
-                disabled={savingGtm}
-                className="mt-4 w-full inline-flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                loading={savingGtm}
+                fullWidth
+                className="mt-4 border-amber-500 bg-amber-600 text-white hover:border-amber-600 hover:bg-amber-700"
               >
-                <Save className="w-4 h-4" />
+                {!savingGtm && <Save className="w-4 h-4" />}
                 <span>{savingGtm ? 'Salvando...' : 'Salvar GTM'}</span>
-              </button>
+              </Button>
             </div>
           </div>
 

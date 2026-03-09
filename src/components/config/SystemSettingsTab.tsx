@@ -320,7 +320,7 @@ export default function SystemSettingsTab() {
       overlayLabel="Atualizando configuracoes do sistema..."
       stageClassName="min-h-[440px]"
     >
-      <div className="space-y-6">
+      <div className="panel-page-shell space-y-6">
         {message && (
           <div
             className={`flex items-center space-x-3 rounded-lg border p-4 ${

@@ -494,7 +494,7 @@ export function MessageBubble({
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="block w-[min(360px,72vw)] max-w-full rounded-xl overflow-hidden"
+              className="block w-[min(420px,85vw)] max-w-full rounded-xl overflow-hidden"
             >
               <img
                 src={displayUrl}
@@ -541,7 +541,7 @@ export function MessageBubble({
       return (
         <div className="space-y-2">
           {videoUrl ? (
-            <div className="w-[min(360px,72vw)] max-w-full rounded-xl overflow-hidden bg-black">
+            <div className="w-[min(420px,85vw)] max-w-full rounded-xl overflow-hidden bg-black">
               <video
                 src={videoUrl}
                 controls

@@ -987,11 +987,17 @@ export function MessageBubble({
           </div>
         </div>
 
-        {showActionMenu && hasActionMenu && (
+        {hasActionMenu && (
           <div
             ref={actionMenuRef}
-            className={`message-bubble-action-menu absolute right-0 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl ${
-              actionMenuOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+            className={`message-bubble-action-menu absolute right-0 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
+              actionMenuOpenUpward ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'
+            } ${
+              showActionMenu
+                ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+                : actionMenuOpenUpward
+                  ? 'pointer-events-none -translate-y-1 scale-95 opacity-0'
+                  : 'pointer-events-none translate-y-1 scale-95 opacity-0'
             }`}
           >
             {canReact && (

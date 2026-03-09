@@ -81,7 +81,7 @@ export default function ModalShell({
   return createPortal(
     <div className={cx('modal-theme-host painel-theme', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
       <div
-        className="fixed inset-0 z-[80] bg-slate-950/55 backdrop-blur-sm"
+        className="fixed inset-0 z-[80] bg-stone-950/60 backdrop-blur-sm"
         aria-hidden="true"
         onClick={() => {
           if (closeOnOverlay) {
@@ -96,14 +96,14 @@ export default function ModalShell({
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descriptionId : undefined}
           className={cx(
-            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-slate-200 sm:max-h-[calc(100dvh-3rem)]',
+            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-amber-200 sm:max-h-[calc(100dvh-3rem)]',
             sizeClasses[size],
             panelClassName,
           )}
           onClick={(event) => event.stopPropagation()}
         >
           {(title || description || showCloseButton) && (
-            <header className="relative border-b border-slate-200 px-5 py-4 sm:px-6">
+            <header className="relative border-b border-amber-200 px-5 py-4 sm:px-6">
               {title && (
                 <h2 id={titleId} className="pr-10 text-base font-semibold text-slate-900 sm:text-lg">
                   {title}
@@ -116,15 +116,15 @@ export default function ModalShell({
               )}
 
               {showCloseButton && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="absolute right-3 top-3 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Fechar modal"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-3 top-3 rounded-lg p-2 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-700"
+                    aria-label="Fechar modal"
+                  >
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                )}
             </header>
           )}
 
@@ -132,7 +132,7 @@ export default function ModalShell({
             {children}
           </div>
 
-          {footer && <footer className="border-t border-slate-200 px-5 py-4 sm:px-6">{footer}</footer>}
+          {footer && <footer className="border-t border-amber-200 px-5 py-4 sm:px-6">{footer}</footer>}
         </section>
       </div>
     </div>,

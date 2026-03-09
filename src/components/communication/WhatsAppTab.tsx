@@ -151,6 +151,8 @@ type SyncAllChatsProgress = {
   total: number;
   completed: number;
   failed: number;
+  currentChatId: string | null;
+  currentChatName: string | null;
 };
 
 const REMINDER_QUICK_OPEN_PERIODS: Array<{
@@ -314,6 +316,8 @@ export default function WhatsAppTab() {
     total: 0,
     completed: 0,
     failed: 0,
+    currentChatId: null,
+    currentChatName: null,
   });
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
@@ -2149,13 +2153,31 @@ export default function WhatsAppTab() {
     }
 
     setIsSyncingAllChats(true);
-    setSyncAllChatsProgress({ total: chatIds.length, completed: 0, failed: 0 });
+    setSyncAllChatsProgress({
+      total: chatIds.length,
+      completed: 0,
+      failed: 0,
+      currentChatId: null,
+      currentChatName: null,
+    });
 
     let failed = 0;
+    const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
     try {
       for (let index = 0; index < chatIds.length; index += 1) {
         const chatId = chatIds[index];
+        const currentChat = chatsRef.current.find((chat) => chat.id === chatId);
+        const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
+
+        setSyncAllChatsProgress((prev) => ({
+          ...prev,
+          total: chatIds.length,
+          currentChatId: chatId,
+          currentChatName,
+        }));
+        await yieldProgressFrame();
+
         const { error } = await supabase.functions.invoke('whatsapp-sync', {
           body: { chatId, count: 200 },
         });
@@ -2165,11 +2187,15 @@ export default function WhatsAppTab() {
           console.error('Erro ao sincronizar chat:', chatId, error);
         }
 
-        setSyncAllChatsProgress({
+        setSyncAllChatsProgress((prev) => ({
+          ...prev,
           total: chatIds.length,
           completed: index + 1,
           failed,
-        });
+          currentChatId: chatId,
+          currentChatName,
+        }));
+        await yieldProgressFrame();
       }
 
       await loadChats();
@@ -2184,6 +2210,11 @@ export default function WhatsAppTab() {
       console.error('Erro ao sincronizar todos os chats:', error);
     } finally {
       setIsSyncingAllChats(false);
+      setSyncAllChatsProgress((prev) => ({
+        ...prev,
+        currentChatId: null,
+        currentChatName: null,
+      }));
     }
   };
 
@@ -2786,9 +2817,33 @@ export default function WhatsAppTab() {
 
   const filteredContacts = useMemo(() => {
     const query = newChatSearch.trim().toLowerCase();
-    const source = contactsList.filter((contact) => contact.saved);
+    const queryDigits = query.replace(/\D/g, '');
+
+    const source = contactsList
+      .filter((contact) => {
+        const normalizedId = normalizeChatId(contact.id || '');
+        return getWhatsAppChatKind(normalizedId || contact.id || '') === 'direct';
+      })
+      .sort((left, right) => {
+        if (left.saved !== right.saved) {
+          return left.saved ? -1 : 1;
+        }
+
+        return (left.name || left.id).localeCompare(right.name || right.id, 'pt-BR', { sensitivity: 'base' });
+      });
+
     if (!query) return source;
-    return source.filter((contact) => (contact.name || contact.id).toLowerCase().includes(query));
+
+    return source.filter((contact) => {
+      const searchable = `${contact.name || ''} ${contact.pushname || ''} ${contact.id || ''}`.toLowerCase();
+      if (searchable.includes(query)) return true;
+
+      if (queryDigits.length >= 3) {
+        return getPhoneDigits(contact.id).includes(queryDigits);
+      }
+
+      return false;
+    });
   }, [contactsList, newChatSearch]);
 
   const templateVariablesForInput = useMemo(() => {

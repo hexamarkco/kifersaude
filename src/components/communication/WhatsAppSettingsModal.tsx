@@ -11,6 +11,8 @@ type SyncAllChatsProgress = {
   total: number;
   completed: number;
   failed: number;
+  currentChatId: string | null;
+  currentChatName: string | null;
 };
 
 type WhatsAppSettingsModalProps = {
@@ -70,6 +72,16 @@ export default function WhatsAppSettingsModal({
     return Math.round((syncAllChatsProgress.completed / syncAllChatsProgress.total) * 100);
   }, [syncAllChatsProgress.completed, syncAllChatsProgress.total]);
 
+  const syncingChatLabel = useMemo(() => {
+    const chatName = syncAllChatsProgress.currentChatName?.trim();
+    if (chatName) return chatName;
+
+    const chatId = syncAllChatsProgress.currentChatId?.trim();
+    if (chatId) return chatId;
+
+    return null;
+  }, [syncAllChatsProgress.currentChatId, syncAllChatsProgress.currentChatName]);
+
   return (
     <ModalShell
       isOpen={isOpen}
@@ -120,6 +132,9 @@ export default function WhatsAppSettingsModal({
                       {syncAllChatsProgress.completed}/{syncAllChatsProgress.total} concluido(s)
                     </span>
                     {syncAllChatsProgress.failed > 0 && <span>{syncAllChatsProgress.failed} com falha</span>}
+                  </div>
+                  <div className="mt-1 truncate text-[11px] text-teal-800/90">
+                    {syncingChatLabel ? `Sincronizando agora: ${syncingChatLabel}` : 'Preparando proximo chat...'}
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-teal-100">
                     <div

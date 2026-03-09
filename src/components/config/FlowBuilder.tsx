@@ -36,6 +36,8 @@ import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
+import Input from '../ui/Input';
+import Textarea from '../ui/Textarea';
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -956,14 +958,14 @@ export default function FlowBuilder({
                 {selectedNode.data.triggerType === 'status_duration' && (
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">Tempo no status (horas)</label>
-                    <input
+                    <Input
                       type="number"
                       min={1}
                       value={selectedNode.data.triggerDurationHours ?? 24}
                       onChange={(event) =>
                         updateSelectedNode({ triggerDurationHours: Number(event.target.value) })
                       }
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      size="compact"
                     />
                     <div className="text-[10px] text-slate-400 mt-1">
                       O fluxo será executado quando o lead estiver há mais de X horas neste(s) status
@@ -1070,7 +1072,7 @@ export default function FlowBuilder({
                               ]}
                             />
                           ) : (
-                            <input
+                            <Input
                               type="text"
                               value={condition.value}
                               onChange={(event) => {
@@ -1078,30 +1080,29 @@ export default function FlowBuilder({
                                 nextConditions[index] = { ...condition, value: event.target.value };
                                 updateSelectedNode({ conditions: nextConditions });
                               }}
-                              className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                              size="compact"
                             />
                           )}
                         </>
                       )}
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-slate-400">Condicao {index + 1}</span>
-                        <button
-                          type="button"
+                        <Button
                           onClick={() => {
                             const nextConditions = [...(selectedNode.data.conditions ?? [])];
                             nextConditions.splice(index, 1);
                             updateSelectedNode({ conditions: nextConditions });
                           }}
-                          className="text-[11px] text-red-500 hover:text-red-600"
+                          variant="danger"
+                          size="sm"
                         >
                           Remover
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
-                <button
-                  type="button"
+                <Button
                   onClick={() => {
                     const nextConditions = [...(selectedNode.data.conditions ?? [])];
                     nextConditions.push({
@@ -1112,31 +1113,35 @@ export default function FlowBuilder({
                     });
                     updateSelectedNode({ conditions: nextConditions });
                   }}
-                  className="w-full px-3 py-2 text-xs border border-dashed border-slate-200 rounded-lg text-slate-500"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                 >
                   + Adicionar condicao
-                </button>
+                </Button>
                 <div className="text-[11px] text-slate-400">
                   Use formulas iniciando com '=' (ex.: =len(lead.telefone)&gt;10).
                 </div>
-                <button
-                  type="button"
+                <Button
                   onClick={addConditionAfterSelected}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg text-slate-600"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                 >
                   + Condicao abaixo
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   onClick={() => {
                     setEdges((current) => current.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
                     setNodes((current) => current.filter((node) => node.id !== selectedNode.id));
                     setSelectedNodeId(null);
                   }}
-                  className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg text-red-600"
+                  variant="danger"
+                  size="sm"
+                  fullWidth
                 >
                   Remover bloco de condicao
-                </button>
+                </Button>
               </div>
             )}
 
@@ -1145,12 +1150,12 @@ export default function FlowBuilder({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">Esperar</label>
-                    <input
+                    <Input
                       type="number"
                       min={0}
                       value={selectedNode.data.step?.delayValue ?? 0}
                       onChange={(event) => updateSelectedStep({ delayValue: Number(event.target.value) })}
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      size="compact"
                     />
                   </div>
                   <div>
@@ -1174,24 +1179,24 @@ export default function FlowBuilder({
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block text-[11px] text-slate-500">Formula de delay (opcional)</label>
-                    <button
-                      type="button"
+                    <Button
                       onClick={() =>
                         updateSelectedStep({
                           delayExpression: selectedNode.data.step?.delayExpression ? '' : '=1',
                         })
                       }
-                      className="text-[11px] text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="sm"
                     >
                       {selectedNode.data.step?.delayExpression ? 'Remover formula' : 'Usar formula'}
-                    </button>
+                    </Button>
                   </div>
                   {selectedNode.data.step?.delayExpression && (
-                    <input
+                    <Input
                       type="text"
                       value={selectedNode.data.step.delayExpression}
                       onChange={(event) => updateSelectedStep({ delayExpression: event.target.value })}
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                      size="compact"
                       placeholder="=if(len(lead.telefone)>10, 2, 6)"
                     />
                   )}
@@ -1319,31 +1324,31 @@ export default function FlowBuilder({
                   <div className="space-y-2">
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Título</label>
-                      <input
+                      <Input
                         type="text"
                         value={selectedNode.data.step?.taskTitle ?? ''}
                         onChange={(event) => updateSelectedStep({ taskTitle: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Descrição</label>
-                      <textarea
+                      <Textarea
                         rows={3}
                         value={selectedNode.data.step?.taskDescription ?? ''}
                         onChange={(event) => updateSelectedStep({ taskDescription: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Vencimento (h)</label>
-                        <input
+                        <Input
                           type="number"
                           min={0}
                           value={selectedNode.data.step?.taskDueHours ?? ''}
                           onChange={(event) => updateSelectedStep({ taskDueHours: Number(event.target.value) })}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                          size="compact"
                         />
                       </div>
                       <div>
@@ -1375,29 +1380,29 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Para</label>
-                      <input
+                      <Input
                         type="text"
                         value={selectedNode.data.step?.emailTo ?? ''}
                         onChange={(event) => updateSelectedStep({ emailTo: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Assunto</label>
-                      <input
+                      <Input
                         type="text"
                         value={selectedNode.data.step?.emailSubject ?? ''}
                         onChange={(event) => updateSelectedStep({ emailSubject: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Corpo</label>
-                      <textarea
+                      <Textarea
                         rows={3}
                         value={selectedNode.data.step?.emailBody ?? ''}
                         onChange={(event) => updateSelectedStep({ emailBody: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                   </div>
@@ -1407,11 +1412,11 @@ export default function FlowBuilder({
                   <div className="space-y-2">
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">URL</label>
-                      <input
+                      <Input
                         type="text"
                         value={selectedNode.data.step?.webhookUrl ?? ''}
                         onChange={(event) => updateSelectedStep({ webhookUrl: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -1438,21 +1443,21 @@ export default function FlowBuilder({
                       </div>
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Headers (JSON)</label>
-                        <input
+                        <Input
                           type="text"
                           value={selectedNode.data.step?.webhookHeaders ?? ''}
                           onChange={(event) => updateSelectedStep({ webhookHeaders: event.target.value })}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                          size="compact"
                         />
                       </div>
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Body</label>
-                      <textarea
+                      <Textarea
                         rows={3}
                         value={selectedNode.data.step?.webhookBody ?? ''}
                         onChange={(event) => updateSelectedStep({ webhookBody: event.target.value })}
-                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                        size="compact"
                       />
                     </div>
                   </div>

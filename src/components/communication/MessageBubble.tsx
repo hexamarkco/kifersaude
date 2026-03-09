@@ -875,7 +875,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
+      className={`message-bubble-row flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
     >
       <div className={`relative ${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
@@ -933,9 +933,10 @@ export function MessageBubble({
                 </span>
               )}
               {hasActionMenu && (
-                <button
+                <Button
                   ref={actionMenuButtonRef}
-                  type="button"
+                  variant="icon"
+                  size="icon"
                   aria-label="Abrir menu da mensagem"
                   aria-expanded={showActionMenu}
                   onClick={() => {
@@ -947,14 +948,14 @@ export function MessageBubble({
                       return next;
                     });
                   }}
-                  className={`inline-flex h-4 w-4 items-center justify-center rounded text-gray-500 transition-colors transition-opacity ${
+                  className={`message-bubble-action-trigger h-4 w-4 rounded border-0 p-0 text-gray-500 shadow-none transition-colors transition-opacity ${
                     showActionMenu
                       ? 'opacity-100 pointer-events-auto bg-black/5'
                       : 'opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-black/5'
                   }`}
                 >
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showActionMenu ? 'rotate-180' : ''}`} />
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -963,78 +964,83 @@ export function MessageBubble({
         {showActionMenu && hasActionMenu && (
           <div
             ref={actionMenuRef}
-            className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
+            className="message-bubble-action-menu absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
           >
             {canReact && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowReactionPicker((previous) => !previous)}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
                 <Smile className="h-4 w-4 text-slate-500" />
                 <span>Reagir</span>
-              </button>
+              </Button>
             )}
 
             {canReact && showReactionPicker && (
               <div className="mx-1 mb-1 mt-0.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-1">
                 <div className="flex items-center justify-between gap-0.5">
                   {quickReactions.map((emoji) => (
-                    <button
+                    <Button
                       key={`${id}-${emoji}`}
-                      type="button"
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-white"
+                      variant="icon"
+                      size="icon"
+                      className="message-bubble-emoji-button h-7 w-7 rounded-full border-0 p-0 text-base shadow-none hover:bg-white"
                       onClick={() => {
                         onReact?.(id, emoji);
                         closeActionMenu();
                       }}
                     >
                       {emoji}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
             )}
 
             {canReply && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   onReply?.(id, body || '', fromName || 'Contato');
                   closeActionMenu();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
                 Responder
-              </button>
+              </Button>
             )}
 
             {canEditMessage && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   onEdit?.(id, body || '');
                   closeActionMenu();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
                 <Edit3 className="h-4 w-4 text-slate-500" />
                 <span>Editar</span>
-              </button>
+              </Button>
             )}
 
             {canViewHistory && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setShowHistory(true);
                   closeActionMenu();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-amber-700 hover:bg-amber-50"
+                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-amber-700 shadow-none hover:bg-amber-50 hover:text-amber-800"
               >
                 <History className="h-4 w-4 text-amber-700" />
                 <span>Ver histórico</span>
-              </button>
+              </Button>
             )}
           </div>
         )}

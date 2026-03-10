@@ -1458,7 +1458,7 @@ export default function WhatsAppTab() {
           last_message_at: row.last_message_at ?? null,
           created_at: row.created_at ?? new Date().toISOString(),
           updated_at: row.updated_at ?? new Date().toISOString(),
-          last_message: sanitizeTechnicalCiphertextPreview(row.last_message),
+          last_message: sanitizeTechnicalCiphertextPreview(row.last_message) || null,
           unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
           archived: row.archived ?? false,
           mute_until: row.mute_until ?? null,
@@ -1808,160 +1808,6 @@ export default function WhatsAppTab() {
       .sort(sortChatsByLatest);
   };
 
-  const fetchChatPreviews = async (chatBatch: WhatsAppChat[]) => {
-    const previewsById = new Map<string, string>();
-    const missingChatIds = new Set<string>();
-
-    const chunkResults = await Promise.all(
-      chatBatch.map(async (chat) => {
-        const variants = getChatIdVariants(chat);
-        const { data: lastMessages, error } = await supabase
-          .from('whatsapp_messages')
-          .select('body, type, has_media, payload, timestamp, created_at, is_deleted')
-          .in('chat_id', variants)
-          .order('timestamp', { ascending: false, nullsFirst: false })
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (error || !lastMessages || lastMessages.length === 0) {
-          return { chatId: chat.id, preview: null };
-        }
-
-        const preview = lastMessages
-          .map((message) => getMessagePreview(message as WhatsAppMessage))
-          .find((value): value is string => Boolean(value)) ?? null;
-
-        return { chatId: chat.id, preview };
-      }),
-    );
-
-    chunkResults.forEach((result) => {
-      if (!result?.preview) {
-        missingChatIds.add(result.chatId);
-        return;
-      }
-
-      previewsById.set(result.chatId, result.preview);
-    });
-
-    return { previewsById, missingChatIds };
-  };
-
-  const silentlySyncChatFromRealtime = async (chatId: string) => {
-    const normalizedChatId = normalizeChatId(chatId);
-    if (getWhatsAppChatKind(normalizedChatId) !== 'direct') return;
-    if (silentRealtimeSyncInFlightRef.current.has(normalizedChatId)) return;
-    if (syncingChatId || isSyncingAllChats) return;
-
-    const lastSyncAt = lastSilentRealtimeSyncAtRef.current.get(normalizedChatId) ?? 0;
-    if (Date.now() - lastSyncAt < 45_000) return;
-
-    lastSilentRealtimeSyncAtRef.current.set(normalizedChatId, Date.now());
-    silentRealtimeSyncInFlightRef.current.add(normalizedChatId);
-
-    try {
-      const { error } = await supabase.functions.invoke('whatsapp-sync', {
-        body: { chatId: normalizedChatId, count: 40 },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      const activeChat = selectedChatRef.current;
-      if (activeChat && getChatIdVariants(activeChat).includes(normalizedChatId)) {
-        void loadMessages(activeChat, { silent: true });
-      }
-    } catch (error) {
-      console.error('Erro ao sincronizar chat em fallback realtime:', error);
-    } finally {
-      silentRealtimeSyncInFlightRef.current.delete(normalizedChatId);
-    }
-  };
-
-  const hydrateChatPreviewsByIds = async (chatIds: string[], options?: { allowSilentSync?: boolean }) => {
-    const requestedIds = Array.from(new Set(chatIds.filter(Boolean)));
-    if (requestedIds.length === 0) return;
-
-    const loadId = activeChatsLoadIdRef.current;
-    const snapshot = chatsRef.current.filter((chat) => requestedIds.includes(chat.id));
-    const chatsToHydrate = snapshot.filter((chat) => Boolean(chat.last_message_at) && !chat.last_message).slice(0, 40);
-    if (chatsToHydrate.length === 0) return;
-
-    const { previewsById, missingChatIds } = await fetchChatPreviews(chatsToHydrate);
-    if (activeChatsLoadIdRef.current !== loadId) {
-      return;
-    }
-
-    if (previewsById.size > 0) {
-      setChats((prev) =>
-        prev.map((chat) => {
-          const preview = previewsById.get(chat.id);
-          if (!preview || chat.last_message === preview) return chat;
-          return { ...chat, last_message: preview };
-        }),
-      );
-    }
-
-    if (options?.allowSilentSync) {
-      const syncCandidates = chatsToHydrate.filter((chat) => missingChatIds.has(chat.id));
-      await Promise.all(syncCandidates.map(async (chat) => {
-        const lastMessageAt = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
-        if (!lastMessageAt || Date.now() - lastMessageAt > 10 * 60 * 1000) return;
-        await silentlySyncChatFromRealtime(chat.id);
-      }));
-    }
-  };
-
-  const queueChatPreviewHydration = (chatId: string, options?: { allowSilentSync?: boolean }) => {
-    if (!chatId) return;
-    pendingPreviewHydrationChatIdsRef.current.add(chatId);
-
-    if (previewHydrationTimeoutRef.current !== null) {
-      return;
-    }
-
-    previewHydrationTimeoutRef.current = window.setTimeout(() => {
-      previewHydrationTimeoutRef.current = null;
-      const chatIdsToHydrate = Array.from(pendingPreviewHydrationChatIdsRef.current);
-      pendingPreviewHydrationChatIdsRef.current.clear();
-      void hydrateChatPreviewsByIds(chatIdsToHydrate, options);
-    }, 600);
-  };
-
-  const hydrateMissingChatPreviews = async (snapshot: WhatsAppChat[], loadId: number) => {
-    const chatsToHydrate = snapshot.filter((chat) => Boolean(chat.last_message_at) && !chat.last_message).slice(0, 120);
-    if (chatsToHydrate.length === 0) return;
-
-    const previewsById = new Map<string, string>();
-    const chunkSize = 20;
-
-    for (let index = 0; index < chatsToHydrate.length; index += chunkSize) {
-      const chunk = chatsToHydrate.slice(index, index + chunkSize);
-      const { previewsById: chunkPreviews } = await fetchChatPreviews(chunk);
-
-      if (activeChatsLoadIdRef.current !== loadId) {
-        return;
-      }
-
-      chunkPreviews.forEach((preview, chatId) => {
-        previewsById.set(chatId, preview);
-      });
-    }
-
-    if (activeChatsLoadIdRef.current !== loadId || previewsById.size === 0) {
-      return;
-    }
-
-    setChats((prev) =>
-      prev.map((chat) => {
-        const preview = previewsById.get(chat.id);
-        if (!preview || chat.last_message) return chat;
-        return { ...chat, last_message: preview };
-      }),
-    );
-  };
-
   const loadChats = async () => {
     activeChatsLoadIdRef.current += 1;
     const currentLoadId = activeChatsLoadIdRef.current;
@@ -1992,7 +1838,7 @@ export default function WhatsAppTab() {
             last_message_at: lastMessageAt,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            last_message: '',
+            last_message: null,
             unread_count: chat.unread_count ?? 0,
             archived: chat.archived ?? false,
             mute_until: muteUntil,
@@ -2001,7 +1847,7 @@ export default function WhatsAppTab() {
       } else {
         incomingChats = (data as WhatsAppChat[]).map((chat) => ({
           ...chat,
-          last_message: sanitizeTechnicalCiphertextPreview(chat.last_message),
+          last_message: sanitizeTechnicalCiphertextPreview(chat.last_message) || null,
         }));
       }
 
@@ -2018,7 +1864,6 @@ export default function WhatsAppTab() {
       void loadUnreadCounts();
       void loadGroupNames(mergedChats);
       void loadNewsletterNames(mergedChats);
-      void hydrateMissingChatPreviews(mergedChats, currentLoadId);
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -2328,12 +2173,13 @@ export default function WhatsAppTab() {
       });
 
       setChats((prev) => {
+        const preview = getMessagePreview(nextMessage);
         const updated = prev.map((chat) => {
           const variants = getChatIdVariants(chat);
           if (!variants.includes(message.chat_id)) return chat;
           return {
             ...chat,
-            last_message: message.body || chat.last_message,
+            last_message: preview || chat.last_message,
             last_message_at: timestamp,
           };
         });
@@ -3522,7 +3368,7 @@ export default function WhatsAppTab() {
       last_message_at: null,
       created_at: now,
       updated_at: now,
-      last_message: '',
+      last_message: null,
       unread_count: 0,
     };
 

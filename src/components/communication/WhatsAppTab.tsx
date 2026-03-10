@@ -373,6 +373,7 @@ export default function WhatsAppTab() {
   const notificationAudioRef = useRef<AudioContext | null>(null);
   const activeDesktopNotificationRef = useRef<Notification | null>(null);
   const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
+  const autoSyncSelectedChatInFlightRef = useRef(false);
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
@@ -1601,6 +1602,50 @@ export default function WhatsAppTab() {
 
     return () => window.clearInterval(intervalId);
   }, [selectedChat]);
+
+  useEffect(() => {
+    if (!selectedChat) {
+      autoSyncSelectedChatInFlightRef.current = false;
+      return;
+    }
+
+    const runAutoSync = async () => {
+      const activeChat = selectedChatRef.current;
+      if (!activeChat) return;
+      if (getChatKind(activeChat) !== 'direct') return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (autoSyncSelectedChatInFlightRef.current || syncingChatId || isSyncingAllChats) return;
+
+      autoSyncSelectedChatInFlightRef.current = true;
+      try {
+        const { error } = await supabase.functions.invoke('whatsapp-sync', {
+          body: { chatId: activeChat.id, count: 120 },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (selectedChatRef.current?.id === activeChat.id) {
+          await loadMessages(activeChat, { silent: true });
+          scheduleUnreadCountsRefresh(50);
+        }
+      } catch (error) {
+        console.error('Error auto-syncing selected chat:', error);
+      } finally {
+        autoSyncSelectedChatInFlightRef.current = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void runAutoSync();
+    }, 25000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      autoSyncSelectedChatInFlightRef.current = false;
+    };
+  }, [selectedChat?.id, syncingChatId, isSyncingAllChats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (skipNextAutoScrollRef.current) {

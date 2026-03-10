@@ -102,6 +102,28 @@ export function calculateSnoozeTime(option: 'minutes-15' | 'minutes-30' | 'hour-
   return now.toISOString();
 }
 
+export function addBusinessDaysSkippingWeekends(source: Date | string, businessDays: number): Date {
+  const parsedSource = source instanceof Date ? new Date(source) : new Date(source);
+  const nextDate = Number.isNaN(parsedSource.getTime()) ? new Date() : new Date(parsedSource);
+  nextDate.setSeconds(0, 0);
+
+  const totalBusinessDays = Number.isFinite(businessDays) ? Math.max(0, Math.floor(businessDays)) : 0;
+  if (totalBusinessDays === 0) {
+    return nextDate;
+  }
+
+  let remaining = totalBusinessDays;
+  while (remaining > 0) {
+    nextDate.setDate(nextDate.getDate() + 1);
+    const weekday = nextDate.getDay();
+    if (weekday !== 0 && weekday !== 6) {
+      remaining -= 1;
+    }
+  }
+
+  return nextDate;
+}
+
 export function getUrgencyLevel(reminder: Reminder): 'critical' | 'high' | 'medium' | 'low' {
   if (isOverdue(reminder.data_lembrete) && !reminder.lido) {
     return 'critical';

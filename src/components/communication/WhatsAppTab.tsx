@@ -19,6 +19,8 @@ import {
   Copy,
   RefreshCw,
   ChevronDown,
+  CalendarPlus,
+  Loader2,
 } from 'lucide-react';
 import { MessageInput, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +41,7 @@ import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
+import { addBusinessDaysSkippingWeekends } from '../../lib/reminderUtils';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
 import {
@@ -132,6 +135,8 @@ type ReminderQuickOpenItem = {
   title: string;
   type: string;
   priority: string;
+  contractId?: string | null;
+  description?: string | null;
   dueAt: string;
   leadId: string;
   leadName: string;
@@ -351,6 +356,10 @@ export default function WhatsAppTab() {
     () => new Set(),
   );
   const [markingReminderReadId, setMarkingReminderReadId] = useState<string | null>(null);
+  const [quickSchedulingReminderAction, setQuickSchedulingReminderAction] = useState<{
+    reminderId: string;
+    daysAhead: 1 | 2;
+  } | null>(null);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
   const [reminderSchedulerRequest, setReminderSchedulerRequest] = useState<{
     lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
@@ -3698,7 +3707,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     try {
       const { data: remindersData, error: remindersError } = await supabase
         .from('reminders')
-        .select('id, lead_id, contract_id, titulo, tipo, prioridade, data_lembrete, lido')
+        .select('id, lead_id, contract_id, titulo, tipo, prioridade, descricao, data_lembrete, lido')
         .eq('lido', false)
         .order('data_lembrete', { ascending: true })
         .limit(300);
@@ -3713,6 +3722,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           titulo?: string | null;
           tipo?: string | null;
           prioridade?: string | null;
+          descricao?: string | null;
           data_lembrete: string;
           lido?: boolean | null;
         }>) || [];
@@ -3812,6 +3822,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             title: reminder.titulo?.trim() || 'Lembrete sem titulo',
             type: reminder.tipo?.trim() || 'Outro',
             priority: reminder.prioridade?.trim() || 'normal',
+            contractId: reminder.contract_id ?? null,
+            description: reminder.descricao ?? null,
             dueAt: reminder.data_lembrete,
             leadId: resolvedLeadId,
             leadName: resolveReminderLeadName(lead?.name, reminder.titulo),
@@ -3923,25 +3935,107 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     };
   };
 
+  const markReminderQuickOpenItemAsRead = async (
+    item: ReminderQuickOpenItem,
+    options?: { syncLeadNextReturn?: boolean },
+  ) => {
+    const completedAt = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('reminders')
+      .update({ lido: true, concluido_em: completedAt })
+      .eq('id', item.id);
+
+    if (updateError) throw updateError;
+
+    if (options?.syncLeadNextReturn !== false) {
+      await syncLeadNextReturnFromUpcomingReminder(item.leadId);
+    }
+
+    setReminderQuickOpenItems((current) =>
+      current.filter((reminderItem) => reminderItem.id !== item.id),
+    );
+  };
+
+  const handleMarkReminderAsRead = async (item: ReminderQuickOpenItem) => {
+    if (markingReminderReadId === item.id) return;
+
+    setMarkingReminderReadId(item.id);
+
+    try {
+      await markReminderQuickOpenItemAsRead(item);
+    } catch (error) {
+      console.error('Erro ao marcar lembrete como lido no WhatsApp:', error);
+      alert('NÃ£o foi possÃ­vel marcar este lembrete como lido.');
+    } finally {
+      setMarkingReminderReadId((current) => (current === item.id ? null : current));
+    }
+  };
+
+  const handleQuickScheduleReminder = async (item: ReminderQuickOpenItem, daysAhead: 1 | 2) => {
+    if (quickSchedulingReminderAction?.reminderId === item.id) return;
+
+    setQuickSchedulingReminderAction({ reminderId: item.id, daysAhead });
+
+    try {
+      await markReminderQuickOpenItemAsRead(item, { syncLeadNextReturn: false });
+
+      const nextReminderDateISO = addBusinessDaysSkippingWeekends(item.dueAt, daysAhead).toISOString();
+      const { data: createdReminder, error: insertError } = await supabase
+        .from('reminders')
+        .insert([
+          {
+            lead_id: item.leadId,
+            contract_id: item.contractId ?? undefined,
+            titulo: item.title,
+            descricao: item.description ?? null,
+            tipo: item.type,
+            prioridade: item.priority,
+            data_lembrete: nextReminderDateISO,
+            lido: false,
+          },
+        ])
+        .select('id, contract_id, titulo, descricao, tipo, prioridade, data_lembrete')
+        .maybeSingle();
+
+      if (insertError) throw insertError;
+
+      await syncLeadNextReturnFromUpcomingReminder(item.leadId);
+
+      if (createdReminder?.id) {
+        const nextItem: ReminderQuickOpenItem = {
+          id: createdReminder.id,
+          title: createdReminder.titulo?.trim() || item.title,
+          type: createdReminder.tipo?.trim() || item.type,
+          priority: createdReminder.prioridade?.trim() || item.priority,
+          contractId: createdReminder.contract_id ?? item.contractId ?? null,
+          description: createdReminder.descricao ?? item.description ?? null,
+          dueAt: createdReminder.data_lembrete,
+          leadId: item.leadId,
+          leadName: item.leadName,
+          leadPhone: item.leadPhone,
+          leadStatus: item.leadStatus ?? null,
+        };
+
+        setReminderQuickOpenItems((current) =>
+          [...current, nextItem].sort(compareReminderQuickOpenItems),
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao criar lembrete rÃ¡pido no WhatsApp:', error);
+      alert('NÃ£o foi possÃ­vel criar o novo lembrete rÃ¡pido.');
+      void loadReminderQuickOpen({ preserveExistingItems: true });
+    } finally {
+      setQuickSchedulingReminderAction((current) => (current?.reminderId === item.id ? null : current));
+    }
+  };
+
   const handleMarkReminderAsReadAndSchedule = async (item: ReminderQuickOpenItem) => {
     if (markingReminderReadId === item.id) return;
 
     setMarkingReminderReadId(item.id);
 
     try {
-      const completedAt = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('reminders')
-        .update({ lido: true, concluido_em: completedAt })
-        .eq('id', item.id);
-
-      if (updateError) throw updateError;
-
-      await syncLeadNextReturnFromUpcomingReminder(item.leadId);
-
-      setReminderQuickOpenItems((current) =>
-        current.filter((reminderItem) => reminderItem.id !== item.id),
-      );
+      await markReminderQuickOpenItemAsRead(item);
 
       const leadForScheduler = await resolveReminderLeadForScheduling(item);
       if (!leadForScheduler) {
@@ -3949,12 +4043,12 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         return;
       }
 
-      setShowRemindersModal(false);
       openReminderScheduler(
         leadForScheduler,
         'Lembrete marcado como lido. Deseja agendar o próximo contato?',
         {
           defaultTitle: item.title,
+          defaultDescription: item.description ?? undefined,
           defaultType: mapReminderTypeToSchedulerType(item.type),
           defaultPriority: mapReminderPriorityToSchedulerPriority(item.priority),
         },
@@ -3966,6 +4060,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       setMarkingReminderReadId((current) => (current === item.id ? null : current));
     }
   };
+  void handleMarkReminderAsReadAndSchedule;
 
   const handleMarkLeadAsLostAndClearPendingReminders = async (item: ReminderQuickOpenItem) => {
     if (markingLostLeadId === item.leadId) return;
@@ -4496,6 +4591,12 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           const leadStatusStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
                           const typeMeta = getReminderTypeMeta(item.type);
                           const priorityMeta = getReminderPriorityMeta(item.priority);
+                          const isQuickSchedulingCurrentReminder = quickSchedulingReminderAction?.reminderId === item.id;
+                          const isBusyWithAnotherReminder = Boolean(
+                            (markingReminderReadId && markingReminderReadId !== item.id) ||
+                            (quickSchedulingReminderAction && quickSchedulingReminderAction.reminderId !== item.id) ||
+                            markingLostLeadId,
+                          );
 
                           return (
                             <div key={item.id} className="panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4">
@@ -4531,10 +4632,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   <Button
                                     type="button"
                                     onClick={() => {
-                                      void handleMarkReminderAsReadAndSchedule(item);
+                                      void handleMarkReminderAsRead(item);
                                     }}
                                     loading={markingReminderReadId === item.id}
-                                    disabled={Boolean((markingReminderReadId && markingReminderReadId !== item.id) || markingLostLeadId)}
+                                    disabled={isBusyWithAnotherReminder || isQuickSchedulingCurrentReminder}
                                     variant="info"
                                     size="icon"
                                     className="h-9 w-9"
@@ -4545,8 +4646,54 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   </Button>
                                   <Button
                                     type="button"
+                                    onClick={() => {
+                                      void handleQuickScheduleReminder(item, 1);
+                                    }}
+                                    disabled={isBusyWithAnotherReminder || Boolean(markingReminderReadId) || isQuickSchedulingCurrentReminder}
+                                    variant="secondary"
+                                    size="icon"
+                                    className="relative h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+                                    title="Marcar como lido e reagendar para 1 dia util"
+                                    aria-label="Marcar como lido e reagendar para 1 dia util"
+                                  >
+                                    {isQuickSchedulingCurrentReminder && quickSchedulingReminderAction?.daysAhead === 1 ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <CalendarPlus className="h-4 w-4" />
+                                        <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-emerald-700 ring-1 ring-emerald-200">
+                                          1
+                                        </span>
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleQuickScheduleReminder(item, 2);
+                                    }}
+                                    disabled={isBusyWithAnotherReminder || Boolean(markingReminderReadId) || isQuickSchedulingCurrentReminder}
+                                    variant="secondary"
+                                    size="icon"
+                                    className="relative h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+                                    title="Marcar como lido e reagendar para 2 dias uteis"
+                                    aria-label="Marcar como lido e reagendar para 2 dias uteis"
+                                  >
+                                    {isQuickSchedulingCurrentReminder && quickSchedulingReminderAction?.daysAhead === 2 ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <CalendarPlus className="h-4 w-4" />
+                                        <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-emerald-700 ring-1 ring-emerald-200">
+                                          2
+                                        </span>
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
                                     onClick={() => openReminderLeadInWhatsApp(item)}
-                                    disabled={!item.leadPhone || Boolean(markingReminderReadId || markingLostLeadId)}
+                                    disabled={!item.leadPhone || Boolean(markingReminderReadId || quickSchedulingReminderAction || markingLostLeadId)}
                                     variant="success"
                                     size="icon"
                                     className="h-9 w-9"
@@ -4561,7 +4708,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                       void handleMarkLeadAsLostAndClearPendingReminders(item);
                                     }}
                                     loading={markingLostLeadId === item.leadId}
-                                    disabled={Boolean((markingLostLeadId && markingLostLeadId !== item.leadId) || markingReminderReadId)}
+                                    disabled={Boolean(
+                                      (markingLostLeadId && markingLostLeadId !== item.leadId) ||
+                                      markingReminderReadId ||
+                                      quickSchedulingReminderAction,
+                                    )}
                                     variant="danger"
                                     size="icon"
                                     className="h-9 w-9"

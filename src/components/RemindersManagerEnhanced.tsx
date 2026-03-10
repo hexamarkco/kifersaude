@@ -16,6 +16,7 @@ import {
   getUrgencyLevel,
   getUrgencyStyles,
   formatEstimatedTime,
+  addBusinessDaysSkippingWeekends,
   ReminderPeriod
 } from '../lib/reminderUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
@@ -516,14 +517,7 @@ export default function RemindersManagerEnhanced() {
       return;
     }
 
-    const sourceDate = new Date(reminder.data_lembrete);
-    const nextReminderDate = new Date();
-
-    if (!Number.isNaN(sourceDate.getTime())) {
-      nextReminderDate.setHours(sourceDate.getHours(), sourceDate.getMinutes(), 0, 0);
-    }
-
-    nextReminderDate.setDate(nextReminderDate.getDate() + daysAhead);
+    const nextReminderDate = addBusinessDaysSkippingWeekends(reminder.data_lembrete, daysAhead);
     const nextReminderDateISO = nextReminderDate.toISOString();
 
     setQuickSchedulingAction({ reminderId: reminder.id, daysAhead });
@@ -1148,8 +1142,8 @@ export default function RemindersManagerEnhanced() {
                   variant="soft"
                   size="icon"
                   className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
-                  title="Agendar +1 dia e marcar atual como lido"
-                  aria-label="Agendar +1 dia e marcar atual como lido"
+                  title="Agendar +1 dia util e marcar atual como lido"
+                  aria-label="Agendar +1 dia util e marcar atual como lido"
                 >
                   {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1168,8 +1162,8 @@ export default function RemindersManagerEnhanced() {
                   variant="soft"
                   size="icon"
                   className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
-                  title="Agendar +2 dias e marcar atual como lido"
-                  aria-label="Agendar +2 dias e marcar atual como lido"
+                  title="Agendar +2 dias uteis e marcar atual como lido"
+                  aria-label="Agendar +2 dias uteis e marcar atual como lido"
                 >
                   {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

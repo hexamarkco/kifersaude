@@ -7,26 +7,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
+const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
+
 type FollowUpRequest = {
   leadName?: string;
   conversationHistory?: string;
   leadContext?: Record<string, unknown> | string;
 };
 
-const SYSTEM_PROMPT = `Você é um assistente de follow-up comercial em português do Brasil.
+const BASE_SYSTEM_PROMPT = `Voce e um assistente de follow-up comercial em portugues do Brasil.
 Gere mensagens curtas, personalizadas, humanas e persuasivas.
 
 Sempre siga estas diretrizes:
-- Analise todo o histórico fornecido para entender perguntas, propostas e respostas (inclusive ausência delas).
-- Adapte o tom ao comportamento do cliente (engajado, frio, indeciso, com objeções, sumido, etc.).
-- Resolva objeções claras antes de avançar para a venda.
-- Espelhe a linguagem do cliente e use PNL, copywriting e gatilhos mentais com moderação.
-- Estrutura recomendada: Abertura com nome + contexto breve (quando necessário) + reforço de benefícios objetivos + CTA clara.
-- Seja respeitoso e direto; não use jargões técnicos nem textos longos.
-- Inclua chamadas à ação práticas como “Me responde por aqui” ou “Podemos retomar de onde paramos”.
-- Mantenha o foco em soluções e segurança do cliente, usando imagens mentais quando fizer sentido.
-- Se não houver histórico, sugira um primeiro contato leve e convidativo.
-`;
+- Analise todo o historico fornecido para entender perguntas, propostas e respostas, inclusive ausencia delas.
+- Adapte o tom ao comportamento do cliente (engajado, frio, indeciso, com objecoes, sumido, etc.).
+- Resolva objecoes claras antes de avancar para a venda.
+- Espelhe a linguagem do cliente e use copywriting com moderacao.
+- Estrutura recomendada: abertura com nome + contexto breve + beneficios objetivos + CTA clara.
+- Seja respeitoso e direto; nao use jargoes tecnicos nem textos longos.
+- Inclua chamadas praticas como "Me responde por aqui" ou "Podemos retomar de onde paramos".
+- Mantenha o foco em solucoes e seguranca do cliente.
+- Se nao houver historico, sugira um primeiro contato leve e convidativo.
+- Quando fizer sentido, entregue o follow-up em multiplas linhas curtas.
+- Cada linha nao vazia sera tratada como uma mensagem separada no WhatsApp.
+- Nao use numeracao, bullets, aspas de abertura/fechamento nem observacoes fora da mensagem final.`;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const normalizeValue = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
@@ -38,13 +45,59 @@ const normalizeValue = (value: unknown): string => {
   }
 };
 
-const buildUserPrompt = (payload: Required<Pick<FollowUpRequest, 'leadName' | 'conversationHistory'>> & FollowUpRequest) => {
-  const leadContext = normalizeValue(payload.leadContext);
+const splitFollowUpMessages = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  return `Nome do cliente: ${payload.leadName}\n\n` +
-    (leadContext ? `Contexto do lead:\n${leadContext}\n\n` : '') +
-    `Histórico completo da conversa:\n${payload.conversationHistory}\n\n` +
-    'Gere apenas a mensagem final de follow-up pronta para ser enviada.';
+const loadCustomInstructions = async (supabaseAdmin: ReturnType<typeof createClient>) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('integration_settings')
+      .select('settings')
+      .eq('slug', AI_FOLLOW_UP_PROMPT_SLUG)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[generate-follow-up] Nao foi possivel carregar instrucoes customizadas', error);
+      return '';
+    }
+
+    const settings = isRecord(data?.settings) ? data.settings : {};
+    return typeof settings.instructions === 'string' ? settings.instructions.trim() : '';
+  } catch (error) {
+    console.warn('[generate-follow-up] Falha ao ler instrucoes customizadas', error);
+    return '';
+  }
+};
+
+const buildSystemPrompt = (customInstructions: string) => {
+  if (!customInstructions) {
+    return BASE_SYSTEM_PROMPT;
+  }
+
+  return `${BASE_SYSTEM_PROMPT}
+
+Instrucoes adicionais da operacao:
+${customInstructions}`;
+};
+
+const buildUserPrompt = (
+  payload: Required<Pick<FollowUpRequest, 'leadName' | 'conversationHistory'>> & FollowUpRequest,
+) => {
+  const leadContext = normalizeValue(payload.leadContext);
+  const conversationHistory = payload.conversationHistory || '(sem historico relevante carregado)';
+
+  return `Nome do cliente: ${payload.leadName}
+
+${leadContext ? `Contexto do lead:\n${leadContext}\n\n` : ''}Historico completo da conversa:
+${conversationHistory}
+
+Gere apenas o follow-up final pronto para envio.
+Se usar mais de uma mensagem, separe cada mensagem com uma quebra de linha.
+Nao inclua numeracao, titulos ou comentarios extras.`;
 };
 
 Deno.serve(async (req) => {
@@ -53,7 +106,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Método não permitido' }), {
+    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -61,18 +114,8 @@ Deno.serve(async (req) => {
 
   try {
     const payload = (await req.json()) as FollowUpRequest;
-    const leadName = normalizeValue(payload.leadName);
+    const leadName = normalizeValue(payload.leadName) || 'Cliente';
     const conversationHistory = normalizeValue(payload.conversationHistory);
-
-    if (!leadName || !conversationHistory) {
-      return new Response(
-        JSON.stringify({ error: 'Parâmetros obrigatórios ausentes: leadName e conversationHistory.' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -80,7 +123,7 @@ Deno.serve(async (req) => {
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       console.error('[generate-follow-up] Missing Supabase environment variables');
       return new Response(
-        JSON.stringify({ error: 'Configuração do servidor incompleta.' }),
+        JSON.stringify({ error: 'Configuracao do servidor incompleta.' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -89,10 +132,11 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const customInstructions = await loadCustomInstructions(supabaseAdmin);
     const generationResult = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_generation',
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: buildSystemPrompt(customInstructions),
       userPrompt: buildUserPrompt({
         leadName,
         conversationHistory,
@@ -107,7 +151,7 @@ Deno.serve(async (req) => {
     if (!followUpText) {
       console.error('[generate-follow-up] Resposta inesperada do provedor de IA', generationResult);
       return new Response(
-          JSON.stringify({ error: 'Resposta da IA vazia.' }),
+        JSON.stringify({ error: 'Resposta da IA vazia.' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -119,11 +163,13 @@ Deno.serve(async (req) => {
       provider: generationResult.provider,
       model: generationResult.model,
       fallbackUsed: generationResult.fallbackUsed,
+      hasCustomInstructions: Boolean(customInstructions),
     });
 
     return new Response(
       JSON.stringify({
         followUp: followUpText,
+        messages: splitFollowUpMessages(followUpText),
         provider: generationResult.provider,
         model: generationResult.model,
       }),

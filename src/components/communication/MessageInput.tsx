@@ -36,6 +36,12 @@ export type SentMessagePayload = {
   payload?: Record<string, unknown> | null;
 };
 
+type FollowUpGenerationContext = {
+  leadName?: string;
+  conversationHistory?: string;
+  leadContext?: Record<string, unknown> | string | null;
+};
+
 interface MessageInputProps {
   chatId: string;
   onMessageSent?: (message?: SentMessagePayload) => void;
@@ -53,6 +59,7 @@ interface MessageInputProps {
     body: string;
   } | null;
   onCancelEdit?: () => void;
+  followUpContext?: FollowUpGenerationContext | null;
 }
 
 type QuickReplyItem = {
@@ -71,6 +78,7 @@ function MessageInputComponent({
   onCancelReply,
   editMessage,
   onCancelEdit,
+  followUpContext,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -98,6 +106,12 @@ function MessageInputComponent({
   const [rewriteResult, setRewriteResult] = useState('');
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [followUpDraft, setFollowUpDraft] = useState('');
+  const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [followUpProvider, setFollowUpProvider] = useState('');
+  const [followUpModel, setFollowUpModel] = useState('');
   const [showLinkPreviewModal, setShowLinkPreviewModal] = useState(false);
   const [linkPreviewTitle, setLinkPreviewTitle] = useState('');
   const [linkPreviewDescription, setLinkPreviewDescription] = useState('');
@@ -123,6 +137,7 @@ function MessageInputComponent({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const analyserDataRef = useRef<Uint8Array | null>(null);
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const followUpRequestIdRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
@@ -354,6 +369,7 @@ function MessageInputComponent({
   }, [message, quickReplies]);
 
   const selectedSlashQuickReply = slashCommandState.results[slashQuickReplyIndex] ?? null;
+  const isDirectChat = getWhatsAppChatKind(chatId) === 'direct';
 
   useEffect(() => {
     if (!slashCommandState.active || slashCommandState.results.length === 0) {
@@ -493,9 +509,19 @@ function MessageInputComponent({
       .map((chunk) => chunk.trim())
       .filter(Boolean);
 
+  const splitFollowUpLines = (text: string) =>
+    text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
   const rewriteChunks = useMemo(
     () => splitRewriteChunks(rewriteResult || rewriteOriginal),
     [rewriteResult, rewriteOriginal],
+  );
+  const followUpMessages = useMemo(
+    () => splitFollowUpLines(followUpDraft),
+    [followUpDraft],
   );
 
   const resolveOutgoingFileMessageType = (file: File): 'image' | 'video' | 'audio' | 'document' => {
@@ -646,6 +672,16 @@ function MessageInputComponent({
       setMessage(editMessage.body);
     }
   }, [editMessage]);
+
+  useEffect(() => {
+    followUpRequestIdRef.current += 1;
+    setShowFollowUpModal(false);
+    setFollowUpDraft('');
+    setFollowUpLoading(false);
+    setFollowUpError(null);
+    setFollowUpProvider('');
+    setFollowUpModel('');
+  }, [chatId]);
 
   useEffect(() => {
     return () => {
@@ -1245,6 +1281,116 @@ function MessageInputComponent({
     handleRewrite(draft, rewriteTone);
   };
 
+  const generateFollowUp = async () => {
+    const requestId = followUpRequestIdRef.current + 1;
+    followUpRequestIdRef.current = requestId;
+    setFollowUpLoading(true);
+    setFollowUpError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-follow-up', {
+        body: {
+          leadName: followUpContext?.leadName || templateVariables.nome || '',
+          conversationHistory: followUpContext?.conversationHistory || '',
+          leadContext: followUpContext?.leadContext ?? null,
+        },
+      });
+
+      if (error) {
+        if (requestId !== followUpRequestIdRef.current) return;
+        setFollowUpError(error.message || 'Erro ao gerar follow-up.');
+        return;
+      }
+
+      const payload = (data || {}) as {
+        followUp?: string;
+        messages?: string[];
+        provider?: string;
+        model?: string;
+      };
+
+      const fallbackText = Array.isArray(payload.messages) ? payload.messages.join('\n') : '';
+      const resultText = (payload.followUp || fallbackText || '').trim();
+
+      if (!resultText) {
+        if (requestId !== followUpRequestIdRef.current) return;
+        setFollowUpError('A IA nao retornou um follow-up utilizavel.');
+        return;
+      }
+
+      if (requestId !== followUpRequestIdRef.current) return;
+      setFollowUpDraft(resultText);
+      setFollowUpProvider((payload.provider || '').trim());
+      setFollowUpModel((payload.model || '').trim());
+    } catch (error) {
+      if (requestId !== followUpRequestIdRef.current) return;
+      console.error('Erro ao gerar follow-up:', error);
+      setFollowUpError('Erro ao gerar follow-up.');
+    } finally {
+      if (requestId !== followUpRequestIdRef.current) return;
+      setFollowUpLoading(false);
+    }
+  };
+
+  const handleOpenFollowUp = () => {
+    if (!isDirectChat) {
+      alert('A geracao de follow-up esta disponivel apenas para conversas individuais.');
+      return;
+    }
+
+    setShowFollowUpModal(true);
+    setFollowUpDraft('');
+    setFollowUpError(null);
+    setFollowUpProvider('');
+    setFollowUpModel('');
+    void generateFollowUp();
+  };
+
+  const handleUseFollowUpInField = () => {
+    if (!followUpDraft.trim()) {
+      setFollowUpError('Nada para usar no campo.');
+      return;
+    }
+
+    setMessage(followUpDraft);
+    setShowFollowUpModal(false);
+    requestAnimationFrame(() => {
+      scheduleTextareaResize();
+      textareaRef.current?.focus();
+    });
+  };
+
+  const handleSendGeneratedFollowUp = async () => {
+    if (isSending || followUpLoading) return;
+
+    const chunks = splitFollowUpLines(followUpDraft);
+    if (chunks.length === 0) {
+      setFollowUpError('Nada para enviar.');
+      return;
+    }
+
+    setIsSending(true);
+    setFollowUpError(null);
+
+    try {
+      for (const chunk of chunks) {
+        await sendPlainTextMessage(chunk);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+
+      setMessage('');
+      setShowFollowUpModal(false);
+      setFollowUpDraft('');
+      if (onCancelReply) onCancelReply();
+    } catch (error) {
+      console.error('Erro ao enviar follow-up gerado:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar follow-up.';
+      setFollowUpError(errorMessage);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleRewrite = async (draft: string, tone: string) => {
     setRewriteLoading(true);
     setRewriteError(null);
@@ -1651,6 +1797,101 @@ function MessageInputComponent({
           </div>
         </div>
       )}
+      {showFollowUpModal && (
+        <div className="absolute bottom-full left-4 mb-2 w-[560px] max-w-[92vw] bg-white border border-slate-200 rounded-lg shadow-xl z-20">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+            <div>
+              <div className="text-sm font-medium text-slate-900">Gerar follow-up</div>
+              <div className="text-[11px] text-slate-500">
+                Baseado no historico carregado deste chat. Cada linha nao vazia vira uma mensagem.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              onClick={() => setShowFollowUpModal(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                {followUpProvider || followUpModel
+                  ? `Gerado com ${followUpProvider || 'IA'}${followUpModel ? ` - ${followUpModel}` : ''}`
+                  : 'A IA vai considerar o historico do chat e o contexto do lead.'}
+              </div>
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                onClick={() => void generateFollowUp()}
+                disabled={followUpLoading || isSending}
+              >
+                {followUpLoading ? 'Gerando...' : 'Gerar novamente'}
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-500">Texto para aprovar</label>
+              <textarea
+                value={followUpDraft}
+                onChange={(event) => setFollowUpDraft(event.target.value)}
+                placeholder={followUpLoading ? 'Gerando follow-up...' : 'O texto gerado vai aparecer aqui.'}
+                className="mt-1 w-full h-36 px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <div className="mt-2 text-xs text-slate-500">
+                Dica: cada quebra de linha sera enviada como uma mensagem separada.
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Mensagens ({followUpMessages.length})</div>
+              <div className="panel-dropdown-scrollbar max-h-36 overflow-y-auto border border-slate-200 bg-white rounded-md px-2 py-2 text-xs text-slate-700 space-y-2">
+                {followUpLoading && followUpMessages.length === 0 ? (
+                  <div className="text-slate-400">Gerando sugestao...</div>
+                ) : followUpMessages.length === 0 ? (
+                  <div className="text-slate-400">Nenhuma mensagem definida.</div>
+                ) : (
+                  followUpMessages.map((chunk, index) => (
+                    <div key={`follow-up-chunk-${index}`} className="border-b border-slate-100 last:border-b-0 pb-2 last:pb-0">
+                      <div className="text-slate-400">Mensagem {index + 1}</div>
+                      <div className="whitespace-pre-wrap">{chunk}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {followUpError && <div className="text-xs text-red-500">{followUpError}</div>}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                onClick={() => setShowFollowUpModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                onClick={handleUseFollowUpInField}
+                disabled={followUpLoading || isSending || !followUpDraft.trim()}
+              >
+                Usar no campo
+              </button>
+              <button
+                type="button"
+                className="px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handleSendGeneratedFollowUp}
+                disabled={followUpLoading || isSending || followUpMessages.length === 0}
+              >
+                {isSending ? 'Enviando...' : `Aprovar e enviar (${followUpMessages.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showLinkPreviewModal && pendingLinkMessage && (
         <div className="absolute bottom-full left-4 mb-2 w-96 bg-white border border-slate-200 rounded-lg shadow-xl z-20">
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
@@ -1867,6 +2108,20 @@ function MessageInputComponent({
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {isDirectChat && (
+        <div className="px-3 pt-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleOpenFollowUp}
+            disabled={isSending || isRecording || followUpLoading || showLinkPreviewModal}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{followUpLoading ? 'Gerando follow-up...' : 'Gerar follow-up com IA'}</span>
+          </button>
         </div>
       )}
 
@@ -2149,7 +2404,8 @@ const areMessageInputPropsEqual = (prev: MessageInputProps, next: MessageInputPr
   prev.templateVariables === next.templateVariables &&
   prev.templateVariableShortcuts === next.templateVariableShortcuts &&
   prev.replyToMessage === next.replyToMessage &&
-  prev.editMessage === next.editMessage
+  prev.editMessage === next.editMessage &&
+  prev.followUpContext === next.followUpContext
 );
 
 export const MessageInput = memo(MessageInputComponent, areMessageInputPropsEqual);

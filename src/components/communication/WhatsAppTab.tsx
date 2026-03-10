@@ -3395,6 +3395,65 @@ export default function WhatsAppTab() {
     return '';
   })();
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
+  const selectedChatConversationHistory = useMemo(() => {
+    if (!selectedChat || messages.length === 0) return '';
+
+    const exportedLines = [...messages]
+      .sort(sortMessagesChronologically)
+      .map((message) => {
+        const preview = getMessagePreview(message);
+        if (!preview) return null;
+
+        const eventTime = getMessageDisplayTimestamp(message);
+        const parsed = new Date(eventTime || '');
+        if (!eventTime) return null;
+        if (Number.isNaN(parsed.getTime())) return null;
+
+        const time = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const date = parsed.toLocaleDateString('pt-BR');
+
+        const author = (() => {
+          if (message.direction === 'outbound') return 'EU';
+          if (selectedChatKind === 'group') {
+            if (message.author) return formatPhone(message.author);
+            if (message.from_number) return formatPhone(message.from_number);
+          }
+          return selectedChatDisplayName || 'CONTATO';
+        })();
+
+        return `[${time}, ${date}] ${author}: ${preview}`;
+      })
+      .filter((line): line is string => Boolean(line));
+
+    return exportedLines.join('\n');
+  }, [messages, selectedChat, selectedChatDisplayName, selectedChatKind]); // eslint-disable-line react-hooks/exhaustive-deps
+  const followUpContextForInput = useMemo(() => {
+    if (!selectedChat || !selectedChatIsDirect) return null;
+
+    const leadName =
+      (selectedLead?.name || selectedChatDisplayName || selectedChatPhoneFormatted || selectedChat.id || '').trim();
+
+    return {
+      leadName,
+      conversationHistory: selectedChatConversationHistory,
+      leadContext: {
+        leadId: selectedLead?.id ?? null,
+        leadStatus: selectedLead?.status ?? null,
+        responsavel: selectedLead?.responsavel ?? null,
+        phone: selectedChatPhone || selectedLead?.phone || null,
+        chatId: selectedChat.id,
+        chatName: selectedChatDisplayName || null,
+      },
+    };
+  }, [
+    selectedChat,
+    selectedChatConversationHistory,
+    selectedChatDisplayName,
+    selectedChatIsDirect,
+    selectedChatPhone,
+    selectedChatPhoneFormatted,
+    selectedLead,
+  ]);
   const selectedChatPhoto = (() => {
     if (!selectedChat || !selectedChatIsDirect) return null;
     const variants = getChatIdVariants(selectedChat);
@@ -3427,39 +3486,10 @@ export default function WhatsAppTab() {
   };
 
   const handleCopyFullChat = async () => {
-    if (!selectedChat || messages.length === 0) return;
-
-    const exportedLines = [...messages]
-      .sort(sortMessagesChronologically)
-      .map((message) => {
-        const preview = getMessagePreview(message);
-        if (!preview) return null;
-
-        const eventTime = getMessageDisplayTimestamp(message);
-        const parsed = new Date(eventTime || '');
-        if (!eventTime) return null;
-        if (Number.isNaN(parsed.getTime())) return null;
-
-        const time = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const date = parsed.toLocaleDateString('pt-BR');
-
-        const author = (() => {
-          if (message.direction === 'outbound') return 'EU';
-          if (selectedChatKind === 'group') {
-            if (message.author) return formatPhone(message.author);
-            if (message.from_number) return formatPhone(message.from_number);
-          }
-          return selectedChatDisplayName || 'CONTATO';
-        })();
-
-        return `[${time}, ${date}] ${author}: ${preview}`;
-      })
-      .filter((line): line is string => Boolean(line));
-
-    if (exportedLines.length === 0) return;
+    if (!selectedChatConversationHistory) return;
 
     try {
-      await navigator.clipboard.writeText(exportedLines.join('\n'));
+      await navigator.clipboard.writeText(selectedChatConversationHistory);
       setChatCopiedAt(Date.now());
       window.setTimeout(() => {
         setChatCopiedAt(null);
@@ -5284,6 +5314,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     contacts={contactsList}
                     templateVariables={templateVariablesForInput}
                     templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
+                    followUpContext={followUpContextForInput}
                     onMessageSent={handleMessageSent}
                     replyToMessage={replyToMessage}
                     onCancelReply={handleCancelReply}

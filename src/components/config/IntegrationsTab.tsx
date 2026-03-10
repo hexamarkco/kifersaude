@@ -26,6 +26,7 @@ const AI_PROVIDER_OPENAI_SLUG = 'ai_provider_openai';
 const AI_PROVIDER_GEMINI_SLUG = 'ai_provider_gemini';
 const AI_PROVIDER_CLAUDE_SLUG = 'ai_provider_claude';
 const AI_ROUTING_SLUG = 'ai_routing';
+const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 
 const META_PIXEL_SLUG = 'meta_pixel';
 const GTM_SLUG = 'google_tag_manager';
@@ -293,6 +294,11 @@ const normalizeRoutingSettings = (
   }, {} as AiRoutingFormState);
 };
 
+const normalizeFollowUpInstructions = (integration: IntegrationSetting | null) => {
+  const settings = isRecord(integration?.settings) ? integration.settings : {};
+  return typeof settings.instructions === 'string' ? settings.instructions : '';
+};
+
 export default function IntegrationsTab() {
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<Record<AiProvider, IntegrationSetting | null>>({
     openai: null,
@@ -306,6 +312,8 @@ export default function IntegrationsTab() {
   const [aiRoutingForm, setAiRoutingForm] = useState<AiRoutingFormState>(() =>
     createDefaultRoutingForm(),
   );
+  const [aiFollowUpPromptIntegration, setAiFollowUpPromptIntegration] = useState<IntegrationSetting | null>(null);
+  const [aiFollowUpInstructions, setAiFollowUpInstructions] = useState('');
   const [aiProviderModels, setAiProviderModels] = useState<Record<AiProvider, AiProviderModelsState>>(() =>
     createDefaultProviderModelsState(),
   );
@@ -316,6 +324,7 @@ export default function IntegrationsTab() {
     claude: false,
   });
   const [savingAiRouting, setSavingAiRouting] = useState(false);
+  const [savingAiFollowUpPrompt, setSavingAiFollowUpPrompt] = useState(false);
   const [aiMessage, setAiMessage] = useState<MessageState>(null);
   const [showProviderApiKey, setShowProviderApiKey] = useState<Record<AiProvider, boolean>>({
     openai: false,
@@ -411,12 +420,20 @@ export default function IntegrationsTab() {
     setAiMessage(null);
 
     try {
-      const [openaiIntegration, geminiIntegration, claudeIntegration, routingIntegration, legacyGptIntegration] =
+      const [
+        openaiIntegration,
+        geminiIntegration,
+        claudeIntegration,
+        routingIntegration,
+        followUpPromptIntegration,
+        legacyGptIntegration,
+      ] =
         await Promise.all([
           configService.getIntegrationSetting(AI_PROVIDER_OPENAI_SLUG),
           configService.getIntegrationSetting(AI_PROVIDER_GEMINI_SLUG),
           configService.getIntegrationSetting(AI_PROVIDER_CLAUDE_SLUG),
           configService.getIntegrationSetting(AI_ROUTING_SLUG),
+          configService.getIntegrationSetting(AI_FOLLOW_UP_PROMPT_SLUG),
           configService.getIntegrationSetting(LEGACY_GPT_SLUG),
         ]);
 
@@ -436,6 +453,8 @@ export default function IntegrationsTab() {
       setAiProviderForms(nextProviderForms);
       setAiRoutingIntegration(routingIntegration);
       setAiRoutingForm(normalizeRoutingSettings(routingIntegration));
+      setAiFollowUpPromptIntegration(followUpPromptIntegration);
+      setAiFollowUpInstructions(normalizeFollowUpInstructions(followUpPromptIntegration));
       setAiProviderModels(createDefaultProviderModelsState());
 
       for (const provider of AI_PROVIDER_ORDER) {
@@ -566,6 +585,37 @@ export default function IntegrationsTab() {
     setSavingAiRouting(false);
   };
 
+  const handleSaveFollowUpPrompt = async () => {
+    setSavingAiFollowUpPrompt(true);
+    setAiMessage(null);
+
+    const settingsPayload = {
+      instructions: aiFollowUpInstructions.trim(),
+    };
+
+    const result = aiFollowUpPromptIntegration?.id
+      ? await configService.updateIntegrationSetting(aiFollowUpPromptIntegration.id, {
+          settings: settingsPayload,
+        })
+      : await configService.createIntegrationSetting({
+          slug: AI_FOLLOW_UP_PROMPT_SLUG,
+          name: 'IA - Instrucoes de follow-up',
+          description: 'Instrui a IA do WhatsApp sobre como gerar follow-ups a partir do historico do chat.',
+          settings: settingsPayload,
+        });
+
+    if (result.error) {
+      setAiMessage({ type: 'error', text: 'Erro ao salvar as instrucoes de follow-up.' });
+    } else {
+      const savedIntegration = result.data ?? aiFollowUpPromptIntegration;
+      setAiFollowUpPromptIntegration(savedIntegration);
+      setAiFollowUpInstructions(settingsPayload.instructions);
+      setAiMessage({ type: 'success', text: 'Instrucoes de follow-up atualizadas com sucesso.' });
+    }
+
+    setSavingAiFollowUpPrompt(false);
+  };
+
   const loadMetaPixel = async () => {
     setLoadingMetaPixel(true);
     const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
@@ -646,6 +696,7 @@ export default function IntegrationsTab() {
 
   const hasIntegrationSnapshot =
     aiRoutingIntegration !== null ||
+    aiFollowUpPromptIntegration !== null ||
     aiProviderIntegrations.openai !== null ||
     aiProviderIntegrations.gemini !== null ||
     aiProviderIntegrations.claude !== null ||
@@ -919,6 +970,47 @@ export default function IntegrationsTab() {
                 >
                   {!savingAiRouting && <Save className="w-4 h-4" />}
                   <span>{savingAiRouting ? 'Salvando...' : 'Salvar roteamento de IA'}</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+              <div className="mb-3">
+                <h3 className="text-lg font-semibold text-slate-900">Follow-up no WhatsApp</h3>
+                <p className="text-sm text-slate-500">
+                  Defina instrucoes extras para a IA ao gerar follow-ups direto do chat. O sistema continua enviando uma mensagem por linha.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Instrucoes adicionais</label>
+                  <textarea
+                    value={aiFollowUpInstructions}
+                    onChange={(event) => setAiFollowUpInstructions(event.target.value)}
+                    rows={8}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    placeholder={
+                      'Exemplo:\n' +
+                      '- Fale como consultora de planos de saude.\n' +
+                      '- Seja objetiva e acolhedora.\n' +
+                      '- Evite texto longo.\n' +
+                      '- Quando fizer sentido, termine com uma CTA simples.'
+                    }
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Use este campo para orientar tom, abordagem comercial, limites e preferencias da sua operacao. Nao precisa repetir regras basicas do sistema.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
+                <Button
+                  onClick={handleSaveFollowUpPrompt}
+                  loading={savingAiFollowUpPrompt}
+                >
+                  {!savingAiFollowUpPrompt && <Save className="w-4 h-4" />}
+                  <span>{savingAiFollowUpPrompt ? 'Salvando...' : 'Salvar instrucoes de follow-up'}</span>
                 </Button>
               </div>
             </div>

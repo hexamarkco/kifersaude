@@ -32,6 +32,23 @@ type ProviderCallParams = {
   maxTokens: number;
 };
 
+type OpenAiMessage = {
+  role: 'system' | 'user';
+  content: string;
+};
+
+type OpenAiTokenParameter = 'max_tokens' | 'max_completion_tokens';
+type OpenAiReasoningEffort = 'none' | 'minimal';
+
+type OpenAiChatRequestBody = {
+  model: string;
+  messages: OpenAiMessage[];
+  temperature?: number;
+  reasoning_effort?: OpenAiReasoningEffort;
+  max_tokens?: number;
+  max_completion_tokens?: number;
+};
+
 type IntegrationRow = {
   slug: string;
   settings: Record<string, unknown> | null;
@@ -239,6 +256,91 @@ const extractOpenAiText = (payload: any): string => {
   return '';
 };
 
+const getPreferredOpenAiTokenParameter = (model: string): OpenAiTokenParameter => {
+  const normalized = model.trim().toLowerCase();
+
+  if (
+    normalized.startsWith('gpt-5') ||
+    normalized.startsWith('o1') ||
+    normalized.startsWith('o3') ||
+    normalized.startsWith('o4')
+  ) {
+    return 'max_completion_tokens';
+  }
+
+  return 'max_tokens';
+};
+
+const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTokenParameter =>
+  value === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+
+const getPreferredOpenAiReasoningEffort = (model: string): OpenAiReasoningEffort | undefined => {
+  const normalized = model.trim().toLowerCase();
+
+  if (normalized.startsWith('gpt-5.4') || normalized.startsWith('gpt-5.2') || normalized.startsWith('gpt-5.1')) {
+    return 'none';
+  }
+
+  if (
+    normalized === 'gpt-5' ||
+    normalized.startsWith('gpt-5-') ||
+    normalized.startsWith('o1') ||
+    normalized.startsWith('o3') ||
+    normalized.startsWith('o4')
+  ) {
+    return 'minimal';
+  }
+
+  return undefined;
+};
+
+const buildOpenAiChatRequestBody = (
+  params: ProviderCallParams,
+  messages: OpenAiMessage[],
+  tokenParameter: OpenAiTokenParameter,
+  includeTemperature: boolean,
+  reasoningEffort?: OpenAiReasoningEffort,
+): OpenAiChatRequestBody => {
+  const body: OpenAiChatRequestBody = {
+    model: params.model,
+    messages,
+  };
+
+  if (includeTemperature) {
+    body.temperature = params.temperature;
+  }
+
+  if (reasoningEffort) {
+    body.reasoning_effort = reasoningEffort;
+  }
+
+  if (tokenParameter === 'max_completion_tokens') {
+    body.max_completion_tokens = params.maxTokens;
+  } else {
+    body.max_tokens = params.maxTokens;
+  }
+
+  return body;
+};
+
+const isUnsupportedOpenAiParameterError = (errorText: string, parameter: string): boolean => {
+  const normalized = errorText.toLowerCase();
+  const expected = parameter.toLowerCase();
+  const hasCompatibilityError =
+    normalized.includes('unsupported parameter') ||
+    normalized.includes('unsupported value') ||
+    normalized.includes('"code":"unsupported_parameter"') ||
+    normalized.includes('"code":"unsupported_value"');
+
+  return (
+    hasCompatibilityError &&
+    (normalized.includes(`'${expected}'`) ||
+      normalized.includes(`"${expected}"`) ||
+      normalized.includes(`"param": "${expected}"`) ||
+      normalized.includes(`"param":"${expected}"`))
+  );
+};
+
 const extractClaudeText = (payload: any): string => {
   if (!Array.isArray(payload?.content)) {
     return '';
@@ -271,38 +373,64 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   const endpointBase = settings.baseUrl.replace(/\/+$/, '');
   const endpoint = `${endpointBase}/chat/completions`;
 
-  const messages = [] as Array<{ role: 'system' | 'user'; content: string }>;
+  const messages: OpenAiMessage[] = [];
   if (params.systemPrompt.trim()) {
     messages.push({ role: 'system', content: params.systemPrompt });
   }
   messages.push({ role: 'user', content: params.userPrompt });
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: params.model,
-      temperature: params.temperature,
-      max_tokens: params.maxTokens,
-      messages,
-    }),
-  });
+  let tokenParameter = getPreferredOpenAiTokenParameter(params.model);
+  let includeTemperature = true;
+  let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model);
 
-  if (!response.ok) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${settings.apiKey}`,
+      },
+      body: JSON.stringify(buildOpenAiChatRequestBody(params, messages, tokenParameter, includeTemperature, reasoningEffort)),
+    });
+
+    if (response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      const text = extractOpenAiText(payload);
+      if (!text) {
+        throw new Error('OpenAI retornou resposta vazia.');
+      }
+
+      return text;
+    }
+
     const errorText = await response.text();
+
+    if (response.status === 400) {
+      if (isUnsupportedOpenAiParameterError(errorText, tokenParameter)) {
+        tokenParameter = getAlternateOpenAiTokenParameter(tokenParameter);
+        continue;
+      }
+
+      if (includeTemperature && isUnsupportedOpenAiParameterError(errorText, 'temperature')) {
+        includeTemperature = false;
+        continue;
+      }
+
+      if (reasoningEffort && isUnsupportedOpenAiParameterError(errorText, 'reasoning_effort')) {
+        reasoningEffort = undefined;
+        continue;
+      }
+    }
+
     throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
   }
 
-  const payload = await response.json().catch(() => ({}));
-  const text = extractOpenAiText(payload);
-  if (!text) {
-    throw new Error('OpenAI retornou resposta vazia.');
-  }
-
-  return text;
+  const fallbackTokenParameter = tokenParameter;
+  const fallbackTemperatureStatus = includeTemperature ? 'com temperatura' : 'sem temperatura';
+  const fallbackReasoningEffort = reasoningEffort ? `reasoning ${reasoningEffort}` : 'sem reasoning_effort';
+  throw new Error(
+    `OpenAI nao aceitou a combinacao de parametros enviada (${fallbackTokenParameter}, ${fallbackTemperatureStatus}, ${fallbackReasoningEffort}).`,
+  );
 };
 
 const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<string> => {

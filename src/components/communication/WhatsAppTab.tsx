@@ -358,7 +358,7 @@ export default function WhatsAppTab() {
   const [markingReminderReadId, setMarkingReminderReadId] = useState<string | null>(null);
   const [quickSchedulingReminderAction, setQuickSchedulingReminderAction] = useState<{
     reminderId: string;
-    daysAhead: 1 | 2;
+    daysAhead: 1 | 2 | 3;
   } | null>(null);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
   const [reminderSchedulerRequest, setReminderSchedulerRequest] = useState<{
@@ -4001,7 +4001,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     }
   };
 
-  const handleQuickScheduleReminder = async (item: ReminderQuickOpenItem, daysAhead: 1 | 2) => {
+  const handleQuickScheduleReminder = async (item: ReminderQuickOpenItem, daysAhead: 1 | 2 | 3) => {
     if (quickSchedulingReminderAction?.reminderId === item.id) return;
 
     setQuickSchedulingReminderAction({ reminderId: item.id, daysAhead });
@@ -4716,6 +4716,29 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                         <CalendarPlus className="h-4 w-4" />
                                         <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-emerald-700 ring-1 ring-emerald-200">
                                           2
+                                        </span>
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleQuickScheduleReminder(item, 3);
+                                    }}
+                                    disabled={isBusyWithAnotherReminder || Boolean(markingReminderReadId) || isQuickSchedulingCurrentReminder}
+                                    variant="secondary"
+                                    size="icon"
+                                    className="relative h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+                                    title="Marcar como lido e reagendar para 3 dias uteis"
+                                    aria-label="Marcar como lido e reagendar para 3 dias uteis"
+                                  >
+                                    {isQuickSchedulingCurrentReminder && quickSchedulingReminderAction?.daysAhead === 3 ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <CalendarPlus className="h-4 w-4" />
+                                        <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-emerald-700 ring-1 ring-emerald-200">
+                                          3
                                         </span>
                                       </>
                                     )}

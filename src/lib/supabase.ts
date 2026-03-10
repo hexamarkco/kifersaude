@@ -342,6 +342,7 @@ export type WhatsAppChat = {
   id: string;
   name: string | null;
   is_group: boolean;
+  last_message: string | null;
   last_message_at: string | null;
   created_at: string;
   updated_at: string;

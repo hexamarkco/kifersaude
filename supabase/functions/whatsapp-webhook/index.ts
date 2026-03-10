@@ -962,6 +962,14 @@ const provisionalBodyMarkers = new Set([
   '[sistema: ciphertext]',
 ]);
 
+const ignoredChatPreviewBodies = new Set([
+  '[evento do whatsapp]',
+  '[atualização do whatsapp]',
+  '[atualizacao do whatsapp]',
+  '[mensagem não suportada]',
+  '[mensagem nao suportada]',
+]);
+
 function normalizeBodyForComparison(body: string | null | undefined): string {
   return toCleanText(body).toLowerCase();
 }
@@ -1028,6 +1036,88 @@ function isLikelyProvisionalStoredMessage(message: {
   const payloadSystem = toPayloadObject(payload.system);
   const payloadSystemBody = payloadSystem ? toCleanText(payloadSystem.body) : '';
   return isWaitingPlaceholderText(payloadSystemBody);
+}
+
+function resolveStoredChatPreview(message: {
+  type?: string | null;
+  body?: string | null;
+  payload?: unknown;
+  has_media?: boolean | null;
+  is_deleted?: boolean | null;
+}): string | null {
+  if (message.is_deleted) {
+    return 'Mensagem apagada';
+  }
+
+  const payload = toPayloadObject(message.payload);
+  const payloadAction = payload ? toPayloadObject(payload.action) : null;
+  const actionType = normalizeActionType(payloadAction?.type);
+  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited') {
+    return null;
+  }
+
+  if (isLikelyProvisionalStoredMessage(message)) {
+    return null;
+  }
+
+  const body = toCleanText(message.body);
+  const normalizedBody = normalizeBodyForComparison(body);
+  if (normalizedBody) {
+    if (ignoredChatPreviewBodies.has(normalizedBody)) {
+      return null;
+    }
+
+    return body;
+  }
+
+  const type = normalizeBodyForComparison(message.type);
+  if (type === 'image') return '[Imagem]';
+  if (type === 'video' || type === 'short' || type === 'gif') return '[Vídeo]';
+  if (type === 'audio' || type === 'voice' || type === 'ptt') return '[Áudio]';
+  if (type === 'document') return '[Documento]';
+  if (type === 'contact') return '[Contato]';
+  if (type === 'location' || type === 'live_location') return '[Localização]';
+  if (message.has_media) return '[Anexo]';
+  return null;
+}
+
+function resolveWhapiChatPreview(message: WhapiMessage | null | undefined): string | null {
+  if (!message) {
+    return null;
+  }
+
+  const actionType = normalizeActionType(message.action?.type);
+  const { body, hasMedia } = buildMessageBody(message);
+  return resolveStoredChatPreview({
+    type: message.type,
+    body,
+    payload: message,
+    has_media: hasMedia,
+    is_deleted: actionType === 'delete' || message.type === 'revoked',
+  });
+}
+
+function mergeChatPreview(
+  existingPreview: string | null | undefined,
+  incomingPreview: string | null,
+  existingLastMessageAt: string | null | undefined,
+  incomingLastMessageAt: string | null | undefined,
+): string | null {
+  if (!incomingPreview) {
+    return toCleanText(existingPreview) || null;
+  }
+
+  const incomingMillis = toEpochMillis(incomingLastMessageAt);
+  const existingMillis = toEpochMillis(existingLastMessageAt);
+  if (Number.isNaN(incomingMillis)) {
+    return incomingPreview;
+  }
+
+  if (Number.isNaN(existingMillis) || incomingMillis >= existingMillis) {
+    return incomingPreview;
+  }
+
+  return toCleanText(existingPreview) || null;
 }
 
 function shouldReplaceProvisionalMessageWithFetched(original: WhapiMessage, fetched: WhapiMessage): boolean {
@@ -1856,7 +1946,7 @@ async function ensureStatusResolvedChatExists(
   const nowIso = new Date().toISOString();
   const { data: existingChat, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, name, is_group, phone_number, lid, last_message_at')
+    .select('id, name, is_group, phone_number, lid, last_message_at, last_message')
     .eq('id', targetChatId)
     .maybeSingle();
 
@@ -1898,6 +1988,7 @@ async function ensureStatusResolvedChatExists(
       is_group: existingChat?.is_group ?? chatType === 'group',
       phone_number: isDirect ? phoneNumber : null,
       lid: isDirect ? lid : null,
+      last_message: existingChat?.last_message ?? null,
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
     },
@@ -1916,14 +2007,13 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
   const normalizedChatId = toCleanText(chatId);
   if (!normalizedChatId) return;
 
-  const { data: latestMessage, error: latestMessageError } = await supabase
+  const { data: recentMessages, error: latestMessageError } = await supabase
     .from('whatsapp_messages')
-    .select('timestamp, created_at')
+    .select('timestamp, created_at, body, type, payload, has_media, is_deleted')
     .eq('chat_id', normalizedChatId)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(25);
 
   if (latestMessageError) {
     console.warn('whatsapp-webhook: erro ao recalcular último horário do chat', {
@@ -1933,10 +2023,25 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
     return;
   }
 
+  const latestMessage = (recentMessages || [])[0];
   const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
+  const nextLastMessage =
+    (recentMessages || [])
+      .map((message) => resolveStoredChatPreview(message as {
+        body?: string | null;
+        type?: string | null;
+        payload?: unknown;
+        has_media?: boolean | null;
+        is_deleted?: boolean | null;
+      }))
+      .find((preview): preview is string => Boolean(preview)) ?? null;
   const { error: updateError } = await supabase
     .from('whatsapp_chats')
-    .update({ last_message_at: nextLastMessageAt, updated_at: new Date().toISOString() })
+    .update({
+      last_message: nextLastMessage,
+      last_message_at: nextLastMessageAt,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', normalizedChatId);
 
   if (updateError) {
@@ -2373,7 +2478,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
   const { data: existingChatById, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, lid, phone_number, last_message_at')
+    .select('id, lid, phone_number, last_message_at, last_message')
     .eq('id', message.chatId)
     .maybeSingle();
 
@@ -2399,11 +2504,12 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
       const { data: existingChat } = await supabase
         .from('whatsapp_chats')
-        .select('lid, last_message_at')
+        .select('lid, last_message_at, last_message')
         .eq('id', preferredChatId)
         .maybeSingle();
 
       const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
+      const incomingPreview = touchLastMessageAt ? resolveStoredChatPreview(message) : null;
       const nextLastMessageAt =
         getLatestIsoTimestamp(existingChat?.last_message_at, incomingActivityAt) ?? existingChat?.last_message_at ?? nowIso;
 
@@ -2411,6 +2517,12 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
         name: chatName,
         phone_number: phoneNumber,
         last_message_at: nextLastMessageAt,
+        last_message: mergeChatPreview(
+          existingChat?.last_message,
+          incomingPreview,
+          existingChat?.last_message_at,
+          incomingActivityAt,
+        ),
         updated_at: nowIso,
       };
 
@@ -2437,6 +2549,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
   }
 
   const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
+  const incomingPreview = touchLastMessageAt ? resolveStoredChatPreview(message) : null;
   const nextLastMessageAt =
     getLatestIsoTimestamp(existingChatById?.last_message_at, incomingActivityAt) ??
     existingChatById?.last_message_at ??
@@ -2450,6 +2563,12 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
       is_group: message.isGroup,
       phone_number: isDirectChat ? phoneNumber ?? existingChatById?.phone_number ?? null : null,
       lid: chatIdType === 'lid' ? lid : existingChatById?.lid ?? null,
+      last_message: mergeChatPreview(
+        existingChatById?.last_message,
+        incomingPreview,
+        existingChatById?.last_message_at,
+        incomingActivityAt,
+      ),
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
     },
@@ -3076,7 +3195,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
 
   const { data: existingChat, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, name, is_group, phone_number, lid, last_message_at')
+    .select('id, name, is_group, phone_number, lid, last_message_at, last_message')
     .eq('id', chatId)
     .maybeSingle();
 
@@ -3093,6 +3212,12 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
     existingChat?.last_message_at ??
     referenceTimestamp ??
     nowIso;
+  const nextLastMessage = mergeChatPreview(
+    existingChat?.last_message,
+    resolveWhapiChatPreview(toWhapiMessageFromChatUpdate(update)),
+    existingChat?.last_message_at,
+    referenceTimestamp,
+  );
 
   const fallbackName =
     chatType === 'status'
@@ -3110,6 +3235,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
       is_group: existingChat?.is_group ?? chatType === 'group',
       phone_number: isDirectChat ? phoneNumber ?? existingChat?.phone_number ?? null : null,
       lid: chatType === 'lid' ? lid : existingChat?.lid ?? null,
+      last_message: nextLastMessage,
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
     },

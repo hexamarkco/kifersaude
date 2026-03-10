@@ -547,9 +547,10 @@ function MessageInputComponent({
     return trimmed.toLowerCase().endsWith('@lid') ? trimmed : null;
   };
 
-  const ensureOutboundChatExists = async (normalizedChatId: string, sentAt: string) => {
+  const ensureOutboundChatExists = async (normalizedChatId: string, sentAt: string, lastMessage?: string | null) => {
     const chatKind = getWhatsAppChatKind(normalizedChatId);
     const isGroup = chatKind === 'group';
+    const normalizedPreview = typeof lastMessage === 'string' && lastMessage.trim() ? lastMessage.trim() : null;
 
     const { error } = await supabase.from('whatsapp_chats').upsert(
       {
@@ -557,6 +558,7 @@ function MessageInputComponent({
         is_group: isGroup,
         phone_number: chatKind === 'direct' ? extractDirectPhoneNumber(normalizedChatId) : null,
         lid: chatKind === 'direct' ? extractChatLid(normalizedChatId) : null,
+        last_message: normalizedPreview,
         last_message_at: sentAt,
         updated_at: new Date().toISOString(),
       },
@@ -578,7 +580,7 @@ function MessageInputComponent({
   }): Promise<{ normalizedChatId: string; messageId: string; persistedMessageId: string | null }> => {
     const { response, chatId: rawChatId, type, body, hasMedia, sentAt } = params;
     const normalizedChatId = normalizeChatId(rawChatId);
-    await ensureOutboundChatExists(normalizedChatId, sentAt);
+    await ensureOutboundChatExists(normalizedChatId, sentAt, body);
 
     const responsePayload = response && typeof response === 'object'
       ? (response as Record<string, unknown>)

@@ -618,6 +618,130 @@ const buildMessageBody = (message: WhapiMessage): { body: string; hasMedia: bool
   return { body: `[${message.type}]`, hasMedia: false };
 };
 
+const provisionalBodyMarkers = new Set([
+  '[mensagem criptografada]',
+  '[evento do whatsapp]',
+  '[sistema: ciphertext]',
+]);
+
+const ignoredChatPreviewBodies = new Set([
+  '[evento do whatsapp]',
+  '[atualização do whatsapp]',
+  '[atualizacao do whatsapp]',
+  '[mensagem não suportada]',
+  '[mensagem nao suportada]',
+]);
+
+const normalizePreviewBody = (value: string | null | undefined): string => toCleanText(value).toLowerCase();
+
+const isWaitingPlaceholderText = (body: string | null | undefined): boolean => {
+  const normalized = normalizePreviewBody(body);
+  if (!normalized) return false;
+  return (
+    normalized.includes('aguardando esta mensagem') ||
+    normalized.includes('aguardando essa mensagem') ||
+    normalized.includes('waiting for this message')
+  );
+};
+
+const resolveStoredChatPreview = (message: {
+  type?: string | null;
+  body?: string | null;
+  payload?: unknown;
+  has_media?: boolean | null;
+  is_deleted?: boolean | null;
+}): string | null => {
+  if (message.is_deleted) {
+    return 'Mensagem apagada';
+  }
+
+  const payload = toPayloadObject(message.payload);
+  const payloadAction = payload ? toPayloadObject(payload.action) : null;
+  const actionType = normalizeActionType(payloadAction?.type);
+  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited') {
+    return null;
+  }
+
+  const normalizedType = normalizePreviewBody(message.type);
+  const normalizedBody = normalizePreviewBody(message.body);
+  const payloadSubtype = normalizePreviewBody(typeof payload?.subtype === 'string' ? payload.subtype : null);
+  const payloadSystem = payload ? toPayloadObject(payload.system) : null;
+  const payloadSystemBody = payloadSystem ? toCleanText(payloadSystem.body) : '';
+
+  if (
+    normalizedType === 'system' &&
+    (
+      provisionalBodyMarkers.has(normalizedBody) ||
+      payloadSubtype === 'ciphertext' ||
+      isWaitingPlaceholderText(message.body) ||
+      isWaitingPlaceholderText(payloadSystemBody)
+    )
+  ) {
+    return null;
+  }
+
+  const body = toCleanText(message.body);
+  if (normalizedBody) {
+    if (ignoredChatPreviewBodies.has(normalizedBody)) {
+      return null;
+    }
+
+    return body;
+  }
+
+  if (normalizedType === 'image') return '[Imagem]';
+  if (normalizedType === 'video' || normalizedType === 'short' || normalizedType === 'gif') return '[Vídeo]';
+  if (normalizedType === 'audio' || normalizedType === 'voice' || normalizedType === 'ptt') return '[Áudio]';
+  if (normalizedType === 'document') return '[Documento]';
+  if (normalizedType === 'contact') return '[Contato]';
+  if (normalizedType === 'location' || normalizedType === 'live_location') return '[Localização]';
+  if (message.has_media) return '[Anexo]';
+  return null;
+};
+
+const refreshChatLastMessageState = async (chatId: string) => {
+  const normalizedChatId = toCleanText(chatId);
+  if (!normalizedChatId) return;
+
+  const { data: recentMessages, error: recentMessagesError } = await supabase
+    .from('whatsapp_messages')
+    .select('timestamp, created_at, body, type, payload, has_media, is_deleted')
+    .eq('chat_id', normalizedChatId)
+    .order('timestamp', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (recentMessagesError) {
+    throw new Error(recentMessagesError.message);
+  }
+
+  const latestMessage = (recentMessages || [])[0];
+  const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
+  const nextLastMessage =
+    (recentMessages || [])
+      .map((message) => resolveStoredChatPreview(message as {
+        body?: string | null;
+        type?: string | null;
+        payload?: unknown;
+        has_media?: boolean | null;
+        is_deleted?: boolean | null;
+      }))
+      .find((preview): preview is string => Boolean(preview)) ?? null;
+
+  const { error: updateError } = await supabase
+    .from('whatsapp_chats')
+    .update({
+      last_message: nextLastMessage,
+      last_message_at: nextLastMessageAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', normalizedChatId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+};
+
 const extractChatPhoneNumber = (chatId: string): string | null => {
   const normalized = chatId.trim();
   if (!normalized) return null;
@@ -759,7 +883,7 @@ Deno.serve(async (req) => {
     const messageChatName = messageChatNameRaw && messageChatNameRaw !== resolvedRequestedChatId ? messageChatNameRaw : null;
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
-      .select('name, last_message_at, phone_number, lid')
+      .select('name, last_message_at, last_message, phone_number, lid')
       .eq('id', resolvedRequestedChatId)
       .maybeSingle();
 
@@ -795,6 +919,7 @@ Deno.serve(async (req) => {
         phone_number:
           chatKind === 'direct' ? extractChatPhoneNumber(resolvedRequestedChatId) ?? existingChat?.phone_number ?? null : null,
         lid: chatKind === 'direct' ? extractChatLid(resolvedRequestedChatId) ?? existingChat?.lid ?? null : null,
+        last_message: existingChat?.last_message ?? null,
         last_message_at: nextLastMessageAt,
         updated_at: nowIso,
       },
@@ -915,6 +1040,8 @@ Deno.serve(async (req) => {
     if (insertError) {
       throw new Error(insertError.message);
     }
+
+    await refreshChatLastMessageState(resolvedRequestedChatId);
 
     return new Response(JSON.stringify({ success: true, count: mergedMessages.length }), {
       status: 200,

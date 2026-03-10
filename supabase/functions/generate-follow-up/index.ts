@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
+const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
 
 type FollowUpRequest = {
   leadName?: string;
@@ -45,6 +46,53 @@ const normalizeValue = (value: unknown): string => {
   }
 };
 
+const formatRuntimeDate = (date: Date, options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat('pt-BR', {
+    timeZone: BRASILIA_TIMEZONE,
+    ...options,
+  }).format(date);
+
+const extractFirstName = (name: string) => {
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  return trimmed.split(/\s+/)[0] || '';
+};
+
+const buildInstructionVariables = (leadName: string) => {
+  const now = new Date();
+  const firstName = extractFirstName(leadName);
+
+  return new Map<string, string>([
+    ['nome', leadName],
+    ['primeiro_nome', firstName],
+    ['data_hoje', formatRuntimeDate(now, { day: '2-digit', month: '2-digit', year: 'numeric' })],
+    ['hora_agora', formatRuntimeDate(now, { hour: '2-digit', minute: '2-digit', hour12: false })],
+    [
+      'data_hora_atual_brasilia',
+      formatRuntimeDate(now, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+    ],
+    ['fuso_horario', 'America/Sao_Paulo'],
+    ['cidade_horario', 'Brasilia'],
+  ]);
+};
+
+const applyInstructionVariables = (text: string, leadName: string) => {
+  if (!text.trim()) return '';
+
+  const variables = buildInstructionVariables(leadName);
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (fullMatch, token) => {
+    const resolved = variables.get(String(token).toLowerCase());
+    return typeof resolved === 'string' && resolved.trim() ? resolved : fullMatch;
+  });
+};
+
 const splitFollowUpMessages = (text: string) =>
   text
     .split(/\r?\n/)
@@ -73,15 +121,17 @@ const loadCustomInstructions = async (supabaseAdmin: ReturnType<typeof createCli
   }
 };
 
-const buildSystemPrompt = (customInstructions: string) => {
+const buildSystemPrompt = (customInstructions: string, leadName: string) => {
   if (!customInstructions) {
     return BASE_SYSTEM_PROMPT;
   }
 
+  const resolvedInstructions = applyInstructionVariables(customInstructions, leadName);
+
   return `${BASE_SYSTEM_PROMPT}
 
 Instrucoes adicionais da operacao:
-${customInstructions}`;
+${resolvedInstructions}`;
 };
 
 const buildUserPrompt = (
@@ -136,7 +186,7 @@ Deno.serve(async (req) => {
     const generationResult = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_generation',
-      systemPrompt: buildSystemPrompt(customInstructions),
+      systemPrompt: buildSystemPrompt(customInstructions, leadName),
       userPrompt: buildUserPrompt({
         leadName,
         conversationHistory,

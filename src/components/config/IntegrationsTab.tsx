@@ -994,12 +994,16 @@ export default function IntegrationsTab() {
                       'Exemplo:\n' +
                       '- Fale como consultora de planos de saude.\n' +
                       '- Seja objetiva e acolhedora.\n' +
+                      '- Considere que agora em Brasilia sao {{hora_agora}} do dia {{data_hoje}}.\n' +
                       '- Evite texto longo.\n' +
                       '- Quando fizer sentido, termine com uma CTA simples.'
                     }
                   />
                   <p className="mt-2 text-xs text-slate-500">
-                    Use este campo para orientar tom, abordagem comercial, limites e preferencias da sua operacao. Nao precisa repetir regras basicas do sistema.
+                    Use este campo para orientar tom, abordagem comercial, limites e preferencias da sua operacao. Variaveis disponiveis: {'{{nome}}'}, {'{{primeiro_nome}}'}, {'{{data_hoje}}'}, {'{{hora_agora}}'} e {'{{data_hora_atual_brasilia}}'}.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    As datas e horas sao resolvidas no fuso de Brasilia. Nao precisa repetir regras basicas do sistema.
                   </p>
                 </div>
               </div>

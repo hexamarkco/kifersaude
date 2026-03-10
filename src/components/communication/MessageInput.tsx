@@ -853,7 +853,8 @@ function MessageInputComponent({
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      alert('Erro ao enviar mensagem');
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+      alert(errorMessage || 'Erro ao enviar mensagem');
     } finally {
       setIsSending(false);
     }

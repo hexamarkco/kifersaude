@@ -211,6 +211,107 @@ async function validateWhatsAppRecipient(chatId: string, token: string): Promise
   return normalizedWaId;
 }
 
+function isInvalidRecipientError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('nao possui whatsapp') ||
+    normalized.includes('não possui whatsapp') ||
+    normalized.includes('recipient not found') ||
+    normalized.includes('recipient does not exist') ||
+    normalized.includes('does not exist') ||
+    normalized.includes('not on whatsapp') ||
+    normalized.includes('chat not found') ||
+    normalized.includes('invalid chatid') ||
+    normalized.includes('invalid wid') ||
+    normalized.includes('invalido') ||
+    normalized.includes('inválido')
+  );
+}
+
+function shouldFallbackAfterRecipientValidation(errorMessage: string): boolean {
+  const normalized = errorMessage.toLowerCase();
+
+  if (!normalized) return true;
+  if (isInvalidRecipientError(normalized)) return false;
+
+  if (
+    normalized.includes('token da whapi') ||
+    normalized.includes('autentica') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('forbidden')
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function buildRecipientCandidates(chatId: string, validatedRecipient?: string | null): string[] {
+  const normalized = normalizeChatId(chatId);
+  const candidates = new Set<string>();
+
+  const add = (value: string | null | undefined) => {
+    if (!value) return;
+    const trimmed = value.trim();
+    if (trimmed) candidates.add(trimmed);
+  };
+
+  add(validatedRecipient);
+  add(normalized);
+
+  if (/@s\.whatsapp\.net$/i.test(normalized)) {
+    add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
+  }
+
+  if (/@c\.us$/i.test(normalized)) {
+    add(normalized.replace(/@c\.us$/i, '@s.whatsapp.net'));
+  }
+
+  const digits = normalized.replace(/@.+$/, '').replace(/\D/g, '');
+  if (digits.length >= 10 && digits.length <= 15) {
+    add(`${digits}@s.whatsapp.net`);
+    add(`${digits}@c.us`);
+  }
+
+  return Array.from(candidates);
+}
+
+async function resolveSendRecipientCandidates(chatId: string, token: string): Promise<string[]> {
+  try {
+    const validatedRecipient = await validateWhatsAppRecipient(chatId, token);
+    return buildRecipientCandidates(chatId, validatedRecipient);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (!shouldFallbackAfterRecipientValidation(errorMessage)) {
+      throw error;
+    }
+
+    console.warn('[WhatsAppAPI] Falha ao validar destinatário; tentando envio direto', {
+      chatId,
+      error: errorMessage,
+    });
+
+    return buildRecipientCandidates(chatId);
+  }
+}
+
+function canRetryWithAlternateRecipient(status: number, errorMessage: string): boolean {
+  if (![400, 404, 409, 422].includes(status)) return false;
+
+  const normalized = errorMessage.toLowerCase();
+  return (
+    normalized.includes('recipient') ||
+    normalized.includes('chat') ||
+    normalized.includes('invalid') ||
+    normalized.includes('invalido') ||
+    normalized.includes('inválido') ||
+    normalized.includes('not found') ||
+    normalized.includes('does not exist') ||
+    normalized.includes('wid')
+  );
+}
+
 export interface MediaContent {
   mimetype?: string;
   data?: string;
@@ -263,11 +364,10 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
   const settings = await getWhatsAppSettings();
 
   const normalizedChatId = normalizeChatId(params.chatId);
+  const recipientCandidates = await resolveSendRecipientCandidates(normalizedChatId, settings.token);
 
   let endpoint = '';
-  const body: Record<string, unknown> = {
-    to: await validateWhatsAppRecipient(normalizedChatId, settings.token),
-  };
+  const body: Record<string, unknown> = {};
 
   if (params.quotedMessageId) {
     body.quoted = params.quotedMessageId;
@@ -395,27 +495,54 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
     throw new Error('Tipo de conteúdo não suportado');
   }
 
-  console.info('[WhatsAppAPI] Enviando requisição para Whapi Cloud', {
-    endpoint: `${WHAPI_BASE_URL}${endpoint}`,
-    body,
-  });
+  let lastErrorMessage = 'Erro desconhecido ao enviar mensagem';
 
-  const response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${settings.token}`,
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  for (let index = 0; index < recipientCandidates.length; index += 1) {
+    const recipient = recipientCandidates[index];
+    const requestBody = {
+      ...body,
+      to: recipient,
+    };
 
-  if (!response.ok) {
+    console.info('[WhatsAppAPI] Enviando requisição para Whapi Cloud', {
+      endpoint: `${WHAPI_BASE_URL}${endpoint}`,
+      body: requestBody,
+      attempt: index + 1,
+      totalAttempts: recipientCandidates.length,
+    });
+
+    const response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.token}`,
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (response.ok) {
+      return response.json();
+    }
+
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(formatApiError(error));
+    const errorMessage = formatApiError(error);
+    lastErrorMessage = errorMessage;
+
+    const hasAlternateRecipient = index < recipientCandidates.length - 1;
+    if (hasAlternateRecipient && canRetryWithAlternateRecipient(response.status, errorMessage)) {
+      console.warn('[WhatsAppAPI] Falha ao enviar com destinatário atual; tentando alternativa', {
+        recipient,
+        status: response.status,
+        error: errorMessage,
+      });
+      continue;
+    }
+
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  throw new Error(lastErrorMessage);
 }
 
 type WhapiPresenceState = 'typing' | 'recording';

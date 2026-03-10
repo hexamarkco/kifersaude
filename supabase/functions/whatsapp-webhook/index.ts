@@ -210,11 +210,26 @@ type WhapiMessageUpdate = {
   changes: string[];
 };
 
+type WhapiChatSnapshot = {
+  id?: string;
+  chat_id?: string;
+  last_message?: WhapiMessage;
+};
+
+type WhapiChatUpdate = {
+  before_update?: WhapiChatSnapshot;
+  after_update?: WhapiChatSnapshot;
+  chat?: WhapiChatSnapshot;
+  last_message?: WhapiMessage;
+  changes?: string[];
+};
+
 type WhapiWebhook = {
   messages?: WhapiMessage[];
   messages_updates?: WhapiMessageUpdate[];
   messages_removed?: Array<string | { id?: string; message_id?: string; chat_id?: string }>;
   messages_removed_all?: string;
+  chats_updates?: WhapiChatUpdate[];
   statuses?: WhapiStatus[];
   groups?: WhapiGroup[];
   groups_participants?: WhapiGroupParticipants[];
@@ -249,6 +264,7 @@ const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const webhookSecret = Deno.env.get('WHATSAPP_WEBHOOK_SECRET')?.trim() ?? '';
 const webhookSignatureSecret = Deno.env.get('WHATSAPP_WEBHOOK_SIGNATURE_SECRET')?.trim() || webhookSecret;
 const allowUnverifiedWebhook = Deno.env.get('WHATSAPP_WEBHOOK_ALLOW_UNVERIFIED') === 'true';
+const WHAPI_BASE_URL = (Deno.env.get('WHAPI_BASE_URL')?.trim() || 'https://gate.whapi.cloud').replace(/\/+$/, '');
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('Missing Supabase environment variables.');
@@ -424,6 +440,52 @@ async function storeEvent(event: StoredEvent) {
   if (error) {
     throw new Error(`Erro ao salvar evento: ${error.message}`);
   }
+}
+
+let cachedWhapiToken: string | null = null;
+let cachedWhapiTokenExpiresAt = 0;
+
+function sanitizeWhapiToken(rawToken: unknown): string {
+  if (typeof rawToken !== 'string') {
+    return '';
+  }
+
+  return rawToken.replace(/^Bearer\s+/i, '').trim();
+}
+
+async function getWhapiToken(): Promise<string | null> {
+  const now = Date.now();
+  if (cachedWhapiToken && now < cachedWhapiTokenExpiresAt) {
+    return cachedWhapiToken;
+  }
+
+  const { data: settingsRow, error } = await supabase
+    .from('integration_settings')
+    .select('settings')
+    .eq('slug', 'whatsapp_auto_contact')
+    .maybeSingle();
+
+  if (error) {
+    console.warn('whatsapp-webhook: erro ao carregar token Whapi da integração', {
+      error: error.message,
+    });
+    return null;
+  }
+
+  const settings = settingsRow?.settings && typeof settingsRow.settings === 'object'
+    ? (settingsRow.settings as Record<string, unknown>)
+    : null;
+
+  const token = sanitizeWhapiToken(settings?.apiKey ?? settings?.token ?? '');
+  if (!token) {
+    cachedWhapiToken = null;
+    cachedWhapiTokenExpiresAt = 0;
+    return null;
+  }
+
+  cachedWhapiToken = token;
+  cachedWhapiTokenExpiresAt = now + 45_000;
+  return cachedWhapiToken;
 }
 
 function toIsoString(timestamp: unknown): string | null {
@@ -982,12 +1044,14 @@ function mapStatusCodeToAck(code?: number | string | null): number | null {
 
   if (Number.isNaN(numericCode)) return null;
 
-  const codeMap: Record<number, number> = {
-    0: 1,
-    1: 2,
-    2: 3,
-    3: 4,
+  const codeMap: Record<number, number | null> = {
+    0: 0,
+    1: 1,
+    2: 2,
+    3: 3,
     4: 4,
+    5: 4,
+    6: null,
   };
 
   if (numericCode in codeMap) {
@@ -1002,6 +1066,79 @@ function resolveStatusAck(status?: string | null, code?: number | string | null)
   const fromCode = mapStatusCodeToAck(code);
 
   return fromStatus ?? fromCode;
+}
+
+async function fetchWhapiMessageById(messageId: string): Promise<WhapiMessage | null> {
+  const normalizedMessageId = toCleanText(messageId);
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  const token = await getWhapiToken();
+  if (!token) {
+    console.warn('whatsapp-webhook: token Whapi indisponivel para buscar mensagem por ID', {
+      messageId: normalizedMessageId,
+    });
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), 12_000);
+
+  try {
+    const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(normalizedMessageId)}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn('whatsapp-webhook: falha ao buscar mensagem na Whapi por ID', {
+        messageId: normalizedMessageId,
+        status: response.status,
+        error: errorBody.slice(0, 240),
+      });
+      return null;
+    }
+
+    const payload = (await response.json()) as Partial<WhapiMessage> | null;
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const payloadId = toCleanText(payload.id);
+    const payloadType = toCleanText(payload.type);
+    const payloadChatId = toCleanText(payload.chat_id);
+
+    if (!payloadId || !payloadType || !payloadChatId || typeof payload.from_me !== 'boolean') {
+      console.warn('whatsapp-webhook: payload incompleto ao buscar mensagem na Whapi por ID', {
+        messageId: normalizedMessageId,
+        payloadId,
+        payloadType,
+        payloadChatId,
+        hasFromMe: typeof payload.from_me === 'boolean',
+      });
+      return null;
+    }
+
+    return payload as WhapiMessage;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('whatsapp-webhook: excecao ao buscar mensagem na Whapi por ID', {
+      messageId: normalizedMessageId,
+      error: message,
+    });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
@@ -2216,6 +2353,237 @@ async function resolveReactionTargetChatId(message: WhapiMessage): Promise<strin
   return targetChatId;
 }
 
+type ProcessWhapiMessageOptions = {
+  sourceEvent?: string;
+  statusRecipientId?: string | null;
+  touchLastMessageAt?: boolean;
+};
+
+type ProcessWhapiMessageResult = {
+  processed: boolean;
+  reason?: string;
+  messageId: string;
+  chatId: string | null;
+  direction?: 'inbound' | 'outbound';
+};
+
+async function processWhapiMessage(message: WhapiMessage, options?: ProcessWhapiMessageOptions): Promise<ProcessWhapiMessageResult> {
+  const messageType = toCleanText(message.type).toLowerCase();
+  const actionType = normalizeActionType(message.action?.type);
+  const isDeleted = actionType === 'delete' || messageType === 'revoked';
+  const isEditAction = messageType === 'action' && (actionType === 'edit' || actionType === 'edited');
+
+  if (isEditAction) {
+    return {
+      processed: false,
+      reason: 'edit_action_ignored',
+      messageId: toCleanText(message.id),
+      chatId: toCleanText(message.chat_id) || null,
+    };
+  }
+
+  if (isDeleted) {
+    await processMessageDelete(message);
+    return {
+      processed: true,
+      reason: 'deleted_message_processed',
+      messageId: toCleanText(message.id),
+      chatId: toCleanText(message.chat_id) || null,
+    };
+  }
+
+  const normalized = normalizeWhapiMessage(message);
+  const isReactionAction = actionType === 'reaction';
+
+  if (isReactionAction) {
+    const targetChatId = await resolveReactionTargetChatId(message);
+
+    if (!targetChatId) {
+      console.warn('whatsapp-webhook: reacao ignorada por nao localizar mensagem alvo', {
+        reactionMessageId: message.id,
+        targetMessageId: message.action?.target,
+        incomingChatId: normalized.chatId,
+        sourceEvent: options?.sourceEvent || null,
+      });
+
+      return {
+        processed: false,
+        reason: 'reaction_target_not_found',
+        messageId: normalized.messageId,
+        chatId: normalized.chatId,
+        direction: normalized.direction,
+      };
+    }
+
+    if (targetChatId !== normalized.chatId) {
+      const originalChatId = normalized.chatId;
+      const resolvedTargetChatId = normalizeDirectChatId(targetChatId);
+      normalized.chatId = resolvedTargetChatId;
+      normalized.isGroup = resolvedTargetChatId.endsWith('@g.us');
+
+      if (normalized.direction === 'outbound') {
+        normalized.toNumber = resolvedTargetChatId;
+      }
+
+      if (normalized.direction === 'inbound' && (!normalized.fromNumber || normalized.fromNumber === originalChatId)) {
+        normalized.fromNumber = normalizeMaybeDirectId(message.from) || resolvedTargetChatId;
+      }
+
+      console.log('whatsapp-webhook: chat da reacao corrigido com base na mensagem alvo', {
+        reactionMessageId: message.id,
+        targetMessageId: message.action?.target,
+        originalChatId,
+        resolvedChatId: resolvedTargetChatId,
+        sourceEvent: options?.sourceEvent || null,
+      });
+    }
+  }
+
+  if (!isReactionAction) {
+    let resolvedOutboundChatId: string | null = null;
+
+    if (normalized.direction === 'outbound' && options?.statusRecipientId) {
+      resolvedOutboundChatId = await resolveCanonicalDirectChatIdFromStatusRecipient(
+        options.statusRecipientId,
+        normalized.chatId,
+        normalized.messageId,
+        normalized.timestamp,
+      );
+    }
+
+    if (!resolvedOutboundChatId) {
+      resolvedOutboundChatId = await resolveOutboundCanonicalDirectChatIdFromMessage(message, normalized);
+    }
+
+    if (resolvedOutboundChatId && resolvedOutboundChatId !== normalized.chatId) {
+      const originalChatId = normalized.chatId;
+      normalized.chatId = normalizeDirectChatId(resolvedOutboundChatId);
+      normalized.isGroup = getChatIdType(normalized.chatId) === 'group';
+      if (normalized.direction === 'outbound') {
+        normalized.toNumber = normalized.chatId;
+      }
+
+      console.log('whatsapp-webhook: chat outbound corrigido por reconciliacao', {
+        messageId: normalized.messageId,
+        originalChatId,
+        resolvedChatId: normalized.chatId,
+        source: message.source,
+        sourceEvent: options?.sourceEvent || null,
+        recipientId: options?.statusRecipientId || null,
+      });
+    }
+  }
+
+  const shouldTouchLastMessageAt =
+    typeof options?.touchLastMessageAt === 'boolean'
+      ? options.touchLastMessageAt
+      : !isReactionAction && !['system'].includes(messageType);
+
+  await upsertChat(normalized, { touchLastMessageAt: shouldTouchLastMessageAt });
+  await upsertMessage(normalized);
+
+  return {
+    processed: true,
+    messageId: normalized.messageId,
+    chatId: normalized.chatId,
+    direction: normalized.direction,
+  };
+}
+
+function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | null {
+  const fallbackChatId =
+    normalizeDirectChatId(toCleanText(update.after_update?.id || update.after_update?.chat_id || update.before_update?.id || update.before_update?.chat_id || update.chat?.id || update.chat?.chat_id || '')) ||
+    null;
+
+  const rawCandidate = update.after_update?.last_message || update.chat?.last_message || update.last_message;
+  if (!rawCandidate || typeof rawCandidate !== 'object') {
+    return null;
+  }
+
+  const candidate = rawCandidate as WhapiMessage;
+  const messageId = toCleanText(candidate.id);
+  const messageType = toCleanText(candidate.type);
+  const chatId = normalizeDirectChatId(toCleanText(candidate.chat_id || fallbackChatId || ''));
+  if (!messageId || !messageType || !chatId) {
+    return null;
+  }
+
+  let inferredFromMe = candidate.from_me;
+  if (typeof inferredFromMe !== 'boolean') {
+    const normalizedFrom = normalizeMaybeDirectId(candidate.from);
+    const chatType = getChatIdType(chatId);
+    if (chatType === 'phone' && normalizedFrom && getChatIdType(normalizedFrom) === 'phone') {
+      inferredFromMe = normalizeDirectChatId(normalizedFrom) !== chatId;
+    } else {
+      inferredFromMe = false;
+    }
+  }
+
+  return {
+    ...candidate,
+    id: messageId,
+    type: messageType,
+    chat_id: chatId,
+    from_me: inferredFromMe,
+    timestamp: candidate.timestamp ?? null,
+  };
+}
+
+type EnsureStatusMessageResult = {
+  ensured: boolean;
+  source: 'existing' | 'fetched' | 'not_found' | 'failed';
+  messageId: string;
+};
+
+async function ensureMessageMaterializedFromStatus(status: WhapiStatus): Promise<EnsureStatusMessageResult> {
+  const messageId = toCleanText(status.id);
+  if (!messageId) {
+    return { ensured: false, source: 'failed', messageId: '' };
+  }
+
+  const { data: existingMessage, error: existingMessageError } = await supabase
+    .from('whatsapp_messages')
+    .select('id')
+    .eq('id', messageId)
+    .maybeSingle();
+
+  if (existingMessageError) {
+    console.warn('whatsapp-webhook: erro ao verificar existencia da mensagem para status', {
+      messageId,
+      error: existingMessageError.message,
+    });
+    return { ensured: false, source: 'failed', messageId };
+  }
+
+  if (existingMessage?.id) {
+    return { ensured: true, source: 'existing', messageId };
+  }
+
+  const fetchedMessage = await fetchWhapiMessageById(messageId);
+  if (!fetchedMessage) {
+    return { ensured: false, source: 'not_found', messageId };
+  }
+
+  const processed = await processWhapiMessage(fetchedMessage, {
+    sourceEvent: 'statuses.fetch',
+    statusRecipientId: status.recipient_id,
+    touchLastMessageAt: true,
+  });
+
+  if (!processed.processed) {
+    return { ensured: false, source: 'failed', messageId };
+  }
+
+  console.log('whatsapp-webhook: mensagem materializada via statuses.post', {
+    messageId,
+    recipientId: status.recipient_id,
+    chatId: processed.chatId,
+    direction: processed.direction || null,
+  });
+
+  return { ensured: true, source: 'fetched', messageId };
+}
+
 async function processGroupCreation(group: WhapiGroup) {
   console.log('whatsapp-webhook: processando criação de grupo', {
     groupId: group.id,
@@ -2519,86 +2887,15 @@ Deno.serve(async (req) => {
   if (Array.isArray(payload.messages)) {
     for (const message of payload.messages) {
       try {
-        const messageType = toCleanText(message.type).toLowerCase();
-        const actionType = normalizeActionType(message.action?.type);
-        const isDeleted = actionType === 'delete' || messageType === 'revoked';
-        const isEditAction = messageType === 'action' && (actionType === 'edit' || actionType === 'edited');
+        const processedMessage = await processWhapiMessage(message, {
+          sourceEvent: eventName,
+        });
 
-        if (isEditAction) {
+        if (!processedMessage.processed && processedMessage.reason === 'edit_action_ignored') {
           console.log('whatsapp-webhook: ignorando ação de edição (será processada via messages_updates)', {
             actionId: message.id,
             targetId: message.action?.target,
           });
-          continue;
-        }
-
-        if (isDeleted) {
-          console.log('whatsapp-webhook: mensagem deletada detectada', {
-            messageId: message.id,
-            chatId: message.chat_id,
-          });
-          await processMessageDelete(message);
-        } else {
-          const normalized = normalizeWhapiMessage(message);
-          const isReactionAction = actionType === 'reaction';
-
-          if (isReactionAction) {
-            const targetChatId = await resolveReactionTargetChatId(message);
-
-            if (!targetChatId) {
-              console.warn('whatsapp-webhook: reacao ignorada por nao localizar mensagem alvo', {
-                reactionMessageId: message.id,
-                targetMessageId: message.action?.target,
-                incomingChatId: normalized.chatId,
-              });
-              continue;
-            }
-
-            if (targetChatId !== normalized.chatId) {
-              const originalChatId = normalized.chatId;
-              const resolvedTargetChatId = normalizeDirectChatId(targetChatId);
-              normalized.chatId = resolvedTargetChatId;
-              normalized.isGroup = resolvedTargetChatId.endsWith('@g.us');
-
-              if (normalized.direction === 'outbound') {
-                normalized.toNumber = resolvedTargetChatId;
-              }
-
-              if (normalized.direction === 'inbound' && (!normalized.fromNumber || normalized.fromNumber === originalChatId)) {
-                normalized.fromNumber = normalizeMaybeDirectId(message.from) || resolvedTargetChatId;
-              }
-
-              console.log('whatsapp-webhook: chat da reacao corrigido com base na mensagem alvo', {
-                reactionMessageId: message.id,
-                targetMessageId: message.action?.target,
-                originalChatId,
-                resolvedChatId: resolvedTargetChatId,
-              });
-            }
-          }
-
-          if (!isReactionAction) {
-            const resolvedOutboundChatId = await resolveOutboundCanonicalDirectChatIdFromMessage(message, normalized);
-            if (resolvedOutboundChatId && resolvedOutboundChatId !== normalized.chatId) {
-              const originalChatId = normalized.chatId;
-              normalized.chatId = normalizeDirectChatId(resolvedOutboundChatId);
-              normalized.isGroup = getChatIdType(normalized.chatId) === 'group';
-              if (normalized.direction === 'outbound') {
-                normalized.toNumber = normalized.chatId;
-              }
-
-              console.log('whatsapp-webhook: chat outbound corrigido por chave de conversa', {
-                messageId: normalized.messageId,
-                originalChatId,
-                resolvedChatId: normalized.chatId,
-                source: message.source,
-              });
-            }
-          }
-
-          const shouldTouchLastMessageAt = !isReactionAction && !['system'].includes(messageType);
-          await upsertChat(normalized, { touchLastMessageAt: shouldTouchLastMessageAt });
-          await upsertMessage(normalized);
         }
       } catch (error) {
         const message_error = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -2651,10 +2948,43 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (Array.isArray(payload.chats_updates)) {
+    for (const update of payload.chats_updates) {
+      try {
+        const changedFields = Array.isArray(update.changes) ? update.changes : [];
+        if (changedFields.length > 0 && !changedFields.includes('last_message')) {
+          continue;
+        }
+
+        const chatUpdateMessage = toWhapiMessageFromChatUpdate(update);
+        if (!chatUpdateMessage) {
+          continue;
+        }
+
+        const processedFromChatPatch = await processWhapiMessage(chatUpdateMessage, {
+          sourceEvent: 'chats.patch',
+        });
+
+        if (processedFromChatPatch.processed) {
+          console.log('whatsapp-webhook: mensagem processada via chats.patch', {
+            messageId: processedFromChatPatch.messageId,
+            chatId: processedFromChatPatch.chatId,
+          });
+        }
+      } catch (error) {
+        const chat_update_error = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error('whatsapp-webhook: erro ao processar chats.patch', chat_update_error, {
+          chatId: update.after_update?.id || update.before_update?.id || null,
+        });
+      }
+    }
+  }
+
   if (Array.isArray(payload.statuses)) {
     for (const status of payload.statuses) {
       try {
         const ackStatus = resolveStatusAck(status.status, status.code);
+        const materialized = await ensureMessageMaterializedFromStatus(status);
         const reconciled = await reconcileMessageChatFromStatus(status);
 
         if (ackStatus !== null) {
@@ -2667,6 +2997,8 @@ Deno.serve(async (req) => {
           code: status.code,
           ackStatus,
           recipientId: status.recipient_id,
+          materializedSource: materialized.source,
+          materialized: materialized.ensured,
           reconciledFromChatId: reconciled?.fromChatId || null,
           reconciledToChatId: reconciled?.toChatId || null,
         });
@@ -2732,6 +3064,7 @@ Deno.serve(async (req) => {
     (payload.messages_updates?.length || 0) +
     (payload.messages_removed?.length || 0) +
     (payload.messages_removed_all ? 1 : 0) +
+    (payload.chats_updates?.length || 0) +
     (payload.statuses?.length || 0) +
     (payload.groups?.length || 0) +
     (payload.groups_participants?.length || 0) +

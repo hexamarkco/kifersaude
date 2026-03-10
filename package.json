@@ -13,6 +13,7 @@
     "backfill:whatsapp:global": "node scripts/backfill-whatsapp-global.mjs",
     "reconcile:whatsapp:direct": "node scripts/reconcile-whatsapp-direct-chats.mjs",
     "reconcile:whatsapp:web-outbound": "node scripts/reconcile-whatsapp-web-outbound-routing.mjs",
+    "monitor:whatsapp:realtime": "node scripts/monitor-whatsapp-realtime-health.mjs",
     "migrations:report": "node scripts/audit-migrations.mjs",
     "migrations:report:write": "node scripts/audit-migrations.mjs --write",
     "migrations:baseline:write": "node scripts/audit-migrations.mjs --write-baseline",

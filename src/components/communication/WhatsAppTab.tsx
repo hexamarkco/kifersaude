@@ -752,8 +752,12 @@ export default function WhatsAppTab() {
   };
 
   const extractPhoneFromChatId = (chatId: string) => {
-    if (getWhatsAppChatKind(chatId) !== 'direct') return '';
-    return normalizePhoneNumber(chatId);
+    const trimmed = chatId.trim();
+    if (!trimmed) return '';
+    if (getWhatsAppChatKind(trimmed) !== 'direct') return '';
+    if (/@lid$/i.test(trimmed)) return '';
+    if (!/@(?:s\.whatsapp\.net|c\.us)$/i.test(trimmed)) return '';
+    return normalizePhoneNumber(trimmed);
   };
 
   const getChatIdVariants = (chat: WhatsAppChat) => {
@@ -2562,7 +2566,7 @@ export default function WhatsAppTab() {
       return getNonDirectFallbackName(chat);
     }
 
-    const phone = normalizePhoneNumber(chat.phone_number || chat.id);
+    const phone = normalizePhoneNumber(chat.phone_number || extractPhoneFromChatId(chat.id));
     const leadMatchKeys = getLeadMatchKeysForChat(chat);
 
     for (const key of leadMatchKeys) {
@@ -2956,7 +2960,7 @@ export default function WhatsAppTab() {
     const fullName = (selectedLead?.name || selectedChatDisplayName || '').trim();
     const firstName = fullName.split(/\s+/).filter(Boolean)[0] || '';
     const rawPhone = selectedChat && isDirectChat(selectedChat)
-      ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
+      ? normalizePhoneNumber(selectedLead?.phone || selectedChat.phone_number || extractPhoneFromChatId(selectedChat.id))
       : '';
 
     return {
@@ -3030,13 +3034,46 @@ export default function WhatsAppTab() {
         ? 'bg-indigo-100 text-indigo-700'
         : selectedChatKind === 'status'
           ? 'bg-amber-100 text-amber-700'
-          : selectedChatKind === 'broadcast'
+        : selectedChatKind === 'broadcast'
             ? 'bg-orange-100 text-orange-700'
             : 'bg-slate-100 text-slate-700';
   const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
-  const selectedChatPhone = selectedChat && selectedChatIsDirect
-    ? normalizePhoneNumber(selectedChat.phone_number || selectedChat.id)
-    : '';
+  const selectedChatPeerPhoneFromMessages = useMemo(() => {
+    if (!selectedChat || !selectedChatIsDirect) return '';
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      const peerRaw =
+        message.direction === 'inbound'
+          ? message.from_number
+          : message.direction === 'outbound'
+            ? message.to_number
+            : null;
+      if (!peerRaw || /@lid$/i.test(peerRaw)) continue;
+
+      const normalized = normalizePhoneNumber(peerRaw);
+      if (normalized) return normalized;
+    }
+
+    return '';
+  }, [messages, selectedChat, selectedChatIsDirect]);
+  const selectedChatPhone = (() => {
+    if (!selectedChat || !selectedChatIsDirect) return '';
+
+    const candidates = [
+      selectedLead?.phone || '',
+      selectedChatPeerPhoneFromMessages,
+      /@lid$/i.test(selectedChat.id) ? '' : selectedChat.phone_number || '',
+      extractPhoneFromChatId(selectedChat.id),
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = normalizePhoneNumber(candidate);
+      if (normalized) return normalized;
+    }
+
+    return '';
+  })();
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
   const selectedChatPhoto = (() => {
     if (!selectedChat || !selectedChatIsDirect) return null;

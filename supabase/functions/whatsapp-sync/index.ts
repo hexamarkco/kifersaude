@@ -248,6 +248,62 @@ const normalizeDirectChatId = (chatId: string): string => {
   return trimmed;
 };
 
+const normalizeMaybeDirectId = (value: string | null | undefined): string | null => {
+  const cleaned = toCleanText(value);
+  if (!cleaned) return null;
+  return getChatIdKind(cleaned) === 'direct' ? normalizeDirectChatId(cleaned) : cleaned;
+};
+
+const resolveInboundCanonicalDirectChatId = (
+  rawChatId: string,
+  normalizedChatId: string,
+  normalizedFrom: string | null,
+): string => {
+  if (!normalizedFrom || getChatIdKind(normalizedFrom) !== 'direct') {
+    return normalizedChatId;
+  }
+
+  if (normalizedFrom.trim().toLowerCase().endsWith('@lid')) {
+    return normalizedChatId;
+  }
+
+  const normalizedRaw = rawChatId.trim().toLowerCase();
+  if (!normalizedRaw) {
+    return normalizedFrom;
+  }
+
+  if (normalizedRaw.endsWith('@g.us') || normalizedRaw.endsWith('@newsletter') || normalizedRaw.endsWith('@broadcast')) {
+    return normalizedChatId;
+  }
+
+  if (normalizedRaw === 'status@broadcast' || normalizedRaw === 'stories') {
+    return normalizedChatId;
+  }
+
+  if (normalizedChatId !== normalizedFrom) {
+    return normalizedFrom;
+  }
+
+  return normalizedChatId;
+};
+
+const resolveRequestedChatIdFromMessages = (requestedChatId: string, messages: WhapiMessage[]): string => {
+  if (getChatIdKind(requestedChatId) !== 'direct') {
+    return requestedChatId;
+  }
+
+  for (const message of messages) {
+    if (message.from_me) continue;
+    const normalizedFrom = normalizeMaybeDirectId(message.from);
+    if (!normalizedFrom || getChatIdKind(normalizedFrom) !== 'direct') continue;
+    if (normalizedFrom.trim().toLowerCase().endsWith('@lid')) continue;
+    if (normalizedFrom === requestedChatId) return requestedChatId;
+    return normalizedFrom;
+  }
+
+  return requestedChatId;
+};
+
 const mergeAckStatus = (currentAck: number | null | undefined, incomingAck: number | null | undefined): number | null => {
   if (incomingAck === null || incomingAck === undefined) {
     return typeof currentAck === 'number' ? currentAck : null;
@@ -625,7 +681,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const chatKind = getChatIdKind(requestedChatId);
+    const resolvedRequestedChatId = resolveRequestedChatIdFromMessages(requestedChatId, messages);
+    const chatKind = getChatIdKind(resolvedRequestedChatId);
     const isGroup = chatKind === 'group';
     const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast' || chatKind === 'status';
     const nowIso = new Date().toISOString();
@@ -634,21 +691,21 @@ Deno.serve(async (req) => {
       .reduce<string | null>((latest, current) => getLatestIsoTimestamp(latest, current), null);
     const lastMessageAt = latestMessageAt ?? nowIso;
     const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
-    const messageChatName = messageChatNameRaw && messageChatNameRaw !== requestedChatId ? messageChatNameRaw : null;
+    const messageChatName = messageChatNameRaw && messageChatNameRaw !== resolvedRequestedChatId ? messageChatNameRaw : null;
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
       .select('name, last_message_at, phone_number, lid')
-      .eq('id', requestedChatId)
+      .eq('id', resolvedRequestedChatId)
       .maybeSingle();
 
     const existingChatName = existingChat?.name?.trim() || null;
 
     let chatName = existingChatName;
     if (isGroup) {
-      const canonicalGroupName = await fetchGroupName(token, requestedChatId);
-      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? requestedChatId;
+      const canonicalGroupName = await fetchGroupName(token, resolvedRequestedChatId);
+      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? resolvedRequestedChatId;
     } else if (isChannelChat) {
-      const channelName = messageChatName ?? (await fetchNewsletterName(token, requestedChatId));
+      const channelName = messageChatName ?? (await fetchNewsletterName(token, resolvedRequestedChatId));
       if (chatKind === 'status') {
         chatName = 'Status';
       } else if (channelName) {
@@ -667,23 +724,35 @@ Deno.serve(async (req) => {
 
     await supabase.from('whatsapp_chats').upsert(
       {
-        id: requestedChatId,
+        id: resolvedRequestedChatId,
         name: chatName,
         is_group: isGroup,
         phone_number:
-          chatKind === 'direct' ? extractChatPhoneNumber(requestedChatId) ?? existingChat?.phone_number ?? null : null,
-        lid: chatKind === 'direct' ? extractChatLid(requestedChatId) ?? existingChat?.lid ?? null : null,
+          chatKind === 'direct' ? extractChatPhoneNumber(resolvedRequestedChatId) ?? existingChat?.phone_number ?? null : null,
+        lid: chatKind === 'direct' ? extractChatLid(resolvedRequestedChatId) ?? existingChat?.lid ?? null : null,
         last_message_at: nextLastMessageAt,
         updated_at: nowIso,
       },
       { onConflict: 'id' },
     );
 
+    if (resolvedRequestedChatId !== requestedChatId) {
+      await supabase
+        .from('whatsapp_messages')
+        .update({ chat_id: resolvedRequestedChatId })
+        .eq('chat_id', requestedChatId);
+
+      await supabase
+        .from('whatsapp_chats')
+        .delete()
+        .eq('id', requestedChatId);
+    }
+
     if (isGroup && chatName) {
       await supabase
         .from('whatsapp_groups')
         .update({ name: chatName, last_updated_at: nowIso })
-        .eq('id', requestedChatId);
+        .eq('id', resolvedRequestedChatId);
     }
 
     const normalized = messages
@@ -696,11 +765,14 @@ Deno.serve(async (req) => {
         const direction = message.from_me ? 'outbound' : 'inbound';
         const { body, hasMedia } = buildMessageBody(message);
         const actionType = normalizeActionType(message.action?.type);
-        const messageChatIdRaw = actionType === 'reaction' && message.action?.target ? requestedChatId : message.chat_id;
-        const messageChatId = normalizeDirectChatId(messageChatIdRaw || requestedChatId);
-        const normalizedFrom = toCleanText(message.from);
+        const messageChatIdRaw = actionType === 'reaction' && message.action?.target ? resolvedRequestedChatId : message.chat_id;
+        let messageChatId = normalizeDirectChatId(messageChatIdRaw || resolvedRequestedChatId);
+        const normalizedFrom = normalizeMaybeDirectId(message.from);
+        if (direction === 'inbound') {
+          messageChatId = resolveInboundCanonicalDirectChatId(messageChatIdRaw || '', messageChatId, normalizedFrom);
+        }
         const normalizedFromNumber =
-          direction === 'inbound' ? (normalizedFrom ? normalizeDirectChatId(normalizedFrom) : messageChatId) : null;
+          direction === 'inbound' ? (normalizedFrom || messageChatId) : null;
         const normalizedToNumber = direction === 'outbound' ? messageChatId : null;
         const incomingTimestamp = toIsoString(message.timestamp);
 

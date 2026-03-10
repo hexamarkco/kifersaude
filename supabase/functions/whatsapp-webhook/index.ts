@@ -512,6 +512,36 @@ function normalizeMaybeDirectId(value: string | null | undefined): string | null
   return cleaned;
 }
 
+function resolveInboundCanonicalDirectChatId(
+  rawChatId: string,
+  normalizedChatId: string,
+  normalizedFrom: string | null,
+): string {
+  if (!normalizedFrom || getChatIdType(normalizedFrom) !== 'phone') {
+    return normalizedChatId;
+  }
+
+  const chatType = getChatIdType(normalizedChatId);
+  if (chatType === 'group' || chatType === 'newsletter' || chatType === 'broadcast' || chatType === 'status') {
+    return normalizedChatId;
+  }
+
+  if (chatType === 'lid' || chatType === 'unknown') {
+    return normalizedFrom;
+  }
+
+  if (chatType === 'phone' && normalizedChatId !== normalizedFrom) {
+    const raw = rawChatId.trim().toLowerCase();
+    if (!raw || raw.endsWith('@lid') || !raw.includes('@')) {
+      return normalizedFrom;
+    }
+
+    return normalizedFrom;
+  }
+
+  return normalizedChatId;
+}
+
 function toPayloadObject(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 }
@@ -867,12 +897,18 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
 function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const messageId = message.id;
   const direction: 'inbound' | 'outbound' = message.from_me ? 'outbound' : 'inbound';
-  const chatId = normalizeDirectChatId(message.chat_id || '');
+  const rawChatId = toCleanText(message.chat_id);
+  let chatId = normalizeDirectChatId(rawChatId || '');
+  const normalizedFrom = normalizeMaybeDirectId(message.from);
+
+  if (direction === 'inbound') {
+    chatId = resolveInboundCanonicalDirectChatId(rawChatId, chatId, normalizedFrom);
+  }
+
   const chatIdType = getChatIdType(chatId);
   const isGroup = chatIdType === 'group';
   const { body, hasMedia } = buildMessageBody(message);
 
-  const normalizedFrom = normalizeMaybeDirectId(message.from);
   const fromNumber = direction === 'inbound' ? (normalizedFrom || chatId) : null;
   const toNumber = direction === 'outbound' ? chatId : null;
   const contactName = message.from_name || null;
@@ -901,6 +937,7 @@ function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
 
   console.log('whatsapp-webhook: mensagem Whapi normalizada', {
     messageId: normalized.messageId,
+    incomingChatId: message.chat_id,
     chatId: normalized.chatId,
     direction: normalized.direction,
     contactName: normalized.contactName,
@@ -1034,13 +1071,80 @@ function buildPhoneLookupVariants(phoneNumber: string): string[] {
   return Array.from(variants);
 }
 
+function buildDirectChatIdVariantsFromPhone(phoneNumber: string): string[] {
+  const phoneVariants = buildPhoneLookupVariants(phoneNumber);
+  const chatIdVariants = new Set<string>();
+
+  phoneVariants.forEach((digits) => {
+    chatIdVariants.add(`${digits}@s.whatsapp.net`);
+    chatIdVariants.add(`${digits}@c.us`);
+  });
+
+  return Array.from(chatIdVariants);
+}
+
+function getDirectChatMergePriority(chatId: string, phoneNumber: string | null): number {
+  const normalized = chatId.trim().toLowerCase();
+  if (!normalized) return -1;
+
+  if (phoneNumber) {
+    if (normalized === `${phoneNumber}@s.whatsapp.net`) return 120;
+    if (normalized === `${phoneNumber}@c.us`) return 110;
+  }
+
+  if (normalized.endsWith('@s.whatsapp.net')) return 90;
+  if (normalized.endsWith('@c.us')) return 80;
+  if (normalized.endsWith('@lid')) return 20;
+  if (!normalized.includes('@')) return 10;
+  return 0;
+}
+
+function choosePreferredDirectChatId(primaryChatId: string, secondaryChatId: string, phoneNumber: string | null): string {
+  const primaryScore = getDirectChatMergePriority(primaryChatId, phoneNumber);
+  const secondaryScore = getDirectChatMergePriority(secondaryChatId, phoneNumber);
+  if (secondaryScore > primaryScore) {
+    return secondaryChatId;
+  }
+  return primaryChatId;
+}
+
 async function findExistingChatByPhone(phoneNumber: string, currentChatId: string): Promise<string | null> {
   const phoneVariants = buildPhoneLookupVariants(phoneNumber);
   if (phoneVariants.length === 0) {
     return null;
   }
 
+  const chatIdVariants = buildDirectChatIdVariantsFromPhone(phoneNumber).filter((variant) => variant !== currentChatId);
+  if (chatIdVariants.length > 0) {
+    const { data: byId, error: byIdError } = await supabase
+      .from('whatsapp_chats')
+      .select('id')
+      .in('id', chatIdVariants)
+      .neq('id', currentChatId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!byIdError && byId?.id) {
+      return byId.id;
+    }
+  }
+
   const { data, error } = await supabase
+    .from('whatsapp_chats')
+    .select('id, phone_number, lid')
+    .in('phone_number', phoneVariants)
+    .neq('id', currentChatId)
+    .not('id', 'ilike', '%@lid')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!error && data?.id) {
+    return data.id;
+  }
+
+  const { data: fallbackData, error: fallbackError } = await supabase
     .from('whatsapp_chats')
     .select('id, phone_number, lid')
     .in('phone_number', phoneVariants)
@@ -1049,11 +1153,11 @@ async function findExistingChatByPhone(phoneNumber: string, currentChatId: strin
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) {
+  if (fallbackError || !fallbackData) {
     return null;
   }
 
-  return data.id;
+  return fallbackData.id;
 }
 
 async function mergeChatMessages(fromChatId: string, toChatId: string) {
@@ -1215,10 +1319,15 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
   let chatIdType = getChatIdType(message.chatId);
   let lid = chatIdType === 'lid' ? message.chatId : null;
+  const chatPhone = extractPhoneNumber(message.chatId);
+  const fromPhone = extractPhoneNumber(message.fromNumber || '');
+  const toPhone = extractPhoneNumber(message.toNumber || '');
   const phoneNumber =
     chatIdType === 'phone'
-      ? extractPhoneNumber(message.chatId)
-      : extractPhoneNumber(message.fromNumber || '') || extractPhoneNumber(message.toNumber || '');
+      ? message.direction === 'inbound'
+        ? fromPhone || chatPhone || toPhone
+        : chatPhone || toPhone || fromPhone
+      : fromPhone || toPhone || chatPhone;
 
   if (chatIdType === 'lid') {
     const { data: chatByLid, error: chatByLidError } = await supabase
@@ -1269,18 +1378,22 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
     const existingChatId = await findExistingChatByPhone(phoneNumber, message.chatId);
 
     if (existingChatId) {
+      const preferredChatId = choosePreferredDirectChatId(message.chatId, existingChatId, phoneNumber);
+      const sourceChatId = preferredChatId === message.chatId ? existingChatId : message.chatId;
+
       console.log('whatsapp-webhook: chat existente encontrado para o mesmo telefone', {
-        newChatId: message.chatId,
+        newChatId: sourceChatId,
         existingChatId,
+        preferredChatId,
         phoneNumber,
       });
 
-      await mergeChatMessages(message.chatId, existingChatId);
+      await mergeChatMessages(sourceChatId, preferredChatId);
 
       const { data: existingChat } = await supabase
         .from('whatsapp_chats')
         .select('lid, last_message_at')
-        .eq('id', existingChatId)
+        .eq('id', preferredChatId)
         .maybeSingle();
 
       const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
@@ -1297,7 +1410,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
       if (lid && !existingChat?.lid) {
         updateData.lid = lid;
         console.log('whatsapp-webhook: vinculando LID ao chat existente', {
-          chatId: existingChatId,
+          chatId: preferredChatId,
           lid,
         });
       }
@@ -1305,13 +1418,13 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
       const { error: updateError } = await supabase
         .from('whatsapp_chats')
         .update(updateData)
-        .eq('id', existingChatId);
+        .eq('id', preferredChatId);
 
       if (updateError) {
         throw new Error(`Erro ao atualizar chat existente: ${updateError.message}`);
       }
 
-      message.chatId = existingChatId;
+      message.chatId = preferredChatId;
       return;
     }
   }

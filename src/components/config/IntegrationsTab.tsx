@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { configService } from '../../lib/configService';
-import type { IntegrationSetting } from '../../lib/supabase';
+import { supabase, type IntegrationSetting } from '../../lib/supabase';
 import WhatsAppApiSettings from './WhatsAppApiSettings';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
@@ -38,12 +38,11 @@ const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 type AiProvider = 'openai' | 'gemini' | 'claude';
 type AiTaskKey = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription';
+type ModelOption = { value: string; label: string };
 
 type AiProviderFormState = {
   enabled: boolean;
   apiKey: string;
-  defaultModelText: string;
-  defaultModelTranscription: string;
 };
 
 type AiTaskRouteState = {
@@ -58,7 +57,12 @@ type AiProviderMeta = {
   slug: string;
   name: string;
   description: string;
-  textModelOptions: Array<{ value: string; label: string }>;
+};
+
+type AiProviderModelsState = {
+  loading: boolean;
+  options: ModelOption[];
+  error: string | null;
 };
 
 const AI_PROVIDER_ORDER: AiProvider[] = ['openai', 'gemini', 'claude'];
@@ -68,32 +72,16 @@ const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
     slug: AI_PROVIDER_OPENAI_SLUG,
     name: 'OpenAI',
     description: 'Use modelos GPT para reescrita, follow-up e futuras tarefas de IA.',
-    textModelOptions: [
-      { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
-      { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
-      { value: 'gpt-4o', label: 'gpt-4o' },
-      { value: 'gpt-4.1', label: 'gpt-4.1' },
-    ],
   },
   gemini: {
     slug: AI_PROVIDER_GEMINI_SLUG,
     name: 'Google Gemini',
     description: 'Conecte sua API key do Gemini para usar modelos da Google.',
-    textModelOptions: [
-      { value: 'gemini-2.0-flash', label: 'gemini-2.0-flash' },
-      { value: 'gemini-2.0-flash-lite', label: 'gemini-2.0-flash-lite' },
-      { value: 'gemini-1.5-pro', label: 'gemini-1.5-pro' },
-    ],
   },
   claude: {
     slug: AI_PROVIDER_CLAUDE_SLUG,
     name: 'Claude (Anthropic)',
     description: 'Conecte sua API key da Anthropic para usar modelos Claude.',
-    textModelOptions: [
-      { value: 'claude-3-5-sonnet-latest', label: 'claude-3-5-sonnet-latest' },
-      { value: 'claude-3-5-haiku-latest', label: 'claude-3-5-haiku-latest' },
-      { value: 'claude-3-opus-latest', label: 'claude-3-opus-latest' },
-    ],
   },
 };
 
@@ -128,71 +116,122 @@ const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.t
 const isAiProvider = (value: string): value is AiProvider =>
   value === 'openai' || value === 'gemini' || value === 'claude';
 
-const getProviderDefaults = (provider: AiProvider): Pick<AiProviderFormState, 'defaultModelText' | 'defaultModelTranscription'> => {
-  if (provider === 'openai') {
-    return {
-      defaultModelText: OPENAI_DEFAULT_TEXT_MODEL,
-      defaultModelTranscription: OPENAI_DEFAULT_TRANSCRIPTION_MODEL,
-    };
+const normalizeModelOptions = (value: unknown): ModelOption[] => {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set<string>();
+  const options: ModelOption[] = [];
+
+  for (const item of value) {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (!trimmed || seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      options.push({ value: trimmed, label: trimmed });
+      continue;
+    }
+
+    if (!isRecord(item)) continue;
+
+    const modelValue =
+      toTrimmedString(item.value) ||
+      toTrimmedString(item.id) ||
+      toTrimmedString(item.name);
+
+    if (!modelValue || seen.has(modelValue)) continue;
+
+    const modelLabel =
+      toTrimmedString(item.label) ||
+      toTrimmedString(item.displayName) ||
+      modelValue;
+
+    seen.add(modelValue);
+    options.push({ value: modelValue, label: modelLabel || modelValue });
   }
 
-  if (provider === 'gemini') {
-    return {
-      defaultModelText: GEMINI_DEFAULT_TEXT_MODEL,
-      defaultModelTranscription: GEMINI_DEFAULT_TEXT_MODEL,
-    };
-  }
-
-  return {
-    defaultModelText: CLAUDE_DEFAULT_TEXT_MODEL,
-    defaultModelTranscription: CLAUDE_DEFAULT_TEXT_MODEL,
-  };
+  return options;
 };
 
-const createDefaultProviderForms = (): Record<AiProvider, AiProviderFormState> => ({
+const createDefaultProviderModelsState = (): Record<AiProvider, AiProviderModelsState> => ({
   openai: {
-    enabled: false,
-    apiKey: '',
-    ...getProviderDefaults('openai'),
+    loading: false,
+    options: [],
+    error: null,
   },
   gemini: {
-    enabled: false,
-    apiKey: '',
-    ...getProviderDefaults('gemini'),
+    loading: false,
+    options: [],
+    error: null,
   },
   claude: {
-    enabled: false,
-    apiKey: '',
-    ...getProviderDefaults('claude'),
+    loading: false,
+    options: [],
+    error: null,
   },
 });
 
 const getDefaultTaskModel = (
   task: AiTaskKey,
   provider: AiProvider,
-  providerForms: Record<AiProvider, AiProviderFormState>,
 ): string => {
-  if (task === 'whatsapp_audio_transcription') {
-    return providerForms[provider].defaultModelTranscription || providerForms[provider].defaultModelText;
+  if (provider === 'openai') {
+    if (task === 'whatsapp_audio_transcription') {
+      return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
+    }
+
+    return OPENAI_DEFAULT_TEXT_MODEL;
   }
 
-  return providerForms[provider].defaultModelText;
+  if (provider === 'gemini') {
+    return GEMINI_DEFAULT_TEXT_MODEL;
+  }
+
+  return CLAUDE_DEFAULT_TEXT_MODEL;
 };
 
-const createDefaultRoutingForm = (providerForms: Record<AiProvider, AiProviderFormState>): AiRoutingFormState => ({
+const getPreferredTaskModel = (
+  task: AiTaskKey,
+  provider: AiProvider,
+  providerOptions: ModelOption[],
+): string => {
+  const defaultModel = getDefaultTaskModel(task, provider);
+
+  if (providerOptions.some((option) => option.value === defaultModel)) {
+    return defaultModel;
+  }
+
+  return providerOptions[0]?.value ?? defaultModel;
+};
+
+const createDefaultProviderForms = (): Record<AiProvider, AiProviderFormState> => ({
+  openai: {
+    enabled: false,
+    apiKey: '',
+  },
+  gemini: {
+    enabled: false,
+    apiKey: '',
+  },
+  claude: {
+    enabled: false,
+    apiKey: '',
+  },
+});
+
+const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: 'openai',
-    model: getDefaultTaskModel('rewrite_message', 'openai', providerForms),
+    model: getDefaultTaskModel('rewrite_message', 'openai'),
     fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: 'openai',
-    model: getDefaultTaskModel('follow_up_generation', 'openai', providerForms),
+    model: getDefaultTaskModel('follow_up_generation', 'openai'),
     fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {
     provider: 'openai',
-    model: getDefaultTaskModel('whatsapp_audio_transcription', 'openai', providerForms),
+    model: getDefaultTaskModel('whatsapp_audio_transcription', 'openai'),
     fallbackToOpenAi: true,
   },
 });
@@ -204,25 +243,10 @@ const normalizeProviderSettings = (
 ): AiProviderFormState => {
   const settings = isRecord(integration?.settings) ? integration.settings : {};
   const legacySettings = isRecord(legacyIntegration?.settings) ? legacyIntegration.settings : {};
-  const defaults = getProviderDefaults(provider);
 
   const legacyApiKey = provider === 'openai' ? toTrimmedString(legacySettings.apiKey) : '';
-  const legacyTextModel =
-    provider === 'openai'
-      ? toTrimmedString(legacySettings.textModel) || toTrimmedString(legacySettings.model)
-      : '';
 
   const apiKey = toTrimmedString(settings.apiKey) || legacyApiKey;
-  const defaultModelText =
-    toTrimmedString(settings.defaultModelText) ||
-    toTrimmedString(settings.textModel) ||
-    toTrimmedString(settings.model) ||
-    legacyTextModel ||
-    defaults.defaultModelText;
-  const defaultModelTranscription =
-    toTrimmedString(settings.defaultModelTranscription) ||
-    toTrimmedString(settings.transcriptionModel) ||
-    defaults.defaultModelTranscription;
 
   const enabled =
     typeof settings.enabled === 'boolean'
@@ -234,16 +258,13 @@ const normalizeProviderSettings = (
   return {
     enabled,
     apiKey,
-    defaultModelText,
-    defaultModelTranscription,
   };
 };
 
 const normalizeRoutingSettings = (
   integration: IntegrationSetting | null,
-  providerForms: Record<AiProvider, AiProviderFormState>,
 ): AiRoutingFormState => {
-  const defaults = createDefaultRoutingForm(providerForms);
+  const defaults = createDefaultRoutingForm();
   const settings = isRecord(integration?.settings) ? integration.settings : {};
   const tasks = isRecord(settings.tasks) ? settings.tasks : {};
 
@@ -255,7 +276,7 @@ const normalizeRoutingSettings = (
     const model =
       toTrimmedString(rawTask.model) ||
       toTrimmedString(rawTask.textModel) ||
-      getDefaultTaskModel(task.key, provider, providerForms);
+      getDefaultTaskModel(task.key, provider);
 
     const fallbackToOpenAi =
       typeof rawTask.fallbackToOpenAi === 'boolean'
@@ -283,7 +304,10 @@ export default function IntegrationsTab() {
   );
   const [aiRoutingIntegration, setAiRoutingIntegration] = useState<IntegrationSetting | null>(null);
   const [aiRoutingForm, setAiRoutingForm] = useState<AiRoutingFormState>(() =>
-    createDefaultRoutingForm(createDefaultProviderForms()),
+    createDefaultRoutingForm(),
+  );
+  const [aiProviderModels, setAiProviderModels] = useState<Record<AiProvider, AiProviderModelsState>>(() =>
+    createDefaultProviderModelsState(),
   );
   const [loadingAi, setLoadingAi] = useState(true);
   const [savingAiProvider, setSavingAiProvider] = useState<Record<AiProvider, boolean>>({
@@ -322,6 +346,66 @@ export default function IntegrationsTab() {
   void loadingMetaPixel;
   void loadingGtm;
 
+  const loadProviderModels = async (provider: AiProvider, apiKey: string) => {
+    const normalizedApiKey = apiKey.trim();
+
+    if (!normalizedApiKey) {
+      setAiProviderModels((prev) => ({
+        ...prev,
+        [provider]: {
+          loading: false,
+          options: [],
+          error: null,
+        },
+      }));
+      return;
+    }
+
+    setAiProviderModels((prev) => ({
+      ...prev,
+      [provider]: {
+        ...prev[provider],
+        loading: true,
+        error: null,
+      },
+    }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('list-ai-models', {
+        body: {
+          provider,
+          apiKey: normalizedApiKey,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao consultar modelos');
+      }
+
+      const payload = isRecord(data) ? data : {};
+      const options = normalizeModelOptions(payload.models);
+
+      setAiProviderModels((prev) => ({
+        ...prev,
+        [provider]: {
+          loading: false,
+          options,
+          error: options.length === 0 ? 'Nenhum modelo retornado pela API do provedor.' : null,
+        },
+      }));
+    } catch (error) {
+      console.error(`Erro ao carregar modelos de ${provider}:`, error);
+      setAiProviderModels((prev) => ({
+        ...prev,
+        [provider]: {
+          loading: false,
+          options: [],
+          error: 'Nao foi possivel carregar os modelos da API do provedor.',
+        },
+      }));
+    }
+  };
+
   const loadAiIntegrations = async () => {
     setLoadingAi(true);
     setAiMessage(null);
@@ -351,7 +435,15 @@ export default function IntegrationsTab() {
       setAiProviderIntegrations(nextProviderIntegrations);
       setAiProviderForms(nextProviderForms);
       setAiRoutingIntegration(routingIntegration);
-      setAiRoutingForm(normalizeRoutingSettings(routingIntegration, nextProviderForms));
+      setAiRoutingForm(normalizeRoutingSettings(routingIntegration));
+      setAiProviderModels(createDefaultProviderModelsState());
+
+      for (const provider of AI_PROVIDER_ORDER) {
+        const apiKey = nextProviderForms[provider].apiKey;
+        if (apiKey.trim()) {
+          void loadProviderModels(provider, apiKey);
+        }
+      }
     } catch (error) {
       console.error('Erro ao carregar configuracoes de IA:', error);
       setAiMessage({ type: 'error', text: 'Nao foi possivel carregar as configuracoes de IA.' });
@@ -370,10 +462,6 @@ export default function IntegrationsTab() {
     const settingsPayload = {
       enabled: currentForm.enabled,
       apiKey: currentForm.apiKey.trim(),
-      defaultModelText: currentForm.defaultModelText.trim() || getProviderDefaults(provider).defaultModelText,
-      defaultModelTranscription:
-        currentForm.defaultModelTranscription.trim() ||
-        getProviderDefaults(provider).defaultModelTranscription,
     };
 
     const integration = aiProviderIntegrations[provider];
@@ -402,10 +490,21 @@ export default function IntegrationsTab() {
         [provider]: {
           enabled: settingsPayload.enabled,
           apiKey: settingsPayload.apiKey,
-          defaultModelText: settingsPayload.defaultModelText,
-          defaultModelTranscription: settingsPayload.defaultModelTranscription,
         },
       }));
+
+      if (settingsPayload.apiKey) {
+        void loadProviderModels(provider, settingsPayload.apiKey);
+      } else {
+        setAiProviderModels((prev) => ({
+          ...prev,
+          [provider]: {
+            loading: false,
+            options: [],
+            error: null,
+          },
+        }));
+      }
 
       setAiMessage({ type: 'success', text: `${providerMeta.name} atualizado com sucesso.` });
     }
@@ -419,7 +518,7 @@ export default function IntegrationsTab() {
 
     const tasksPayload = AI_TASKS.reduce((accumulator, task) => {
       const route = aiRoutingForm[task.key];
-      const model = route.model.trim() || getDefaultTaskModel(task.key, route.provider, aiProviderForms);
+      const model = route.model.trim() || getDefaultTaskModel(task.key, route.provider);
 
       accumulator[task.key] = {
         provider: route.provider,
@@ -589,8 +688,18 @@ export default function IntegrationsTab() {
             {AI_PROVIDER_ORDER.map((provider) => {
               const providerMeta = AI_PROVIDER_META[provider];
               const formState = aiProviderForms[provider];
-              const modelOptions = providerMeta.textModelOptions;
-              const currentModelIncluded = modelOptions.some((option) => option.value === formState.defaultModelText);
+              const providerModelsState = aiProviderModels[provider];
+              const hasApiKey = formState.apiKey.trim().length > 0;
+
+              const providerModelsHint = providerModelsState.loading
+                ? 'Carregando modelos da API para o roteamento...'
+                : !hasApiKey
+                  ? 'Salve uma API key para carregar modelos no roteamento por funcionalidade.'
+                  : providerModelsState.error
+                    ? providerModelsState.error
+                    : providerModelsState.options.length > 0
+                      ? `${providerModelsState.options.length} modelos carregados da API do provedor.`
+                      : 'Nenhum modelo retornado pela API do provedor.';
 
               return (
                 <div key={provider} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
@@ -618,84 +727,40 @@ export default function IntegrationsTab() {
                     </label>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-2">API Key</label>
-                      <div className="relative">
-                        <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type={showProviderApiKey[provider] ? 'text' : 'password'}
-                          value={formState.apiKey}
-                          onChange={(event) =>
-                            setAiProviderForms((prev) => ({
-                              ...prev,
-                              [provider]: {
-                                ...prev[provider],
-                                apiKey: event.target.value,
-                              },
-                            }))
-                          }
-                          className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          placeholder="Informe a API key"
-                          autoComplete="off"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowProviderApiKey((prev) => ({
-                              ...prev,
-                              [provider]: !prev[provider],
-                            }))
-                          }
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                        >
-                          {showProviderApiKey[provider] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Modelo padrao (texto)</label>
-                      <FilterSingleSelect
-                        icon={Tag}
-                        value={formState.defaultModelText}
-                        onChange={(value) =>
-                          setAiProviderForms((prev) => ({
-                            ...prev,
-                            [provider]: {
-                              ...prev[provider],
-                              defaultModelText: value,
-                            },
-                          }))
-                        }
-                        placeholder="Selecione o modelo"
-                        includePlaceholderOption={false}
-                        options={[
-                          ...(!currentModelIncluded && formState.defaultModelText
-                            ? [{ value: formState.defaultModelText, label: formState.defaultModelText }]
-                            : []),
-                          ...modelOptions,
-                        ]}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Modelo padrao (transcricao)</label>
-                      <Input
-                        type="text"
-                        value={formState.defaultModelTranscription}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">API Key</label>
+                    <div className="relative">
+                      <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showProviderApiKey[provider] ? 'text' : 'password'}
+                        value={formState.apiKey}
                         onChange={(event) =>
                           setAiProviderForms((prev) => ({
                             ...prev,
                             [provider]: {
                               ...prev[provider],
-                              defaultModelTranscription: event.target.value,
+                              apiKey: event.target.value,
                             },
                           }))
                         }
-                        placeholder="Modelo para transcricao"
+                        className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Informe a API key"
+                        autoComplete="off"
                       />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowProviderApiKey((prev) => ({
+                            ...prev,
+                            [provider]: !prev[provider],
+                          }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                      >
+                        {showProviderApiKey[provider] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
+                    <p className="mt-2 text-xs text-slate-500">{providerModelsHint}</p>
                   </div>
 
                   <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
@@ -722,6 +787,27 @@ export default function IntegrationsTab() {
               <div className="space-y-4">
                 {AI_TASKS.map((task) => {
                   const routeState = aiRoutingForm[task.key];
+                  const providerModelsState = aiProviderModels[routeState.provider];
+                  const providerApiKey = aiProviderForms[routeState.provider].apiKey.trim();
+                  const providerModelOptions = providerModelsState.options;
+                  const routeModelInOptions = providerModelOptions.some((option) => option.value === routeState.model);
+                  const modelOptions =
+                    providerModelOptions.length > 0
+                      ? [
+                          ...(!routeModelInOptions && routeState.model
+                            ? [{ value: routeState.model, label: routeState.model }]
+                            : []),
+                          ...providerModelOptions,
+                        ]
+                      : [];
+
+                  const modelFieldPlaceholder = providerModelsState.loading
+                    ? 'Carregando modelos...'
+                    : !providerApiKey
+                      ? 'Salve a API key do provedor'
+                      : providerModelOptions.length > 0
+                        ? 'Selecione o modelo'
+                        : 'Nenhum modelo disponivel';
 
                   return (
                     <div key={task.key} className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
@@ -738,12 +824,29 @@ export default function IntegrationsTab() {
                             value={routeState.provider}
                             onChange={(value) => {
                               const nextProvider = isAiProvider(value) ? value : 'openai';
+                              const nextProviderModelsState = aiProviderModels[nextProvider];
+                              const nextProviderApiKey = aiProviderForms[nextProvider].apiKey.trim();
+
+                              if (
+                                nextProviderApiKey &&
+                                nextProviderModelsState.options.length === 0 &&
+                                !nextProviderModelsState.loading
+                              ) {
+                                void loadProviderModels(nextProvider, nextProviderApiKey);
+                              }
+
+                              const nextModel = getPreferredTaskModel(
+                                task.key,
+                                nextProvider,
+                                nextProviderModelsState.options,
+                              );
+
                               setAiRoutingForm((prev) => ({
                                 ...prev,
                                 [task.key]: {
                                   ...prev[task.key],
                                   provider: nextProvider,
-                                  model: getDefaultTaskModel(task.key, nextProvider, aiProviderForms),
+                                  model: nextModel,
                                 },
                               }));
                             }}
@@ -755,21 +858,35 @@ export default function IntegrationsTab() {
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">Modelo</label>
-                          <Input
-                            type="text"
+                          <FilterSingleSelect
+                            icon={Tag}
                             value={routeState.model}
-                            onChange={(event) =>
+                            onChange={(value) =>
                               setAiRoutingForm((prev) => ({
                                 ...prev,
                                 [task.key]: {
                                   ...prev[task.key],
-                                  model: event.target.value,
+                                  model: value,
                                 },
                               }))
                             }
+                            placeholder={modelFieldPlaceholder}
+                            includePlaceholderOption={false}
+                            options={modelOptions}
                             size="compact"
-                            placeholder="Modelo para esta funcionalidade"
+                            disabled={providerModelsState.loading || modelOptions.length === 0}
                           />
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {providerModelsState.loading
+                              ? 'Consultando modelos na API do provedor...'
+                              : !providerApiKey
+                                ? 'Configure e salve a API key deste provedor para carregar os modelos.'
+                                : providerModelsState.error
+                                  ? providerModelsState.error
+                                  : providerModelOptions.length > 0
+                                    ? `${providerModelOptions.length} modelos disponiveis.`
+                                    : 'Nenhum modelo disponivel para este provedor.'}
+                          </p>
                         </div>
                       </div>
 

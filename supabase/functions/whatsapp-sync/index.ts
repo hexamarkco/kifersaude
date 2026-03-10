@@ -311,6 +311,47 @@ const mergeAckStatus = (currentAck: number | null | undefined, incomingAck: numb
   return incomingAck;
 };
 
+const toEpochMillis = (value: string | null | undefined): number => {
+  if (!value) return Number.NaN;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
+};
+
+const mergeMessageTimestamp = (
+  currentTimestamp: string | null | undefined,
+  incomingTimestamp: string | null | undefined,
+  currentCreatedAt?: string | null | undefined,
+): string | null => {
+  const current = toCleanText(currentTimestamp);
+  const incoming = toCleanText(incomingTimestamp);
+  const createdAt = toCleanText(currentCreatedAt);
+
+  const currentMillis = toEpochMillis(current || null);
+  const incomingMillis = toEpochMillis(incoming || null);
+  const createdAtMillis = toEpochMillis(createdAt || null);
+
+  if (Number.isNaN(currentMillis) && Number.isNaN(incomingMillis)) {
+    return createdAt || current || incoming || null;
+  }
+
+  if (Number.isNaN(currentMillis)) {
+    if (!Number.isNaN(createdAtMillis) && !Number.isNaN(incomingMillis) && incomingMillis - createdAtMillis > 20 * 60 * 1000) {
+      return createdAt || incoming || null;
+    }
+    return incoming || createdAt || null;
+  }
+
+  if (Number.isNaN(incomingMillis)) {
+    return current || createdAt || null;
+  }
+
+  if (incomingMillis < currentMillis) {
+    return incoming || current || createdAt || null;
+  }
+
+  return current || incoming || createdAt || null;
+};
+
 const toPayloadObject = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
@@ -799,6 +840,8 @@ Deno.serve(async (req) => {
     const messageIds = normalized.map((message) => message.id);
     type ExistingMessageSnapshot = {
       id: string;
+      timestamp: string | null;
+      created_at: string | null;
       is_deleted: boolean | null;
       deleted_at: string | null;
       deleted_by: string | null;
@@ -810,7 +853,7 @@ Deno.serve(async (req) => {
 
     const { data: existingMessages, error: existingMessagesError } = await supabase
       .from('whatsapp_messages')
-      .select('id, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status')
+      .select('id, timestamp, created_at, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status')
       .in('id', messageIds);
 
     if (existingMessagesError) {
@@ -837,6 +880,7 @@ Deno.serve(async (req) => {
         edited_at: existing.edited_at ?? message.edited_at,
         original_body: existing.original_body ?? message.original_body ?? message.body,
         ack_status: mergeAckStatus(existing.ack_status, message.ack_status),
+        timestamp: mergeMessageTimestamp(existing.timestamp, message.timestamp, existing.created_at),
       };
     });
 

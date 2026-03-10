@@ -956,6 +956,104 @@ function buildMessageBody(message: WhapiMessage): { body: string; hasMedia: bool
   return { body: `[${message.type}]`, hasMedia: false };
 }
 
+const provisionalBodyMarkers = new Set([
+  '[mensagem criptografada]',
+  '[evento do whatsapp]',
+  '[sistema: ciphertext]',
+]);
+
+function normalizeBodyForComparison(body: string | null | undefined): string {
+  return toCleanText(body).toLowerCase();
+}
+
+function isCiphertextSubtype(subtype: unknown): boolean {
+  return normalizeBodyForComparison(typeof subtype === 'string' ? subtype : '').includes('ciphertext');
+}
+
+function isWaitingPlaceholderText(body: string | null | undefined): boolean {
+  const normalized = normalizeBodyForComparison(body);
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized.includes('aguardando esta mensagem') ||
+    normalized.includes('waiting for this message') ||
+    normalized.includes('aguardando essa mensagem')
+  );
+}
+
+function isLikelyProvisionalWhapiMessage(message: WhapiMessage): boolean {
+  const messageType = normalizeBodyForComparison(message.type);
+  if (messageType !== 'system') {
+    return false;
+  }
+
+  if (isCiphertextSubtype(message.subtype)) {
+    return true;
+  }
+
+  const systemBody = toCleanText(message.system?.body);
+  if (isWaitingPlaceholderText(systemBody)) {
+    return true;
+  }
+
+  const { body } = buildMessageBody(message);
+  return provisionalBodyMarkers.has(normalizeBodyForComparison(body));
+}
+
+function isLikelyProvisionalStoredMessage(message: {
+  type?: string | null;
+  body?: string | null;
+  payload?: unknown;
+}): boolean {
+  const normalizedType = normalizeBodyForComparison(message.type || '');
+  if (normalizedType !== 'system') {
+    return false;
+  }
+
+  if (provisionalBodyMarkers.has(normalizeBodyForComparison(message.body || ''))) {
+    return true;
+  }
+
+  const payload = toPayloadObject(message.payload);
+  if (!payload) {
+    return false;
+  }
+
+  if (isCiphertextSubtype(payload.subtype)) {
+    return true;
+  }
+
+  const payloadSystem = toPayloadObject(payload.system);
+  const payloadSystemBody = payloadSystem ? toCleanText(payloadSystem.body) : '';
+  return isWaitingPlaceholderText(payloadSystemBody);
+}
+
+function shouldReplaceProvisionalMessageWithFetched(original: WhapiMessage, fetched: WhapiMessage): boolean {
+  if (toCleanText(original.id) !== toCleanText(fetched.id)) {
+    return false;
+  }
+
+  const originalIsProvisional = isLikelyProvisionalWhapiMessage(original);
+  if (!originalIsProvisional) {
+    return false;
+  }
+
+  const fetchedIsProvisional = isLikelyProvisionalWhapiMessage(fetched);
+  if (!fetchedIsProvisional) {
+    return true;
+  }
+
+  const originalBody = normalizeBodyForComparison(buildMessageBody(original).body);
+  const fetchedBody = normalizeBodyForComparison(buildMessageBody(fetched).body);
+  if (fetchedBody && fetchedBody !== originalBody && !provisionalBodyMarkers.has(fetchedBody)) {
+    return true;
+  }
+
+  return false;
+}
+
 function normalizeWhapiMessage(message: WhapiMessage): NormalizedMessage {
   const messageId = message.id;
   const direction: 'inbound' | 'outbound' = message.from_me ? 'outbound' : 'inbound';
@@ -1670,8 +1768,132 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
   }
 }
 
-async function reconcileMessageChatFromStatus(status: WhapiStatus): Promise<{ fromChatId: string; toChatId: string } | null> {
-  const messageId = toCleanText(status.id);
+type StatusMessageResolution = {
+  messageId: string;
+  strategy: 'exact' | 'conversation_key' | 'status_id';
+  confidence: number;
+};
+
+async function resolveStatusMessageId(status: WhapiStatus): Promise<StatusMessageResolution> {
+  const statusMessageId = toCleanText(status.id);
+  if (!statusMessageId) {
+    return { messageId: '', strategy: 'status_id', confidence: 0 };
+  }
+
+  const { data: byExactId, error: byExactIdError } = await supabase
+    .from('whatsapp_messages')
+    .select('id')
+    .eq('id', statusMessageId)
+    .maybeSingle();
+
+  if (byExactIdError) {
+    console.warn('whatsapp-webhook: erro ao validar id exato do status', {
+      statusId: statusMessageId,
+      error: byExactIdError.message,
+    });
+  }
+
+  if (byExactId?.id) {
+    return { messageId: statusMessageId, strategy: 'exact', confidence: 100 };
+  }
+
+  const conversationKey = extractMessageConversationKey(statusMessageId);
+  if (!conversationKey) {
+    return { messageId: statusMessageId, strategy: 'status_id', confidence: 0 };
+  }
+
+  const statusTimestampIso = toIsoString(status.timestamp);
+  const statusTimestampMillis = toEpochMillis(statusTimestampIso);
+  const canonicalRecipientChatId = await resolveCanonicalDirectChatIdFromStatusRecipient(
+    status.recipient_id,
+    '',
+    statusMessageId,
+    statusTimestampIso,
+  );
+
+  const { data: candidates, error: candidatesError } = await supabase
+    .from('whatsapp_messages')
+    .select('id, chat_id, to_number, direction, timestamp, created_at')
+    .eq('direction', 'outbound')
+    .ilike('id', `%${conversationKey}`)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (candidatesError) {
+    console.warn('whatsapp-webhook: erro ao buscar candidatos por chave de conversa para status', {
+      statusId: statusMessageId,
+      conversationKey,
+      error: candidatesError.message,
+    });
+    return { messageId: statusMessageId, strategy: 'status_id', confidence: 0 };
+  }
+
+  const rankedCandidates = (candidates || [])
+    .filter((candidate) => toCleanText((candidate as { id?: string }).id).endsWith(conversationKey))
+    .map((candidate) => {
+      const candidateId = toCleanText((candidate as { id?: string }).id);
+      const candidateChatId = normalizeDirectChatId(toCleanText((candidate as { chat_id?: string }).chat_id));
+      const candidateTo = normalizeDirectChatId(toCleanText((candidate as { to_number?: string | null }).to_number || ''));
+      const candidateTimestamp =
+        toEpochMillis(toCleanText((candidate as { timestamp?: string | null }).timestamp)) ||
+        toEpochMillis(toCleanText((candidate as { created_at?: string | null }).created_at));
+
+      let score = 0;
+      if (canonicalRecipientChatId && candidateChatId === canonicalRecipientChatId) {
+        score += 12;
+      }
+
+      if (canonicalRecipientChatId && candidateTo === canonicalRecipientChatId) {
+        score += 8;
+      }
+
+      if (!Number.isNaN(statusTimestampMillis) && !Number.isNaN(candidateTimestamp)) {
+        const diff = Math.abs(candidateTimestamp - statusTimestampMillis);
+        if (diff <= 60_000) {
+          score += 7;
+        } else if (diff <= 5 * 60_000) {
+          score += 5;
+        } else if (diff <= 30 * 60_000) {
+          score += 3;
+        } else if (diff <= 6 * 60 * 60_000) {
+          score += 1;
+        }
+      }
+
+      return {
+        id: candidateId,
+        score,
+        timestamp: candidateTimestamp,
+      };
+    })
+    .filter((candidate) => candidate.id);
+
+  rankedCandidates.sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    return (right.timestamp || 0) - (left.timestamp || 0);
+  });
+
+  const [best, secondBest] = rankedCandidates;
+  if (!best || best.score < 6) {
+    return { messageId: statusMessageId, strategy: 'status_id', confidence: 0 };
+  }
+
+  if (secondBest && best.score - secondBest.score < 2 && best.score < 12) {
+    return { messageId: statusMessageId, strategy: 'status_id', confidence: 0 };
+  }
+
+  return {
+    messageId: best.id,
+    strategy: 'conversation_key',
+    confidence: best.score,
+  };
+}
+
+async function reconcileMessageChatFromStatus(
+  status: WhapiStatus,
+  messageIdOverride?: string | null,
+): Promise<{ fromChatId: string; toChatId: string } | null> {
+  const messageId = toCleanText(messageIdOverride) || toCleanText(status.id);
   if (!messageId) {
     return null;
   }
@@ -2079,10 +2301,45 @@ function mergeAckStatus(currentAck: number | null | undefined, incomingAck: numb
   return Math.max(currentAck, incomingAck);
 }
 
+function mergeMessageTimestamp(
+  currentTimestamp: string | null | undefined,
+  incomingTimestamp: string | null | undefined,
+  currentCreatedAt?: string | null | undefined,
+): string | null {
+  const current = toCleanText(currentTimestamp);
+  const incoming = toCleanText(incomingTimestamp);
+  const createdAt = toCleanText(currentCreatedAt);
+
+  const currentMillis = toEpochMillis(current || null);
+  const incomingMillis = toEpochMillis(incoming || null);
+  const createdAtMillis = toEpochMillis(createdAt || null);
+
+  if (Number.isNaN(currentMillis) && Number.isNaN(incomingMillis)) {
+    return createdAt || current || incoming || null;
+  }
+
+  if (Number.isNaN(currentMillis)) {
+    if (!Number.isNaN(createdAtMillis) && !Number.isNaN(incomingMillis) && incomingMillis - createdAtMillis > 20 * 60 * 1000) {
+      return createdAt || incoming || null;
+    }
+    return incoming || createdAt || null;
+  }
+
+  if (Number.isNaN(incomingMillis)) {
+    return current || createdAt || null;
+  }
+
+  if (incomingMillis < currentMillis) {
+    return incoming || current || createdAt || null;
+  }
+
+  return current || incoming || createdAt || null;
+}
+
 async function upsertMessage(message: NormalizedMessage) {
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('id, body, timestamp, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status')
+    .select('id, body, timestamp, created_at, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status')
     .eq('id', message.messageId)
     .maybeSingle();
 
@@ -2103,7 +2360,7 @@ async function upsertMessage(message: NormalizedMessage) {
         body: message.body ?? existingMessage.body,
         original_body: existingMessage.original_body ?? existingMessage.body ?? message.body,
         has_media: message.hasMedia,
-        timestamp: message.timestamp ?? existingMessage.timestamp,
+        timestamp: mergeMessageTimestamp(existingMessage.timestamp, message.timestamp, existingMessage.created_at),
         payload: message.payload,
         direction: message.direction,
         author: message.author,
@@ -2364,6 +2621,7 @@ type ProcessWhapiMessageOptions = {
   sourceEvent?: string;
   statusRecipientId?: string | null;
   touchLastMessageAt?: boolean;
+  allowProvisionalResolution?: boolean;
 };
 
 type ProcessWhapiMessageResult = {
@@ -2396,6 +2654,46 @@ async function processWhapiMessage(message: WhapiMessage, options?: ProcessWhapi
       reason: 'deleted_message_processed',
       messageId: toCleanText(message.id),
       chatId: toCleanText(message.chat_id) || null,
+    };
+  }
+
+  const provisionalMessage = isLikelyProvisionalWhapiMessage(message);
+  const canResolveProvisional = options?.allowProvisionalResolution !== false;
+  if (canResolveProvisional && provisionalMessage) {
+    const fetchedMessage = await fetchWhapiMessageById(message.id);
+    if (fetchedMessage && shouldReplaceProvisionalMessageWithFetched(message, fetchedMessage)) {
+      console.log('whatsapp-webhook: mensagem provisoria substituida por payload completo', {
+        messageId: message.id,
+        sourceEvent: options?.sourceEvent || null,
+        provisionalType: message.type,
+        provisionalSubtype: message.subtype || null,
+        fetchedType: fetchedMessage.type,
+      });
+
+      return processWhapiMessage(fetchedMessage, {
+        ...options,
+        sourceEvent: `${options?.sourceEvent || 'unknown'}.provisional_refresh`,
+        allowProvisionalResolution: false,
+        touchLastMessageAt: true,
+      });
+    }
+  }
+
+  if (provisionalMessage) {
+    console.log('whatsapp-webhook: mensagem provisoria ignorada para timeline', {
+      messageId: message.id,
+      sourceEvent: options?.sourceEvent || null,
+      type: message.type,
+      subtype: message.subtype || null,
+      source: message.source || null,
+    });
+
+    return {
+      processed: false,
+      reason: 'provisional_message_ignored',
+      messageId: toCleanText(message.id),
+      chatId: toCleanText(message.chat_id) || null,
+      direction: message.from_me ? 'outbound' : 'inbound',
     };
   }
 
@@ -2538,36 +2836,85 @@ function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | n
 
 type EnsureStatusMessageResult = {
   ensured: boolean;
-  source: 'existing' | 'fetched' | 'not_found' | 'failed';
+  source: 'existing' | 'existing_provisional' | 'fetched' | 'not_found' | 'failed';
   messageId: string;
 };
 
-async function ensureMessageMaterializedFromStatus(status: WhapiStatus): Promise<EnsureStatusMessageResult> {
+async function ensureMessageMaterializedFromStatus(
+  status: WhapiStatus,
+  messageIdHint?: string | null,
+): Promise<EnsureStatusMessageResult> {
   const messageId = toCleanText(status.id);
   if (!messageId) {
     return { ensured: false, source: 'failed', messageId: '' };
   }
 
-  const { data: existingMessage, error: existingMessageError } = await supabase
-    .from('whatsapp_messages')
-    .select('id')
-    .eq('id', messageId)
-    .maybeSingle();
+  const hintedMessageId = toCleanText(messageIdHint);
 
-  if (existingMessageError) {
-    console.warn('whatsapp-webhook: erro ao verificar existencia da mensagem para status', {
-      messageId,
-      error: existingMessageError.message,
-    });
-    return { ensured: false, source: 'failed', messageId };
+  type ExistingStatusMessageSnapshot = {
+    id: string;
+    type: string | null;
+    body: string | null;
+    payload: unknown;
+  };
+
+  let existingMessage: ExistingStatusMessageSnapshot | null = null;
+
+  if (hintedMessageId && hintedMessageId !== messageId) {
+    const { data: hintedMessage, error: hintedMessageError } = await supabase
+      .from('whatsapp_messages')
+      .select('id, type, body, payload')
+      .eq('id', hintedMessageId)
+      .maybeSingle();
+
+    if (hintedMessageError) {
+      console.warn('whatsapp-webhook: erro ao validar mensagem sugerida para status', {
+        statusId: messageId,
+        hintedMessageId,
+        error: hintedMessageError.message,
+      });
+    } else if (hintedMessage) {
+      existingMessage = hintedMessage as ExistingStatusMessageSnapshot;
+    }
   }
 
-  if (existingMessage?.id) {
-    return { ensured: true, source: 'existing', messageId };
+  if (!existingMessage) {
+    const { data: exactMessage, error: exactMessageError } = await supabase
+      .from('whatsapp_messages')
+      .select('id, type, body, payload')
+      .eq('id', messageId)
+      .maybeSingle();
+
+    if (exactMessageError) {
+      console.warn('whatsapp-webhook: erro ao verificar existencia da mensagem para status', {
+        messageId,
+        error: exactMessageError.message,
+      });
+      return { ensured: false, source: 'failed', messageId };
+    }
+
+    existingMessage = exactMessage as ExistingStatusMessageSnapshot;
+  }
+
+  const existingMessageId = existingMessage ? toCleanText(existingMessage.id) : '';
+
+  const existingIsProvisional = existingMessage
+    ? isLikelyProvisionalStoredMessage({
+      type: existingMessage.type,
+      body: existingMessage.body,
+      payload: existingMessage.payload,
+    })
+    : false;
+
+  if (existingMessageId && !existingIsProvisional) {
+    return { ensured: true, source: 'existing', messageId: existingMessageId };
   }
 
   const fetchedMessage = await fetchWhapiMessageById(messageId);
   if (!fetchedMessage) {
+    if (existingMessageId && existingIsProvisional) {
+      return { ensured: true, source: 'existing_provisional', messageId: existingMessageId };
+    }
     return { ensured: false, source: 'not_found', messageId };
   }
 
@@ -2575,9 +2922,13 @@ async function ensureMessageMaterializedFromStatus(status: WhapiStatus): Promise
     sourceEvent: 'statuses.fetch',
     statusRecipientId: status.recipient_id,
     touchLastMessageAt: true,
+    allowProvisionalResolution: false,
   });
 
   if (!processed.processed) {
+    if (existingMessageId && existingIsProvisional) {
+      return { ensured: true, source: 'existing_provisional', messageId: existingMessageId };
+    }
     return { ensured: false, source: 'failed', messageId };
   }
 
@@ -2588,7 +2939,7 @@ async function ensureMessageMaterializedFromStatus(status: WhapiStatus): Promise
     direction: processed.direction || null,
   });
 
-  return { ensured: true, source: 'fetched', messageId };
+  return { ensured: true, source: 'fetched', messageId: processed.messageId || messageId };
 }
 
 async function processGroupCreation(group: WhapiGroup) {
@@ -2990,16 +3341,24 @@ Deno.serve(async (req) => {
   if (Array.isArray(payload.statuses)) {
     for (const status of payload.statuses) {
       try {
-        const ackStatus = resolveStatusAck(status.status, status.code);
-        const materialized = await ensureMessageMaterializedFromStatus(status);
-        const reconciled = await reconcileMessageChatFromStatus(status);
+        const statusMessageResolution = await resolveStatusMessageId(status);
+        const ackTargetMessageId =
+          toCleanText(statusMessageResolution.messageId) ||
+          toCleanText(status.id);
 
-        if (ackStatus !== null) {
-          await updateMessageAck(status.id, ackStatus);
+        const ackStatus = resolveStatusAck(status.status, status.code);
+        const materialized = await ensureMessageMaterializedFromStatus(status, ackTargetMessageId);
+        const reconciled = await reconcileMessageChatFromStatus(status, ackTargetMessageId);
+
+        if (ackStatus !== null && ackTargetMessageId) {
+          await updateMessageAck(ackTargetMessageId, ackStatus);
         }
 
         console.log('whatsapp-webhook: status de mensagem atualizado', {
-          messageId: status.id,
+          statusId: status.id,
+          messageId: ackTargetMessageId,
+          ackTargetStrategy: statusMessageResolution.strategy,
+          ackTargetConfidence: statusMessageResolution.confidence,
           status: status.status,
           code: status.code,
           ackStatus,

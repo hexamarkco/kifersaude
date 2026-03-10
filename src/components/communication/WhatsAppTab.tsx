@@ -495,16 +495,42 @@ export default function WhatsAppTab() {
     return Array.from(keys);
   };
 
+  const parseIsoTimestampMillis = (value: string | null | undefined) => {
+    if (!value) return Number.NaN;
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? Number.NaN : parsed;
+  };
+
   const getMessageTimeValue = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>) => {
-    const primary = message.timestamp ? new Date(message.timestamp).getTime() : Number.NaN;
-    if (!Number.isNaN(primary)) return primary;
-    const fallback = new Date(message.created_at).getTime();
-    return Number.isNaN(fallback) ? 0 : fallback;
+    const eventMillis = parseIsoTimestampMillis(message.timestamp);
+    const createdMillis = parseIsoTimestampMillis(message.created_at);
+
+    if (!Number.isNaN(eventMillis) && !Number.isNaN(createdMillis)) {
+      return Math.min(eventMillis, createdMillis);
+    }
+
+    if (!Number.isNaN(eventMillis)) return eventMillis;
+    if (!Number.isNaN(createdMillis)) return createdMillis;
+    return 0;
   };
 
   const getMessageCreatedAtValue = (message: Pick<WhatsAppMessage, 'created_at'>) => {
-    const parsed = new Date(message.created_at).getTime();
+    const parsed = parseIsoTimestampMillis(message.created_at);
     return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
+  const getMessageDisplayTimestamp = (message: Pick<WhatsAppMessage, 'timestamp' | 'created_at'>): string | null => {
+    const eventMillis = parseIsoTimestampMillis(message.timestamp);
+    const createdMillis = parseIsoTimestampMillis(message.created_at);
+
+    if (!Number.isNaN(eventMillis) && !Number.isNaN(createdMillis)) {
+      if (eventMillis - createdMillis > 20 * 60 * 1000) {
+        return message.created_at;
+      }
+      return message.timestamp || message.created_at || null;
+    }
+
+    return message.timestamp || message.created_at || null;
   };
 
   const sortMessagesChronologically = (
@@ -644,6 +670,41 @@ export default function WhatsAppTab() {
 
   const asMessagePayload = (payload: unknown): WhatsAppMessagePayload =>
     payload && typeof payload === 'object' ? (payload as WhatsAppMessagePayload) : {};
+
+  const isTechnicalCiphertextMessage = (
+    message: Pick<WhatsAppMessage, 'type' | 'body' | 'payload'>,
+  ) => {
+    const type = (message.type || '').trim().toLowerCase();
+    if (type !== 'system') return false;
+
+    const payloadData = asMessagePayload(message.payload);
+    const subtype = String(payloadData?.subtype || '').trim().toLowerCase();
+    const body = (message.body || '').trim().toLowerCase();
+    const payloadSystem = payloadData?.system && typeof payloadData.system === 'object'
+      ? (payloadData.system as { body?: unknown })
+      : null;
+    const payloadSystemBody = typeof payloadSystem?.body === 'string' ? payloadSystem.body.trim().toLowerCase() : '';
+
+    if (subtype === 'ciphertext') return true;
+    if (body === '[mensagem criptografada]') return true;
+    if (body.includes('aguardando esta mensagem') || body.includes('waiting for this message')) return true;
+    if (payloadSystemBody.includes('aguardando esta mensagem') || payloadSystemBody.includes('waiting for this message')) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const sanitizeTechnicalCiphertextPreview = (value: string | null | undefined) => {
+    const normalized = (value || '').trim().toLowerCase();
+    if (!normalized) return '';
+
+    if (normalized === '[mensagem criptografada]') return '';
+    if (normalized.includes('aguardando esta mensagem')) return '';
+    if (normalized.includes('waiting for this message')) return '';
+
+    return value?.trim() || '';
+  };
 
   const resolveReactionTargetChatId = (message: WhatsAppMessage) => {
     const payloadData = asMessagePayload(message.payload);
@@ -1377,7 +1438,7 @@ export default function WhatsAppTab() {
           last_message_at: row.last_message_at ?? null,
           created_at: row.created_at ?? new Date().toISOString(),
           updated_at: row.updated_at ?? new Date().toISOString(),
-          last_message: row.last_message,
+          last_message: sanitizeTechnicalCiphertextPreview(row.last_message),
           unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
           archived: row.archived ?? false,
           mute_until: row.mute_until ?? null,
@@ -1439,6 +1500,14 @@ export default function WhatsAppTab() {
                   incomingMessage.direction === 'outbound' ? reactionTargetChatId : incomingMessage.to_number,
               }
             : incomingMessage;
+
+        if (eventType !== 'DELETE' && isTechnicalCiphertextMessage(message)) {
+          const currentChat = selectedChatRef.current;
+          if (currentChat && getChatIdVariants(currentChat).includes(message.chat_id)) {
+            setMessages((prev) => prev.filter((item) => item.id !== message.id));
+          }
+          return;
+        }
 
         if (eventType === 'INSERT' && isReactionOnlyMessage(message) && !reactionTargetChatId) {
           const hasChatInMemory = chatsRef.current.some((chat) => getChatIdVariants(chat).includes(message.chat_id));
@@ -1695,7 +1764,7 @@ export default function WhatsAppTab() {
         const previous = previousById.get(incoming.id);
         return {
           ...incoming,
-          last_message: incoming.last_message ?? previous?.last_message ?? '',
+          last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? ''),
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count
@@ -1803,7 +1872,10 @@ export default function WhatsAppTab() {
           };
         });
       } else {
-        incomingChats = data as WhatsAppChat[];
+        incomingChats = (data as WhatsAppChat[]).map((chat) => ({
+          ...chat,
+          last_message: sanitizeTechnicalCiphertextPreview(chat.last_message),
+        }));
       }
 
       if (activeChatsLoadIdRef.current !== currentLoadId) {
@@ -1853,8 +1925,11 @@ export default function WhatsAppTab() {
         return;
       }
 
-      const fetchedCount = (data || []).length;
-      const baseMessages = dedupeMessagesForDisplay(data || []);
+      const fetchedMessages = (data || []).filter(
+        (item) => !isTechnicalCiphertextMessage(item as WhatsAppMessage),
+      );
+      const fetchedCount = fetchedMessages.length;
+      const baseMessages = dedupeMessagesForDisplay(fetchedMessages as WhatsAppMessage[]);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
         messagesCacheRef.current.set(chat.id, {
@@ -1907,7 +1982,9 @@ export default function WhatsAppTab() {
         return;
       }
 
-      const olderMessages = dedupeMessagesForDisplay(data || []);
+      const olderMessages = dedupeMessagesForDisplay(
+        ((data || []).filter((item) => !isTechnicalCiphertextMessage(item as WhatsAppMessage)) as WhatsAppMessage[]),
+      );
       if (olderMessages.length === 0) {
         setHasOlderMessages(false);
         return;
@@ -2360,6 +2437,7 @@ export default function WhatsAppTab() {
     if (message.is_deleted) return 'Mensagem apagada';
     if (isEditActionMessage(message)) return null;
     if (isReactionOnlyMessage(message)) return null;
+    if (isTechnicalCiphertextMessage(message)) return null;
 
     const resolvedBody = resolveWhatsAppMessageBody({
       body: message.body,
@@ -2724,7 +2802,7 @@ export default function WhatsAppTab() {
       if (!normalizedSearchQuery) return true;
 
       const displayName = (chatListPresentationById.get(chat.id)?.displayName || chat.id).toLowerCase();
-      const preview = (chat.last_message || '').toLowerCase();
+      const preview = sanitizeTechnicalCiphertextPreview(chat.last_message).toLowerCase();
       return (
         displayName.includes(normalizedSearchQuery) ||
         chat.id.toLowerCase().includes(normalizedSearchQuery) ||
@@ -2842,7 +2920,13 @@ export default function WhatsAppTab() {
   }, [messages]);
 
   const renderedMessages = useMemo(
-    () => messages.filter((message) => !isReactionOnlyMessage(message) && !isEditActionMessage(message)),
+    () =>
+      messages.filter(
+        (message) =>
+          !isReactionOnlyMessage(message) &&
+          !isEditActionMessage(message) &&
+          !isTechnicalCiphertextMessage(message),
+      ),
     [messages], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -2866,6 +2950,7 @@ export default function WhatsAppTab() {
         const actionType = String(payloadData?.action?.type || '').toLowerCase();
         if (actionType === 'reaction' && payloadData?.action?.target) return false;
         if ((actionType === 'edit' || actionType === 'edited') && payloadData?.action?.target) return false;
+        if (isTechnicalCiphertextMessage(message)) return false;
         return true;
       })
       .sort(sortMessagesChronologically);
@@ -3160,8 +3245,9 @@ export default function WhatsAppTab() {
         const preview = getMessagePreview(message);
         if (!preview) return null;
 
-        const eventTime = message.timestamp || message.created_at;
-        const parsed = new Date(eventTime);
+        const eventTime = getMessageDisplayTimestamp(message);
+        const parsed = new Date(eventTime || '');
+        if (!eventTime) return null;
         if (Number.isNaN(parsed.getTime())) return null;
 
         const time = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -4534,7 +4620,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm text-slate-600 truncate">
-                          {chat.last_message || 'Sem mensagens'}
+                          {sanitizeTechnicalCiphertextPreview(chat.last_message) || 'Sem mensagens'}
                         </p>
                         {unreadWaitingLabel && (
                           <span className="text-[10px] text-rose-600 whitespace-nowrap">Aguardando {unreadWaitingLabel}</span>
@@ -4835,7 +4921,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           body={message.body}
                           type={message.type}
                           direction={message.direction || 'inbound'}
-                          timestamp={message.timestamp}
+                          timestamp={getMessageDisplayTimestamp(message)}
                           ackStatus={message.ack_status}
                           hasMedia={message.has_media}
                           payload={message.payload}

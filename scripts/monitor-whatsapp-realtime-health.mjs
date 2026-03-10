@@ -127,7 +127,7 @@ async function run() {
   const [{ data: messageRows, error: messageError }, { data: statusEvents, error: statusEventsError }] = await Promise.all([
     supabase
       .from('whatsapp_messages')
-      .select('id, chat_id, direction, timestamp, created_at, payload')
+      .select('id, chat_id, direction, type, body, timestamp, created_at, payload')
       .gte('created_at', sinceIso)
       .order('created_at', { ascending: false })
       .limit(8000),
@@ -149,20 +149,91 @@ async function run() {
   }
 
   const messages = messageRows || [];
+  const sinceMillis = toMillis(sinceIso);
   const directInboundLatency = [];
   const highLatencySamples = [];
+  const skippedBackfillSamples = [];
+  const negativeDelaySamples = [];
   const suspiciousSelfChats = [];
+  const provisionalSamples = [];
 
   for (const row of messages) {
     const chatId = cleanText(row.chat_id);
     const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
     const payloadSource = cleanText(payload.source).toLowerCase();
 
+    const type = cleanText(row.type).toLowerCase();
+    const body = cleanText(row.body).toLowerCase();
+    const subtype = cleanText(payload.subtype).toLowerCase();
+    const payloadSystemBody = cleanText(payload?.system?.body).toLowerCase();
+    const isProvisional =
+      type === 'system' &&
+      (
+        subtype.includes('ciphertext') ||
+        body === '[mensagem criptografada]' ||
+        body.includes('aguardando esta mensagem') ||
+        payloadSystemBody.includes('aguardando esta mensagem') ||
+        payloadSystemBody.includes('waiting for this message')
+      );
+
+    if (isProvisional && provisionalSamples.length < sampleLimit) {
+      provisionalSamples.push({
+        id: row.id,
+        chat_id: row.chat_id,
+        type: row.type,
+        body: row.body,
+        timestamp: row.timestamp,
+        created_at: row.created_at,
+      });
+    }
+
     if (row.direction === 'inbound' && isDirectChat(chatId)) {
       const timestampMs = toMillis(row.timestamp);
       const createdAtMs = toMillis(row.created_at);
       if (!Number.isNaN(timestampMs) && !Number.isNaN(createdAtMs)) {
-        const delaySec = (createdAtMs - timestampMs) / 1000;
+        if (!Number.isNaN(sinceMillis) && timestampMs < sinceMillis - 10 * 60 * 1000) {
+          if (skippedBackfillSamples.length < sampleLimit) {
+            skippedBackfillSamples.push({
+              id: row.id,
+              chat_id: row.chat_id,
+              timestamp: row.timestamp,
+              created_at: row.created_at,
+              reason: 'timestamp_older_than_window',
+            });
+          }
+          continue;
+        }
+
+        const rawDelaySec = (createdAtMs - timestampMs) / 1000;
+        if (rawDelaySec < -5) {
+          if (negativeDelaySamples.length < sampleLimit) {
+            negativeDelaySamples.push({
+              id: row.id,
+              chat_id: row.chat_id,
+              delay_sec: Number(rawDelaySec.toFixed(1)),
+              timestamp: row.timestamp,
+              created_at: row.created_at,
+              source: payloadSource || null,
+            });
+          }
+          continue;
+        }
+
+        const delaySec = Math.max(0, rawDelaySec);
+        if (delaySec > 12 * 60 * 60) {
+          if (skippedBackfillSamples.length < sampleLimit) {
+            skippedBackfillSamples.push({
+              id: row.id,
+              chat_id: row.chat_id,
+              delay_sec: Number(delaySec.toFixed(1)),
+              timestamp: row.timestamp,
+              created_at: row.created_at,
+              reason: 'delay_outlier_backfill',
+            });
+          }
+          continue;
+        }
+
         directInboundLatency.push(delaySec);
         if (delaySec > 30 && highLatencySamples.length < sampleLimit) {
           highLatencySamples.push({
@@ -242,6 +313,9 @@ async function run() {
     unique_status_message_ids: uniqueStatusIds.length,
     status_ids_missing_message: missingStatusIds.length,
     direct_inbound_delay_seconds: buildStats(directInboundLatency),
+    direct_inbound_delay_negative_count: negativeDelaySamples.length,
+    direct_inbound_delay_skipped_backfill_count: skippedBackfillSamples.length,
+    provisional_messages_count: provisionalSamples.length,
     suspicious_outbound_self_chat_count: suspiciousSelfChats.length,
   };
 
@@ -261,9 +335,30 @@ async function run() {
     });
   }
 
+  if (negativeDelaySamples.length > 0) {
+    console.log('\nnegative_delay_sample');
+    negativeDelaySamples.forEach((row) => {
+      console.log(JSON.stringify(row));
+    });
+  }
+
+  if (skippedBackfillSamples.length > 0) {
+    console.log('\nskipped_backfill_sample');
+    skippedBackfillSamples.forEach((row) => {
+      console.log(JSON.stringify(row));
+    });
+  }
+
   if (suspiciousSelfChats.length > 0) {
     console.log('\nsuspicious_outbound_self_chat_sample');
     suspiciousSelfChats.forEach((row) => {
+      console.log(JSON.stringify(row));
+    });
+  }
+
+  if (provisionalSamples.length > 0) {
+    console.log('\nprovisional_messages_sample');
+    provisionalSamples.forEach((row) => {
       console.log(JSON.stringify(row));
     });
   }

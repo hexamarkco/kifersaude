@@ -94,6 +94,25 @@
   box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.16);
 }
 
+.kifer-ds
+  :where(
+    input:not([type]),
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='number'],
+    input[type='tel'],
+    input[type='url'],
+    input[type='date'],
+    input[type='datetime-local'],
+    input[type='month'],
+    input[type='time'],
+    select
+  ):not([class*='h-']):not([class*='min-h-']):not([class*='max-h-']):not(.panel-control-compact) {
+  min-height: 2.75rem;
+}
+
 .kifer-home-theme,
 .kifer-landing-theme {
   background:

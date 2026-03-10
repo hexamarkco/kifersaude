@@ -162,6 +162,83 @@ const toMillis = (value) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+const toPayloadObject = (value) => (value && typeof value === 'object' ? value : null);
+
+const provisionalBodyMarkers = new Set([
+  '[mensagem criptografada]',
+  '[evento do whatsapp]',
+  '[sistema: ciphertext]',
+]);
+
+const ignoredChatPreviewBodies = new Set([
+  '[evento do whatsapp]',
+  '[atualizacao do whatsapp]',
+  '[atualização do whatsapp]',
+  '[mensagem nao suportada]',
+  '[mensagem não suportada]',
+]);
+
+const normalizePreviewBody = (value) => cleanText(value).toLowerCase();
+
+const isWaitingPlaceholderText = (body) => {
+  const normalized = normalizePreviewBody(body);
+  if (!normalized) return false;
+  return (
+    normalized.includes('aguardando esta mensagem') ||
+    normalized.includes('aguardando essa mensagem') ||
+    normalized.includes('waiting for this message')
+  );
+};
+
+const resolveStoredChatPreview = (message) => {
+  if (message?.is_deleted) {
+    return 'Mensagem apagada';
+  }
+
+  const payload = toPayloadObject(message?.payload);
+  const action = toPayloadObject(payload?.action);
+  const actionType = normalizePreviewBody(action?.type);
+  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited') {
+    return null;
+  }
+
+  const normalizedType = normalizePreviewBody(message?.type);
+  const normalizedBody = normalizePreviewBody(message?.body);
+  const payloadSubtype = normalizePreviewBody(payload?.subtype);
+  const payloadSystem = toPayloadObject(payload?.system);
+  const payloadSystemBody = cleanText(payloadSystem?.body);
+
+  if (
+    normalizedType === 'system' &&
+    (
+      provisionalBodyMarkers.has(normalizedBody) ||
+      payloadSubtype === 'ciphertext' ||
+      isWaitingPlaceholderText(message?.body) ||
+      isWaitingPlaceholderText(payloadSystemBody)
+    )
+  ) {
+    return null;
+  }
+
+  const body = cleanText(message?.body);
+  if (normalizedBody) {
+    if (ignoredChatPreviewBodies.has(normalizedBody)) {
+      return null;
+    }
+
+    return body;
+  }
+
+  if (normalizedType === 'image') return '[Imagem]';
+  if (normalizedType === 'video' || normalizedType === 'short' || normalizedType === 'gif') return '[Video]';
+  if (normalizedType === 'audio' || normalizedType === 'voice' || normalizedType === 'ptt') return '[Audio]';
+  if (normalizedType === 'document') return '[Documento]';
+  if (normalizedType === 'contact') return '[Contato]';
+  if (normalizedType === 'location' || normalizedType === 'live_location') return '[Localizacao]';
+  if (message?.has_media) return '[Anexo]';
+  return null;
+};
+
 async function listDirectChats() {
   const pageSize = 500;
   let offset = 0;
@@ -170,7 +247,7 @@ async function listDirectChats() {
   while (true) {
     const { data, error } = await supabase
       .from('whatsapp_chats')
-      .select('id, name, is_group, phone_number, lid, created_at, updated_at, last_message_at')
+      .select('id, name, is_group, phone_number, lid, created_at, updated_at, last_message_at, last_message')
       .order('updated_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
@@ -195,7 +272,7 @@ async function listDirectChats() {
 async function fetchChatById(chatId) {
   const { data, error } = await supabase
     .from('whatsapp_chats')
-    .select('id, name, is_group, phone_number, lid, created_at, updated_at, last_message_at')
+    .select('id, name, is_group, phone_number, lid, created_at, updated_at, last_message_at, last_message')
     .eq('id', chatId)
     .maybeSingle();
 
@@ -220,6 +297,43 @@ async function fetchRecentPeerMessages(chatId) {
   }
 
   return data || [];
+}
+
+async function refreshChatLastMessage(chatId) {
+  const normalizedChatId = cleanText(chatId);
+  if (!normalizedChatId) return;
+
+  const { data: recentMessages, error: recentMessagesError } = await supabase
+    .from('whatsapp_messages')
+    .select('timestamp, created_at, body, type, payload, has_media, is_deleted')
+    .eq('chat_id', normalizedChatId)
+    .order('timestamp', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (recentMessagesError) {
+    throw new Error(`Erro ao recalcular ultimo preview do chat ${normalizedChatId}: ${recentMessagesError.message}`);
+  }
+
+  const latestMessage = (recentMessages || [])[0];
+  const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
+  const nextLastMessage =
+    (recentMessages || [])
+      .map((message) => resolveStoredChatPreview(message))
+      .find((preview) => typeof preview === 'string' && preview.trim() !== '') || null;
+
+  const { error: updateError } = await supabase
+    .from('whatsapp_chats')
+    .update({
+      last_message: nextLastMessage,
+      last_message_at: nextLastMessageAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', normalizedChatId);
+
+  if (updateError) {
+    throw new Error(`Erro ao atualizar chat ${normalizedChatId}: ${updateError.message}`);
+  }
 }
 
 const resolvePhoneFromChatAndMessages = (chat, messages) => {
@@ -295,6 +409,7 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
         is_group: false,
         phone_number: phoneDigits,
         lid: initialLid,
+        last_message: sourceChat.last_message ?? null,
         last_message_at: sourceChat.last_message_at,
         updated_at: nowIso,
       },
@@ -314,6 +429,7 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
       name: null,
       phone_number: phoneDigits,
       lid: sourceChat.id.toLowerCase().endsWith('@lid') ? sourceChat.id : sourceChat.lid,
+      last_message: sourceChat.last_message ?? null,
       last_message_at: sourceChat.last_message_at,
       updated_at: sourceChat.updated_at,
       created_at: sourceChat.created_at,
@@ -324,6 +440,10 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
     toMillis(sourceChat.last_message_at) > toMillis(targetChat.last_message_at)
       ? sourceChat.last_message_at
       : targetChat.last_message_at;
+  const mergedLastMessage =
+    toMillis(sourceChat.last_message_at) >= toMillis(targetChat.last_message_at)
+      ? sourceChat.last_message ?? targetChat.last_message ?? null
+      : targetChat.last_message ?? sourceChat.last_message ?? null;
 
   const mergedName = pickBestName(targetChat.name, targetChat.id, sourceChat.name, sourceChat.id);
   const mergedLid = cleanText(targetChat.lid) || (sourceChat.id.toLowerCase().endsWith('@lid') ? sourceChat.id : cleanText(sourceChat.lid));
@@ -336,6 +456,7 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
         name: mergedName,
         phone_number: mergedPhone,
         lid: mergedLid || null,
+        last_message: mergedLastMessage,
         last_message_at: mergedLastMessageAt,
         updated_at: nowIso,
       })
@@ -351,6 +472,7 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
     name: mergedName,
     phone_number: mergedPhone,
     lid: mergedLid || null,
+    last_message: mergedLastMessage,
     last_message_at: mergedLastMessageAt,
   };
 }
@@ -451,6 +573,9 @@ async function reconcileDirectChats() {
 
     await ensureTargetChat(normalizedTargetId, sourceChat, resolvedPhone, nowIso);
     await moveMessagesToTarget(sourceChat.id, normalizedTargetId);
+    if (!dryRun) {
+      await refreshChatLastMessage(normalizedTargetId);
+    }
     await deleteChat(sourceChat.id);
     summary.merged += 1;
 

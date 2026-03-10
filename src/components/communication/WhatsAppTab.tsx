@@ -67,7 +67,7 @@ type WhatsAppChat = {
   last_message_at: string | null;
   created_at: string;
   updated_at: string;
-  last_message?: string;
+  last_message: string | null;
   unread_count?: number;
   archived?: boolean | null;
   mute_until?: string | null;
@@ -387,10 +387,6 @@ export default function WhatsAppTab() {
   const skipNextAutoScrollRef = useRef(false);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
-  const previewHydrationTimeoutRef = useRef<number | null>(null);
-  const pendingPreviewHydrationChatIdsRef = useRef<Set<string>>(new Set());
-  const silentRealtimeSyncInFlightRef = useRef<Set<string>>(new Set());
-  const lastSilentRealtimeSyncAtRef = useRef<Map<string, number>>(new Map());
   const lastGroupNamesSyncAtRef = useRef(0);
   const handledReminderQueryRef = useRef<string | null>(null);
   const reminderQuickOpenLoadingRef = useRef(false);
@@ -1107,14 +1103,6 @@ export default function WhatsAppTab() {
   }, [chats]);
 
   useEffect(() => {
-    return () => {
-      if (previewHydrationTimeoutRef.current !== null) {
-        window.clearTimeout(previewHydrationTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     newsletterNamesByIdRef.current = newsletterNamesById;
   }, [newsletterNamesById]);
 
@@ -1481,18 +1469,13 @@ export default function WhatsAppTab() {
           return;
         }
 
-        const shouldHydratePreview =
-          Boolean(incomingChat.last_message_at) &&
-          !incomingChat.last_message &&
-          getWhatsAppChatKind(incomingChat.id) !== 'group';
-
         setChats((prev) => {
           const existingIndex = prev.findIndex((chat) => chat.id === incomingChat.id);
           if (existingIndex === -1) {
             const next = [
               {
                 ...incomingChat,
-                last_message: incomingChat.last_message ?? '',
+                last_message: incomingChat.last_message ?? null,
                 unread_count: incomingChat.unread_count ?? 0,
               },
               ...prev,
@@ -1517,10 +1500,6 @@ export default function WhatsAppTab() {
           next[existingIndex] = mergedChat;
           return next.sort(sortChatsByLatest);
         });
-
-        if (shouldHydratePreview) {
-          queueChatPreviewHydration(incomingChat.id, { allowSilentSync: true });
-        }
       })
       .subscribe();
 
@@ -1815,7 +1794,7 @@ export default function WhatsAppTab() {
         const previous = previousById.get(incoming.id);
         return {
           ...incoming,
-          last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? ''),
+          last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? null) || null,
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count

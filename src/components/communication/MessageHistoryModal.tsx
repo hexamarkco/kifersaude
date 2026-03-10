@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../lib/whatsappApiService';
+import { formatWhatsAppAudioTranscriptionLabel } from '../../lib/whatsappAudioTranscription';
 import Button from '../ui/Button';
 import ModalShell from '../ui/ModalShell';
 
@@ -94,6 +95,8 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
   };
 
   const getMessageBody = (message: WhapiMessage): string => {
+    const transcription = formatWhatsAppAudioTranscriptionLabel(message.audio || message.voice || message);
+    if (transcription) return transcription;
     if (message.text?.body) return message.text.body;
     if (message.image) return message.image.caption || '[Imagem]';
     if (message.video) return message.video.caption || '[Vídeo]';

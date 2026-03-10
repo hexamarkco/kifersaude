@@ -19,8 +19,10 @@ import {
 import ReactFlow, { Background, Controls, MarkerType, MiniMap, Position, type Edge, type Node } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
+import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { fetchAllPages, getUserManagementId, supabase } from '../../lib/supabase';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
+import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../lib/templateVariableSuggestions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
@@ -1115,11 +1117,12 @@ export default function WhatsAppCampaignSettings() {
                   {selectedStep.type === 'text' ? (
                     <label className="text-xs font-medium text-slate-600">
                       Texto da mensagem
-                      <textarea
+                      <VariableAutocompleteTextarea
                         value={selectedStep.text ?? ''}
-                        onChange={(event) => updateSelectedStep({ text: event.target.value })}
+                        onChange={(value) => updateSelectedStep({ text: value })}
                         rows={6}
-                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        className="mt-1 text-sm"
+                        suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                         placeholder="Digite a mensagem desta etapa"
                       />
                     </label>
@@ -1161,11 +1164,12 @@ export default function WhatsAppCampaignSettings() {
 
                       <label className="text-xs font-medium text-slate-600">
                         Legenda (opcional)
-                        <textarea
+                        <VariableAutocompleteTextarea
                           value={selectedStep.caption ?? ''}
-                          onChange={(event) => updateSelectedStep({ caption: event.target.value })}
+                          onChange={(value) => updateSelectedStep({ caption: value })}
                           rows={3}
-                          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          className="mt-1 text-sm"
+                          suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                           placeholder="Legenda para acompanhar a midia"
                         />
                       </label>

@@ -63,7 +63,22 @@ type GenerateTextWithRoutingOptions = {
   maxTokens?: number;
 };
 
+type TranscribeAudioWithRoutingOptions = {
+  supabaseAdmin: any;
+  audioBlob: Blob;
+  fileName?: string;
+  mimeType?: string;
+  prompt?: string;
+};
+
 export type GenerateTextWithRoutingResult = {
+  text: string;
+  provider: AiProvider;
+  model: string;
+  fallbackUsed: boolean;
+};
+
+export type TranscribeAudioWithRoutingResult = {
   text: string;
   provider: AiProvider;
   model: string;
@@ -433,6 +448,63 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   );
 };
 
+const callOpenAiTranscription = async (
+  settings: ProviderSettings,
+  params: { model: string; audioBlob: Blob; fileName?: string; mimeType?: string; prompt?: string },
+): Promise<string> => {
+  const endpointBase = settings.baseUrl.replace(/\/+$/, '');
+  const endpoint = `${endpointBase}/audio/transcriptions`;
+  const formData = new FormData();
+
+  const mimeType = params.mimeType?.trim() || params.audioBlob.type || 'audio/ogg';
+  const fileName = params.fileName?.trim() || `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : 'ogg'}`;
+  const normalizedBlob = params.audioBlob.type ? params.audioBlob : params.audioBlob.slice(0, params.audioBlob.size, mimeType);
+
+  formData.append('file', normalizedBlob, fileName);
+  formData.append('model', params.model);
+
+  if (params.prompt?.trim()) {
+    formData.append('prompt', params.prompt.trim());
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const payload = await response.json().catch(() => ({}));
+    const text =
+      typeof payload?.text === 'string'
+        ? payload.text.trim()
+        : typeof payload?.transcript === 'string'
+          ? payload.transcript.trim()
+          : '';
+
+    if (!text) {
+      throw new Error('OpenAI retornou transcricao vazia.');
+    }
+
+    return text;
+  }
+
+  const text = (await response.text()).trim();
+  if (!text) {
+    throw new Error('OpenAI retornou transcricao vazia.');
+  }
+
+  return text;
+};
+
 const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<string> => {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -524,6 +596,18 @@ const callProvider = async (
   return callClaude(settings, params);
 };
 
+const callProviderTranscription = async (
+  provider: AiProvider,
+  settings: ProviderSettings,
+  params: { model: string; audioBlob: Blob; fileName?: string; mimeType?: string; prompt?: string },
+): Promise<string> => {
+  if (provider === 'openai') {
+    return callOpenAiTranscription(settings, params);
+  }
+
+  throw new Error(`Transcricao de audio nao suportada pelo provedor ${provider}.`);
+};
+
 const canUseProvider = (provider: ProviderSettings): { ok: boolean; reason: string } => {
   if (!provider.enabled) {
     return { ok: false, reason: 'provedor desativado' };
@@ -594,6 +678,66 @@ export const generateTextWithRouting = async (
   }
 
   throw new Error(`Nao foi possivel gerar resposta por IA. Tentativas: ${failures.join(' | ')}`);
+};
+
+export const transcribeAudioWithRouting = async (
+  options: TranscribeAudioWithRoutingOptions,
+): Promise<TranscribeAudioWithRoutingResult> => {
+  const runtime = await loadAiRuntimeConfig(options.supabaseAdmin);
+  const taskRoute = runtime.routing.whatsapp_audio_transcription;
+
+  const preferredProvider = taskRoute.provider;
+  const preferredProviderSettings = runtime.providers[preferredProvider];
+  const preferredModel =
+    taskRoute.model || getTaskDefaultModel('whatsapp_audio_transcription', preferredProvider, preferredProviderSettings);
+
+  const attempts: Array<{ provider: AiProvider; model: string }> = [
+    { provider: preferredProvider, model: preferredModel },
+  ];
+
+  if (taskRoute.fallbackToOpenAi && runtime.fallbackProvider !== preferredProvider) {
+    const fallbackProvider = runtime.fallbackProvider;
+    const fallbackSettings = runtime.providers[fallbackProvider];
+    attempts.push({
+      provider: fallbackProvider,
+      model: getTaskDefaultModel('whatsapp_audio_transcription', fallbackProvider, fallbackSettings),
+    });
+  }
+
+  const failures: string[] = [];
+
+  for (let index = 0; index < attempts.length; index += 1) {
+    const attempt = attempts[index];
+    const providerSettings = runtime.providers[attempt.provider];
+    const providerStatus = canUseProvider(providerSettings);
+
+    if (!providerStatus.ok) {
+      failures.push(`${attempt.provider}: ${providerStatus.reason}`);
+      continue;
+    }
+
+    try {
+      const text = await callProviderTranscription(attempt.provider, providerSettings, {
+        model: attempt.model,
+        audioBlob: options.audioBlob,
+        fileName: options.fileName,
+        mimeType: options.mimeType,
+        prompt: options.prompt,
+      });
+
+      return {
+        text,
+        provider: attempt.provider,
+        model: attempt.model,
+        fallbackUsed: index > 0,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${attempt.provider}: ${message}`);
+    }
+  }
+
+  throw new Error(`Nao foi possivel transcrever audio por IA. Tentativas: ${failures.join(' | ')}`);
 };
 
 export const aiProviderSlugByProvider: Record<AiProvider, string> = {

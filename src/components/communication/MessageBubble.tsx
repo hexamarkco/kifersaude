@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2 } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from './WhatsAppFormattedText';
 import ModalShell from '../ui/ModalShell';
@@ -7,7 +7,9 @@ import Button from '../ui/Button';
 import { getWhatsAppMedia } from '../../lib/whatsappApiService';
 import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
+import { getWhatsAppAudioTranscription } from '../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
+import { supabase } from '../../lib/supabase';
 
 interface MessageBubbleProps {
   id: string;
@@ -29,6 +31,7 @@ interface MessageBubbleProps {
   onReply?: (messageId: string, body: string, from: string) => void;
   onEdit?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
+  onTranscriptionSaved?: (messageId: string, payload: MessagePayload) => void;
 }
 
 type MediaPayload = {
@@ -118,6 +121,7 @@ export function MessageBubble({
   onReply,
   onEdit,
   onReact,
+  onTranscriptionSaved,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -136,6 +140,9 @@ export function MessageBubble({
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [visualMediaUrl, setVisualMediaUrl] = useState<string | null>(null);
   const [visualMediaLoading, setVisualMediaLoading] = useState(false);
+  const [transcriptionLoading, setTranscriptionLoading] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+  const [localPayload, setLocalPayload] = useState<MessagePayload | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -249,8 +256,13 @@ export function MessageBubble({
     return formatPhoneDisplay(phone);
   };
 
-  const payloadData: MessagePayload = payload && typeof payload === 'object' ? payload : {};
+  useEffect(() => {
+    setLocalPayload(payload && typeof payload === 'object' ? (payload as MessagePayload) : null);
+  }, [payload]);
+
+  const payloadData: MessagePayload = localPayload || (payload && typeof payload === 'object' ? payload : {});
   const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
+  const transcription = getWhatsAppAudioTranscription(payloadData);
   const normalizedType = (type || '').toLowerCase();
   const audioPayload: MediaPayload | null = payloadData.audio || payloadData.voice || payloadData.media || payloadData;
   const audioMediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id || null;
@@ -452,6 +464,45 @@ export function MessageBubble({
     setAudioRateIndex(nextIndex);
     if (audioRef.current) {
       audioRef.current.playbackRate = rates[nextIndex];
+    }
+  };
+
+  const handleTranscribeAudio = async () => {
+    if (!isAudioMessage || transcriptionLoading) return;
+
+    setTranscriptionLoading(true);
+    setTranscriptionError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
+        body: {
+          messageId: id,
+          mediaId: audioMediaId,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const nextPayload =
+        data?.payload && typeof data.payload === 'object'
+          ? (data.payload as MessagePayload)
+          : ({
+              ...payloadData,
+              transcription: {
+                text: typeof data?.transcript === 'string' ? data.transcript : '',
+                provider: typeof data?.provider === 'string' ? data.provider : undefined,
+                model: typeof data?.model === 'string' ? data.model : undefined,
+              },
+            } as MessagePayload);
+
+      setLocalPayload(nextPayload);
+      onTranscriptionSaved?.(id, nextPayload);
+    } catch (error) {
+      setTranscriptionError(error instanceof Error ? error.message : 'Nao foi possivel transcrever o audio.');
+    } finally {
+      setTranscriptionLoading(false);
     }
   };
 
@@ -759,6 +810,41 @@ export function MessageBubble({
             </div>
             {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={transcription ? 'secondary' : 'warning'}
+              size="sm"
+              className="h-auto rounded-full px-3 py-1 text-xs"
+              onClick={handleTranscribeAudio}
+              disabled={transcriptionLoading}
+            >
+              {transcriptionLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Transcrevendo...</span>
+                </>
+              ) : (
+                <span>{transcription ? 'Atualizar transcricao' : 'Transcrever audio'}</span>
+              )}
+            </Button>
+            {transcription && (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                Audio transcrito
+              </span>
+            )}
+          </div>
+          {transcription && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                Audio transcrito
+              </div>
+              <WhatsAppFormattedText
+                text={transcription.text}
+                className="text-sm whitespace-pre-wrap break-words text-slate-800"
+              />
+            </div>
+          )}
+          {transcriptionError && <div className="text-xs text-red-600">{transcriptionError}</div>}
           {resolvedBody && resolvedBody !== '[Mensagem de voz]' && resolvedBody !== '[Áudio]' && (
             <WhatsAppFormattedText text={resolvedBody} className="text-sm whitespace-pre-wrap break-words" />
           )}

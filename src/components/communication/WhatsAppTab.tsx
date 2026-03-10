@@ -45,6 +45,7 @@ import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
 import { addBusinessDaysSkippingWeekends } from '../../lib/reminderUtils';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
+import { formatWhatsAppAudioTranscriptionLabel } from '../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
 import {
   buildChatIdFromPhone,
@@ -347,6 +348,7 @@ export default function WhatsAppTab() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
+  const [isCopyingChat, setIsCopyingChat] = useState(false);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
@@ -3245,13 +3247,13 @@ export default function WhatsAppTab() {
     return '';
   })();
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
-  const selectedChatConversationHistory = useMemo(() => {
-    if (!selectedChat || messages.length === 0) return '';
+  const buildConversationHistoryForCopy = (items: WhatsAppMessage[]) => {
+    if (!selectedChat || items.length === 0) return '';
 
-    const exportedLines = [...messages]
+    const exportedLines = [...items]
       .sort(sortMessagesChronologically)
       .map((message) => {
-        const preview = getMessagePreview(message);
+        const preview = formatWhatsAppAudioTranscriptionLabel(message.payload) || getMessagePreview(message);
         if (!preview) return null;
 
         const eventTime = getMessageDisplayTimestamp(message);
@@ -3276,6 +3278,9 @@ export default function WhatsAppTab() {
       .filter((line): line is string => Boolean(line));
 
     return exportedLines.join('\n');
+  };
+  const selectedChatConversationHistory = useMemo(() => {
+    return buildConversationHistoryForCopy(messages);
   }, [messages, selectedChat, selectedChatDisplayName, selectedChatKind]); // eslint-disable-line react-hooks/exhaustive-deps
   const followUpContextForInput = useMemo(() => {
     if (!selectedChat || !selectedChatIsDirect) return null;
@@ -3335,17 +3340,111 @@ export default function WhatsAppTab() {
     }
   };
 
+  const handleAudioTranscriptionSaved = (messageId: string, nextPayload: WhatsAppMessagePayload) => {
+    setMessages((prev) => {
+      const nextMessages = prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              payload: nextPayload,
+            }
+          : message,
+      );
+
+      if (selectedChat) {
+        const cachedState = messagesCacheRef.current.get(selectedChat.id);
+        if (cachedState) {
+          messagesCacheRef.current.set(selectedChat.id, {
+            ...cachedState,
+            messages: nextMessages,
+          });
+        }
+      }
+
+      return nextMessages;
+    });
+  };
+
   const handleCopyFullChat = async () => {
-    if (!selectedChatConversationHistory) return;
+    if (!selectedChat || messages.length === 0 || isCopyingChat) return;
 
     try {
-      await navigator.clipboard.writeText(selectedChatConversationHistory);
+      setIsCopyingChat(true);
+
+      const audioMessagesWithoutTranscription = messages.filter((message) => {
+        const normalizedType = (message.type || '').toLowerCase();
+        if (!['audio', 'voice', 'ptt'].includes(normalizedType)) return false;
+        return !formatWhatsAppAudioTranscriptionLabel(message.payload);
+      });
+
+      let messagesForCopy = messages;
+
+      if (audioMessagesWithoutTranscription.length > 0) {
+        const payloadsByMessageId = new Map<string, WhatsAppMessagePayload>();
+
+        for (const message of audioMessagesWithoutTranscription) {
+          try {
+            const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
+              body: { messageId: message.id },
+            });
+
+            if (error) {
+              throw error;
+            }
+
+            if (data?.payload && typeof data.payload === 'object') {
+              payloadsByMessageId.set(message.id, data.payload as WhatsAppMessagePayload);
+            }
+          } catch (error) {
+            console.error(`Erro ao transcrever audio ${message.id} para copia do chat:`, error);
+          }
+        }
+
+        if (payloadsByMessageId.size > 0) {
+          messagesForCopy = messages.map((message) =>
+            payloadsByMessageId.has(message.id)
+              ? {
+                  ...message,
+                  payload: payloadsByMessageId.get(message.id) ?? message.payload,
+                }
+              : message,
+          );
+
+          setMessages((prev) => {
+            const nextMessages = prev.map((message) =>
+              payloadsByMessageId.has(message.id)
+                ? {
+                    ...message,
+                    payload: payloadsByMessageId.get(message.id) ?? message.payload,
+                  }
+                : message,
+            );
+
+            const cachedState = messagesCacheRef.current.get(selectedChat.id);
+            if (cachedState) {
+              messagesCacheRef.current.set(selectedChat.id, {
+                ...cachedState,
+                messages: nextMessages,
+              });
+            }
+
+            return nextMessages;
+          });
+        }
+      }
+
+      const conversationHistory = buildConversationHistoryForCopy(messagesForCopy);
+      if (!conversationHistory) return;
+
+      await navigator.clipboard.writeText(conversationHistory);
       setChatCopiedAt(Date.now());
       window.setTimeout(() => {
         setChatCopiedAt(null);
       }, 1600);
     } catch (error) {
       console.error('Erro ao copiar chat:', error);
+    } finally {
+      setIsCopyingChat(false);
     }
   };
 
@@ -5109,11 +5208,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     variant="icon"
                     size="icon"
                     className="h-9 w-9 rounded-full"
-                    title={chatCopiedAt ? 'Chat copiado' : 'Copiar chat'}
+                    title={isCopyingChat ? 'Transcrevendo e copiando chat' : chatCopiedAt ? 'Chat copiado' : 'Copiar chat'}
                     onClick={handleCopyFullChat}
-                    disabled={messages.length === 0}
+                    disabled={messages.length === 0 || isCopyingChat}
                   >
-                    <Copy className={`w-5 h-5 ${chatCopiedAt ? 'text-emerald-600' : 'text-slate-600'}`} />
+                    {isCopyingChat ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
+                    ) : (
+                      <Copy className={`w-5 h-5 ${chatCopiedAt ? 'text-emerald-600' : 'text-slate-600'}`} />
+                    )}
                   </Button>
                   <Button
                     variant="icon"
@@ -5190,6 +5293,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           onReact={isSelectedStatusChat ? undefined : handleReact}
                           onReply={isSelectedStatusChat ? undefined : handleReply}
                           onEdit={isSelectedStatusChat ? undefined : handleEdit}
+                          onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
                         />
                       </div>
                     );

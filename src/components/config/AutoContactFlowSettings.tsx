@@ -49,6 +49,7 @@ import {
   type TemplateMessage,
   type TemplateMessageType,
 } from '../../lib/autoContactService';
+import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../lib/templateVariableSuggestions';
 import { applyFlowGraphToFlow, buildFlowGraphFromFlow, expandFlowGraphToFlows } from '../../lib/autoContactFlowGraph';
 import { supabase } from '../../lib/supabase';
 import type { IntegrationSetting, LeadStatusConfig, Lead } from '../../lib/supabase';
@@ -59,7 +60,7 @@ import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
 import Input from '../ui/Input';
-import Textarea from '../ui/Textarea';
+import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { AutomationFlowsSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -2230,18 +2231,19 @@ export default function AutoContactFlowSettings() {
                                     <label className="block text-xs font-semibold text-slate-500 mb-1">
                                       Texto/legenda
                                     </label>
-                                    <Textarea
+                                    <VariableAutocompleteTextarea
                                       value={step.customMessage?.text ?? ''}
-                                      onChange={(event) =>
+                                      onChange={(value) =>
                                         handleUpdateFlowStep(activeFlow.id, step.id, {
                                           customMessage: {
                                             ...(step.customMessage ?? {}),
-                                            text: event.target.value,
+                                            text: value,
                                           } as AutoContactFlowCustomMessage,
                                         })
                                       }
                                       rows={2}
                                       size="compact"
+                                      suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                                       placeholder="Digite a mensagem"
                                     />
                                   </div>
@@ -2290,13 +2292,14 @@ export default function AutoContactFlowSettings() {
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                                   Descrição
                                 </label>
-                                <Textarea
-                                  rows={3}
+                                <VariableAutocompleteTextarea
                                   value={step.taskDescription ?? ''}
-                                  onChange={(event) =>
-                                    handleUpdateFlowStep(activeFlow.id, step.id, { taskDescription: event.target.value })
+                                  onChange={(value) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { taskDescription: value })
                                   }
+                                  rows={3}
                                   size="compact"
+                                  suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                                   placeholder="Detalhes da tarefa"
                                 />
                               </div>
@@ -2386,16 +2389,17 @@ export default function AutoContactFlowSettings() {
                               </div>
                               <div className="md:col-span-2">
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Corpo do e-mail</label>
-                                <Textarea
-                                  rows={4}
+                                <VariableAutocompleteTextarea
                                   value={step.emailBody ?? ''}
-                                  onChange={(event) =>
-                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailBody: event.target.value })
+                                  onChange={(value) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { emailBody: value })
                                   }
+                                  rows={4}
                                   size="compact"
+                                  suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                                 />
                                 <p className="text-[11px] text-slate-400 mt-1">
-                                  Use {'{{= ... }}'} para formulas.
+                                  Use variaveis como {'{{primeiro_nome}}'} ou {'{{= ... }}'} para formulas.
                                 </p>
                               </div>
                             </div>
@@ -2447,13 +2451,14 @@ export default function AutoContactFlowSettings() {
                               </div>
                               <div className="md:col-span-2">
                                 <label className="block text-xs font-semibold text-slate-500 mb-1">Body</label>
-                                <Textarea
-                                  rows={4}
+                                <VariableAutocompleteTextarea
                                   value={step.webhookBody ?? ''}
-                                  onChange={(event) =>
-                                    handleUpdateFlowStep(activeFlow.id, step.id, { webhookBody: event.target.value })
+                                  onChange={(value) =>
+                                    handleUpdateFlowStep(activeFlow.id, step.id, { webhookBody: value })
                                   }
+                                  rows={4}
                                   size="compact"
+                                  suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                                   placeholder='{"lead_id":"{{= lead.id }}"}'
                                 />
                                 <p className="text-[11px] text-slate-400 mt-1">
@@ -2511,62 +2516,219 @@ export default function AutoContactFlowSettings() {
                     )}
 
                     {showSimulation && (
-                      <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                        <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
-                          <Timer className="w-4 h-4" />
-                          Simulação (dry run)
-                        </div>
-                        <p className="text-xs text-amber-700">
-                          Esta simulação não envia mensagens. Ela apenas calcula os horários previstos para cada etapa.
-                        </p>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <label className="block text-xs font-semibold text-amber-700 mb-1">
-                              Início da simulação
-                            </label>
-                            <DateTimePicker
-                              type="datetime-local"
-                              value={simulationStart || getLocalDateTimeValue()}
-                              onChange={setSimulationStart}
-                              triggerClassName="border-amber-200 bg-white"
-                              placeholder="Selecionar inicio"
-                            />
+                      <div className="space-y-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                              <Timer className="w-4 h-4" />
+                              Simulacao operacional
+                            </div>
+                            <p className="text-xs text-amber-800">
+                              Dry run do fluxo. Nenhuma mensagem e enviada; mostramos somente a previsao de execucao.
+                            </p>
                           </div>
-                          <div className="text-xs text-amber-700 flex items-end">
-                            Janela ativa: {activeFlowScheduling.startHour} até {activeFlowScheduling.endHour} (
-                            {activeFlowScheduling.timezone})
+                          <div className="rounded-full border border-amber-200 bg-white px-3 py-1 text-[11px] font-medium text-amber-700">
+                            Lead de exemplo + agenda do fluxo
                           </div>
                         </div>
-                        {simulationTimeline.length === 0 ? (
-                          <div className="text-xs text-amber-700">Adicione etapas para visualizar a simulação.</div>
-                        ) : (
-                          <div className="space-y-2">
-                            {simulationTimeline.map((item) => (
-                              <div
-                                key={item.step.id}
-                                className="flex items-center justify-between rounded-lg bg-white border border-amber-100 px-3 py-2 text-xs text-amber-800"
-                              >
-                                <div>
-                                  <div>
-                                    Etapa {item.index}: {formatDelayLabel(item.delayValue, item.delayUnit)} após início
-                                  </div>
-                                  {item.adjustmentReasons.length > 0 && (
-                                    <div className="text-[11px] text-amber-600">
-                                      Ajuste: {item.adjustmentReasons.map((reason) => adjustmentReasonLabels[reason]).join(', ')}
-                                    </div>
-                                  )}
+
+                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                          <div className="rounded-xl border border-amber-200 bg-white/90 p-4">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold text-amber-700">
+                                  Inicio da simulacao
+                                </label>
+                                <DateTimePicker
+                                  type="datetime-local"
+                                  value={simulationInputValue}
+                                  onChange={setSimulationStart}
+                                  triggerClassName="border-amber-200 bg-white"
+                                  placeholder="Selecionar inicio"
+                                />
+                              </div>
+                              <div className="grid gap-2 text-xs text-amber-800">
+                                <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                                  <span className="font-semibold">Janela:</span> {activeFlowScheduling.startHour} ate {activeFlowScheduling.endHour}
                                 </div>
-                                <div>
-                                  {item.scheduledAt.toLocaleString('pt-BR', {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short',
-                                    timeZone: activeFlowScheduling.timezone,
-                                  })}
+                                <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                                  <span className="font-semibold">Fuso:</span> {activeFlowScheduling.timezone}
+                                </div>
+                                <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                                  <span className="font-semibold">Dias:</span>{' '}
+                                  {activeFlowScheduling.allowedWeekdays.length
+                                    ? weekdayLabels
+                                        .filter((day) => activeFlowScheduling.allowedWeekdays.includes(day.value))
+                                        .map((day) => day.label)
+                                        .join(', ')
+                                    : 'nenhum selecionado'}
                                 </div>
                               </div>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-amber-200 bg-white p-4">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                                <ClipboardList className="h-3.5 w-3.5" />
+                                Etapas
+                              </div>
+                              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                                {simulationSummary?.totalSteps ?? 0}
+                              </div>
+                              <div className="text-xs text-slate-500">Acoes previstas no fluxo atual.</div>
+                            </div>
+                            <div className="rounded-xl border border-amber-200 bg-white p-4">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                                <AlarmClock className="h-3.5 w-3.5" />
+                                Ajustes
+                              </div>
+                              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                                {simulationSummary?.adjustedSteps ?? 0}
+                              </div>
+                              <div className="text-xs text-slate-500">Etapas movidas por regras de agenda.</div>
+                            </div>
+                            <div className="rounded-xl border border-amber-200 bg-white p-4 sm:col-span-2">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                                <Activity className="h-3.5 w-3.5" />
+                                Janela estimada
+                              </div>
+                              <div className="mt-2 space-y-1 text-xs text-slate-600">
+                                <div>
+                                  Primeiro disparo:{' '}
+                                  <span className="font-medium text-slate-800">
+                                    {simulationSummary?.firstAt
+                                      ? formatSimulationDateTime(simulationSummary.firstAt, activeFlowScheduling.timezone)
+                                      : 'aguardando dados'}
+                                  </span>
+                                </div>
+                                <div>
+                                  Ultima execucao:{' '}
+                                  <span className="font-medium text-slate-800">
+                                    {simulationSummary?.lastAt
+                                      ? formatSimulationDateTime(simulationSummary.lastAt, activeFlowScheduling.timezone)
+                                      : 'aguardando dados'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {simulationSummary && Object.keys(simulationSummary.actionCounts).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(simulationSummary.actionCounts).map(([actionType, count]) => (
+                              <span
+                                key={actionType}
+                                className="rounded-full border border-amber-200 bg-white px-3 py-1 text-[11px] text-amber-800"
+                              >
+                                {count}x {flowActionLabels[actionType as AutoContactFlowActionType] ?? actionType}
+                              </span>
                             ))}
                           </div>
                         )}
+
+                        {simulationIssues.length > 0 && (
+                          <div className="rounded-xl border border-amber-300 bg-amber-100/70 p-4">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                              <AlertCircle className="h-4 w-4" />
+                              Pontos para revisar antes de confiar na simulacao
+                            </div>
+                            <div className="mt-3 grid gap-2">
+                              {simulationIssues.map((issue) => (
+                                <div
+                                  key={issue}
+                                  className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-amber-900"
+                                >
+                                  {issue}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                              <Timer className="h-4 w-4 text-amber-700" />
+                              Linha do tempo prevista
+                            </div>
+
+                            {simulationTimeline.length === 0 ? (
+                              <div className="rounded-xl border border-dashed border-amber-300 bg-white/80 p-5 text-sm text-slate-600">
+                                {simulationIssues.length > 0
+                                  ? 'A simulacao ficou incompleta porque ainda existem configuracoes pendentes.'
+                                  : 'Adicione etapas para visualizar a linha do tempo.'}
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {simulationTimeline.map((item) => (
+                                  <div
+                                    key={item.step.id}
+                                    className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm"
+                                  >
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div className="space-y-1">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                                          Etapa {item.index}
+                                        </div>
+                                        <div className="text-sm font-semibold text-slate-900">
+                                          {getSimulationStepLabel(item.step)}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                          {formatDelayLabel(item.delayValue, item.delayUnit)} apos o marco anterior
+                                        </div>
+                                      </div>
+                                      <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-right text-xs text-amber-900">
+                                        {formatSimulationDateTime(item.scheduledAt, activeFlowScheduling.timezone)}
+                                      </div>
+                                    </div>
+                                    {item.adjustmentReasons.length > 0 && (
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        {item.adjustmentReasons.map((reason) => (
+                                          <span
+                                            key={item.step.id + '-' + reason}
+                                            className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800"
+                                          >
+                                            Ajustado por {adjustmentReasonLabels[reason]}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                              <Info className="h-4 w-4 text-amber-700" />
+                              Contexto da simulacao
+                            </div>
+                            <div className="rounded-xl border border-amber-200 bg-white p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                Lead de exemplo
+                              </div>
+                              <div className="mt-3 grid gap-2 text-xs text-slate-600">
+                                <div><span className="font-semibold text-slate-800">Nome:</span> {simulationLead.nome_completo}</div>
+                                <div><span className="font-semibold text-slate-800">Status inicial:</span> {simulationLead.status}</div>
+                                <div><span className="font-semibold text-slate-800">Origem:</span> {simulationLead.origem}</div>
+                                <div><span className="font-semibold text-slate-800">Cidade:</span> {simulationLead.cidade}</div>
+                              </div>
+                            </div>
+                            <div className="rounded-xl border border-amber-200 bg-white p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                Como ler
+                              </div>
+                              <div className="mt-3 space-y-2 text-xs text-slate-600">
+                                <p>Os horarios ja consideram a janela do fluxo, os dias permitidos e pulos automaticos da agenda.</p>
+                                <p>Quando uma etapa nao pode rodar no horario original, ela aparece com o motivo do ajuste.</p>
+                                <p>Se houver pendencias de configuracao, a simulacao mostra os alertas antes da timeline.</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2807,11 +2969,12 @@ export default function AutoContactFlowSettings() {
                           </div>
 
                           {message.type === 'text' ? (
-                            <Textarea
+                            <VariableAutocompleteTextarea
                               value={message.text ?? ''}
-                              onChange={(event) => handleUpdateDraftMessage(message.id, { text: event.target.value })}
+                              onChange={(value) => handleUpdateDraftMessage(message.id, { text: value })}
                               rows={3}
                               size="compact"
+                              suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                               placeholder="Digite a mensagem..."
                             />
                           ) : (

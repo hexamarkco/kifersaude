@@ -31,13 +31,14 @@ import {
   type AutoContactFlowStep,
   type AutoContactTemplate,
 } from '../../lib/autoContactService';
+import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../lib/templateVariableSuggestions';
 import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import Textarea from '../ui/Textarea';
+import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -1273,21 +1274,22 @@ export default function FlowBuilder({
                     ) : (
                       <div>
                         <label className="block text-[11px] text-slate-500 mb-1">Mensagem</label>
-                        <textarea
-                          rows={4}
+                        <VariableAutocompleteTextarea
                           value={selectedNode.data.step?.customMessage?.text ?? ''}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             updateSelectedStep({
                               customMessage: {
                                 type: 'text',
-                                text: event.target.value,
+                                text: value,
                               },
                             })
                           }
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md"
+                          rows={4}
+                          size="compact"
+                          suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                         />
                         <div className="text-[11px] text-slate-400 mt-1">
-                          Use formulas com {'{{= ... }}'}.
+                          Use variaveis como {'{{primeiro_nome}}'} ou formulas com {'{{= ... }}'}.
                         </div>
                         {messagePreview && (
                           <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-600">
@@ -1335,11 +1337,12 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Descrição</label>
-                      <Textarea
-                        rows={3}
+                      <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.taskDescription ?? ''}
-                        onChange={(event) => updateSelectedStep({ taskDescription: event.target.value })}
+                        onChange={(value) => updateSelectedStep({ taskDescription: value })}
+                        rows={3}
                         size="compact"
+                        suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -1400,11 +1403,12 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Corpo</label>
-                      <Textarea
-                        rows={3}
+                      <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.emailBody ?? ''}
-                        onChange={(event) => updateSelectedStep({ emailBody: event.target.value })}
+                        onChange={(value) => updateSelectedStep({ emailBody: value })}
+                        rows={3}
                         size="compact"
+                        suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
                   </div>
@@ -1455,11 +1459,12 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-500 mb-1">Body</label>
-                      <Textarea
-                        rows={3}
+                      <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.webhookBody ?? ''}
-                        onChange={(event) => updateSelectedStep({ webhookBody: event.target.value })}
+                        onChange={(value) => updateSelectedStep({ webhookBody: value })}
+                        rows={3}
                         size="compact"
+                        suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
                   </div>

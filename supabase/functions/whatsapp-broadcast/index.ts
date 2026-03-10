@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
 
 type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'cancelled';
 type TargetStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'invalid' | 'cancelled';
@@ -33,9 +34,16 @@ type CampaignFlowStep = {
 type TargetRecord = {
   id: string;
   campaign_id: string;
+  lead_id: string | null;
   phone: string;
   chat_id: string | null;
   attempts: number | null;
+  lead?: {
+    nome_completo?: string | null;
+    origem?: string | null;
+    cidade?: string | null;
+    responsavel?: string | null;
+  } | null;
   campaign: CampaignRecord | null;
 };
 
@@ -98,6 +106,65 @@ const getUserManagementId = (user: Record<string, unknown> | null | undefined): 
 };
 
 const sanitizeWhapiToken = (rawToken: string): string => rawToken.replace(/^Bearer\s+/i, '').trim();
+
+const formatRuntimeDate = (date: Date, options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat('pt-BR', {
+    timeZone: BRASILIA_TIMEZONE,
+    ...options,
+  }).format(date);
+
+const getGreetingForDate = (date: Date, timeZone: string = BRASILIA_TIMEZONE): string => {
+  const hour = Number.parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      hour12: false,
+    }).format(date),
+    10,
+  );
+
+  if (Number.isNaN(hour)) {
+    return 'ola';
+  }
+
+  if (hour < 12) return 'bom dia';
+  if (hour < 18) return 'boa tarde';
+  return 'boa noite';
+};
+
+const formatGreetingTitle = (value: string) =>
+  value.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+
+const applyCampaignTemplateVariables = (
+  text: string,
+  lead?: TargetRecord['lead'] | null,
+) => {
+  if (!text.trim()) return '';
+
+  const now = new Date();
+  const fullName = (lead?.nome_completo || '').trim();
+  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || '';
+  const greeting = getGreetingForDate(now, BRASILIA_TIMEZONE);
+  const greetingTitle = formatGreetingTitle(greeting);
+
+  const variables = new Map<string, string>([
+    ['nome', fullName],
+    ['primeiro_nome', firstName],
+    ['saudacao', greeting],
+    ['saudacao_titulo', greetingTitle],
+    ['saudacao_capitalizada', greetingTitle],
+    ['origem', (lead?.origem || '').trim()],
+    ['cidade', (lead?.cidade || '').trim()],
+    ['responsavel', (lead?.responsavel || '').trim()],
+    ['data_hoje', formatRuntimeDate(now, { day: '2-digit', month: '2-digit', year: 'numeric' })],
+    ['hora_agora', formatRuntimeDate(now, { hour: '2-digit', minute: '2-digit', hour12: false })],
+  ]);
+
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (fullMatch, token) => {
+    const resolved = variables.get(String(token).toLowerCase());
+    return typeof resolved === 'string' && resolved.trim() ? resolved : fullMatch;
+  });
+};
 
 const normalizeChatId = (value: string): string => {
   if (!value) return '';
@@ -426,13 +493,15 @@ const sendCampaignStep = async ({
   token,
   to,
   step,
+  lead,
 }: {
   token: string;
   to: string;
   step: CampaignFlowStep;
+  lead?: TargetRecord['lead'] | null;
 }): Promise<void> => {
   if (step.type === 'text') {
-    const body = (step.text || '').trim();
+    const body = applyCampaignTemplateVariables(step.text || '', lead).trim();
     if (!body) {
       throw new Error('Etapa de texto sem conteudo.');
     }
@@ -465,7 +534,7 @@ const sendCampaignStep = async ({
     media: mediaUrl,
   };
 
-  const caption = (step.caption || '').trim();
+  const caption = applyCampaignTemplateVariables(step.caption || '', lead).trim();
   if (caption && (step.type === 'image' || step.type === 'video' || step.type === 'document')) {
     payload.caption = caption;
   }
@@ -592,7 +661,7 @@ const loadPendingTargets = async (
 ): Promise<TargetRecord[]> => {
   let query = supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .select('id, campaign_id, phone, chat_id, attempts, campaign:whatsapp_campaigns!inner(id, status, message, flow_steps)')
+    .select('id, campaign_id, lead_id, phone, chat_id, attempts, lead:leads(nome_completo, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps)')
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
     .limit(limit);
@@ -663,7 +732,7 @@ const processCampaignTargets = async ({
       });
 
       for (const step of campaignSteps) {
-        await sendCampaignStep({ token, to: recipient, step });
+        await sendCampaignStep({ token, to: recipient, step, lead: target.lead ?? null });
       }
 
       await updateTargetResult(supabaseAdmin, target.id, 'sent', null, true);

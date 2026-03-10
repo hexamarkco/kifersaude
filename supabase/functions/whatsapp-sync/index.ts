@@ -941,7 +941,24 @@ Deno.serve(async (req) => {
     if (isGroup && chatName) {
       await supabase
         .from('whatsapp_groups')
-        .update({ name: chatName, last_updated_at: nowIso })
+        .upsert(
+          {
+            id: resolvedRequestedChatId,
+            name: chatName,
+            type: 'group',
+            created_at: nowIso,
+            created_by: 'system',
+            name_at: nowIso,
+            admin_add_member_mode: true,
+            first_seen_at: nowIso,
+            last_updated_at: nowIso,
+          },
+          { onConflict: 'id', ignoreDuplicates: true },
+        );
+
+      await supabase
+        .from('whatsapp_groups')
+        .update({ name: chatName, type: 'group', name_at: nowIso, last_updated_at: nowIso })
         .eq('id', resolvedRequestedChatId);
     }
 
@@ -975,7 +992,10 @@ Deno.serve(async (req) => {
           body,
           has_media: hasMedia,
           timestamp: incomingTimestamp,
-          payload: message,
+          payload: {
+            ...message,
+            ...(isGroup && chatName && !message.chat_name ? { chat_name: chatName } : {}),
+          },
           direction,
           ack_status: mapStatusToAck(message.status),
           author: message.from_name ?? null,

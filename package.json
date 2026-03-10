@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "backfill:whatsapp:global": "node scripts/backfill-whatsapp-global.mjs",
     "reconcile:whatsapp:direct": "node scripts/reconcile-whatsapp-direct-chats.mjs",
+    "reconcile:whatsapp:group-names": "node scripts/reconcile-whatsapp-group-names.mjs",
     "reconcile:whatsapp:web-outbound": "node scripts/reconcile-whatsapp-web-outbound-routing.mjs",
     "reconcile:whatsapp:manual-reroute": "node scripts/reconcile-whatsapp-manual-reroute.mjs",
     "reconcile:whatsapp:provider-gaps": "node scripts/reconcile-whatsapp-provider-gaps.mjs",

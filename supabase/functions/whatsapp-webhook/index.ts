@@ -213,6 +213,12 @@ type WhapiMessageUpdate = {
 type WhapiChatSnapshot = {
   id?: string;
   chat_id?: string;
+  name?: string;
+  chat_name?: string;
+  unread?: number;
+  archived?: boolean;
+  mute_until?: number;
+  timestamp?: number;
   last_message?: WhapiMessage;
 };
 
@@ -444,6 +450,8 @@ async function storeEvent(event: StoredEvent) {
 
 let cachedWhapiToken: string | null = null;
 let cachedWhapiTokenExpiresAt = 0;
+const WHAPI_CHAT_NAME_CACHE_TTL_MS = 5 * 60_000;
+const cachedWhapiChatNames = new Map<string, { name: string | null; expiresAt: number }>();
 
 function sanitizeWhapiToken(rawToken: unknown): string {
   if (typeof rawToken !== 'string') {
@@ -486,6 +494,139 @@ async function getWhapiToken(): Promise<string | null> {
   cachedWhapiToken = token;
   cachedWhapiTokenExpiresAt = now + 45_000;
   return cachedWhapiToken;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasMeaningfulPayloadValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim() !== '';
+  }
+
+  return true;
+}
+
+function mergePayloadValue(existingValue: unknown, incomingValue: unknown): unknown {
+  if (!hasMeaningfulPayloadValue(incomingValue)) {
+    return existingValue ?? incomingValue;
+  }
+
+  if (isPlainObject(existingValue) && isPlainObject(incomingValue)) {
+    const merged: Record<string, unknown> = { ...existingValue };
+
+    Object.entries(incomingValue).forEach(([key, value]) => {
+      const nextValue = mergePayloadValue(existingValue[key], value);
+      if (nextValue !== undefined) {
+        merged[key] = nextValue;
+      }
+    });
+
+    return merged;
+  }
+
+  return incomingValue;
+}
+
+function mergeMessagePayload(
+  existingPayload: Record<string, unknown> | null | undefined,
+  incomingPayload: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  if (!isPlainObject(existingPayload)) {
+    return isPlainObject(incomingPayload) ? incomingPayload : {};
+  }
+
+  if (!isPlainObject(incomingPayload)) {
+    return existingPayload;
+  }
+
+  const merged: Record<string, unknown> = { ...existingPayload };
+  Object.entries(incomingPayload).forEach(([key, value]) => {
+    const nextValue = mergePayloadValue(existingPayload[key], value);
+    if (nextValue !== undefined) {
+      merged[key] = nextValue;
+    }
+  });
+
+  return merged;
+}
+
+async function fetchWhapiChatName(chatId: string, attempt = 0): Promise<string | null> {
+  const normalizedChatId = normalizeDirectChatId(chatId);
+  if (!normalizedChatId || getChatIdType(normalizedChatId) === 'status') {
+    return null;
+  }
+
+  const now = Date.now();
+  const cached = cachedWhapiChatNames.get(normalizedChatId);
+  if (cached && now < cached.expiresAt) {
+    return cached.name;
+  }
+
+  const token = await getWhapiToken();
+  if (!token) {
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), 10_000);
+
+  try {
+    const response = await fetch(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(normalizedChatId)}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    if ((response.status === 401 || response.status === 403) && attempt === 0) {
+      cachedWhapiToken = null;
+      cachedWhapiTokenExpiresAt = 0;
+      return fetchWhapiChatName(normalizedChatId, attempt + 1);
+    }
+
+    if (response.status === 404) {
+      cachedWhapiChatNames.set(normalizedChatId, {
+        name: null,
+        expiresAt: now + 60_000,
+      });
+      return null;
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn('whatsapp-webhook: falha ao buscar nome do chat na Whapi', {
+        chatId: normalizedChatId,
+        status: response.status,
+        error: errorBody.slice(0, 240),
+      });
+      return null;
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as { name?: unknown };
+    const resolvedName = getValidChatName(toCleanText(payload.name), normalizedChatId);
+    cachedWhapiChatNames.set(normalizedChatId, {
+      name: resolvedName,
+      expiresAt: now + WHAPI_CHAT_NAME_CACHE_TTL_MS,
+    });
+
+    return resolvedName;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('whatsapp-webhook: excecao ao buscar nome do chat na Whapi', {
+      chatId: normalizedChatId,
+      error: message,
+    });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function toIsoString(timestamp: unknown): string | null {
@@ -2318,6 +2459,76 @@ function getValidChatName(value: string | null | undefined, chatId: string): str
   return trimmed;
 }
 
+function resolveChatUpdateName(update: WhapiChatUpdate): string | null {
+  const chatId = resolveChatUpdateChatId(update) || '';
+  const candidates = [
+    update.after_update?.name,
+    update.after_update?.chat_name,
+    update.chat?.name,
+    update.chat?.chat_name,
+    update.before_update?.name,
+    update.before_update?.chat_name,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = getValidChatName(toCleanText(candidate), chatId);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+async function upsertCanonicalGroupName(chatId: string, groupName: string, nowIso: string) {
+  const resolvedName = getValidChatName(groupName, chatId);
+  if (!resolvedName) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from('whatsapp_groups')
+    .upsert(
+      {
+        id: chatId,
+        name: resolvedName,
+        type: 'group',
+        created_at: nowIso,
+        created_by: 'system',
+        name_at: nowIso,
+        admin_add_member_mode: true,
+        first_seen_at: nowIso,
+        last_updated_at: nowIso,
+      },
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+
+  if (insertError) {
+    console.warn('whatsapp-webhook: erro ao inserir metadata canonica do grupo', {
+      chatId,
+      error: insertError.message,
+    });
+    return;
+  }
+
+  const { error: updateError } = await supabase
+    .from('whatsapp_groups')
+    .update({
+      name: resolvedName,
+      type: 'group',
+      name_at: nowIso,
+      last_updated_at: nowIso,
+    })
+    .eq('id', chatId);
+
+  if (updateError) {
+    console.warn('whatsapp-webhook: erro ao atualizar metadata canonica do grupo', {
+      chatId,
+      error: updateError.message,
+    });
+  }
+}
+
 async function resolveChatName(message: NormalizedMessage): Promise<string> {
   const chatType = getChatIdType(message.chatId);
 
@@ -2336,6 +2547,11 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
     const messageGroupName = getValidChatName(message.chatName, message.chatId);
     if (messageGroupName) {
       return messageGroupName;
+    }
+
+    const whapiGroupName = await fetchWhapiChatName(message.chatId);
+    if (whapiGroupName) {
+      return whapiGroupName;
     }
 
     const { data: existingChat } = await supabase
@@ -2580,10 +2796,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
   }
 
   if (chatIdType === 'group' && chatName && chatName !== message.chatId) {
-    await supabase
-      .from('whatsapp_groups')
-      .update({ name: chatName, last_updated_at: nowIso })
-      .eq('id', message.chatId);
+    await upsertCanonicalGroupName(message.chatId, chatName, nowIso);
   }
 }
 
@@ -2645,7 +2858,7 @@ function mergeMessageTimestamp(
 async function upsertMessage(message: NormalizedMessage) {
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('id, body, timestamp, created_at, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status')
+    .select('id, body, timestamp, created_at, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status, payload')
     .eq('id', message.messageId)
     .maybeSingle();
 
@@ -2654,6 +2867,10 @@ async function upsertMessage(message: NormalizedMessage) {
   }
 
   const mergedAckStatus = mergeAckStatus(existingMessage?.ack_status, message.ackStatus);
+  const mergedPayload = mergeMessagePayload(
+    isPlainObject(existingMessage?.payload) ? existingMessage.payload : null,
+    message.payload,
+  );
 
   if (existingMessage?.id) {
     const { error: updateError } = await supabase
@@ -2667,7 +2884,7 @@ async function upsertMessage(message: NormalizedMessage) {
         original_body: existingMessage.original_body ?? existingMessage.body ?? message.body,
         has_media: message.hasMedia,
         timestamp: mergeMessageTimestamp(existingMessage.timestamp, message.timestamp, existingMessage.created_at),
-        payload: message.payload,
+        payload: mergedPayload,
         direction: message.direction,
         author: message.author,
         ack_status: mergedAckStatus,
@@ -2696,7 +2913,7 @@ async function upsertMessage(message: NormalizedMessage) {
     original_body: message.body,
     has_media: message.hasMedia,
     timestamp: message.timestamp,
-    payload: message.payload,
+    payload: mergedPayload,
     direction: message.direction,
     author: message.author,
     ack_status: mergedAckStatus,
@@ -2797,6 +3014,10 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
 
   const editCount = hasBodyChanged ? (existingMessage.edit_count || 0) + 1 : existingMessage.edit_count || 0;
   const originalBody = existingMessage.original_body || existingMessage.body;
+  const mergedPayload = mergeMessagePayload(
+    isPlainObject(existingMessage.payload) ? existingMessage.payload : null,
+    normalized.payload,
+  );
 
   const { error: updateError } = await supabase
     .from('whatsapp_messages')
@@ -2805,7 +3026,7 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
       original_body: originalBody,
       edit_count: editCount,
       edited_at: incomingEditedAtIso || new Date().toISOString(),
-      payload: normalized.payload,
+      payload: mergedPayload,
     })
     .eq('id', message.id);
 
@@ -3115,6 +3336,7 @@ function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | n
   const fallbackChatId =
     normalizeDirectChatId(toCleanText(update.after_update?.id || update.after_update?.chat_id || update.before_update?.id || update.before_update?.chat_id || update.chat?.id || update.chat?.chat_id || '')) ||
     null;
+  const chatUpdateName = resolveChatUpdateName(update);
 
   const rawCandidate = update.after_update?.last_message || update.chat?.last_message || update.last_message;
   if (!rawCandidate || typeof rawCandidate !== 'object') {
@@ -3145,6 +3367,7 @@ function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | n
     id: messageId,
     type: messageType,
     chat_id: chatId,
+    chat_name: toCleanText(candidate.chat_name) || chatUpdateName || undefined,
     from_me: inferredFromMe,
     timestamp: candidate.timestamp ?? null,
   };
@@ -3192,6 +3415,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
   const isDirectChat = chatType === 'phone' || chatType === 'lid';
   const phoneNumber = isDirectChat ? extractPhoneNumber(chatId) : null;
   const lid = chatType === 'lid' ? chatId : null;
+  const updateName = resolveChatUpdateName(update);
 
   const { data: existingChat, error: existingChatError } = await supabase
     .from('whatsapp_chats')
@@ -3231,7 +3455,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
   const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
     {
       id: chatId,
-      name: existingChat?.name ?? fallbackName,
+      name: updateName ?? existingChat?.name ?? fallbackName,
       is_group: existingChat?.is_group ?? chatType === 'group',
       phone_number: isDirectChat ? phoneNumber ?? existingChat?.phone_number ?? null : null,
       lid: chatType === 'lid' ? lid : existingChat?.lid ?? null,
@@ -3248,6 +3472,10 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
       error: upsertError.message,
     });
     return null;
+  }
+
+  if (chatType === 'group' && updateName) {
+    await upsertCanonicalGroupName(chatId, updateName, nowIso);
   }
 
   return { chatId, lastMessageAt: nextLastMessageAt };

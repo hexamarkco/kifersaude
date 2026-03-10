@@ -16,6 +16,8 @@ import {
   Bell,
   SkipForward,
   Settings,
+  Archive,
+  Inbox,
   Copy,
   RefreshCw,
   ChevronDown,
@@ -46,6 +48,7 @@ import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../lib/dateUtils';
 import {
   buildChatIdFromPhone,
+  getWhatsAppChat,
   getWhatsAppChatKind,
   getWhatsAppChats,
   getWhatsAppContacts,
@@ -954,29 +957,49 @@ export default function WhatsAppTab() {
 
     try {
       const namesById = new Map<string, string>();
-      const pageSize = 100;
-      let offset = 0;
+      try {
+        const pageSize = 100;
+        let offset = 0;
 
-      for (let page = 0; page < 20; page += 1) {
-        const response = await getWhatsAppGroups(pageSize, offset, false);
-        const groups = response.groups || [];
+        for (let page = 0; page < 20; page += 1) {
+          const response = await getWhatsAppGroups(pageSize, offset, false);
+          const groups = response.groups || [];
 
-        groups.forEach((group: WhapiGroup) => {
-          if (!groupIds.has(group.id)) return;
-          const name = group.name?.trim();
-          if (!name || name === group.id) return;
-          namesById.set(group.id, name);
+          groups.forEach((group: WhapiGroup) => {
+            if (!groupIds.has(group.id)) return;
+            const name = group.name?.trim();
+            if (!name || name === group.id) return;
+            namesById.set(group.id, name);
+          });
+
+          const resolvedAllCandidates = Array.from(groupIds).every((chatId) => namesById.has(chatId));
+          if (resolvedAllCandidates || groups.length < pageSize) {
+            break;
+          }
+
+          offset += groups.length;
+          if (groups.length === 0) {
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn('Error loading group names from /groups:', error);
+      }
+
+      const unresolvedGroupIds = Array.from(groupIds).filter((chatId) => !namesById.has(chatId));
+      if (unresolvedGroupIds.length > 0) {
+        const fallbackResults = await Promise.allSettled(
+          unresolvedGroupIds.map(async (chatId) => {
+            const metadata = await getWhatsAppChat(chatId);
+            const name = metadata.name?.trim();
+            return name && name !== chatId ? { id: chatId, name } : null;
+          }),
+        );
+
+        fallbackResults.forEach((result) => {
+          if (result.status !== 'fulfilled' || !result.value) return;
+          namesById.set(result.value.id, result.value.name);
         });
-
-        const resolvedAllCandidates = Array.from(groupIds).every((chatId) => namesById.has(chatId));
-        if (resolvedAllCandidates || groups.length < pageSize) {
-          break;
-        }
-
-        offset += groups.length;
-        if (groups.length === 0) {
-          break;
-        }
       }
 
       const validUpdates = Array.from(namesById.entries()).map(([id, name]) => ({ id, name }));
@@ -2824,8 +2847,10 @@ export default function WhatsAppTab() {
       );
     });
 
-    const archivedCount = chatsMatchingSearch.filter((chat) => chat.archived).length;
-    const inboxChats = showArchived ? chatsMatchingSearch : chatsMatchingSearch.filter((chat) => !chat.archived);
+    const activeChats = chatsMatchingSearch.filter((chat) => !chat.archived);
+    const archivedChats = chatsMatchingSearch.filter((chat) => chat.archived);
+    const archivedCount = archivedChats.length;
+    const baseChats = showArchived ? archivedChats : activeChats;
 
     let unreadInboxCount = 0;
     let groupInboxCount = 0;
@@ -2833,7 +2858,7 @@ export default function WhatsAppTab() {
     let channelInboxCount = 0;
     let broadcastInboxCount = 0;
 
-    inboxChats.forEach((chat) => {
+    baseChats.forEach((chat) => {
       const chatKind = chatListPresentationById.get(chat.id)?.kind ?? getChatKind(chat);
 
       if ((chat.unread_count ?? 0) > 0) unreadInboxCount += 1;
@@ -2843,7 +2868,7 @@ export default function WhatsAppTab() {
       if (chatKind === 'broadcast') broadcastInboxCount += 1;
     });
 
-    const filteredVisibleChats = inboxChats.filter((chat) => {
+    const filteredVisibleChats = baseChats.filter((chat) => {
       const chatKind = chatListPresentationById.get(chat.id)?.kind ?? getChatKind(chat);
 
       if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
@@ -2870,7 +2895,7 @@ export default function WhatsAppTab() {
 
     return {
       archivedCount,
-      inboxCount: inboxChats.length,
+      inboxCount: baseChats.length,
       unreadInboxCount,
       groupInboxCount,
       directInboxCount,
@@ -4234,9 +4259,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         onSyncAllChats={() => {
           void handleSyncAllChatsFromListSettings();
         }}
-        showArchived={showArchived}
         archivedCount={archivedCount}
-        onToggleShowArchived={() => setShowArchived((prev) => !prev)}
         prioritizeUnread={prioritizeUnread}
         onTogglePrioritizeUnread={setPrioritizeUnread}
         notificationPermission={notificationPermission}
@@ -4617,8 +4640,30 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         <div className={`${isMobileView ? 'w-full' : 'w-96 shrink-0'} bg-white border-r border-slate-200 flex flex-col min-h-0`}>
           <div className="p-4 border-b border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-slate-900">Conversas</h2>
+                {showArchived && (
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                    Arquivados
+                  </span>
+                )}
+              </div>
               <div className="relative flex items-center gap-2">
+                <Button
+                  variant={showArchived ? 'warning' : 'secondary'}
+                  size="icon"
+                  className="relative h-9 w-9"
+                  onClick={() => setShowArchived((prev) => !prev)}
+                  title={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
+                  aria-label={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
+                >
+                  {showArchived ? <Inbox className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  {!showArchived && archivedCount > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                      {archivedCount}
+                    </span>
+                  )}
+                </Button>
                 <Button
                   variant="primary"
                   size="icon"

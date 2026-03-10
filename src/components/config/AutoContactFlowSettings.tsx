@@ -954,6 +954,41 @@ export default function AutoContactFlowSettings() {
     const offset = now.getTimezoneOffset() * 60000;
     return new Date(now.getTime() - offset).toISOString().slice(0, 16);
   };
+  const formatSimulationDateTime = (date: Date, timezone: string) =>
+    date.toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: timezone,
+    });
+  const getSimulationStepLabel = (step: AutoContactFlowStep) => {
+    switch (step.actionType) {
+      case 'send_message': {
+        if (step.messageSource === 'custom') {
+          const messageType = messageTypeLabels[step.customMessage?.type ?? 'text'] ?? 'Mensagem';
+          const preview = step.customMessage?.text?.trim();
+          return preview ? `${messageType}: ${preview.slice(0, 72)}` : `${messageType} personalizada`;
+        }
+        const template = messageTemplatesDraft.find((item) => item.id === step.templateId);
+        return template?.name?.trim() ? `Template: ${template.name}` : 'Enviar mensagem via template';
+      }
+      case 'update_status':
+        return step.statusToSet?.trim() ? `Atualizar status para ${step.statusToSet}` : 'Atualizar status';
+      case 'create_task':
+        return step.taskTitle?.trim() ? `Criar tarefa: ${step.taskTitle}` : 'Criar tarefa';
+      case 'send_email':
+        return step.emailSubject?.trim() ? `Enviar e-mail: ${step.emailSubject}` : 'Enviar e-mail';
+      case 'webhook':
+        return step.webhookUrl?.trim()
+          ? `Webhook ${step.webhookMethod ?? 'POST'}`
+          : 'Disparar webhook';
+      case 'archive_lead':
+        return 'Arquivar lead';
+      case 'delete_lead':
+        return 'Excluir lead';
+      default:
+        return flowActionLabels[step.actionType] ?? 'Acao';
+    }
+  };
   const simulationLead = useMemo<Lead>(
     () => ({
       id: 'preview-lead',
@@ -972,26 +1007,96 @@ export default function AutoContactFlowSettings() {
     }),
     [activeFlow?.triggerStatus],
   );
+  const simulationFlow = useMemo(() => {
+    if (!activeFlow) return null;
+    return activeFlow.flowGraph ? applyFlowGraphToFlow(activeFlow, activeFlow.flowGraph) : activeFlow;
+  }, [activeFlow]);
+  const simulationInputValue = simulationStart || getLocalDateTimeValue();
+  const simulationBaseDate = useMemo(() => {
+    const parsed = new Date(simulationInputValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, [simulationInputValue]);
   const simulationTimeline = useMemo(() => {
-    if (!activeFlow || !showSimulation) return [];
-    const baseDate = simulationStart ? new Date(simulationStart) : new Date();
-    const effectiveFlow = activeFlow.flowGraph
-      ? applyFlowGraphToFlow(activeFlow, activeFlow.flowGraph)
-      : activeFlow;
-    return buildAutoContactScheduleTimeline({
-      startAt: baseDate,
-      steps: effectiveFlow.steps,
-      scheduling: getFlowScheduling(effectiveFlow),
-      lead: simulationLead,
-    }).map((item, index) => ({
-      index: index + 1,
-      step: item.step,
-      scheduledAt: item.scheduledAt,
-      delayValue: item.step.delayValue,
-      delayUnit: item.step.delayUnit,
-      adjustmentReasons: item.adjustmentReasons,
-    }));
-  }, [activeFlow, getFlowScheduling, showSimulation, simulationLead, simulationStart]);
+    if (!simulationFlow || !showSimulation || !simulationBaseDate) return [];
+    try {
+      return buildAutoContactScheduleTimeline({
+        startAt: simulationBaseDate,
+        steps: simulationFlow.steps,
+        scheduling: getFlowScheduling(simulationFlow),
+        lead: simulationLead,
+      }).map((item, index) => ({
+        index: index + 1,
+        step: item.step,
+        scheduledAt: item.scheduledAt,
+        delayValue: item.step.delayValue,
+        delayUnit: item.step.delayUnit,
+        adjustmentReasons: item.adjustmentReasons,
+      }));
+    } catch (error) {
+      console.error('Erro ao montar simulacao do fluxo:', error);
+      return [];
+    }
+  }, [getFlowScheduling, showSimulation, simulationBaseDate, simulationFlow, simulationLead]);
+  const simulationIssues = useMemo(() => {
+    if (!simulationFlow || !showSimulation) return [];
+    const issues: string[] = [];
+    const scheduling = getFlowScheduling(simulationFlow);
+    if (!simulationBaseDate) {
+      issues.push('Defina uma data inicial valida para a simulacao.');
+    }
+    if (!simulationFlow.steps.length) {
+      issues.push('Adicione ao menos uma etapa para gerar a linha do tempo.');
+    }
+    if (!scheduling.allowedWeekdays.length) {
+      issues.push('Selecione ao menos um dia permitido no agendamento.');
+    }
+    if (scheduling.startHour === scheduling.endHour) {
+      issues.push('A janela diaria esta com inicio e fim iguais; revise o horario.');
+    }
+    simulationFlow.steps.forEach((step, index) => {
+      if (step.actionType === 'send_message' && step.messageSource !== 'custom') {
+        const templateExists = messageTemplatesDraft.some((template) => template.id === step.templateId);
+        if (!templateExists) {
+          issues.push(`Etapa ${index + 1}: selecione um template valido para a mensagem.`);
+        }
+      }
+      if (step.actionType === 'send_message' && step.messageSource === 'custom' && !step.customMessage?.text?.trim()) {
+        issues.push(`Etapa ${index + 1}: a mensagem personalizada esta vazia.`);
+      }
+      if (step.actionType === 'update_status' && !step.statusToSet?.trim()) {
+        issues.push(`Etapa ${index + 1}: informe o status de destino.`);
+      }
+      if (step.actionType === 'create_task' && !step.taskTitle?.trim()) {
+        issues.push(`Etapa ${index + 1}: informe o titulo da tarefa.`);
+      }
+      if (step.actionType === 'send_email' && !step.emailSubject?.trim()) {
+        issues.push(`Etapa ${index + 1}: informe o assunto do e-mail.`);
+      }
+      if (step.actionType === 'webhook' && !step.webhookUrl?.trim()) {
+        issues.push(`Etapa ${index + 1}: informe a URL do webhook.`);
+      }
+    });
+    return issues;
+  }, [getFlowScheduling, messageTemplatesDraft, showSimulation, simulationBaseDate, simulationFlow]);
+  const simulationSummary = useMemo(() => {
+    if (!simulationFlow || !showSimulation) return null;
+    const firstItem = simulationTimeline[0] ?? null;
+    const lastItem = simulationTimeline[simulationTimeline.length - 1] ?? null;
+    const adjustedSteps = simulationTimeline.filter((item) => item.adjustmentReasons.length > 0).length;
+    const actionCounts = simulationFlow.steps.reduce<Record<string, number>>((accumulator, step) => {
+      accumulator[step.actionType] = (accumulator[step.actionType] ?? 0) + 1;
+      return accumulator;
+    }, {});
+
+    return {
+      totalSteps: simulationFlow.steps.length,
+      adjustedSteps,
+      firstAt: firstItem?.scheduledAt ?? null,
+      lastAt: lastItem?.scheduledAt ?? null,
+      actionCounts,
+      hasIssues: simulationIssues.length > 0,
+    };
+  }, [showSimulation, simulationFlow, simulationIssues.length, simulationTimeline]);
 
   const activeFlowScheduling = useMemo(
     () => (activeFlow ? getFlowScheduling(activeFlow) : schedulingDraft),

@@ -24,9 +24,7 @@ type WhatsAppSettingsModalProps = {
   chatsCount: number;
   syncAllChatsProgress: SyncAllChatsProgress;
   onSyncAllChats: () => void;
-  showArchived: boolean;
   archivedCount: number;
-  onToggleShowArchived: () => void;
   prioritizeUnread: boolean;
   onTogglePrioritizeUnread: (nextValue: boolean) => void;
   notificationPermission: NotificationPermission | 'unsupported';
@@ -48,9 +46,7 @@ export default function WhatsAppSettingsModal({
   chatsCount,
   syncAllChatsProgress,
   onSyncAllChats,
-  showArchived,
   archivedCount,
-  onToggleShowArchived,
   prioritizeUnread,
   onTogglePrioritizeUnread,
   notificationPermission,
@@ -147,10 +143,6 @@ export default function WhatsAppSettingsModal({
               )}
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Button variant="soft" size="sm" onClick={onToggleShowArchived}>
-                  {showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'}
-                </Button>
-
                 <label className="flex h-9 items-center justify-between rounded-lg border border-slate-200 px-3 text-xs text-slate-700">
                   <span>Priorizar nao lidas</span>
                   <Checkbox

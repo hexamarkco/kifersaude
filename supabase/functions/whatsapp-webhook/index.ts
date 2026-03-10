@@ -1068,7 +1068,7 @@ function resolveStatusAck(status?: string | null, code?: number | string | null)
   return fromStatus ?? fromCode;
 }
 
-async function fetchWhapiMessageById(messageId: string): Promise<WhapiMessage | null> {
+async function fetchWhapiMessageById(messageId: string, attempt = 0): Promise<WhapiMessage | null> {
   const normalizedMessageId = toCleanText(messageId);
   if (!normalizedMessageId) {
     return null;
@@ -1100,6 +1100,13 @@ async function fetchWhapiMessageById(messageId: string): Promise<WhapiMessage | 
 
     if (!response.ok) {
       const errorBody = await response.text();
+
+      if ((response.status === 401 || response.status === 403) && attempt === 0) {
+        cachedWhapiToken = null;
+        cachedWhapiTokenExpiresAt = 0;
+        return fetchWhapiMessageById(normalizedMessageId, attempt + 1);
+      }
+
       console.warn('whatsapp-webhook: falha ao buscar mensagem na Whapi por ID', {
         messageId: normalizedMessageId,
         status: response.status,

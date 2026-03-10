@@ -1160,6 +1160,460 @@ async function findExistingChatByPhone(phoneNumber: string, currentChatId: strin
   return fallbackData.id;
 }
 
+function extractMessageConversationKey(messageId: string): string | null {
+  const normalized = toCleanText(messageId);
+  if (!normalized || normalized.length < 6) {
+    return null;
+  }
+
+  return normalized.slice(-8);
+}
+
+function toEpochMillis(value: string | null | undefined): number {
+  if (!value) return Number.NaN;
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+  return Number.isNaN(timestamp) ? Number.NaN : timestamp;
+}
+
+type ConversationKeyCandidate = {
+  chatId: string;
+  score: number;
+  inboundHits: number;
+  latestAt: number;
+};
+
+async function findDirectChatByMessageConversationKey(
+  messageId: string,
+  options?: {
+    excludeChatIds?: string[];
+    referenceIso?: string | null;
+    requireInboundEvidence?: boolean;
+  },
+): Promise<string | null> {
+  const key = extractMessageConversationKey(messageId);
+  if (!key) {
+    return null;
+  }
+
+  const referenceMillis = toEpochMillis(options?.referenceIso ?? null);
+  const excludedChatIds = new Set((options?.excludeChatIds || []).map((chatId) => normalizeDirectChatId(chatId || '')));
+
+  const { data, error } = await supabase
+    .from('whatsapp_messages')
+    .select('id, chat_id, direction, timestamp, created_at')
+    .ilike('id', `%${key}`)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.warn('whatsapp-webhook: erro ao buscar mensagens por chave de conversa', {
+      messageId,
+      key,
+      error: error.message,
+    });
+    return null;
+  }
+
+  const byChat = new Map<string, ConversationKeyCandidate>();
+
+  for (const row of data || []) {
+    const rowId = toCleanText((row as { id?: string }).id);
+    if (!rowId.endsWith(key)) {
+      continue;
+    }
+
+    const rowChatId = normalizeDirectChatId(toCleanText((row as { chat_id?: string }).chat_id));
+    if (!rowChatId || excludedChatIds.has(rowChatId)) {
+      continue;
+    }
+
+    const chatType = getChatIdType(rowChatId);
+    if (chatType !== 'phone' && chatType !== 'lid') {
+      continue;
+    }
+
+    const direction = toCleanText((row as { direction?: string | null }).direction).toLowerCase();
+    const rowTimestamp =
+      toEpochMillis(toCleanText((row as { timestamp?: string | null }).timestamp)) ||
+      toEpochMillis(toCleanText((row as { created_at?: string | null }).created_at));
+
+    let score = direction === 'inbound' ? 8 : 2;
+
+    if (!Number.isNaN(referenceMillis) && !Number.isNaN(rowTimestamp)) {
+      const diff = Math.abs(rowTimestamp - referenceMillis);
+      if (diff <= 2 * 60 * 60 * 1000) {
+        score += 8;
+      } else if (diff <= 12 * 60 * 60 * 1000) {
+        score += 5;
+      } else if (diff <= 48 * 60 * 60 * 1000) {
+        score += 3;
+      } else if (diff <= 7 * 24 * 60 * 60 * 1000) {
+        score += 1;
+      }
+    }
+
+    const previous = byChat.get(rowChatId) || {
+      chatId: rowChatId,
+      score: 0,
+      inboundHits: 0,
+      latestAt: Number.NaN,
+    };
+
+    byChat.set(rowChatId, {
+      chatId: rowChatId,
+      score: previous.score + score,
+      inboundHits: previous.inboundHits + (direction === 'inbound' ? 1 : 0),
+      latestAt: Number.isNaN(previous.latestAt)
+        ? rowTimestamp
+        : Number.isNaN(rowTimestamp)
+          ? previous.latestAt
+          : Math.max(previous.latestAt, rowTimestamp),
+    });
+  }
+
+  const candidates = Array.from(byChat.values()).sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    if (right.inboundHits !== left.inboundHits) return right.inboundHits - left.inboundHits;
+    return (right.latestAt || 0) - (left.latestAt || 0);
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const [best, secondBest] = candidates;
+  if (options?.requireInboundEvidence && best.inboundHits === 0) {
+    return null;
+  }
+
+  if (secondBest) {
+    const scoreDelta = best.score - secondBest.score;
+    if (scoreDelta <= 0 && best.inboundHits === secondBest.inboundHits) {
+      return null;
+    }
+
+    if (scoreDelta < 2 && best.inboundHits <= secondBest.inboundHits) {
+      return null;
+    }
+  }
+
+  return best.chatId;
+}
+
+async function resolveCanonicalDirectChatIdFromStatusRecipient(
+  recipientId: string | null | undefined,
+  currentChatId: string,
+  messageId: string,
+  referenceIso: string | null,
+): Promise<string | null> {
+  const normalizedRecipient = normalizeMaybeDirectId(recipientId);
+  if (!normalizedRecipient) {
+    return findDirectChatByMessageConversationKey(messageId, {
+      excludeChatIds: [currentChatId],
+      referenceIso,
+      requireInboundEvidence: true,
+    });
+  }
+
+  const recipientType = getChatIdType(normalizedRecipient);
+  if (recipientType === 'phone') {
+    const phoneNumber = extractPhoneNumber(normalizedRecipient);
+    if (phoneNumber) {
+      const existingChatId = await findExistingChatByPhone(phoneNumber, currentChatId);
+      if (existingChatId) {
+        return normalizeDirectChatId(existingChatId);
+      }
+    }
+
+    return normalizeDirectChatId(normalizedRecipient);
+  }
+
+  if (recipientType === 'lid') {
+    const { data: byId, error: byIdError } = await supabase
+      .from('whatsapp_chats')
+      .select('id, phone_number')
+      .eq('id', normalizedRecipient)
+      .maybeSingle();
+
+    if (!byIdError && byId?.id) {
+      const normalizedById = normalizeDirectChatId(byId.id);
+      if (getChatIdType(normalizedById) === 'phone') {
+        return normalizedById;
+      }
+
+      const phoneFromChat = toCleanText(byId.phone_number);
+      if (phoneFromChat) {
+        const existingChatId = await findExistingChatByPhone(phoneFromChat, currentChatId);
+        if (existingChatId) {
+          return normalizeDirectChatId(existingChatId);
+        }
+      }
+    }
+
+    const { data: byLid, error: byLidError } = await supabase
+      .from('whatsapp_chats')
+      .select('id, phone_number')
+      .eq('lid', normalizedRecipient)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!byLidError && byLid?.id) {
+      const normalizedByLid = normalizeDirectChatId(byLid.id);
+      if (getChatIdType(normalizedByLid) === 'phone') {
+        return normalizedByLid;
+      }
+
+      const phoneFromLid = toCleanText(byLid.phone_number);
+      if (phoneFromLid) {
+        const existingChatId = await findExistingChatByPhone(phoneFromLid, currentChatId);
+        if (existingChatId) {
+          return normalizeDirectChatId(existingChatId);
+        }
+      }
+    }
+
+    return findDirectChatByMessageConversationKey(messageId, {
+      excludeChatIds: [currentChatId],
+      referenceIso,
+      requireInboundEvidence: true,
+    });
+  }
+
+  if (recipientType === 'group' || recipientType === 'newsletter' || recipientType === 'broadcast' || recipientType === 'status') {
+    return normalizedRecipient;
+  }
+
+  return findDirectChatByMessageConversationKey(messageId, {
+    excludeChatIds: [currentChatId],
+    referenceIso,
+    requireInboundEvidence: true,
+  });
+}
+
+async function resolveOutboundCanonicalDirectChatIdFromMessage(
+  rawMessage: WhapiMessage,
+  normalized: NormalizedMessage,
+): Promise<string | null> {
+  if (normalized.direction !== 'outbound') {
+    return null;
+  }
+
+  const chatType = getChatIdType(normalized.chatId);
+  if (chatType !== 'phone' && chatType !== 'lid') {
+    return null;
+  }
+
+  const source = toCleanText(rawMessage.source).toLowerCase();
+  if (source !== 'web' && source !== 'mobile') {
+    return null;
+  }
+
+  const normalizedFrom = normalizeMaybeDirectId(rawMessage.from);
+  if (!normalizedFrom || getChatIdType(normalizedFrom) !== 'phone') {
+    return null;
+  }
+
+  const normalizedChatId = normalizeDirectChatId(normalized.chatId);
+  if (normalizeDirectChatId(normalizedFrom) !== normalizedChatId) {
+    return null;
+  }
+
+  return findDirectChatByMessageConversationKey(normalized.messageId, {
+    excludeChatIds: [normalizedChatId],
+    referenceIso: normalized.timestamp,
+    requireInboundEvidence: true,
+  });
+}
+
+async function ensureStatusResolvedChatExists(
+  targetChatId: string,
+  recipientId: string | null | undefined,
+  referenceTimestamp: string | null,
+) {
+  const nowIso = new Date().toISOString();
+  const { data: existingChat, error: existingChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('id, name, is_group, phone_number, lid, last_message_at')
+    .eq('id', targetChatId)
+    .maybeSingle();
+
+  if (existingChatError) {
+    console.warn('whatsapp-webhook: erro ao carregar chat para reconciliação de status', {
+      chatId: targetChatId,
+      error: existingChatError.message,
+    });
+    return;
+  }
+
+  const chatType = getChatIdType(targetChatId);
+  const isDirect = chatType === 'phone' || chatType === 'lid';
+  const recipientNormalized = normalizeMaybeDirectId(recipientId);
+  const recipientType = recipientNormalized ? getChatIdType(recipientNormalized) : 'unknown';
+
+  const phoneNumber =
+    isDirect
+      ? extractPhoneNumber(targetChatId) || toCleanText(existingChat?.phone_number) || null
+      : null;
+
+  const lid =
+    isDirect
+      ? chatType === 'lid'
+        ? targetChatId
+        : toCleanText(existingChat?.lid) || (recipientType === 'lid' ? recipientNormalized : null)
+      : null;
+
+  const nextLastMessageAt =
+    getLatestIsoTimestamp(existingChat?.last_message_at ?? null, referenceTimestamp, nowIso) ??
+    existingChat?.last_message_at ??
+    referenceTimestamp ??
+    nowIso;
+
+  const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
+    {
+      id: targetChatId,
+      name: existingChat?.name ?? (phoneNumber || targetChatId),
+      is_group: existingChat?.is_group ?? chatType === 'group',
+      phone_number: isDirect ? phoneNumber : null,
+      lid: isDirect ? lid : null,
+      last_message_at: nextLastMessageAt,
+      updated_at: nowIso,
+    },
+    { onConflict: 'id' },
+  );
+
+  if (upsertError) {
+    console.warn('whatsapp-webhook: erro ao garantir chat após reconciliação por status', {
+      chatId: targetChatId,
+      error: upsertError.message,
+    });
+  }
+}
+
+async function refreshChatLastMessageTimestamp(chatId: string) {
+  const normalizedChatId = toCleanText(chatId);
+  if (!normalizedChatId) return;
+
+  const { data: latestMessage, error: latestMessageError } = await supabase
+    .from('whatsapp_messages')
+    .select('timestamp, created_at')
+    .eq('chat_id', normalizedChatId)
+    .order('timestamp', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestMessageError) {
+    console.warn('whatsapp-webhook: erro ao recalcular último horário do chat', {
+      chatId: normalizedChatId,
+      error: latestMessageError.message,
+    });
+    return;
+  }
+
+  const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
+  const { error: updateError } = await supabase
+    .from('whatsapp_chats')
+    .update({ last_message_at: nextLastMessageAt, updated_at: new Date().toISOString() })
+    .eq('id', normalizedChatId);
+
+  if (updateError) {
+    console.warn('whatsapp-webhook: erro ao atualizar último horário do chat', {
+      chatId: normalizedChatId,
+      error: updateError.message,
+    });
+  }
+}
+
+async function reconcileMessageChatFromStatus(status: WhapiStatus): Promise<{ fromChatId: string; toChatId: string } | null> {
+  const messageId = toCleanText(status.id);
+  if (!messageId) {
+    return null;
+  }
+
+  const { data: existingMessage, error: fetchError } = await supabase
+    .from('whatsapp_messages')
+    .select('id, chat_id, direction, timestamp, created_at, to_number')
+    .eq('id', messageId)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.warn('whatsapp-webhook: erro ao buscar mensagem para reconciliação de status', {
+      messageId,
+      error: fetchError.message,
+    });
+    return null;
+  }
+
+  if (!existingMessage || existingMessage.direction !== 'outbound') {
+    return null;
+  }
+
+  const currentChatId = normalizeDirectChatId(toCleanText(existingMessage.chat_id));
+  if (!currentChatId) {
+    return null;
+  }
+
+  const targetChatId = await resolveCanonicalDirectChatIdFromStatusRecipient(
+    status.recipient_id,
+    currentChatId,
+    messageId,
+    existingMessage.timestamp || existingMessage.created_at || null,
+  );
+
+  if (!targetChatId) {
+    return null;
+  }
+
+  const normalizedTargetChatId = normalizeDirectChatId(targetChatId);
+  if (!normalizedTargetChatId || normalizedTargetChatId === currentChatId) {
+    return null;
+  }
+
+  const targetType = getChatIdType(normalizedTargetChatId);
+  if (targetType === 'unknown') {
+    return null;
+  }
+
+  const { error: updateError } = await supabase
+    .from('whatsapp_messages')
+    .update({
+      chat_id: normalizedTargetChatId,
+      to_number: normalizedTargetChatId,
+    })
+    .eq('id', messageId);
+
+  if (updateError) {
+    console.warn('whatsapp-webhook: erro ao reconciliar chat da mensagem pelo status', {
+      messageId,
+      fromChatId: currentChatId,
+      toChatId: normalizedTargetChatId,
+      error: updateError.message,
+    });
+    return null;
+  }
+
+  const referenceTimestamp =
+    existingMessage.timestamp || existingMessage.created_at || toIsoString(status.timestamp) || new Date().toISOString();
+
+  await ensureStatusResolvedChatExists(normalizedTargetChatId, status.recipient_id, referenceTimestamp);
+  await refreshChatLastMessageTimestamp(currentChatId);
+  await refreshChatLastMessageTimestamp(normalizedTargetChatId);
+
+  console.log('whatsapp-webhook: chat da mensagem reconciliado via status', {
+    messageId,
+    fromChatId: currentChatId,
+    toChatId: normalizedTargetChatId,
+    recipientId: status.recipient_id,
+  });
+
+  return {
+    fromChatId: currentChatId,
+    toChatId: normalizedTargetChatId,
+  };
+}
+
 async function mergeChatMessages(fromChatId: string, toChatId: string) {
   console.log('whatsapp-webhook: mesclando mensagens de chats duplicados', {
     fromChatId,
@@ -2123,6 +2577,25 @@ Deno.serve(async (req) => {
             }
           }
 
+          if (!isReactionAction) {
+            const resolvedOutboundChatId = await resolveOutboundCanonicalDirectChatIdFromMessage(message, normalized);
+            if (resolvedOutboundChatId && resolvedOutboundChatId !== normalized.chatId) {
+              const originalChatId = normalized.chatId;
+              normalized.chatId = normalizeDirectChatId(resolvedOutboundChatId);
+              normalized.isGroup = getChatIdType(normalized.chatId) === 'group';
+              if (normalized.direction === 'outbound') {
+                normalized.toNumber = normalized.chatId;
+              }
+
+              console.log('whatsapp-webhook: chat outbound corrigido por chave de conversa', {
+                messageId: normalized.messageId,
+                originalChatId,
+                resolvedChatId: normalized.chatId,
+                source: message.source,
+              });
+            }
+          }
+
           const shouldTouchLastMessageAt = !isReactionAction && !['system'].includes(messageType);
           await upsertChat(normalized, { touchLastMessageAt: shouldTouchLastMessageAt });
           await upsertMessage(normalized);
@@ -2182,16 +2655,20 @@ Deno.serve(async (req) => {
     for (const status of payload.statuses) {
       try {
         const ackStatus = resolveStatusAck(status.status, status.code);
-        if (ackStatus === null) {
-          continue;
+        const reconciled = await reconcileMessageChatFromStatus(status);
+
+        if (ackStatus !== null) {
+          await updateMessageAck(status.id, ackStatus);
         }
 
-        await updateMessageAck(status.id, ackStatus);
         console.log('whatsapp-webhook: status de mensagem atualizado', {
           messageId: status.id,
           status: status.status,
           code: status.code,
           ackStatus,
+          recipientId: status.recipient_id,
+          reconciledFromChatId: reconciled?.fromChatId || null,
+          reconciledToChatId: reconciled?.toChatId || null,
         });
       } catch (error) {
         const status_error = error instanceof Error ? error.message : 'Erro desconhecido';

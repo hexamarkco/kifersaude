@@ -1015,36 +1015,34 @@ export async function getWhatsAppContacts(count: number = 500, offset: number = 
 }
 
 export async function getWhatsAppMedia(mediaId: string): Promise<{ url?: string; data?: Blob }> {
-  const settings = await getWhatsAppSettings();
-  const response = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${settings.token}`,
-      Accept: 'application/json, */*',
-    },
+  const { data, error } = await supabase.functions.invoke('whatsapp-media', {
+    body: { mediaId },
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(formatApiError(error));
+  if (error) {
+    throw error;
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    const json = await response.json().catch(() => ({} as Record<string, unknown>));
-    const url =
-      typeof json.url === 'string'
-        ? json.url
-        : typeof json.link === 'string'
-          ? json.link
-          : typeof json.media === 'string'
-            ? json.media
-            : undefined;
-    return { url };
+  const payload =
+    data && typeof data === 'object'
+      ? (data as { data?: string; mimeType?: string })
+      : null;
+
+  if (!payload?.data) {
+    throw new Error('Resposta invalida ao carregar midia do WhatsApp.');
   }
 
-  const data = await response.blob();
-  return { data };
+  const binaryString = atob(payload.data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let index = 0; index < binaryString.length; index += 1) {
+    bytes[index] = binaryString.charCodeAt(index);
+  }
+
+  return {
+    data: new Blob([bytes], {
+      type: payload.mimeType || 'application/octet-stream',
+    }),
+  };
 }
 
 export async function reactToMessage(messageId: string, emoji: string) {

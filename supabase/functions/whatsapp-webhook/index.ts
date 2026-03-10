@@ -1669,6 +1669,142 @@ async function resolveOutboundCanonicalDirectChatIdFromMessage(
   });
 }
 
+function isSuspiciousOutboundSelfStoredMessage(row: {
+  chat_id?: string | null;
+  direction?: string | null;
+  payload?: unknown;
+}): boolean {
+  if (toCleanText(row.direction).toLowerCase() !== 'outbound') {
+    return false;
+  }
+
+  const chatId = normalizeDirectChatId(toCleanText(row.chat_id));
+  if (getChatIdType(chatId) !== 'phone') {
+    return false;
+  }
+
+  const payload = row.payload && typeof row.payload === 'object'
+    ? (row.payload as Record<string, unknown>)
+    : null;
+
+  if (!payload || payload.from_me !== true) {
+    return false;
+  }
+
+  const source = toCleanText(payload.source).toLowerCase();
+  if (source !== 'web' && source !== 'mobile') {
+    return false;
+  }
+
+  const normalizedFrom = normalizeMaybeDirectId(payload.from as string | null | undefined);
+  if (!normalizedFrom || getChatIdType(normalizedFrom) !== 'phone') {
+    return false;
+  }
+
+  const payloadChatId = normalizeDirectChatId(toCleanText(payload.chat_id as string | null | undefined));
+  if (payloadChatId && payloadChatId !== chatId) {
+    return false;
+  }
+
+  return normalizeDirectChatId(normalizedFrom) === chatId;
+}
+
+async function reconcileSiblingOutboundMessagesByConversationKey(params: {
+  messageId: string;
+  targetChatId: string;
+  referenceIso?: string | null;
+}): Promise<number> {
+  const conversationKey = extractMessageConversationKey(params.messageId);
+  if (!conversationKey) {
+    return 0;
+  }
+
+  const referenceMillis = toEpochMillis(params.referenceIso ?? null);
+  const normalizedTargetChatId = normalizeDirectChatId(params.targetChatId);
+  if (!normalizedTargetChatId) {
+    return 0;
+  }
+
+  const { data: candidates, error } = await supabase
+    .from('whatsapp_messages')
+    .select('id, chat_id, direction, timestamp, created_at, to_number, payload')
+    .eq('direction', 'outbound')
+    .ilike('id', `%${conversationKey}`)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.warn('whatsapp-webhook: erro ao buscar siblings outbound por chave de conversa', {
+      messageId: params.messageId,
+      conversationKey,
+      targetChatId: normalizedTargetChatId,
+      error: error.message,
+    });
+    return 0;
+  }
+
+  let updatedCount = 0;
+
+  for (const candidate of candidates || []) {
+    const candidateId = toCleanText((candidate as { id?: string }).id);
+    if (!candidateId.endsWith(conversationKey)) {
+      continue;
+    }
+
+    const candidateChatId = normalizeDirectChatId(toCleanText((candidate as { chat_id?: string | null }).chat_id));
+    if (!candidateChatId || candidateChatId === normalizedTargetChatId) {
+      continue;
+    }
+
+    if (!isSuspiciousOutboundSelfStoredMessage(candidate as {
+      chat_id?: string | null;
+      direction?: string | null;
+      payload?: unknown;
+    })) {
+      continue;
+    }
+
+    const candidateMillis =
+      toEpochMillis(toCleanText((candidate as { timestamp?: string | null }).timestamp)) ||
+      toEpochMillis(toCleanText((candidate as { created_at?: string | null }).created_at));
+
+    if (!Number.isNaN(referenceMillis) && !Number.isNaN(candidateMillis)) {
+      const diff = Math.abs(candidateMillis - referenceMillis);
+      if (diff > 6 * 60 * 60 * 1000) {
+        continue;
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('whatsapp_messages')
+      .update({
+        chat_id: normalizedTargetChatId,
+        to_number: normalizedTargetChatId,
+      })
+      .eq('id', candidateId);
+
+    if (updateError) {
+      console.warn('whatsapp-webhook: erro ao reconciliar sibling outbound', {
+        messageId: candidateId,
+        conversationKey,
+        fromChatId: candidateChatId,
+        toChatId: normalizedTargetChatId,
+        error: updateError.message,
+      });
+      continue;
+    }
+
+    updatedCount += 1;
+    await refreshChatLastMessageTimestamp(candidateChatId);
+  }
+
+  if (updatedCount > 0) {
+    await refreshChatLastMessageTimestamp(normalizedTargetChatId);
+  }
+
+  return updatedCount;
+}
+
 async function ensureStatusResolvedChatExists(
   targetChatId: string,
   recipientId: string | null | undefined,
@@ -3349,6 +3485,13 @@ Deno.serve(async (req) => {
         const ackStatus = resolveStatusAck(status.status, status.code);
         const materialized = await ensureMessageMaterializedFromStatus(status, ackTargetMessageId);
         const reconciled = await reconcileMessageChatFromStatus(status, ackTargetMessageId);
+        const siblingReconciledCount = reconciled
+          ? await reconcileSiblingOutboundMessagesByConversationKey({
+            messageId: ackTargetMessageId,
+            targetChatId: reconciled.toChatId,
+            referenceIso: toIsoString(status.timestamp),
+          })
+          : 0;
 
         if (ackStatus !== null && ackTargetMessageId) {
           await updateMessageAck(ackTargetMessageId, ackStatus);
@@ -3367,6 +3510,7 @@ Deno.serve(async (req) => {
           materialized: materialized.ensured,
           reconciledFromChatId: reconciled?.fromChatId || null,
           reconciledToChatId: reconciled?.toChatId || null,
+          siblingReconciledCount,
         });
       } catch (error) {
         const status_error = error instanceof Error ? error.message : 'Erro desconhecido';

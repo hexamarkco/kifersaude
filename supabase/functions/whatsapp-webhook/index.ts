@@ -2970,6 +2970,98 @@ function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | n
   };
 }
 
+function resolveChatUpdateChatId(update: WhapiChatUpdate): string | null {
+  return normalizeDirectChatId(
+    toCleanText(
+      update.after_update?.id ||
+      update.after_update?.chat_id ||
+      update.before_update?.id ||
+      update.before_update?.chat_id ||
+      update.chat?.id ||
+      update.chat?.chat_id ||
+      '',
+    ),
+  ) || null;
+}
+
+function extractChatUpdateLastMessageId(update: WhapiChatUpdate): string | null {
+  const rawCandidate = update.after_update?.last_message || update.chat?.last_message || update.last_message;
+  if (!rawCandidate || typeof rawCandidate !== 'object') {
+    return null;
+  }
+
+  return toCleanText((rawCandidate as { id?: string }).id) || null;
+}
+
+async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
+  const chatId = resolveChatUpdateChatId(update);
+  if (!chatId) {
+    return null;
+  }
+
+  const rawCandidate = update.after_update?.last_message || update.chat?.last_message || update.last_message;
+  const referenceTimestamp = rawCandidate && typeof rawCandidate === 'object'
+    ? toIsoString((rawCandidate as { timestamp?: unknown }).timestamp)
+    : null;
+  const nowIso = new Date().toISOString();
+  const chatType = getChatIdType(chatId);
+  const isDirectChat = chatType === 'phone' || chatType === 'lid';
+  const phoneNumber = isDirectChat ? extractPhoneNumber(chatId) : null;
+  const lid = chatType === 'lid' ? chatId : null;
+
+  const { data: existingChat, error: existingChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('id, name, is_group, phone_number, lid, last_message_at')
+    .eq('id', chatId)
+    .maybeSingle();
+
+  if (existingChatError) {
+    console.warn('whatsapp-webhook: erro ao tocar chat via chats.patch', {
+      chatId,
+      error: existingChatError.message,
+    });
+    return null;
+  }
+
+  const nextLastMessageAt =
+    getLatestIsoTimestamp(existingChat?.last_message_at ?? null, referenceTimestamp, nowIso) ??
+    existingChat?.last_message_at ??
+    referenceTimestamp ??
+    nowIso;
+
+  const fallbackName =
+    chatType === 'status'
+      ? 'Status'
+      : chatType === 'newsletter'
+        ? 'Canal sem nome'
+        : chatType === 'broadcast'
+          ? 'Transmissao sem nome'
+          : phoneNumber || chatId;
+
+  const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
+    {
+      id: chatId,
+      name: existingChat?.name ?? fallbackName,
+      is_group: existingChat?.is_group ?? chatType === 'group',
+      phone_number: isDirectChat ? phoneNumber ?? existingChat?.phone_number ?? null : null,
+      lid: chatType === 'lid' ? lid : existingChat?.lid ?? null,
+      last_message_at: nextLastMessageAt,
+      updated_at: nowIso,
+    },
+    { onConflict: 'id' },
+  );
+
+  if (upsertError) {
+    console.warn('whatsapp-webhook: erro ao atualizar atividade do chat via chats.patch', {
+      chatId,
+      error: upsertError.message,
+    });
+    return null;
+  }
+
+  return { chatId, lastMessageAt: nextLastMessageAt };
+}
+
 type EnsureStatusMessageResult = {
   ensured: boolean;
   source: 'existing' | 'existing_provisional' | 'fetched' | 'not_found' | 'failed';
@@ -3450,19 +3542,48 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const touchedChat = await touchChatFromChatUpdate(update);
+        const chatUpdateLastMessageId = extractChatUpdateLastMessageId(update);
+
         const chatUpdateMessage = toWhapiMessageFromChatUpdate(update);
-        if (!chatUpdateMessage) {
-          continue;
+        if (chatUpdateMessage) {
+          const processedFromChatPatch = await processWhapiMessage(chatUpdateMessage, {
+            sourceEvent: 'chats.patch',
+          });
+
+          if (processedFromChatPatch.processed) {
+            console.log('whatsapp-webhook: mensagem processada via chats.patch', {
+              messageId: processedFromChatPatch.messageId,
+              chatId: processedFromChatPatch.chatId,
+            });
+            continue;
+          }
         }
 
-        const processedFromChatPatch = await processWhapiMessage(chatUpdateMessage, {
-          sourceEvent: 'chats.patch',
-        });
+        if (chatUpdateLastMessageId) {
+          const fetchedMessage = await fetchWhapiMessageById(chatUpdateLastMessageId);
+          if (fetchedMessage) {
+            const processedFetchedMessage = await processWhapiMessage(fetchedMessage, {
+              sourceEvent: 'chats.patch.fetch',
+              touchLastMessageAt: true,
+              allowProvisionalResolution: false,
+            });
 
-        if (processedFromChatPatch.processed) {
-          console.log('whatsapp-webhook: mensagem processada via chats.patch', {
-            messageId: processedFromChatPatch.messageId,
-            chatId: processedFromChatPatch.chatId,
+            if (processedFetchedMessage.processed) {
+              console.log('whatsapp-webhook: mensagem materializada via chats.patch.fetch', {
+                messageId: processedFetchedMessage.messageId,
+                chatId: processedFetchedMessage.chatId,
+              });
+              continue;
+            }
+          }
+        }
+
+        if (touchedChat) {
+          console.log('whatsapp-webhook: atividade de chat registrada via chats.patch', {
+            chatId: touchedChat.chatId,
+            lastMessageAt: touchedChat.lastMessageAt,
+            lastMessageId: chatUpdateLastMessageId,
           });
         }
       } catch (error) {

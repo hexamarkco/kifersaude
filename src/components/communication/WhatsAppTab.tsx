@@ -1930,6 +1930,7 @@ export default function WhatsAppTab() {
       );
       const fetchedCount = fetchedMessages.length;
       const baseMessages = dedupeMessagesForDisplay(fetchedMessages as WhatsAppMessage[]);
+      const latestPreview = getLatestMeaningfulPreview(baseMessages);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
         messagesCacheRef.current.set(chat.id, {
@@ -1941,6 +1942,27 @@ export default function WhatsAppTab() {
       });
       setLoadedMessagesCount(fetchedCount);
       setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
+
+      if (latestPreview) {
+        setChats((prev) => {
+          const updated = prev.map((item) => {
+            const variants = getChatIdVariants(item);
+            if (!variants.includes(chat.id)) return item;
+
+            const currentTime = item.last_message_at ? new Date(item.last_message_at).getTime() : 0;
+            const incomingTime = latestPreview.timestamp ? new Date(latestPreview.timestamp).getTime() : 0;
+            const shouldUpdateTime = incomingTime > 0 && (!currentTime || incomingTime >= currentTime);
+
+            return {
+              ...item,
+              last_message: latestPreview.preview,
+              last_message_at: shouldUpdateTime ? latestPreview.timestamp : item.last_message_at,
+            };
+          });
+
+          return updated.sort(sortChatsByLatest);
+        });
+      }
 
       if (userRef.current) {
         void markChatAsRead(chat, baseMessages).then(() => {
@@ -2465,6 +2487,21 @@ export default function WhatsAppTab() {
     if (type === 'location') return '[Localização]';
     if (message.has_media) return '[Anexo]';
     return 'Mensagem';
+  };
+
+  const getLatestMeaningfulPreview = (items: WhatsAppMessage[]) => {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const candidate = items[index];
+      const preview = getMessagePreview(candidate);
+      if (!preview) continue;
+
+      return {
+        preview,
+        timestamp: getMessageDisplayTimestamp(candidate),
+      };
+    }
+
+    return null;
   };
 
   const playNotificationTone = () => {
@@ -3156,6 +3193,7 @@ export default function WhatsAppTab() {
   };
 
   const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;
+  const isSelectedStatusChat = selectedChatKind === 'status';
   const selectedChatTypeLabel = selectedChat ? getChatTypeLabel(selectedChat) : null;
   const selectedChatTypeBadgeClass =
     selectedChatKind === 'group'
@@ -4805,7 +4843,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         : selectedChatKind === 'newsletter'
                           ? 'Canal informativo'
                           : selectedChatKind === 'status'
-                            ? 'Atualizacoes de status'
+                            ? 'Feed de atualizacoes de status'
                             : selectedChatKind === 'broadcast'
                               ? 'Lista de transmissao'
                               : 'Conversa'}
@@ -4892,7 +4930,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 )}
                 {renderedMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
-                    <p>{isLoadingMessages ? 'Carregando mensagens...' : 'Nenhuma mensagem ainda'}</p>
+                    <p>{isLoadingMessages ? 'Carregando atualizacoes...' : isSelectedStatusChat ? 'Nenhuma atualizacao de status ainda' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
                   renderedMessages.map((message, index) => {
@@ -4932,9 +4970,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           editCount={message.edit_count}
                           editedAt={message.edited_at}
                           originalBody={message.original_body}
-                          onReact={handleReact}
-                          onReply={handleReply}
-                          onEdit={handleEdit}
+                          onReact={isSelectedStatusChat ? undefined : handleReact}
+                          onReply={isSelectedStatusChat ? undefined : handleReply}
+                          onEdit={isSelectedStatusChat ? undefined : handleEdit}
                         />
                       </div>
                     );
@@ -4943,19 +4981,27 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 <div ref={messagesEndRef} />
               </div>
 
-              <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChatDisplayName || selectedChat.id} />
+              {!isSelectedStatusChat ? (
+                <>
+                  <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChatDisplayName || selectedChat.id} />
 
-              <MessageInput
-                chatId={selectedChat.id}
-                contacts={contactsList}
-                templateVariables={templateVariablesForInput}
-                templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
-                onMessageSent={handleMessageSent}
-                replyToMessage={replyToMessage}
-                onCancelReply={handleCancelReply}
-                editMessage={editMessage}
-                onCancelEdit={handleCancelEdit}
-              />
+                  <MessageInput
+                    chatId={selectedChat.id}
+                    contacts={contactsList}
+                    templateVariables={templateVariablesForInput}
+                    templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
+                    onMessageSent={handleMessageSent}
+                    replyToMessage={replyToMessage}
+                    onCancelReply={handleCancelReply}
+                    editMessage={editMessage}
+                    onCancelEdit={handleCancelEdit}
+                  />
+                </>
+              ) : (
+                <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                  Este painel mostra somente atualizacoes de status recebidas. O composer de conversa fica disponivel apenas em chats e grupos.
+                </div>
+              )}
 
               {showGroupInfo && selectedChatKind === 'group' && (
                 <GroupInfoPanel

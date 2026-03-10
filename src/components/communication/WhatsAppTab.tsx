@@ -395,7 +395,7 @@ export default function WhatsAppTab() {
 
   const selectChat = (chat: WhatsAppChat | null) => {
     startTransition(() => {
-      setSelectedChat(chat);
+      setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
     });
   };
 
@@ -787,6 +787,17 @@ export default function WhatsAppTab() {
     }
 
     return kind;
+  };
+
+  const isStatusChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined) => {
+    if (!chat) return false;
+    return getChatKind(chat) === 'status';
+  };
+
+  const isStatusMessage = (message: Pick<WhatsAppMessage, 'chat_id' | 'type'> | null | undefined) => {
+    if (!message) return false;
+    if (String(message.type || '').trim().toLowerCase() === 'story') return true;
+    return getWhatsAppChatKind(message.chat_id || '') === 'status';
   };
 
   const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => getChatKind(chat) === 'direct';
@@ -1455,6 +1466,12 @@ export default function WhatsAppTab() {
           archived: row.archived ?? false,
           mute_until: row.mute_until ?? null,
         };
+        if (isStatusChat(incomingChat)) {
+          setChats((prev) => prev.filter((chat) => chat.id !== incomingChat.id));
+          setSelectedChat((current) => (current?.id === incomingChat.id ? null : current));
+          return;
+        }
+
         const shouldHydratePreview =
           Boolean(incomingChat.last_message_at) &&
           !incomingChat.last_message &&
@@ -1520,6 +1537,10 @@ export default function WhatsAppTab() {
                   incomingMessage.direction === 'outbound' ? reactionTargetChatId : incomingMessage.to_number,
               }
             : incomingMessage;
+
+        if (isStatusMessage(message)) {
+          return;
+        }
 
         if (eventType !== 'DELETE' && isTechnicalCiphertextMessage(message)) {
           const currentChat = selectedChatRef.current;
@@ -1780,6 +1801,7 @@ export default function WhatsAppTab() {
     const previousById = new Map(chatsRef.current.map((chat) => [chat.id, chat]));
 
     return incomingChats
+      .filter((incoming) => !isStatusChat(incoming))
       .map((incoming) => {
         const previous = previousById.get(incoming.id);
         return {
@@ -1995,12 +2017,15 @@ export default function WhatsAppTab() {
         }));
       }
 
+      incomingChats = incomingChats.filter((chat) => !isStatusChat(chat));
+
       if (activeChatsLoadIdRef.current !== currentLoadId) {
         return;
       }
 
       const mergedChats = mergeChatsWithCurrentState(incomingChats);
       setChats(mergedChats);
+      setSelectedChat((current) => (isStatusChat(current) ? null : current));
 
       void loadUnreadCounts();
       void loadGroupNames(mergedChats);
@@ -2952,7 +2977,8 @@ export default function WhatsAppTab() {
     unreadQueue,
   } = useMemo(() => {
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-    const chatsMatchingSearch = chats.filter((chat) => {
+    const workspaceChats = chats.filter((chat) => !isStatusChat(chat));
+    const chatsMatchingSearch = workspaceChats.filter((chat) => {
       if (!normalizedSearchQuery) return true;
 
       const displayName = (chatListPresentationById.get(chat.id)?.displayName || chat.id).toLowerCase();

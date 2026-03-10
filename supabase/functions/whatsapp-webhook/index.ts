@@ -1265,6 +1265,49 @@ function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter'
   return 'unknown';
 }
 
+function isStatusChatId(chatId: string | null | undefined): boolean {
+  const cleaned = toCleanText(chatId);
+  if (!cleaned) return false;
+  return getChatIdType(normalizeDirectChatId(cleaned)) === 'status';
+}
+
+function isStatusStoryMessage(message: WhapiMessage | null | undefined): boolean {
+  if (!message) return false;
+  if (toCleanText(message.type).toLowerCase() === 'story') return true;
+  return isStatusChatId(message.chat_id);
+}
+
+function isStatusChatUpdate(update: WhapiChatUpdate | null | undefined): boolean {
+  if (!update) return false;
+  return isStatusChatId(resolveChatUpdateChatId(update));
+}
+
+function shouldSkipEventStorage(payload: WhapiWebhook): boolean {
+  const hasMessages = Array.isArray(payload.messages) && payload.messages.length > 0;
+  const hasMessageUpdates = Array.isArray(payload.messages_updates) && payload.messages_updates.length > 0;
+  const hasChatUpdates = Array.isArray(payload.chats_updates) && payload.chats_updates.length > 0;
+
+  const hasNonStatusMessages = payload.messages?.some((message) => !isStatusStoryMessage(message)) ?? false;
+  const hasNonStatusMessageUpdates =
+    payload.messages_updates?.some((update) => !isStatusStoryMessage(update.after_update)) ?? false;
+  const hasNonStatusChatUpdates = payload.chats_updates?.some((update) => !isStatusChatUpdate(update)) ?? false;
+  const hasOtherUsefulEvents =
+    Boolean(payload.messages_removed?.length) ||
+    Boolean(payload.messages_removed_all) ||
+    Boolean(payload.statuses?.length) ||
+    Boolean(payload.groups?.length) ||
+    Boolean(payload.groups_participants?.length) ||
+    Boolean(payload.groups_updates?.length);
+
+  const hasOnlyStatusTraffic =
+    (hasMessages || hasMessageUpdates || hasChatUpdates) &&
+    !hasNonStatusMessages &&
+    !hasNonStatusMessageUpdates &&
+    !hasNonStatusChatUpdates;
+
+  return hasOnlyStatusTraffic && !hasOtherUsefulEvents;
+}
+
 function extractPhoneNumber(chatId: string): string | null {
   const normalizedChatId = normalizeDirectChatId(chatId);
   if (getChatIdType(normalizedChatId) !== 'phone') return null;
@@ -2306,6 +2349,14 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
     }
   }
 
+  if (chatIdType === 'status') {
+    console.log('whatsapp-webhook: chat de status ignorado no upsert', {
+      chatId: message.chatId,
+      messageId: message.messageId,
+    });
+    return;
+  }
+
   const chatName = await resolveChatName(message);
   const isDirectChat = chatIdType === 'phone' || chatIdType === 'lid';
 
@@ -2783,6 +2834,16 @@ async function processWhapiMessage(message: WhapiMessage, options?: ProcessWhapi
     };
   }
 
+  if (isStatusStoryMessage(message)) {
+    return {
+      processed: false,
+      reason: 'status_story_ignored',
+      messageId: toCleanText(message.id),
+      chatId: toCleanText(message.chat_id) || null,
+      direction: message.from_me ? 'outbound' : 'inbound',
+    };
+  }
+
   if (isDeleted) {
     await processMessageDelete(message);
     return {
@@ -2945,7 +3006,7 @@ function toWhapiMessageFromChatUpdate(update: WhapiChatUpdate): WhapiMessage | n
   const messageId = toCleanText(candidate.id);
   const messageType = toCleanText(candidate.type);
   const chatId = normalizeDirectChatId(toCleanText(candidate.chat_id || fallbackChatId || ''));
-  if (!messageId || !messageType || !chatId) {
+  if (!messageId || !messageType || !chatId || isStatusStoryMessage(candidate) || isStatusChatId(chatId)) {
     return null;
   }
 
@@ -2996,6 +3057,10 @@ function extractChatUpdateLastMessageId(update: WhapiChatUpdate): string | null 
 async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
   const chatId = resolveChatUpdateChatId(update);
   if (!chatId) {
+    return null;
+  }
+
+  if (isStatusChatId(chatId)) {
     return null;
   }
 
@@ -3463,11 +3528,17 @@ Deno.serve(async (req) => {
     eventAction: payload.event?.event,
   });
 
-  try {
-    await storeEvent({ event: eventName, payload: payload as unknown as Record<string, unknown>, headers });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('whatsapp-webhook: erro ao salvar evento', message, { eventName, payload });
+  if (shouldSkipEventStorage(payload)) {
+    console.log('whatsapp-webhook: evento de status/story ignorado para storage', {
+      eventName,
+    });
+  } else {
+    try {
+      await storeEvent({ event: eventName, payload: payload as unknown as Record<string, unknown>, headers });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('whatsapp-webhook: erro ao salvar evento', message, { eventName, payload });
+    }
   }
 
   if (Array.isArray(payload.messages)) {
@@ -3497,6 +3568,10 @@ Deno.serve(async (req) => {
           messageId: update.id,
           changes: update.changes,
         });
+
+        if (isStatusStoryMessage(update.after_update)) {
+          continue;
+        }
 
         const normalized = normalizeWhapiMessage(update.after_update);
         await upsertChat(normalized, { touchLastMessageAt: false });
@@ -3537,6 +3612,10 @@ Deno.serve(async (req) => {
   if (Array.isArray(payload.chats_updates)) {
     for (const update of payload.chats_updates) {
       try {
+        if (isStatusChatUpdate(update)) {
+          continue;
+        }
+
         const changedFields = Array.isArray(update.changes) ? update.changes : [];
         if (changedFields.length > 0 && !changedFields.includes('last_message')) {
           continue;

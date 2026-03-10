@@ -121,6 +121,18 @@ const getChatIdKind = (chatId: string): ChatIdKind => {
   return 'unknown';
 };
 
+const isStatusChatId = (chatId: string | null | undefined): boolean => {
+  const cleaned = toCleanText(chatId);
+  if (!cleaned) return false;
+  return getChatIdKind(normalizeDirectChatId(cleaned)) === 'status';
+};
+
+const isStatusStoryMessage = (message: WhapiMessage | null | undefined): boolean => {
+  if (!message) return false;
+  if (toCleanText(message.type).toLowerCase() === 'story') return true;
+  return isStatusChatId(message.chat_id);
+};
+
 const fetchNewsletterName = async (token: string, chatId: string): Promise<string | null> => {
   const pageSize = 100;
   let offset = 0;
@@ -691,6 +703,12 @@ Deno.serve(async (req) => {
     }
 
     const requestedChatId = normalizeDirectChatId(chatId);
+    if (isStatusChatId(requestedChatId)) {
+      return new Response(JSON.stringify({ success: true, count: 0, skipped: 'status_chat_ignored' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const queryParams = new URLSearchParams();
     queryParams.append('count', String(typeof count === 'number' ? count : 200));
@@ -713,7 +731,7 @@ Deno.serve(async (req) => {
     }
 
     const payload = (await response.json()) as WhapiMessageListResponse;
-    const messages = payload.messages || [];
+    const messages = (payload.messages || []).filter((message) => !isStatusStoryMessage(message));
 
     if (messages.length === 0) {
       return new Response(JSON.stringify({ success: true, count: 0 }), {
@@ -724,8 +742,14 @@ Deno.serve(async (req) => {
 
     const resolvedRequestedChatId = resolveRequestedChatIdFromMessages(requestedChatId, messages);
     const chatKind = getChatIdKind(resolvedRequestedChatId);
+    if (chatKind === 'status') {
+      return new Response(JSON.stringify({ success: true, count: 0, skipped: 'status_chat_ignored' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const isGroup = chatKind === 'group';
-    const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast' || chatKind === 'status';
+    const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast';
     const nowIso = new Date().toISOString();
     const latestMessageAt = messages
       .map((message) => toIsoString(message.timestamp))

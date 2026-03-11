@@ -70,7 +70,7 @@ export default function WhatsAppSettingsPage() {
       setArchivedCount(rows.filter((chat) => Boolean(chat.archived)).length);
     } catch (error) {
       console.error('Erro ao carregar resumo do WhatsApp:', error);
-      setSummaryError('Nao foi possivel carregar os indicadores do WhatsApp agora.');
+      setSummaryError('Não foi possível carregar os indicadores do WhatsApp agora.');
     } finally {
       setIsLoadingSummary(false);
     }
@@ -186,7 +186,7 @@ export default function WhatsAppSettingsPage() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-sm font-semibold text-slate-900">Configuracoes da inbox</h2>
-                    <p className="text-xs text-slate-500">Sincronizacao, visualizacao e prioridades da fila de conversas.</p>
+              <p className="text-xs text-slate-500">Sincronização, visualização e prioridades da fila de conversas.</p>
                   </div>
                   <Button
                     variant="secondary"
@@ -238,7 +238,7 @@ export default function WhatsAppSettingsPage() {
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <label className="flex h-10 items-center justify-between rounded-lg border border-slate-200 px-3 text-xs text-slate-700">
-                    <span>Priorizar nao lidas</span>
+                  <span>Priorizar não lidas</span>
                     <Checkbox checked={prioritizeUnread} onChange={(event) => setPrioritizeUnread(event.target.checked)} />
                   </label>
 
@@ -259,7 +259,7 @@ export default function WhatsAppSettingsPage() {
 
               <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                 <p className="font-semibold text-slate-700">Atalhos rapidos</p>
-                <p className="mt-1">Ctrl/Cmd + K busca, Ctrl/Cmd + N novo chat, Ctrl/Cmd + Shift + J proxima nao lida.</p>
+              <p className="mt-1">Ctrl/Cmd + K busca, Ctrl/Cmd + N novo chat, Ctrl/Cmd + Shift + J próxima não lida.</p>
               </section>
             </div>
           ) : (

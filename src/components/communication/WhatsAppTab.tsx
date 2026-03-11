@@ -2912,6 +2912,7 @@ const sortChatsByLatest = (
     }
 
     const type = (message.type || '').toLowerCase();
+    if (type === 'sticker') return '[Sticker]';
     if (type === 'image') return '[Imagem]';
     if (type === 'video') return '[Vídeo]';
     if (['audio', 'voice', 'ptt'].includes(type)) return '[Áudio]';
@@ -3354,7 +3355,7 @@ const sortChatsByLatest = (
     chatLeadStatusFilter !== 'all' || chatLeadOwnerFilter !== 'all' || chatLeadPresenceFilter !== 'all';
   const hasSegmentFilters = chatOnlyUnread || chatKindFilters.length > 0;
   const activeSegmentFiltersLabel = [
-    chatOnlyUnread ? 'Nao lidas' : null,
+                  chatOnlyUnread ? 'Não lidas' : null,
     ...chatKindFilters.map((filter) => {
       if (filter === 'direct') return 'Diretas';
       if (filter === 'groups') return 'Grupos';
@@ -4107,7 +4108,7 @@ const sortChatsByLatest = (
               payloadsByMessageId.set(message.id, data.payload as WhatsAppMessagePayload);
             }
           } catch (error) {
-            console.error(`Erro ao transcrever audio ${message.id} para copia do chat:`, error);
+        console.error(`Erro ao transcrever áudio ${message.id} para cópia do chat:`, error);
           }
         }
 
@@ -4519,7 +4520,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           const lead = leadById.get(resolvedLeadId);
           return {
             id: reminder.id,
-            title: reminder.titulo?.trim() || 'Lembrete sem titulo',
+                    title: reminder.titulo?.trim() || 'Lembrete sem título',
             type: reminder.tipo?.trim() || 'Outro',
             priority: reminder.prioridade?.trim() || 'normal',
             contractId: reminder.contract_id ?? null,
@@ -4538,7 +4539,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       reminderQuickOpenLastLoadedAtRef.current = Date.now();
     } catch (error) {
       console.error('Erro ao carregar lembretes para o WhatsApp:', error);
-      setReminderQuickOpenError('Nao foi possivel carregar os lembretes agora.');
+      setReminderQuickOpenError('Não foi possível carregar os lembretes agora.');
       if (!preserveExistingItems) {
         setReminderQuickOpenItems([]);
       }
@@ -4804,7 +4805,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       ]);
 
       if (statusHistoryError) {
-        console.error('Erro ao registrar historico de status do lead no WhatsApp:', statusHistoryError);
+    console.error('Erro ao registrar histórico de status do lead no WhatsApp:', statusHistoryError);
       }
 
       const reminderIdsToDelete = new Set<string>();
@@ -4886,7 +4887,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       );
     } catch (error) {
       console.error('Erro ao marcar lead como perdido no WhatsApp:', error);
-      alert('Nao foi possivel marcar este lead como perdido.');
+    alert('Não foi possível marcar este lead como perdido.');
     } finally {
       setMarkingLostLeadId((current) => (current === item.leadId ? null : current));
     }
@@ -4991,7 +4992,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     if (error || !data) {
       setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, pinned: previousPinned } : chat)).sort(sortChatsByLatest));
       patchSelectedChat(chatId, { pinned: previousPinned });
-      console.error('Erro ao atualizar fixacao do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
+      console.error('Erro ao atualizar fixação do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissão).');
     }
   };
 
@@ -5046,7 +5047,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       );
       scheduleUnreadCountsRefresh(50);
     } catch (error) {
-      console.error('Erro ao marcar chat como nao lido:', error);
+    console.error('Erro ao marcar chat como não lido:', error);
     }
   };
 
@@ -5268,7 +5269,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             <div className="panel-glass-panel rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="comm-title text-sm font-semibold">Abertura rapida de conversas</p>
+                    <p className="comm-title text-sm font-semibold">Abertura rápida de conversas</p>
                   <p className="comm-text mt-1 text-xs">
                     Abra em um clique os chats com lembretes pendentes vinculados aos leads.
                   </p>
@@ -5408,8 +5409,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                     variant="secondary"
                                     size="icon"
                                     className="relative h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
-                                    title="Marcar como lido e reagendar para 1 dia util"
-                                    aria-label="Marcar como lido e reagendar para 1 dia util"
+                      title="Marcar como lido e reagendar para 1 dia útil"
+                      aria-label="Marcar como lido e reagendar para 1 dia útil"
                                   >
                                     {isQuickSchedulingCurrentReminder && quickSchedulingReminderAction?.daysAhead === 1 ? (
                                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -5638,7 +5639,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     </span>
                   </button>
                   {[
-                    { id: 'unread', label: 'Nao lidas', count: unreadInboxCount },
+                        { id: 'unread', label: 'Não lidas', count: unreadInboxCount },
                     { id: 'direct', label: 'Diretas', count: directInboxCount },
                     { id: 'groups', label: 'Grupos', count: groupInboxCount },
                     { id: 'channels', label: 'Canais', count: channelInboxCount },
@@ -5726,7 +5727,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 <div className="absolute left-0 top-full z-20 mt-2 w-full max-w-2xl rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Segmentacao CRM</p>
+                              <p className="text-sm font-semibold text-slate-900">Segmentação CRM</p>
                       <p className="text-[11px] text-slate-500">Combine status, responsavel e vinculo sem poluir a inbox.</p>
                     </div>
                     {hasAdvancedChatFilters && (
@@ -5808,7 +5809,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 disabled={!nextUnreadChat}
               >
                 <SkipForward className="h-3.5 w-3.5" />
-                {nextUnreadChat ? `Proxima nao lida (${unreadQueue.length})` : 'Fila zerada'}
+                            {nextUnreadChat ? `Próxima não lida (${unreadQueue.length})` : 'Fila zerada'}
               </Button>
             </div>
           </div>
@@ -5957,7 +5958,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 }}
               >
                 <Circle className="h-4 w-4" />
-                Marcar como nao lida
+                                  Marcar como não lida
               </Button>
               <Button
                 variant="ghost"
@@ -6189,7 +6190,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         : selectedChatKind === 'newsletter'
                           ? 'Canal informativo'
                           : selectedChatKind === 'status'
-                            ? 'Feed de atualizacoes de status'
+                                  ? 'Feed de atualizações de status'
                             : selectedChatKind === 'broadcast'
                               ? 'Lista de transmissao'
                               : 'Conversa'}
@@ -6283,7 +6284,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 )}
                 {renderedMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-500">
-                    <p>{isLoadingMessages ? 'Carregando atualizacoes...' : isSelectedStatusChat ? 'Nenhuma atualizacao de status ainda' : 'Nenhuma mensagem ainda'}</p>
+                                <p>{isLoadingMessages ? 'Carregando atualizações...' : isSelectedStatusChat ? 'Nenhuma atualização de status ainda' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
                   renderedMessages.map((message, index) => {
@@ -6378,7 +6379,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 </>
               ) : (
                 <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  Este painel mostra somente atualizacoes de status recebidas. O composer de conversa fica disponivel apenas em chats e grupos.
+                                Este painel mostra somente atualizações de status recebidas. O composer de conversa fica disponível apenas em chats e grupos.
                 </div>
               )}
 

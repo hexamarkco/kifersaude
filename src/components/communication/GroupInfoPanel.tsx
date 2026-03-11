@@ -137,7 +137,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   if (!groupInfo) {
     return (
       <div className={`${panelShellClass} items-center justify-center`}>
-        <p className="comm-muted">Grupo nao encontrado</p>
+        <p className="comm-muted">Grupo não encontrado</p>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   return (
     <div className={panelShellClass}>
       <div className="flex items-center justify-between border-b border-[var(--panel-border-subtle,#e7dac8)] p-4">
-        <h3 className="comm-title font-semibold">Informacoes do Grupo</h3>
+        <h3 className="comm-title font-semibold">Informações do Grupo</h3>
         <button onClick={onClose} className="comm-icon-button rounded p-1">
           <X className="h-5 w-5" />
         </button>
@@ -191,7 +191,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
             onClick={() => setShowEvents((current) => !current)}
             className="comm-list-item flex w-full items-center justify-between rounded p-2"
           >
-            <h3 className="comm-title font-semibold">Historico de Eventos</h3>
+            <h3 className="comm-title font-semibold">Histórico de Eventos</h3>
             {showEvents ? <ChevronUp className="comm-muted h-5 w-5" /> : <ChevronDown className="comm-muted h-5 w-5" />}
           </button>
 

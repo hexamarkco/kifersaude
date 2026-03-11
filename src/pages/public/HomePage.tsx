@@ -51,13 +51,13 @@ const methodSteps = [
   },
   {
     step: '02',
-    title: 'Curadoria de opcoes',
-    text: 'Filtramos planos com foco em rede relevante, sustentabilidade financeira e seguranca de uso.',
+    title: 'Curadoria de opções',
+    text: 'Filtramos planos com foco em rede relevante, sustentabilidade financeira e segurança de uso.',
   },
   {
     step: '03',
     title: 'Comparativo guiado',
-    text: 'Voce recebe recomendacao principal, alternativa de seguranca e leitura honesta dos pontos sensiveis.',
+    text: 'Você recebe recomendação principal, alternativa de segurança e leitura honesta dos pontos sensíveis.',
   },
   {
     step: '04',
@@ -88,10 +88,10 @@ const faqItems = [
   {
     question: 'A consultoria da Kifer tem custo para o cliente final?',
     answer:
-      'Nao. A orientacao consultiva e gratuita para o cliente final e inclui triagem, comparativo e apoio no processo de contratacao.',
+      'Não. A orientação consultiva é gratuita para o cliente final e inclui triagem, comparativo e apoio no processo de contratação.',
   },
   {
-    question: 'Como voces garantem que a rede informada e a correta?',
+    question: 'Como vocês garantem que a rede informada é a correta?',
     answer:
       'A validacao e feita no produto especifico, por categoria e territorio de uso, evitando confirmacoes genericas por nome de operadora.',
   },
@@ -101,9 +101,9 @@ const faqItems = [
       'Sim. O metodo e o mesmo, mas a estrategia muda conforme perfil, elegibilidade, objetivo de cobertura e realidade financeira.',
   },
   {
-    question: 'Voces acompanham depois da assinatura?',
+    question: 'Vocês acompanham depois da assinatura?',
     answer:
-      'Sim. O pos-venda faz parte da entrega, com apoio em duvidas operacionais, pendencias e primeiros passos de uso.',
+      'Sim. O pós-venda faz parte da entrega, com apoio em dúvidas operacionais, pendências e primeiros passos de uso.',
   },
 ];
 
@@ -190,8 +190,8 @@ export default function HomePage() {
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">+3.200 clientes orientados</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia util</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pos-venda</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia útil</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pós-venda</div>
               </div>
             </div>
 
@@ -214,7 +214,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Analise de rede por uso real e nao por vitrine comercial.
+                  Análise de rede por uso real e não por vitrine comercial.
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
@@ -229,7 +229,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl rounded-[2rem] bg-slate-900 px-8 py-11 text-white shadow-[0_40px_90px_-56px_rgba(15,23,42,0.92)] md:px-12">
             <div className="max-w-3xl clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">metodo institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight">Uma jornada de decisao, nao uma pagina de oferta</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight">Uma jornada de decisão, não uma página de oferta</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
                 Nosso processo e desenhado para reduzir risco de arrependimento e aumentar seguranca de uso no curto e medio prazo.
               </p>
@@ -320,7 +320,7 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">faq institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Duvidas que aparecem antes de contratar</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Dúvidas que aparecem antes de contratar</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 Reunimos respostas objetivas para os temas que mais influenciam sua decisao.
               </p>
@@ -361,7 +361,7 @@ export default function HomePage() {
                   Vamos construir seu comparativo com criterio tecnico.
                 </h2>
                 <p className="mt-4 max-w-2xl text-orange-50">
-                  Se voce quer decidir com mais seguranca, nossa equipe inicia pelo briefing e organiza as melhores opcoes para seu perfil.
+                  Se você quer decidir com mais segurança, nossa equipe inicia pelo briefing e organiza as melhores opções para seu perfil.
                 </p>
               </div>
 

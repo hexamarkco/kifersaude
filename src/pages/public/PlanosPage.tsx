@@ -45,13 +45,13 @@ const operatorProfiles = [
     name: 'Amil',
     logo: '/amil-logo-1-2.png',
     highlight:
-      'Portifolio amplo para diferentes perfis, com opcoes que variam de entrada ate categorias com cobertura mais robusta.',
+      'Portfólio amplo para diferentes perfis, com opções que variam de entrada até categorias com cobertura mais robusta.',
   },
   {
     name: 'Bradesco Saude',
     logo: '/bradesco-saude-logo-1-1.png',
     highlight:
-      'Historico forte em produtos corporativos e posicionamento premium para quem prioriza rede consolidada.',
+      'Histórico forte em produtos corporativos e posicionamento premium para quem prioriza rede consolidada.',
   },
   {
     name: 'SulAmerica Saude',
@@ -72,10 +72,10 @@ const operatorProfiles = [
 ];
 
 const decisionChecklist = [
-  'Rede credenciada nos bairros e cidades onde voce realmente circula.',
-  'Custo anual projetado, e nao apenas mensalidade de entrada.',
-  'Leitura de carencias e regras de uso antes da assinatura.',
-  'Analise de coparticipacao conforme frequencia de consultas e exames.',
+  'Rede credenciada nos bairros e cidades onde você realmente circula.',
+  'Custo anual projetado, e não apenas mensalidade de entrada.',
+  'Leitura de carências e regras de uso antes da assinatura.',
+  'Análise de coparticipação conforme frequência de consultas e exames.',
   'Impacto de reajuste e mudanca de faixa etaria no medio prazo.',
   'Capacidade de suporte operacional da operadora para o seu perfil.',
 ];
@@ -88,7 +88,7 @@ const financialModels = [
   },
   {
     title: 'Com coparticipacao',
-    text: 'Entrada inicial menor, com custo por utilizacao. Funciona melhor para baixo uso e quando existe disciplina de acompanhamento.',
+    text: 'Entrada inicial menor, com custo por utilização. Funciona melhor para baixo uso e quando existe disciplina de acompanhamento.',
     Icon: ShieldCheck,
   },
 ];
@@ -244,8 +244,8 @@ export default function PlanosPage() {
             <article className="marketing-surface ks-card marketing-reveal marketing-delay-1 rounded-2xl p-7">
               <h2 className="text-2xl font-black text-slate-900">Como usamos esses criterios na consultoria</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Primeiro entendemos seu objetivo real de uso. Depois filtramos opcoes viaveis, comparamos custo anual e
-                validamos rede funcional por territorio. So entao recomendamos um plano principal e alternativas seguras.
+                Primeiro entendemos seu objetivo real de uso. Depois filtramos opções viáveis, comparamos custo anual e
+                validamos rede funcional por território. Só então recomendamos um plano principal e alternativas seguras.
               </p>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 Essa abordagem reduz risco de arrependimento e evita contratacao baseada apenas em valor de entrada.

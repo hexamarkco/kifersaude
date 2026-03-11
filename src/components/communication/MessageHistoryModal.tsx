@@ -121,7 +121,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
       isOpen={isOpen}
       onClose={onClose}
       title="Contexto da Mensagem"
-      description="Mensagens proximas (ultimos 10 minutos)"
+      description="Mensagens próximas (últimos 10 minutos)"
       size="lg"
       panelClassName="max-w-3xl"
       footer={
@@ -195,7 +195,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
                           isTarget ? 'text-amber-900' : message.from_me ? 'text-amber-900' : 'text-slate-900'
                         }`}
                       >
-                        {message.from_me ? 'Voce' : message.from_name || message.from || 'Desconhecido'}
+                        {message.from_me ? 'Você' : message.from_name || message.from || 'Desconhecido'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500">

@@ -1209,6 +1209,7 @@ function normalizeTelefone(telefone: string): string {
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 const WHAPI_REQUEST_TIMEOUT_MS = 15000;
 const MAX_WHAPI_TEMPORARY_RETRIES = 3;
+const WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS = [1500, 4000];
 const WHAPI_RETRY_DELAYS_MS = [2 * 60 * 1000, 10 * 60 * 1000, 30 * 60 * 1000];
 
 type WhapiContactCheckResult = {
@@ -1229,6 +1230,11 @@ const getWhapiRetryDelayMs = (previousAttempts: number): number => {
   const index = Math.min(Math.max(previousAttempts, 0), WHAPI_RETRY_DELAYS_MS.length - 1);
   return WHAPI_RETRY_DELAYS_MS[index];
 };
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 const normalizeWhapiChatId = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -1432,14 +1438,29 @@ const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null):
 };
 
 const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> => {
-  try {
-    const result = await checkWhatsAppExistence(apiKey, lead?.telefone);
-    return result.exists ? 'true' : 'false';
-  } catch (error) {
-    console.warn('Erro ao validar WhatsApp no Whapi', error);
+  const fallbackValue = normalizeBooleanConditionValue(lead?.whatsapp_valid);
+
+  for (let attempt = 0; attempt <= WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      const result = await checkWhatsAppExistence(apiKey, lead?.telefone);
+      return result.exists ? 'true' : 'false';
+    } catch (error) {
+      if (isTemporaryWhapiError(error) && attempt < WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length) {
+        console.warn('Erro temporario ao validar WhatsApp no Whapi; tentando novamente', {
+          attempt: attempt + 1,
+          leadId: lead?.id ?? null,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        await sleep(WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+
+      console.warn('Erro ao validar WhatsApp no Whapi', error);
+      break;
+    }
   }
 
-  return 'false';
+  return fallbackValue ?? 'false';
 };
 
 const isInvalidNumberError = (error: unknown): boolean => {
@@ -2438,10 +2459,12 @@ async function scheduleFlowJobs({
       flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
     dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
   };
-  const jobs = flow.steps.map((step) => {
+  let cursor = new Date(now);
+  const jobs = flow.steps.map((step, stepIndex) => {
     const delaySeconds = getDelaySeconds(step, lead);
-    const desiredAt = new Date(now.getTime() + delaySeconds * 1000);
+    const desiredAt = new Date(cursor.getTime() + delaySeconds * 1000);
     const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
+    cursor = scheduledAt;
     const actionPayload = (() => {
       switch (step.actionType) {
         case 'webhook':
@@ -2474,6 +2497,7 @@ async function scheduleFlowJobs({
       lead_id: leadId,
       flow_id: flow.id,
       step_id: step.id,
+      step_order: stepIndex,
       action_type: step.actionType,
       message_source: step.messageSource ?? null,
       template_id: step.templateId ?? null,
@@ -2542,6 +2566,7 @@ async function processFlowJobs({
     .eq('status', 'pending')
     .lte('scheduled_at', nowIso)
     .order('scheduled_at', { ascending: true })
+    .order('step_order', { ascending: true })
     .limit(25);
 
   if (leadId) {

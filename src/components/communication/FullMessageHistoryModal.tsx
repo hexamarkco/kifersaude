@@ -206,7 +206,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     <ModalShell
       isOpen
       onClose={onClose}
-      title="Historico Completo"
+      title="Histórico Completo"
       description={chatName}
       size="xl"
       panelClassName="max-w-4xl"
@@ -318,7 +318,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
                   icon={Clock}
                   value={sortOrder}
                   onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
-                  placeholder="Ordenacao"
+                placeholder="Ordenação"
                   includePlaceholderOption={false}
                   options={[
                     { value: 'desc', label: 'Mais recentes primeiro' },
@@ -361,7 +361,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
             <div className="mb-4 text-red-500">
               <X className="h-12 w-12" />
             </div>
-            <p className="mb-2 font-medium text-red-600">Erro ao carregar historico</p>
+            <p className="mb-2 font-medium text-red-600">Erro ao carregar histórico</p>
             <p className="mb-4 text-sm text-slate-600">{error}</p>
             <Button
               variant="primary"
@@ -395,7 +395,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
                   <div className="flex items-center gap-2">
                     <User className={`h-4 w-4 ${message.from_me ? 'text-teal-600' : 'text-slate-600'}`} />
                     <span className={`text-sm font-medium ${message.from_me ? 'text-teal-900' : 'text-slate-900'}`}>
-                      {message.from_me ? 'Voce' : message.from_name || message.from || 'Desconhecido'}
+                      {message.from_me ? 'Você' : message.from_name || message.from || 'Desconhecido'}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${

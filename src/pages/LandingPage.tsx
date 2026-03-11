@@ -78,7 +78,7 @@ const profileConfigs: Array<{
     Icon: Building2,
     benefits: [
       'Triagem de elegibilidade de entrada',
-      'Comparativo tecnico entre opcoes de adesao',
+      'Comparativo técnico entre opções de adesão',
       'Suporte completo da proposta ao uso inicial',
     ],
   },
@@ -92,7 +92,7 @@ const conversionBlocks = [
   },
   {
     title: 'Comparativo consultivo',
-    text: 'Voce recebe opcoes filtradas com explicacao clara de riscos e vantagens.',
+    text: 'Você recebe opções filtradas com explicação clara de riscos e vantagens.',
     Icon: FileCheck2,
   },
   {
@@ -105,11 +105,11 @@ const conversionBlocks = [
 const objectionFaq = [
   {
     question: 'A consultoria da landing tem custo?',
-    answer: 'Nao. O atendimento consultivo e gratuito para o cliente final, incluindo comparativo e suporte de contratacao.',
+    answer: 'Não. O atendimento consultivo é gratuito para o cliente final, incluindo comparativo e suporte de contratação.',
   },
   {
     question: 'Em quanto tempo recebo o primeiro retorno?',
-    answer: 'Em geral no mesmo dia util. O prazo pode variar de acordo com horario do envio e complexidade do perfil.',
+    answer: 'Em geral no mesmo dia útil. O prazo pode variar de acordo com horário do envio e complexidade do perfil.',
   },
   {
     question: 'Vocês atendem cidade fora da capital?',
@@ -312,7 +312,7 @@ export default function LandingPage() {
       origem_id: findOriginId(origins),
       status_id: findStatusId(statuses),
       tipo_contratacao_id: contractTypeId,
-      observacoes: `Lead /lp | Perfil: ${selectedProfile?.label ?? formData.perfil} | Vidas: ${formData.vidas || 'nao informado'}`,
+      observacoes: `Lead /lp | Perfil: ${selectedProfile?.label ?? formData.perfil} | Vidas: ${formData.vidas || 'não informado'}`,
       data_criacao: new Date().toISOString(),
       ultimo_contato: new Date().toISOString(),
       arquivado: false,
@@ -323,7 +323,7 @@ export default function LandingPage() {
     if (error) {
       setFeedback({
         type: 'error',
-        message: 'Nao foi possivel enviar agora. Tente novamente em instantes ou chame no WhatsApp.',
+        message: 'Não foi possível enviar agora. Tente novamente em instantes ou chame no WhatsApp.',
       });
       setSubmitting(false);
       return;
@@ -415,8 +415,8 @@ export default function LandingPage() {
                 Cotacao consultiva para PME, PF e adesao.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
-                Aqui voce nao recebe lista generica de planos. Recebe um comparativo direcionado para seu perfil, com
-                orientacao tecnica e atendimento humano no mesmo dia util.
+                Aqui você não recebe lista genérica de planos. Recebe um comparativo direcionado para seu perfil, com
+                orientação técnica e atendimento humano no mesmo dia útil.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-2">
@@ -560,7 +560,7 @@ export default function LandingPage() {
                       value={formData.email}
                       onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
                       className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"
-                      placeholder="voce@empresa.com"
+                      placeholder="você@empresa.com"
                     />
                   </div>
                 </div>
@@ -639,7 +639,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">processo</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold">Em poucas horas voce sai da duvida para um plano de acao</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold">Em poucas horas você sai da dúvida para um plano de ação</h2>
             </div>
 
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -696,7 +696,7 @@ export default function LandingPage() {
                   Vamos montar seu comparativo agora.
                 </h2>
                 <p className="mt-4 max-w-2xl text-orange-50">
-                  Selecione seu perfil, envie os dados e receba retorno com orientacao consultiva no mesmo dia util.
+                  Selecione seu perfil, envie os dados e receba retorno com orientação consultiva no mesmo dia útil.
                 </p>
               </div>
 

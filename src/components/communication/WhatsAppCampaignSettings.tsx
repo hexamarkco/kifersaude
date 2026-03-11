@@ -88,7 +88,7 @@ const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
   text: 'Mensagem',
   image: 'Imagem',
   video: 'Video',
-  audio: 'Audio',
+  audio: 'Áudio',
   document: 'PDF / Documento',
 };
 
@@ -401,7 +401,7 @@ export default function WhatsAppCampaignSettings() {
       });
     } catch (error) {
       console.error('Erro ao carregar campanhas do WhatsApp:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel carregar as campanhas.' });
+      setMessageState({ type: 'error', text: 'Não foi possível carregar as campanhas.' });
     } finally {
       if (!silent) {
         setLoadingCampaigns(false);
@@ -439,7 +439,7 @@ export default function WhatsAppCampaignSettings() {
       }
 
       console.error('Erro ao carregar canais para filtro de campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel carregar os canais de leads.' });
+      setMessageState({ type: 'error', text: 'Não foi possível carregar os canais de leads.' });
     } finally {
       setLoadingFilters(false);
     }
@@ -586,7 +586,7 @@ export default function WhatsAppCampaignSettings() {
       if (!result.success || !result.url) {
         setMessageState({
           type: 'error',
-          text: result.error || 'Nao foi possivel enviar o arquivo da etapa.',
+          text: result.error || 'Não foi possível enviar o arquivo da etapa.',
         });
         return;
       }
@@ -698,7 +698,7 @@ export default function WhatsAppCampaignSettings() {
       setPreviewLeads((data ?? []) as LeadPreviewRow[]);
     } catch (error) {
       console.error('Erro ao gerar preview de publico da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel gerar o preview do publico.' });
+      setMessageState({ type: 'error', text: 'Não foi possível gerar o preview do público.' });
     } finally {
       setLoadingPreview(false);
     }
@@ -798,7 +798,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'Campanha criada com sucesso.' });
     } catch (error) {
       console.error('Erro ao criar campanha do WhatsApp:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel criar a campanha.' });
+      setMessageState({ type: 'error', text: 'Não foi possível criar a campanha.' });
     } finally {
       setCreatingCampaign(false);
     }
@@ -841,7 +841,7 @@ export default function WhatsAppCampaignSettings() {
       await loadCampaigns();
     } catch (error) {
       console.error('Erro ao atualizar status da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel atualizar o status da campanha.' });
+      setMessageState({ type: 'error', text: 'Não foi possível atualizar o status da campanha.' });
     } finally {
       setActionCampaignId(null);
     }
@@ -885,7 +885,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'Campanha cancelada com sucesso.' });
     } catch (error) {
       console.error('Erro ao cancelar campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel cancelar a campanha.' });
+      setMessageState({ type: 'error', text: 'Não foi possível cancelar a campanha.' });
     } finally {
       setActionCampaignId(null);
     }
@@ -926,7 +926,7 @@ export default function WhatsAppCampaignSettings() {
       });
     } catch (error) {
       console.error('Erro ao processar campanhas manualmente:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel processar os envios agora.' });
+      setMessageState({ type: 'error', text: 'Não foi possível processar os envios agora.' });
     } finally {
       setProcessingCampaignId(null);
     }
@@ -976,7 +976,7 @@ export default function WhatsAppCampaignSettings() {
               value={campaignName}
               onChange={(event) => setCampaignName(event.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Ex: Reengajamento de cotacao"
+                    placeholder="Ex: Reengajamento de cotação"
             />
           </label>
         </div>

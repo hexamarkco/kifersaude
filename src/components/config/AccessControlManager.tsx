@@ -116,7 +116,7 @@ export default function AccessControlManager() {
 
     const slug = buildProfileSlug(trimmedName);
     if (!slug) {
-      showMessage('error', 'Nao foi possivel gerar um identificador valido para o perfil.');
+      showMessage('error', 'Não foi possível gerar um identificador válido para o perfil.');
       return;
     }
 
@@ -185,12 +185,12 @@ export default function AccessControlManager() {
       .eq('role', profile.slug);
 
     if (countError) {
-      showMessage('error', 'Nao foi possivel validar se o perfil esta em uso.');
+      showMessage('error', 'Não foi possível validar se o perfil está em uso.');
       return;
     }
 
     if ((count ?? 0) > 0) {
-      showMessage('error', 'Este perfil esta vinculado a usuarios e nao pode ser excluido.');
+      showMessage('error', 'Este perfil está vinculado a usuários e não pode ser excluído.');
       return;
     }
 
@@ -217,7 +217,7 @@ export default function AccessControlManager() {
           <div>
             <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">Perfis e permissoes dinamicas</h3>
             <p className="text-sm text-[color:var(--panel-text-soft)]">
-              Crie perfis pelo sistema, marque perfis administrativos e controle visualizacao ou edicao modulo a modulo.
+              Crie perfis pelo sistema, marque perfis administrativos e controle visualização ou edição módulo a módulo.
             </p>
           </div>
         </div>
@@ -357,7 +357,7 @@ export default function AccessControlManager() {
         <table className="min-w-full divide-y divide-[color:var(--panel-border-subtle)]">
           <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">Modulo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">Módulo</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">Descricao</th>
               {accessProfiles.map((profile) => (
                 <th key={profile.id} className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">

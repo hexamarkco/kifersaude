@@ -334,6 +334,7 @@ export interface SendMessageParams {
   contentType:
     | 'string'
     | 'image'
+    | 'sticker'
     | 'video'
     | 'gif'
     | 'short'
@@ -380,7 +381,7 @@ export async function sendWhatsAppMessage(params: SendMessageParams) {
   if (params.contentType === 'string') {
     endpoint = '/messages/text';
     body.body = params.content as string;
-  } else if (['image', 'video', 'gif', 'short', 'audio', 'voice', 'document'].includes(params.contentType) && typeof params.content === 'object') {
+  } else if (['image', 'sticker', 'video', 'gif', 'short', 'audio', 'voice', 'document'].includes(params.contentType) && typeof params.content === 'object') {
     const media = params.content as MediaContent;
 
     endpoint = `/messages/${params.contentType}`;
@@ -603,8 +604,15 @@ export function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function detectMediaType(mimetype: string): 'image' | 'video' | 'audio' | 'voice' | 'document' {
-  if (mimetype.startsWith('image/')) {
+function isStickerMimeType(mimetype: string): boolean {
+  const normalized = mimetype.trim().toLowerCase();
+  return normalized === 'image/webp' || normalized === 'application/webp';
+}
+
+export function detectMediaType(mimetype: string): 'image' | 'sticker' | 'video' | 'audio' | 'voice' | 'document' {
+  if (isStickerMimeType(mimetype)) {
+    return 'sticker';
+  } else if (mimetype.startsWith('image/')) {
     return 'image';
   } else if (mimetype.startsWith('video/')) {
     return 'video';
@@ -629,7 +637,8 @@ export async function sendMediaMessage(
   }
 ) {
   const base64Data = await fileToBase64(file);
-  const mimetype = file.type;
+  const inferredMimeType = file.name.toLowerCase().endsWith('.webp') ? 'image/webp' : '';
+  const mimetype = file.type || inferredMimeType || 'application/octet-stream';
   let contentType = detectMediaType(mimetype);
 
   if (options?.asVoice && mimetype.startsWith('audio/')) {

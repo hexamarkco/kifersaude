@@ -987,7 +987,7 @@ export default function AutoContactFlowSettings() {
       case 'delete_lead':
         return 'Excluir lead';
       default:
-        return flowActionLabels[step.actionType] ?? 'Acao';
+    return flowActionLabels[step.actionType] ?? 'Ação';
     }
   };
   const simulationLead = useMemo<Lead>(
@@ -1034,7 +1034,7 @@ export default function AutoContactFlowSettings() {
         adjustmentReasons: item.adjustmentReasons,
       }));
     } catch (error) {
-      console.error('Erro ao montar simulacao do fluxo:', error);
+      console.error('Erro ao montar simulação do fluxo:', error);
       return [];
     }
   }, [getFlowScheduling, showSimulation, simulationBaseDate, simulationFlow, simulationLead]);
@@ -1043,7 +1043,7 @@ export default function AutoContactFlowSettings() {
     const issues: string[] = [];
     const scheduling = getFlowScheduling(simulationFlow);
     if (!simulationBaseDate) {
-      issues.push('Defina uma data inicial valida para a simulacao.');
+      issues.push('Defina uma data inicial válida para a simulação.');
     }
     if (!simulationFlow.steps.length) {
       issues.push('Adicione ao menos uma etapa para gerar a linha do tempo.');
@@ -1068,7 +1068,7 @@ export default function AutoContactFlowSettings() {
         issues.push(`Etapa ${index + 1}: informe o status de destino.`);
       }
       if (step.actionType === 'create_task' && !step.taskTitle?.trim()) {
-        issues.push(`Etapa ${index + 1}: informe o titulo da tarefa.`);
+        issues.push(`Etapa ${index + 1}: informe o título da tarefa.`);
       }
       if (step.actionType === 'send_email' && !step.emailSubject?.trim()) {
         issues.push(`Etapa ${index + 1}: informe o assunto do e-mail.`);
@@ -1247,8 +1247,8 @@ export default function AutoContactFlowSettings() {
       phase={loadingUi.phase}
       hasContent={hasFlowSnapshot}
       skeleton={<AutomationFlowsSkeleton />}
-      stageLabel="Carregando fluxos de automacao..."
-      overlayLabel="Atualizando fluxos de automacao..."
+        stageLabel="Carregando fluxos de automação..."
+        overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
     <div className="panel-page-shell bg-[color:var(--panel-surface)] rounded-xl shadow-sm border border-[var(--panel-border-subtle)] p-6">
@@ -2521,7 +2521,7 @@ export default function AutoContactFlowSettings() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-accent-ink-strong)]">
                               <Timer className="w-4 h-4" />
-                              Simulacao operacional
+                  Simulação operacional
                             </div>
                             <p className="text-xs text-[var(--panel-accent-ink-strong)]">
                               Dry run do fluxo. Nenhuma mensagem e enviada; mostramos somente a previsao de execucao.
@@ -2537,7 +2537,7 @@ export default function AutoContactFlowSettings() {
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div>
                                 <label className="mb-1 block text-xs font-semibold text-[var(--panel-accent-ink)]">
-                                  Inicio da simulacao
+                    Início da simulação
                                 </label>
                                 <DateTimePicker
                                   type="datetime-local"
@@ -2632,7 +2632,7 @@ export default function AutoContactFlowSettings() {
                           <div className="rounded-xl border border-[var(--panel-accent-strong)] bg-[color:color-mix(in_srgb,var(--panel-accent-warm)_70%,transparent)] p-4">
                             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-accent-ink-strong)]">
                               <AlertCircle className="h-4 w-4" />
-                              Pontos para revisar antes de confiar na simulacao
+                  Pontos para revisar antes de confiar na simulação
                             </div>
                             <div className="mt-3 grid gap-2">
                               {simulationIssues.map((issue) => (
@@ -2657,7 +2657,7 @@ export default function AutoContactFlowSettings() {
                             {simulationTimeline.length === 0 ? (
                               <div className="rounded-xl border border-dashed border-[var(--panel-accent-strong)] bg-[color:color-mix(in_srgb,var(--panel-surface)_80%,transparent)] p-5 text-sm text-[var(--panel-text-soft)]">
                                 {simulationIssues.length > 0
-                                  ? 'A simulacao ficou incompleta porque ainda existem configuracoes pendentes.'
+                        ? 'A simulação ficou incompleta porque ainda existem configurações pendentes.'
                                   : 'Adicione etapas para visualizar a linha do tempo.'}
                               </div>
                             ) : (
@@ -2704,7 +2704,7 @@ export default function AutoContactFlowSettings() {
                           <div className="space-y-3">
                             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text)]">
                               <Info className="h-4 w-4 text-[var(--panel-accent-ink)]" />
-                              Contexto da simulacao
+                    Contexto da simulação
                             </div>
                             <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4">
                               <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted)]">
@@ -2723,8 +2723,8 @@ export default function AutoContactFlowSettings() {
                               </div>
                               <div className="mt-3 space-y-2 text-xs text-[var(--panel-text-soft)]">
                                 <p>Os horarios ja consideram a janela do fluxo, os dias permitidos e pulos automaticos da agenda.</p>
-                                <p>Quando uma etapa nao pode rodar no horario original, ela aparece com o motivo do ajuste.</p>
-                                <p>Se houver pendencias de configuracao, a simulacao mostra os alertas antes da timeline.</p>
+                    <p>Quando uma etapa não pode rodar no horário original, ela aparece com o motivo do ajuste.</p>
+                    <p>Se houver pendências de configuração, a simulação mostra os alertas antes da timeline.</p>
                               </div>
                             </div>
                           </div>

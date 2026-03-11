@@ -96,7 +96,7 @@ export default function WhatsAppSettingsModal({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">Configuracoes da lista</h3>
-                  <p className="text-xs text-slate-500">Sincronizacao, visualizacao e prioridade da fila.</p>
+              <p className="text-xs text-slate-500">Sincronização, visualização e prioridade da fila.</p>
                 </div>
                 <Button
                   variant="secondary"
@@ -144,7 +144,7 @@ export default function WhatsAppSettingsModal({
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="flex h-9 items-center justify-between rounded-lg border border-slate-200 px-3 text-xs text-slate-700">
-                  <span>Priorizar nao lidas</span>
+                  <span>Priorizar não lidas</span>
                   <Checkbox
                     checked={prioritizeUnread}
                     onChange={(event) => onTogglePrioritizeUnread(event.target.checked)}
@@ -166,7 +166,7 @@ export default function WhatsAppSettingsModal({
 
             <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
               <p className="font-semibold text-slate-700">Atalhos rapidos</p>
-              <p className="mt-1">Ctrl/Cmd + K busca, Ctrl/Cmd + N novo chat, Ctrl/Cmd + Shift + J proxima nao lida.</p>
+              <p className="mt-1">Ctrl/Cmd + K busca, Ctrl/Cmd + N novo chat, Ctrl/Cmd + Shift + J próxima não lida.</p>
             </section>
           </div>
         ) : (

@@ -62,6 +62,7 @@ type MessagePayload = MediaPayload & {
   voice?: MediaPayload;
   media?: MediaPayload;
   image?: MediaPayload;
+  sticker?: MediaPayload;
   video?: MediaPayload;
   document?: MediaPayload;
   contact?: {
@@ -334,6 +335,21 @@ export function MessageBubble({
     payloadData?.image?.link ||
     '';
   const imagePreviewSrc = payloadData?.image?.preview || payloadData?.media?.preview || '';
+  const stickerDirectSrc =
+    payloadData?.sticker?.url ||
+    payloadData?.sticker?.file ||
+    payloadData?.sticker?.path ||
+    payloadData?.sticker?.link ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    '';
+  const stickerPreviewSrc =
+    payloadData?.sticker?.preview ||
+    payloadData?.image?.preview ||
+    payloadData?.media?.preview ||
+    '';
   const videoDirectSrc =
     payloadData?.video?.url ||
     payloadData?.video?.file ||
@@ -346,6 +362,9 @@ export function MessageBubble({
     '';
   const videoPreviewSrc = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || '';
   const visualMediaId =
+    payloadData?.sticker?.id ||
+    payloadData?.sticker?.media_id ||
+    payloadData?.sticker?.mediaId ||
     payloadData?.image?.id ||
     payloadData?.image?.media_id ||
     payloadData?.image?.mediaId ||
@@ -356,15 +375,18 @@ export function MessageBubble({
     payloadData?.media_id ||
     payloadData?.mediaId ||
     null;
-  const isImageMessage = hasMedia && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
+  const isStickerMessage = hasMedia && (normalizedType === 'sticker' || Boolean(payloadData?.sticker));
+  const isImageMessage = hasMedia && !isStickerMessage && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
   const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
-  const isVisualMediaMessage = !isDeleted && (isImageMessage || isVideoMessage);
+  const isVisualMediaMessage = !isDeleted && (isStickerMessage || isImageMessage || isVideoMessage);
   const isAudioMessage = hasMedia && (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice');
-  const visualDirectSrc = isVideoMessage ? videoDirectSrc : imageDirectSrc;
-  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : imagePreviewSrc;
+  const visualDirectSrc = isVideoMessage ? videoDirectSrc : isStickerMessage ? stickerDirectSrc : imageDirectSrc;
+  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : isStickerMessage ? stickerPreviewSrc : imagePreviewSrc;
   const visualDisplayUrl = visualMediaUrl || visualDirectSrc || visualPreviewSrc || null;
   const visualNeedsUpgrade = Boolean(visualMediaId && !visualMediaUrl && !visualDirectSrc);
-  const visualAspectRatio = isVideoMessage
+  const visualAspectRatio = isStickerMessage
+    ? resolveAspectRatio(payloadData.sticker, payloadData.media, 1)
+    : isVideoMessage
     ? resolveAspectRatio(payloadData.video, payloadData.media, DEFAULT_VIDEO_ASPECT_RATIO)
     : resolveAspectRatio(payloadData.image, payloadData.media, DEFAULT_IMAGE_ASPECT_RATIO);
   const documentPayload = payloadData?.document || payloadData?.media;
@@ -409,7 +431,7 @@ export function MessageBubble({
         return nextUrl;
       }
     } catch (error) {
-      console.error('Erro ao carregar audio:', error);
+      console.error('Erro ao carregar áudio:', error);
     } finally {
       setAudioMediaLoading(false);
     }
@@ -515,7 +537,7 @@ export function MessageBubble({
     void audio.play().then(() => {
       setAudioIsPlaying(true);
     }).catch((error) => {
-      console.error('Erro ao reproduzir audio:', error);
+      console.error('Erro ao reproduzir áudio:', error);
     });
   }, [audioUrl]);
 
@@ -543,7 +565,7 @@ export function MessageBubble({
         await audio.play();
         setAudioIsPlaying(true);
       } catch (error) {
-        console.error('Erro ao reproduzir audio:', error);
+      console.error('Erro ao reproduzir áudio:', error);
       }
     }
   };
@@ -590,7 +612,7 @@ export function MessageBubble({
       setLocalPayload(nextPayload);
       onTranscriptionSaved?.(id, nextPayload);
     } catch (error) {
-      setTranscriptionError(error instanceof Error ? error.message : 'Nao foi possivel transcrever o audio.');
+      setTranscriptionError(error instanceof Error ? error.message : 'Não foi possível transcrever o áudio.');
     } finally {
       setTranscriptionLoading(false);
     }
@@ -676,6 +698,50 @@ export function MessageBubble({
               Ver no mapa
             </a>
           </div>
+        </div>
+      );
+    }
+
+    if (isStickerMessage) {
+      const displayUrl = visualDisplayUrl;
+      return (
+        <div className="flex w-[min(220px,60vw)] max-w-full flex-col gap-2">
+          {displayUrl ? (
+            <button
+              type="button"
+              onClick={() => {
+                void openMediaPreview('image', displayUrl);
+              }}
+              className="mx-auto block overflow-hidden bg-transparent"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
+            >
+              <img
+                src={displayUrl}
+                alt="Sticker"
+                className="block h-full w-full object-contain"
+                loading={isNearViewport ? 'eager' : 'lazy'}
+              />
+            </button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-auto w-full max-w-full rounded p-2 text-sm text-gray-600"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
+              onClick={() => {
+                void openMediaPreview('image');
+              }}
+              disabled={visualMediaLoading}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">S</div>
+                <div>
+                  <div className="font-medium">Sticker</div>
+                  <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para visualizar'}</div>
+                </div>
+              </div>
+            </Button>
+          )}
         </div>
       );
     }
@@ -878,7 +944,7 @@ export function MessageBubble({
                   </div>
                 ) : (
                   <div className="text-xs">
-                    {audioMediaLoading ? 'Preparando audio...' : 'Clique para carregar'}
+                        {audioMediaLoading ? 'Preparando áudio...' : 'Clique para carregar'}
                   </div>
                 )}
               </div>
@@ -908,19 +974,19 @@ export function MessageBubble({
                   <span>Transcrevendo...</span>
                 </>
               ) : (
-                <span>{transcription ? 'Atualizar transcricao' : 'Transcrever audio'}</span>
+                <span>{transcription ? 'Atualizar transcrição' : 'Transcrever áudio'}</span>
               )}
             </Button>
             {transcription && (
               <span className="comm-badge comm-badge-brand px-2.5 py-1 text-[11px] font-medium">
-                Audio transcrito
+                  Áudio transcrito
               </span>
             )}
           </div>
           {transcription && (
             <div className="comm-card comm-card-brand rounded-xl px-3 py-2">
               <div className="comm-accent-text mb-1 text-[11px] font-semibold uppercase tracking-wide">
-                Audio transcrito
+                    Áudio transcrito
               </div>
               <WhatsAppFormattedText
                 text={transcription.text}
@@ -1078,9 +1144,11 @@ export function MessageBubble({
       <div className={`relative ${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>
         <div
           className={`message-bubble break-words [overflow-wrap:anywhere] rounded-lg ${
-            isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
+            isStickerMessage ? 'border-0 bg-transparent p-0 shadow-none' : isVisualMediaMessage ? 'p-1.5' : 'px-3 py-2'
           } ${
-            isOutbound
+            isStickerMessage
+              ? ''
+              : isOutbound
               ? 'message-bubble-outbound border border-amber-200 bg-amber-100 text-slate-900'
               : 'message-bubble-inbound border border-slate-200 bg-white text-slate-900'
           }`}
@@ -1161,7 +1229,7 @@ export function MessageBubble({
           {showFailedActions && (
             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-red-200/80 pt-2">
               <span className="text-xs text-red-700">
-                {errorMessage?.trim() || 'Nao foi possivel enviar.'}
+                {errorMessage?.trim() || 'Não foi possível enviar.'}
               </span>
               {onRetryFailed && (
                 <button
@@ -1338,7 +1406,7 @@ export function MessageBubble({
         <ModalShell
           isOpen
           onClose={() => setShowPdfPreview(false)}
-          title={documentName || 'Pre-visualizacao de PDF'}
+            title={documentName || 'Pré-visualização de PDF'}
           size="xl"
           panelClassName="max-w-6xl"
           bodyClassName="p-0"

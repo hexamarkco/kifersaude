@@ -34,6 +34,7 @@ import {
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../lib/templateVariableSuggestions';
 import { type LeadStatusConfig } from '../../lib/supabase';
 import { buildFlowGraphFromFlow } from '../../lib/autoContactFlowGraph';
+import { buildAutoContactFlowTextExport } from '../../lib/autoContactFlowExport';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
@@ -564,6 +565,56 @@ export default function FlowBuilder({
     }
   }, [isExporting, nodes, edges, flow, messageTemplates, conditionFieldOptions, conditionOperatorLabels, flowActionLabels]);
 
+  const exportFlowAsTxtDiagnostic = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const graph = {
+        nodes: nodes.map(toGraphNode),
+        edges: edges.map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: typeof edge.label === 'string' ? edge.label : undefined,
+          sourceHandle: edge.sourceHandle ?? undefined,
+          targetHandle: edge.targetHandle ?? undefined,
+        })),
+      };
+      const txt = buildAutoContactFlowTextExport({
+        flow: {
+          ...flow,
+          flowGraph: graph,
+        },
+        graph,
+        messageTemplates,
+        conditionFieldOptions,
+        conditionOperatorLabels,
+        flowActionLabels,
+        getConditionOptionLabel,
+      });
+
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${(flow.name || 'fluxo').toLowerCase().replace(/\s+/g, '-')}-detalhes.txt`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [
+    isExporting,
+    nodes,
+    edges,
+    flow,
+    messageTemplates,
+    conditionFieldOptions,
+    conditionOperatorLabels,
+    flowActionLabels,
+    getConditionOptionLabel,
+  ]);
+  void exportFlowAsTxt;
+
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
   const previewContext = useMemo(() => buildPreviewContext(), []);
   const delayPreview = useMemo(() => {
@@ -824,7 +875,7 @@ export default function FlowBuilder({
               PNG
             </Button>
             <Button
-              onClick={exportFlowAsTxt}
+              onClick={exportFlowAsTxtDiagnostic}
               disabled={isExporting}
               variant="secondary"
               size="sm"

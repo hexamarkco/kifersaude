@@ -91,6 +91,33 @@ type QuickReplyItem = {
   message: string;
 };
 
+type EmojiCategoryId = 'recent' | 'faces' | 'gestures' | 'objects' | 'symbols';
+
+const EMOJI_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-emojis';
+const MAX_RECENT_EMOJIS = 24;
+const EMOJI_CATEGORIES: Array<{ id: Exclude<EmojiCategoryId, 'recent'>; label: string; emojis: string[] }> = [
+  {
+    id: 'faces',
+    label: 'Rostos',
+    emojis: ['😀', '😁', '😂', '🤣', '😊', '🙂', '😉', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡'],
+  },
+  {
+    id: 'gestures',
+    label: 'Gestos',
+    emojis: ['👍', '👎', '👏', '🙌', '🙏', '💪', '👀', '🤝', '✍️', '👆', '👇', '🤞', '👌', '🫶', '💥', '🔥'],
+  },
+  {
+    id: 'objects',
+    label: 'Objetos',
+    emojis: ['🎉', '🎯', '🎁', '📌', '📅', '📞', '💬', '📣', '💡', '💰', '📎', '✅', '❌', '⚠️', '📍', '📝'],
+  },
+  {
+    id: 'symbols',
+    label: 'Simbolos',
+    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '⭐', '✨', '✔️', '☑️', '❗', '❓', '➕', '➖'],
+  },
+];
+
 function MessageInputComponent({
   chatId,
   onMessageSent,
@@ -115,6 +142,8 @@ function MessageInputComponent({
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiCategoryId>('recent');
+  const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
@@ -175,6 +204,15 @@ function MessageInputComponent({
     { value: 'curto', label: 'Curto e direto' },
     { value: 'persuasivo', label: 'Persuasivo' },
   ];
+  const emojiTabs = useMemo(
+    () => [
+      { id: 'recent' as const, label: 'Mais usados', emojis: recentEmojis },
+      { id: 'faces' as const, label: 'Rostos', emojis: emojiList },
+      ...EMOJI_CATEGORIES.filter((category) => category.id !== 'faces'),
+    ],
+    [emojiList, recentEmojis],
+  );
+  const activeEmojiTab = emojiTabs.find((tab) => tab.id === activeEmojiCategory) ?? emojiTabs[0];
 
   const normalizedTemplateVariables = useMemo(() => {
     const normalized = new Map<string, string>();
@@ -186,6 +224,21 @@ function MessageInputComponent({
     });
     return normalized;
   }, [templateVariables]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const stored = window.localStorage.getItem(EMOJI_RECENTS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setRecentEmojis(parsed.filter((value): value is string => typeof value === 'string').slice(0, MAX_RECENT_EMOJIS));
+      }
+    } catch (error) {
+      console.warn('Erro ao carregar emojis recentes:', error);
+    }
+  }, []);
 
   const getRuntimeTemplateVariable = (key: string) => {
     const normalizedKey = key.toLowerCase();
@@ -259,7 +312,7 @@ function MessageInputComponent({
       });
 
       if (error) {
-        throw new Error(error.message || 'Nao foi possivel carregar metadados do link.');
+        throw new Error(error.message || 'Não foi possível carregar metadados do link.');
       }
 
       const metadata = (data || {}) as {
@@ -291,7 +344,7 @@ function MessageInputComponent({
       setLinkPreviewUrl(normalizedUrlForFallback);
       setLinkPreviewCanonical(normalizedUrlForFallback);
       setLinkPreviewTitle((prev) => prev.trim() || hostname);
-      setLinkPreviewError('Preview nao disponivel para este link.');
+      setLinkPreviewError('Preview não disponível para este link.');
     } finally {
       if (linkPreviewRequestIdRef.current === requestId) {
         setLinkPreviewLoading(false);
@@ -471,7 +524,7 @@ function MessageInputComponent({
       const titleRaw = typeof row.title === 'string' ? row.title.trim() : '';
       return {
         id,
-        title: titleRaw || 'Resposta rapida',
+        title: titleRaw || 'Resposta rápida',
         message,
       };
     };
@@ -540,7 +593,7 @@ function MessageInputComponent({
 
         localStorage.removeItem('whatsapp_quick_replies');
       } catch (error) {
-        console.error('Erro ao carregar respostas rapidas globais:', error);
+        console.error('Erro ao carregar respostas rápidas globais:', error);
 
         const stored = localStorage.getItem('whatsapp_quick_replies');
         if (!stored || cancelled) return;
@@ -589,8 +642,10 @@ function MessageInputComponent({
     [followUpDraft],
   );
 
-  const resolveOutgoingFileMessageType = (file: File): 'image' | 'video' | 'audio' | 'document' => {
+  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'audio' | 'document' => {
     const mimeType = file.type.toLowerCase();
+    const fileName = file.name.toLowerCase();
+    if (mimeType === 'image/webp' || mimeType === 'application/webp' || fileName.endsWith('.webp')) return 'sticker';
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
@@ -882,8 +937,24 @@ function MessageInputComponent({
     }, 3000);
   };
 
+  const rememberRecentEmoji = (emoji: string) => {
+    setRecentEmojis((current) => {
+      const next = [emoji, ...current.filter((item) => item !== emoji)].slice(0, MAX_RECENT_EMOJIS);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(EMOJI_RECENTS_STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   const toggleEmojiPicker = () => {
-    setShowEmojiPicker((prev) => !prev);
+    setShowEmojiPicker((prev) => {
+      const next = !prev;
+      if (next) {
+        setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'faces');
+      }
+      return next;
+    });
     setShowAttachMenu(false);
     setShowComposerActionsMenu(false);
     setShowQuickReplies(false);
@@ -1056,22 +1127,22 @@ function MessageInputComponent({
         if (onCancelEdit) onCancelEdit();
         if (onMessageSent) onMessageSent();
       } else if (selectedFile) {
+        const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
+        const caption = mediaMessageType === 'sticker' ? '' : resolvedMessage;
         const response = await sendMediaMessage(chatId, selectedFile, {
-          caption: resolvedMessage || undefined,
+          caption: caption || undefined,
           quotedMessageId: replyToMessage?.id,
         });
 
         const sentAt = new Date().toISOString();
-        const caption = resolvedMessage;
-        const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
-        const fallbackBody = selectedFile.type.startsWith('audio/')
+        const fallbackBody = mediaMessageType === 'sticker' ? '[Sticker]' : selectedFile.type.startsWith('audio/')
           ? '[Áudio]'
           : selectedFile.type.startsWith('image/')
             ? '[Imagem]'
             : selectedFile.type.startsWith('video/')
               ? '[Vídeo]'
               : '[Arquivo]';
-        const resolvedBody = caption || fallbackBody;
+        const resolvedBody = mediaMessageType === 'sticker' ? '[Sticker]' : caption || fallbackBody;
         const { normalizedChatId, messageId } = await persistOutboundMessage({
           response,
           chatId,
@@ -1194,6 +1265,7 @@ function MessageInputComponent({
   };
 
   const insertEmoji = (emoji: string) => {
+    rememberRecentEmoji(emoji);
     const textarea = textareaRef.current;
     if (!textarea) {
       setMessage((prev) => `${prev}${emoji}`);
@@ -1216,7 +1288,9 @@ function MessageInputComponent({
     if (file.name?.trim()) return file.name;
 
     const extensionFromType = file.type.split('/')[1]?.split(';')[0]?.trim() || 'bin';
-    const prefix = file.type.startsWith('image/')
+    const prefix = file.type === 'image/webp' || file.type === 'application/webp'
+      ? 'sticker'
+      : file.type.startsWith('image/')
       ? 'imagem'
       : file.type.startsWith('video/')
         ? 'video'
@@ -1243,7 +1317,9 @@ function MessageInputComponent({
 
     setSelectedFile(normalizedFile);
 
-    if (normalizedFile.type.startsWith('image/') || normalizedFile.type.startsWith('video/')) {
+    const outgoingType = resolveOutgoingFileMessageType(normalizedFile);
+
+    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video') {
       const url = URL.createObjectURL(normalizedFile);
       setPreviewUrl(url);
     }
@@ -1479,7 +1555,7 @@ function MessageInputComponent({
     const title = quickReplyTitle.trim();
     const content = quickReplyMessage.trim();
     if (!title || !content) {
-      alert('Preencha titulo e mensagem.');
+      alert('Preencha título e mensagem.');
       return;
     }
 
@@ -1499,7 +1575,7 @@ function MessageInputComponent({
         setQuickReplies((prev) => [
           {
             id: data.id,
-            title: (data.title || '').trim() || 'Resposta rapida',
+            title: (data.title || '').trim() || 'Resposta rápida',
             message: (data.text || '').trim(),
           },
           ...prev,
@@ -1509,8 +1585,8 @@ function MessageInputComponent({
       setQuickReplyTitle('');
       setQuickReplyMessage('');
     } catch (error) {
-      console.error('Erro ao salvar resposta rapida global:', error);
-      alert('Erro ao salvar resposta rapida.');
+      console.error('Erro ao salvar resposta rápida global:', error);
+      alert('Erro ao salvar resposta rápida.');
     } finally {
       setQuickRepliesLoading(false);
     }
@@ -1557,8 +1633,8 @@ function MessageInputComponent({
 
       setQuickReplies((prev) => prev.filter((reply) => reply.id !== replyId));
     } catch (error) {
-      console.error('Erro ao remover resposta rapida global:', error);
-      alert('Erro ao remover resposta rapida.');
+      console.error('Erro ao remover resposta rápida global:', error);
+      alert('Erro ao remover resposta rápida.');
     } finally {
       setQuickRepliesLoading(false);
     }
@@ -1610,7 +1686,7 @@ function MessageInputComponent({
 
       if (!resultText) {
         if (requestId !== followUpRequestIdRef.current) return;
-        setFollowUpError('A IA nao retornou um follow-up utilizavel.');
+        setFollowUpError('A IA não retornou um follow-up utilizável.');
         return;
       }
 
@@ -1630,7 +1706,7 @@ function MessageInputComponent({
 
   const handleOpenFollowUp = () => {
     if (!isDirectChat) {
-      alert('A geracao de follow-up esta disponivel apenas para conversas individuais.');
+      alert('A geração de follow-up está disponível apenas para conversas individuais.');
       return;
     }
 
@@ -1877,7 +1953,7 @@ function MessageInputComponent({
       {showQuickReplies && (
         <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-96 max-w-[90vw]">
           <div className="comm-popover-header">
-            <span className="comm-title text-sm font-medium">Respostas rapidas</span>
+            <span className="comm-title text-sm font-medium">Respostas rápidas</span>
             <button
               type="button"
               className="comm-icon-button p-1"
@@ -1917,9 +1993,9 @@ function MessageInputComponent({
 
             <div className="comm-list panel-dropdown-scrollbar max-h-40 overflow-y-auto">
               {quickRepliesLoading ? (
-                <div className="comm-muted px-3 py-2 text-xs">Carregando respostas rapidas...</div>
+                <div className="comm-muted px-3 py-2 text-xs">Carregando respostas rápidas...</div>
               ) : filteredQuickReplies.length === 0 ? (
-                <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rapida encontrada.</div>
+                <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rápida encontrada.</div>
               ) : (
                 filteredQuickReplies.map((reply) => {
                   const resolvedPreview = applyTemplateVariables(reply.message);
@@ -1971,7 +2047,7 @@ function MessageInputComponent({
                 type="text"
                 value={quickReplyTitle}
                 onChange={(e) => setQuickReplyTitle(e.target.value)}
-                placeholder="Titulo"
+                placeholder="Título"
                 className="comm-input px-3 py-2 text-sm"
               />
               <textarea
@@ -1986,7 +2062,7 @@ function MessageInputComponent({
                 onClick={handleAddQuickReply}
                 disabled={quickRepliesLoading}
               >
-                {quickRepliesLoading ? 'Salvando...' : 'Salvar resposta rapida'}
+                {quickRepliesLoading ? 'Salvando...' : 'Salvar resposta rápida'}
               </button>
             </div>
           </div>
@@ -2047,7 +2123,7 @@ function MessageInputComponent({
                 onClick={handleInsertSplit}
               >
                 <Scissors className="h-3 w-3" />
-                Inserir divisao
+                Inserir divisão
               </button>
             </div>
           </div>
@@ -2097,7 +2173,7 @@ function MessageInputComponent({
           isOpen
           onClose={() => setShowFollowUpModal(false)}
           title="Gerar follow-up"
-          description="Baseado no historico carregado deste chat. Cada linha nao vazia vira uma mensagem."
+          description="Baseado no histórico carregado deste chat. Cada linha não vazia vira uma mensagem."
           size="md"
           bodyClassName="space-y-3"
         >
@@ -2105,7 +2181,7 @@ function MessageInputComponent({
             <div className="comm-muted text-xs">
               {followUpProvider || followUpModel
                 ? `Gerado com ${followUpProvider || 'IA'}${followUpModel ? ` - ${followUpModel}` : ''}`
-                : 'A IA vai considerar o historico do chat e o contexto do lead.'}
+                : 'A IA vai considerar o histórico do chat e o contexto do lead.'}
             </div>
             <button
               type="button"
@@ -2278,14 +2354,19 @@ function MessageInputComponent({
               <div className="comm-muted text-xs">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
-              {(selectedFile.type.startsWith('image/') || selectedFile.type.startsWith('video/')) && (
+              {(['image', 'video'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video') && (
                 <div className="comm-badge comm-badge-info mt-1">
                   Digite uma legenda abaixo (opcional)
                 </div>
               )}
-              {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
+              {resolveOutgoingFileMessageType(selectedFile) === 'sticker' && (
                 <div className="comm-badge comm-badge-neutral mt-1">
-                  Voce tambem pode colar arquivos direto no composer
+                  Sticker sera enviado no formato nativo do WhatsApp
+                </div>
+              )}
+              {!['image', 'video', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
+                <div className="comm-badge comm-badge-neutral mt-1">
+                  Você também pode colar arquivos direto no composer
                 </div>
               )}
             </div>
@@ -2339,8 +2420,8 @@ function MessageInputComponent({
         </div>
       )}
 
-      <div className="relative flex items-end gap-2 p-3">
-        <div className="relative">
+      <div className="relative flex items-center gap-2 p-3">
+        <div className="relative self-center">
           <button
             onClick={() => setShowAttachMenu(!showAttachMenu)}
             className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
@@ -2405,7 +2486,7 @@ function MessageInputComponent({
           <input
             ref={imageInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept="image/*,image/webp,.webp,video/*"
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -2418,8 +2499,8 @@ function MessageInputComponent({
           />
         </div>
 
-        <div className="comm-composer-shell flex flex-1 items-end overflow-visible">
-          <div ref={composerActionsMenuRef} className="relative z-[90] flex items-center">
+        <div className="comm-composer-shell flex flex-1 items-center overflow-visible">
+          <div ref={composerActionsMenuRef} className="relative z-[90] flex items-center self-center">
             <button
               className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSending}
@@ -2497,7 +2578,7 @@ function MessageInputComponent({
                     disabled={isSending}
                   >
                     <MessageSquare className="h-4 w-4" />
-                    <span>Mensagens rapidas</span>
+                    <span>Mensagens rápidas</span>
                   </button>
                 </div>
               </div>
@@ -2558,11 +2639,11 @@ function MessageInputComponent({
             <div className="comm-muted flex items-center justify-between gap-2 border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-[11px]">
               {slashCommandState.query
                 ? `Atalho rapido: "${slashCommandState.query}"`
-                : 'Digite / e o nome da resposta rapida'}
+                : 'Digite / e o nome da resposta rápida'}
               <span className="comm-subtle text-[10px]">Enter/Tab aplica</span>
             </div>
             {slashCommandState.results.length === 0 ? (
-              <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rapida encontrada.</div>
+              <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rápida encontrada.</div>
             ) : (
               <div className="panel-dropdown-scrollbar max-h-56 overflow-y-auto">
                 {slashCommandState.results.map((reply, index) => {
@@ -2625,7 +2706,7 @@ function MessageInputComponent({
               onClick={handleSendAudioPreview}
               disabled={isSending}
               className="comm-fab-primary h-10 w-10 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Enviar audio"
+                title="Enviar áudio"
             >
               <Send className="w-5 h-5" />
             </button>

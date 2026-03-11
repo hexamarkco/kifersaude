@@ -633,6 +633,8 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               source: edge.source,
               target: edge.target,
               label: typeof edge?.label === 'string' ? edge.label : undefined,
+              sourceHandle: typeof edge?.sourceHandle === 'string' ? edge.sourceHandle : undefined,
+              targetHandle: typeof edge?.targetHandle === 'string' ? edge.targetHandle : undefined,
             } as AutoContactFlowGraphEdge;
           })
           .filter(Boolean)

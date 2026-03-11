@@ -63,6 +63,16 @@ import {
   type WhapiGroup,
 } from '../../lib/whatsappApiService';
 
+const getChatTypeBadgeClass = (kind?: string | null) => {
+  const normalized = (kind || 'direct').trim().toLowerCase();
+
+  if (normalized === 'group') return 'comm-badge-info';
+  if (normalized === 'newsletter') return 'comm-badge-brand';
+  if (normalized === 'status') return 'comm-badge-warning';
+  if (normalized === 'broadcast') return 'comm-badge-brand';
+  return 'comm-badge-neutral';
+};
+
 type WhatsAppChat = {
   id: string;
   name: string | null;
@@ -3499,16 +3509,6 @@ const getReminderTypeMeta = (type?: string | null) => {
     className: 'comm-badge-neutral',
   };
 };
-
-function getChatTypeBadgeClass(kind?: string | null) {
-  const normalized = (kind || 'direct').trim().toLowerCase();
-
-  if (normalized === 'group') return 'comm-badge-info';
-  if (normalized === 'newsletter') return 'comm-badge-brand';
-  if (normalized === 'status') return 'comm-badge-warning';
-  if (normalized === 'broadcast') return 'comm-badge-brand';
-  return 'comm-badge-neutral';
-}
 
 const getChatAvatarClass = (kind?: string | null) => {
   const normalized = (kind || 'direct').trim().toLowerCase();

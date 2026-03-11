@@ -14,10 +14,18 @@ import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
 const detailPanelClass = 'rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)]';
+const detailPanelMutedClass = 'rounded-lg bg-[var(--panel-surface-muted,#f7f0e7)]';
+const detailDividerClass = 'mt-4 border-t border-[var(--panel-border-subtle,#e7dac8)] pt-4';
+const detailTitleClass = 'text-lg font-semibold text-[var(--panel-text,#1a120d)]';
 const detailHeadingTextClass = 'font-semibold text-[var(--panel-text,#1a120d)]';
-  const detailBodyTextClass = 'text-sm text-[var(--panel-text-soft,#5b4635)]';
-  const detailBodyStrongClass = 'text-sm font-medium text-[var(--panel-text-soft,#5b4635)]';
+const detailBodyTextClass = 'text-sm text-[var(--panel-text-soft,#5b4635)]';
+const detailBodyStrongClass = 'text-sm font-medium text-[var(--panel-text-soft,#5b4635)]';
 const detailMutedTextClass = 'text-xs text-[var(--panel-text-muted,#876f5c)]';
+const detailLabelTextClass = 'font-medium text-[var(--panel-text-soft,#5b4635)]';
+const detailEmptyStateClass =
+  'rounded-lg border-2 border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)] py-8 text-center';
+const detailEmptyCompactClass =
+  'rounded-lg border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-6 text-center text-sm text-[var(--panel-text-muted,#876f5c)]';
 const detailAccentLinkClass =
   'text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]';
 
@@ -56,7 +64,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const [selectedHolderId, setSelectedHolderId] = useState<string | null>(null);
   const [showInteractionForm, setShowInteractionForm] = useState(false);
   const initialInteractionData = {
-    tipo: 'Observação',
+    tipo: 'ObservaÃ§Ã£o',
     descricao: '',
     responsavel: 'Luiza',
   };
@@ -151,7 +159,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       ? 'hoje'
       : remaining > 0
         ? `em ${remaining} dia${remaining === 1 ? '' : 's'}`
-        : `há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'}`;
+        : `hÃ¡ ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'}`;
 
     return (
       <div key={`${label}-${date}`} className={`comm-badge gap-2 px-3 py-2 text-xs font-medium ${tone}`}>
@@ -388,7 +396,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
     const startDate = parseDate(contract.data_inicio);
     if (startDate) {
-      events.push({ id: 'start', label: 'Início de vigência', date: startDate });
+      events.push({ id: 'start', label: 'InÃ­cio de vigÃªncia', date: startDate });
     }
 
     const fidelityEnd = getFidelityEndDate(contract.data_renovacao);
@@ -398,17 +406,17 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
     const adjustmentDate = getNextAdjustmentDate(contract.mes_reajuste);
     if (adjustmentDate) {
-      events.push({ id: 'adjustment', label: 'Próximo reajuste anual', date: adjustmentDate });
+      events.push({ id: 'adjustment', label: 'PrÃ³ximo reajuste anual', date: adjustmentDate });
     }
 
     const commissionDate = parseDate(contract.previsao_recebimento_comissao);
     if (commissionDate) {
-      events.push({ id: 'commission', label: 'Recebimento comissão', date: commissionDate });
+      events.push({ id: 'commission', label: 'Recebimento comissÃ£o', date: commissionDate });
     }
 
     const bonusDate = parseDate(contract.previsao_pagamento_bonificacao);
     if (bonusDate) {
-      events.push({ id: 'bonus', label: 'Pagamento bonificação', date: bonusDate });
+      events.push({ id: 'bonus', label: 'Pagamento bonificaÃ§Ã£o', date: bonusDate });
     }
 
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -433,7 +441,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     interactions.forEach((interaction) => {
       events.push({
         id: `audit-interaction-${interaction.id}`,
-        label: `Interação: ${interaction.tipo}`,
+        label: `InteraÃ§Ã£o: ${interaction.tipo}`,
         date: interaction.data_interacao,
         description: interaction.descricao,
       });
@@ -455,7 +463,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
         if (error) throw error;
         onUpdate();
       } catch (error) {
-        console.error('Erro ao atualizar vidas elegíveis para bônus:', error);
+        console.error('Erro ao atualizar vidas elegÃ­veis para bÃ´nus:', error);
       }
     };
 
@@ -472,7 +480,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Remover dependente',
-      description: 'Deseja remover este dependente? Esta ação não pode ser desfeita.',
+      description: 'Deseja remover este dependente? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
       confirmLabel: 'Remover',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -516,8 +524,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       setEditingInteraction(null);
       loadData();
     } catch (error) {
-      console.error('Erro ao adicionar interação:', error);
-      alert('Erro ao adicionar interação');
+      console.error('Erro ao adicionar interaÃ§Ã£o:', error);
+      alert('Erro ao adicionar interaÃ§Ã£o');
     }
   };
 
@@ -533,8 +541,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
   const handleDeleteInteraction = async (interactionId: string) => {
     const confirmed = await requestConfirmation({
-      title: 'Remover interação',
-      description: 'Deseja remover esta interação? Esta ação não pode ser desfeita.',
+      title: 'Remover interaÃ§Ã£o',
+      description: 'Deseja remover esta interaÃ§Ã£o? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
       confirmLabel: 'Remover',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -547,8 +555,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       if (error) throw error;
       loadData();
     } catch (error) {
-      console.error('Erro ao remover interação:', error);
-      alert('Erro ao remover interação');
+      console.error('Erro ao remover interaÃ§Ã£o:', error);
+      alert('Erro ao remover interaÃ§Ã£o');
     }
   };
 
@@ -613,7 +621,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <span className={`ml-2 ${detailHeadingTextClass}`}>{contract.modalidade}</span>
               </div>
               <div>
-                <span className="font-medium text-slate-700">Responsável:</span>
+                <span className={detailLabelTextClass}>ResponsÃ¡vel:</span>
                 <span className={`ml-2 ${detailHeadingTextClass}`}>{contract.responsavel}</span>
               </div>
               {contract.mensalidade_total && (
@@ -626,64 +634,64 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className={`${detailPanelClass} p-3`}>
-                <p className="text-xs text-slate-500">Comissão prevista</p>
-                <p className="text-lg font-semibold text-slate-900">
+                <p className={detailMutedTextClass}>ComissÃ£o prevista</p>
+                <p className={detailTitleClass}>
                   {contract.comissao_prevista
                     ? `R$ ${contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    : 'Não informado'}
+                    : 'NÃ£o informado'}
                 </p>
                 {contract.previsao_recebimento_comissao && (
-                  <p className="text-xs text-slate-500">
+                  <p className={detailMutedTextClass}>
                     Previsto: {new Date(contract.previsao_recebimento_comissao).toLocaleDateString('pt-BR')}
                   </p>
                 )}
               </div>
               <div className={`${detailPanelClass} p-3`}>
-                <p className="text-xs text-slate-500">Bônus total</p>
-                <p className="text-lg font-semibold text-slate-900">
+                <p className={detailMutedTextClass}>BÃ´nus total</p>
+                <p className={detailTitleClass}>
                   {bonusTotal
                     ? `R$ ${bonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    : 'Não aplicado'}
+                    : 'NÃ£o aplicado'}
                 </p>
                 {contract.previsao_pagamento_bonificacao && (
-                  <p className="text-xs text-slate-500">
+                  <p className={detailMutedTextClass}>
                     Previsto: {new Date(contract.previsao_pagamento_bonificacao).toLocaleDateString('pt-BR')}
                   </p>
                 )}
               </div>
               <div className={`${detailPanelClass} p-3`}>
-                <p className="text-xs text-slate-500">Reajuste anual</p>
-                <p className="text-lg font-semibold text-slate-900">
+                <p className={detailMutedTextClass}>Reajuste anual</p>
+                <p className={detailTitleClass}>
                   {getNextAdjustmentDate(contract.mes_reajuste)
                     ? getNextAdjustmentDate(contract.mes_reajuste)?.toLocaleDateString('pt-BR')
-                    : 'Não definido'}
+                    : 'NÃ£o definido'}
                 </p>
-                <p className="text-xs text-slate-500">
-                  Mês de reajuste: {contract.mes_reajuste ? String(contract.mes_reajuste).padStart(2, '0') : '--'}
+                <p className={detailMutedTextClass}>
+                  MÃªs de reajuste: {contract.mes_reajuste ? String(contract.mes_reajuste).padStart(2, '0') : '--'}
                 </p>
               </div>
             </div>
 
             {(contract.data_renovacao || contract.previsao_recebimento_comissao || contract.previsao_pagamento_bonificacao) && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="text-sm font-medium text-slate-700 mb-2">Datas-chave</div>
+              <div className={detailDividerClass}>
+                <div className={`${detailBodyStrongClass} mb-2`}>Datas-chave</div>
                 <div className="flex flex-wrap gap-2">
                   {buildDatePill('Fim da fidelidade', getFidelityEndDate(contract.data_renovacao))}
-                  {buildDatePill('Mês de reajuste', getNextAdjustmentDate(contract.mes_reajuste))}
-                  {buildDatePill('Prev. comissão', parseDate(contract.previsao_recebimento_comissao))}
-                  {buildDatePill('Prev. bonificação', parseDate(contract.previsao_pagamento_bonificacao))}
+                  {buildDatePill('MÃªs de reajuste', getNextAdjustmentDate(contract.mes_reajuste))}
+                  {buildDatePill('Prev. comissÃ£o', parseDate(contract.previsao_recebimento_comissao))}
+                  {buildDatePill('Prev. bonificaÃ§Ã£o', parseDate(contract.previsao_pagamento_bonificacao))}
                 </div>
               </div>
             )}
 
             {contractTimeline.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="text-sm font-medium text-slate-700 mb-2">Linha do tempo do contrato</div>
+              <div className={detailDividerClass}>
+                <div className={`${detailBodyStrongClass} mb-2`}>Linha do tempo do contrato</div>
                 <div className="space-y-2">
                   {contractTimeline.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
-                      <div className="text-slate-700 font-medium">{event.label}</div>
-                      <div className="text-slate-500 text-xs">{event.date.toLocaleDateString('pt-BR')}</div>
+                    <div key={event.id} className={`${detailPanelClass} flex items-center justify-between px-3 py-2 text-sm`}>
+                      <div className={detailBodyStrongClass}>{event.label}</div>
+                      <div className={detailMutedTextClass}>{event.date.toLocaleDateString('pt-BR')}</div>
                     </div>
                   ))}
                 </div>
@@ -691,10 +699,10 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             )}
 
             {(ageAdjustmentAlerts.length > 0 || upcomingAgeAdjustments.length > 0) && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className={detailDividerClass}>
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
                   <AlertCircle className="w-4 h-4" />
-                  <span>Gestão de reajuste por idade</span>
+                  <span>GestÃ£o de reajuste por idade</span>
                 </div>
                 {upcomingAgeAdjustments.length > 0 ? (
                   <div className="mt-3 space-y-2">
@@ -704,7 +712,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                         className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs"
                       >
                         <span className="font-semibold text-amber-800">
-                          {person.name} • {person.role} • {person.age} anos
+                          {person.name} â€¢ {person.role} â€¢ {person.age} anos
                         </span>
                         <span className="text-amber-700">
                           {person.date.toLocaleDateString('pt-BR')}
@@ -713,7 +721,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-amber-600">Nenhum reajuste por idade previsto nos próximos 120 dias.</p>
+                  <p className="mt-2 text-xs text-amber-600">Nenhum reajuste por idade previsto nos prÃ³ximos 120 dias.</p>
                 )}
                 <p className="text-xs text-amber-600 mt-2">
                   Os planos reajustam por idade quando um titular ou dependente completa 19, 24, 29, 34, 39, 44, 49, 54 ou 59 anos.
@@ -722,8 +730,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             )}
 
             {adjustments.length > 0 && contract.mensalidade_total && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="text-sm font-medium text-slate-700 mb-2">Ajustes de Valor:</div>
+              <div className={detailDividerClass}>
+                <div className={`${detailBodyStrongClass} mb-2`}>Ajustes de Valor:</div>
                 <div className="space-y-2">
                   {adjustments.map((adj) => (
                     <div
@@ -752,7 +760,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   ))}
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Mensalidade Final:</span>
+                  <span className={detailLabelTextClass}>Mensalidade Final:</span>
                   <span className="font-bold text-teal-700 text-lg">
                     R$ {calculateAdjustedValue(contract.mensalidade_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
@@ -761,20 +769,20 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             )}
 
             {contract.comissao_multiplicador && contract.comissao_multiplicador !== 2.8 && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className={detailDividerClass}>
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-5 h-5 text-amber-500" />
-                  <span className="text-sm font-medium text-slate-700">Multiplicador de Comissão:</span>
+                  <span className={detailBodyStrongClass}>Multiplicador de ComissÃ£o:</span>
                   <span className="text-lg font-bold text-teal-700">{contract.comissao_multiplicador}x</span>
-                  <span className="text-xs text-slate-500">(padrão: 2.8x)</span>
+                  <span className={detailMutedTextClass}>(padrÃ£o: 2.8x)</span>
                 </div>
               </div>
             )}
 
             {contract.comissao_prevista && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className={detailDividerClass}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Comissão Prevista:</span>
+                  <span className={detailBodyStrongClass}>ComissÃ£o Prevista:</span>
                   <span className="font-bold text-teal-700 text-lg">
                     R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
@@ -791,7 +799,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                           <div key={`parcel-${index}`} className="flex items-center justify-between text-xs text-amber-800">
                             <div className="flex items-center space-x-2">
                               <span className="font-semibold">Parcela {index + 1}</span>
-                              <span>• {parcel.percentual?.toFixed(2)}%</span>
+                              <span>â€¢ {parcel.percentual?.toFixed(2)}%</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               {parcel.data_pagamento && (
@@ -808,38 +816,38 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                         <div className="pt-2 border-t border-amber-100 text-xs text-amber-800 flex items-center justify-between">
                           <span className="font-semibold">Total</span>
                           <span className="font-semibold">
-                            {totalCommissionPercent.toFixed(2)}% • R$ {commissionBaseValue.toLocaleString('pt-BR', {
+                            {totalCommissionPercent.toFixed(2)}% â€¢ R$ {commissionBaseValue.toLocaleString('pt-BR', {
                               minimumFractionDigits: 2,
                             })}
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-500">
-                        Defina os percentuais e datas para acompanhar o recebimento parcelado desta comissão.
+                      <p className={detailMutedTextClass}>
+                        Defina os percentuais e datas para acompanhar o recebimento parcelado desta comissÃ£o.
                       </p>
                     )}
                   </div>
                 ) : contract.comissao_recebimento_adiantado ? (
                   <div className="mt-2 flex items-center space-x-2 text-xs text-emerald-600">
                     <TrendingUp className="w-4 h-4" />
-                    <span>Recebimento adiantado previsto (pagamento único).</span>
+                    <span>Recebimento adiantado previsto (pagamento Ãºnico).</span>
                   </div>
                 ) : null}
               </div>
             )}
 
             {contract.bonus_por_vida_aplicado && contract.bonus_por_vida_valor && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className={detailDividerClass}>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-800">Bônus por Vida:</span>
+                    <span className="text-sm font-medium text-green-800">BÃ´nus por Vida:</span>
                     <span className="font-bold text-green-700 text-lg">
                       R$ {contract.bonus_por_vida_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-green-700">Vidas elegíveis:</span>
+                    <span className="text-xs text-green-700">Vidas elegÃ­veis:</span>
                     <span className="text-sm font-semibold text-green-800">{bonusEligibleLives}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -847,7 +855,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     <span className="text-xs font-semibold text-green-700">{contract.vidas || 1}</span>
                   </div>
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-green-200">
-                    <span className="text-sm font-semibold text-green-800">Total do Bônus:</span>
+                    <span className="text-sm font-semibold text-green-800">Total do BÃ´nus:</span>
                     <span className="font-bold text-green-700 text-xl">
                       R$ {(bonusTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
@@ -862,7 +870,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   )}
                 </div>
                 <p className="text-xs text-green-600 mt-2">
-                  Pagamento por vida do contrato, previsto conforme a data de bonificação.
+                  Pagamento por vida do contrato, previsto conforme a data de bonificaÃ§Ã£o.
                 </p>
               </div>
             )}
@@ -891,7 +899,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             {holders.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
                 {holders.map((holderItem) => (
-                  <div key={holderItem.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                  <div key={holderItem.id} className={`${detailPanelClass} p-4`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h5 className="font-semibold text-slate-900 mb-3">{holderItem.nome_completo}</h5>
@@ -922,9 +930,9 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+              <div className={detailEmptyStateClass}>
                 <User className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600 mb-3">Nenhum titular cadastrado</p>
+                <p className={`${detailBodyTextClass} mb-3`}>Nenhum titular cadastrado</p>
                 {canEditContracts && (
                   <Button
                     onClick={() => {
@@ -971,11 +979,11 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 {holders.map((holderItem) => {
                   const holderDependents = dependents.filter((d) => d.holder_id === holderItem.id);
                   return (
-                    <div key={holderItem.id} className="bg-white border border-slate-200 rounded-lg">
+                    <div key={holderItem.id} className={detailPanelClass}>
                       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
                         <div>
-                          <p className="text-sm text-slate-600">Titular</p>
-                          <p className="font-semibold text-slate-900">{holderItem.nome_completo}</p>
+                          <p className={detailBodyTextClass}>Titular</p>
+                          <p className={detailHeadingTextClass}>{holderItem.nome_completo}</p>
                         </div>
                         {canEditContracts && (
                           <Button
@@ -1000,7 +1008,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                               <div className="flex-1">
                                 <h5 className="font-semibold text-slate-900 mb-1">{dependent.nome_completo}</h5>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-600">
-                                  <div><span className="font-medium">Relação:</span> {dependent.relacao}</div>
+                                  <div><span className="font-medium">RelaÃ§Ã£o:</span> {dependent.relacao}</div>
                                   <div><span className="font-medium">Data Nasc.:</span> {formatDateOnly(dependent.data_nascimento)}</div>
                                   {dependent.cpf && <div><span className="font-medium">CPF:</span> {dependent.cpf}</div>}
                                   {dependent.valor_individual && (
@@ -1031,7 +1039,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                             </div>
                           ))
                         ) : (
-                          <p className="text-sm text-slate-600">Nenhum dependente para este titular.</p>
+                          <p className={detailBodyTextClass}>Nenhum dependente para este titular.</p>
                         )}
                       </div>
                     </div>
@@ -1039,34 +1047,34 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+              <div className={detailEmptyStateClass}>
                 <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600">Cadastre um titular para incluir dependentes.</p>
+                <p className={detailBodyTextClass}>Cadastre um titular para incluir dependentes.</p>
               </div>
             )}
           </div>
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-slate-900">Documentos</h4>
-              <span className="text-xs text-slate-500">{documents.length} arquivo(s)</span>
+              <h4 className={detailTitleClass}>Documentos</h4>
+              <span className={detailMutedTextClass}>{documents.length} arquivo(s)</span>
             </div>
             <div className="space-y-4">
               {holders.map((holderItem) => (
-                <div key={`docs-holder-${holderItem.id}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div key={`docs-holder-${holderItem.id}`} className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)] p-4">
                   <p className="text-sm font-semibold text-slate-800 mb-2">Titular: {holderItem.nome_completo}</p>
                   {renderDocumentList(holderItem.id)}
                 </div>
               ))}
               {dependents.map((dependent) => (
-                <div key={`docs-dependent-${dependent.id}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div key={`docs-dependent-${dependent.id}`} className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)] p-4">
                   <p className="text-sm font-semibold text-slate-800 mb-2">Dependente: {dependent.nome_completo}</p>
                   {renderDocumentList(dependent.id)}
                 </div>
               ))}
               {holders.length === 0 && dependents.length === 0 && (
-                <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-                  Cadastre um titular para começar a anexar documentos.
+                <div className={detailEmptyCompactClass}>
+                  Cadastre um titular para comeÃ§ar a anexar documentos.
                 </div>
               )}
             </div>
@@ -1074,12 +1082,12 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-slate-900">Auditoria</h4>
-              <span className="text-xs text-slate-500">{auditEvents.length} evento(s)</span>
+              <h4 className={detailTitleClass}>Auditoria</h4>
+              <span className={detailMutedTextClass}>{auditEvents.length} evento(s)</span>
             </div>
             {auditEvents.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
-                Nenhum evento de auditoria disponível.
+              <div className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)] p-6 text-sm text-[var(--panel-text-muted,#876f5c)]">
+                Nenhum evento de auditoria disponÃ­vel.
               </div>
             ) : (
               <div className="space-y-2">
@@ -1101,7 +1109,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
           </div>
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
+              <h4 className={detailTitleClass}>HistÃ³rico de InteraÃ§Ãµes</h4>
               {canEditContracts && (
                 <Button
                   onClick={() => {
@@ -1112,7 +1120,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   size="sm"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Nova Interação</span>
+                  <span>Nova InteraÃ§Ã£o</span>
                 </Button>
               )}
             </div>
@@ -1122,26 +1130,26 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Tipo de Interação
+                      Tipo de InteraÃ§Ã£o
                     </label>
                     <FilterSingleSelect
                       icon={MessageCircle}
                       value={interactionData.tipo}
                       onChange={(value) => setInteractionData({ ...interactionData, tipo: value })}
-                      placeholder="Tipo de interação"
+                      placeholder="Tipo de interaÃ§Ã£o"
                       includePlaceholderOption={false}
                       options={[
-                        { value: 'Ligação', label: 'Ligação' },
+                        { value: 'LigaÃ§Ã£o', label: 'LigaÃ§Ã£o' },
                         { value: 'Mensagem', label: 'Mensagem' },
                         { value: 'E-mail', label: 'E-mail' },
-                        { value: 'Reunião', label: 'Reunião' },
-                        { value: 'Observação', label: 'Observação' },
+                        { value: 'ReuniÃ£o', label: 'ReuniÃ£o' },
+                        { value: 'ObservaÃ§Ã£o', label: 'ObservaÃ§Ã£o' },
                       ]}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Responsável
+                      ResponsÃ¡vel
                     </label>
                     <FilterSingleSelect
                       icon={User}
@@ -1149,7 +1157,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                       onChange={(value) =>
                         setInteractionData({ ...interactionData, responsavel: value })
                       }
-                      placeholder="Responsável"
+                      placeholder="ResponsÃ¡vel"
                       includePlaceholderOption={false}
                       options={[
                         { value: 'Luiza', label: 'Luiza' },
@@ -1160,7 +1168,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Descrição
+                    DescriÃ§Ã£o
                   </label>
                   <textarea
                     required
@@ -1186,16 +1194,16 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   <Button
                     type="submit"
                   >
-                    {editingInteraction ? 'Salvar alterações' : 'Adicionar'}
+                    {editingInteraction ? 'Salvar alteraÃ§Ãµes' : 'Adicionar'}
                   </Button>
                 </div>
               </form>
             )}
 
             {interactions.length === 0 ? (
-              <div className="text-center py-8 bg-slate-50 rounded-lg">
+              <div className="rounded-lg bg-[var(--panel-surface-muted,#f7f0e7)] py-8 text-center">
                 <MessageCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600">Nenhuma interação registrada</p>
+                <p className={detailBodyTextClass}>Nenhuma interaÃ§Ã£o registrada</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1206,11 +1214,11 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
                           {interaction.tipo}
                         </span>
-                        <span className="text-sm text-slate-600">{interaction.responsavel}</span>
+                        <span className={detailBodyTextClass}>{interaction.responsavel}</span>
                       </div>
                       <div className="flex items-center space-x-3 text-sm text-slate-500">
                         <span>
-                          {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
+                          {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} Ã s{' '}
                           {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {canEditContracts && (
@@ -1231,7 +1239,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                         )}
                       </div>
                     </div>
-                    <p className="text-slate-700">{interaction.descricao}</p>
+                    <p className={detailBodyStrongClass}>{interaction.descricao}</p>
                   </div>
                 ))}
               </div>
@@ -1292,3 +1300,4 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     </ModalShell>
   );
 }
+

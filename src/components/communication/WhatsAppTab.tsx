@@ -83,6 +83,7 @@ type WhatsAppChat = {
   created_at: string;
   updated_at: string;
   last_message: string | null;
+  last_message_direction?: 'inbound' | 'outbound' | null;
   unread_count?: number;
   archived?: boolean | null;
   mute_until?: string | null;
@@ -1563,6 +1564,7 @@ export default function WhatsAppTab() {
           created_at: row.created_at ?? new Date().toISOString(),
           updated_at: row.updated_at ?? new Date().toISOString(),
           last_message: sanitizeTechnicalCiphertextPreview(row.last_message) || null,
+          last_message_direction: null,
           unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
           archived: row.archived ?? false,
           mute_until: row.mute_until ?? null,
@@ -1580,6 +1582,7 @@ export default function WhatsAppTab() {
               {
                 ...incomingChat,
                 last_message: incomingChat.last_message ?? null,
+                last_message_direction: incomingChat.last_message_direction ?? null,
                 unread_count: incomingChat.unread_count ?? 0,
               },
               ...prev,
@@ -1592,6 +1595,7 @@ export default function WhatsAppTab() {
             ...existingChat,
             ...incomingChat,
             last_message: incomingChat.last_message ?? existingChat.last_message,
+            last_message_direction: existingChat.last_message_direction ?? incomingChat.last_message_direction ?? null,
             unread_count:
               typeof incomingChat.unread_count === 'number'
                 ? incomingChat.unread_count
@@ -1744,6 +1748,7 @@ export default function WhatsAppTab() {
             return {
               ...chat,
               last_message: preview || chat.last_message,
+              last_message_direction: preview ? message.direction ?? chat.last_message_direction ?? null : chat.last_message_direction ?? null,
               last_message_at: preview ? messageTimestamp || chat.last_message_at : chat.last_message_at,
               archived: shouldUnarchive ? false : chat.archived,
             };
@@ -1899,6 +1904,7 @@ export default function WhatsAppTab() {
         return {
           ...incoming,
           last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? null) || null,
+          last_message_direction: previous?.last_message_direction ?? null,
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count
@@ -1943,6 +1949,7 @@ export default function WhatsAppTab() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_message: null,
+            last_message_direction: null,
             unread_count: chat.unread_count ?? 0,
             archived: chat.archived ?? false,
             mute_until: muteUntil,
@@ -1952,6 +1959,7 @@ export default function WhatsAppTab() {
         incomingChats = (data as WhatsAppChat[]).map((chat) => ({
           ...chat,
           last_message: sanitizeTechnicalCiphertextPreview(chat.last_message) || null,
+          last_message_direction: chat.last_message_direction ?? null,
         }));
       }
 
@@ -1965,6 +1973,7 @@ export default function WhatsAppTab() {
       setChats(mergedChats);
       setSelectedChat((current) => (isStatusChat(current) ? null : current));
 
+      void refreshChatPreviewsFromMessages(mergedChats, currentLoadId);
       void loadUnreadCounts();
       void loadGroupNames(mergedChats);
       void loadNewsletterNames(mergedChats);
@@ -2035,6 +2044,7 @@ export default function WhatsAppTab() {
             return {
               ...item,
               last_message: latestPreview.preview,
+              last_message_direction: latestPreview.direction,
               last_message_at: shouldUpdateTime ? latestPreview.timestamp : item.last_message_at,
             };
           });
@@ -2284,6 +2294,7 @@ export default function WhatsAppTab() {
           return {
             ...chat,
             last_message: preview || chat.last_message,
+            last_message_direction: preview ? nextMessage.direction ?? chat.last_message_direction ?? null : chat.last_message_direction ?? null,
             last_message_at: timestamp,
           };
         });
@@ -2504,6 +2515,7 @@ export default function WhatsAppTab() {
       return {
         preview,
         timestamp: getMessageDisplayTimestamp(candidate),
+        direction: candidate.direction ?? null,
       };
     }
 
@@ -2539,6 +2551,99 @@ export default function WhatsAppTab() {
       oscillator.stop(now + 0.25);
     } catch (error) {
       console.warn('Erro ao reproduzir alerta sonoro:', error);
+    }
+  };
+
+  const formatChatListPreview = (chat: Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'is_group'>) => {
+    const preview = sanitizeTechnicalCiphertextPreview(chat.last_message);
+    if (!preview) return 'Sem mensagens';
+
+    if (chat.last_message_direction === 'outbound') {
+      return `Você: ${preview}`;
+    }
+
+    if (chat.last_message_direction === 'inbound') {
+      return `${chat.is_group ? 'Pessoa' : 'Contato'}: ${preview}`;
+    }
+
+    return preview;
+  };
+
+  const refreshChatPreviewsFromMessages = async (sourceChats: WhatsAppChat[], currentLoadId?: number) => {
+    const variantToBaseChatIds = new Map<string, string[]>();
+
+    sourceChats.forEach((chat) => {
+      getChatIdVariants(chat).forEach((variant) => {
+        if (!variantToBaseChatIds.has(variant)) {
+          variantToBaseChatIds.set(variant, []);
+        }
+
+        const matches = variantToBaseChatIds.get(variant);
+        if (matches && !matches.includes(chat.id)) {
+          matches.push(chat.id);
+        }
+      });
+    });
+
+    const variants = Array.from(variantToBaseChatIds.keys());
+    if (variants.length === 0) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('id, chat_id, body, type, has_media, payload, is_deleted, direction, timestamp, created_at')
+        .in('chat_id', variants)
+        .order('timestamp', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(Math.min(Math.max(variants.length * 6, 300), 4000));
+
+      if (error) throw error;
+      if (currentLoadId && activeChatsLoadIdRef.current !== currentLoadId) return;
+
+      const previewByChatId = new Map<
+        string,
+        { preview: string; direction: 'inbound' | 'outbound' | null; timestamp: string | null }
+      >();
+
+      ((data || []) as WhatsAppMessage[]).forEach((message) => {
+        const preview = getMessagePreview(message);
+        if (!preview) return;
+
+        const matchingChatIds = variantToBaseChatIds.get(message.chat_id) || [];
+        matchingChatIds.forEach((chatId) => {
+          if (!previewByChatId.has(chatId)) {
+            previewByChatId.set(chatId, {
+              preview,
+              direction: message.direction ?? null,
+              timestamp: getMessageDisplayTimestamp(message),
+            });
+          }
+        });
+      });
+
+      if (previewByChatId.size === 0) return;
+
+      setChats((prev) => {
+        const updated = prev.map((chat) => {
+          const nextPreview = previewByChatId.get(chat.id);
+          if (!nextPreview) return chat;
+
+          const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
+          const incomingTime = nextPreview.timestamp ? new Date(nextPreview.timestamp).getTime() : 0;
+          const shouldUpdateTime = incomingTime > 0 && (!currentTime || incomingTime >= currentTime);
+
+          return {
+            ...chat,
+            last_message: nextPreview.preview,
+            last_message_direction: nextPreview.direction,
+            last_message_at: shouldUpdateTime ? nextPreview.timestamp : chat.last_message_at,
+          };
+        });
+
+        return updated.sort(sortChatsByLatest);
+      });
+    } catch (error) {
+      console.error('Erro ao recalcular previews dos chats:', error);
     }
   };
 
@@ -4541,11 +4646,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           panelClassName="max-w-3xl"
         >
           <div className="space-y-4">
-            <div className="panel-glass-panel rounded-xl border border-slate-200 p-4">
+            <div className="comm-card comm-card-brand p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Abertura rapida de conversas</p>
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="comm-title text-sm font-semibold">Abertura rapida de conversas</p>
+                  <p className="comm-text mt-1 text-xs">
                     Abra em um clique os chats com lembretes pendentes vinculados aos leads.
                   </p>
                 </div>
@@ -4595,7 +4700,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
                   return (
                     <section key={period.id} className="space-y-2">
-                      <div className="sticky top-0 z-[1] flex items-center justify-between rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[color:rgba(255,253,250,0.95)] px-3 py-2 backdrop-blur-sm">
+                      <div className="comm-accordion-header sticky top-0 z-[1] flex items-center justify-between px-3 py-2">
                         <p className={`text-xs font-semibold uppercase tracking-wide ${period.accentClassName}`}>
                           {period.label}
                         </p>
@@ -4603,7 +4708,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           onClick={() => toggleReminderQuickOpenPeriod(period.id)}
                           variant="secondary"
                           size="sm"
-                          className="h-auto rounded-full px-2 py-0.5 text-[11px]"
+                          className="comm-accordion-toggle h-auto px-2 py-0.5 text-[11px] shadow-none"
                           title={isCollapsed ? 'Expandir seção' : 'Minimizar seção'}
                           aria-label={isCollapsed ? `Expandir ${period.label}` : `Minimizar ${period.label}`}
                         >
@@ -4653,7 +4758,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                     )}
                                   </div>
                                   <p className="comm-text mt-1 truncate text-xs">{item.title}</p>
-                                  <p className="mt-2 text-[11px] text-slate-500">
+                                  <p className="comm-muted mt-2 text-[11px]">
                                     {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
                                     {formatReminderDueAt(item.dueAt)}
                                   </p>
@@ -5128,13 +5233,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   >
                     <div className="relative flex-shrink-0">
                       {chatPhoto && isDirectChat(chat) ? (
-                        <img
-                          src={chatPhoto}
-                          alt={chatDisplayName}
-                          className="h-12 w-12 rounded-full object-cover ring-1 ring-[var(--panel-border,#d4c0a7)]"
-                        />
+                        <div className="comm-avatar-shell h-12 w-12">
+                          <img
+                            src={chatPhoto}
+                            alt={chatDisplayName}
+                            className="comm-avatar-image"
+                          />
+                        </div>
                       ) : (
-                        <div className={`comm-icon-chip flex h-12 w-12 items-center justify-center rounded-full font-semibold ring-1 ring-[var(--panel-border,#d4c0a7)] ${
+                        <div className={`comm-avatar-shell comm-icon-chip flex h-12 w-12 items-center justify-center font-semibold ${
                           getChatAvatarClass(chatKind)
                         }`}>
                           {chatKind === 'group' ? (
@@ -5173,7 +5280,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm text-slate-600 truncate">
-                          {sanitizeTechnicalCiphertextPreview(chat.last_message) || 'Sem mensagens'}
+                          {formatChatListPreview(chat)}
                         </p>
                         {unreadWaitingLabel && (
                           <span className="text-[10px] text-rose-600 whitespace-nowrap">Aguardando {unreadWaitingLabel}</span>
@@ -5309,13 +5416,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   </Button>
                 )}
                 {selectedChatPhoto ? (
-                  <img
-                    src={selectedChatPhoto}
-                    alt={selectedChatDisplayName || selectedChat.id}
-                    className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-1 ring-[var(--panel-border,#d4c0a7)]"
-                  />
+                  <div className="comm-avatar-shell h-10 w-10 flex-shrink-0">
+                    <img
+                      src={selectedChatPhoto}
+                      alt={selectedChatDisplayName || selectedChat.id}
+                      className="comm-avatar-image"
+                    />
+                  </div>
                 ) : (
-                  <div className={`comm-icon-chip flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-[var(--panel-border,#d4c0a7)] ${
+                  <div className={`comm-avatar-shell comm-icon-chip flex h-10 w-10 flex-shrink-0 items-center justify-center font-semibold ${
                     getChatAvatarClass(selectedChatKind)
                   }`}>
                     {selectedChatKind === 'group' ? (

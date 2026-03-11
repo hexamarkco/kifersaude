@@ -96,43 +96,58 @@ export default function ModalShell({
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descriptionId : undefined}
           className={cx(
-            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-amber-200 sm:max-h-[calc(100dvh-3rem)]',
+            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] sm:max-h-[calc(100dvh-3rem)]',
             sizeClasses[size],
             panelClassName,
           )}
           onClick={(event) => event.stopPropagation()}
         >
           {(title || description || showCloseButton) && (
-            <header className="relative border-b border-amber-200 px-5 py-4 sm:px-6">
+            <header className="relative border-b border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4 sm:px-6">
               {title && (
-                <h2 id={titleId} className="pr-10 text-base font-semibold text-slate-900 sm:text-lg">
+                <h2
+                  id={titleId}
+                  className="pr-10 text-base font-semibold text-[var(--panel-text,#1a120d)] sm:text-lg"
+                >
                   {title}
                 </h2>
               )}
               {description && (
-                <p id={descriptionId} className="mt-1 pr-10 text-sm text-slate-600">
+                <p
+                  id={descriptionId}
+                  className="mt-1 pr-10 text-sm text-[var(--panel-text-muted,#876f5c)]"
+                >
                   {description}
                 </p>
               )}
 
               {showCloseButton && (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="absolute right-3 top-3 rounded-lg p-2 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-700"
-                    aria-label="Fechar modal"
-                  >
-                    <X className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-3 top-3 rounded-lg p-2 text-[var(--panel-text-muted,#876f5c)] transition-colors hover:bg-[color:var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)]"
+                  aria-label="Fechar modal"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              )}
             </header>
           )}
 
-          <div className={cx('modal-panel-content min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5', bodyClassName)}>
+          <div
+            className={cx(
+              'modal-panel-content min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5',
+              bodyClassName,
+            )}
+          >
             {children}
           </div>
 
-          {footer && <footer className="border-t border-amber-200 px-5 py-4 sm:px-6">{footer}</footer>}
+          {footer && (
+            <footer className="border-t border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4 sm:px-6">
+              {footer}
+            </footer>
+          )}
         </section>
       </div>
     </div>,

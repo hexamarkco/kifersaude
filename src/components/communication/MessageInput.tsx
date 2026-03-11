@@ -5,6 +5,7 @@ import {
   Mic,
   MapPin,
   Smile,
+  MoreVertical,
   X,
   Image as ImageIcon,
   File as FileIcon,
@@ -23,6 +24,7 @@ import {
 } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
 import FilterSingleSelect from '../FilterSingleSelect';
+import ModalShell from '../ui/ModalShell';
 
 export type SentMessagePayload = {
   id: string;
@@ -91,6 +93,7 @@ function MessageInputComponent({
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -140,6 +143,7 @@ function MessageInputComponent({
   const followUpRequestIdRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerActionsMenuRef = useRef<HTMLDivElement>(null);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
   const rewriteTones = [
     { value: 'claro', label: 'Claro e correto' },
@@ -734,6 +738,21 @@ function MessageInputComponent({
     scheduleTextareaResize();
   }, [message]);
 
+  useEffect(() => {
+    if (!showComposerActionsMenu) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!composerActionsMenuRef.current?.contains(event.target as Node)) {
+        setShowComposerActionsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [showComposerActionsMenu]);
+
   const handleTyping = () => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -753,7 +772,20 @@ function MessageInputComponent({
   const toggleEmojiPicker = () => {
     setShowEmojiPicker((prev) => !prev);
     setShowAttachMenu(false);
+    setShowComposerActionsMenu(false);
     setShowQuickReplies(false);
+  };
+
+  const toggleComposerActionsMenu = () => {
+    setShowComposerActionsMenu((prev) => !prev);
+    setShowEmojiPicker(false);
+    setShowAttachMenu(false);
+  };
+
+  const handleOpenQuickRepliesMenu = () => {
+    setShowQuickReplies((prev) => !prev);
+    setShowComposerActionsMenu(false);
+    setShowEmojiPicker(false);
   };
 
   const handleSendMessage = async () => {
@@ -1699,316 +1731,298 @@ function MessageInputComponent({
         </div>
       )}
       {showRewriteModal && (
-        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-[520px] max-w-[90vw]">
-          <div className="comm-popover-header">
-            <span className="comm-title text-sm font-medium">Reescrever com GPT</span>
+        <ModalShell
+          isOpen
+          onClose={() => setShowRewriteModal(false)}
+          title="Reescrever com GPT"
+          size="md"
+          bodyClassName="space-y-3"
+        >
+          <div>
+            <label className="comm-muted text-xs">Texto original</label>
+            <div className="comm-card comm-text mt-1 whitespace-pre-wrap break-words px-3 py-2 text-sm">
+              {rewriteOriginal}
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="comm-muted text-xs">Tom</label>
+              <FilterSingleSelect
+                icon={Sparkles}
+                value={rewriteTone}
+                onChange={(value) => setRewriteTone(value)}
+                placeholder="Tom"
+                includePlaceholderOption={false}
+                options={rewriteTones.map((tone) => ({
+                  value: tone.value,
+                  label: tone.label,
+                }))}
+              />
+            </div>
             <button
               type="button"
-              className="comm-icon-button p-1"
-              onClick={() => setShowRewriteModal(false)}
+              className="comm-button-primary rounded-md px-3 py-2 text-sm"
+              onClick={() => handleRewrite(rewriteOriginal, rewriteTone)}
+              disabled={rewriteLoading}
             >
-              <X className="w-4 h-4" />
+              {rewriteLoading ? 'Gerando...' : 'Gerar'}
             </button>
           </div>
-          <div className="p-3 space-y-3">
-            <div>
-              <label className="comm-muted text-xs">Texto original</label>
-              <div className="comm-card comm-text mt-1 whitespace-pre-wrap px-3 py-2 text-sm">
-                {rewriteOriginal}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <label className="comm-muted text-xs">Tom</label>
-                <FilterSingleSelect
-                  icon={Sparkles}
-                  value={rewriteTone}
-                  onChange={(value) => setRewriteTone(value)}
-                  placeholder="Tom"
-                  includePlaceholderOption={false}
-                  options={rewriteTones.map((tone) => ({
-                    value: tone.value,
-                    label: tone.label,
-                  }))}
-                />
-              </div>
+          <div>
+            <label className="comm-muted text-xs">Preview</label>
+            <textarea
+              ref={rewriteTextareaRef}
+              value={rewriteResult}
+              onChange={(event) => setRewriteResult(event.target.value)}
+              placeholder="Resultado da reescrita"
+              className="comm-textarea mt-1 min-h-[10rem] px-3 py-2 text-sm"
+            />
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="comm-muted text-xs">Use --- para dividir</span>
               <button
                 type="button"
-                className="comm-button-primary self-end rounded-md px-3 py-2 text-sm"
-                onClick={() => handleRewrite(rewriteOriginal, rewriteTone)}
-                disabled={rewriteLoading}
+                className="comm-button-link flex items-center gap-1 text-xs"
+                onClick={handleInsertSplit}
               >
-                {rewriteLoading ? 'Gerando...' : 'Gerar'}
-              </button>
-            </div>
-            <div>
-              <label className="comm-muted text-xs">Preview</label>
-              <textarea
-                ref={rewriteTextareaRef}
-                value={rewriteResult}
-                onChange={(event) => setRewriteResult(event.target.value)}
-                placeholder="Resultado da reescrita"
-                className="comm-textarea mt-1 h-28 px-3 py-2 text-sm"
-              />
-              <div className="mt-2 flex items-center justify-between">
-                <span className="comm-muted text-xs">Use --- para dividir</span>
-                <button
-                  type="button"
-                  className="comm-button-link flex items-center gap-1 text-xs"
-                  onClick={handleInsertSplit}
-                >
-                  <Scissors className="w-3 h-3" />
-                  Inserir divisao
-                </button>
-              </div>
-            </div>
-            {rewriteError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{rewriteError}</div>}
-            <div>
-              <div className="comm-muted mb-1 text-xs">Partes ({rewriteChunks.length})</div>
-              <div className="comm-list panel-dropdown-scrollbar max-h-32 overflow-y-auto space-y-2 px-2 py-2 text-xs">
-                {rewriteChunks.length === 0 ? (
-                  <div className="comm-subtle">Nenhuma parte definida.</div>
-                ) : (
-                  rewriteChunks.map((chunk, index) => (
-                    <div
-                      key={`chunk-${index}`}
-                      className="border-b border-[var(--panel-border-subtle,#e7dac8)] pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <div className="comm-subtle">Parte {index + 1}</div>
-                      <div className="whitespace-pre-wrap">{chunk}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-                onClick={() => {
-                  setMessage(rewriteResult || rewriteOriginal);
-                  setShowRewriteModal(false);
-                }}
-              >
-                Usar no campo
-              </button>
-              <button
-                type="button"
-                className="comm-button-primary rounded-md px-3 py-2 text-sm"
-                onClick={handleSendRewriteChunks}
-                disabled={rewriteLoading || isSending}
-              >
-                Enviar em partes
+                <Scissors className="h-3 w-3" />
+                Inserir divisao
               </button>
             </div>
           </div>
-        </div>
+          {rewriteError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{rewriteError}</div>}
+          <div>
+            <div className="comm-muted mb-1 text-xs">Partes ({rewriteChunks.length})</div>
+            <div className="comm-list comm-text panel-dropdown-scrollbar max-h-40 overflow-y-auto space-y-2 px-2 py-2 text-xs">
+              {rewriteChunks.length === 0 ? (
+                <div className="comm-subtle">Nenhuma parte definida.</div>
+              ) : (
+                rewriteChunks.map((chunk, index) => (
+                  <div
+                    key={`chunk-${index}`}
+                    className="rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2 py-2"
+                  >
+                    <div className="comm-muted">Parte {index + 1}</div>
+                    <div className="comm-text whitespace-pre-wrap break-words">{chunk}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+            <button
+              type="button"
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
+              onClick={() => {
+                setMessage(rewriteResult || rewriteOriginal);
+                setShowRewriteModal(false);
+              }}
+            >
+              Usar no campo
+            </button>
+            <button
+              type="button"
+              className="comm-button-primary rounded-md px-3 py-2 text-sm"
+              onClick={handleSendRewriteChunks}
+              disabled={rewriteLoading || isSending}
+            >
+              Enviar em partes
+            </button>
+          </div>
+        </ModalShell>
       )}
       {showFollowUpModal && (
-        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-[560px] max-w-[92vw]">
-          <div className="comm-popover-header">
-            <div>
-              <div className="comm-title text-sm font-medium">Gerar follow-up</div>
-              <div className="comm-muted text-[11px]">
-                Baseado no historico carregado deste chat. Cada linha nao vazia vira uma mensagem.
-              </div>
+        <ModalShell
+          isOpen
+          onClose={() => setShowFollowUpModal(false)}
+          title="Gerar follow-up"
+          description="Baseado no historico carregado deste chat. Cada linha nao vazia vira uma mensagem."
+          size="md"
+          bodyClassName="space-y-3"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="comm-muted text-xs">
+              {followUpProvider || followUpModel
+                ? `Gerado com ${followUpProvider || 'IA'}${followUpModel ? ` - ${followUpModel}` : ''}`
+                : 'A IA vai considerar o historico do chat e o contexto do lead.'}
             </div>
             <button
               type="button"
-              className="comm-icon-button p-1"
-              onClick={() => setShowFollowUpModal(false)}
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
+              onClick={() => void generateFollowUp()}
+              disabled={followUpLoading || isSending}
             >
-              <X className="w-4 h-4" />
+              {followUpLoading ? 'Gerando...' : 'Gerar novamente'}
             </button>
           </div>
-          <div className="p-3 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="comm-muted text-xs">
-                {followUpProvider || followUpModel
-                  ? `Gerado com ${followUpProvider || 'IA'}${followUpModel ? ` - ${followUpModel}` : ''}`
-                  : 'A IA vai considerar o historico do chat e o contexto do lead.'}
-              </div>
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-                onClick={() => void generateFollowUp()}
-                disabled={followUpLoading || isSending}
-              >
-                {followUpLoading ? 'Gerando...' : 'Gerar novamente'}
-              </button>
-            </div>
 
-            <div>
-              <label className="comm-muted text-xs">Texto para aprovar</label>
-              <textarea
-                value={followUpDraft}
-                onChange={(event) => setFollowUpDraft(event.target.value)}
-                placeholder={followUpLoading ? 'Gerando follow-up...' : 'O texto gerado vai aparecer aqui.'}
-                className="comm-textarea mt-1 h-36 px-3 py-2 text-sm"
-              />
-              <div className="comm-muted mt-2 text-xs">
-                Dica: cada quebra de linha sera enviada como uma mensagem separada.
-              </div>
-            </div>
-
-            <div>
-              <div className="comm-muted mb-1 text-xs">Mensagens ({followUpMessages.length})</div>
-              <div className="comm-list panel-dropdown-scrollbar max-h-36 overflow-y-auto space-y-2 px-2 py-2 text-xs">
-                {followUpLoading && followUpMessages.length === 0 ? (
-                  <div className="comm-subtle">Gerando sugestao...</div>
-                ) : followUpMessages.length === 0 ? (
-                  <div className="comm-subtle">Nenhuma mensagem definida.</div>
-                ) : (
-                  followUpMessages.map((chunk, index) => (
-                    <div
-                      key={`follow-up-chunk-${index}`}
-                      className="border-b border-[var(--panel-border-subtle,#e7dac8)] pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <div className="comm-subtle">Mensagem {index + 1}</div>
-                      <div className="whitespace-pre-wrap">{chunk}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {followUpError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{followUpError}</div>}
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-                onClick={() => setShowFollowUpModal(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-                onClick={handleUseFollowUpInField}
-                disabled={followUpLoading || isSending || !followUpDraft.trim()}
-              >
-                Usar no campo
-              </button>
-              <button
-                type="button"
-                className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={handleSendGeneratedFollowUp}
-                disabled={followUpLoading || isSending || followUpMessages.length === 0}
-              >
-                {isSending ? 'Enviando...' : `Aprovar e enviar (${followUpMessages.length})`}
-              </button>
+          <div>
+            <label className="comm-muted text-xs">Texto para aprovar</label>
+            <textarea
+              value={followUpDraft}
+              onChange={(event) => setFollowUpDraft(event.target.value)}
+              placeholder={followUpLoading ? 'Gerando follow-up...' : 'O texto gerado vai aparecer aqui.'}
+              className="comm-textarea mt-1 min-h-[11rem] px-3 py-2 text-sm"
+            />
+            <div className="comm-muted mt-2 text-xs">
+              Dica: cada quebra de linha sera enviada como uma mensagem separada.
             </div>
           </div>
-        </div>
-      )}
-      {showLinkPreviewModal && pendingLinkMessage && (
-        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-96">
-          <div className="comm-popover-header">
-            <span className="comm-title text-sm font-medium">Enviar preview de link</span>
+
+          <div>
+            <div className="comm-muted mb-1 text-xs">Mensagens ({followUpMessages.length})</div>
+            <div className="comm-list comm-text panel-dropdown-scrollbar max-h-40 overflow-y-auto space-y-2 px-2 py-2 text-xs">
+              {followUpLoading && followUpMessages.length === 0 ? (
+                <div className="comm-subtle">Gerando sugestao...</div>
+              ) : followUpMessages.length === 0 ? (
+                <div className="comm-subtle">Nenhuma mensagem definida.</div>
+              ) : (
+                followUpMessages.map((chunk, index) => (
+                  <div
+                    key={`follow-up-chunk-${index}`}
+                    className="rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2 py-2"
+                  >
+                    <div className="comm-muted">Mensagem {index + 1}</div>
+                    <div className="comm-text whitespace-pre-wrap break-words">{chunk}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {followUpError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{followUpError}</div>}
+
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
             <button
               type="button"
-              className="comm-icon-button p-1"
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
+              onClick={() => setShowFollowUpModal(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
+              onClick={handleUseFollowUpInField}
+              disabled={followUpLoading || isSending || !followUpDraft.trim()}
+            >
+              Usar no campo
+            </button>
+            <button
+              type="button"
+              className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleSendGeneratedFollowUp}
+              disabled={followUpLoading || isSending || followUpMessages.length === 0}
+            >
+              {isSending ? 'Enviando...' : `Aprovar e enviar (${followUpMessages.length})`}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+      {showLinkPreviewModal && pendingLinkMessage && (
+        <ModalShell
+          isOpen
+          onClose={() => {
+            setShowLinkPreviewModal(false);
+            clearLinkPreviewDraft();
+          }}
+          title="Enviar preview de link"
+          size="sm"
+          bodyClassName="space-y-2"
+        >
+          <div className="comm-card px-2.5 py-2">
+            <div className="comm-muted text-[11px]">Mensagem</div>
+            <div className="comm-text mt-0.5 whitespace-pre-wrap break-words text-xs">{pendingLinkMessage}</div>
+          </div>
+
+          <div>
+            <label className="comm-muted text-xs">Titulo (obrigatorio)</label>
+            <input
+              type="text"
+              value={linkPreviewTitle}
+              onChange={(e) => setLinkPreviewTitle(e.target.value)}
+              className="comm-input mt-1 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="comm-muted text-xs">Descricao</label>
+            <input
+              type="text"
+              value={linkPreviewDescription}
+              onChange={(e) => setLinkPreviewDescription(e.target.value)}
+              className="comm-input mt-1 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="comm-muted text-xs">URL canonica</label>
+            <input
+              type="text"
+              value={linkPreviewCanonical}
+              onChange={(e) => setLinkPreviewCanonical(e.target.value)}
+              className="comm-input mt-1 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="comm-muted text-xs">Imagem (URL)</label>
+            <input
+              type="text"
+              value={linkPreviewImage}
+              onChange={(e) => setLinkPreviewImage(e.target.value)}
+              className="comm-input mt-1 px-3 py-2 text-sm"
+            />
+          </div>
+          {linkPreviewLoading && <div className="comm-muted text-xs">Carregando metadados do link...</div>}
+          {linkPreviewError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{linkPreviewError}</div>}
+
+          {(linkPreviewTitle || linkPreviewDescription || linkPreviewImage) && (
+            <div className="comm-card overflow-hidden bg-[var(--panel-surface,#fffdfa)]">
+              {linkPreviewImage && (
+                <img
+                  src={linkPreviewImage}
+                  alt={linkPreviewTitle || 'Link preview'}
+                  className="h-28 w-full object-cover bg-[var(--panel-surface-soft,#f4ede3)]"
+                />
+              )}
+              <div className="space-y-1 px-3 py-2">
+                <div className="comm-muted truncate text-[11px]">
+                  {linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}
+                </div>
+                <div className="comm-title line-clamp-2 text-sm">
+                  {linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}
+                </div>
+                {linkPreviewDescription && <div className="comm-text line-clamp-3 text-xs">{linkPreviewDescription}</div>}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
+            <button
+              type="button"
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => fetchLinkPreviewMetadata(linkPreviewCanonical)}
+              disabled={isSending || linkPreviewLoading || !linkPreviewCanonical.trim()}
+            >
+              {linkPreviewLoading ? 'Atualizando...' : 'Atualizar dados'}
+            </button>
+            <button
+              type="button"
+              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
               onClick={() => {
                 setShowLinkPreviewModal(false);
                 clearLinkPreviewDraft();
               }}
             >
-              <X className="w-4 h-4" />
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleSendMessage}
+              disabled={isSending}
+            >
+              Enviar
             </button>
           </div>
-          <div className="p-3 space-y-2">
-            <div className="comm-card px-2.5 py-2">
-              <div className="comm-muted text-[11px]">Mensagem</div>
-              <div className="comm-text mt-0.5 whitespace-pre-wrap break-words text-xs">{pendingLinkMessage}</div>
-            </div>
-
-            <div>
-              <label className="comm-muted text-xs">Titulo (obrigatorio)</label>
-              <input
-                type="text"
-                value={linkPreviewTitle}
-                onChange={(e) => setLinkPreviewTitle(e.target.value)}
-                className="comm-input mt-1 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="comm-muted text-xs">Descricao</label>
-              <input
-                type="text"
-                value={linkPreviewDescription}
-                onChange={(e) => setLinkPreviewDescription(e.target.value)}
-                className="comm-input mt-1 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="comm-muted text-xs">URL canonica</label>
-              <input
-                type="text"
-                value={linkPreviewCanonical}
-                onChange={(e) => setLinkPreviewCanonical(e.target.value)}
-                className="comm-input mt-1 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="comm-muted text-xs">Imagem (URL)</label>
-              <input
-                type="text"
-                value={linkPreviewImage}
-                onChange={(e) => setLinkPreviewImage(e.target.value)}
-                className="comm-input mt-1 px-3 py-2 text-sm"
-              />
-            </div>
-            {linkPreviewLoading && <div className="comm-muted text-xs">Carregando metadados do link...</div>}
-            {linkPreviewError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{linkPreviewError}</div>}
-
-            {(linkPreviewTitle || linkPreviewDescription || linkPreviewImage) && (
-              <div className="comm-card overflow-hidden bg-[var(--panel-surface,#fffdfa)]">
-                {linkPreviewImage && (
-                  <img
-                    src={linkPreviewImage}
-                    alt={linkPreviewTitle || 'Link preview'}
-                    className="h-28 w-full object-cover bg-[var(--panel-surface-soft,#f4ede3)]"
-                  />
-                )}
-                <div className="px-3 py-2 space-y-1">
-                  <div className="comm-muted truncate text-[11px]">{linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}</div>
-                  <div className="comm-title line-clamp-2 text-sm">{linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}</div>
-                  {linkPreviewDescription && <div className="comm-text line-clamp-3 text-xs">{linkPreviewDescription}</div>}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => fetchLinkPreviewMetadata(linkPreviewCanonical)}
-                disabled={isSending || linkPreviewLoading || !linkPreviewCanonical.trim()}
-              >
-                {linkPreviewLoading ? 'Atualizando...' : 'Atualizar dados'}
-              </button>
-              <button
-                type="button"
-                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-                onClick={() => {
-                  setShowLinkPreviewModal(false);
-                  clearLinkPreviewDraft();
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={handleSendMessage}
-                disabled={isSending}
-              >
-                Enviar
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
       {showContactPicker && (
         <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-80 overflow-hidden">
@@ -2125,20 +2139,6 @@ function MessageInputComponent({
         </div>
       )}
 
-      {isDirectChat && (
-        <div className="px-3 pt-3">
-          <button
-            type="button"
-            className="comm-chip-button inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={handleOpenFollowUp}
-            disabled={isSending || isRecording || followUpLoading || showLinkPreviewModal}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>{followUpLoading ? 'Gerando follow-up...' : 'Gerar follow-up com IA'}</span>
-          </button>
-        </div>
-      )}
-
       <div className="relative flex items-end gap-2 p-3">
         <div className="relative">
           <button
@@ -2219,7 +2219,7 @@ function MessageInputComponent({
         </div>
 
         <div className="comm-composer-shell flex flex-1 items-end overflow-visible">
-          <div className="relative z-[90]">
+          <div ref={composerActionsMenuRef} className="relative z-[90] flex items-center">
             <button
               className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSending}
@@ -2234,21 +2234,13 @@ function MessageInputComponent({
             <button
               className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSending}
-              onClick={() => setShowQuickReplies((prev) => !prev)}
+              onClick={toggleComposerActionsMenu}
               type="button"
-              title="Respostas rapidas"
+              title="Mais acoes"
+              aria-label="Mais acoes"
+              aria-expanded={showComposerActionsMenu}
             >
-              <MessageSquare className="w-5 h-5" />
-            </button>
-
-            <button
-              className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSending || isRecording || showLinkPreviewModal}
-              onClick={handleOpenRewrite}
-              type="button"
-              title="Reescrever com GPT"
-            >
-              <Sparkles className="w-5 h-5" />
+              <MoreVertical className="w-5 h-5" />
             </button>
 
             {showEmojiPicker && (
@@ -2266,6 +2258,48 @@ function MessageInputComponent({
                     <span className="text-base">{emoji}</span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {showComposerActionsMenu && (
+              <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 min-w-64 p-2">
+                <div className="space-y-1">
+                  {isDirectChat && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        setShowComposerActionsMenu(false);
+                        handleOpenFollowUp();
+                      }}
+                      disabled={isSending || isRecording || followUpLoading || showLinkPreviewModal}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span>{followUpLoading ? 'Gerando follow-up...' : 'Gerar follow-up com IA'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      setShowComposerActionsMenu(false);
+                      handleOpenRewrite();
+                    }}
+                    disabled={isSending || isRecording || showLinkPreviewModal}
+                  >
+                    <Scissors className="h-4 w-4" />
+                    <span>Reescrever mensagem</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleOpenQuickRepliesMenu}
+                    disabled={isSending}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Mensagens rapidas</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

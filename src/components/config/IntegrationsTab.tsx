@@ -935,6 +935,7 @@ export default function IntegrationsTab() {
                             placeholder="Selecione o provedor"
                             includePlaceholderOption={false}
                             options={AI_PROVIDER_OPTIONS}
+                            size="compact"
                           />
                         </div>
 

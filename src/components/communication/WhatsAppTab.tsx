@@ -378,6 +378,7 @@ export default function WhatsAppTab() {
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const advancedChatFiltersRef = useRef<HTMLDivElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
@@ -1328,6 +1329,21 @@ export default function WhatsAppTab() {
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
   }, [chatMenu, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!showAdvancedChatFilters) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!advancedChatFiltersRef.current?.contains(event.target as Node)) {
+        setShowAdvancedChatFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [showAdvancedChatFilters]);
 
   useEffect(() => {
     const loadSavedContacts = async () => {
@@ -2799,6 +2815,24 @@ export default function WhatsAppTab() {
 
   const hasAdvancedChatFilters =
     chatLeadStatusFilter !== 'all' || chatLeadOwnerFilter !== 'all' || chatLeadPresenceFilter !== 'all';
+  const activeAdvancedChatFiltersCount = [
+    chatLeadStatusFilter !== 'all',
+    chatLeadOwnerFilter !== 'all',
+    chatLeadPresenceFilter !== 'all',
+  ].filter(Boolean).length;
+  const activeAdvancedChatFiltersLabel = [
+    chatLeadStatusFilter !== 'all'
+      ? `Status: ${chatLeadStatusFilter === EMPTY_FILTER_VALUE ? 'Sem status' : chatLeadStatusFilter}`
+      : null,
+    chatLeadOwnerFilter !== 'all'
+      ? `Responsavel: ${chatLeadOwnerFilter === EMPTY_FILTER_VALUE ? 'Sem responsavel' : chatLeadOwnerFilter}`
+      : null,
+    chatLeadPresenceFilter !== 'all'
+      ? `CRM: ${chatLeadPresenceFilter === 'withLead' ? 'Com lead' : 'Sem lead'}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   const {
     archivedCount,
@@ -4849,23 +4883,26 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   Transmissoes ({broadcastInboxCount})
                 </Button>
             </div>
-            <div className="space-y-2 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2ea)]/60 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant={showAdvancedChatFilters || hasAdvancedChatFilters ? 'warning' : 'secondary'}
-                    size="sm"
-                    className="h-auto rounded-full px-3 py-1.5 text-xs"
-                    onClick={() => setShowAdvancedChatFilters((current) => !current)}
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Filtros CRM
-                    {hasAdvancedChatFilters ? ' ativos' : ''}
-                  </Button>
-                  <span className="text-[11px] text-slate-500">
-                    {visibleChats.length} resultado(s){hasAdvancedChatFilters ? ' com segmentacao avancada' : ''}
-                  </span>
-                </div>
+            <div ref={advancedChatFiltersRef} className="relative">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={showAdvancedChatFilters || hasAdvancedChatFilters ? 'warning' : 'secondary'}
+                  size="sm"
+                  className="h-auto rounded-full px-3 py-1.5 text-xs"
+                  onClick={() => setShowAdvancedChatFilters((current: boolean) => !current)}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filtros CRM
+                  {hasAdvancedChatFilters && (
+                    <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] leading-none">
+                      {activeAdvancedChatFiltersCount}
+                    </span>
+                  )}
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedChatFilters ? 'rotate-180' : ''}`} />
+                </Button>
+                <span className="text-[11px] text-slate-500">
+                  {hasAdvancedChatFilters ? activeAdvancedChatFiltersLabel : `${visibleChats.length} resultado(s)`}
+                </span>
                 {hasAdvancedChatFilters && (
                   <Button
                     variant="ghost"
@@ -4878,56 +4915,78 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     }}
                   >
                     <X className="h-3.5 w-3.5" />
-                    Limpar filtros
+                    Limpar
                   </Button>
                 )}
               </div>
-              {(showAdvancedChatFilters || hasAdvancedChatFilters) && (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status CRM</span>
-                    <select
-                      value={chatLeadStatusFilter}
-                      onChange={(event) => setChatLeadStatusFilter(event.target.value)}
-                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
-                    >
-                      <option value="all">Todos os status</option>
-                      <option value={EMPTY_FILTER_VALUE}>Sem status</option>
-                      {chatLeadStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Responsavel</span>
-                    <select
-                      value={chatLeadOwnerFilter}
-                      onChange={(event) => setChatLeadOwnerFilter(event.target.value)}
-                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
-                    >
-                      <option value="all">Todos os responsaveis</option>
-                      <option value={EMPTY_FILTER_VALUE}>Sem responsavel</option>
-                      {chatLeadOwnerOptions.map((owner) => (
-                        <option key={owner} value={owner}>
-                          {owner}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Vinculo CRM</span>
-                    <select
-                      value={chatLeadPresenceFilter}
-                      onChange={(event) => setChatLeadPresenceFilter(event.target.value as ChatLeadPresenceFilter)}
-                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
-                    >
-                      <option value="all">Todos</option>
-                      <option value="withLead">Com lead vinculado</option>
-                      <option value="withoutLead">Sem lead vinculado</option>
-                    </select>
-                  </label>
+              {showAdvancedChatFilters && (
+                <div className="absolute left-0 top-full z-20 mt-2 w-full max-w-2xl rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Segmentacao CRM</p>
+                      <p className="text-[11px] text-slate-500">Combine status, responsavel e vinculo sem poluir a inbox.</p>
+                    </div>
+                    {hasAdvancedChatFilters && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto rounded-full px-2.5 py-1 text-xs"
+                        onClick={() => {
+                          setChatLeadStatusFilter('all');
+                          setChatLeadOwnerFilter('all');
+                          setChatLeadPresenceFilter('all');
+                        }}
+                      >
+                        Limpar filtros
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status CRM</span>
+                      <select
+                        value={chatLeadStatusFilter}
+                        onChange={(event) => setChatLeadStatusFilter(event.target.value)}
+                        className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                      >
+                        <option value="all">Todos os status</option>
+                        <option value={EMPTY_FILTER_VALUE}>Sem status</option>
+                        {chatLeadStatusOptions.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Responsavel</span>
+                      <select
+                        value={chatLeadOwnerFilter}
+                        onChange={(event) => setChatLeadOwnerFilter(event.target.value)}
+                        className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                      >
+                        <option value="all">Todos os responsaveis</option>
+                        <option value={EMPTY_FILTER_VALUE}>Sem responsavel</option>
+                        {chatLeadOwnerOptions.map((owner) => (
+                          <option key={owner} value={owner}>
+                            {owner}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Vinculo CRM</span>
+                      <select
+                        value={chatLeadPresenceFilter}
+                        onChange={(event) => setChatLeadPresenceFilter(event.target.value as ChatLeadPresenceFilter)}
+                        className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                      >
+                        <option value="all">Todos</option>
+                        <option value="withLead">Com lead vinculado</option>
+                        <option value="withoutLead">Sem lead vinculado</option>
+                      </select>
+                    </label>
+                  </div>
                 </div>
               )}
             </div>

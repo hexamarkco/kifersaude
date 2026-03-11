@@ -52,11 +52,11 @@ export const getDropdownTriggerClass = ({
 }: TriggerOptions) =>
   cx(
     'panel-glass-panel panel-interactive-glass relative w-full rounded-lg border text-left transition-shadow',
-    'focus:border-transparent focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60',
+    'focus:border-transparent focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60',
     compact ? 'h-8 pl-8 pr-8 text-xs' : 'h-11 pl-10 pr-10 text-sm',
     isDark
-      ? 'border-amber-700/70 bg-stone-950 text-[var(--panel-input-text,var(--panel-text))]'
-      : 'border-slate-300 bg-white text-[var(--panel-input-text,var(--panel-text-soft))]',
+      ? 'border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-surface,#1b1611)] text-[var(--panel-input-text,var(--panel-text))]'
+      : 'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-input-text,var(--panel-text-soft))]',
     className,
   );
 
@@ -69,8 +69,8 @@ export const getDropdownMenuClass = ({
     'panel-glass-panel panel-dropdown-scrollbar z-[110] overflow-y-auto rounded-lg border shadow-xl',
     position,
     isDark
-      ? 'panel-dropdown-dark border-amber-700/70 bg-stone-950 text-stone-100'
-      : 'border-slate-200 bg-white text-slate-700',
+      ? 'panel-dropdown-dark border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-surface,#1b1611)] text-[var(--panel-text,#f7efe5)]'
+      : 'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]',
     className,
   );
 
@@ -86,20 +86,22 @@ export const getDropdownOptionClass = ({
     compact ? 'py-1.5 text-xs' : 'py-2 text-sm',
     selected
       ? isDark
-        ? 'bg-amber-500/20 font-medium text-amber-200'
-        : 'bg-amber-50 font-medium text-amber-700'
+        ? 'bg-[color:var(--panel-accent-soft,#4a2a14)] font-medium text-[var(--panel-accent-foreground,#f7d7b4)]'
+        : 'bg-[color:var(--panel-accent-soft,#f6e4c7)] font-medium text-[var(--panel-accent-ink,#6f3f16)]'
       : highlighted
         ? isDark
-          ? 'bg-stone-800 text-stone-100'
-          : 'bg-slate-100 text-slate-700'
+          ? 'bg-[color:var(--panel-surface-soft,#2a1d15)] text-[var(--panel-text,#f7efe5)]'
+          : 'bg-[color:var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text,#1a120d)]'
         : isDark
-          ? 'text-stone-200 hover:bg-stone-800'
-          : 'text-slate-700 hover:bg-slate-100',
+          ? 'text-[var(--panel-text,#f7efe5)] hover:bg-[color:var(--panel-surface-soft,#2a1d15)]'
+          : 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
     className,
   );
 
 export const getDropdownActionClass = (isDark: boolean) =>
   cx(
     'w-full px-3 py-2 text-left text-sm font-medium transition-colors',
-    isDark ? 'text-amber-300 hover:bg-stone-800' : 'text-amber-600 hover:bg-slate-50',
+    isDark
+      ? 'text-[var(--panel-accent-foreground,#f7d7b4)] hover:bg-[color:var(--panel-surface-soft,#2a1d15)]'
+      : 'text-[var(--panel-accent-ink,#6f3f16)] hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
   );

@@ -13,32 +13,32 @@ import {
 const serviceProfiles = [
   {
     id: 'pf',
-    title: 'Pessoa fisica',
-    subtitle: 'Decisao individual com previsibilidade e cobertura inteligente.',
+    title: 'Pessoa f?sica',
+    subtitle: 'Decis?o individual com previsibilidade e cobertura inteligente.',
     bullets: [
       'Comparativo com foco no seu uso real',
-      'Validacao de rede por regiao de atendimento',
-      'Leitura clara de carencias e reajustes',
+      'Valida??o de rede por regi?o de atendimento',
+      'Leitura clara de car?ncias e reajustes',
     ],
   },
   {
     id: 'pme',
     title: 'PME e CNPJ',
-    subtitle: 'Beneficio de saude estruturado para empresas de pequeno e medio porte.',
+    subtitle: 'Benef?cio de sa?de estruturado para empresas de pequeno e m?dio porte.',
     bullets: [
-      'Apoio de elegibilidade e documentacao',
-      'Analise de custo total por composicao',
+      'Apoio de elegibilidade e documenta??o',
+      'An?lise de custo total por composi??o',
       'Curadoria por perfil da equipe',
     ],
   },
   {
     id: 'adesao',
-    title: 'Coletivo por adesao',
-    subtitle: 'Alternativa para perfis elegiveis que querem equilibrio entre custo e rede.',
+    title: 'Coletivo por ades?o',
+    subtitle: 'Alternativa para perfis eleg?veis que querem equil?brio entre custo e rede.',
     bullets: [
       'Triagem de regras de entrada',
-      'Comparativo tecnico de operadoras',
-      'Acompanhamento do inicio ao pos-venda',
+      'Comparativo t?cnico de operadoras',
+      'Acompanhamento do in?cio ao p?s-venda',
     ],
   },
 ];
@@ -51,36 +51,36 @@ const methodSteps = [
   },
   {
     step: '02',
-    title: 'Curadoria de opções',
-    text: 'Filtramos planos com foco em rede relevante, sustentabilidade financeira e segurança de uso.',
+    title: 'Curadoria de op??es',
+    text: 'Filtramos planos com foco em rede relevante, sustentabilidade financeira e seguran?a de uso.',
   },
   {
     step: '03',
     title: 'Comparativo guiado',
-    text: 'Você recebe recomendação principal, alternativa de segurança e leitura honesta dos pontos sensíveis.',
+    text: 'Voc? recebe recomenda??o principal, alternativa de seguran?a e leitura honesta dos pontos sens?veis.',
   },
   {
     step: '04',
-    title: 'Apoio na contratacao',
-    text: 'Acompanhamos proposta, pendencias e ativacao para transformar escolha em resultado pratico.',
+    title: 'Apoio na contrata??o',
+    text: 'Acompanhamos proposta, pend?ncias e ativa??o para transformar escolha em resultado pr?tico.',
   },
 ];
 
 const testimonials = [
   {
     name: 'Regina S.',
-    context: 'Familia com 3 vidas',
-    quote: 'Consegui reduzir custo sem abrir mao dos hospitais que ja usavamos. A clareza no comparativo foi essencial.',
+    context: 'Fam?lia com 3 vidas',
+    quote: 'Consegui reduzir custo sem abrir m?o dos hospitais que j? us?vamos. A clareza no comparativo foi essencial.',
   },
   {
     name: 'Marcelo R.',
-    context: 'PME de servicos',
+    context: 'PME de servi?os',
     quote: 'Estruturamos o plano empresarial com menos burocracia e mais previsibilidade para o caixa da empresa.',
   },
   {
     name: 'Ana Paula F.',
-    context: 'Transicao de beneficio corporativo',
-    quote: 'Atendimento consultivo de verdade. Entendi riscos e vantagens antes de tomar decisao.',
+    context: 'Transi??o de benef?cio corporativo',
+    quote: 'Atendimento consultivo de verdade. Entendi riscos e vantagens antes de tomar decis?o.',
   },
 ];
 
@@ -88,22 +88,22 @@ const faqItems = [
   {
     question: 'A consultoria da Kifer tem custo para o cliente final?',
     answer:
-      'Não. A orientação consultiva é gratuita para o cliente final e inclui triagem, comparativo e apoio no processo de contratação.',
+      'N?o. A orienta??o consultiva ? gratuita para o cliente final e inclui triagem, comparativo e apoio no processo de contrata??o.',
   },
   {
-    question: 'Como vocês garantem que a rede informada é a correta?',
+    question: 'Como voc?s garantem que a rede informada ? a correta?',
     answer:
-      'A validacao e feita no produto especifico, por categoria e territorio de uso, evitando confirmacoes genericas por nome de operadora.',
+      'A valida??o ? feita no produto espec?fico, por categoria e territ?rio de uso, evitando confirma??es gen?ricas por nome de operadora.',
   },
   {
-    question: 'Atendem PF, PME e adesao com a mesma metodologia?',
+    question: 'Atendem PF, PME e ades?o com a mesma metodologia?',
     answer:
-      'Sim. O metodo e o mesmo, mas a estrategia muda conforme perfil, elegibilidade, objetivo de cobertura e realidade financeira.',
+      'Sim. O m?todo ? o mesmo, mas a estrat?gia muda conforme perfil, elegibilidade, objetivo de cobertura e realidade financeira.',
   },
   {
-    question: 'Vocês acompanham depois da assinatura?',
+    question: 'Voc?s acompanham depois da assinatura?',
     answer:
-      'Sim. O pós-venda faz parte da entrega, com apoio em dúvidas operacionais, pendências e primeiros passos de uso.',
+      'Sim. O p?s-venda faz parte da entrega, com apoio em d?vidas operacionais, pend?ncias e primeiros passos de uso.',
   },
 ];
 
@@ -111,10 +111,10 @@ export default function HomePage() {
   return (
     <div className="clinic-theme kifer-ds kifer-home-theme min-h-screen text-slate-900">
       <Helmet>
-        <title>Kifer Saude | Site institucional</title>
+        <title>Kifer Sa?de | Site institucional</title>
         <meta
           name="description"
-          content="Consultoria institucional da Kifer Saude para PF, PME e adesao, com comparativo tecnico e acompanhamento consultivo completo."
+          content="Consultoria institucional da Kifer Sa?de para PF, PME e ades?o, com comparativo t?cnico e acompanhamento consultivo completo."
         />
         <link rel="canonical" href="https://www.kifersaude.com.br/" />
       </Helmet>
@@ -126,14 +126,14 @@ export default function HomePage() {
               <Stethoscope className="h-5 w-5" />
             </span>
             <span>
-              <span className="clinic-heading block text-2xl font-semibold leading-none">Kifer Saude</span>
+              <span className="clinic-heading block text-2xl font-semibold leading-none">Kifer Sa?de</span>
               <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">institucional</span>
             </span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-700 md:flex">
             <a href="#metodo" className="transition hover:text-orange-700">
-              Metodo
+              M?todo
             </a>
             <a href="#perfis" className="transition hover:text-orange-700">
               Perfis
@@ -165,11 +165,11 @@ export default function HomePage() {
             <div className="clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-700">site principal</p>
               <h1 className="clinic-heading mt-4 text-5xl font-semibold leading-[0.93] text-slate-900 md:text-7xl">
-                Consultoria de saude com linguagem clara e decisao segura.
+                Consultoria de sa?de com linguagem clara e decis?o segura.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
-                Estruturamos comparativos para PF, PME e adesao com criterio tecnico, leitura honesta de risco e apoio
-                humano em toda a jornada de contratacao.
+                Estruturamos comparativos para PF, PME e ades?o com crit?rio t?cnico, leitura honesta de risco e apoio
+                humano em toda a jornada de contrata??o.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -190,8 +190,8 @@ export default function HomePage() {
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">+3.200 clientes orientados</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia útil</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pós-venda</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia ?til</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no p?s-venda</div>
               </div>
             </div>
 
@@ -202,23 +202,23 @@ export default function HomePage() {
               <div className="clinic-photo-slot mt-6 aspect-[4/5] rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-100/60 to-white p-6">
                 <div className="flex h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-300/90 text-center text-slate-600">
                   <BadgeCheck className="h-8 w-8 text-orange-600" />
-                  <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-orange-700">Espaco para foto da corretora</p>
-                  <p className="mt-2 max-w-[18rem] text-xs">Substituir por retrato profissional em plano medio, fundo claro e identidade visual da marca.</p>
+                  <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-orange-700">Espa?o para foto da corretora</p>
+                  <p className="mt-2 max-w-[18rem] text-xs">Substituir por retrato profissional em plano m?dio, fundo claro e identidade visual da marca.</p>
                 </div>
               </div>
 
               <ul className="mt-6 space-y-3 text-sm text-slate-700">
                 <li className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Comparativo consultivo sem pressao de fechamento.
+                  Comparativo consultivo sem press?o de fechamento.
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Análise de rede por uso real e não por vitrine comercial.
+                  An?lise de rede por uso real e n?o por vitrine comercial.
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Suporte de documentacao, proposta e ativacao.
+                  Suporte de documenta??o, proposta e ativa??o.
                 </li>
               </ul>
             </article>
@@ -228,10 +228,10 @@ export default function HomePage() {
         <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl rounded-[2rem] bg-slate-900 px-8 py-11 text-white shadow-[0_40px_90px_-56px_rgba(15,23,42,0.92)] md:px-12">
             <div className="max-w-3xl clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">metodo institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight">Uma jornada de decisão, não uma página de oferta</h2>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">m?todo institucional</p>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight">Uma jornada de decis?o, n?o uma p?gina de oferta</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-300">
-                Nosso processo e desenhado para reduzir risco de arrependimento e aumentar seguranca de uso no curto e medio prazo.
+                Nosso processo ? desenhado para reduzir risco de arrependimento e aumentar seguran?a de uso no curto e m?dio prazo.
               </p>
             </div>
 
@@ -254,7 +254,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">frentes de atendimento</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Trilhas especificas para PF, PME e adesao</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Trilhas espec?ficas para PF, PME e ades?o</h2>
             </div>
 
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
@@ -293,7 +293,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">depoimentos</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Quem passou pela consultoria descreve clareza e seguranca</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Quem passou pela consultoria descreve clareza e seguran?a</h2>
             </div>
 
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -320,9 +320,9 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">faq institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Dúvidas que aparecem antes de contratar</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">D?vidas que aparecem antes de contratar</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Reunimos respostas objetivas para os temas que mais influenciam sua decisao.
+                Reunimos respostas objetivas para os temas que mais influenciam sua decis?o.
               </p>
               <Link
                 to="/lp"
@@ -356,12 +356,12 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-orange-700 via-orange-600 to-orange-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
             <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">proximo passo</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">pr?ximo passo</p>
                 <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight md:text-6xl">
-                  Vamos construir seu comparativo com criterio tecnico.
+                  Vamos construir seu comparativo com crit?rio t?cnico.
                 </h2>
                 <p className="mt-4 max-w-2xl text-orange-50">
-                  Se você quer decidir com mais segurança, nossa equipe inicia pelo briefing e organiza as melhores opções para seu perfil.
+                  Se voc? quer decidir com mais seguran?a, nossa equipe inicia pelo briefing e organiza as melhores op??es para seu perfil.
                 </p>
               </div>
 
@@ -383,7 +383,7 @@ export default function HomePage() {
                 </a>
                 <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-orange-100">
                   <Clock3 className="h-4 w-4" />
-                  retorno em horario comercial
+                  retorno em hor?rio comercial
                 </p>
               </div>
             </div>
@@ -393,13 +393,13 @@ export default function HomePage() {
 
       <footer className="border-t border-orange-100 bg-white/85 px-4 py-7 text-sm text-slate-600 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 md:flex-row">
-          <p>Kifer Saude - Consultoria institucional em saude suplementar no RJ.</p>
+          <p>Kifer Sa?de - Consultoria institucional em sa?de suplementar no RJ.</p>
           <div className="flex items-center gap-4">
             <Link to="/planos" className="font-semibold text-slate-700 hover:text-orange-700">
               Planos
             </Link>
             <Link to="/lp" className="font-semibold text-slate-700 hover:text-orange-700">
-              Cotacao
+              Cota??o
             </Link>
             <a href="tel:+5521979302389" className="font-semibold text-slate-700 hover:text-orange-700">
               (21) 97930-2389

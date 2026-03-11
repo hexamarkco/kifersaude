@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cx } from '../lib/cx';
+import Checkbox from './ui/Checkbox';
 import {
   getDropdownActionClass,
   getDropdownMenuClass,
@@ -162,23 +163,10 @@ export default function FilterMultiSelect({
                   isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
                 )}
               >
-                <span
-                  className={cx(
-                    'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border',
-                    isSelected
-                      ? 'border-teal-500 bg-teal-500'
-                      : isDarkTheme
-                        ? 'border-slate-600'
-                        : 'border-slate-300',
-                  )}
-                >
-                  {isSelected && <Check className="w-3 h-3 text-white" />}
-                </span>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={isSelected}
                   onChange={() => toggleOption(option.value)}
-                  className="sr-only"
+                  className="pointer-events-none"
                 />
                 <span>{option.label}</span>
               </label>

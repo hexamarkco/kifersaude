@@ -21,13 +21,13 @@ export default function ConfigPage() {
       ? { id: 'system', label: 'Geral', icon: Settings }
       : null,
     getRoleModulePermission(role, 'config-users').can_view
-      ? { id: 'users', label: 'Usuarios', icon: Users }
+      ? { id: 'users', label: 'Usu?rios', icon: Users }
       : null,
     getRoleModulePermission(role, 'config-automation').can_view
-      ? { id: 'automation', label: 'Automacoes', icon: GitBranch }
+      ? { id: 'automation', label: 'Automa??es', icon: GitBranch }
       : null,
     getRoleModulePermission(role, 'config-integrations').can_view
-      ? { id: 'integrations', label: 'Integracoes', icon: Plug }
+      ? { id: 'integrations', label: 'Integra??es', icon: Plug }
       : null,
   ].filter(Boolean) as TabItem<TabType>[];
 
@@ -37,7 +37,7 @@ export default function ConfigPage() {
         <Card variant="glass" className="border-red-200 bg-red-50 p-8 text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
           <h2 className="mb-2 text-2xl font-bold text-red-900">Acesso Negado</h2>
-          <p className="text-red-700">Voce nao tem permissao para acessar esta pagina.</p>
+          <p className="text-red-700">Voc? n?o tem permiss?o para acessar esta p?gina.</p>
         </Card>
       </div>
     );
@@ -49,8 +49,8 @@ export default function ConfigPage() {
   return (
     <div className="config-transparent-buttons panel-page-shell w-full">
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">Configuracoes</h1>
-        <p className="text-slate-600">Centralize regras do sistema, operadoras, acessos e integracoes</p>
+        <h1 className="mb-2 text-3xl font-bold text-slate-900">Configura??es</h1>
+        <p className="text-slate-600">Centralize regras do sistema, operadoras, acessos e integra??es</p>
       </div>
 
       <Card variant="glass" padding="none" className="mb-6 overflow-hidden">

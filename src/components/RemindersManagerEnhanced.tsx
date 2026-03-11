@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Reminder, Lead, Contract } from '../lib/supabase';
@@ -32,6 +32,7 @@ import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 import { RemindersPageSkeleton } from './ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
+import { toast } from '../lib/toast';
 
 const getWhatsappLink = (phone: string | null | undefined) => {
   if (!phone) return null;
@@ -281,7 +282,7 @@ export default function RemindersManagerEnhanced() {
     const leadData = await fetchLeadInfo(leadId);
 
     if (!leadData) {
-      alert('Não foi possível localizar os dados deste lead.');
+      toast.error('N?o foi poss?vel localizar os dados deste lead.');
       return;
     }
 
@@ -310,7 +311,7 @@ export default function RemindersManagerEnhanced() {
         return next;
       });
     } catch (error) {
-      console.error('Erro ao sincronizar próximo retorno do lead:', error);
+      console.error('Erro ao sincronizar prÃ³ximo retorno do lead:', error);
     }
   };
 
@@ -318,7 +319,7 @@ export default function RemindersManagerEnhanced() {
     const leadId = getLeadIdForReminder(reminder);
 
     if (!leadId) {
-      alert('Não foi possível identificar o lead deste lembrete.');
+      toast.error('N?o foi poss?vel identificar o lead deste lembrete.');
       return;
     }
 
@@ -355,7 +356,7 @@ export default function RemindersManagerEnhanced() {
       if (leadInfo) {
         const interactionPayload = {
           lead_id: leadId,
-          tipo: 'Observação',
+          tipo: 'ObservaÃ§Ã£o',
           descricao: `Status alterado de "${previousStatus}" para "Perdido"`,
           responsavel: leadInfo.responsavel,
         };
@@ -407,7 +408,7 @@ export default function RemindersManagerEnhanced() {
       setReminders(current => current.filter(item => getLeadIdForReminder(item) !== leadId));
     } catch (error) {
       console.error('Erro ao marcar lead como perdido:', error);
-      alert('Não foi possível marcar o lead como perdido.');
+      toast.error('N?o foi poss?vel marcar o lead como perdido.');
     } finally {
       setMarkingLostLeadId(null);
     }
@@ -470,7 +471,7 @@ export default function RemindersManagerEnhanced() {
               ...prev,
               {
                 lead: leadInfo,
-                promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+                promptMessage: 'Deseja marcar um prÃ³ximo lembrete para este lead?',
                 defaultTitle: reminder.titulo,
                 defaultDescription: reminder.descricao ?? undefined,
                 defaultType: 'Follow-up',
@@ -503,7 +504,7 @@ export default function RemindersManagerEnhanced() {
       return true;
     } catch (error) {
       console.error('Erro ao atualizar lembrete:', error);
-      alert('Erro ao atualizar lembrete');
+      toast.error('Erro ao atualizar lembrete.');
       return false;
     }
   };
@@ -513,7 +514,7 @@ export default function RemindersManagerEnhanced() {
 
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
-      alert('Não foi possível identificar o lead deste lembrete.');
+      toast.error('N?o foi poss?vel identificar o lead deste lembrete.');
       return;
     }
 
@@ -561,8 +562,8 @@ export default function RemindersManagerEnhanced() {
         );
       }
     } catch (error) {
-      console.error('Erro ao agendar lembrete rápido:', error);
-      alert('Não foi possível criar o novo lembrete rápido.');
+      console.error('Erro ao agendar lembrete rÃ¡pido:', error);
+      toast.error('N?o foi poss?vel criar o novo lembrete r?pido.');
     } finally {
       setQuickSchedulingAction(null);
     }
@@ -603,7 +604,7 @@ export default function RemindersManagerEnhanced() {
       }
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
-      alert('Erro ao remover lembrete');
+      toast.error('Erro ao remover lembrete.');
     } finally {
       setIsDeletingReminder(false);
       setReminderPendingDeletion(null);
@@ -648,7 +649,7 @@ export default function RemindersManagerEnhanced() {
       );
     } catch (error) {
       console.error('Erro ao reagendar lembrete:', error);
-      alert('Erro ao reagendar lembrete');
+      toast.error('Erro ao reagendar lembrete.');
     }
   };
 
@@ -723,7 +724,7 @@ export default function RemindersManagerEnhanced() {
 
           return {
             lead: leadInfo,
-            promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
+            promptMessage: 'Deseja marcar um prÃ³ximo lembrete para este lead?',
             defaultTitle: reminder.titulo,
             defaultDescription: reminder.descricao ?? undefined,
             defaultType: 'Follow-up',
@@ -752,7 +753,7 @@ export default function RemindersManagerEnhanced() {
       );
     } catch (error) {
       console.error('Erro ao atualizar lembretes:', error);
-      alert('Erro ao atualizar lembretes');
+      toast.error('Erro ao atualizar lembretes.');
     }
   };
 
@@ -760,7 +761,7 @@ export default function RemindersManagerEnhanced() {
     if (selectedReminders.size === 0) return;
     const confirmed = await requestConfirmation({
       title: 'Excluir lembretes selecionados',
-      description: `Deseja remover ${selectedReminders.size} lembrete(s)? Esta ação não pode ser desfeita.`,
+      description: `Deseja remover ${selectedReminders.size} lembrete(s)? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`,
       confirmLabel: 'Excluir lembretes',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -791,14 +792,14 @@ export default function RemindersManagerEnhanced() {
       setReminders(current => current.filter(reminder => !reminderIds.includes(reminder.id)));
     } catch (error) {
       console.error('Erro ao remover lembretes:', error);
-      alert('Erro ao remover lembretes');
+      toast.error('Erro ao remover lembretes.');
     }
   };
 
   const handleMarkAllAsRead = async () => {
     const confirmed = await requestConfirmation({
       title: 'Marcar lembretes como lidos',
-      description: 'Deseja marcar todos os lembretes não lidos como lidos?',
+      description: 'Deseja marcar todos os lembretes nÃ£o lidos como lidos?',
       confirmLabel: 'Marcar como lidos',
       cancelLabel: 'Cancelar',
     });
@@ -842,7 +843,7 @@ export default function RemindersManagerEnhanced() {
       );
     } catch (error) {
       console.error('Erro ao atualizar lembretes:', error);
-      alert('Erro ao atualizar lembretes');
+      toast.error('Erro ao atualizar lembretes.');
     }
   };
 
@@ -1001,8 +1002,8 @@ export default function RemindersManagerEnhanced() {
     const icons: Record<string, LucideIcon> = {
       'Documentos pendentes': AlertCircle,
       'Assinatura': AlertCircle,
-      'Ativação': Calendar,
-      'Renovação': Calendar,
+      'AtivaÃ§Ã£o': Calendar,
+      'RenovaÃ§Ã£o': Calendar,
       'Retorno': Bell,
     };
     const Icon = icons[tipo] || Bell;
@@ -1129,8 +1130,8 @@ export default function RemindersManagerEnhanced() {
               variant="success"
               size="icon"
               className="h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
-              title={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone não disponível'}
-              aria-label={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone não disponível'}
+              title={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone nÃ£o disponÃ­vel'}
+              aria-label={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone nÃ£o disponÃ­vel'}
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
@@ -1183,8 +1184,8 @@ export default function RemindersManagerEnhanced() {
               variant="soft"
               size="icon"
               className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
-              title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-              aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
+              title={reminder.lido ? 'Marcar como nÃ£o lido' : 'Marcar como lido'}
+              aria-label={reminder.lido ? 'Marcar como nÃ£o lido' : 'Marcar como lido'}
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -1232,13 +1233,13 @@ export default function RemindersManagerEnhanced() {
     >
     <div ref={remindersRootRef} className="panel-dashboard-immersive panel-page-shell">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
-        <h2 className="text-2xl font-bold text-slate-900">Lembretes e Notificações</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Lembretes e NotificaÃ§Ãµes</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => setShowCalendar(true)}
             variant="secondary"
             size="icon"
-            title="Ver Calendário"
+            title="Ver CalendÃ¡rio"
           >
             <Calendar className="w-5 h-5" />
           </Button>
@@ -1246,7 +1247,7 @@ export default function RemindersManagerEnhanced() {
             onClick={() => setShowStats(!showStats)}
             variant={showStats ? 'primary' : 'secondary'}
             size="icon"
-            title="Estatísticas"
+            title="EstatÃ­sticas"
           >
             <BarChart3 className="w-5 h-5" />
           </Button>
@@ -1255,7 +1256,7 @@ export default function RemindersManagerEnhanced() {
             variant={filter === 'nao-lidos' ? 'primary' : 'secondary'}
             size="md"
           >
-            Não Lidos ({stats.unread})
+            NÃ£o Lidos ({stats.unread})
           </Button>
           <Button
             onClick={() => setFilter('todos')}
@@ -1281,7 +1282,7 @@ export default function RemindersManagerEnhanced() {
             <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
           </div>
           <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-sm text-slate-600 mb-1">Não Lidos</div>
+            <div className="text-sm text-slate-600 mb-1">NÃ£o Lidos</div>
             <div className="text-3xl font-bold text-orange-600">{stats.unread}</div>
           </div>
           <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1293,7 +1294,7 @@ export default function RemindersManagerEnhanced() {
             <div className="text-3xl font-bold text-teal-600">{stats.today}</div>
           </div>
           <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-sm text-slate-600 mb-1">Concluídos</div>
+            <div className="text-sm text-slate-600 mb-1">ConcluÃ­dos</div>
             <div className="text-3xl font-bold text-green-600">{stats.completed}</div>
           </div>
         </div>
@@ -1304,7 +1305,7 @@ export default function RemindersManagerEnhanced() {
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Buscar lembretes por título, descrição ou tipo..."
+              placeholder="Buscar lembretes por tÃ­tulo, descriÃ§Ã£o ou tipo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={Search}
@@ -1333,8 +1334,8 @@ export default function RemindersManagerEnhanced() {
                 { value: 'all', label: 'Todos os tipos' },
                 { value: 'Documentos pendentes', label: 'Documentos pendentes' },
                 { value: 'Assinatura', label: 'Assinatura' },
-                { value: 'Ativação', label: 'Ativação' },
-                { value: 'Renovação', label: 'Renovação' },
+                { value: 'AtivaÃ§Ã£o', label: 'AtivaÃ§Ã£o' },
+                { value: 'RenovaÃ§Ã£o', label: 'RenovaÃ§Ã£o' },
                 { value: 'Retorno', label: 'Retorno' },
               ]}
             />
@@ -1414,10 +1415,10 @@ export default function RemindersManagerEnhanced() {
             {searchQuery || typeFilter !== 'all' || priorityFilter !== 'all'
               ? 'Tente ajustar os filtros de busca'
               : filter === 'nao-lidos'
-              ? 'Você não tem lembretes pendentes'
+              ? 'VocÃª nÃ£o tem lembretes pendentes'
               : filter === 'lidos'
-              ? 'Você não tem lembretes lidos'
-              : 'Você não tem lembretes cadastrados'}
+              ? 'VocÃª nÃ£o tem lembretes lidos'
+              : 'VocÃª nÃ£o tem lembretes cadastrados'}
           </p>
         </div>
       ) : viewMode === 'grouped' ? (
@@ -1503,7 +1504,7 @@ export default function RemindersManagerEnhanced() {
                 <p className="text-sm text-slate-600 mt-1">
                   Tem certeza que deseja remover o lembrete
                   <span className="font-semibold text-slate-900"> "{reminderPendingDeletion.titulo}"</span>?
-                  Esta ação não pode ser desfeita.
+                  Esta aÃ§Ã£o nÃ£o pode ser desfeita.
                 </p>
                 {reminderPendingDeletion.descricao && (
                   <p className="mt-2 text-xs text-slate-500 break-words">
@@ -1675,3 +1676,4 @@ function ReminderContextLink({
     </span>
   );
 }
+

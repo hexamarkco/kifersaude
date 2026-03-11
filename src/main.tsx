@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
+import ToastViewport from './components/ui/ToastViewport';
 import {
   BlogTab,
   ConfigPage,
@@ -73,6 +74,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        <ToastViewport />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

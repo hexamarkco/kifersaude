@@ -11,6 +11,7 @@ import DateTimePicker from './ui/DateTimePicker';
 import Field from './ui/Field';
 import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
+import { toast } from '../lib/toast';
 
 type DependentFormProps = {
   contractId: string;
@@ -148,7 +149,7 @@ export default function DependentForm({
       onSave();
     } catch (error) {
       console.error('Erro ao salvar dependente:', error);
-      alert('Erro ao salvar dependente');
+      toast.error('Erro ao salvar dependente.');
     } finally {
       setSaving(false);
     }

@@ -12,6 +12,7 @@ import Button from './ui/Button';
 import { panelInputBaseClass, panelInputStateClasses } from './ui/standards';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { toast } from '../lib/toast';
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
 const detailPanelClass = 'rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)]';
@@ -505,7 +506,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       loadData();
     } catch (error) {
       console.error('Erro ao remover dependente:', error);
-      alert('Erro ao remover dependente');
+      toast.error('Erro ao remover dependente.');
     }
   };
 
@@ -537,7 +538,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       loadData();
     } catch (error) {
       console.error('Erro ao adicionar interacao:', error);
-      alert('Erro ao adicionar interacao');
+      toast.error('Erro ao adicionar interação.');
     }
   };
 
@@ -568,7 +569,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       loadData();
     } catch (error) {
       console.error('Erro ao remover interacao:', error);
-      alert('Erro ao remover interacao');
+      toast.error('Erro ao remover interação.');
     }
   };
 
@@ -966,7 +967,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <Button
                   onClick={() => {
                     if (holders.length === 0) {
-                      alert('Cadastre um titular antes de adicionar dependentes.');
+      toast.warning('Cadastre um titular antes de adicionar dependentes.');
                       return;
                     }
                     setEditingDependent(null);
@@ -1310,4 +1311,3 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     </ModalShell>
   );
 }
-

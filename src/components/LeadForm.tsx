@@ -32,6 +32,8 @@ import {
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
+import Checkbox from './ui/Checkbox';
+import { toast } from '../lib/toast';
 import DateTimePicker from './ui/DateTimePicker';
 import Field from './ui/Field';
 import Input from './ui/Input';
@@ -271,7 +273,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     const targetCep = cepValue ?? formData.cep;
 
     if (!targetCep || targetCep.replace(/\D/g, '').length !== 8) {
-      alert('Por favor, informe um CEP valido');
+      toast.warning('Por favor, informe um CEP válido.');
       return;
     }
 
@@ -290,7 +292,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         lastFetchedCepRef.current = targetCep.replace(/\D/g, '');
       }
     } catch {
-      alert('Erro ao consultar CEP. Verifique o CEP informado.');
+      toast.error('Erro ao consultar CEP. Verifique o CEP informado.');
     } finally {
       setLoadingCep(false);
     }
@@ -338,7 +340,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
       const missingRequired = requiredValues.find((item) => !item.value);
       if (missingRequired) {
-        alert(`Preencha o campo obrigatorio: ${missingRequired.label}.`);
+      toast.warning(`Preencha o campo obrigatório: ${missingRequired.label}.`);
         return;
       }
 
@@ -500,7 +502,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
       }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
-      alert('Erro ao salvar lead');
+      toast.error('Erro ao salvar lead.');
     } finally {
       setSaving(false);
     }
@@ -768,11 +770,10 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           {isNewLead && (
             <div className="md:col-span-2">
               <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={skipAutomationOnCreate}
                   onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  className="mt-1"
                 />
                 <span>
                   Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).

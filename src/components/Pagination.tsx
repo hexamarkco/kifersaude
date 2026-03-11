@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, ListFilter } from 'lucide-react';
 import { cx } from '../lib/cx';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
+import { isPanelDarkTheme } from './ui/dropdownStyles';
 
 type PaginationProps = {
   currentPage: number;
@@ -22,6 +23,7 @@ export default function Pagination({
 }: PaginationProps) {
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const isDarkTheme = isPanelDarkTheme();
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -56,9 +58,9 @@ export default function Pagination({
   };
 
   return (
-    <div className="panel-glass-panel flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="panel-glass-panel flex flex-col gap-3 border-t border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-700">Itens por pagina:</span>
+        <span className="text-sm text-[var(--panel-text-soft,#5b4635)]">Itens por página:</span>
         <div className="w-28">
           <FilterSingleSelect
             icon={ListFilter}
@@ -66,6 +68,7 @@ export default function Pagination({
             onChange={(value) => onItemsPerPageChange(Number(value))}
             placeholder="25"
             includePlaceholderOption={false}
+            size="compact"
             options={[
               { value: '10', label: '10' },
               { value: '25', label: '25' },
@@ -74,7 +77,7 @@ export default function Pagination({
             ]}
           />
         </div>
-        <span className="text-sm text-slate-700">
+        <span className="text-sm text-[var(--panel-text-soft,#5b4635)]">
           {startItem}-{endItem} de {totalItems}
         </span>
       </div>
@@ -95,16 +98,20 @@ export default function Pagination({
           {getPageNumbers().map((page, index) => (
             <div key={index}>
               {page === '...' ? (
-                <span className="px-3 py-1 text-slate-500">...</span>
+                <span className="px-3 py-1 text-[var(--panel-text-muted,#876f5c)]">...</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => onPageChange(page as number)}
                   className={cx(
-                    'inline-flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+                    'inline-flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)]',
                     currentPage === page
-                      ? 'border border-amber-300/90 bg-amber-100/80 text-amber-900 shadow-sm hover:border-amber-400/90 hover:bg-amber-200/75 hover:text-amber-950'
-                      : 'border border-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900',
+                      ? isDarkTheme
+                        ? 'border border-[var(--panel-accent-strong,#c86f1d)] bg-[color:rgba(200,111,29,0.24)] text-[var(--panel-accent-foreground,#f7d7b4)] shadow-sm hover:border-[var(--panel-accent,#df8f3b)] hover:bg-[color:rgba(200,111,29,0.34)]'
+                        : 'border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm hover:border-[var(--panel-accent-strong,#b85c1f)] hover:bg-[color:var(--panel-accent-hover,#efcf9f)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]'
+                      : isDarkTheme
+                        ? 'border border-transparent text-[var(--panel-text-soft,#d8c0ab)] hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:var(--panel-surface-soft,#2a1d15)] hover:text-[var(--panel-text,#f7efe5)]'
+                        : 'border border-transparent text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[color:var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)]',
                   )}
                   aria-current={currentPage === page ? 'page' : undefined}
                 >

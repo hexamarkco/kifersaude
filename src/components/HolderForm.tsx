@@ -23,6 +23,7 @@ import Button from './ui/Button';
 import Checkbox from './ui/Checkbox';
 import DateTimePicker from './ui/DateTimePicker';
 import Field from './ui/Field';
+import { toast } from '../lib/toast';
 import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 
@@ -360,7 +361,7 @@ export default function HolderForm({
       onSave();
     } catch (error) {
       console.error('Erro ao salvar titular:', error);
-      alert('Erro ao salvar titular');
+      toast.error('Erro ao salvar titular.');
     } finally {
       setSaving(false);
     }

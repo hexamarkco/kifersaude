@@ -38,6 +38,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
+import { toast } from '../../lib/toast';
 import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
 import { GroupInfoPanel } from './GroupInfoPanel';
@@ -4767,7 +4768,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       await markReminderQuickOpenItemAsRead(item);
     } catch (error) {
       console.error('Erro ao marcar lembrete como lido no WhatsApp:', error);
-      alert('NÃ£o foi possÃ­vel marcar este lembrete como lido.');
+      toast.error('Não foi possível marcar este lembrete como lido.');
     } finally {
       setMarkingReminderReadId((current) => (current === item.id ? null : current));
     }
@@ -4824,7 +4825,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       }
     } catch (error) {
       console.error('Erro ao criar lembrete rÃ¡pido no WhatsApp:', error);
-      alert('NÃ£o foi possÃ­vel criar o novo lembrete rÃ¡pido.');
+      toast.error('Não foi possível criar o novo lembrete rápido.');
       void loadReminderQuickOpen({ preserveExistingItems: true });
     } finally {
       startTransition(() => {
@@ -4855,7 +4856,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
       const leadForScheduler = await resolveReminderLeadForScheduling(item);
       if (!leadForScheduler) {
-        alert('Lembrete marcado como lido, mas não foi possível abrir o agendamento do próximo contato.');
+        toast.warning('Lembrete marcado como lido, mas não foi possível abrir o agendamento do próximo contato.');
         return;
       }
 
@@ -4871,7 +4872,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       );
     } catch (error) {
       console.error('Erro ao marcar lembrete como lido no WhatsApp:', error);
-      alert('Não foi possível marcar este lembrete como lido.');
+      toast.error('Não foi possível marcar este lembrete como lido.');
     } finally {
       setMarkingReminderReadId((current) => (current === item.id ? null : current));
     }
@@ -5003,7 +5004,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       );
     } catch (error) {
       console.error('Erro ao marcar lead como perdido no WhatsApp:', error);
-    alert('Não foi possível marcar este lead como perdido.');
+      toast.error('Não foi possível marcar este lead como perdido.');
     } finally {
       setMarkingLostLeadId((current) => (current === item.leadId ? null : current));
     }
@@ -5214,7 +5215,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       }
     } catch (error) {
       console.error('Erro ao atualizar status do lead:', error);
-      alert('Erro ao atualizar status do lead');
+      toast.error('Erro ao atualizar status do lead.');
     }
   };
 

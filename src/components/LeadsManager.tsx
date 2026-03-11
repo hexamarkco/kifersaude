@@ -33,11 +33,13 @@ import Pagination from './Pagination';
 import { ObserverBanner } from './ObserverRestriction';
 import { useAuth } from '../contexts/AuthContext';
 import { convertLocalToUTC, formatDateTimeFullBR } from '../lib/dateUtils';
+import { toast } from '../lib/toast';
 import { useConfig } from '../contexts/ConfigContext';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import FilterMultiSelect from './FilterMultiSelect';
 import FilterDateRange from './FilterDateRange';
 import FilterSingleSelect from './FilterSingleSelect';
+import Checkbox from './ui/Checkbox';
 import DateTimePicker from './ui/DateTimePicker';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -757,7 +759,7 @@ export default function LeadsManager({
 
   const exportLeadsList = useCallback((leadsToExport: Lead[], fileLabel: string) => {
     if (leadsToExport.length === 0) {
-      alert('Nenhum lead encontrado para exportar.');
+      toast.info('Nenhum lead encontrado para exportar.');
       return;
     }
 
@@ -810,7 +812,7 @@ export default function LeadsManager({
 
   const handleExportSelectedLeads = useCallback(() => {
     if (selectedLeadIds.length === 0) {
-      alert('Selecione ao menos um lead para exportar.');
+      toast.warning('Selecione ao menos um lead para exportar.');
       return;
     }
 
@@ -861,10 +863,10 @@ export default function LeadsManager({
     try {
       const { error } = await supabase.from('leads').update(updates).in('id', selectedLeadIds);
       if (error) throw error;
-      alert('Dados aplicados com sucesso aos leads selecionados.');
+      toast.success('Dados aplicados com sucesso aos leads selecionados.');
     } catch (error) {
       console.error('Erro ao aplicar dados em massa:', error);
-      alert('Erro ao aplicar dados aos leads selecionados. Tente novamente.');
+      toast.error('Erro ao aplicar dados aos leads selecionados. Tente novamente.');
       loadLeads();
     } finally {
       setIsBulkUpdating(false);
@@ -888,7 +890,7 @@ export default function LeadsManager({
     }
 
     if (hasError) {
-      alert('Alguns leads não puderam ter o status atualizado. Verifique e tente novamente.');
+      toast.warning('Alguns leads não puderam ter o status atualizado. Verifique e tente novamente.');
     }
 
     setIsBulkUpdating(false);
@@ -914,7 +916,7 @@ export default function LeadsManager({
       loadLeads();
     } catch (error) {
       console.error('Erro ao arquivar lead:', error);
-      alert('Erro ao arquivar lead');
+      toast.error('Erro ao arquivar lead.');
     }
   };
 
@@ -944,7 +946,7 @@ export default function LeadsManager({
       loadLeads();
     } catch (error) {
       console.error('Erro ao excluir lead:', error);
-      alert('Erro ao excluir lead');
+      toast.error('Erro ao excluir lead.');
     }
   };
 
@@ -967,7 +969,7 @@ export default function LeadsManager({
       loadLeads();
     } catch (error) {
       console.error('Erro ao reativar lead:', error);
-      alert('Erro ao reativar lead');
+      toast.error('Erro ao reativar lead.');
     }
   };
 
@@ -1230,7 +1232,7 @@ export default function LeadsManager({
 
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
-      alert('Erro ao atualizar status do lead');
+      toast.error('Erro ao atualizar status do lead.');
 
       setLeads((current) =>
         current.map((l) =>
@@ -1652,9 +1654,7 @@ export default function LeadsManager({
           {canEditLeads && paginatedLeads.length > 0 && (
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 py-3 border-b border-slate-200">
               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                <Checkbox
                   checked={areAllPageLeadsSelected}
                   onChange={toggleSelectAllCurrentPage}
                 />
@@ -1782,11 +1782,9 @@ export default function LeadsManager({
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       {canSelectLeads && (
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedLeadIdsSet.has(lead.id)}
                           onChange={() => toggleLeadSelection(lead.id)}
-                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                           aria-label={`Selecionar lead ${lead.nome_completo}`}
                         />
                       )}

@@ -5,6 +5,7 @@ import { formatDateTimeFullBR, isOverdue, convertLocalToUTC } from '../lib/dateU
 import { createAdditionalFollowUps } from '../lib/followUpService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DateTimePicker from './ui/DateTimePicker';
+import { toast } from '../lib/toast';
 
 export default function RemindersManager() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -109,7 +110,7 @@ export default function RemindersManager() {
       loadReminders();
     } catch (error) {
       console.error('Erro ao atualizar lembrete:', error);
-      alert('Erro ao atualizar lembrete');
+      toast.error('Erro ao atualizar lembrete.');
     }
   };
 
@@ -133,13 +134,13 @@ export default function RemindersManager() {
       loadReminders();
     } catch (error) {
       console.error('Erro ao remover lembrete:', error);
-      alert('Erro ao remover lembrete');
+      toast.error('Erro ao remover lembrete.');
     }
   };
 
   const handleReschedule = async (reminder: Reminder) => {
     if (!newReminderDate) {
-      alert('Por favor, selecione uma nova data e hora');
+      toast.warning('Por favor, selecione uma nova data e hora.');
       return;
     }
 
@@ -168,7 +169,7 @@ export default function RemindersManager() {
       loadReminders();
     } catch (error) {
       console.error('Erro ao remarcar lembrete:', error);
-      alert('Erro ao remarcar lembrete');
+      toast.error('Erro ao remarcar lembrete.');
     }
   };
 
@@ -195,7 +196,7 @@ export default function RemindersManager() {
 
   const handleLeadResponded = async (reminder: Reminder) => {
     if (!reminder.lead_id) {
-      alert('Este lembrete não está associado a um lead');
+      toast.warning('Este lembrete não está associado a um lead.');
       return;
     }
 
@@ -215,10 +216,10 @@ export default function RemindersManager() {
       setAdditionalFollowUps({ count: 3, intervalDays: 2 });
       loadReminders();
 
-      alert(`${additionalFollowUps.count} lembretes adicionais criados com sucesso!`);
+      toast.success(`${additionalFollowUps.count} lembretes adicionais criados com sucesso!`);
     } catch (error) {
       console.error('Erro ao criar lembretes adicionais:', error);
-      alert('Erro ao criar lembretes adicionais');
+      toast.error('Erro ao criar lembretes adicionais.');
     }
   };
 

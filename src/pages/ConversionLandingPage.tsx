@@ -5,6 +5,7 @@ import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { formatPhoneInput } from '../lib/inputFormatters';
+import Checkbox from '../components/ui/Checkbox';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 import { 
@@ -1066,9 +1067,8 @@ export default function ConversionLandingPage() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <label className="flex items-center justify-center gap-2 text-sm text-slate-500 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                <Checkbox
+                  size="sm"
                   onChange={(e) => {
                     if (e.target.checked) {
                       localStorage.setItem('exit_popup_seen', 'true');

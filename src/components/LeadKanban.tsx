@@ -4,6 +4,7 @@ import { Users, Phone, Mail, Calendar } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
+import { toast } from '../lib/toast';
 
 type LeadKanbanProps = {
   onLeadClick?: (lead: Lead) => void;
@@ -204,7 +205,7 @@ export default function LeadKanban({ onLeadClick, onConvertToContract, leads }: 
       ]);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
-      alert('Erro ao atualizar status do lead');
+      toast.error('Erro ao atualizar status do lead.');
       setLocalLeads((current) =>
         current.map((lead) =>
           lead.id === draggedLead.id

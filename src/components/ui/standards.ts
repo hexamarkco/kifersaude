@@ -113,6 +113,16 @@ export const panelInputIconSizeClasses: Record<PanelInputSize, string> = {
   compact: 'h-4 w-4',
 };
 
+export type PanelCheckboxSize = 'sm' | 'md';
+
+export const panelCheckboxBaseClass =
+  'panel-ui-checkbox shrink-0 rounded border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-accent-strong,#b85c1f)] shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
+
+export const panelCheckboxSizeClasses: Record<PanelCheckboxSize, string> = {
+  sm: 'h-4 w-4',
+  md: 'h-5 w-5',
+};
+
 export type PanelTabsVariant = 'underline' | 'pill' | 'panel';
 
 const tabsListBaseClass = 'flex w-full flex-wrap';

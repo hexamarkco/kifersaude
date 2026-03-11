@@ -8,6 +8,7 @@ import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
 import ModalShell from './ui/ModalShell';
 import Button from './ui/Button';
+import { toast } from '../lib/toast';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -148,7 +149,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
       onUpdate();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
-      alert('Erro ao adicionar interação');
+      toast.error('Erro ao adicionar interação.');
     }
   };
 

@@ -10,6 +10,7 @@ import Field from './ui/Field';
 import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 import Textarea from './ui/Textarea';
+import { toast } from '../lib/toast';
 
 const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
 const PRIORITY_OPTIONS = ['alta', 'normal', 'baixa'] as const;
@@ -91,13 +92,13 @@ export default function ReminderSchedulerModal({
 
   const handleSchedule = async () => {
     if (!scheduledFor) {
-      alert('Por favor, informe a data e hora do lembrete.');
+      toast.warning('Por favor, informe a data e hora do lembrete.');
       return;
     }
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      alert('Informe um título para o lembrete.');
+      toast.warning('Informe um título para o lembrete.');
       return;
     }
 
@@ -107,7 +108,7 @@ export default function ReminderSchedulerModal({
       const reminderDateUTC = convertLocalToUTC(scheduledFor);
 
       if (!reminderDateUTC) {
-        alert('Data do lembrete inválida. Verifique e tente novamente.');
+      toast.warning('Data do lembrete inválida. Verifique e tente novamente.');
         return;
       }
 
@@ -149,7 +150,7 @@ export default function ReminderSchedulerModal({
       onClose();
     } catch (error) {
       console.error('Erro ao criar lembrete manual:', error);
-      alert('Erro ao criar lembrete. Tente novamente.');
+      toast.error('Erro ao criar lembrete. Tente novamente.');
     } finally {
       setSaving(false);
     }

@@ -23,6 +23,7 @@ import {
   getWhatsAppChatKind,
 } from '../../lib/whatsappApiService';
 import { supabase } from '../../lib/supabase';
+import { toast } from '../../lib/toast';
 import FilterSingleSelect from '../FilterSingleSelect';
 import ModalShell from '../ui/ModalShell';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
@@ -1547,7 +1548,7 @@ function MessageInputComponent({
 
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
-      alert('Erro ao acessar o microfone');
+      toast.error('Erro ao acessar o microfone.');
     }
   };
 
@@ -1625,7 +1626,7 @@ function MessageInputComponent({
       if (onMessageSent) onMessageSent(audioPayload);
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
-      alert('Erro ao enviar mensagem de voz');
+      toast.error('Erro ao enviar mensagem de voz.');
     } finally {
       setIsSending(false);
     }
@@ -1637,7 +1638,7 @@ function MessageInputComponent({
     const title = quickReplyTitle.trim();
     const content = quickReplyMessage.trim();
     if (!title || !content) {
-      alert('Preencha título e mensagem.');
+      toast.warning('Preencha título e mensagem.');
       return;
     }
 
@@ -1668,7 +1669,7 @@ function MessageInputComponent({
       setQuickReplyMessage('');
     } catch (error) {
       console.error('Erro ao salvar resposta rápida global:', error);
-      alert('Erro ao salvar resposta rápida.');
+      toast.error('Erro ao salvar resposta rápida.');
     } finally {
       setQuickRepliesLoading(false);
     }
@@ -1716,7 +1717,7 @@ function MessageInputComponent({
       setQuickReplies((prev) => prev.filter((reply) => reply.id !== replyId));
     } catch (error) {
       console.error('Erro ao remover resposta rápida global:', error);
-      alert('Erro ao remover resposta rápida.');
+      toast.error('Erro ao remover resposta rápida.');
     } finally {
       setQuickRepliesLoading(false);
     }
@@ -1725,7 +1726,7 @@ function MessageInputComponent({
   const handleOpenRewrite = () => {
     const draft = message.trim();
     if (!draft) {
-      alert('Digite uma mensagem para reescrever.');
+      toast.warning('Digite uma mensagem para reescrever.');
       return;
     }
     setRewriteOriginal(draft);
@@ -1788,7 +1789,7 @@ function MessageInputComponent({
 
   const handleOpenFollowUp = () => {
     if (!isDirectChat) {
-      alert('A geração de follow-up está disponível apenas para conversas individuais.');
+      toast.info('A geração de follow-up está disponível apenas para conversas individuais.');
       return;
     }
 
@@ -1887,7 +1888,7 @@ function MessageInputComponent({
     if (isSending) return;
     const chunks = splitRewriteChunks(rewriteResult || rewriteOriginal);
     if (chunks.length === 0) {
-      alert('Nada para enviar.');
+      toast.warning('Nada para enviar.');
       return;
     }
     setIsSending(true);
@@ -1913,7 +1914,7 @@ function MessageInputComponent({
 
   const handleSendLocation = async () => {
     if (!navigator.geolocation) {
-      alert('Geolocalização não é suportada pelo seu navegador');
+      toast.warning('Geolocalização não é suportada pelo seu navegador.');
       return;
     }
 
@@ -1958,14 +1959,14 @@ function MessageInputComponent({
           }
         } catch (error) {
           console.error('Erro ao enviar localização:', error);
-          alert('Erro ao enviar localização');
+          toast.error('Erro ao enviar localização.');
         } finally {
           setIsSending(false);
         }
       },
       (error) => {
         console.error('Erro ao obter localização:', error);
-        alert('Erro ao obter localização');
+        toast.error('Erro ao obter localização.');
         setIsSending(false);
       }
     );
@@ -1979,7 +1980,7 @@ function MessageInputComponent({
   const handleSendContact = async (contact: { id: string; name: string }) => {
     const phone = extractPhoneFromContactId(contact.id);
     if (!phone) {
-      alert('Contato sem telefone válido.');
+      toast.warning('Contato sem telefone válido.');
       return;
     }
 
@@ -2024,7 +2025,7 @@ function MessageInputComponent({
       if (onMessageSent) onMessageSent(contactPayload);
     } catch (error) {
       console.error('Erro ao enviar contato:', error);
-      alert('Erro ao enviar contato');
+      toast.error('Erro ao enviar contato.');
     } finally {
       setIsSending(false);
     }

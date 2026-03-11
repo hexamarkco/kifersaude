@@ -3,6 +3,7 @@ import { ArrowUpRight, Bell, Check, Clock, RefreshCw } from 'lucide-react';
 import type { Reminder } from '../lib/supabase';
 import { formatDateTimeForInput, formatDateTimeFullBR } from '../lib/dateUtils';
 import DateTimePicker from './ui/DateTimePicker';
+import { toast } from '../lib/toast';
 
 const EMPTY_STATE_COPY = {
   title: 'Nenhum lembrete para este lead',
@@ -56,7 +57,7 @@ export default function LeadRemindersPanel({
       await onToggleRead(reminder.id, reminder.lido);
     } catch (toggleError) {
       console.error('Erro ao atualizar lembrete:', toggleError);
-      alert('Não foi possível atualizar o status do lembrete. Tente novamente.');
+      toast.error('Não foi possível atualizar o status do lembrete. Tente novamente.');
     } finally {
       setActionLoading(prev => {
         const next = { ...prev };
@@ -68,7 +69,7 @@ export default function LeadRemindersPanel({
 
   const handleRescheduleSubmit = async (reminder: Reminder) => {
     if (!rescheduleValue) {
-      alert('Informe a nova data e hora do lembrete.');
+      toast.warning('Informe a nova data e hora do lembrete.');
       return;
     }
 
@@ -80,7 +81,7 @@ export default function LeadRemindersPanel({
       setRescheduleValue('');
     } catch (rescheduleError) {
       console.error('Erro ao reagendar lembrete:', rescheduleError);
-      alert('Não foi possível reagendar o lembrete. Tente novamente.');
+      toast.error('Não foi possível reagendar o lembrete. Tente novamente.');
     } finally {
       setRescheduleLoading(prev => {
         const next = { ...prev };

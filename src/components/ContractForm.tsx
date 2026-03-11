@@ -12,6 +12,7 @@ import ModalShell from './ui/ModalShell';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import { toast } from '../lib/toast';
 import {
   formatCnpj,
   formatCurrencyFromNumber,
@@ -373,7 +374,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       }
     } catch (error) {
       console.error('Erro ao remover ajuste:', error);
-      alert('Erro ao remover ajuste');
+      toast.error('Erro ao remover ajuste.');
     }
   };
 
@@ -385,7 +386,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       const codigo = formData.codigo_contrato.trim();
 
       if (!codigo) {
-        alert('Informe o código do contrato.');
+        toast.warning('Informe o código do contrato.');
         return;
       }
 
@@ -399,7 +400,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
       const missingRequired = requiredValues.find((item) => !item.value);
       if (missingRequired) {
-        alert(`Preencha o campo obrigatório: ${missingRequired.label}.`);
+        toast.warning(`Preencha o campo obrigatório: ${missingRequired.label}.`);
         return;
       }
 
@@ -412,20 +413,20 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
       if (!formData.comissao_recebimento_adiantado) {
         if (installmentsPayload.length === 0) {
-          alert('Adicione ao menos uma parcela de comissão ou marque como adiantamento.');
+          toast.warning('Adicione ao menos uma parcela de comissão ou marque como adiantamento.');
           setSaving(false);
           return;
         }
 
         const hasMissingDates = installmentsPayload.some(parcel => !parcel.data_pagamento);
         if (hasMissingDates) {
-          alert('Informe a data prevista de pagamento para cada parcela.');
+          toast.warning('Informe a data prevista de pagamento para cada parcela.');
           setSaving(false);
           return;
         }
 
         if (totalInstallmentPercent > MAX_COMMISSION_PERCENT) {
-          alert(`O total das parcelas não pode ultrapassar ${MAX_COMMISSION_PERCENT}% da mensalidade.`);
+          toast.warning(`O total das parcelas não pode ultrapassar ${MAX_COMMISSION_PERCENT}% da mensalidade.`);
           setSaving(false);
           return;
         }
@@ -502,7 +503,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       }
     } catch (error) {
       console.error('Erro ao salvar contrato:', error);
-      alert('Erro ao salvar contrato');
+      toast.error('Erro ao salvar contrato.');
     } finally {
       setSaving(false);
     }
@@ -543,14 +544,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         bodyClassName="p-0"
       >
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-            <h4 className="font-semibold text-slate-900 mb-3 flex items-center">
+          <div className="mb-6 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-4">
+            <h4 className="comm-title mb-3 flex items-center font-semibold">
               <Building2 className="w-5 h-5 mr-2 text-amber-600" />
               Informações do Contrato
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Código do Contrato
                 </label>
                 <input
@@ -559,12 +560,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   value={formData.codigo_contrato}
                   onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
                   placeholder="Informe o código fornecido pela operadora"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="panel-ui-input w-full rounded-lg px-4 py-2"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Lead Vinculado
                 </label>
                 <FilterSingleSelect
@@ -584,7 +585,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Status *
                 </label>
                 {contractStatusOptions.length > 0 ? (
@@ -605,14 +606,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     required
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Configure os status de contrato"
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Modalidade *
                 </label>
                 {modalidadeOptions.length > 0 ? (
@@ -633,7 +634,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     required
                     value={formData.modalidade}
                     onChange={(e) => setFormData({ ...formData, modalidade: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a modalidade"
                   />
                 )}
@@ -707,7 +708,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Operadora *
                 </label>
                 <FilterSingleSelect
@@ -724,13 +725,13 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     })),
                   ]}
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="comm-muted mt-1 text-xs">
                   Comissão e bônus serão preenchidos automaticamente
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Produto/Plano *
                 </label>
                 <input
@@ -738,12 +739,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   required
                   value={formData.produto_plano}
                   onChange={(e) => setFormData({ ...formData, produto_plano: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="panel-ui-input w-full rounded-lg px-4 py-2"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Abrangência
                 </label>
                 {abrangenciaOptions.length > 0 ? (
@@ -763,14 +764,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     type="text"
                     value={formData.abrangencia}
                     onChange={(e) => setFormData({ ...formData, abrangencia: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a abrangência"
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="comm-text mb-1 block text-sm font-medium">
                   Acomodação
                 </label>
                 {acomodacaoOptions.length > 0 ? (
@@ -790,7 +791,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     type="text"
                     value={formData.acomodacao}
                     onChange={(e) => setFormData({ ...formData, acomodacao: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a acomodação"
                   />
                 )}

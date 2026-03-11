@@ -15,6 +15,7 @@ import { usePanelMotion } from '../hooks/usePanelMotion';
 import { ContractsPageSkeleton } from './ui/panelSkeletons';
 import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
+import { toast } from '../lib/toast';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -297,7 +298,7 @@ export default function ContractsManager({
       loadContracts();
     } catch (error) {
       console.error('Erro ao excluir contrato:', error);
-      alert('Erro ao excluir contrato');
+      toast.error('Erro ao excluir contrato.');
     }
   };
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from '../lib/toast';
 
 const PRIORITIZE_UNREAD_STORAGE_KEY = 'whatsapp.inbox.prioritize-unread';
 const DESKTOP_NOTIFICATIONS_STORAGE_KEY = 'whatsapp.inbox.desktop-notifications';
@@ -73,7 +74,7 @@ export function useWhatsAppInboxPreferences() {
     if (notificationPermission === 'unsupported' || typeof window === 'undefined') return;
 
     if (notificationPermission === 'denied') {
-      window.alert('Permissao de notificacao negada no navegador. Libere para receber alertas desktop.');
+      toast.warning('Permissão de notificação negada no navegador. Libere para receber alertas desktop.');
       return;
     }
 

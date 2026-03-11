@@ -8,6 +8,7 @@ import FilterSingleSelect from '../FilterSingleSelect';
 import { BlogTabSkeletonList } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
+import { toast } from '../../lib/toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -126,7 +127,7 @@ export default function BlogTab() {
 
   const handleSave = async () => {
     if (!formData.title || !formData.slug || !formData.excerpt || !formData.content) {
-      alert('Preencha todos os campos obrigatórios');
+      toast.warning('Preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -143,7 +144,7 @@ export default function BlogTab() {
         .eq('id', editingPost.id);
 
       if (error) {
-        alert('Erro ao atualizar post: ' + error.message);
+        toast.error('Erro ao atualizar post: ' + error.message);
         return;
       }
     } else {
@@ -152,7 +153,7 @@ export default function BlogTab() {
         .insert([postData]);
 
       if (error) {
-        alert('Erro ao criar post: ' + error.message);
+        toast.error('Erro ao criar post: ' + error.message);
         return;
       }
     }
@@ -196,7 +197,7 @@ export default function BlogTab() {
       .eq('id', id);
 
     if (error) {
-      alert('Erro ao excluir post: ' + error.message);
+      toast.error('Erro ao excluir post: ' + error.message);
       return;
     }
 
@@ -213,7 +214,7 @@ export default function BlogTab() {
       .eq('id', post.id);
 
     if (error) {
-      alert('Erro ao atualizar status: ' + error.message);
+      toast.error('Erro ao atualizar status: ' + error.message);
       return;
     }
 
@@ -246,7 +247,7 @@ export default function BlogTab() {
     if (result.success && result.url) {
       setFormData({ ...formData, cover_image_url: result.url });
     } else {
-      alert(result.error || 'Erro ao fazer upload da imagem');
+      toast.error(result.error || 'Erro ao fazer upload da imagem.');
     }
   };
 
@@ -262,7 +263,7 @@ export default function BlogTab() {
       const imageHtml = `<img src="${result.url}" alt="Imagem do artigo" />`;
       setFormData({ ...formData, content: formData.content + imageHtml });
     } else {
-      alert(result.error || 'Erro ao fazer upload da imagem');
+      toast.error(result.error || 'Erro ao fazer upload da imagem.');
     }
   };
 

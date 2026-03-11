@@ -33,6 +33,7 @@ import LeadFunnel from './LeadFunnel';
 import ContractDetails from './ContractDetails';
 import LeadDetails from './LeadDetails';
 import LeadForm from './LeadForm';
+import { toast } from '../lib/toast';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -2017,11 +2018,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
     if (error) {
       console.error('Erro ao criar lembrete:', error);
-      alert('Erro ao criar lembrete');
+      toast.error('Erro ao criar lembrete.');
       return;
     }
     onNavigateToTab?.('reminders');
-    alert('Lembrete criado');
+    toast.success('Lembrete criado com sucesso.');
   };
 
   return (

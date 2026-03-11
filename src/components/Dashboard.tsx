@@ -2058,6 +2058,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 }}
                 placeholder="Período"
                 includePlaceholderOption={false}
+                neutralValues={['todo-periodo']}
                 options={[
                   { value: 'mes-atual', label: 'Mês Atual' },
                   { value: 'todo-periodo', label: 'Todo Período' },
@@ -2098,6 +2099,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                   persistFilters(undefined, undefined, undefined, value, dashboardOwnerFilter);
                 }}
                 placeholder="Todas as origens"
+                neutralValues={['']}
                 options={visibleLeadOrigins.map((origin) => ({
                   value: origin.nome,
                   label: origin.nome,

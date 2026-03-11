@@ -7,7 +7,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   userProfile: UserProfile | null;
-  role: 'admin' | 'observer';
+  role: string;
   isAdmin: boolean;
   isObserver: boolean;
   loading: boolean;
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
 
-  const resolveRoleFromMetadata = (userToResolve: User | null): 'admin' | 'observer' | null => {
+  const resolveRoleFromMetadata = (userToResolve: User | null): string | null => {
     if (!userToResolve) {
       return null;
     }
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const normalized = candidate.trim().toLowerCase();
 
-      if (normalized === 'admin' || normalized === 'observer') {
+      if (normalized) {
         return normalized;
       }
     }

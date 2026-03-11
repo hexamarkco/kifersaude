@@ -55,7 +55,7 @@ export function ConfirmationModal({
       <div className="flex items-start gap-3">
         <span
           className={`rounded-full p-2 ${
-            tone === 'danger' ? 'bg-red-100 text-red-600' : 'bg-teal-100 text-teal-700'
+            tone === 'danger' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'
           }`}
           aria-hidden="true"
         >

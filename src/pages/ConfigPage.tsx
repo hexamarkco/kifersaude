@@ -7,14 +7,31 @@ import AutomationFlowsTab from '../components/config/AutomationFlowsTab';
 import Card from '../components/ui/Card';
 import Tabs, { type TabItem } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 
 type TabType = 'system' | 'users' | 'integrations' | 'automation';
 
 export default function ConfigPage() {
-  const { isAdmin } = useAuth();
+  const { role } = useAuth();
+  const { getRoleModulePermission } = useConfig();
   const [activeTab, setActiveTab] = useState<TabType>('system');
 
-  if (!isAdmin) {
+  const allowedTabs: TabItem<TabType>[] = [
+    getRoleModulePermission(role, 'config-system').can_view
+      ? { id: 'system', label: 'Geral', icon: Settings }
+      : null,
+    getRoleModulePermission(role, 'config-users').can_view
+      ? { id: 'users', label: 'Usuarios', icon: Users }
+      : null,
+    getRoleModulePermission(role, 'config-automation').can_view
+      ? { id: 'automation', label: 'Automacoes', icon: GitBranch }
+      : null,
+    getRoleModulePermission(role, 'config-integrations').can_view
+      ? { id: 'integrations', label: 'Integracoes', icon: Plug }
+      : null,
+  ].filter(Boolean) as TabItem<TabType>[];
+
+  if (allowedTabs.length === 0) {
     return (
       <div className="w-full">
         <Card variant="glass" className="border-red-200 bg-red-50 p-8 text-center">
@@ -26,12 +43,8 @@ export default function ConfigPage() {
     );
   }
 
-  const tabs: TabItem<TabType>[] = [
-    { id: 'system', label: 'Geral', icon: Settings },
-    { id: 'users', label: 'Usuarios', icon: Users },
-    { id: 'automation', label: 'Automacoes', icon: GitBranch },
-    { id: 'integrations', label: 'Integracoes', icon: Plug },
-  ];
+  const tabs = allowedTabs;
+  const activeAllowedTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0].id;
 
   return (
     <div className="config-transparent-buttons panel-page-shell w-full">
@@ -43,17 +56,17 @@ export default function ConfigPage() {
       <Card variant="glass" padding="none" className="mb-6 overflow-hidden">
         <Tabs
           items={tabs}
-          value={activeTab}
+          value={activeAllowedTab}
           onChange={setActiveTab}
           variant="panel"
           listClassName="rounded-none border-x-0 border-t-0"
         />
 
         <div className="p-6">
-          {activeTab === 'system' && <SystemSettingsTab />}
-          {activeTab === 'users' && <UsersTab />}
-          {activeTab === 'automation' && <AutomationFlowsTab />}
-          {activeTab === 'integrations' && <IntegrationsTab />}
+          {activeAllowedTab === 'system' && <SystemSettingsTab />}
+          {activeAllowedTab === 'users' && <UsersTab />}
+          {activeAllowedTab === 'automation' && <AutomationFlowsTab />}
+          {activeAllowedTab === 'integrations' && <IntegrationsTab />}
         </div>
       </Card>
     </div>

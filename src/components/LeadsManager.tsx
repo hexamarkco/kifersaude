@@ -159,8 +159,9 @@ export default function LeadsManager({
   initialStatusFilter,
   initialLeadIdFilter,
 }: LeadsManagerProps) {
-  const { isObserver } = useAuth();
-  const { leadStatuses, leadOrigins, options } = useConfig();
+  const { isObserver, role } = useAuth();
+  const { leadStatuses, leadOrigins, options, getRoleModulePermission } = useConfig();
+  const canEditLeads = getRoleModulePermission(role, 'leads').can_edit;
   const [leads, setLeads] = useState<Lead[]>([]);
   const [nextReminderByLeadId, setNextReminderByLeadId] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -694,7 +695,7 @@ export default function LeadsManager({
     () => paginatedLeadIds.length > 0 && paginatedLeadIds.every((id) => selectedLeadIdsSet.has(id)),
     [paginatedLeadIds, selectedLeadIdsSet]
   );
-  const canSelectLeads = !isObserver && viewMode === 'list';
+  const canSelectLeads = canEditLeads && viewMode === 'list';
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -1281,10 +1282,10 @@ export default function LeadsManager({
   }, [showArchived, clearSelection]);
 
   useEffect(() => {
-    if (isObserver) {
+    if (!canEditLeads) {
       clearSelection();
     }
-  }, [isObserver, clearSelection]);
+  }, [canEditLeads, clearSelection]);
 
   useEffect(() => {
     setSelectedLeadIds((current) => {
@@ -1417,9 +1418,9 @@ export default function LeadsManager({
               setEditingLead(null);
               setShowForm(true);
             }}
-            disabled={isObserver}
+            disabled={!canEditLeads}
             className="w-full sm:w-auto"
-            title={isObserver ? 'Você não tem permissão para criar leads' : 'Criar novo lead'}
+            title={!canEditLeads ? 'Voce nao tem permissao para criar leads' : 'Criar novo lead'}
           >
             <Plus className="h-5 w-5" />
             <span>Novo Lead</span>
@@ -1466,7 +1467,7 @@ export default function LeadsManager({
               <Download className="h-4 w-4" />
               Página
             </Button>
-            <div className="px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-1.5 border border-slate-200 whitespace-nowrap">
+            <div className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
               <span className="font-semibold text-teal-700">{filteredLeads.length}</span>
               <span>leads</span>
             </div>
@@ -1648,7 +1649,7 @@ export default function LeadsManager({
         </div>
       ) : (
         <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white shadow-sm" data-panel-animate>
-          {!isObserver && paginatedLeads.length > 0 && (
+          {canEditLeads && paginatedLeads.length > 0 && (
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 py-3 border-b border-slate-200">
               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
                 <input
@@ -1799,7 +1800,7 @@ export default function LeadsManager({
                           Contrato
                         </span>
                       )}
-                      {!isObserver ? (
+                      {canEditLeads ? (
                         <StatusDropdown
                           currentStatus={lead.status ?? ''}
                           leadId={lead.id}
@@ -1883,12 +1884,12 @@ export default function LeadsManager({
                 variant="secondary"
                 size="sm"
                 className="space-x-0 sm:space-x-2"
-                aria-label={isObserver ? 'Ver detalhes do lead' : 'Ver e editar lead'}
+                aria-label={canEditLeads ? 'Ver e editar lead' : 'Ver detalhes do lead'}
               >
                 <MessageCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">{isObserver ? 'Ver Detalhes' : 'Ver/Editar'}</span>
+                <span className="hidden sm:inline">{canEditLeads ? 'Ver/Editar' : 'Ver Detalhes'}</span>
               </Button>
-              {!isObserver && (
+              {canEditLeads && (
                 <>
                   <Button
                     onClick={() => handleConvertToContract(lead)}

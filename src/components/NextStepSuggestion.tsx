@@ -82,19 +82,19 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
     <div className={`rounded-lg p-4 border-2 ${
       isUrgent
         ? 'bg-orange-50 border-orange-300'
-        : 'bg-teal-50 border-teal-300'
+        : 'bg-amber-50/90 border-amber-300'
     }`}>
       <div className="flex items-start space-x-3">
         <div className={`p-2 rounded-lg flex-shrink-0 ${
-          isUrgent ? 'bg-orange-200' : 'bg-teal-200'
+          isUrgent ? 'bg-orange-200' : 'bg-amber-100'
         }`}>
           <Lightbulb className={`w-5 h-5 ${
-            isUrgent ? 'text-orange-700' : 'text-teal-700'
+            isUrgent ? 'text-orange-700' : 'text-amber-700'
           }`} />
         </div>
         <div className="flex-1">
           <h4 className={`font-semibold mb-2 ${
-            isUrgent ? 'text-orange-900' : 'text-teal-900'
+            isUrgent ? 'text-orange-900' : 'text-amber-950'
           }`}>
             {isUrgent && '⚠️ Atenção: '} Próximos Passos - {suggestion.title}
           </h4>
@@ -108,7 +108,7 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
               <li
                 key={index}
                 className={`flex items-start space-x-2 text-sm ${
-                  isUrgent ? 'text-orange-800' : 'text-teal-800'
+                  isUrgent ? 'text-orange-800' : 'text-amber-800'
                 }`}
               >
                 <ArrowRight className="w-4 h-4 mt-0.5 flex-shrink-0" />

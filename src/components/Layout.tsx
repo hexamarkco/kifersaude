@@ -27,6 +27,7 @@ import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { CONFIG_MODULE_IDS } from '../lib/accessControl';
 
 type TabConfig = {
   id: string;
@@ -40,6 +41,7 @@ type TabConfig = {
 type LayoutProps = {
   children: ReactNode;
   activeTab: string;
+  useFullBleedContent?: boolean;
   onTabChange: (tab: string, options?: TabNavigationOptions) => void;
   unreadReminders: number;
   hasActiveNotification?: boolean;
@@ -66,6 +68,7 @@ const getInitialThemeMode = (): ThemeMode => {
 export default function Layout({
   children,
   activeTab,
+  useFullBleedContent = false,
   onTabChange,
   unreadReminders,
   hasActiveNotification,
@@ -163,7 +166,9 @@ export default function Layout({
     baseTabs.push({ id: 'financeiro', label: 'Financeiro', icon: PiggyBank, children: financeiroChildren });
   }
 
-  const tabs = canView('config')
+  const canViewConfig = canView('config') || CONFIG_MODULE_IDS.some((moduleId) => canView(moduleId));
+
+  const tabs = canViewConfig
     ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]
     : baseTabs;
 
@@ -1234,11 +1239,11 @@ export default function Layout({
       )}
 
       <div className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <main className={`flex-1 min-h-0 ${activeTab === 'whatsapp' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <main className={`flex-1 min-h-0 ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}
             className={
-              activeTab === 'whatsapp'
+              useFullBleedContent
                 ? 'w-full h-[calc(100vh)] min-h-0'
                 : 'w-full py-8 px-2 sm:px-3 lg:px-4'
             }

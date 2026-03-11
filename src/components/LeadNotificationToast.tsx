@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import { Lead } from '../lib/supabase';
+import Button from './ui/Button';
 
 type LeadNotificationToastProps = {
   lead: Lead;
@@ -15,6 +16,8 @@ export default function LeadNotificationToast({
 }: LeadNotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const isDarkThemeActive =
+    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   const statusLabel = lead.status ?? 'Não definido';
   const origemLabel = lead.origem ?? 'Não definida';
@@ -49,14 +52,16 @@ export default function LeadNotificationToast({
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+      className={`painel-theme kifer-ds fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+        isDarkThemeActive ? 'theme-dark' : 'theme-light'
+      } ${
         isVisible && !isExiting
           ? 'translate-x-0 opacity-100'
           : 'translate-x-full opacity-0'
       }`}
     >
-      <div className="bg-white rounded-xl shadow-2xl border-2 border-teal-500 max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-3 flex items-center justify-between">
+      <div className="max-w-md overflow-hidden rounded-xl border border-amber-300/70 bg-white shadow-2xl">
+        <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-700 px-4 py-3">
           <div className="flex items-center space-x-2 text-white">
             <UserPlus className="w-5 h-5 animate-bounce" />
             <h3 className="font-bold text-lg">Novo Lead Recebido!</h3>
@@ -111,12 +116,9 @@ export default function LeadNotificationToast({
             </p>
           </div>
 
-          <button
-            onClick={handleViewLead}
-            className="w-full bg-teal-600 text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium"
-          >
+          <Button onClick={handleViewLead} fullWidth>
             Ver Lead
-          </button>
+          </Button>
         </div>
       </div>
     </div>

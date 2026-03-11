@@ -36,8 +36,9 @@ export default function ContractsManager({
   onConvertComplete,
   initialOperadoraFilter,
 }: ContractsManagerProps) {
-  const { isObserver } = useAuth();
-  const { options } = useConfig();
+  const { role } = useAuth();
+  const { options, getRoleModulePermission } = useConfig();
+  const canEditContracts = getRoleModulePermission(role, 'contracts').can_edit;
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Record<string, ContractHolder[]>>({});
@@ -477,7 +478,7 @@ export default function ContractsManager({
     <div ref={contractsRootRef} className="panel-dashboard-immersive panel-page-shell">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-panel-animate>
         <h2 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h2>
-        {!isObserver && (
+        {canEditContracts && (
           <Button
             onClick={() => {
               setEditingContract(null);
@@ -698,7 +699,7 @@ export default function ContractsManager({
                     <Eye className="h-4 w-4" />
                     <span>Abrir</span>
                   </Button>
-                  {!isObserver && (
+                  {canEditContracts && (
                     <Button
                       onClick={() => handleDeleteContract(contract)}
                       variant="danger"

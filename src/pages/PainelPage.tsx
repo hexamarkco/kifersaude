@@ -21,8 +21,8 @@ import { useConfig } from '../contexts/ConfigContext';
 import type { TabNavigationOptions } from '../types/navigation';
 
 export default function PainelPage() {
-  const { isObserver } = useAuth();
-  const { leadOrigins, loading: configLoading } = useConfig();
+  const { isObserver, role } = useAuth();
+  const { leadOrigins, loading: configLoading, getRoleModulePermission } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadReminders, setUnreadReminders] = useState(0);
@@ -35,21 +35,26 @@ export default function PainelPage() {
   const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
 
-  const validTabIds = useMemo(
-    () =>
-      new Set([
-        'dashboard',
-        'leads',
-        'contracts',
-        'financeiro-comissoes',
-        'financeiro-agenda',
-        'reminders',
-        'whatsapp',
-        'blog',
+  const validTabIds = useMemo(() => {
+    const entries: Array<[string, boolean]> = [
+      ['dashboard', getRoleModulePermission(role, 'dashboard').can_view],
+      ['leads', getRoleModulePermission(role, 'leads').can_view],
+      ['contracts', getRoleModulePermission(role, 'contracts').can_view],
+      ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
+      ['financeiro-agenda', getRoleModulePermission(role, 'financeiro-agenda').can_view],
+      ['reminders', getRoleModulePermission(role, 'reminders').can_view],
+      ['whatsapp', getRoleModulePermission(role, 'whatsapp').can_view],
+      ['blog', getRoleModulePermission(role, 'blog').can_view],
+      [
         'config',
-      ]),
-    [],
-  );
+        ['config-system', 'config-users', 'config-automation', 'config-integrations', 'config-access'].some(
+          (moduleId) => getRoleModulePermission(role, moduleId).can_view,
+        ),
+      ],
+    ];
+
+    return new Set(entries.filter(([, allowed]) => allowed).map(([tabId]) => tabId));
+  }, [getRoleModulePermission, role]);
 
   const updateSearchParamsForTab = useCallback(
     (tabId: string) => {
@@ -88,7 +93,8 @@ export default function PainelPage() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    const requestedTab = tabParam && validTabIds.has(tabParam) ? tabParam : 'dashboard';
+    const fallbackTab = Array.from(validTabIds)[0] ?? 'dashboard';
+    const requestedTab = tabParam && validTabIds.has(tabParam) ? tabParam : fallbackTab;
 
     setActiveTab(previous => (previous !== requestedTab ? requestedTab : previous));
   }, [searchParams, validTabIds]);

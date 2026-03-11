@@ -3,9 +3,11 @@ import { supabase, Lead, Interaction, Reminder, LeadStatusHistory } from '../lib
 import { MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
 import ModalShell from './ui/ModalShell';
+import Button from './ui/Button';
 
 type LeadWithRelations = Lead & {
   status_nome?: string | null;
@@ -21,7 +23,9 @@ type LeadDetailsProps = {
 };
 
 export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete }: LeadDetailsProps) {
-  const { isObserver } = useAuth();
+  const { role } = useAuth();
+  const { getRoleModulePermission } = useConfig();
+  const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [statusHistory, setStatusHistory] = useState<LeadStatusHistory[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -159,7 +163,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     >
       <div className="flex-1 overflow-y-auto">
           <div className="mb-4 flex items-center justify-end gap-2">
-            {!isObserver && (
+            {canEditLead && (
               <button
                 type="button"
                 onClick={() => onEdit(lead)}
@@ -169,7 +173,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                 <span className="hidden sm:inline">Editar Lead</span>
               </button>
             )}
-            {!isObserver && onDelete && (
+            {canEditLead && onDelete && (
               <button
                 type="button"
                 onClick={() => onDelete(lead)}
@@ -259,19 +263,20 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h4 className="text-lg font-semibold text-slate-900">Interações</h4>
-            {!isObserver && (
-              <button
+            {canEditLead && (
+              <Button
                 onClick={() => setShowForm(!showForm)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 sm:w-auto"
+                className="sm:w-auto"
+                fullWidth
               >
                 <Plus className="h-4 w-4" />
                 <span>Nova Interação</span>
-              </button>
+              </Button>
             )}
           </div>
 
           {showForm && (
-            <form onSubmit={handleAddInteraction} className="mb-6 rounded-lg bg-teal-50 p-4">
+            <form onSubmit={handleAddInteraction} className="mb-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4">
               <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -319,23 +324,26 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   rows={3}
                   placeholder="Descreva o que foi tratado nesta interação..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-teal-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-amber-500"
                 />
               </div>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-0 sm:space-x-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="w-full rounded-lg px-4 py-2 text-slate-700 transition-colors hover:bg-white sm:w-auto"
+                  variant="ghost"
+                  className="sm:w-auto"
+                  fullWidth
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="w-full rounded-lg bg-teal-600 px-4 py-2 text-white transition-colors hover:bg-teal-700 sm:w-auto"
+                  className="sm:w-auto"
+                  fullWidth
                 >
                   Adicionar
-                </button>
+                </Button>
               </div>
             </form>
           )}

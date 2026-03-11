@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase, UserProfile, getUserManagementId } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfig } from '../../contexts/ConfigContext';
 import { Users, Shield, Trash2, Plus, AlertCircle, CheckCircle, User as UserIcon, Pencil } from 'lucide-react';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { formatProfileLabel } from '../../lib/accessControl';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -10,27 +12,50 @@ import { UsersSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
+const FALLBACK_PROFILES = [
+  { value: 'observer', label: 'Observador' },
+  { value: 'admin', label: 'Administrador' },
+];
+
 export default function UsersTab() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, role: currentRole } = useAuth();
+  const { accessProfiles, getRoleModulePermission } = useConfig();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserUsername, setNewUserUsername] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'observer'>('observer');
+  const [newUserRole, setNewUserRole] = useState('observer');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editUserUsername, setEditUserUsername] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
   const [editUserPassword, setEditUserPassword] = useState('');
-  const [editUserRole, setEditUserRole] = useState<'admin' | 'observer'>('observer');
+  const [editUserRole, setEditUserRole] = useState('observer');
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const loadingUi = useAdaptiveLoading(loading);
+  const canManageUsers = getRoleModulePermission(currentRole, 'config-users').can_edit;
+
+  const profileOptions = useMemo(
+    () =>
+      accessProfiles.length > 0
+        ? accessProfiles.map((profile) => ({
+            value: profile.slug,
+            label: formatProfileLabel(profile.slug, profile.name),
+          }))
+        : FALLBACK_PROFILES,
+    [accessProfiles],
+  );
+
+  const profileBySlug = useMemo(
+    () => new Map(accessProfiles.map((profile) => [profile.slug, profile])),
+    [accessProfiles],
+  );
 
   useEffect(() => {
-    loadUsers();
+    void loadUsers();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUsers = async () => {
@@ -44,8 +69,8 @@ export default function UsersTab() {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
-      showMessage('error', 'Erro ao carregar usuários');
+      console.error('Erro ao carregar usuarios:', error);
+      showMessage('error', 'Erro ao carregar usuarios');
     } finally {
       setLoading(false);
     }
@@ -53,7 +78,15 @@ export default function UsersTab() {
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
+    window.setTimeout(() => setMessage(null), 5000);
+  };
+
+  const resetCreateForm = () => {
+    setNewUserUsername('');
+    setNewUserEmail('');
+    setNewUserPassword('');
+    setNewUserRole(profileOptions[0]?.value ?? 'observer');
+    setShowAddUser(false);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -65,63 +98,44 @@ export default function UsersTab() {
       const trimmedEmail = newUserEmail.trim();
 
       if (!trimmedUsername) {
-        showMessage('error', 'Informe um nome de usuário');
+        showMessage('error', 'Informe um nome de usuario');
         return;
       }
 
       if (!trimmedEmail) {
-        showMessage('error', 'Informe um email válido');
+        showMessage('error', 'Informe um email valido');
         return;
       }
 
-      const { data: existingUser, error: existingUserError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', trimmedUsername)
-        .maybeSingle();
-
-      if (existingUserError && existingUserError.code !== 'PGRST116') {
-        throw existingUserError;
-      }
-
-      if (existingUser) {
-        showMessage('error', 'Nome de usuário já está em uso');
-        setActionLoading(false);
+      if (newUserPassword.length < 6) {
+        showMessage('error', 'A senha deve ter pelo menos 6 caracteres');
         return;
       }
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: trimmedEmail,
-        password: newUserPassword,
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'createUser',
+          email: trimmedEmail,
+          password: newUserPassword,
+          username: trimmedUsername,
+          role: newUserRole,
+        },
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        const newProfileId = getUserManagementId(authData.user) ?? authData.user.id;
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .update({
-            role: newUserRole,
-            created_by: getUserManagementId(user) ?? user?.id ?? null,
-            username: trimmedUsername,
-            email: trimmedEmail,
-          })
-          .eq('id', newProfileId);
-
-        if (profileError) throw profileError;
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar usuario');
       }
 
-      showMessage('success', 'Usuário criado com sucesso');
-      setNewUserUsername('');
-      setNewUserEmail('');
-      setNewUserPassword('');
-      setNewUserRole('observer');
-      setShowAddUser(false);
-      loadUsers();
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      showMessage('success', 'Usuario criado com sucesso');
+      resetCreateForm();
+      await loadUsers();
     } catch (error: unknown) {
-      console.error('Erro ao criar usuário:', error);
-      showMessage('error', error instanceof Error ? error.message : 'Erro ao criar usuário');
+      console.error('Erro ao criar usuario:', error);
+      showMessage('error', error instanceof Error ? error.message : 'Erro ao criar usuario');
     } finally {
       setActionLoading(false);
     }
@@ -144,12 +158,12 @@ export default function UsersTab() {
     const trimmedEmail = editUserEmail.trim();
 
     if (!trimmedUsername) {
-      showMessage('error', 'Informe um nome de usuário');
+      showMessage('error', 'Informe um nome de usuario');
       return;
     }
 
     if (!trimmedEmail) {
-      showMessage('error', 'Informe um email válido');
+      showMessage('error', 'Informe um email valido');
       return;
     }
 
@@ -160,67 +174,29 @@ export default function UsersTab() {
 
     setActionLoading(true);
 
-    const previousProfile = {
-      username: editingUser.username,
-      email: editingUser.email,
-      role: editingUser.role,
-    };
-    let profileUpdated = false;
-
     try {
-      const { data: existingUser, error: existingUserError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', trimmedUsername)
-        .neq('id', editingUser.id)
-        .maybeSingle();
-
-      if (existingUserError && existingUserError.code !== 'PGRST116') {
-        throw existingUserError;
-      }
-
-      if (existingUser) {
-        showMessage('error', 'Nome de usuário já está em uso');
-        return;
-      }
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          username: trimmedUsername,
-          email: trimmedEmail,
-          role: editUserRole,
-        })
-        .eq('id', editingUser.id);
-
-      if (profileError) throw profileError;
-      profileUpdated = true;
-
-      const authUpdates: { email?: string; password?: string } = {};
-
-      if (trimmedEmail !== editingUser.email) {
-        authUpdates.email = trimmedEmail;
-      }
-
-      if (editUserPassword) {
-        authUpdates.password = editUserPassword;
-      }
-
-      if (Object.keys(authUpdates).length > 0) {
-        const { error: functionError } = await supabase.functions.invoke('manage-users', {
-          body: {
-            action: 'updateUser',
-            userId: editingUser.id,
-            updates: authUpdates,
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'updateUser',
+          userId: editingUser.id,
+          updates: {
+            username: trimmedUsername,
+            email: trimmedEmail,
+            role: editUserRole,
+            password: editUserPassword || undefined,
           },
-        });
+        },
+      });
 
-        if (functionError) {
-          throw new Error(functionError.message || 'Erro ao atualizar credenciais do usuário');
-        }
+      if (error) {
+        throw new Error(error.message || 'Erro ao atualizar usuario');
       }
 
-      showMessage('success', 'Usuário atualizado com sucesso');
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      showMessage('success', 'Usuario atualizado com sucesso');
       setEditingUser(null);
       setEditUserPassword('');
 
@@ -231,40 +207,27 @@ export default function UsersTab() {
 
       await loadUsers();
     } catch (error: unknown) {
-      console.error('Erro ao atualizar usuário:', error);
-      if (profileUpdated) {
-        try {
-          await supabase
-            .from('user_profiles')
-            .update(previousProfile)
-            .eq('id', editingUser.id);
-          setEditUserUsername(previousProfile.username);
-          setEditUserEmail(previousProfile.email);
-          setEditUserRole(previousProfile.role);
-        } catch (revertError) {
-          console.error('Erro ao reverter alterações do usuário:', revertError);
-        }
-      }
-      showMessage('error', error instanceof Error ? error.message : 'Erro ao atualizar usuário');
-  } finally {
-    setActionLoading(false);
-  }
-};
+      console.error('Erro ao atualizar usuario:', error);
+      showMessage('error', error instanceof Error ? error.message : 'Erro ao atualizar usuario');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
-const handleDeleteUser = async (userId: string) => {
-  const confirmed = await requestConfirmation({
-    title: 'Excluir usuário',
-    description: 'Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.',
-    confirmLabel: 'Excluir usuário',
-    cancelLabel: 'Cancelar',
-    tone: 'danger',
-  });
+  const handleDeleteUser = async (userId: string) => {
+    const confirmed = await requestConfirmation({
+      title: 'Excluir usuario',
+      description: 'Tem certeza que deseja excluir este usuario? Esta acao nao pode ser desfeita.',
+      confirmLabel: 'Excluir usuario',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  setActionLoading(true);
-  try {
-      const { error } = await supabase.functions.invoke('manage-users', {
+    setActionLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'deleteUser',
           userId,
@@ -272,20 +235,37 @@ const handleDeleteUser = async (userId: string) => {
       });
 
       if (error) {
-        throw new Error(error.message || 'Erro ao excluir usuário');
+        throw new Error(error.message || 'Erro ao excluir usuario');
       }
 
-      showMessage('success', 'Usuário excluído com sucesso');
-      loadUsers();
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      showMessage('success', 'Usuario excluido com sucesso');
+      await loadUsers();
     } catch (error: unknown) {
-      console.error('Erro ao excluir usuário:', error);
-      showMessage('error', 'Erro ao excluir usuário. Você precisa de permissões de admin.');
+      console.error('Erro ao excluir usuario:', error);
+      showMessage('error', error instanceof Error ? error.message : 'Erro ao excluir usuario');
     } finally {
       setActionLoading(false);
     }
   };
 
   const hasUsersSnapshot = users.length > 0;
+  const currentUserManagementId = getUserManagementId(user) ?? user?.id ?? null;
+
+  if (!canManageUsers) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+        <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-600" />
+        <h3 className="text-lg font-semibold text-red-900">Acesso restrito</h3>
+        <p className="mt-2 text-sm text-red-700">
+          Seu perfil nao possui permissao para gerenciar usuarios do sistema.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <PanelAdaptiveLoadingFrame
@@ -297,277 +277,256 @@ const handleDeleteUser = async (userId: string) => {
       overlayLabel="Atualizando usuarios..."
       stageClassName="min-h-[420px]"
     >
-    <div className="panel-page-shell space-y-6">
-      {message && (
-        <div className={`p-4 rounded-lg border flex items-center space-x-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border-green-200 text-green-800'
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
-          {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          )}
-          <p>{message.text}</p>
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <Users className="w-6 h-6 text-amber-600" />
-            <h3 className="text-xl font-semibold text-slate-900">Usuários do Sistema</h3>
-          </div>
-          <Button
-            onClick={() => setShowAddUser(!showAddUser)}
-            variant="primary"
+      <div className="panel-page-shell space-y-6">
+        {message && (
+          <div
+            className={`rounded-lg border p-4 ${message.type === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}
           >
-            <Plus className="w-4 h-4" />
-            <span>Novo Usuário</span>
-          </Button>
-        </div>
-
-        {showAddUser && (
-          <form onSubmit={handleCreateUser} className="bg-slate-50 rounded-lg p-6 mb-6">
-            <h4 className="text-lg font-semibold text-slate-900 mb-4">Adicionar Novo Usuário</h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Usuário
-                </label>
-                <Input
-                  type="text"
-                  value={newUserUsername}
-                  onChange={(e) => setNewUserUsername(e.target.value)}
-                  required
-                  placeholder="nome.usuario"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  required
-                  placeholder="usuario@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Senha
-                </label>
-                <Input
-                  type="password"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Permissão
-                </label>
-                <FilterSingleSelect
-                  icon={Shield}
-                  value={newUserRole}
-                  onChange={(value) => setNewUserRole(value as 'admin' | 'observer')}
-                  placeholder="Permissão"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: 'observer', label: 'Observador' },
-                    { value: 'admin', label: 'Administrador' },
-                  ]}
-                />
-              </div>
-            </div>
-
             <div className="flex items-center space-x-3">
-              <Button
-                type="submit"
-                disabled={actionLoading}
-              >
-                {actionLoading ? 'Criando...' : 'Criar Usuário'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setShowAddUser(false)}
-                variant="secondary"
-              >
-                Cancelar
-              </Button>
+              {message.type === 'success' ? (
+                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              )}
+              <p>{message.text}</p>
             </div>
-          </form>
+          </div>
         )}
 
-        {editingUser && (
-          <form onSubmit={handleUpdateUser} className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
-            <h4 className="text-lg font-semibold text-amber-900 mb-4">Editar Usuário</h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">Usuário</label>
-                <Input
-                  type="text"
-                  value={editUserUsername}
-                  onChange={(e) => setEditUserUsername(e.target.value)}
-                  required
-                  className="border-amber-200 focus:ring-amber-500"
-                  placeholder="nome.usuario"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">Email</label>
-                <Input
-                  type="email"
-                  value={editUserEmail}
-                  onChange={(e) => setEditUserEmail(e.target.value)}
-                  required
-                  className="border-amber-200 focus:ring-amber-500"
-                  placeholder="usuario@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">Nova Senha</label>
-                <Input
-                  type="password"
-                  value={editUserPassword}
-                  onChange={(e) => setEditUserPassword(e.target.value)}
-                  minLength={6}
-                  className="border-amber-200 focus:ring-amber-500"
-                  placeholder="Deixe em branco para manter"
-                />
-                <p className="text-xs text-amber-700 mt-1">Deixe em branco para manter a senha atual</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-amber-900 mb-2">Permissão</label>
-                <FilterSingleSelect
-                  icon={Shield}
-                  value={editUserRole}
-                  onChange={(value) => setEditUserRole(value as 'admin' | 'observer')}
-                  placeholder="Permissão"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: 'observer', label: 'Observador' },
-                    { value: 'admin', label: 'Administrador' },
-                  ]}
-                />
-              </div>
-            </div>
-
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Button
-                type="submit"
-                disabled={actionLoading}
-                variant="warning"
-              >
-                {actionLoading ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  setEditingUser(null);
-                  setEditUserPassword('');
-                }}
-                variant="secondary"
-                className="text-amber-800 hover:bg-amber-100"
-              >
-                Cancelar
-              </Button>
+              <Users className="h-6 w-6 text-amber-600" />
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Usuarios do Sistema</h3>
+                <p className="text-sm text-slate-500">Associe cada usuario a um perfil dinamico de acesso.</p>
+              </div>
             </div>
-          </form>
-        )}
+            <Button onClick={() => setShowAddUser(!showAddUser)} variant="primary">
+              <Plus className="h-4 w-4" />
+              <span>Novo Usuario</span>
+            </Button>
+          </div>
 
-        <div className="space-y-3">
-          {users.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-600">Nenhum usuário cadastrado</p>
-            </div>
-          ) : (
-            users.map((userProfile) => (
-              <div
-                key={userProfile.id}
-                className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
-                    <UserIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">@{userProfile.username}</p>
-                    <p className="text-sm text-slate-600">{userProfile.email}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Shield className={`w-4 h-4 ${userProfile.role === 'admin' ? 'text-amber-600' : 'text-blue-600'}`} />
-                      <span className={`text-sm ${userProfile.role === 'admin' ? 'text-amber-700' : 'text-blue-700'}`}>
-                        {userProfile.role === 'admin' ? 'Administrador' : 'Observador'}
-                      </span>
-                    </div>
-                  </div>
+          {showAddUser && (
+            <form onSubmit={handleCreateUser} className="mb-6 rounded-lg bg-slate-50 p-6">
+              <h4 className="mb-4 text-lg font-semibold text-slate-900">Adicionar Novo Usuario</h4>
+
+              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Usuario</label>
+                  <Input
+                    type="text"
+                    value={newUserUsername}
+                    onChange={(e) => setNewUserUsername(e.target.value)}
+                    required
+                    placeholder="nome.usuario"
+                  />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Button
-                    type="button"
-                    onClick={() => startEditingUser(userProfile)}
-                    disabled={actionLoading}
-                    variant="icon"
-                    size="icon"
-                    className="h-8 w-8 text-slate-600 hover:bg-slate-200"
-                    title="Editar usuário"
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                  <Input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    placeholder="usuario@email.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Senha</label>
+                  <Input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Perfil</label>
+                  <FilterSingleSelect
+                    icon={Shield}
+                    value={newUserRole}
+                    onChange={setNewUserRole}
+                    placeholder="Selecione um perfil"
+                    includePlaceholderOption={false}
+                    options={profileOptions}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Button type="submit" disabled={actionLoading}>
+                  {actionLoading ? 'Criando...' : 'Criar Usuario'}
+                </Button>
+                <Button type="button" onClick={resetCreateForm} variant="secondary">
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {editingUser && (
+            <form onSubmit={handleUpdateUser} className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-6">
+              <h4 className="mb-4 text-lg font-semibold text-amber-900">Editar Usuario</h4>
+
+              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-amber-900">Usuario</label>
+                  <Input
+                    type="text"
+                    value={editUserUsername}
+                    onChange={(e) => setEditUserUsername(e.target.value)}
+                    required
+                    className="border-amber-200 focus:ring-amber-500"
+                    placeholder="nome.usuario"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-amber-900">Email</label>
+                  <Input
+                    type="email"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                    required
+                    className="border-amber-200 focus:ring-amber-500"
+                    placeholder="usuario@email.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-amber-900">Nova Senha</label>
+                  <Input
+                    type="password"
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    minLength={6}
+                    className="border-amber-200 focus:ring-amber-500"
+                    placeholder="Deixe em branco para manter"
+                  />
+                  <p className="mt-1 text-xs text-amber-700">Deixe em branco para manter a senha atual.</p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-amber-900">Perfil</label>
+                  <FilterSingleSelect
+                    icon={Shield}
+                    value={editUserRole}
+                    onChange={setEditUserRole}
+                    placeholder="Selecione um perfil"
+                    includePlaceholderOption={false}
+                    options={profileOptions}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Button type="submit" disabled={actionLoading} variant="warning">
+                  {actionLoading ? 'Salvando...' : 'Salvar Alteracoes'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setEditUserPassword('');
+                  }}
+                  variant="secondary"
+                  className="text-amber-800 hover:bg-amber-100"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <div className="space-y-3">
+            {users.length === 0 ? (
+              <div className="py-12 text-center">
+                <Users className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                <p className="text-slate-600">Nenhum usuario cadastrado</p>
+              </div>
+            ) : (
+              users.map((userProfile) => {
+                const profile = profileBySlug.get(userProfile.role);
+                const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
+                const isAdminProfile = profile?.is_admin || userProfile.role === 'admin';
+
+                return (
+                  <div
+                    key={userProfile.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
                   >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  {userProfile.id !== user?.id && (
-                    <>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-yellow-600">
+                        <UserIcon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">@{userProfile.username}</p>
+                        <p className="text-sm text-slate-600">{userProfile.email}</p>
+                        <div className="mt-1 flex items-center space-x-2">
+                          <Shield className={`h-4 w-4 ${isAdminProfile ? 'text-amber-600' : 'text-blue-600'}`} />
+                          <span className={`text-sm ${isAdminProfile ? 'text-amber-700' : 'text-blue-700'}`}>
+                            {profileLabel || userProfile.role}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
                       <Button
-                        onClick={() => handleDeleteUser(userProfile.id)}
+                        type="button"
+                        onClick={() => startEditingUser(userProfile)}
                         disabled={actionLoading}
                         variant="icon"
                         size="icon"
-                        className="h-8 w-8 text-red-600 hover:bg-red-50"
-                        title="Excluir usuário"
+                        className="h-8 w-8 text-slate-600 hover:bg-slate-200"
+                        title="Editar usuario"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                    </>
-                  )}
-                  {userProfile.id === user?.id && (
-                    <span className="text-sm text-slate-500 italic">Você</span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-2">Sobre as Permissões</h4>
-            <ul className="text-sm text-blue-800 space-y-2">
-              <li><strong>Administrador:</strong> Acesso completo ao sistema. Pode criar, editar e excluir leads, contratos, lembretes e gerenciar usuários.</li>
-              <li><strong>Observador:</strong> Acesso somente-leitura. Pode visualizar dashboard, leads, contratos e lembretes, mas não pode modificar nada.</li>
-            </ul>
+                      {userProfile.id !== currentUserManagementId ? (
+                        <Button
+                          onClick={() => void handleDeleteUser(userProfile.id)}
+                          disabled={actionLoading}
+                          variant="icon"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:bg-red-50"
+                          title="Excluir usuario"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <span className="text-sm italic text-slate-500">Voce</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
+
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+            <div>
+              <h4 className="mb-2 font-semibold text-blue-900">Como funciona agora</h4>
+              <ul className="space-y-2 text-sm text-blue-800">
+                <li>Os perfis disponiveis aqui sao dinamicos e podem ser criados na area "Perfis e Acessos".</li>
+                <li>Perfis marcados como administrativos recebem acesso total ao sistema automaticamente.</li>
+                <li>Perfis comuns nascem sem acesso e voce libera cada modulo de forma granular.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        {ConfirmationDialog}
       </div>
-      {ConfirmationDialog}
-    </div>
     </PanelAdaptiveLoadingFrame>
   );
 }

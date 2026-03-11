@@ -56,6 +56,8 @@ export default function PainelWrapper() {
     return ROUTE_TAB_MAP[route] || 'dashboard';
   }, [location.pathname]);
 
+  const useFullBleedContent = useMemo(() => location.pathname === '/painel/whatsapp', [location.pathname]);
+
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
     [leadOrigins],
@@ -169,6 +171,7 @@ export default function PainelWrapper() {
       </Helmet>
       <Layout
         activeTab={activeTab}
+        useFullBleedContent={useFullBleedContent}
         onTabChange={handleTabChange}
         unreadReminders={unreadReminders}
         hasActiveNotification={hasActiveNotification}

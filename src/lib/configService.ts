@@ -10,6 +10,7 @@ import {
   ConfigOption,
   ProfilePermission,
   IntegrationSetting,
+  AccessProfile,
 } from './supabase';
 
 export type ConfigCategory =
@@ -256,6 +257,7 @@ const isMissingColumnError = (error: PostgrestError | null | undefined, column: 
 };
 
 const PROFILE_PERMISSIONS_TABLE = 'profile_permissions';
+const ACCESS_PROFILES_TABLE = 'access_profiles';
 
 const isTableMissingError = (error: unknown, table: string) => {
   if (!error || typeof error !== 'object') return false;
@@ -388,6 +390,93 @@ const updateLocalIntegrationSetting = (
 };
 
 export const configService = {
+  async getAccessProfiles(): Promise<AccessProfile[]> {
+    try {
+      const { data, error, status } = await supabase
+        .from(ACCESS_PROFILES_TABLE)
+        .select('*')
+        .order('is_system', { ascending: false })
+        .order('name', { ascending: true });
+
+      if (error) {
+        if (status === 404 || isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
+          return [];
+        }
+        throw error;
+      }
+
+      return (data as AccessProfile[] | null) ?? [];
+    } catch (error) {
+      if (isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
+        return [];
+      }
+
+      console.error('Error loading access profiles:', error);
+      return [];
+    }
+  },
+
+  async createAccessProfile(
+    payload: Pick<AccessProfile, 'slug' | 'name'> & Partial<Pick<AccessProfile, 'description' | 'is_admin' | 'is_system'>>,
+  ): Promise<{ data: AccessProfile | null; error: PostgrestError | null }> {
+    try {
+      const { data, error } = await supabase
+        .from(ACCESS_PROFILES_TABLE)
+        .insert([
+          {
+            slug: payload.slug,
+            name: payload.name,
+            description: payload.description ?? null,
+            is_admin: payload.is_admin ?? false,
+            is_system: payload.is_system ?? false,
+          },
+        ])
+        .select()
+        .single();
+
+      return { data: (data as AccessProfile) ?? null, error };
+    } catch (error) {
+      console.error('Error creating access profile:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
+  async updateAccessProfile(
+    id: string,
+    updates: Partial<Pick<AccessProfile, 'name' | 'description' | 'is_admin'>>,
+  ): Promise<{ data: AccessProfile | null; error: PostgrestError | null }> {
+    try {
+      const { data, error } = await supabase
+        .from(ACCESS_PROFILES_TABLE)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data: (data as AccessProfile) ?? null, error };
+    } catch (error) {
+      console.error('Error updating access profile:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
+  async deleteAccessProfile(id: string): Promise<{ error: PostgrestError | null }> {
+    try {
+      const { error } = await supabase
+        .from(ACCESS_PROFILES_TABLE)
+        .delete()
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting access profile:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async getSystemSettings(): Promise<SystemSettings | null> {
     try {
       const { data, error } = await supabase

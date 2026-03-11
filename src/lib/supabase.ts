@@ -241,9 +241,20 @@ export type UserProfile = {
   id: string;
   email: string;
   username: string;
-  role: 'admin' | 'observer';
+  role: string;
   created_at: string;
   created_by?: string;
+};
+
+export type AccessProfile = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  is_system: boolean;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type SystemSettings = {

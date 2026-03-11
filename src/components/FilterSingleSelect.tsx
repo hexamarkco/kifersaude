@@ -22,6 +22,7 @@ type FilterSingleSelectProps = {
   value: string;
   onChange: (next: string) => void;
   includePlaceholderOption?: boolean;
+  neutralValues?: string[];
   disabled?: boolean;
   size?: 'default' | 'compact';
 };
@@ -35,6 +36,7 @@ export default function FilterSingleSelect({
   value,
   onChange,
   includePlaceholderOption = true,
+  neutralValues = [],
   disabled = false,
   size = 'default',
 }: FilterSingleSelectProps) {
@@ -118,10 +120,23 @@ export default function FilterSingleSelect({
     return [{ value: '', label: placeholder }, ...options];
   }, [includePlaceholderOption, options, placeholder]);
 
-  const selectedLabel = useMemo(() => {
-    const selected = optionsWithDefault.find((option) => option.value === value);
-    return selected?.label ?? placeholder;
-  }, [optionsWithDefault, placeholder, value]);
+  const selectedOption = useMemo(
+    () => optionsWithDefault.find((option) => option.value === value) ?? null,
+    [optionsWithDefault, value],
+  );
+
+  const selectedLabel = useMemo(
+    () => selectedOption?.label ?? placeholder,
+    [placeholder, selectedOption],
+  );
+
+  const isNeutralSelection = useMemo(() => {
+    if (!selectedOption) {
+      return true;
+    }
+
+    return selectedOption.value === '' || neutralValues.includes(selectedOption.value);
+  }, [neutralValues, selectedOption]);
 
   const selectedIndex = useMemo(
     () => optionsWithDefault.findIndex((option) => option.value === value),
@@ -219,7 +234,7 @@ export default function FilterSingleSelect({
           className={cx(
             'block truncate',
             labelTextClass,
-            value
+            !isNeutralSelection
               ? isDarkTheme
                 ? 'font-medium text-stone-100'
                 : 'font-medium text-[var(--panel-input-text,var(--panel-text-soft))]'

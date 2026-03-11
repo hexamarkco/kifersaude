@@ -17,6 +17,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { configService, type ConfigCategory } from '../../lib/configService';
 import { type SystemSettings } from '../../lib/supabase';
@@ -190,6 +191,7 @@ const sectionBodyClass =
   'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-6 shadow-sm';
 
 export default function SystemSettingsTab() {
+  const { role } = useAuth();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [savedSettings, setSavedSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,7 +205,7 @@ export default function SystemSettingsTab() {
     leads: false,
     contracts: false,
   });
-  const { loading: configLoading } = useConfig();
+  const { loading: configLoading, getRoleModulePermission } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
@@ -307,7 +309,8 @@ export default function SystemSettingsTab() {
 
   const showGeneralSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[0].searchTerms);
   const showOperadorasSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[1].searchTerms);
-  const showAccessSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[2].searchTerms);
+  const canViewAccessSettings = getRoleModulePermission(role, 'config-access').can_view;
+  const showAccessSection = canViewAccessSettings && matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[2].searchTerms);
 
   const showLeadStatusManager = matchesSearch(normalizedSearchTerm, [
     'status dos leads',

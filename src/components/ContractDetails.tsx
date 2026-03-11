@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase, Contract, ContractHolder, Dependent, Interaction, ContractValueAdjustment } from '../lib/supabase';
 import { User, Users, Plus, Edit, Trash2, MessageCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import HolderForm from './HolderForm';
 import ContractForm from './ContractForm';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import ModalShell from './ui/ModalShell';
+import Button from './ui/Button';
 import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
@@ -30,7 +32,9 @@ type ContractDocument = {
 };
 
 export default function ContractDetails({ contract, onClose, onUpdate, onDelete }: ContractDetailsProps) {
-  const { isObserver } = useAuth();
+  const { role } = useAuth();
+  const { getRoleModulePermission } = useConfig();
+  const canEditContracts = getRoleModulePermission(role, 'contracts').can_edit;
   const [holders, setHolders] = useState<ContractHolder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
@@ -568,7 +572,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
       panelClassName="sm:max-w-5xl"
     >
       <div className="mb-4 flex items-center justify-end gap-2">
-        {!isObserver && (
+        {canEditContracts && (
           <button
             onClick={() => setShowEditForm(true)}
             className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
@@ -576,7 +580,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
             Editar
           </button>
         )}
-        {!isObserver && onDelete && (
+        {canEditContracts && onDelete && (
           <button
             onClick={() => onDelete(contract)}
             className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
@@ -861,17 +865,17 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <User className="w-5 h-5 mr-2" />
                 Titulares ({holders.length})
               </h4>
-              {!isObserver && (
-                <button
+              {canEditContracts && (
+                <Button
                   onClick={() => {
                     setEditingHolder(null);
                     setShowHolderForm(true);
                   }}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  size="sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Adicionar Titular</span>
-                </button>
+                </Button>
               )}
             </div>
 
@@ -891,7 +895,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                           {holderItem.cnpj && <div><span className="font-medium">CNPJ:</span> {holderItem.cnpj}</div>}
                         </div>
                       </div>
-                      {!isObserver && (
+                      {canEditContracts && (
                         <div className="flex items-center space-x-2 ml-4">
                           <button
                             onClick={() => {
@@ -912,16 +916,16 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                 <User className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-600 mb-3">Nenhum titular cadastrado</p>
-                {!isObserver && (
-                  <button
+                {canEditContracts && (
+                  <Button
                     onClick={() => {
                       setEditingHolder(null);
                       setShowHolderForm(true);
                     }}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                    size="sm"
                   >
                     Adicionar Titular
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -934,8 +938,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                 <Users className="w-5 h-5 mr-2" />
                 Dependentes ({dependents.length})
               </h4>
-              {!isObserver && (
-                <button
+              {canEditContracts && (
+                <Button
                   onClick={() => {
                     if (holders.length === 0) {
                       alert('Cadastre um titular antes de adicionar dependentes.');
@@ -945,11 +949,11 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     setSelectedHolderId(holders[0]?.id || null);
                     setShowDependentForm(true);
                   }}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  size="sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Adicionar</span>
-                </button>
+                </Button>
               )}
             </div>
 
@@ -964,18 +968,19 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                           <p className="text-sm text-slate-600">Titular</p>
                           <p className="font-semibold text-slate-900">{holderItem.nome_completo}</p>
                         </div>
-                        {!isObserver && (
-                          <button
+                        {canEditContracts && (
+                          <Button
                             onClick={() => {
                               setSelectedHolderId(holderItem.id);
                               setEditingDependent(null);
                               setShowDependentForm(true);
                             }}
-                            className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                            variant="secondary"
+                            size="sm"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Adicionar dependente</span>
-                          </button>
+                          </Button>
                         )}
                       </div>
 
@@ -994,7 +999,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                                   )}
                                 </div>
                               </div>
-                              {!isObserver && (
+                              {canEditContracts && (
                                 <div className="flex items-center space-x-2 ml-4">
                                   <button
                                     onClick={() => {
@@ -1088,23 +1093,23 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-slate-900">Histórico de Interações</h4>
-              {!isObserver && (
-                <button
+              {canEditContracts && (
+                <Button
                   onClick={() => {
                     setEditingInteraction(null);
                     setInteractionData(initialInteractionData);
                     setShowInteractionForm(!showInteractionForm);
                   }}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  size="sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Nova Interação</span>
-                </button>
+                </Button>
               )}
             </div>
 
             {showInteractionForm && (
-              <form onSubmit={handleAddInteraction} className="mb-6 bg-teal-50 rounded-lg p-4">
+              <form onSubmit={handleAddInteraction} className="mb-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -1154,27 +1159,26 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     onChange={(e) => setInteractionData({ ...interactionData, descricao: e.target.value })}
                     rows={3}
                     placeholder="Descreva o que foi tratado..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex items-center justify-end space-x-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       setShowInteractionForm(false);
                       setEditingInteraction(null);
                       setInteractionData(initialInteractionData);
                     }}
-                    className="px-4 py-2 text-slate-700 hover:bg-white rounded-lg transition-colors"
+                    variant="ghost"
                   >
                     Cancelar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                   >
                     {editingInteraction ? 'Salvar alterações' : 'Adicionar'}
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
@@ -1200,7 +1204,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                           {new Date(interaction.data_interacao).toLocaleDateString('pt-BR')} às{' '}
                           {new Date(interaction.data_interacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        {!isObserver && (
+                        {canEditContracts && (
                           <div className="flex items-center space-x-1">
                             <button
                               onClick={() => handleEditInteraction(interaction)}

@@ -79,7 +79,7 @@ export default function ModalShell({
   }
 
   return createPortal(
-    <div className={cx('modal-theme-host painel-theme', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
+    <div className={cx('modal-theme-host painel-theme kifer-ds', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
       <div
         className="fixed inset-0 z-[80] bg-stone-950/60 backdrop-blur-sm"
         aria-hidden="true"

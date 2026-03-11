@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { Reminder } from '../lib/supabase';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import Button from './ui/Button';
 
 type NotificationToastProps = {
   reminder: Reminder;
@@ -11,6 +12,8 @@ type NotificationToastProps = {
 
 export default function NotificationToast({ reminder, onClose, onViewReminders }: NotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const isDarkThemeActive =
+    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 10);
@@ -34,11 +37,13 @@ export default function NotificationToast({ reminder, onClose, onViewReminders }
 
   return (
     <div
-      className={`fixed top-20 right-4 z-50 w-96 bg-white rounded-xl shadow-2xl border-2 border-teal-500 overflow-hidden transition-all duration-300 ${
+      className={`painel-theme kifer-ds fixed top-20 right-4 z-50 w-96 overflow-hidden rounded-xl border border-amber-300/70 bg-white shadow-2xl transition-all duration-300 ${
+        isDarkThemeActive ? 'theme-dark' : 'theme-light'
+      } ${
         isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
       }`}
     >
-      <div className="bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-3">
+      <div className="bg-gradient-to-r from-amber-500 to-amber-700 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-white">
             <Bell className="w-5 h-5 animate-bounce" />
@@ -75,12 +80,9 @@ export default function NotificationToast({ reminder, onClose, onViewReminders }
       </div>
 
       <div className="px-4 pb-4">
-        <button
-          onClick={handleViewReminders}
-          className="w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium"
-        >
+        <Button onClick={handleViewReminders} fullWidth>
           Ver Lembretes
-        </button>
+        </Button>
       </div>
     </div>
   );

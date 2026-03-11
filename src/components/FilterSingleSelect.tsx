@@ -26,7 +26,7 @@ type FilterSingleSelectProps = {
   size?: 'default' | 'compact';
 };
 
-type DropdownPos = { top: number; left: number; width: number };
+type DropdownPos = { top: number; left: number; width: number; maxHeight: number };
 
 export default function FilterSingleSelect({
   icon: Icon,
@@ -49,8 +49,27 @@ export default function FilterSingleSelect({
 
   const calcPos = () => {
     if (!buttonRef.current) return;
+
     const r = buttonRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    const viewportPadding = 12;
+    const gap = 4;
+    const estimatedOptionHeight = isCompact ? 32 : 40;
+    const estimatedMenuHeight = Math.min(288, optionsWithDefault.length * estimatedOptionHeight + 8);
+    const availableBelow = window.innerHeight - r.bottom - viewportPadding;
+    const availableAbove = r.top - viewportPadding;
+    const shouldOpenUpward = availableBelow < Math.min(estimatedMenuHeight, 180) && availableAbove > availableBelow;
+    const maxHeight = Math.max(
+      120,
+      Math.min(288, shouldOpenUpward ? availableAbove - gap : availableBelow - gap),
+    );
+    const unclampedLeft = r.left;
+    const width = Math.min(r.width, window.innerWidth - viewportPadding * 2);
+    const left = Math.max(viewportPadding, Math.min(unclampedLeft, window.innerWidth - width - viewportPadding));
+    const top = shouldOpenUpward
+      ? Math.max(viewportPadding, r.top - maxHeight - gap)
+      : Math.min(window.innerHeight - maxHeight - viewportPadding, r.bottom + gap);
+
+    setPos({ top, left, width, maxHeight });
   };
 
   const openDropdown = () => {
@@ -229,7 +248,7 @@ export default function FilterSingleSelect({
             isDark: isDarkTheme,
             className: 'max-h-72',
           })}
-          style={{ top: pos.top, left: pos.left, width: pos.width }}
+          style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
           role="listbox"
         >
           {optionsWithDefault.map((option, index) => {

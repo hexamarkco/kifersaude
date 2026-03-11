@@ -123,20 +123,20 @@ const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
 };
 
 const tabsTriggerBaseClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'panel-ui-tab inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {
-    active: 'rounded-none border-b-2 border-amber-600 bg-amber-50/70 px-3 py-4 text-amber-700',
-    idle: 'rounded-none border-b-2 border-transparent px-3 py-4 text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+    active: 'panel-ui-tab-underline rounded-none border-b-2 border-amber-600 bg-amber-50/70 px-3 py-4 text-amber-700',
+    idle: 'panel-ui-tab-underline rounded-none border-b-2 border-transparent px-3 py-4 text-slate-600 hover:bg-slate-100 hover:text-slate-900',
   },
   pill: {
-    active: 'bg-white text-slate-900 shadow-sm',
-    idle: 'text-slate-600 hover:bg-white/70 hover:text-slate-900',
+    active: 'panel-ui-tab-pill bg-white text-slate-900 shadow-sm',
+    idle: 'panel-ui-tab-pill text-slate-600 hover:bg-white/70 hover:text-slate-900',
   },
   panel: {
-    active: 'h-9 bg-slate-100 px-3 py-0 text-amber-700 shadow-sm',
-    idle: 'h-9 px-3 py-0 text-slate-500 hover:bg-white/70 hover:text-slate-900',
+    active: 'panel-ui-tab-panel h-9 bg-slate-100 px-3 py-0 text-amber-700 shadow-sm',
+    idle: 'panel-ui-tab-panel h-9 px-3 py-0 text-slate-500 hover:bg-white/70 hover:text-slate-900',
   },
 };
 

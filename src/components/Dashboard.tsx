@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import AnimatedStatCard from './AnimatedStatCard';
 import DonutChart from './charts/DonutChart';
-import LineChart from './charts/LineChart';
+import MonthlyTrendChart from './charts/MonthlyTrendChart';
 import LeadFunnel from './LeadFunnel';
 import ContractDetails from './ContractDetails';
 import LeadDetails from './LeadDetails';
@@ -1900,6 +1900,29 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     displayedMonthlySeries.length > 1
       ? displayedMonthlySeries[displayedMonthlySeries.length - 2]
       : undefined;
+  const highestMonthlyPoint = useMemo(() => {
+    if (displayedMonthlySeries.length === 0) {
+      return undefined;
+    }
+
+    return displayedMonthlySeries.reduce((highest, point) =>
+      point.value > highest.value ? point : highest
+    );
+  }, [displayedMonthlySeries]);
+  const averageMonthlyValue = useMemo(() => {
+    if (displayedMonthlySeries.length === 0) {
+      return 0;
+    }
+
+    const total = displayedMonthlySeries.reduce((sum, point) => sum + point.value, 0);
+    return total / displayedMonthlySeries.length;
+  }, [displayedMonthlySeries]);
+  const monthlyVariationTone =
+    (latestMonthlyPoint?.variation || 0) > 0
+      ? 'text-emerald-600'
+      : (latestMonthlyPoint?.variation || 0) < 0
+        ? 'text-red-600'
+        : 'text-slate-700';
 
   const operadoraColors = [
     '#14b8a6',
@@ -2261,55 +2284,64 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           </div>
         </div>
 
-        <div className="mt-4 grid gap-6 lg:grid-cols-5">
-          <div className="space-y-4 lg:col-span-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
+        <div className="mt-4 space-y-6">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <BadgePercent className="h-4 w-4 text-teal-600" />
-                  <span>Variação mensal</span>
+                  <TrendingUp className="h-4 w-4 text-teal-600" />
+                  <span>Ultimo mes</span>
                 </div>
-                <span className="text-xs text-slate-500">
-                  {previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'Primeiro mês'}
-                </span>
+                <span className="text-xs text-slate-500">{latestMonthlyPoint?.label || "Sem dados"}</span>
               </div>
-              <p
-                className={`mt-3 text-2xl font-bold ${
-                  (latestMonthlyPoint?.variation || 0) > 0
-                    ? 'text-emerald-600'
-                    : (latestMonthlyPoint?.variation || 0) < 0
-                      ? 'text-red-600'
-                      : 'text-slate-700'
-                }`}
-              >
+              <p className="mt-3 text-2xl font-bold text-slate-900">
+                {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : "Sem dados"}
+              </p>
+              <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
                 {latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
-                  ? `${latestMonthlyPoint.variation.toFixed(1)}%`
-                  : 'Sem dados'}
+                  ? `${latestMonthlyPoint.variation > 0 ? "+" : ""}${latestMonthlyPoint.variation.toFixed(1)}% ${
+                      previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : "vs mes anterior"
+                    }`
+                  : "Primeiro mes exibido no recorte"}
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <TrendingUp className="h-4 w-4 text-teal-600" />
-                <span>{latestMonthlyPoint?.label || 'Sem dados'}</span>
+                <BadgePercent className="h-4 w-4 text-teal-600" />
+                <span>Media do periodo</span>
               </div>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
+              <p className="mt-3 text-2xl font-bold text-slate-900">
+                {displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : "Sem dados"}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Referência do mês mais recente exibido</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Baseado nos ultimos {displayedMonthlySeries.length} meses exibidos
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Calendar className="h-4 w-4 text-teal-600" />
+                <span>Pico do periodo</span>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-slate-900">
+                {highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : "Sem dados"}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes do recorte` : "Aguardando historico suficiente"}
+              </p>
             </div>
           </div>
 
-          <div className="lg:col-span-3">
-            <LineChart
-              data={displayedMonthlySeries.map((point) => ({
-                label: point.label,
-                value: point.value,
-              }))}
-              color={metricColorMap[selectedMetric]}
-              height={260}
-            />
-          </div>
+          <MonthlyTrendChart
+            data={displayedMonthlySeries.map((point) => ({
+              label: point.label,
+              value: point.value,
+            }))}
+            color={metricColorMap[selectedMetric]}
+            formatValue={formatSelectedMetricValue}
+            height={280}
+          />
         </div>
       </div>
 

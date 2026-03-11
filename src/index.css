@@ -1287,6 +1287,41 @@
   color: var(--panel-text) !important;
 }
 
+.painel-theme.theme-dark .panel-ui-tab {
+  --tw-ring-offset-color: var(--panel-bg);
+}
+
+.painel-theme.theme-dark .panel-ui-tab-underline[aria-selected='false']:hover {
+  background-color: rgba(51, 65, 85, 0.52) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-tab-pill[aria-selected='false']:hover {
+  background-color: rgba(51, 65, 85, 0.58) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-tab-panel[aria-selected='false']:hover {
+  background-color: rgba(71, 85, 105, 0.5) !important;
+  color: var(--panel-text) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-tab-pill[aria-selected='true'] {
+  background-color: rgba(30, 41, 59, 0.92) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.16),
+    0 10px 24px -18px rgba(2, 6, 23, 0.9) !important;
+}
+
+.painel-theme.theme-dark .panel-ui-tab-panel[aria-selected='true'] {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  color: #fcd34d !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 191, 36, 0.18),
+    0 10px 24px -18px rgba(2, 6, 23, 0.9) !important;
+}
+
 .config-transparent-buttons button.bg-white,
 .config-transparent-buttons button.bg-slate-50,
 .config-transparent-buttons button.bg-slate-100 {

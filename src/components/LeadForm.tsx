@@ -1,24 +1,41 @@
-import { useEffect, useMemo, useState } from 'react';
-import { supabase, Lead } from '../lib/supabase';
-import { Search, Compass, Briefcase, AlertCircle, UserCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertCircle,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  Compass,
+  Mail,
+  MapPin,
+  MapPinned,
+  Phone,
+  Search,
+  UserCircle,
+} from 'lucide-react';
+import { supabase, type Lead } from '../lib/supabase';
+import {
+  convertLocalToUTC,
   formatDateForInput,
   formatDateTimeForInput,
-  convertLocalToUTC,
 } from '../lib/dateUtils';
+import { BRAZIL_STATE_OPTIONS, fetchCitiesByState } from '../lib/brasilLocations';
 import { consultarCep, formatCep } from '../lib/cepService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import {
-  resolveStatusIdByName,
   resolveOrigemIdByName,
-  resolveTipoContratacaoIdByLabel,
   resolveResponsavelIdByLabel,
+  resolveStatusIdByName,
+  resolveTipoContratacaoIdByLabel,
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
 import DateTimePicker from './ui/DateTimePicker';
+import Field from './ui/Field';
+import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
+import Textarea from './ui/Textarea';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -49,7 +66,15 @@ type LeadFormState = {
 
 type LeadPayload = Omit<
   LeadFormState,
-  'proximo_retorno' | 'blackout_dates' | 'daily_send_limit' | 'email' | 'cidade' | 'estado' | 'regiao' | 'operadora_atual' | 'endereco'
+  | 'proximo_retorno'
+  | 'blackout_dates'
+  | 'daily_send_limit'
+  | 'email'
+  | 'cidade'
+  | 'estado'
+  | 'regiao'
+  | 'operadora_atual'
+  | 'endereco'
 > & {
   proximo_retorno: string | null;
   ultimo_contato: string;
@@ -70,6 +95,7 @@ const normalizeEmail = (value: string | null | undefined) =>
 
 const parseBlackoutDates = (value: string): string[] => {
   if (!value.trim()) return [];
+
   const dates = value
     .split(/[\n,]+/)
     .map((entry) => entry.trim())
@@ -114,11 +140,15 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [skipAutomationOnCreate, setSkipAutomationOnCreate] = useState(false);
   const isNewLead = !lead;
+  const lastFetchedCepRef = useRef('');
 
   const activeLeadStatuses = leadStatuses.filter((status) => status.ativo);
-  const defaultStatus = activeLeadStatuses.find((status) => status.padrao) || activeLeadStatuses[0];
+  const defaultStatus =
+    activeLeadStatuses.find((status) => status.padrao) || activeLeadStatuses[0];
 
   const restrictedOriginNames = useMemo(
     () =>
@@ -148,25 +178,73 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
     if (!lead && !formData.status && defaultStatus) {
       setFormData((prev) => ({ ...prev, status: defaultStatus.nome }));
     }
-  }, [lead, defaultStatus, formData.status]);
+  }, [defaultStatus, formData.status, lead]);
 
   useEffect(() => {
     if (!lead && !formData.origem && activeOrigins.length > 0) {
       setFormData((prev) => ({ ...prev, origem: activeOrigins[0].nome }));
     }
-  }, [lead, activeOrigins, formData.origem]);
+  }, [activeOrigins, formData.origem, lead]);
 
   useEffect(() => {
     if (!lead && !formData.tipo_contratacao && tipoContratacaoOptions.length > 0) {
-      setFormData((prev) => ({ ...prev, tipo_contratacao: tipoContratacaoOptions[0].label }));
+      setFormData((prev) => ({
+        ...prev,
+        tipo_contratacao: tipoContratacaoOptions[0].label,
+      }));
     }
-  }, [lead, tipoContratacaoOptions, formData.tipo_contratacao]);
+  }, [formData.tipo_contratacao, lead, tipoContratacaoOptions]);
 
   useEffect(() => {
     if (!lead && !formData.responsavel && responsavelOptions.length > 0) {
       setFormData((prev) => ({ ...prev, responsavel: responsavelOptions[0].label }));
     }
-  }, [lead, responsavelOptions, formData.responsavel]);
+  }, [formData.responsavel, lead, responsavelOptions]);
+
+  useEffect(() => {
+    const stateUf = formData.estado.trim().toUpperCase();
+
+    if (!stateUf) {
+      setCityOptions([]);
+      setLoadingCities(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingCities(true);
+
+    void fetchCitiesByState(stateUf)
+      .then((cities) => {
+        if (!cancelled) {
+          setCityOptions(cities);
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar cidades:', error);
+        if (!cancelled) {
+          setCityOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingCities(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.estado]);
+
+  const citySelectOptions = useMemo(
+    () => [
+      ...(formData.cidade && !cityOptions.includes(formData.cidade)
+        ? [{ value: formData.cidade, label: formData.cidade }]
+        : []),
+      ...cityOptions.map((city) => ({ value: city, label: city })),
+    ],
+    [cityOptions, formData.cidade],
+  );
 
   if (configLoading && !lead) {
     return (
@@ -181,28 +259,34 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         bodyClassName="flex min-h-[220px] flex-col items-center justify-center"
       >
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
-        <p className="mt-4 text-center text-sm text-slate-600">Carregando configurações...</p>
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Carregando configuracoes...
+        </p>
       </ModalShell>
     );
   }
 
-  const handleCepSearch = async () => {
-    if (!formData.cep || formData.cep.replace(/\D/g, '').length !== 8) {
-      alert('Por favor, informe um CEP válido');
+  const handleCepSearch = async (cepValue?: string) => {
+    const targetCep = cepValue ?? formData.cep;
+
+    if (!targetCep || targetCep.replace(/\D/g, '').length !== 8) {
+      alert('Por favor, informe um CEP valido');
       return;
     }
 
     setLoadingCep(true);
     try {
-      const data = await consultarCep(formData.cep);
+      const data = await consultarCep(targetCep);
       if (data) {
+        const stateUf = data.uf.trim().toUpperCase();
         setFormData((prev) => ({
           ...prev,
           endereco: data.logradouro,
           cidade: data.localidade,
-          estado: data.uf,
-          regiao: data.uf,
+          estado: stateUf,
+          regiao: stateUf,
         }));
+        lastFetchedCepRef.current = targetCep.replace(/\D/g, '');
       }
     } catch {
       alert('Erro ao consultar CEP. Verifique o CEP informado.');
@@ -213,11 +297,28 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
 
   const handleCepChange = (value: string) => {
     const formatted = formatCep(value);
+    const normalizedCep = formatted.replace(/\D/g, '');
+
     setFormData((prev) => ({ ...prev, cep: formatted }));
 
-    if (formatted.replace(/\D/g, '').length === 8) {
-      handleCepSearch();
+    if (normalizedCep.length === 8 && lastFetchedCepRef.current !== normalizedCep) {
+      void handleCepSearch(formatted);
     }
+
+    if (normalizedCep.length < 8) {
+      lastFetchedCepRef.current = '';
+    }
+  };
+
+  const handleStateChange = (nextState: string) => {
+    const normalizedState = nextState.trim().toUpperCase();
+
+    setFormData((prev) => ({
+      ...prev,
+      estado: normalizedState,
+      regiao: normalizedState,
+      cidade: prev.estado === normalizedState ? prev.cidade : '',
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,14 +330,14 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         { value: formData.nome_completo.trim(), label: 'nome completo' },
         { value: formData.telefone.trim(), label: 'telefone' },
         { value: formData.origem.trim(), label: 'origem do lead' },
-        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratação' },
+        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratacao' },
         { value: formData.status.trim(), label: 'status' },
-        { value: formData.responsavel.trim(), label: 'responsável' },
+        { value: formData.responsavel.trim(), label: 'responsavel' },
       ];
 
       const missingRequired = requiredValues.find((item) => !item.value);
       if (missingRequired) {
-        alert(`Preencha o campo obrigatório: ${missingRequired.label}.`);
+        alert(`Preencha o campo obrigatorio: ${missingRequired.label}.`);
         return;
       }
 
@@ -283,8 +384,14 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         ...normalizedLeadData,
         origem_id: resolveOrigemIdByName(leadOrigins, normalizedLeadData.origem),
         status_id: resolveStatusIdByName(leadStatuses, normalizedLeadData.status),
-        tipo_contratacao_id: resolveTipoContratacaoIdByLabel(tipoContratacaoOptions, normalizedLeadData.tipo_contratacao),
-        responsavel_id: resolveResponsavelIdByLabel(responsavelOptions, normalizedLeadData.responsavel),
+        tipo_contratacao_id: resolveTipoContratacaoIdByLabel(
+          tipoContratacaoOptions,
+          normalizedLeadData.tipo_contratacao,
+        ),
+        responsavel_id: resolveResponsavelIdByLabel(
+          responsavelOptions,
+          normalizedLeadData.responsavel,
+        ),
       };
 
       if (!lead && skipAutomationOnCreate) {
@@ -297,7 +404,6 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
       delete leadDataForDb.responsavel;
 
       let savedLeadId = lead?.id;
-
       let savedLead: Lead | null = lead;
 
       if (lead) {
@@ -311,15 +417,12 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         if (error) throw error;
         savedLead = updatedLead as Lead;
       } else {
-        console.log('[LeadForm] Criando novo lead...');
-        console.log('[LeadForm] Dados normalizados:', normalizedLeadData);
-
         const duplicateFilters = [
-          normalizedLeadData.telefone ? `telefone.eq.${normalizedLeadData.telefone}` : null,
+          normalizedLeadData.telefone
+            ? `telefone.eq.${normalizedLeadData.telefone}`
+            : null,
           normalizedLeadData.email ? `email.ilike.${normalizedLeadData.email}` : null,
         ].filter(Boolean);
-
-        console.log('[LeadForm] Filtros de duplicados:', duplicateFilters);
 
         if (duplicateFilters.length > 0) {
           const { data: duplicateLead, error: duplicateCheckError } = await supabase
@@ -330,23 +433,16 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
             .maybeSingle();
 
           if (duplicateCheckError) {
-            console.error('[LeadForm] Erro ao verificar duplicados:', duplicateCheckError);
             throw duplicateCheckError;
           }
 
-          console.log('[LeadForm] Lead duplicado encontrado?', !!duplicateLead);
-
           if (duplicateLead) {
-            const duplicateStatus = leadStatuses.find((s) => s.nome === 'Duplicado');
-            console.log('[LeadForm] Status Duplicado encontrado?', !!duplicateStatus);
+            const duplicateStatus = leadStatuses.find((status) => status.nome === 'Duplicado');
             if (duplicateStatus) {
               leadDataForDb.status_id = duplicateStatus.id;
-              console.log('[LeadForm] Marcando lead como Duplicado');
             }
           }
         }
-
-        console.log('[LeadForm] Dados para inserir no banco:', leadDataForDb);
 
         const { data: insertedLead, error } = await supabase
           .from('leads')
@@ -354,14 +450,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
           .select()
           .single<Lead>();
 
-        if (error) {
-          console.error('[LeadForm] Erro ao inserir lead:', error);
-          throw error;
-        }
-
-        console.log('[LeadForm] Lead inserido com sucesso:', insertedLead);
-        console.log('[LeadForm] ID do lead inserido:', insertedLead.id);
-        console.log('[LeadForm] Trigger de auto-contact no leads-api deve ser acionado agora...');
+        if (error) throw error;
 
         savedLead = insertedLead as Lead;
         savedLeadId = insertedLead.id;
@@ -429,432 +518,378 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
       >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Nome Completo *
-              </label>
-              <input
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field label="Nome Completo" htmlFor="lead-nome" required className="md:col-span-2">
+            <Input
+              id="lead-nome"
+              type="text"
+              required
+              leftIcon={UserCircle}
+              value={formData.nome_completo}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Telefone" htmlFor="lead-telefone" required>
+            <Input
+              id="lead-telefone"
+              type="tel"
+              required
+              leftIcon={Phone}
+              value={formData.telefone}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, telefone: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="E-mail" htmlFor="lead-email">
+            <Input
+              id="lead-email"
+              type="email"
+              leftIcon={Mail}
+              value={formData.email}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, email: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="CEP" htmlFor="lead-cep">
+            <div className="relative">
+              <Input
+                id="lead-cep"
+                type="text"
+                leftIcon={MapPin}
+                value={formData.cep}
+                onChange={(e) => handleCepChange(e.target.value)}
+                placeholder="00000-000"
+                maxLength={9}
+                className="pr-11"
+              />
+              {loadingCep ? (
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleCepSearch()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-teal-600"
+                  aria-label="Buscar CEP"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Endereco" htmlFor="lead-endereco">
+            <Input
+              id="lead-endereco"
+              type="text"
+              leftIcon={MapPinned}
+              value={formData.endereco}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, endereco: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Estado">
+            <FilterSingleSelect
+              icon={MapPin}
+              value={formData.estado}
+              onChange={handleStateChange}
+              placeholder="Selecione o estado"
+              options={BRAZIL_STATE_OPTIONS}
+            />
+          </Field>
+
+          <Field
+            label="Cidade"
+            helperText={
+              formData.estado
+                ? loadingCities
+                  ? 'Carregando cidades...'
+                  : 'Cidade filtrada pelo estado selecionado.'
+                : 'Selecione um estado para liberar as cidades.'
+            }
+          >
+            <FilterSingleSelect
+              icon={MapPinned}
+              value={formData.cidade}
+              onChange={(value) => setFormData((prev) => ({ ...prev, cidade: value }))}
+              placeholder={
+                formData.estado
+                  ? loadingCities
+                    ? 'Carregando cidades'
+                    : 'Selecione a cidade'
+                  : 'Escolha primeiro o estado'
+              }
+              options={citySelectOptions}
+              disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
+            />
+          </Field>
+
+          <Field label="Origem do Lead" required>
+            {activeOrigins.length > 0 ? (
+              <FilterSingleSelect
+                icon={Compass}
+                value={formData.origem}
+                onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
+                placeholder="Origem do lead"
+                includePlaceholderOption={false}
+                options={[
+                  ...(!activeOrigins.some((origin) => origin.nome === formData.origem) &&
+                  formData.origem
+                    ? [{ value: formData.origem, label: formData.origem }]
+                    : []),
+                  ...activeOrigins.map((origin) => ({
+                    value: origin.nome,
+                    label: origin.nome,
+                  })),
+                ]}
+              />
+            ) : (
+              <Input
                 type="text"
                 required
-                value={formData.nome_completo}
+                leftIcon={Compass}
+                value={formData.origem}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
+                  setFormData((prev) => ({ ...prev, origem: e.target.value }))
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Informe a origem"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Telefone *
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.telefone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, telefone: e.target.value }))
-                }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                E-mail
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                CEP
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.cep}
-                  onChange={(e) => handleCepChange(e.target.value)}
-                  placeholder="00000-000"
-                  maxLength={9}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-                {loadingCep && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-teal-500 border-t-transparent"></div>
-                  </div>
-                )}
-                {!loadingCep && formData.cep.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleCepSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-600 hover:text-teal-700"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Endereço
-              </label>
-              <input
-                type="text"
-                value={formData.endereco}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, endereco: e.target.value }))
-                }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Cidade
-              </label>
-              <input
-                type="text"
-                value={formData.cidade}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, cidade: e.target.value }))
-                }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Estado
-              </label>
-              <input
-                type="text"
-                value={formData.estado}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, estado: e.target.value }))
-                }
-                maxLength={2}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent uppercase"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Origem do Lead *
-              </label>
-              {activeOrigins.length > 0 ? (
-                <FilterSingleSelect
-                  icon={Compass}
-                  value={formData.origem}
-                  onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
-                  placeholder="Origem do lead"
-                  includePlaceholderOption={false}
-                  options={[
-                    ...(!activeOrigins.some((origin) => origin.nome === formData.origem) &&
-                    formData.origem
-                      ? [{ value: formData.origem, label: formData.origem }]
-                      : []),
-                    ...activeOrigins.map((origin) => ({
-                      value: origin.nome,
-                      label: origin.nome,
-                    })),
-                  ]}
-                />
-              ) : (
-                <input
-                  type="text"
-                  required
-                  value={formData.origem}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, origem: e.target.value }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe a origem"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Tipo de Contratação *
-              </label>
-              {tipoContratacaoOptions.length > 0 ? (
-                <FilterSingleSelect
-                  icon={Briefcase}
-                  value={formData.tipo_contratacao}
-                  onChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tipo_contratacao: value,
-                    }))
-                  }
-                  placeholder="Tipo de contratação"
-                  includePlaceholderOption={false}
-                  options={[
-                    ...(!tipoContratacaoOptions.some(
-                      (option) => option.label === formData.tipo_contratacao,
-                    ) && formData.tipo_contratacao
-                      ? [
-                          {
-                            value: formData.tipo_contratacao,
-                            label: formData.tipo_contratacao,
-                          },
-                        ]
-                      : []),
-                    ...tipoContratacaoOptions.map((option) => ({
-                      value: option.label,
-                      label: option.label,
-                    })),
-                  ]}
-                />
-              ) : (
-                <input
-                  type="text"
-                  required
-                  value={formData.tipo_contratacao}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tipo_contratacao: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o tipo de contratação"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Operadora Atual
-              </label>
-              <input
-                type="text"
-                value={formData.operadora_atual}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    operadora_atual: e.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Status *
-              </label>
-              {activeLeadStatuses.length > 0 ? (
-                <FilterSingleSelect
-                  icon={AlertCircle}
-                  value={formData.status}
-                  onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-                  placeholder="Status"
-                  includePlaceholderOption={false}
-                  options={[
-                    ...(!activeLeadStatuses.some((status) => status.nome === formData.status) &&
-                    formData.status
-                      ? [{ value: formData.status, label: formData.status }]
-                      : []),
-                    ...activeLeadStatuses.map((status) => ({
-                      value: status.nome,
-                      label: status.nome,
-                    })),
-                  ]}
-                />
-              ) : (
-                <input
-                  type="text"
-                  required
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, status: e.target.value }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o status"
-                />
-              )}
-            </div>
-
-            {isNewLead && (
-              <div className="md:col-span-2">
-                <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={skipAutomationOnCreate}
-                    onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                  />
-                  <span>
-                    Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).
-                  </span>
-                </label>
-              </div>
             )}
+          </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Responsável *
-              </label>
-              {responsavelOptions.length > 0 ? (
-                <FilterSingleSelect
-                  icon={UserCircle}
-                  value={formData.responsavel}
-                  onChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      responsavel: value,
-                    }))
-                  }
-                  placeholder="Responsável"
-                  includePlaceholderOption={false}
-                  options={[
-                    ...(!responsavelOptions.some(
-                      (option) => option.label === formData.responsavel,
-                    ) && formData.responsavel
-                      ? [{ value: formData.responsavel, label: formData.responsavel }]
-                      : []),
-                    ...responsavelOptions.map((option) => ({
-                      value: option.label,
-                      label: option.label,
-                    })),
-                  ]}
-                />
-              ) : (
+          <Field label="Tipo de Contratacao" required>
+            {tipoContratacaoOptions.length > 0 ? (
+              <FilterSingleSelect
+                icon={Briefcase}
+                value={formData.tipo_contratacao}
+                onChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    tipo_contratacao: value,
+                  }))
+                }
+                placeholder="Tipo de contratacao"
+                includePlaceholderOption={false}
+                options={[
+                  ...(!tipoContratacaoOptions.some(
+                    (option) => option.label === formData.tipo_contratacao,
+                  ) && formData.tipo_contratacao
+                    ? [
+                        {
+                          value: formData.tipo_contratacao,
+                          label: formData.tipo_contratacao,
+                        },
+                      ]
+                    : []),
+                  ...tipoContratacaoOptions.map((option) => ({
+                    value: option.label,
+                    label: option.label,
+                  })),
+                ]}
+              />
+            ) : (
+              <Input
+                type="text"
+                required
+                leftIcon={Briefcase}
+                value={formData.tipo_contratacao}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    tipo_contratacao: e.target.value,
+                  }))
+                }
+                placeholder="Informe o tipo de contratacao"
+              />
+            )}
+          </Field>
+
+          <Field label="Operadora Atual" htmlFor="lead-operadora">
+            <Input
+              id="lead-operadora"
+              type="text"
+              leftIcon={Building2}
+              value={formData.operadora_atual}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  operadora_atual: e.target.value,
+                }))
+              }
+            />
+          </Field>
+
+          <Field label="Status" required>
+            {activeLeadStatuses.length > 0 ? (
+              <FilterSingleSelect
+                icon={AlertCircle}
+                value={formData.status}
+                onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+                placeholder="Status"
+                includePlaceholderOption={false}
+                options={[
+                  ...(!activeLeadStatuses.some((status) => status.nome === formData.status) &&
+                  formData.status
+                    ? [{ value: formData.status, label: formData.status }]
+                    : []),
+                  ...activeLeadStatuses.map((status) => ({
+                    value: status.nome,
+                    label: status.nome,
+                  })),
+                ]}
+              />
+            ) : (
+              <Input
+                type="text"
+                required
+                leftIcon={AlertCircle}
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, status: e.target.value }))
+                }
+                placeholder="Informe o status"
+              />
+            )}
+          </Field>
+
+          {isNewLead && (
+            <div className="md:col-span-2">
+              <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 <input
-                  type="text"
-                  required
-                  value={formData.responsavel}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      responsavel: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="Informe o responsável"
+                  type="checkbox"
+                  checked={skipAutomationOnCreate}
+                  onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                 />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Data de criação
+                <span>
+                  Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).
+                </span>
               </label>
-              <DateTimePicker
-                type="date"
-                value={formData.data_criacao}
-                onChange={(value) =>
-                  setFormData((prev) => ({ ...prev, data_criacao: value }))
-                }
-                placeholder="Selecionar data"
-              />
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Próximo Retorno
-              </label>
-              <DateTimePicker
-                type="datetime-local"
-                value={formData.proximo_retorno}
+          <Field label="Responsavel" required>
+            {responsavelOptions.length > 0 ? (
+              <FilterSingleSelect
+                icon={UserCircle}
+                value={formData.responsavel}
                 onChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    proximo_retorno: value,
+                    responsavel: value,
                   }))
                 }
-                placeholder="Selecionar data e hora"
+                placeholder="Responsavel"
+                includePlaceholderOption={false}
+                options={[
+                  ...(!responsavelOptions.some(
+                    (option) => option.label === formData.responsavel,
+                  ) && formData.responsavel
+                    ? [{ value: formData.responsavel, label: formData.responsavel }]
+                    : []),
+                  ...responsavelOptions.map((option) => ({
+                    value: option.label,
+                    label: option.label,
+                  })),
+                ]}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Limite diário de envios
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={formData.daily_send_limit}
+            ) : (
+              <Input
+                type="text"
+                required
+                leftIcon={UserCircle}
+                value={formData.responsavel}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    daily_send_limit: e.target.value,
+                    responsavel: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Sem limite"
+                placeholder="Informe o responsavel"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                Defina um limite específico para este lead (deixe vazio para usar o limite do tenant).
-              </p>
-            </div>
+            )}
+          </Field>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Datas bloqueadas para automação
-              </label>
-              <textarea
-                value={formData.blackout_dates}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    blackout_dates: e.target.value,
-                  }))
-                }
-                rows={2}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="2024-12-25, 2024-12-31"
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Informe as datas em formato AAAA-MM-DD, separadas por vírgula ou linha.
-              </p>
-            </div>
+          <Field label="Data de Criacao">
+            <DateTimePicker
+              type="date"
+              value={formData.data_criacao}
+              onChange={(value) =>
+                setFormData((prev) => ({ ...prev, data_criacao: value }))
+              }
+              placeholder="Selecionar data"
+              triggerClassName="focus:ring-teal-500"
+            />
+          </Field>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Observações
-              </label>
-              <textarea
-                value={formData.observacoes}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    observacoes: e.target.value,
-                  }))
-                }
-                rows={3}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-          </div>
+          <Field label="Proximo Retorno">
+            <DateTimePicker
+              type="datetime-local"
+              value={formData.proximo_retorno}
+              onChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  proximo_retorno: value,
+                }))
+              }
+              placeholder="Selecionar data e hora"
+              triggerClassName="focus:ring-teal-500"
+            />
+          </Field>
 
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-0 sm:space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full rounded-lg px-4 py-2 text-slate-700 transition-colors hover:bg-slate-100 sm:w-auto"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full rounded-lg bg-teal-600 px-6 py-2 text-white transition-colors hover:bg-teal-700 disabled:opacity-50 sm:w-auto"
-            >
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <Field
+            label="Limite Diario de Envios"
+            htmlFor="lead-daily-send-limit"
+            helperText="Defina um limite especifico para este lead ou deixe vazio para usar o limite do tenant."
+          >
+            <Input
+              id="lead-daily-send-limit"
+              type="number"
+              min={1}
+              leftIcon={CalendarDays}
+              value={formData.daily_send_limit}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  daily_send_limit: e.target.value,
+                }))
+              }
+              placeholder="Sem limite"
+            />
+          </Field>
+
+          <Field label="Observacoes" className="md:col-span-2">
+            <Textarea
+              value={formData.observacoes}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  observacoes: e.target.value,
+                }))
+              }
+              rows={3}
+            />
+          </Field>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end">
+          <Button type="button" variant="ghost" onClick={onClose} fullWidth className="sm:w-auto">
+            Cancelar
+          </Button>
+          <Button type="submit" loading={saving} fullWidth className="sm:w-auto">
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
       </form>
     </ModalShell>
   );

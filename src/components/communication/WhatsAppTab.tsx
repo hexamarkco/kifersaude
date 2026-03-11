@@ -383,6 +383,7 @@ export default function WhatsAppTab() {
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
   const [isCopyingChat, setIsCopyingChat] = useState(false);
   const [pendingMessagesBelow, setPendingMessagesBelow] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(96);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
@@ -407,6 +408,7 @@ export default function WhatsAppTab() {
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+  const composerContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatSegmentsMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedChatFiltersRef = useRef<HTMLDivElement | null>(null);
@@ -664,6 +666,25 @@ export default function WhatsAppTab() {
     if (!Number.isNaN(primary)) return primary;
     const fallback = new Date(chat.created_at).getTime();
     return Number.isNaN(fallback) ? 0 : fallback;
+  };
+
+  const shouldApplyIncomingChatPreview = (
+    currentChat: Pick<WhatsAppChat, 'last_message' | 'last_message_at'> | null | undefined,
+    incomingPreview: string | null | undefined,
+    incomingTimestamp: string | null | undefined,
+  ) => {
+    const sanitizedIncomingPreview = sanitizeTechnicalCiphertextPreview(incomingPreview) || null;
+    if (!sanitizedIncomingPreview) return false;
+    if (!currentChat?.last_message) return true;
+
+    const currentTime = currentChat.last_message_at ? new Date(currentChat.last_message_at).getTime() : 0;
+    const incomingTime = incomingTimestamp ? new Date(incomingTimestamp).getTime() : 0;
+
+    if (incomingTime > currentTime) return true;
+    if (incomingTime < currentTime) return false;
+
+    const normalizedCurrentPreview = sanitizeTechnicalCiphertextPreview(currentChat.last_message) || null;
+    return normalizedCurrentPreview === sanitizedIncomingPreview;
   };
 
 const getPinnedSortValue = (chat: Pick<WhatsAppChat, 'pinned'>) => {
@@ -1296,6 +1317,29 @@ const sortChatsByLatest = (
   }, [selectedChat]);
 
   useEffect(() => {
+    const composerElement = composerContainerRef.current;
+    if (!composerElement) return;
+
+    const syncComposerHeight = () => {
+      setComposerHeight(composerElement.getBoundingClientRect().height || 96);
+    };
+
+    syncComposerHeight();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncComposerHeight);
+      return () => window.removeEventListener('resize', syncComposerHeight);
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncComposerHeight();
+    });
+
+    observer.observe(composerElement);
+    return () => observer.disconnect();
+  }, [selectedChat?.id, replyToMessage, editMessage]);
+
+  useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
 
@@ -1716,11 +1760,22 @@ const sortChatsByLatest = (
           }
 
           const existingChat = prev[existingIndex];
+          const shouldUseIncomingPreview = shouldApplyIncomingChatPreview(
+            existingChat,
+            incomingChat.last_message,
+            incomingChat.last_message_at,
+          );
           const mergedChat: WhatsAppChat = {
             ...existingChat,
             ...incomingChat,
-            last_message: incomingChat.last_message ?? existingChat.last_message,
-            last_message_direction: incomingChat.last_message_direction ?? existingChat.last_message_direction ?? null,
+            last_message:
+              shouldUseIncomingPreview
+                ? incomingChat.last_message ?? existingChat.last_message
+                : existingChat.last_message ?? incomingChat.last_message,
+            last_message_direction:
+              shouldUseIncomingPreview
+                ? incomingChat.last_message_direction ?? existingChat.last_message_direction ?? null
+                : existingChat.last_message_direction ?? incomingChat.last_message_direction ?? null,
             unread_count:
               typeof incomingChat.unread_count === 'number'
                 ? incomingChat.unread_count
@@ -2062,10 +2117,22 @@ const sortChatsByLatest = (
       .filter((incoming) => !isStatusChat(incoming))
       .map((incoming) => {
         const previous = previousById.get(incoming.id);
+        const shouldUseIncomingPreview = shouldApplyIncomingChatPreview(
+          previous,
+          incoming.last_message,
+          incoming.last_message_at,
+        );
+
         return {
           ...incoming,
-          last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? null) || null,
-          last_message_direction: incoming.last_message_direction ?? previous?.last_message_direction ?? null,
+          last_message:
+            shouldUseIncomingPreview
+              ? sanitizeTechnicalCiphertextPreview(incoming.last_message) || null
+              : (previous?.last_message ?? (sanitizeTechnicalCiphertextPreview(incoming.last_message) || null)),
+          last_message_direction:
+            shouldUseIncomingPreview
+              ? incoming.last_message_direction ?? previous?.last_message_direction ?? null
+              : previous?.last_message_direction ?? incoming.last_message_direction ?? null,
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count
@@ -6272,7 +6339,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 <div ref={messagesEndRef} />
               </div>
               {pendingMessagesBelow > 0 && (
-                <div className="pointer-events-none absolute bottom-24 right-6 z-20">
+                <div
+                  className="pointer-events-none absolute right-6 z-20"
+                  style={{ bottom: `${composerHeight + 16}px` }}
+                >
                   <Button
                     variant="warning"
                     size="sm"
@@ -6290,19 +6360,21 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
               {!isSelectedStatusChat ? (
                 <>
-                  <MessageInput
-                    key={selectedChat.id}
-                    chatId={selectedChat.id}
-                    contacts={contactsList}
-                    templateVariables={templateVariablesForInput}
-                    templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
-                    followUpContext={followUpContextForInput}
-                    onMessageSent={handleMessageSent}
-                    replyToMessage={replyToMessage}
-                    onCancelReply={handleCancelReply}
-                    editMessage={editMessage}
-                    onCancelEdit={handleCancelEdit}
-                  />
+                  <div ref={composerContainerRef}>
+                    <MessageInput
+                      key={selectedChat.id}
+                      chatId={selectedChat.id}
+                      contacts={contactsList}
+                      templateVariables={templateVariablesForInput}
+                      templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
+                      followUpContext={followUpContextForInput}
+                      onMessageSent={handleMessageSent}
+                      replyToMessage={replyToMessage}
+                      onCancelReply={handleCancelReply}
+                      editMessage={editMessage}
+                      onCancelEdit={handleCancelEdit}
+                    />
+                  </div>
                 </>
               ) : (
                 <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">

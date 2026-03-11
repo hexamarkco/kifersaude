@@ -1183,11 +1183,14 @@ export function MessageBubble({
               <Button
                 variant="ghost"
                 size="sm"
+                fullWidth
                 onClick={() => setShowReactionPicker((previous) => !previous)}
-                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
-                <Smile className="h-4 w-4 text-slate-500" />
-                <span>Reagir</span>
+                <span className="flex w-full items-center gap-2 text-left">
+                  <Smile className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <span className="flex-1 text-left">Reagir</span>
+                </span>
               </Button>
             )}
 
@@ -1216,14 +1219,17 @@ export function MessageBubble({
               <Button
                 variant="ghost"
                 size="sm"
+                fullWidth
                 onClick={() => {
                   onReply?.(id, body || '', fromName || 'Contato');
                   closeActionMenu();
                 }}
-                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
-                <CornerUpLeft className="h-4 w-4 text-slate-500" />
-                <span>Responder</span>
+                <span className="flex w-full items-center gap-2 text-left">
+                  <CornerUpLeft className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <span className="flex-1 text-left">Responder</span>
+                </span>
               </Button>
             )}
 
@@ -1231,14 +1237,17 @@ export function MessageBubble({
               <Button
                 variant="ghost"
                 size="sm"
+                fullWidth
                 onClick={() => {
                   onEdit?.(id, body || '');
                   closeActionMenu();
                 }}
-                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
               >
-                <Edit3 className="h-4 w-4 text-slate-500" />
-                <span>Editar</span>
+                <span className="flex w-full items-center gap-2 text-left">
+                  <Edit3 className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <span className="flex-1 text-left">Editar</span>
+                </span>
               </Button>
             )}
 

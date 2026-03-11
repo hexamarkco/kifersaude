@@ -23,13 +23,8 @@ export default function LeadOriginsManager() {
       return undefined;
     }
 
-    const timeout = window.setTimeout(() => {
-      setMessage(null);
-    }, 4000);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
+    const timeout = window.setTimeout(() => setMessage(null), 4000);
+    return () => window.clearTimeout(timeout);
   }, [message]);
 
   const showMessage = (type: Message['type'], text: string) => {
@@ -73,9 +68,7 @@ export default function LeadOriginsManager() {
 
   const handleToggleObserverVisibility = async (id: string, visivel: boolean) => {
     setBusyId(id);
-    const { error } = await configService.updateLeadOrigem(id, {
-      visivel_para_observadores: visivel,
-    });
+    const { error } = await configService.updateLeadOrigem(id, { visivel_para_observadores: visivel });
     if (error) {
       showMessage('error', 'Erro ao atualizar visibilidade para observadores.');
     } else {
@@ -87,7 +80,7 @@ export default function LeadOriginsManager() {
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Excluir origem',
-      description: 'Deseja remover esta origem? Esta ação não pode ser desfeita.',
+      description: 'Deseja remover esta origem? Esta acao nao pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -128,9 +121,7 @@ export default function LeadOriginsManager() {
     }
 
     setBusyId(editingId);
-    const { error } = await configService.updateLeadOrigem(editingId, {
-      nome: editingName.trim(),
-    });
+    const { error } = await configService.updateLeadOrigem(editingId, { nome: editingName.trim() });
     if (error) {
       showMessage('error', 'Erro ao atualizar origem.');
     } else {
@@ -142,11 +133,24 @@ export default function LeadOriginsManager() {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Origens de Leads</h3>
-          <p className="text-sm text-slate-600">Gerencie todos os canais de entrada de leads.</p>
+          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">Origens de Leads</h3>
+          <p className="text-sm text-[color:var(--panel-text-soft)]">Gerencie todos os canais de entrada de leads.</p>
+        </div>
+
+        <div className="flex w-full gap-3 lg:max-w-xl">
+          <Input
+            type="text"
+            value={newOrigin}
+            onChange={(event) => setNewOrigin(event.target.value)}
+            placeholder="Nova origem"
+          />
+          <Button onClick={() => void handleCreate()} disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
         </div>
       </div>
 
@@ -158,11 +162,7 @@ export default function LeadOriginsManager() {
               : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
-          {message.type === 'success' ? (
-            <CheckCircle className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
+          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
         </div>
       )}
@@ -174,7 +174,7 @@ export default function LeadOriginsManager() {
           return (
             <div
               key={origin.id}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+              className="flex flex-col gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
             >
               <div className="flex-1">
                 {editingId === origin.id ? (
@@ -185,87 +185,55 @@ export default function LeadOriginsManager() {
                     disabled={isBusy}
                   />
                 ) : (
-                  <p className="text-sm font-medium text-slate-900">{origin.nome}</p>
+                  <p className="text-sm font-medium text-[color:var(--panel-text)]">{origin.nome}</p>
                 )}
 
                 <div className="mt-1 flex flex-col gap-1">
-                  <p className="text-xs text-slate-500">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
-                  <p className="text-xs text-slate-500">
-                    {origin.visivel_para_observadores
-                      ? 'Visível para observadores'
-                      : 'Oculto para observadores'}
+                  <p className="text-xs text-[color:var(--panel-text-soft)]">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
+                  <p className="text-xs text-[color:var(--panel-text-soft)]">
+                    {origin.visivel_para_observadores ? 'Visivel para observadores' : 'Oculto para observadores'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
                   <input
                     type="checkbox"
                     checked={origin.ativo}
-                    onChange={(event) =>
-                      void handleToggleAtivo(origin.id, event.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    onChange={(event) => void handleToggleAtivo(origin.id, event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
                   <span>Ativo</span>
                 </label>
 
-                <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
+                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
                   <input
                     type="checkbox"
                     checked={origin.visivel_para_observadores}
-                    onChange={(event) =>
-                      void handleToggleObserverVisibility(origin.id, event.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    onChange={(event) => void handleToggleObserverVisibility(origin.id, event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
-                  <span>Visível para observadores</span>
+                  <span>Visivel para observadores</span>
                 </label>
 
                 {editingId === origin.id ? (
                   <div className="flex items-center space-x-2">
-                    <Button
-                      onClick={() => void confirmEditing()}
-                      variant="success"
-                      size="icon"
-                      className="h-9 w-9"
-                      title="Salvar"
-                      disabled={isBusy}
-                    >
+                    <Button onClick={() => void confirmEditing()} variant="success" size="icon" className="h-9 w-9" disabled={isBusy}>
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button
-                      onClick={cancelEditing}
-                      variant="secondary"
-                      size="icon"
-                      className="h-9 w-9"
-                      title="Cancelar"
-                      disabled={isBusy}
-                    >
+                    <Button onClick={cancelEditing} variant="secondary" size="icon" className="h-9 w-9" disabled={isBusy}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2">
-                    <Button
-                      onClick={() => startEditing(origin.id, origin.nome)}
-                      variant="secondary"
-                      size="sm"
-                      disabled={isBusy}
-                    >
+                    <Button onClick={() => startEditing(origin.id, origin.nome)} variant="secondary" size="sm" disabled={isBusy}>
                       Editar
                     </Button>
-                    <Button
-                      onClick={() => void handleDelete(origin.id)}
-                      variant="danger"
-                      size="icon"
-                      className="h-9 w-9"
-                      title="Remover"
-                      disabled={isBusy}
-                    >
+                    <Button onClick={() => void handleDelete(origin.id)} variant="danger" size="icon" className="h-9 w-9" disabled={isBusy}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -275,27 +243,6 @@ export default function LeadOriginsManager() {
           );
         })}
       </div>
-
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <h4 className="mb-3 text-sm font-semibold text-slate-900">Adicionar nova origem</h4>
-        <div className="flex flex-col space-y-3 md:flex-row md:items-center md:space-x-3 md:space-y-0">
-          <Input
-            type="text"
-            value={newOrigin}
-            onChange={(event) => setNewOrigin(event.target.value)}
-            className="flex-1"
-            placeholder="Ex: Indicação"
-          />
-          <Button
-            onClick={() => void handleCreate()}
-            loading={saving}
-          >
-            {!saving && <Plus className="h-4 w-4" />}
-            <span>{saving ? 'Salvando...' : 'Adicionar origem'}</span>
-          </Button>
-        </div>
-      </div>
-
       {ConfirmationDialog}
     </div>
   );

@@ -75,7 +75,7 @@ export default function MultiSelectDropdown({
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-stone-400' : 'text-slate-500')}>
+        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]')}>
           {label}
         </label>
       )}
@@ -90,13 +90,13 @@ export default function MultiSelectDropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={selectedOptions.length === 0 ? (isDarkTheme ? 'text-stone-400' : 'text-slate-400') : isDarkTheme ? 'text-stone-100' : 'text-slate-700'}>
+        <span className={selectedOptions.length === 0 ? (isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]') : isDarkTheme ? 'text-stone-100' : 'text-[var(--panel-input-text,var(--panel-text-soft))]'}>
           {displayText}
         </span>
         <ChevronDown
           className={cx(
             'h-4 w-4 transition-transform',
-            isDarkTheme ? 'text-stone-400' : 'text-slate-400',
+            isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
             isOpen && 'rotate-180',
           )}
         />

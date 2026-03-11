@@ -1,12 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  AlertCircle,
-  CheckCircle,
-  PaintBucket,
-  Plus,
-  Star,
-  Trash2,
-} from 'lucide-react';
+import { AlertCircle, CheckCircle, PaintBucket, Plus, Star, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { getBadgeStyle } from '../../lib/colorUtils';
@@ -19,11 +12,7 @@ type StatusDraft = { nome: string; ordem: string };
 
 export default function LeadStatusManager() {
   const { leadStatuses, refreshLeadStatuses } = useConfig();
-  const [newStatus, setNewStatus] = useState({
-    nome: '',
-    cor: '#3b82f6',
-    ordem: leadStatuses.length + 1,
-  });
+  const [newStatus, setNewStatus] = useState({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
   const [saving, setSaving] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, StatusDraft>>({});
@@ -33,10 +22,7 @@ export default function LeadStatusManager() {
   useEffect(() => {
     const nextDrafts: Record<string, StatusDraft> = {};
     leadStatuses.forEach((status) => {
-      nextDrafts[status.id] = {
-        nome: status.nome,
-        ordem: String(status.ordem),
-      };
+      nextDrafts[status.id] = { nome: status.nome, ordem: String(status.ordem) };
     });
     setDrafts(nextDrafts);
   }, [leadStatuses]);
@@ -46,27 +32,16 @@ export default function LeadStatusManager() {
       return undefined;
     }
 
-    const timeout = window.setTimeout(() => {
-      setMessage(null);
-    }, 4000);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
+    const timeout = window.setTimeout(() => setMessage(null), 4000);
+    return () => window.clearTimeout(timeout);
   }, [message]);
 
-  const showMessage = (type: Message['type'], text: string) => {
-    setMessage({ type, text });
-  };
+  const showMessage = (type: Message['type'], text: string) => setMessage({ type, text });
 
   const updateDraft = (id: string, updates: Partial<StatusDraft>) => {
     setDrafts((current) => ({
       ...current,
-      [id]: {
-        nome: current[id]?.nome ?? '',
-        ordem: current[id]?.ordem ?? '',
-        ...updates,
-      },
+      [id]: { nome: current[id]?.nome ?? '', ordem: current[id]?.ordem ?? '', ...updates },
     }));
   };
 
@@ -118,14 +93,12 @@ export default function LeadStatusManager() {
     const nextName = drafts[id]?.nome?.trim() ?? '';
     if (!nextName) {
       updateDraft(id, { nome: originalName });
-      showMessage('error', 'O nome do status não pode ficar vazio.');
+      showMessage('error', 'O nome do status nao pode ficar vazio.');
       return;
     }
-
     if (nextName === originalName) {
       return;
     }
-
     await handleUpdate(id, { nome: nextName }, 'Nome do status atualizado.');
   };
 
@@ -133,14 +106,14 @@ export default function LeadStatusManager() {
     const rawOrder = drafts[id]?.ordem?.trim() ?? '';
     if (!rawOrder) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem válida para o status.');
+      showMessage('error', 'Informe uma ordem valida para o status.');
       return;
     }
 
     const parsedOrder = Number.parseInt(rawOrder, 10);
     if (!Number.isFinite(parsedOrder) || parsedOrder < 0) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem válida para o status.');
+      showMessage('error', 'Informe uma ordem valida para o status.');
       return;
     }
 
@@ -158,13 +131,13 @@ export default function LeadStatusManager() {
     }
 
     if (status.padrao) {
-      showMessage('error', 'Defina outro status como padrão antes de remover este item.');
+      showMessage('error', 'Defina outro status como padrao antes de remover este item.');
       return;
     }
 
     const confirmed = await requestConfirmation({
       title: 'Excluir status',
-      description: 'Deseja remover este status? Esta ação não pode ser desfeita.',
+      description: 'Deseja remover este status? Esta acao nao pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -191,7 +164,6 @@ export default function LeadStatusManager() {
     }
 
     setProcessingId(id);
-
     const results = await Promise.all(
       leadStatuses.map((status) => {
         if (status.id === id) {
@@ -204,26 +176,48 @@ export default function LeadStatusManager() {
       }),
     );
 
-    const hasError = results.some((result) => Boolean(result.error));
-    if (hasError) {
-      showMessage('error', 'Erro ao definir status padrão.');
+    if (results.some((result) => Boolean(result.error))) {
+      showMessage('error', 'Erro ao definir status padrao.');
       setProcessingId(null);
       return;
     }
 
     await refreshLeadStatuses();
-    showMessage('success', 'Status padrão atualizado.');
+    showMessage('success', 'Status padrao atualizado.');
     setProcessingId(null);
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Status dos Leads</h3>
-          <p className="text-sm text-slate-600">
+          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">Status dos Leads</h3>
+          <p className="text-sm text-[color:var(--panel-text-soft)]">
             Personalize as etapas do funil de leads e defina cores e ordens.
           </p>
+        </div>
+
+        <div className="grid w-full gap-3 md:grid-cols-[minmax(0,1fr)_120px_110px_auto] lg:max-w-3xl">
+          <Input
+            type="text"
+            value={newStatus.nome}
+            onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
+            placeholder="Novo status"
+          />
+          <Input
+            type="color"
+            value={newStatus.cor}
+            onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
+          />
+          <Input
+            type="number"
+            value={newStatus.ordem}
+            onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
+          />
+          <Button onClick={() => void handleCreate()} disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
         </div>
       </div>
 
@@ -235,119 +229,67 @@ export default function LeadStatusManager() {
               : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
-          {message.type === 'success' ? (
-            <CheckCircle className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
+          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {leadStatuses.map((status) => {
           const isProcessing = processingId === status.id;
 
           return (
             <div
               key={status.id}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
+              className="flex flex-col gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 lg:flex-row lg:items-center lg:justify-between"
             >
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)]">
+                  <PaintBucket className="h-4 w-4" style={{ color: status.cor }} />
+                </div>
+
                 <div>
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className="rounded-full border px-3 py-1 text-sm font-medium"
-                      style={getBadgeStyle(status.cor, 1)}
-                    >
-                      {status.nome}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-[color:var(--panel-text)]">{status.nome}</span>
                     {status.padrao && (
-                      <span className="inline-flex items-center space-x-1 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs text-amber-600">
-                        <Star className="h-3 w-3" />
-                        <span>Padrão</span>
+                      <span className="rounded-full border border-[color:var(--panel-accent-amber-border)] bg-[var(--panel-accent-amber-bg)] px-2.5 py-1 text-xs font-medium text-[var(--panel-accent-amber-text)]">
+                        Padrao
                       </span>
                     )}
+                    <span className="rounded-full border px-2.5 py-1 text-xs font-medium" style={getBadgeStyle(status.cor)}>
+                      {status.cor}
+                    </span>
                   </div>
-
-                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <label className="flex flex-col text-xs text-slate-600">
-                      Nome
-                      <Input
-                        type="text"
-                        value={drafts[status.id]?.nome ?? status.nome}
-                        onChange={(event) => updateDraft(status.id, { nome: event.target.value })}
-                        onBlur={() => void handleNameBlur(status.id, status.nome)}
-                        className="mt-1"
-                        disabled={isProcessing}
-                      />
-                    </label>
-
-                    <label className="flex flex-col text-xs text-slate-600">
-                      Cor
-                      <div className="mt-1 flex items-center space-x-2">
-                        <input
-                          type="color"
-                          value={status.cor}
-                          onChange={(event) =>
-                            void handleUpdate(status.id, { cor: event.target.value })
-                          }
-                          className="h-10 w-16 rounded border border-slate-300"
-                          disabled={isProcessing}
-                        />
-                        <span className="flex items-center space-x-1 text-xs text-slate-500">
-                          <PaintBucket className="h-4 w-4 text-slate-400" />
-                          <span>{status.cor}</span>
-                        </span>
-                      </div>
-                    </label>
-
-                    <label className="flex flex-col text-xs text-slate-600">
-                      Ordem
-                      <Input
-                        type="number"
-                        value={drafts[status.id]?.ordem ?? String(status.ordem)}
-                        onChange={(event) => updateDraft(status.id, { ordem: event.target.value })}
-                        onBlur={() => void handleOrderBlur(status.id, status.ordem)}
-                        className="mt-1"
-                        disabled={isProcessing}
-                      />
-                    </label>
-                  </div>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ordem atual: {status.ordem}</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={status.ativo}
-                    onChange={(event) =>
-                      void handleUpdate(status.id, { ativo: event.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                    disabled={isProcessing}
-                  />
-                  <span>Ativo</span>
-                </label>
-
-                <Button
-                  onClick={() => void handleSetDefault(status.id)}
-                  variant={status.padrao ? 'warning' : 'secondary'}
-                  size="sm"
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_110px_auto_auto_auto] lg:min-w-[720px]">
+                <Input
+                  type="text"
+                  value={drafts[status.id]?.nome ?? status.nome}
+                  onChange={(event) => updateDraft(status.id, { nome: event.target.value })}
+                  onBlur={() => void handleNameBlur(status.id, status.nome)}
                   disabled={isProcessing}
-                >
-                  Definir padrão
+                />
+                <Input
+                  type="number"
+                  value={drafts[status.id]?.ordem ?? String(status.ordem)}
+                  onChange={(event) => updateDraft(status.id, { ordem: event.target.value })}
+                  onBlur={() => void handleOrderBlur(status.id, status.ordem)}
+                  disabled={isProcessing}
+                />
+                <Input
+                  type="color"
+                  value={status.cor}
+                  onChange={(event) => void handleUpdate(status.id, { cor: event.target.value })}
+                  disabled={isProcessing}
+                />
+                <Button onClick={() => void handleSetDefault(status.id)} variant="secondary" disabled={isProcessing || status.padrao}>
+                  <Star className="h-4 w-4" />
+                  <span>Padrao</span>
                 </Button>
-
-                <Button
-                  onClick={() => void handleDelete(status.id)}
-                  variant="danger"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Remover status"
-                  disabled={isProcessing}
-                >
+                <Button onClick={() => void handleDelete(status.id)} variant="danger" size="icon" disabled={isProcessing}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -355,60 +297,6 @@ export default function LeadStatusManager() {
           );
         })}
       </div>
-
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <h4 className="mb-3 text-sm font-semibold text-slate-900">Adicionar novo status</h4>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-600">Nome</label>
-            <Input
-              type="text"
-              value={newStatus.nome}
-              onChange={(event) =>
-                setNewStatus((current) => ({ ...current, nome: event.target.value }))
-              }
-              placeholder="Ex: Em negociação"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Cor</label>
-            <input
-              type="color"
-              value={newStatus.cor}
-              onChange={(event) =>
-                setNewStatus((current) => ({ ...current, cor: event.target.value }))
-              }
-              className="h-10 w-full rounded border border-slate-300"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Ordem</label>
-            <Input
-              type="number"
-              value={newStatus.ordem}
-              onChange={(event) =>
-                setNewStatus((current) => ({
-                  ...current,
-                  ordem: Number.parseInt(event.target.value, 10) || 0,
-                }))
-              }
-            />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <Button
-            onClick={() => void handleCreate()}
-            loading={saving}
-          >
-            {!saving && <Plus className="h-4 w-4" />}
-            <span>{saving ? 'Salvando...' : 'Adicionar status'}</span>
-          </Button>
-        </div>
-      </div>
-
       {ConfirmationDialog}
     </div>
   );

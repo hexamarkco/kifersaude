@@ -184,9 +184,10 @@ const arePreferencesEqual = (a: SystemSettings | null, b: SystemSettings | null)
 };
 
 const sectionCardClass =
-  'flex w-full items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm transition-colors hover:border-slate-300 hover:bg-white';
+  'flex w-full items-start justify-between gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-4 text-left shadow-sm transition-colors hover:border-[color:var(--panel-border)]';
 
-const sectionBodyClass = 'rounded-2xl border border-slate-200 bg-slate-50/70 p-6 shadow-sm';
+const sectionBodyClass =
+  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-6 shadow-sm';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -418,15 +419,15 @@ export default function SystemSettingsTab() {
           </div>
         )}
 
-        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-sm">
+        <div className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft)]">
                 <Settings className="h-3.5 w-3.5" />
                 Central de configuracoes
               </div>
-              <h2 className="text-2xl font-semibold text-slate-900">Sistema e operadoras agora vivem no mesmo fluxo</h2>
-              <p className="mt-2 text-sm text-slate-600">
+              <h2 className="text-2xl font-semibold text-[color:var(--panel-text)]">Sistema e operadoras agora vivem no mesmo fluxo</h2>
+              <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
                 Organize preferencias, acessos, operadoras, leads e contratos em uma experiencia unica, com busca e atalhos por area.
               </p>
             </div>
@@ -452,14 +453,14 @@ export default function SystemSettingsTab() {
                   key={section.id}
                   type="button"
                   onClick={() => revealSection(section.id)}
-                  className="rounded-2xl border border-white/80 bg-white/85 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                  className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[color:var(--panel-border)] hover:bg-[var(--panel-surface)] hover:shadow-md"
                 >
                   <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${section.accentClassName}`}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-4 text-sm font-semibold text-slate-900">{section.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{section.description}</p>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                  <h3 className="mt-4 text-sm font-semibold text-[color:var(--panel-text)]">{section.title}</h3>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">{section.description}</p>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--panel-text-muted)]">
                     {expanded ? 'Visivel' : 'Fechada'}
                   </p>
                 </button>
@@ -469,8 +470,8 @@ export default function SystemSettingsTab() {
         </div>
 
         {!hasVisibleSections && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-600">Nenhum bloco encontrado para "{searchTerm}".</p>
+          <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] p-6 text-center">
+            <p className="text-sm text-[color:var(--panel-text-soft)]">Nenhum bloco encontrado para "{searchTerm}".</p>
           </div>
         )}
 
@@ -478,12 +479,12 @@ export default function SystemSettingsTab() {
           <div id="settings-section-general" className="space-y-4">
             <button type="button" onClick={() => toggleSection('general')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-amber-bg)] text-[var(--panel-accent-amber-text)]">
                   <Settings className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Preferencias do sistema</h3>
-                  <p className="text-sm text-slate-600">Notificacoes, formato de data e tempo de sessao.</p>
+                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">Preferencias do sistema</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">Notificacoes, formato de data e tempo de sessao.</p>
                 </div>
               </div>
               <ChevronDown
@@ -633,12 +634,12 @@ export default function SystemSettingsTab() {
           <div id="settings-section-operadoras" className="space-y-4">
             <button type="button" onClick={() => toggleSection('operadoras')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-emerald-bg)] text-[var(--panel-accent-emerald-text)]">
                   <Building2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Operadoras</h3>
-                  <p className="text-sm text-slate-600">Comissao, prazo, bonus e manutencao da carteira comercial.</p>
+                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">Operadoras</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">Comissao, prazo, bonus e manutencao da carteira comercial.</p>
                 </div>
               </div>
               <ChevronDown
@@ -660,12 +661,12 @@ export default function SystemSettingsTab() {
           <div id="settings-section-access" className="space-y-4">
             <button type="button" onClick={() => toggleSection('access')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-blue-bg)] text-[var(--panel-accent-blue-text)]">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Permissoes por perfil</h3>
-                  <p className="text-sm text-slate-600">Controle de acesso aos modulos para cada tipo de usuario.</p>
+                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">Permissoes por perfil</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">Controle de acesso aos modulos para cada tipo de usuario.</p>
                 </div>
               </div>
               <ChevronDown
@@ -698,12 +699,12 @@ export default function SystemSettingsTab() {
           <div id="settings-section-leads" className="space-y-4">
             <button type="button" onClick={() => toggleSection('leads')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-orange-bg)] text-[var(--panel-accent-orange-text)]">
                   <ListTree className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Leads</h3>
-                  <p className="text-sm text-slate-600">Etapas do funil, origens e cadastros de apoio para leads.</p>
+                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">Leads</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">Etapas do funil, origens e cadastros de apoio para leads.</p>
                 </div>
               </div>
               <ChevronDown
@@ -753,12 +754,12 @@ export default function SystemSettingsTab() {
           <div id="settings-section-contracts" className="space-y-4">
             <button type="button" onClick={() => toggleSection('contracts')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-green-bg)] text-[var(--panel-accent-green-text)]">
                   <FileText className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Contratos</h3>
-                  <p className="text-sm text-slate-600">Estados e parametros auxiliares usados no cadastro de contratos.</p>
+                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">Contratos</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">Estados e parametros auxiliares usados no cadastro de contratos.</p>
                 </div>
               </div>
               <ChevronDown

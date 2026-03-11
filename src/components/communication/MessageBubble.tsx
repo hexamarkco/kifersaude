@@ -48,6 +48,8 @@ type MediaPayload = {
   mime_type?: string;
   mimetype?: string;
   seconds?: number;
+  width?: number;
+  height?: number;
   [key: string]: unknown;
 };
 
@@ -103,6 +105,29 @@ const MESSAGE_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
   hour12: false,
 });
 
+const DEFAULT_IMAGE_ASPECT_RATIO = 4 / 5;
+const DEFAULT_VIDEO_ASPECT_RATIO = 9 / 16;
+const VIEWPORT_PRELOAD_ROOT_MARGIN = '240px';
+
+function readPositiveNumber(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  return value;
+}
+
+function resolveAspectRatio(primary?: MediaPayload | null, fallback?: MediaPayload | null, defaultRatio: number = 1) {
+  const width = readPositiveNumber(primary?.width) ?? readPositiveNumber(fallback?.width);
+  const height = readPositiveNumber(primary?.height) ?? readPositiveNumber(fallback?.height);
+
+  if (!width || !height) {
+    return defaultRatio;
+  }
+
+  return width / height;
+}
+
 export function MessageBubble({
   id,
   chatId,
@@ -143,10 +168,12 @@ export function MessageBubble({
   const [transcriptionLoading, setTranscriptionLoading] = useState(false);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [localPayload, setLocalPayload] = useState<MessagePayload | null>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const audioAutoLoadTriggeredRef = useRef(false);
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const audioAutoplayRequestedRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
   const canReact = Boolean(onReact && !isDeleted);
   const canReply = Boolean(onReply && !isDeleted);
@@ -266,8 +293,9 @@ export function MessageBubble({
   const normalizedType = (type || '').toLowerCase();
   const audioPayload: MediaPayload | null = payloadData.audio || payloadData.voice || payloadData.media || payloadData;
   const audioMediaId = audioPayload?.id || payloadData?.media?.id || payloadData?.voice?.id || payloadData?.audio?.id || null;
-  const audioUrl = audioMediaUrl || audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path || null;
-  const imageFullSrc =
+  const audioDirectSrc = audioPayload?.link || audioPayload?.url || audioPayload?.file || audioPayload?.path || null;
+  const audioUrl = audioMediaUrl || audioDirectSrc;
+  const imageDirectSrc =
     payloadData?.image?.url ||
     payloadData?.image?.file ||
     payloadData?.image?.path ||
@@ -276,9 +304,9 @@ export function MessageBubble({
     payloadData?.media?.file ||
     payloadData?.media?.path ||
     payloadData?.image?.link ||
-    payloadData?.image?.preview ||
     '';
-  const videoFullSrc =
+  const imagePreviewSrc = payloadData?.image?.preview || payloadData?.media?.preview || '';
+  const videoDirectSrc =
     payloadData?.video?.url ||
     payloadData?.video?.file ||
     payloadData?.video?.path ||
@@ -288,6 +316,7 @@ export function MessageBubble({
     payloadData?.media?.path ||
     payloadData?.video?.link ||
     '';
+  const videoPreviewSrc = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || '';
   const visualMediaId =
     payloadData?.image?.id ||
     payloadData?.image?.media_id ||
@@ -299,11 +328,17 @@ export function MessageBubble({
     payloadData?.media_id ||
     payloadData?.mediaId ||
     null;
-  const visualDisplayUrl = visualMediaUrl || (normalizedType.startsWith('video') ? videoFullSrc : imageFullSrc);
   const isImageMessage = hasMedia && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
   const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
   const isVisualMediaMessage = !isDeleted && (isImageMessage || isVideoMessage);
   const isAudioMessage = hasMedia && (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice');
+  const visualDirectSrc = isVideoMessage ? videoDirectSrc : imageDirectSrc;
+  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : imagePreviewSrc;
+  const visualDisplayUrl = visualMediaUrl || visualDirectSrc || visualPreviewSrc || null;
+  const visualNeedsUpgrade = Boolean(visualMediaId && !visualMediaUrl && !visualDirectSrc);
+  const visualAspectRatio = isVideoMessage
+    ? resolveAspectRatio(payloadData.video, payloadData.media, DEFAULT_VIDEO_ASPECT_RATIO)
+    : resolveAspectRatio(payloadData.image, payloadData.media, DEFAULT_IMAGE_ASPECT_RATIO);
   const documentPayload = payloadData?.document || payloadData?.media;
   const documentLink = documentPayload?.link || documentPayload?.url || documentPayload?.file || documentPayload?.path;
   const documentName = documentPayload?.filename || documentPayload?.name || 'Documento';
@@ -311,42 +346,52 @@ export function MessageBubble({
   const isPdf = (documentMime || '').toLowerCase().includes('pdf') || documentName.toLowerCase().endsWith('.pdf');
 
   useEffect(() => {
-    return () => {
-      if (audioMediaUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(audioMediaUrl);
-      }
-      if (documentUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(documentUrl);
-      }
-      if (visualMediaUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(visualMediaUrl);
-      }
-    };
-  }, [audioMediaUrl, documentUrl, visualMediaUrl]);
+    const element = bubbleRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: VIEWPORT_PRELOAD_ROOT_MARGIN,
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const loadAudioMedia = useCallback(async () => {
-    if (!audioMediaId || audioMediaLoading) return;
+    if (audioUrl) return audioUrl;
+    if (!audioMediaId || audioMediaLoading) return null;
     setAudioMediaLoading(true);
     try {
-      const response = await getWhatsAppMedia(audioMediaId);
-      if (response.url) {
-        setAudioMediaUrl(response.url);
-      } else if (response.data) {
-        const objectUrl = URL.createObjectURL(response.data);
-        setAudioMediaUrl(objectUrl);
+      const response = await getWhatsAppMedia(audioMediaId, { preferObjectUrl: true });
+      const nextUrl = response.url || response.objectUrl || null;
+      if (nextUrl) {
+        setAudioMediaUrl(nextUrl);
+        return nextUrl;
       }
     } catch (error) {
       console.error('Erro ao carregar audio:', error);
     } finally {
       setAudioMediaLoading(false);
     }
-  }, [audioMediaId, audioMediaLoading]);
+    return null;
+  }, [audioMediaId, audioMediaLoading, audioUrl]);
 
   useEffect(() => {
-    if (!isAudioMessage || audioUrl || audioMediaLoading || audioAutoLoadTriggeredRef.current) return;
-    audioAutoLoadTriggeredRef.current = true;
+    if (!isAudioMessage || !isNearViewport || audioUrl || audioMediaLoading) return;
     void loadAudioMedia();
-  }, [audioMediaLoading, audioUrl, isAudioMessage, loadAudioMedia]);
+  }, [audioMediaLoading, audioUrl, isAudioMessage, isNearViewport, loadAudioMedia]);
 
   useEffect(() => {
     if (!showActionMenu) {
@@ -384,24 +429,25 @@ export function MessageBubble({
     };
   }, [closeActionMenu, repositionActionMenu, showActionMenu, showReactionPicker]);
 
-  const loadDocumentMedia = async () => {
+  const loadDocumentMedia = useCallback(async () => {
     const mediaId = documentPayload?.id || payloadData?.media?.id || payloadData?.document?.id;
-    if (!mediaId || documentLoading) return;
+    if (documentUrl) return documentUrl;
+    if (!mediaId || documentLoading) return null;
     setDocumentLoading(true);
     try {
-      const response = await getWhatsAppMedia(mediaId);
-      if (response.url) {
-        setDocumentUrl(response.url);
-      } else if (response.data) {
-        const objectUrl = URL.createObjectURL(response.data);
-        setDocumentUrl(objectUrl);
+      const response = await getWhatsAppMedia(mediaId, { preferObjectUrl: true });
+      const nextUrl = response.url || response.objectUrl || null;
+      if (nextUrl) {
+        setDocumentUrl(nextUrl);
+        return nextUrl;
       }
     } catch (error) {
       console.error('Erro ao carregar documento:', error);
     } finally {
       setDocumentLoading(false);
     }
-  };
+    return null;
+  }, [documentLoading, documentPayload?.id, documentUrl, payloadData?.document?.id, payloadData?.media?.id]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -430,6 +476,20 @@ export function MessageBubble({
     };
   }, [audioUrl]);
 
+  useEffect(() => {
+    if (!audioUrl || !audioAutoplayRequestedRef.current) return;
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audioAutoplayRequestedRef.current = false;
+    void audio.play().then(() => {
+      setAudioIsPlaying(true);
+    }).catch((error) => {
+      console.error('Erro ao reproduzir audio:', error);
+    });
+  }, [audioUrl]);
+
   const formatAudioTime = (value: number) => {
     const minutes = Math.floor(value / 60);
     const seconds = Math.floor(value % 60);
@@ -438,6 +498,7 @@ export function MessageBubble({
 
   const toggleAudioPlayback = async () => {
     if (!audioUrl) {
+      audioAutoplayRequestedRef.current = true;
       await loadAudioMedia();
       return;
     }
@@ -591,40 +652,32 @@ export function MessageBubble({
     }
 
     if (isImageMessage) {
-      const imageUrl =
-        payloadData?.image?.url ||
-        payloadData?.image?.file ||
-        payloadData?.image?.path ||
-        payloadData?.media?.link ||
-        payloadData?.media?.url ||
-        payloadData?.media?.file ||
-        payloadData?.media?.path ||
-        payloadData?.image?.link;
-      const imagePreview = payloadData?.image?.preview;
-      const displayUrl = visualMediaUrl || imageUrl || imagePreview;
+      const displayUrl = visualDisplayUrl;
       const shouldShowCaption = Boolean(resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]');
       return (
-        <div className="flex w-fit max-w-[min(420px,85vw)] flex-col gap-2">
+        <div className="flex w-[min(420px,85vw)] max-w-full flex-col gap-2">
           {displayUrl ? (
             <button
               type="button"
               onClick={() => {
                 void openMediaPreview('image', displayUrl);
               }}
-              className="block w-fit max-w-full overflow-hidden rounded-xl"
+              className="block w-full overflow-hidden rounded-xl bg-slate-100"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
             >
               <img
                 src={displayUrl}
                 alt="Imagem"
-                className="block h-auto w-auto max-h-[520px] max-w-full"
-                loading="lazy"
+                className="block h-full w-full object-contain"
+                loading={isNearViewport ? 'eager' : 'lazy'}
               />
             </button>
           ) : (
             <Button
               variant="secondary"
               size="sm"
-              className="h-auto w-[320px] max-w-full rounded p-2 text-sm text-gray-600"
+              className="h-auto w-full max-w-full rounded p-2 text-sm text-gray-600"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
               onClick={() => {
                 void openMediaPreview('image');
               }}
@@ -660,14 +713,16 @@ export function MessageBubble({
         <div className="w-[min(420px,85vw)] max-w-full space-y-2">
           {videoUrl ? (
             <div className="w-full rounded-xl overflow-hidden bg-black">
-              <video
-                src={videoUrl}
-                controls
-                playsInline
-                preload="metadata"
-                poster={poster}
-                className="block w-full h-auto max-h-[520px] bg-black"
-              />
+              <div className="w-full bg-black" style={{ aspectRatio: `${visualAspectRatio}` }}>
+                <video
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster={poster}
+                  className="block h-full w-full bg-black object-contain"
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -684,6 +739,7 @@ export function MessageBubble({
               variant="secondary"
               size="sm"
               className="h-auto w-full rounded p-2 text-sm text-gray-600"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
               onClick={() => {
                 void openMediaPreview('video');
               }}
@@ -763,9 +819,8 @@ export function MessageBubble({
                 size="icon"
                 className="h-10 w-10 rounded-full bg-gray-200 p-0 text-lg"
                 onClick={toggleAudioPlayback}
-                disabled={audioMediaLoading}
               >
-                {audioIsPlaying ? '⏸' : '▶'}
+                {audioMediaLoading && !audioUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : (audioIsPlaying ? '⏸' : '▶')}
               </Button>
               <div className="flex-1">
                 {audioUrl ? (
@@ -794,7 +849,7 @@ export function MessageBubble({
                   </div>
                 ) : (
                   <div className="text-xs">
-                    {audioMediaLoading ? 'Carregando audio...' : 'Clique para carregar'}
+                    {audioMediaLoading ? 'Preparando audio...' : 'Clique para carregar'}
                   </div>
                 )}
               </div>
@@ -808,7 +863,7 @@ export function MessageBubble({
                 {[1, 1.5, 2, 3][audioRateIndex]}x
               </Button>
             </div>
-            {audioUrl && <audio ref={audioRef} src={audioUrl} preload="none" className="hidden" />}
+            {audioUrl && <audio ref={audioRef} src={audioUrl} preload="auto" className="hidden" />}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -932,19 +987,16 @@ export function MessageBubble({
     return <WhatsAppFormattedText text={resolvedBody || '(mensagem vazia)'} className="text-sm whitespace-pre-wrap break-words" />;
   };
 
-  async function loadVisualMedia() {
+  const loadVisualMedia = useCallback(async () => {
+    if (visualMediaUrl) return visualMediaUrl;
     if (!visualMediaId || visualMediaLoading) return null;
     setVisualMediaLoading(true);
     try {
-      const response = await getWhatsAppMedia(visualMediaId);
-      if (response.url) {
-        setVisualMediaUrl(response.url);
-        return response.url;
-      }
-      if (response.data) {
-        const objectUrl = URL.createObjectURL(response.data);
-        setVisualMediaUrl(objectUrl);
-        return objectUrl;
+      const response = await getWhatsAppMedia(visualMediaId, { preferObjectUrl: true });
+      const nextUrl = response.url || response.objectUrl || null;
+      if (nextUrl) {
+        setVisualMediaUrl(nextUrl);
+        return nextUrl;
       }
     } catch (error) {
       console.error('Erro ao carregar midia visual:', error);
@@ -952,17 +1004,22 @@ export function MessageBubble({
       setVisualMediaLoading(false);
     }
     return null;
-  }
+  }, [visualMediaId, visualMediaLoading, visualMediaUrl]);
+
+  useEffect(() => {
+    if (!isNearViewport || !isVisualMediaMessage || !visualNeedsUpgrade || visualMediaLoading) return;
+    void loadVisualMedia();
+  }, [isNearViewport, isVisualMediaMessage, loadVisualMedia, visualMediaLoading, visualNeedsUpgrade]);
 
   async function openMediaPreview(previewType: 'image' | 'video', fallbackSrc?: string | null) {
-    const initialSrc = fallbackSrc || visualMediaUrl || null;
+    const initialSrc = fallbackSrc || visualDisplayUrl || null;
     const shouldOpenAfterLoad = !initialSrc;
 
     if (initialSrc) {
       setMediaPreview({ type: previewType, src: initialSrc });
     }
 
-    if (!visualMediaId || visualMediaUrl) {
+    if (!visualNeedsUpgrade) {
       return;
     }
 
@@ -986,6 +1043,7 @@ export function MessageBubble({
 
   return (
     <div
+      ref={bubbleRef}
       className={`message-bubble-row flex ${isOutbound ? 'justify-end' : 'justify-start'} mb-2 group`}
     >
       <div className={`relative ${isVisualMediaMessage ? 'max-w-[85%]' : 'max-w-[70%]'} min-w-0 ${isOutbound ? 'order-2' : 'order-1'}`}>

@@ -12,6 +12,15 @@ type MediaRequest = {
   mediaId?: string;
 };
 
+type CachedMediaPayload = {
+  mimeType: string;
+  fileName: string | null;
+  data: string;
+};
+
+const MEDIA_CACHE_TTL_MS = 5 * 60 * 1000;
+const mediaResponseCache = new Map<string, { expiresAt: number; payload: CachedMediaPayload }>();
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
@@ -28,6 +37,25 @@ const encodeBase64 = (buffer: ArrayBuffer) => {
   }
 
   return btoa(binary);
+};
+
+const getCachedMediaPayload = (mediaId: string): CachedMediaPayload | null => {
+  const cached = mediaResponseCache.get(mediaId);
+  if (!cached) return null;
+
+  if (cached.expiresAt <= Date.now()) {
+    mediaResponseCache.delete(mediaId);
+    return null;
+  }
+
+  return cached.payload;
+};
+
+const setCachedMediaPayload = (mediaId: string, payload: CachedMediaPayload) => {
+  mediaResponseCache.set(mediaId, {
+    expiresAt: Date.now() + MEDIA_CACHE_TTL_MS,
+    payload,
+  });
 };
 
 const loadWhapiToken = async (supabaseAdmin: ReturnType<typeof createClient>) => {
@@ -107,6 +135,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const cachedPayload = getCachedMediaPayload(mediaId);
+    if (cachedPayload) {
+      return new Response(JSON.stringify(cachedPayload), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -170,17 +206,18 @@ Deno.serve(async (req) => {
     const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^\";]+)/i);
     const fileName = fileNameMatch ? decodeURIComponent(fileNameMatch[1].replace(/"/g, '')) : null;
 
-    return new Response(
-      JSON.stringify({
-        mimeType: binaryContentType,
-        fileName,
-        data: encodeBase64(mediaBuffer),
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+    const responsePayload = {
+      mimeType: binaryContentType,
+      fileName,
+      data: encodeBase64(mediaBuffer),
+    };
+
+    setCachedMediaPayload(mediaId, responsePayload);
+
+    return new Response(JSON.stringify(responsePayload), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[whatsapp-media] Erro inesperado:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao carregar midia.' }), {

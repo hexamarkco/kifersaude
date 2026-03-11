@@ -99,35 +99,68 @@ export default function AnimatedStatCard({
       <div
         className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.08] transition-opacity duration-300 group-hover:opacity-[0.14]`}
       />
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/70 to-transparent" />
-      <div className="absolute right-[-34px] top-[-34px] h-28 w-28 rounded-full bg-white/45 blur-2xl" />
+      <div
+        className="absolute inset-x-0 top-0 h-24"
+        style={{
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface) 88%, white 12%) 0%, transparent 100%)',
+        }}
+      />
+      <div
+        className="absolute right-[-34px] top-[-34px] h-28 w-28 rounded-full blur-2xl"
+        style={{ background: 'color-mix(in srgb, var(--panel-surface) 82%, white 18%)' }}
+      />
 
       <div className="relative p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <p
+                className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+                style={{ color: 'var(--panel-text-muted)' }}
+              >
                 Panorama
               </p>
               {contextLabel && contextValue && (
-                <div className="rounded-full border border-white/70 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">
-                  <span className="text-slate-400">{contextLabel}</span>{' '}
-                  <span className="text-slate-800">{contextValue}</span>
+                <div
+                  className="rounded-full border px-3 py-1 text-[11px] font-semibold shadow-sm"
+                  style={{
+                    borderColor: 'var(--panel-border-subtle)',
+                    background: 'color-mix(in srgb, var(--panel-surface) 88%, transparent)',
+                    color: 'var(--panel-text-soft)',
+                  }}
+                >
+                  <span style={{ color: 'var(--panel-text-muted)' }}>{contextLabel}</span>{' '}
+                  <span style={{ color: 'var(--panel-text)' }}>{contextValue}</span>
                 </div>
               )}
             </div>
 
-            <p className="mb-2 text-sm font-semibold text-slate-700 sm:text-base">{label}</p>
+            <p className="mb-2 text-sm font-semibold sm:text-base" style={{ color: 'var(--panel-text-soft)' }}>
+              {label}
+            </p>
 
             <div className="flex items-end gap-2">
-              {prefix && <span className="pb-1 text-lg font-bold text-slate-700 sm:text-xl">{prefix}</span>}
-              <p className="text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              {prefix && (
+                <span className="pb-1 text-lg font-bold sm:text-xl" style={{ color: 'var(--panel-text-soft)' }}>
+                  {prefix}
+                </span>
+              )}
+              <p className="text-3xl font-bold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--panel-text)' }}>
                 {formattedValue}
               </p>
-              {suffix && <span className="pb-1 text-base font-semibold text-slate-500 sm:text-lg">{suffix}</span>}
+              {suffix && (
+                <span className="pb-1 text-base font-semibold sm:text-lg" style={{ color: 'var(--panel-text-muted)' }}>
+                  {suffix}
+                </span>
+              )}
             </div>
 
-            {subtitle && <p className="mt-2 text-sm text-slate-500">{subtitle}</p>}
+            {subtitle && (
+              <p className="mt-2 text-sm" style={{ color: 'var(--panel-text-muted)' }}>
+                {subtitle}
+              </p>
+            )}
 
             {trend && (
               <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm">
@@ -140,7 +173,7 @@ export default function AnimatedStatCard({
                 >
                   {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%
                 </span>
-                <span className="text-xs text-slate-500">vs mes anterior</span>
+                <span className="text-xs" style={{ color: 'var(--panel-text-muted)' }}>vs mes anterior</span>
               </div>
             )}
           </div>
@@ -153,13 +186,19 @@ export default function AnimatedStatCard({
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200/80 pt-4">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div
+          className="mt-5 flex items-center justify-between gap-3 border-t pt-4"
+          style={{ borderColor: 'var(--panel-border-subtle)' }}
+        >
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
             <span className={`h-2.5 w-2.5 rounded-full bg-gradient-to-br ${gradient}`} />
             <span>{footerLabel || 'Toque para abrir detalhes'}</span>
           </div>
           {onClick && (
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors duration-300 group-hover:text-slate-700">
+            <span
+              className="text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300"
+              style={{ color: 'var(--panel-text-subtle)' }}
+            >
               Abrir
             </span>
           )}

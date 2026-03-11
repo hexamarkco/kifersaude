@@ -4653,7 +4653,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   className="h-9 w-9"
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate('/painel/config/whatsapp');
+                    navigate('/painel/whatsapp/config');
                   }}
                 >
                   <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />

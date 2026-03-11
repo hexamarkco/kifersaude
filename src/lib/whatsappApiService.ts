@@ -1014,35 +1014,121 @@ export async function getWhatsAppContacts(count: number = 500, offset: number = 
   return response.json();
 }
 
-export async function getWhatsAppMedia(mediaId: string): Promise<{ url?: string; data?: Blob }> {
-  const { data, error } = await supabase.functions.invoke('whatsapp-media', {
-    body: { mediaId },
-  });
+export interface WhatsAppMediaResponse {
+  url?: string;
+  data?: Blob;
+  fileName?: string | null;
+  mimeType?: string;
+  objectUrl?: string;
+}
 
-  if (error) {
-    throw error;
+const whatsappMediaCache = new Map<string, WhatsAppMediaResponse>();
+const whatsappMediaRequestCache = new Map<string, Promise<WhatsAppMediaResponse>>();
+
+function materializeCachedObjectUrl(cached: WhatsAppMediaResponse): WhatsAppMediaResponse {
+  if (cached.objectUrl || !cached.data) {
+    return cached;
   }
 
-  const payload =
-    data && typeof data === 'object'
-      ? (data as { data?: string; mimeType?: string })
-      : null;
+  const objectUrl = URL.createObjectURL(cached.data);
+  const nextCached = { ...cached, objectUrl };
+  return nextCached;
+}
 
-  if (!payload?.data) {
-    throw new Error('Resposta invalida ao carregar midia do WhatsApp.');
+export async function getWhatsAppMedia(
+  mediaId: string,
+  options?: {
+    preferObjectUrl?: boolean;
+    forceRefresh?: boolean;
+  },
+): Promise<WhatsAppMediaResponse> {
+  const cacheKey = mediaId.trim();
+  if (!cacheKey) {
+    throw new Error('mediaId obrigatorio.');
   }
 
-  const binaryString = atob(payload.data);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let index = 0; index < binaryString.length; index += 1) {
-    bytes[index] = binaryString.charCodeAt(index);
+  const cached = !options?.forceRefresh ? whatsappMediaCache.get(cacheKey) : undefined;
+  if (cached) {
+    if (options?.preferObjectUrl) {
+      const nextCached = materializeCachedObjectUrl(cached);
+      if (nextCached !== cached) {
+        whatsappMediaCache.set(cacheKey, nextCached);
+      }
+      return nextCached;
+    }
+
+    return cached;
   }
 
-  return {
-    data: new Blob([bytes], {
-      type: payload.mimeType || 'application/octet-stream',
-    }),
-  };
+  const pending = !options?.forceRefresh ? whatsappMediaRequestCache.get(cacheKey) : undefined;
+  if (pending) {
+    const response = await pending;
+    if (options?.preferObjectUrl) {
+      const nextCached = materializeCachedObjectUrl(response);
+      if (nextCached !== response) {
+        whatsappMediaCache.set(cacheKey, nextCached);
+      }
+      return nextCached;
+    }
+
+    return response;
+  }
+
+  const request = (async (): Promise<WhatsAppMediaResponse> => {
+    const { data, error } = await supabase.functions.invoke('whatsapp-media', {
+      body: { mediaId: cacheKey },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const payload =
+      data && typeof data === 'object'
+        ? (data as { data?: string; mimeType?: string; fileName?: string | null; url?: string })
+        : null;
+
+    if (!payload) {
+      throw new Error('Resposta invalida ao carregar midia do WhatsApp.');
+    }
+
+    if (payload.url) {
+      return {
+        url: payload.url,
+        fileName: payload.fileName ?? null,
+        mimeType: payload.mimeType,
+      };
+    }
+
+    if (!payload.data) {
+      throw new Error('Resposta invalida ao carregar midia do WhatsApp.');
+    }
+
+    const binaryString = atob(payload.data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let index = 0; index < binaryString.length; index += 1) {
+      bytes[index] = binaryString.charCodeAt(index);
+    }
+
+    return {
+      data: new Blob([bytes], {
+        type: payload.mimeType || 'application/octet-stream',
+      }),
+      fileName: payload.fileName ?? null,
+      mimeType: payload.mimeType || 'application/octet-stream',
+    };
+  })();
+
+  whatsappMediaRequestCache.set(cacheKey, request);
+
+  try {
+    const response = await request;
+    const nextCached = options?.preferObjectUrl ? materializeCachedObjectUrl(response) : response;
+    whatsappMediaCache.set(cacheKey, nextCached);
+    return nextCached;
+  } finally {
+    whatsappMediaRequestCache.delete(cacheKey);
+  }
 }
 
 export async function reactToMessage(messageId: string, emoji: string) {

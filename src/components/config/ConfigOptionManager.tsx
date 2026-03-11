@@ -48,13 +48,8 @@ export default function ConfigOptionManager({
       return undefined;
     }
 
-    const timeout = window.setTimeout(() => {
-      setMessage(null);
-    }, 4000);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
+    const timeout = window.setTimeout(() => setMessage(null), 4000);
+    return () => window.clearTimeout(timeout);
   }, [message]);
 
   const showMessage = (type: Message['type'], text: string) => {
@@ -74,7 +69,7 @@ export default function ConfigOptionManager({
 
   const handleCreate = async () => {
     if (!newLabel.trim()) {
-      showMessage('error', 'Informe o nome da opção.');
+      showMessage('error', 'Informe o nome da opcao.');
       return;
     }
 
@@ -86,11 +81,11 @@ export default function ConfigOptionManager({
     });
 
     if (error) {
-      showMessage('error', 'Erro ao adicionar opção.');
+      showMessage('error', 'Erro ao adicionar opcao.');
     } else {
       setNewLabel('');
       await refreshCategory(category);
-      showMessage('success', 'Opção adicionada com sucesso.');
+      showMessage('success', 'Opcao adicionada com sucesso.');
     }
     setSaving(false);
   };
@@ -103,7 +98,7 @@ export default function ConfigOptionManager({
     setBusyId(id);
     const { error } = await configService.updateConfigOption(category, id, updates);
     if (error) {
-      showMessage('error', 'Erro ao atualizar opção.');
+      showMessage('error', 'Erro ao atualizar opcao.');
     } else {
       await refreshCategory(category);
       if (successMessage) {
@@ -117,7 +112,7 @@ export default function ConfigOptionManager({
     const nextLabel = drafts[id]?.label?.trim() ?? '';
     if (!nextLabel) {
       updateDraft(id, { label: originalLabel });
-      showMessage('error', 'O rótulo não pode ficar vazio.');
+      showMessage('error', 'O rotulo nao pode ficar vazio.');
       return;
     }
 
@@ -125,21 +120,21 @@ export default function ConfigOptionManager({
       return;
     }
 
-    await handleUpdate(id, { label: nextLabel }, 'Rótulo atualizado com sucesso.');
+    await handleUpdate(id, { label: nextLabel }, 'Rotulo atualizado com sucesso.');
   };
 
   const handleOrderBlur = async (id: string, originalOrder: number) => {
     const rawOrder = drafts[id]?.ordem?.trim() ?? '';
     if (!rawOrder) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem válida.');
+      showMessage('error', 'Informe uma ordem valida.');
       return;
     }
 
     const parsedOrder = Number.parseInt(rawOrder, 10);
     if (!Number.isFinite(parsedOrder) || parsedOrder < 0) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem válida.');
+      showMessage('error', 'Informe uma ordem valida.');
       return;
     }
 
@@ -152,8 +147,8 @@ export default function ConfigOptionManager({
 
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
-      title: 'Excluir opção',
-      description: 'Deseja remover esta opção? Esta ação não pode ser desfeita.',
+      title: 'Excluir opcao',
+      description: 'Deseja remover esta opcao? Esta acao nao pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -165,20 +160,33 @@ export default function ConfigOptionManager({
     setBusyId(id);
     const { error } = await configService.deleteConfigOption(category, id);
     if (error) {
-      showMessage('error', 'Erro ao remover opção.');
+      showMessage('error', 'Erro ao remover opcao.');
     } else {
       await refreshCategory(category);
-      showMessage('success', 'Opção removida com sucesso.');
+      showMessage('success', 'Opcao removida com sucesso.');
     }
     setBusyId(null);
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-          {description && <p className="text-sm text-slate-600">{description}</p>}
+          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">{title}</h3>
+          {description && <p className="text-sm text-[color:var(--panel-text-soft)]">{description}</p>}
+        </div>
+
+        <div className="flex w-full gap-3 lg:max-w-xl">
+          <Input
+            type="text"
+            value={newLabel}
+            onChange={(event) => setNewLabel(event.target.value)}
+            placeholder={placeholder || 'Nova opcao'}
+          />
+          <Button onClick={() => void handleCreate()} disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
         </div>
       </div>
 
@@ -190,11 +198,7 @@ export default function ConfigOptionManager({
               : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
-          {message.type === 'success' ? (
-            <CheckCircle className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
+          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
         </div>
       )}
@@ -206,11 +210,11 @@ export default function ConfigOptionManager({
           return (
             <div
               key={item.id}
-              className="flex flex-col space-y-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:space-x-3 md:space-y-0"
+              className="flex flex-col space-y-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-4 py-4 md:flex-row md:items-center md:space-x-3 md:space-y-0"
             >
               <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="flex flex-col text-xs text-slate-600">
-                  Rótulo
+                <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
+                  Rotulo
                   <Input
                     type="text"
                     value={drafts[item.id]?.label ?? item.label}
@@ -221,7 +225,7 @@ export default function ConfigOptionManager({
                   />
                 </label>
 
-                <label className="flex flex-col text-xs text-slate-600">
+                <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
                   Ordem
                   <Input
                     type="number"
@@ -235,14 +239,12 @@ export default function ConfigOptionManager({
               </div>
 
               <div className="flex items-center space-x-3">
-                <label className="inline-flex items-center space-x-2 text-sm text-slate-600">
+                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
                   <input
                     type="checkbox"
                     checked={item.ativo}
-                    onChange={(event) =>
-                      void handleUpdate(item.id, { ativo: event.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
                   <span>Ativo</span>
@@ -253,7 +255,7 @@ export default function ConfigOptionManager({
                   variant="danger"
                   size="icon"
                   className="h-9 w-9"
-                  title="Remover opção"
+                  title="Remover opcao"
                   disabled={isBusy}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -262,39 +264,7 @@ export default function ConfigOptionManager({
             </div>
           );
         })}
-
-        {items.length === 0 && (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-600">
-            Nenhuma opção cadastrada ainda.
-          </div>
-        )}
       </div>
-
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <h4 className="mb-3 text-sm font-semibold text-slate-900">Adicionar nova opção</h4>
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Rótulo</label>
-            <Input
-              type="text"
-              value={newLabel}
-              onChange={(event) => setNewLabel(event.target.value)}
-              placeholder={placeholder || 'Ex: Valor visível para o usuário'}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <Button
-            onClick={() => void handleCreate()}
-            loading={saving}
-          >
-            {!saving && <Plus className="h-4 w-4" />}
-            <span>{saving ? 'Salvando...' : 'Adicionar opção'}</span>
-          </Button>
-        </div>
-      </div>
-
       {ConfirmationDialog}
     </div>
   );

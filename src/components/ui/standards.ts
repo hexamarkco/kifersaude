@@ -98,8 +98,8 @@ export const panelInputBaseClass =
   'panel-ui-input w-full rounded-lg border bg-white px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelInputStateClasses = {
-  valid: 'border-slate-300 text-slate-700 placeholder:text-slate-400',
-  invalid: 'border-red-400 text-red-700 placeholder:text-red-300',
+  valid: 'border-slate-300 text-[var(--panel-input-text,var(--panel-text-soft))] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]',
+  invalid: 'border-red-400 text-red-700 placeholder:text-red-400',
 };
 
 export const panelInputSizeClasses: Record<PanelInputSize, string> = {

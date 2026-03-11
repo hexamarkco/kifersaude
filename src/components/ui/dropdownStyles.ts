@@ -54,7 +54,9 @@ export const getDropdownTriggerClass = ({
     'panel-glass-panel panel-interactive-glass relative w-full rounded-lg border text-left transition-shadow',
     'focus:border-transparent focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60',
     compact ? 'h-8 pl-8 pr-8 text-xs' : 'h-11 pl-10 pr-10 text-sm',
-    isDark ? 'border-amber-700/70 bg-stone-950 text-stone-100' : 'border-slate-300 bg-white text-slate-700',
+    isDark
+      ? 'border-amber-700/70 bg-stone-950 text-[var(--panel-input-text,var(--panel-text))]'
+      : 'border-slate-300 bg-white text-[var(--panel-input-text,var(--panel-text-soft))]',
     className,
   );
 

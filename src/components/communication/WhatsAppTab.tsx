@@ -37,7 +37,6 @@ import { WhatsAppPageSkeleton } from '../ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorUtils';
 import { MessageBubble } from './MessageBubble';
-import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
@@ -68,9 +67,9 @@ const getChatTypeBadgeClass = (kind?: string | null) => {
   const normalized = (kind || 'direct').trim().toLowerCase();
 
   if (normalized === 'group') return 'comm-badge-info';
-  if (normalized === 'newsletter') return 'comm-badge-brand';
+  if (normalized === 'newsletter') return 'comm-badge-channel';
   if (normalized === 'status') return 'comm-badge-warning';
-  if (normalized === 'broadcast') return 'comm-badge-brand';
+  if (normalized === 'broadcast') return 'comm-badge-channel';
   return 'comm-badge-neutral';
 };
 
@@ -735,9 +734,9 @@ export default function WhatsAppTab() {
       body: preferred.body ?? fallback.body,
       timestamp: preferred.timestamp ?? fallback.timestamp,
       payload: mergeMessagePayloadForDisplay(fallback.payload, preferred.payload),
-      send_state: preferred.send_state ?? fallback.send_state ?? null,
-      error_message: preferred.error_message ?? fallback.error_message ?? null,
-      retry_payload: preferred.retry_payload ?? fallback.retry_payload ?? null,
+      send_state: preferred.send_state !== undefined ? preferred.send_state : fallback.send_state ?? null,
+      error_message: preferred.error_message !== undefined ? preferred.error_message : fallback.error_message ?? null,
+      retry_payload: preferred.retry_payload !== undefined ? preferred.retry_payload : fallback.retry_payload ?? null,
       created_at: preferred.created_at || fallback.created_at,
     };
   };
@@ -5824,8 +5823,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
               {!isSelectedStatusChat ? (
                 <>
-                  <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChatDisplayName || selectedChat.id} />
-
                   <MessageInput
                     key={selectedChat.id}
                     chatId={selectedChat.id}

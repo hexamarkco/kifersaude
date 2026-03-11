@@ -163,7 +163,6 @@ function MessageInputComponent({
   const analyserDataRef = useRef<Uint8Array | null>(null);
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const followUpRequestIdRef = useRef(0);
-  const activeChatIdRef = useRef(chatId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
@@ -794,10 +793,6 @@ function MessageInputComponent({
     lastTypingSignalAtRef.current = 0;
   }, [chatId]);
 
-  useEffect(() => {
-    activeChatIdRef.current = chatId;
-  }, [chatId]);
-
   const scheduleTextareaResize = () => {
     if (textareaResizeFrameRef.current !== null) return;
 
@@ -1166,18 +1161,73 @@ function MessageInputComponent({
     });
   };
 
+  const buildClipboardFileName = (file: File) => {
+    if (file.name?.trim()) return file.name;
+
+    const extensionFromType = file.type.split('/')[1]?.split(';')[0]?.trim() || 'bin';
+    const prefix = file.type.startsWith('image/')
+      ? 'imagem'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : file.type.startsWith('audio/')
+          ? 'audio'
+          : 'arquivo';
+
+    return `${prefix}-${Date.now()}.${extensionFromType}`;
+  };
+
+  const attachFileToComposer = (incomingFile: File) => {
+    const normalizedFile =
+      incomingFile.name?.trim()
+        ? incomingFile
+        : new File([incomingFile], buildClipboardFileName(incomingFile), {
+            type: incomingFile.type || 'application/octet-stream',
+            lastModified: incomingFile.lastModified || Date.now(),
+          });
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+
+    setSelectedFile(normalizedFile);
+
+    if (normalizedFile.type.startsWith('image/') || normalizedFile.type.startsWith('video/')) {
+      const url = URL.createObjectURL(normalizedFile);
+      setPreviewUrl(url);
+    }
+
+    setShowAttachMenu(false);
+    setShowEmojiPicker(false);
+    setShowComposerActionsMenu(false);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      }
-
-      setShowAttachMenu(false);
+      attachFileToComposer(file);
     }
+  };
+
+  const handleTextareaPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardItems = Array.from(event.clipboardData?.items || []);
+    const fileItem = clipboardItems.find((item) => item.kind === 'file');
+    const pastedFile = fileItem?.getAsFile();
+
+    if (!pastedFile) {
+      return;
+    }
+
+    event.preventDefault();
+    attachFileToComposer(pastedFile);
+  };
+
+  const handleTextareaDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
+    const droppedFile = event.dataTransfer?.files?.[0];
+    if (!droppedFile) return;
+
+    event.preventDefault();
+    attachFileToComposer(droppedFile);
   };
 
   const clearFile = () => {
@@ -2288,6 +2338,11 @@ function MessageInputComponent({
                   Digite uma legenda abaixo (opcional)
                 </div>
               )}
+              {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
+                <div className="comm-badge comm-badge-neutral mt-1">
+                  Voce tambem pode colar arquivos direto no composer
+                </div>
+              )}
             </div>
             <button
               onClick={clearFile}
@@ -2495,6 +2550,13 @@ function MessageInputComponent({
                 }
               }}
               onKeyDown={handleTextareaKeyDown}
+              onPaste={handleTextareaPaste}
+              onDrop={handleTextareaDrop}
+              onDragOver={(event) => {
+                if (event.dataTransfer?.types?.includes('Files')) {
+                  event.preventDefault();
+                }
+              }}
               placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
               className="comm-composer-textarea flex-1 max-h-32 min-h-[40px] resize-none bg-transparent px-2 py-2 focus:outline-none"
               rows={1}

@@ -1743,8 +1743,8 @@
 }
 
 .comm-card-brand {
-  border-color: rgba(122, 62, 22, 0.2);
-  background: rgba(247, 240, 231, 0.94);
+  border-color: var(--panel-accent-border, #d5a25c);
+  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 72%, var(--panel-surface, #fffdfa));
 }
 
 .comm-accordion-header {
@@ -2026,6 +2026,11 @@
   color: var(--panel-text, #f8efe3);
 }
 
+.painel-theme.theme-dark .comm-card-brand {
+  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 88%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 84%, var(--panel-surface-soft, #2a1c15));
+}
+
 .comm-badge {
   display: inline-flex;
   align-items: center;
@@ -2039,9 +2044,15 @@
 }
 
 .comm-badge-brand {
-  border-color: rgba(122, 62, 22, 0.22);
-  background: rgba(246, 228, 199, 0.82);
+  border-color: var(--panel-accent-border, #d5a25c);
+  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 78%, var(--panel-surface, #fffdfa));
   color: var(--panel-accent-ink, #6f3f16);
+}
+
+.comm-badge-channel {
+  border-color: var(--panel-accent-border, #d5a25c);
+  background: color-mix(in srgb, var(--panel-accent-warm, #efcf9f) 74%, var(--panel-surface, #fffdfa));
+  color: var(--panel-accent-ink-strong, #4a2411);
 }
 
 .comm-badge-neutral {
@@ -2072,6 +2083,18 @@
   border-color: rgba(239, 68, 68, 0.24);
   background: rgba(254, 226, 226, 0.9);
   color: #b91c1c;
+}
+
+.painel-theme.theme-dark .comm-badge-brand {
+  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 88%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 92%, var(--panel-surface-soft, #2a1c15));
+  color: var(--panel-accent-ink-strong, #ffe1bc);
+}
+
+.painel-theme.theme-dark .comm-badge-channel {
+  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 92%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-warm, #5b3317) 90%, var(--panel-surface-soft-2, #35241a));
+  color: var(--panel-accent-ink-strong, #ffe1bc);
 }
 
 .comm-fab-neutral,

@@ -167,6 +167,7 @@ export function MessageBubble({
   const [audioRateIndex, setAudioRateIndex] = useState(0);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [actionMenuOpenUpward, setActionMenuOpenUpward] = useState(false);
+  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
@@ -193,6 +194,7 @@ export function MessageBubble({
   const closeActionMenu = useCallback(() => {
     setShowActionMenu(false);
     setShowReactionPicker(false);
+    setActionMenuPosition(null);
   }, []);
 
   const showFailedActions = isOutbound && sendState === 'failed' && (onRetryFailed || onDismissFailed);
@@ -203,13 +205,29 @@ export function MessageBubble({
     if (!menu || !trigger) return;
 
     const spacing = 8;
+    const viewportPadding = 12;
     const triggerRect = trigger.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth;
     const menuHeight = menu.offsetHeight;
     const spaceBelow = window.innerHeight - triggerRect.bottom;
     const spaceAbove = triggerRect.top;
     const shouldOpenUpward = spaceBelow < menuHeight + spacing && spaceAbove > spaceBelow;
+    const unclampedLeft = triggerRect.right - menuWidth;
+    const left = Math.min(
+      Math.max(unclampedLeft, viewportPadding),
+      Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding),
+    );
+    const top = shouldOpenUpward
+      ? Math.max(viewportPadding, triggerRect.top - menuHeight - spacing)
+      : Math.min(window.innerHeight - menuHeight - viewportPadding, triggerRect.bottom + spacing);
 
     setActionMenuOpenUpward((previous) => (previous === shouldOpenUpward ? previous : shouldOpenUpward));
+    setActionMenuPosition((previous) => {
+      if (previous && previous.top === top && previous.left === left) {
+        return previous;
+      }
+      return { top, left };
+    });
   }, []);
 
   const formatTimestamp = (ts: string | null) => {
@@ -406,6 +424,7 @@ export function MessageBubble({
   useEffect(() => {
     if (!showActionMenu) {
       setActionMenuOpenUpward(false);
+      setActionMenuPosition(null);
       return;
     }
 
@@ -1169,8 +1188,8 @@ export function MessageBubble({
         {hasActionMenu && (
           <div
             ref={actionMenuRef}
-            className={`message-bubble-action-menu absolute right-0 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
-              actionMenuOpenUpward ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'
+            className={`message-bubble-action-menu fixed z-30 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
+              actionMenuOpenUpward ? 'origin-bottom-right' : 'origin-top-right'
             } ${
               showActionMenu
                 ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
@@ -1178,6 +1197,17 @@ export function MessageBubble({
                   ? 'pointer-events-none -translate-y-1 scale-95 opacity-0'
                   : 'pointer-events-none translate-y-1 scale-95 opacity-0'
             }`}
+            style={
+              actionMenuPosition
+                ? {
+                    top: actionMenuPosition.top,
+                    left: actionMenuPosition.left,
+                    visibility: 'visible',
+                  }
+                : {
+                    visibility: showActionMenu ? 'hidden' : 'visible',
+                  }
+            }
           >
             {canReact && (
               <Button
@@ -1255,11 +1285,12 @@ export function MessageBubble({
               <Button
                 variant="ghost"
                 size="sm"
+                fullWidth
                 onClick={() => {
                   setShowHistory(true);
                   closeActionMenu();
                 }}
-                className="h-auto w-full items-center justify-start gap-2 rounded-md border-0 px-2.5 py-2 text-left text-sm font-normal text-amber-700 shadow-none hover:bg-amber-50 hover:text-amber-800"
+                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-amber-700 shadow-none hover:bg-amber-50 hover:text-amber-800"
               >
                 <History className="h-4 w-4 text-amber-700" />
                 <span>Ver histórico</span>

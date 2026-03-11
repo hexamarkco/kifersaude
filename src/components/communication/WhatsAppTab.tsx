@@ -167,31 +167,31 @@ const REMINDER_QUICK_OPEN_PERIODS: Array<{
     id: 'overdue',
     label: 'Atrasados',
     emptyLabel: 'Sem lembretes atrasados.',
-    accentClassName: 'border-red-200 bg-red-50 text-red-700',
+    accentClassName: 'comm-badge comm-badge-danger',
   },
   {
     id: 'today',
     label: 'Hoje',
     emptyLabel: 'Sem lembretes para hoje.',
-    accentClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    accentClassName: 'comm-badge comm-badge-success',
   },
   {
     id: 'thisWeek',
     label: 'Esta semana',
     emptyLabel: 'Sem lembretes para esta semana.',
-    accentClassName: 'border-sky-200 bg-sky-50 text-sky-700',
+    accentClassName: 'comm-badge comm-badge-info',
   },
   {
     id: 'thisMonth',
     label: 'Este mês',
     emptyLabel: 'Sem lembretes para este mês.',
-    accentClassName: 'border-amber-200 bg-amber-50 text-amber-700',
+    accentClassName: 'comm-badge comm-badge-warning',
   },
   {
     id: 'later',
     label: 'Mais adiante',
     emptyLabel: 'Sem lembretes futuros.',
-    accentClassName: 'border-slate-300 bg-slate-100 text-slate-700',
+    accentClassName: 'comm-badge comm-badge-neutral',
   },
 ];
 
@@ -2670,16 +2670,7 @@ export default function WhatsAppTab() {
           .map((key) => leadByPhoneMatchKey.get(key))
           .find(Boolean)?.status ?? null;
 
-      const chatTypeBadgeClass =
-        chatKind === 'group'
-          ? 'bg-blue-100 text-blue-700'
-          : chatKind === 'newsletter'
-            ? 'bg-indigo-100 text-indigo-700'
-            : chatKind === 'status'
-              ? 'bg-amber-100 text-amber-700'
-              : chatKind === 'broadcast'
-                ? 'bg-orange-100 text-orange-700'
-                : 'bg-slate-100 text-slate-700';
+      const chatTypeBadgeClass = getChatTypeBadgeClass(chatKind);
 
       const chatPhoto = (() => {
         const variants = getChatIdVariants(chat);
@@ -2899,7 +2890,7 @@ export default function WhatsAppTab() {
     if (firstResponseSla.kind === 'no-inbound') {
       return {
         label: 'SLA 1a resposta: sem pendencia',
-        className: 'border-slate-200 bg-slate-100 text-slate-600',
+        className: 'comm-badge-neutral',
       };
     }
 
@@ -2907,36 +2898,36 @@ export default function WhatsAppTab() {
       if (firstResponseSla.minutes <= 5) {
         return {
           label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+          className: 'comm-badge-success',
         };
       }
       if (firstResponseSla.minutes <= 15) {
         return {
           label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-          className: 'border-amber-200 bg-amber-50 text-amber-700',
+          className: 'comm-badge-warning',
         };
       }
       return {
         label: `SLA 1a resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-        className: 'border-slate-200 bg-slate-100 text-slate-700',
+        className: 'comm-badge-neutral',
       };
     }
 
     if (firstResponseSla.minutes <= 5) {
       return {
         label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        className: 'comm-badge-success',
       };
     }
     if (firstResponseSla.minutes <= 15) {
       return {
         label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-        className: 'border-amber-200 bg-amber-50 text-amber-700',
+        className: 'comm-badge-warning',
       };
     }
     return {
       label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
-      className: 'border-rose-200 bg-rose-50 text-rose-700',
+      className: 'comm-badge-danger',
     };
   }, [firstResponseSla]);
   const isDarkThemeActive =
@@ -3068,16 +3059,7 @@ export default function WhatsAppTab() {
   const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;
   const isSelectedStatusChat = selectedChatKind === 'status';
   const selectedChatTypeLabel = selectedChat ? getChatTypeLabel(selectedChat) : null;
-  const selectedChatTypeBadgeClass =
-    selectedChatKind === 'group'
-      ? 'bg-blue-100 text-blue-700'
-      : selectedChatKind === 'newsletter'
-        ? 'bg-indigo-100 text-indigo-700'
-        : selectedChatKind === 'status'
-          ? 'bg-amber-100 text-amber-700'
-        : selectedChatKind === 'broadcast'
-            ? 'bg-orange-100 text-orange-700'
-            : 'bg-slate-100 text-slate-700';
+  const selectedChatTypeBadgeClass = getChatTypeBadgeClass(selectedChatKind);
   const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
   const selectedChatPeerPhoneFromMessages = useMemo(() => {
     if (!selectedChat || !selectedChatIsDirect) return '';
@@ -3191,7 +3173,7 @@ export default function WhatsAppTab() {
     selectedChatIsDirect && isLoadingMessages && messages.length === 0
       ? {
           label: 'SLA 1a resposta: carregando...',
-          className: 'border-slate-200 bg-slate-100 text-slate-600',
+          className: 'comm-badge-neutral',
         }
       : firstResponseSlaBadge;
 
@@ -3415,31 +3397,50 @@ const getReminderPriorityMeta = (priority?: string | null) => {
   const normalized = (priority || 'normal').trim().toLowerCase();
 
   if (normalized === 'alta' || normalized === 'high') {
-    return { label: 'Alta', className: 'border border-red-300 bg-red-100 text-red-700' };
+    return { label: 'Alta', className: 'comm-badge-danger' };
   }
 
   if (normalized === 'baixa' || normalized === 'low') {
-    return { label: 'Baixa', className: 'border border-emerald-300 bg-emerald-100 text-emerald-700' };
+    return { label: 'Baixa', className: 'comm-badge-success' };
   }
 
-  return { label: 'Normal', className: 'border border-blue-300 bg-blue-100 text-blue-700' };
+  return { label: 'Normal', className: 'comm-badge-info' };
 };
 
 const getReminderTypeMeta = (type?: string | null) => {
   const normalized = (type || '').trim().toLowerCase();
 
   if (normalized === 'retorno') {
-    return { label: 'Retorno', className: 'border border-amber-300 bg-amber-100 text-amber-700' };
+    return { label: 'Retorno', className: 'comm-badge-warning' };
   }
 
   if (normalized === 'follow-up' || normalized === 'follow up' || normalized === 'followup') {
-    return { label: 'Follow-up', className: 'border border-blue-300 bg-blue-100 text-blue-700' };
+    return { label: 'Follow-up', className: 'comm-badge-info' };
   }
 
   return {
     label: type?.trim() || 'Outro',
-    className: 'border border-slate-300 bg-slate-100 text-slate-700',
+    className: 'comm-badge-neutral',
   };
+};
+
+const getChatTypeBadgeClass = (kind?: string | null) => {
+  const normalized = (kind || 'direct').trim().toLowerCase();
+
+  if (normalized === 'group') return 'comm-badge-info';
+  if (normalized === 'newsletter') return 'comm-badge-brand';
+  if (normalized === 'status') return 'comm-badge-warning';
+  if (normalized === 'broadcast') return 'comm-badge-brand';
+  return 'comm-badge-neutral';
+};
+
+const getChatAvatarClass = (kind?: string | null) => {
+  const normalized = (kind || 'direct').trim().toLowerCase();
+
+  if (normalized === 'group') return 'comm-icon-chip-info';
+  if (normalized === 'newsletter') return 'comm-icon-chip-brand';
+  if (normalized === 'status' || normalized === 'broadcast') return 'comm-icon-chip-warning';
+  return 'comm-icon-chip-brand';
 };
 
 const mapReminderTypeToSchedulerType = (type?: string | null): 'Retorno' | 'Follow-up' | 'Outro' => {
@@ -4360,10 +4361,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-600">
+                <span className="comm-badge comm-badge-neutral">
                   {reminderQuickOpenItems.length} pendente(s)
                 </span>
-                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                <span className="comm-badge comm-badge-danger">
                   {overdueReminderQuickOpenCount} atrasado(s)
                 </span>
               </div>
@@ -4372,15 +4373,15 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
             {(isLoadingReminderQuickOpen || !hasLoadedReminderQuickOpen) &&
             reminderQuickOpenItems.length === 0 &&
             !reminderQuickOpenError ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+              <div className="comm-card px-3 py-4 text-sm comm-text">
                 Carregando lembretes...
               </div>
             ) : reminderQuickOpenError ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-4 text-sm text-red-700">
+              <div className="comm-card comm-card-danger px-3 py-4 text-sm">
                 {reminderQuickOpenError}
               </div>
             ) : reminderQuickOpenItems.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+              <div className="comm-card px-3 py-4 text-sm comm-text">
                 Nenhum lembrete pendente com lead vinculado.
               </div>
             ) : (
@@ -4392,7 +4393,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
                   return (
                     <section key={period.id} className="space-y-2">
-                      <div className="sticky top-0 z-[1] flex items-center justify-between rounded-lg border border-slate-200 bg-white/95 px-3 py-2 backdrop-blur-sm">
+                      <div className="sticky top-0 z-[1] flex items-center justify-between rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[color:rgba(255,253,250,0.95)] px-3 py-2 backdrop-blur-sm">
                         <p className={`text-xs font-semibold uppercase tracking-wide ${period.accentClassName}`}>
                           {period.label}
                         </p>
@@ -4427,29 +4428,29 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           );
 
                           return (
-                            <div key={item.id} className="panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4">
+                            <div key={item.id} className="panel-interactive-glass rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-4">
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="truncate text-sm font-semibold text-slate-900">{item.leadName}</p>
+                                    <p className="comm-title truncate text-sm font-semibold">{item.leadName}</p>
                                     {leadStatusStyles && item.leadStatus && (
                                       <span className="rounded-full border px-2 py-0.5 text-[10px]" style={leadStatusStyles}>
                                         {item.leadStatus}
                                       </span>
                                     )}
-                                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${typeMeta.className}`}>
+                                    <span className={`comm-badge text-[10px] ${typeMeta.className}`}>
                                       {typeMeta.label}
                                     </span>
-                                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${priorityMeta.className}`}>
+                                    <span className={`comm-badge text-[10px] ${priorityMeta.className}`}>
                                       {priorityMeta.label}
                                     </span>
                                     {isOverdue && (
-                                      <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] text-red-700">
+                                      <span className="comm-badge comm-badge-danger text-[10px]">
                                         Atrasado
                                       </span>
                                     )}
                                   </div>
-                                  <p className="mt-1 truncate text-xs text-slate-600">{item.title}</p>
+                                  <p className="comm-text mt-1 truncate text-xs">{item.title}</p>
                                   <p className="mt-2 text-[11px] text-slate-500">
                                     {item.leadPhone ? `${formatPhone(item.leadPhone)} • ` : ''}
                                     {formatReminderDueAt(item.dueAt)}
@@ -4625,7 +4626,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 >
                   <Bell className="h-4 w-4" />
                   {reminderQuickOpenItems.length > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                    <span className="comm-badge comm-badge-warning absolute -right-1 -top-1 px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {reminderQuickOpenItems.length}
                     </span>
                   )}
@@ -4640,7 +4641,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 >
                   {showArchived ? <Inbox className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   {!showArchived && archivedCount > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                    <span className="comm-badge comm-badge-warning absolute -right-1 -top-1 px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                       {archivedCount}
                     </span>
                   )}
@@ -4754,7 +4755,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 const leadStatus = chatPresentation?.leadStatus ?? null;
                 const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
                 const badgeStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
-                const chatTypeBadgeClass = chatPresentation?.typeBadgeClass ?? 'bg-slate-100 text-slate-700';
+                const chatTypeBadgeClass = chatPresentation?.typeBadgeClass ?? getChatTypeBadgeClass(chatKind);
                 const chatPhoto = chatPresentation?.photo ?? null;
 
                 const muted = isChatMuted(chat);
@@ -4771,22 +4772,20 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       event.preventDefault();
                       openChatContextMenu(chat.id, event.clientX, event.clientY);
                     }}
-                    className={`h-auto justify-start rounded-none border-b border-slate-100 p-4 text-left font-normal shadow-none transition-colors hover:bg-slate-50 hover:text-slate-900 ${
-                      selectedChat?.id === chat.id ? 'bg-amber-50' : ''
+                    className={`h-auto justify-start rounded-none border-b border-[var(--panel-border-subtle,#e7dac8)] p-4 text-left font-normal shadow-none transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] ${
+                      selectedChat?.id === chat.id ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
                     }`}
                   >
                     <div className="relative flex-shrink-0">
                       {chatPhoto && isDirectChat(chat) ? (
-                        <img src={chatPhoto} alt={chatDisplayName} className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200" />
+                        <img
+                          src={chatPhoto}
+                          alt={chatDisplayName}
+                          className="h-12 w-12 rounded-full object-cover ring-1 ring-[var(--panel-border,#d4c0a7)]"
+                        />
                       ) : (
-                        <div className={`flex h-12 w-12 items-center justify-center rounded-full font-semibold ring-1 ring-slate-200 ${
-                          chatKind === 'group'
-                            ? 'bg-blue-100 text-blue-700'
-                            : chatKind === 'newsletter'
-                              ? 'bg-indigo-600 text-white'
-                            : chatKind === 'status' || chatKind === 'broadcast'
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-amber-200 text-amber-900'
+                        <div className={`comm-icon-chip flex h-12 w-12 items-center justify-center rounded-full font-semibold ring-1 ring-[var(--panel-border,#d4c0a7)] ${
+                          getChatAvatarClass(chatKind)
                         }`}>
                           {chatKind === 'group' ? (
                             <Users className="w-5 h-5" />
@@ -4813,7 +4812,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                             </span>
                           )}
                           {chatTypeLabel && (
-                            <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${chatTypeBadgeClass}`}>
+                            <span className={`comm-badge flex-shrink-0 text-xs ${chatTypeBadgeClass}`}>
                               {chatTypeLabel}
                             </span>
                           )}
@@ -4945,10 +4944,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       )}
 
       {showMessageArea && (
-        <div className={`${isMobileView ? 'w-full' : 'flex-1'} flex min-w-0 flex-col bg-slate-100 relative min-h-0`}>
+        <div className={`${isMobileView ? 'w-full' : 'flex-1'} relative flex min-w-0 min-h-0 flex-col bg-[var(--panel-surface-muted,#f7f0e7)]`}>
           {selectedChat ? (
             <>
-              <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3">
+              <div className="flex items-center gap-3 border-b border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-4">
                 {isMobileView && (
                   <Button
                     variant="icon"
@@ -4960,16 +4959,14 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   </Button>
                 )}
                 {selectedChatPhoto ? (
-                  <img src={selectedChatPhoto} alt={selectedChatDisplayName || selectedChat.id} className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-1 ring-slate-200" />
+                  <img
+                    src={selectedChatPhoto}
+                    alt={selectedChatDisplayName || selectedChat.id}
+                    className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-1 ring-[var(--panel-border,#d4c0a7)]"
+                  />
                 ) : (
-                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-slate-200 ${
-                    selectedChatKind === 'group'
-                      ? 'bg-blue-100 text-blue-700'
-                      : selectedChatKind === 'newsletter'
-                        ? 'bg-indigo-600 text-white'
-                      : selectedChatKind === 'status' || selectedChatKind === 'broadcast'
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-amber-200 text-amber-900'
+                  <div className={`comm-icon-chip flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-[var(--panel-border,#d4c0a7)] ${
+                    getChatAvatarClass(selectedChatKind)
                   }`}>
                     {selectedChatKind === 'group' ? (
                       <Users className="w-5 h-5" />
@@ -4986,7 +4983,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                       {selectedChatDisplayName || selectedChat.id}
                     </h2>
                     {selectedChatTypeLabel && (
-                      <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${selectedChatTypeBadgeClass}`}>
+                      <span className={`comm-badge flex-shrink-0 text-xs ${selectedChatTypeBadgeClass}`}>
                         {selectedChatTypeLabel}
                       </span>
                     )}
@@ -5015,7 +5012,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                               : 'Conversa'}
                   </p>
                   {selectedChatIsDirect && (
-                    <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${effectiveFirstResponseSlaBadge.className}`}>
+                    <div className={`comm-badge mt-1 inline-flex text-[11px] font-medium ${effectiveFirstResponseSlaBadge.className}`}>
                       {effectiveFirstResponseSlaBadge.label}
                     </div>
                   )}

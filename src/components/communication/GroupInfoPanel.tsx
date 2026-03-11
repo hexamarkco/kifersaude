@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Crown, ChevronDown, ChevronUp, Shield, User as UserIcon, Users, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { Users, Crown, Shield, User as UserIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatPhoneDisplay } from '../../lib/phoneFormatting';
 
 type GroupParticipant = {
@@ -35,6 +35,9 @@ type GroupInfoPanelProps = {
   onClose: () => void;
 };
 
+const panelShellClass =
+  'absolute right-0 top-0 flex h-full w-80 flex-col border-l border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] shadow-[var(--panel-glass-shadow-lite,0_16px_32px_-26px_rgba(42,24,12,0.18))]';
+
 export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
   const [participants, setParticipants] = useState<GroupParticipant[]>([]);
@@ -43,47 +46,47 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   const [showEvents, setShowEvents] = useState(false);
 
   useEffect(() => {
-    loadGroupData();
-  }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const loadGroupData = async () => {
+      try {
+        setLoading(true);
 
-  const loadGroupData = async () => {
-    try {
-      setLoading(true);
+        const [groupResult, participantsResult, eventsResult] = await Promise.all([
+          supabase.from('whatsapp_groups').select('*').eq('id', groupId).maybeSingle(),
+          supabase
+            .from('whatsapp_group_participants')
+            .select('*')
+            .eq('group_id', groupId)
+            .order('rank', { ascending: true })
+            .order('joined_at', { ascending: true }),
+          supabase
+            .from('whatsapp_group_events')
+            .select('*')
+            .eq('group_id', groupId)
+            .order('occurred_at', { ascending: false })
+            .limit(20),
+        ]);
 
-      const [groupResult, participantsResult, eventsResult] = await Promise.all([
-        supabase.from('whatsapp_groups').select('*').eq('id', groupId).maybeSingle(),
-        supabase
-          .from('whatsapp_group_participants')
-          .select('*')
-          .eq('group_id', groupId)
-          .order('rank', { ascending: true })
-          .order('joined_at', { ascending: true }),
-        supabase
-          .from('whatsapp_group_events')
-          .select('*')
-          .eq('group_id', groupId)
-          .order('occurred_at', { ascending: false })
-          .limit(20),
-      ]);
+        if (groupResult.data) setGroupInfo(groupResult.data);
+        if (participantsResult.data) setParticipants(participantsResult.data);
+        if (eventsResult.data) setEvents(eventsResult.data);
+      } catch (error) {
+        console.error('Erro ao carregar dados do grupo:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      if (groupResult.data) setGroupInfo(groupResult.data);
-      if (participantsResult.data) setParticipants(participantsResult.data);
-      if (eventsResult.data) setEvents(eventsResult.data);
-    } catch (error) {
-      console.error('Erro ao carregar dados do grupo:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    void loadGroupData();
+  }, [groupId]);
 
   const getRankIcon = (rank: string) => {
     switch (rank) {
       case 'creator':
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+        return <Crown className="comm-accent-text h-4 w-4" />;
       case 'admin':
-        return <Shield className="w-4 h-4 text-blue-500" />;
+        return <Shield className="comm-text h-4 w-4" />;
       default:
-        return <UserIcon className="w-4 h-4 text-slate-400" />;
+        return <UserIcon className="comm-subtle h-4 w-4" />;
     }
   };
 
@@ -121,78 +124,62 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
     });
   };
 
-  const formatPhone = (phone: string) => {
-    return formatPhoneDisplay(phone);
-  };
+  const formatPhone = (phone: string) => formatPhoneDisplay(phone);
 
   if (loading) {
     return (
-      <div className="absolute right-0 top-0 h-full w-80 bg-white border-l border-slate-200 shadow-lg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+      <div className={`${panelShellClass} items-center justify-center`}>
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[var(--panel-focus,#c86f1d)]"></div>
       </div>
     );
   }
 
   if (!groupInfo) {
     return (
-      <div className="absolute right-0 top-0 h-full w-80 bg-white border-l border-slate-200 shadow-lg flex items-center justify-center">
-        <p className="text-slate-500">Grupo não encontrado</p>
+      <div className={`${panelShellClass} items-center justify-center`}>
+        <p className="comm-muted">Grupo nao encontrado</p>
       </div>
     );
   }
 
   return (
-    <div className="absolute right-0 top-0 h-full w-80 bg-white border-l border-slate-200 shadow-lg flex flex-col">
-      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-        <h3 className="font-semibold text-slate-900">Informações do Grupo</h3>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-slate-100 rounded transition-colors"
-        >
-          <X className="w-5 h-5 text-slate-600" />
+    <div className={panelShellClass}>
+      <div className="flex items-center justify-between border-b border-[var(--panel-border-subtle,#e7dac8)] p-4">
+        <h3 className="comm-title font-semibold">Informacoes do Grupo</h3>
+        <button onClick={onClose} className="comm-icon-button rounded p-1">
+          <X className="h-5 w-5" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 border-b border-slate-200">
-          <div className="flex flex-col items-center mb-4">
+        <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] p-4">
+          <div className="mb-4 flex flex-col items-center">
             {groupInfo.chat_pic ? (
-              <img
-                src={groupInfo.chat_pic}
-                alt={groupInfo.name}
-                className="w-20 h-20 rounded-full mb-3"
-              />
+              <img src={groupInfo.chat_pic} alt={groupInfo.name} className="mb-3 h-20 w-20 rounded-full" />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-teal-100 flex items-center justify-center mb-3">
-                <Users className="w-10 h-10 text-teal-600" />
+              <div className="comm-icon-chip comm-icon-chip-brand mb-3 flex h-20 w-20 items-center justify-center rounded-full">
+                <Users className="h-10 w-10" />
               </div>
             )}
-            <h2 className="font-semibold text-lg text-center">{groupInfo.name}</h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Criado em {formatDate(groupInfo.created_at)}
-            </p>
+            <h2 className="comm-title text-center text-lg font-semibold">{groupInfo.name}</h2>
+            <p className="comm-muted mt-1 text-sm">Criado em {formatDate(groupInfo.created_at)}</p>
           </div>
         </div>
 
-        <div className="p-4 border-b border-slate-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Users className="w-4 h-4" />
+        <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="comm-title flex items-center gap-2 font-semibold">
+              <Users className="h-4 w-4" />
               Participantes ({participants.length})
             </h3>
           </div>
           <div className="space-y-2">
             {participants.map((participant) => (
-              <div
-                key={participant.phone}
-                className="flex items-center gap-3 p-2 rounded hover:bg-slate-50 transition-colors"
-              >
+              <div key={participant.phone} className="comm-list-item flex items-center gap-3 rounded p-2">
                 {getRankIcon(participant.rank)}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">
-                    {formatPhone(participant.phone)}
-                  </p>
-                  <p className="text-xs text-slate-500">{getRankLabel(participant.rank)}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="comm-title truncate text-sm font-medium">{formatPhone(participant.phone)}</p>
+                  <p className="comm-muted text-xs">{getRankLabel(participant.rank)}</p>
                 </div>
               </div>
             ))}
@@ -201,48 +188,33 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
 
         <div className="p-4">
           <button
-            onClick={() => setShowEvents(!showEvents)}
-            className="w-full flex items-center justify-between p-2 hover:bg-slate-50 rounded transition-colors"
+            onClick={() => setShowEvents((current) => !current)}
+            className="comm-list-item flex w-full items-center justify-between rounded p-2"
           >
-            <h3 className="font-semibold text-slate-900">Histórico de Eventos</h3>
-            {showEvents ? (
-              <ChevronUp className="w-5 h-5 text-slate-600" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-slate-600" />
-            )}
+            <h3 className="comm-title font-semibold">Historico de Eventos</h3>
+            {showEvents ? <ChevronUp className="comm-muted h-5 w-5" /> : <ChevronDown className="comm-muted h-5 w-5" />}
           </button>
 
           {showEvents && (
             <div className="mt-3 space-y-3">
               {events.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-4">
-                  Nenhum evento registrado
-                </p>
+                <p className="comm-muted py-4 text-center text-sm">Nenhum evento registrado</p>
               ) : (
                 events.map((event) => (
-                  <div
-                    key={event.id}
-                    className="p-3 bg-slate-50 rounded border border-slate-200"
-                  >
-                    <p className="text-sm font-medium text-slate-900 mb-1">
-                      {getEventLabel(event.event_type)}
-                    </p>
+                  <div key={event.id} className="comm-card p-3">
+                    <p className="comm-title mb-1 text-sm font-medium">{getEventLabel(event.event_type)}</p>
 
                     {event.event_type === 'name_changed' && (
-                      <p className="text-xs text-slate-600">
-                        "{event.old_value}" → "{event.new_value}"
+                      <p className="comm-text text-xs">
+                        "{event.old_value}" {'->'} "{event.new_value}"
                       </p>
                     )}
 
                     {event.participants && event.participants.length > 0 && (
-                      <p className="text-xs text-slate-600">
-                        {event.participants.map(formatPhone).join(', ')}
-                      </p>
+                      <p className="comm-text text-xs">{event.participants.map(formatPhone).join(', ')}</p>
                     )}
 
-                    <p className="text-xs text-slate-500 mt-1">
-                      {formatDate(event.occurred_at)}
-                    </p>
+                    <p className="comm-muted mt-1 text-xs">{formatDate(event.occurred_at)}</p>
                   </div>
                 ))
               )}

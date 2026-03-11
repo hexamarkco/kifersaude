@@ -1579,14 +1579,14 @@ function MessageInputComponent({
   };
 
   return (
-    <div className="border-t bg-white relative">
+    <div className="relative border-t border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
       {showQuickReplies && (
-        <div className="absolute bottom-full left-4 mb-2 w-96 max-w-[90vw] bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-            <span className="text-sm font-medium text-slate-900">Respostas rapidas</span>
+        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-96 max-w-[90vw]">
+          <div className="comm-popover-header">
+            <span className="comm-title text-sm font-medium">Respostas rapidas</span>
             <button
               type="button"
-              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              className="comm-icon-button p-1"
               onClick={() => setShowQuickReplies(false)}
             >
               <X className="w-4 h-4" />
@@ -1599,19 +1599,19 @@ function MessageInputComponent({
                 value={quickReplySearch}
                 onChange={(e) => setQuickReplySearch(e.target.value)}
                 placeholder="Buscar resposta..."
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input px-3 py-2 text-sm"
               />
             </div>
 
             {templateVariableShortcuts.length > 0 && (
-              <div className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-2">
+              <div className="comm-card comm-card-success px-2 py-2">
                 <div className="text-[11px] font-semibold text-emerald-700">Variaveis de template</div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {templateVariableShortcuts.map((shortcut) => (
                     <button
                       key={`qr-variable-${shortcut.key}`}
                       type="button"
-                      className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[11px] text-emerald-700 hover:bg-emerald-100"
+                      className="comm-badge comm-badge-success bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[11px]"
                       onClick={() => insertTemplateTokenOnQuickReply(shortcut.key)}
                     >
                       {shortcut.label}
@@ -1621,38 +1621,40 @@ function MessageInputComponent({
               </div>
             )}
 
-            <div className="panel-dropdown-scrollbar max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
+            <div className="comm-list panel-dropdown-scrollbar max-h-40 overflow-y-auto">
               {quickRepliesLoading ? (
-                <div className="px-3 py-2 text-xs text-slate-500">Carregando respostas rapidas...</div>
+                <div className="comm-muted px-3 py-2 text-xs">Carregando respostas rapidas...</div>
               ) : filteredQuickReplies.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-slate-500">Nenhuma resposta rapida encontrada.</div>
+                <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rapida encontrada.</div>
               ) : (
                 filteredQuickReplies.map((reply) => {
                   const resolvedPreview = applyTemplateVariables(reply.message);
                   const hasDynamicPreview = resolvedPreview !== reply.message;
 
                   return (
-                    <div key={reply.id} className="px-3 py-2 border-b last:border-b-0">
+                    <div key={reply.id} className="border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 last:border-b-0">
                       <div className="flex items-center justify-between">
                         <button
                           type="button"
-                          className="text-sm font-medium text-slate-800 text-left"
+                          className="comm-title text-left text-sm font-medium"
                           onClick={() => handleUseQuickReply(reply)}
                         >
                           {reply.title}
                         </button>
                         <button
                           type="button"
-                          className="text-xs text-red-500 hover:text-red-600"
+                          className="comm-badge comm-badge-danger disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => handleRemoveQuickReply(reply.id)}
                           disabled={quickRepliesLoading}
                         >
                           Remover
                         </button>
                       </div>
-                      <div className="text-xs text-slate-500 mt-1 whitespace-pre-wrap">{reply.message}</div>
+                      <div className="comm-muted mt-1 whitespace-pre-wrap text-xs">{reply.message}</div>
                       {hasDynamicPreview && (
-                        <div className="text-[11px] text-emerald-700 mt-1 whitespace-pre-wrap">Preview: {resolvedPreview}</div>
+                        <div className="comm-badge comm-badge-success mt-1 whitespace-pre-wrap text-[11px]">
+                          Preview: {resolvedPreview}
+                        </div>
                       )}
                     </div>
                   );
@@ -1662,10 +1664,10 @@ function MessageInputComponent({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Nova resposta</span>
+                <span className="comm-muted text-xs font-semibold">Nova resposta</span>
                 <button
                   type="button"
-                  className="text-xs text-teal-700 hover:text-teal-800"
+                  className="comm-button-link text-xs"
                   onClick={() => setQuickReplyMessage(message)}
                 >
                   Usar texto atual
@@ -1676,17 +1678,17 @@ function MessageInputComponent({
                 value={quickReplyTitle}
                 onChange={(e) => setQuickReplyTitle(e.target.value)}
                 placeholder="Titulo"
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input px-3 py-2 text-sm"
               />
               <textarea
                 value={quickReplyMessage}
                 onChange={(e) => setQuickReplyMessage(e.target.value)}
                 placeholder="Mensagem (use {{nome}}, {{telefone}}, etc.)"
-                className="w-full h-20 px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-textarea h-20 px-3 py-2 text-sm"
               />
               <button
                 type="button"
-                className="w-full px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
+                className="comm-button-primary w-full rounded-md px-3 py-2 text-sm"
                 onClick={handleAddQuickReply}
                 disabled={quickRepliesLoading}
               >
@@ -1697,12 +1699,12 @@ function MessageInputComponent({
         </div>
       )}
       {showRewriteModal && (
-        <div className="absolute bottom-full left-4 mb-2 w-[520px] max-w-[90vw] bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-            <span className="text-sm font-medium text-slate-900">Reescrever com GPT</span>
+        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-[520px] max-w-[90vw]">
+          <div className="comm-popover-header">
+            <span className="comm-title text-sm font-medium">Reescrever com GPT</span>
             <button
               type="button"
-              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              className="comm-icon-button p-1"
               onClick={() => setShowRewriteModal(false)}
             >
               <X className="w-4 h-4" />
@@ -1710,14 +1712,14 @@ function MessageInputComponent({
           </div>
           <div className="p-3 space-y-3">
             <div>
-              <label className="text-xs text-slate-500">Texto original</label>
-              <div className="mt-1 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">
+              <label className="comm-muted text-xs">Texto original</label>
+              <div className="comm-card comm-text mt-1 whitespace-pre-wrap px-3 py-2 text-sm">
                 {rewriteOriginal}
               </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-xs text-slate-500">Tom</label>
+                <label className="comm-muted text-xs">Tom</label>
                 <FilterSingleSelect
                   icon={Sparkles}
                   value={rewriteTone}
@@ -1732,7 +1734,7 @@ function MessageInputComponent({
               </div>
               <button
                 type="button"
-                className="self-end px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
+                className="comm-button-primary self-end rounded-md px-3 py-2 text-sm"
                 onClick={() => handleRewrite(rewriteOriginal, rewriteTone)}
                 disabled={rewriteLoading}
               >
@@ -1740,19 +1742,19 @@ function MessageInputComponent({
               </button>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Preview</label>
+              <label className="comm-muted text-xs">Preview</label>
               <textarea
                 ref={rewriteTextareaRef}
                 value={rewriteResult}
                 onChange={(event) => setRewriteResult(event.target.value)}
                 placeholder="Resultado da reescrita"
-                className="mt-1 w-full h-28 px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-textarea mt-1 h-28 px-3 py-2 text-sm"
               />
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-slate-500">Use --- para dividir</span>
+                <span className="comm-muted text-xs">Use --- para dividir</span>
                 <button
                   type="button"
-                  className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1"
+                  className="comm-button-link flex items-center gap-1 text-xs"
                   onClick={handleInsertSplit}
                 >
                   <Scissors className="w-3 h-3" />
@@ -1760,16 +1762,19 @@ function MessageInputComponent({
                 </button>
               </div>
             </div>
-            {rewriteError && <div className="text-xs text-red-500">{rewriteError}</div>}
+            {rewriteError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{rewriteError}</div>}
             <div>
-              <div className="text-xs text-slate-500 mb-1">Partes ({rewriteChunks.length})</div>
-              <div className="panel-dropdown-scrollbar max-h-32 overflow-y-auto border border-slate-200 bg-white rounded-md px-2 py-2 text-xs text-slate-700 space-y-2">
+              <div className="comm-muted mb-1 text-xs">Partes ({rewriteChunks.length})</div>
+              <div className="comm-list panel-dropdown-scrollbar max-h-32 overflow-y-auto space-y-2 px-2 py-2 text-xs">
                 {rewriteChunks.length === 0 ? (
-                  <div className="text-slate-400">Nenhuma parte definida.</div>
+                  <div className="comm-subtle">Nenhuma parte definida.</div>
                 ) : (
                   rewriteChunks.map((chunk, index) => (
-                    <div key={`chunk-${index}`} className="border-b border-slate-100 last:border-b-0 pb-2 last:pb-0">
-                      <div className="text-slate-400">Parte {index + 1}</div>
+                    <div
+                      key={`chunk-${index}`}
+                      className="border-b border-[var(--panel-border-subtle,#e7dac8)] pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <div className="comm-subtle">Parte {index + 1}</div>
                       <div className="whitespace-pre-wrap">{chunk}</div>
                     </div>
                   ))
@@ -1779,7 +1784,7 @@ function MessageInputComponent({
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
                 onClick={() => {
                   setMessage(rewriteResult || rewriteOriginal);
                   setShowRewriteModal(false);
@@ -1789,7 +1794,7 @@ function MessageInputComponent({
               </button>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
+                className="comm-button-primary rounded-md px-3 py-2 text-sm"
                 onClick={handleSendRewriteChunks}
                 disabled={rewriteLoading || isSending}
               >
@@ -1800,17 +1805,17 @@ function MessageInputComponent({
         </div>
       )}
       {showFollowUpModal && (
-        <div className="absolute bottom-full left-4 mb-2 w-[560px] max-w-[92vw] bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-[560px] max-w-[92vw]">
+          <div className="comm-popover-header">
             <div>
-              <div className="text-sm font-medium text-slate-900">Gerar follow-up</div>
-              <div className="text-[11px] text-slate-500">
+              <div className="comm-title text-sm font-medium">Gerar follow-up</div>
+              <div className="comm-muted text-[11px]">
                 Baseado no historico carregado deste chat. Cada linha nao vazia vira uma mensagem.
               </div>
             </div>
             <button
               type="button"
-              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              className="comm-icon-button p-1"
               onClick={() => setShowFollowUpModal(false)}
             >
               <X className="w-4 h-4" />
@@ -1818,14 +1823,14 @@ function MessageInputComponent({
           </div>
           <div className="p-3 space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-slate-500">
+              <div className="comm-muted text-xs">
                 {followUpProvider || followUpModel
                   ? `Gerado com ${followUpProvider || 'IA'}${followUpModel ? ` - ${followUpModel}` : ''}`
                   : 'A IA vai considerar o historico do chat e o contexto do lead.'}
               </div>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
                 onClick={() => void generateFollowUp()}
                 disabled={followUpLoading || isSending}
               >
@@ -1834,29 +1839,32 @@ function MessageInputComponent({
             </div>
 
             <div>
-              <label className="text-xs text-slate-500">Texto para aprovar</label>
+              <label className="comm-muted text-xs">Texto para aprovar</label>
               <textarea
                 value={followUpDraft}
                 onChange={(event) => setFollowUpDraft(event.target.value)}
                 placeholder={followUpLoading ? 'Gerando follow-up...' : 'O texto gerado vai aparecer aqui.'}
-                className="mt-1 w-full h-36 px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-textarea mt-1 h-36 px-3 py-2 text-sm"
               />
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="comm-muted mt-2 text-xs">
                 Dica: cada quebra de linha sera enviada como uma mensagem separada.
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-slate-500 mb-1">Mensagens ({followUpMessages.length})</div>
-              <div className="panel-dropdown-scrollbar max-h-36 overflow-y-auto border border-slate-200 bg-white rounded-md px-2 py-2 text-xs text-slate-700 space-y-2">
+              <div className="comm-muted mb-1 text-xs">Mensagens ({followUpMessages.length})</div>
+              <div className="comm-list panel-dropdown-scrollbar max-h-36 overflow-y-auto space-y-2 px-2 py-2 text-xs">
                 {followUpLoading && followUpMessages.length === 0 ? (
-                  <div className="text-slate-400">Gerando sugestao...</div>
+                  <div className="comm-subtle">Gerando sugestao...</div>
                 ) : followUpMessages.length === 0 ? (
-                  <div className="text-slate-400">Nenhuma mensagem definida.</div>
+                  <div className="comm-subtle">Nenhuma mensagem definida.</div>
                 ) : (
                   followUpMessages.map((chunk, index) => (
-                    <div key={`follow-up-chunk-${index}`} className="border-b border-slate-100 last:border-b-0 pb-2 last:pb-0">
-                      <div className="text-slate-400">Mensagem {index + 1}</div>
+                    <div
+                      key={`follow-up-chunk-${index}`}
+                      className="border-b border-[var(--panel-border-subtle,#e7dac8)] pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <div className="comm-subtle">Mensagem {index + 1}</div>
                       <div className="whitespace-pre-wrap">{chunk}</div>
                     </div>
                   ))
@@ -1864,19 +1872,19 @@ function MessageInputComponent({
               </div>
             </div>
 
-            {followUpError && <div className="text-xs text-red-500">{followUpError}</div>}
+            {followUpError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{followUpError}</div>}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
                 onClick={() => setShowFollowUpModal(false)}
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
                 onClick={handleUseFollowUpInField}
                 disabled={followUpLoading || isSending || !followUpDraft.trim()}
               >
@@ -1884,7 +1892,7 @@ function MessageInputComponent({
               </button>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleSendGeneratedFollowUp}
                 disabled={followUpLoading || isSending || followUpMessages.length === 0}
               >
@@ -1895,12 +1903,12 @@ function MessageInputComponent({
         </div>
       )}
       {showLinkPreviewModal && pendingLinkMessage && (
-        <div className="absolute bottom-full left-4 mb-2 w-96 bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-            <span className="text-sm font-medium text-slate-900">Enviar preview de link</span>
+        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-96">
+          <div className="comm-popover-header">
+            <span className="comm-title text-sm font-medium">Enviar preview de link</span>
             <button
               type="button"
-              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              className="comm-icon-button p-1"
               onClick={() => {
                 setShowLinkPreviewModal(false);
                 clearLinkPreviewDraft();
@@ -1910,59 +1918,63 @@ function MessageInputComponent({
             </button>
           </div>
           <div className="p-3 space-y-2">
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
-              <div className="text-[11px] text-slate-500">Mensagem</div>
-              <div className="mt-0.5 text-xs text-slate-700 whitespace-pre-wrap break-words">{pendingLinkMessage}</div>
+            <div className="comm-card px-2.5 py-2">
+              <div className="comm-muted text-[11px]">Mensagem</div>
+              <div className="comm-text mt-0.5 whitespace-pre-wrap break-words text-xs">{pendingLinkMessage}</div>
             </div>
 
             <div>
-              <label className="text-xs text-slate-500">Titulo (obrigatorio)</label>
+              <label className="comm-muted text-xs">Titulo (obrigatorio)</label>
               <input
                 type="text"
                 value={linkPreviewTitle}
                 onChange={(e) => setLinkPreviewTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input mt-1 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500">Descricao</label>
+              <label className="comm-muted text-xs">Descricao</label>
               <input
                 type="text"
                 value={linkPreviewDescription}
                 onChange={(e) => setLinkPreviewDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input mt-1 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500">URL canonica</label>
+              <label className="comm-muted text-xs">URL canonica</label>
               <input
                 type="text"
                 value={linkPreviewCanonical}
                 onChange={(e) => setLinkPreviewCanonical(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input mt-1 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500">Imagem (URL)</label>
+              <label className="comm-muted text-xs">Imagem (URL)</label>
               <input
                 type="text"
                 value={linkPreviewImage}
                 onChange={(e) => setLinkPreviewImage(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="comm-input mt-1 px-3 py-2 text-sm"
               />
             </div>
-            {linkPreviewLoading && <div className="text-xs text-slate-500">Carregando metadados do link...</div>}
-            {linkPreviewError && <div className="text-xs text-amber-700">{linkPreviewError}</div>}
+            {linkPreviewLoading && <div className="comm-muted text-xs">Carregando metadados do link...</div>}
+            {linkPreviewError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{linkPreviewError}</div>}
 
             {(linkPreviewTitle || linkPreviewDescription || linkPreviewImage) && (
-              <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+              <div className="comm-card overflow-hidden bg-[var(--panel-surface,#fffdfa)]">
                 {linkPreviewImage && (
-                  <img src={linkPreviewImage} alt={linkPreviewTitle || 'Link preview'} className="w-full h-28 object-cover bg-slate-100" />
+                  <img
+                    src={linkPreviewImage}
+                    alt={linkPreviewTitle || 'Link preview'}
+                    className="h-28 w-full object-cover bg-[var(--panel-surface-soft,#f4ede3)]"
+                  />
                 )}
                 <div className="px-3 py-2 space-y-1">
-                  <div className="text-[11px] text-slate-500 truncate">{linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}</div>
-                  <div className="text-sm text-slate-800 line-clamp-2">{linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}</div>
-                  {linkPreviewDescription && <div className="text-xs text-slate-600 line-clamp-3">{linkPreviewDescription}</div>}
+                  <div className="comm-muted truncate text-[11px]">{linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}</div>
+                  <div className="comm-title line-clamp-2 text-sm">{linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}</div>
+                  {linkPreviewDescription && <div className="comm-text line-clamp-3 text-xs">{linkPreviewDescription}</div>}
                 </div>
               </div>
             )}
@@ -1970,7 +1982,7 @@ function MessageInputComponent({
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => fetchLinkPreviewMetadata(linkPreviewCanonical)}
                 disabled={isSending || linkPreviewLoading || !linkPreviewCanonical.trim()}
               >
@@ -1978,7 +1990,7 @@ function MessageInputComponent({
               </button>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="comm-button-secondary rounded-md px-3 py-2 text-sm"
                 onClick={() => {
                   setShowLinkPreviewModal(false);
                   clearLinkPreviewDraft();
@@ -1988,7 +2000,7 @@ function MessageInputComponent({
               </button>
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md bg-teal-600 text-white hover:bg-teal-700"
+                className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleSendMessage}
                 disabled={isSending}
               >
@@ -1999,12 +2011,12 @@ function MessageInputComponent({
         </div>
       )}
       {showContactPicker && (
-        <div className="absolute bottom-full left-4 mb-2 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-            <span className="text-sm font-medium text-slate-900">Enviar contato</span>
+        <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-80 overflow-hidden">
+          <div className="comm-popover-header">
+            <span className="comm-title text-sm font-medium">Enviar contato</span>
             <button
               type="button"
-              className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              className="comm-icon-button p-1"
               onClick={() => setShowContactPicker(false)}
             >
               <X className="w-4 h-4" />
@@ -2016,23 +2028,23 @@ function MessageInputComponent({
               value={contactSearch}
               onChange={(e) => setContactSearch(e.target.value)}
               placeholder="Buscar contato..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-slate-700 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="comm-input px-3 py-2 text-sm"
             />
           </div>
           <div className="panel-dropdown-scrollbar max-h-64 overflow-y-auto px-2 pb-2">
             {filteredContacts.length === 0 ? (
-              <div className="text-sm text-slate-500 px-2 py-3">Nenhum contato encontrado.</div>
+              <div className="comm-muted px-2 py-3 text-sm">Nenhum contato encontrado.</div>
             ) : (
               filteredContacts.map((contact) => (
                 <button
                   key={contact.id}
                   type="button"
-                  className="w-full text-left px-3 py-2 rounded hover:bg-slate-50 flex items-center justify-between"
+                  className="comm-list-item flex w-full items-center justify-between rounded px-3 py-2 text-left"
                   onClick={() => handleSendContact(contact)}
                   disabled={isSending}
                 >
-                  <span className="text-sm text-slate-700 truncate">{contact.name || contact.id}</span>
-                  <span className="text-xs text-teal-600">Enviar</span>
+                  <span className="comm-text truncate text-sm">{contact.name || contact.id}</span>
+                  <span className="comm-accent-text text-xs font-medium">Enviar</span>
                 </button>
               ))
             )}
@@ -2040,14 +2052,14 @@ function MessageInputComponent({
         </div>
       )}
       {editMessage && (
-        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="comm-banner flex items-center justify-between px-4 py-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-teal-700">Editando mensagem</div>
-            <div className="text-sm text-slate-600 truncate">{editMessage.body}</div>
+            <div className="comm-accent-text text-xs font-medium">Editando mensagem</div>
+            <div className="comm-text truncate text-sm">{editMessage.body}</div>
           </div>
           <button
             onClick={onCancelEdit}
-            className="ml-2 p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            className="comm-icon-button ml-2 p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -2055,14 +2067,14 @@ function MessageInputComponent({
       )}
 
       {replyToMessage && !editMessage && (
-        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="comm-banner flex items-center justify-between px-4 py-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-teal-700">Respondendo a {replyToMessage.from}</div>
-            <div className="text-sm text-slate-600 truncate">{replyToMessage.body}</div>
+            <div className="comm-accent-text text-xs font-medium">Respondendo a {replyToMessage.from}</div>
+            <div className="comm-text truncate text-sm">{replyToMessage.body}</div>
           </div>
           <button
             onClick={onCancelReply}
-            className="ml-2 p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            className="comm-icon-button ml-2 p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -2070,7 +2082,7 @@ function MessageInputComponent({
       )}
 
       {selectedFile && (
-        <div className="bg-gray-50 border-b border-slate-200 px-4 py-3">
+        <div className="comm-banner px-4 py-3">
           <div className="flex items-start gap-3">
             {previewUrl ? (
               selectedFile.type.startsWith('video/') ? (
@@ -2087,24 +2099,24 @@ function MessageInputComponent({
                 />
               )
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded bg-gray-200">
-                <FileIcon className="h-8 w-8 text-slate-400" />
+              <div className="comm-media-placeholder flex h-20 w-20 items-center justify-center rounded">
+                <FileIcon className="h-8 w-8" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="truncate text-sm font-medium text-slate-900">{selectedFile.name}</div>
-              <div className="text-xs text-slate-500">
+              <div className="comm-title truncate text-sm font-medium">{selectedFile.name}</div>
+              <div className="comm-muted text-xs">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
               {(selectedFile.type.startsWith('image/') || selectedFile.type.startsWith('video/')) && (
-                <div className="text-xs text-blue-600 mt-1">
+                <div className="comm-badge comm-badge-info mt-1">
                   Digite uma legenda abaixo (opcional)
                 </div>
               )}
             </div>
             <button
               onClick={clearFile}
-              className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
+              className="comm-icon-button rounded p-1"
               disabled={isSending}
             >
               <X className="w-4 h-4" />
@@ -2117,7 +2129,7 @@ function MessageInputComponent({
         <div className="px-3 pt-3">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="comm-chip-button inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60"
             onClick={handleOpenFollowUp}
             disabled={isSending || isRecording || followUpLoading || showLinkPreviewModal}
           >
@@ -2127,27 +2139,27 @@ function MessageInputComponent({
         </div>
       )}
 
-      <div className="p-3 flex items-end gap-2 relative">
+      <div className="relative flex items-end gap-2 p-3">
         <div className="relative">
           <button
             onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+            className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isSending}
           >
             <Paperclip className="w-5 h-5" />
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-0 z-[110] mb-2 min-w-[220px] rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
+            <div className="comm-popover absolute bottom-full left-0 z-[110] mb-2 min-w-[220px] p-2">
               <button
                 onClick={() => {
                   imageInputRef.current?.click();
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
+                className="comm-attach-item"
               >
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <ImageIcon className="w-4 h-4 text-purple-600" />
+                <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
+                  <ImageIcon className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Imagem ou vídeo</span>
               </button>
@@ -2157,20 +2169,20 @@ function MessageInputComponent({
                   fileInputRef.current?.click();
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
+                className="comm-attach-item"
               >
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <FileIcon className="w-4 h-4 text-blue-600" />
+                <div className="comm-icon-chip comm-icon-chip-info flex h-8 w-8 items-center justify-center">
+                  <FileIcon className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Documento</span>
               </button>
 
               <button
                 onClick={handleSendLocation}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
+                className="comm-attach-item"
               >
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-green-600" />
+                <div className="comm-icon-chip comm-icon-chip-success flex h-8 w-8 items-center justify-center">
+                  <MapPin className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Localização</span>
               </button>
@@ -2180,10 +2192,10 @@ function MessageInputComponent({
                   setShowContactPicker(true);
                   setShowAttachMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded transition-colors"
+                className="comm-attach-item"
               >
-                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Smile className="w-4 h-4 text-amber-600" />
+                <div className="comm-icon-chip comm-icon-chip-warning flex h-8 w-8 items-center justify-center">
+                  <Smile className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Contato</span>
               </button>
@@ -2206,46 +2218,46 @@ function MessageInputComponent({
           />
         </div>
 
-        <div className="flex flex-1 items-end overflow-visible rounded-lg border border-slate-200 bg-white">
+        <div className="comm-composer-shell flex flex-1 items-end overflow-visible">
           <div className="relative z-[90]">
-          <button
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
-            disabled={isSending}
-            onClick={toggleEmojiPicker}
-            type="button"
-            aria-label="Abrir emojis"
-            aria-expanded={showEmojiPicker}
-          >
-            <Smile className="w-5 h-5" />
-          </button>
+            <button
+              className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSending}
+              onClick={toggleEmojiPicker}
+              type="button"
+              aria-label="Abrir emojis"
+              aria-expanded={showEmojiPicker}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
 
-          <button
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
-            disabled={isSending}
-            onClick={() => setShowQuickReplies((prev) => !prev)}
-            type="button"
-            title="Respostas rapidas"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
+            <button
+              className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSending}
+              onClick={() => setShowQuickReplies((prev) => !prev)}
+              type="button"
+              title="Respostas rapidas"
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
 
-          <button
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-slate-100 hover:text-gray-700"
-            disabled={isSending || isRecording || showLinkPreviewModal}
-            onClick={handleOpenRewrite}
-            type="button"
-            title="Reescrever com GPT"
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
+            <button
+              className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSending || isRecording || showLinkPreviewModal}
+              onClick={handleOpenRewrite}
+              type="button"
+              title="Reescrever com GPT"
+            >
+              <Sparkles className="w-5 h-5" />
+            </button>
 
             {showEmojiPicker && (
-              <div className="absolute bottom-full left-0 z-[120] mb-2 grid w-56 grid-cols-8 gap-1 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
+              <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 grid w-56 grid-cols-8 gap-1 p-2">
                 {emojiList.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
-                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100"
+                    className="comm-icon-button flex h-6 w-6 items-center justify-center"
                     onClick={() => {
                       insertEmoji(emoji);
                       setShowEmojiPicker(false);
@@ -2289,7 +2301,7 @@ function MessageInputComponent({
               }}
               onKeyDown={handleTextareaKeyDown}
               placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
-              className="flex-1 max-h-32 min-h-[40px] resize-none px-2 py-2 text-slate-900 placeholder:text-slate-500 focus:outline-none"
+              className="comm-composer-textarea flex-1 max-h-32 min-h-[40px] resize-none bg-transparent px-2 py-2 focus:outline-none"
               rows={1}
               disabled={isSending || isRecording}
               style={{
@@ -2301,15 +2313,15 @@ function MessageInputComponent({
         </div>
 
         {slashCommandState.active && (
-          <div className="absolute bottom-full left-14 right-14 z-[95] mb-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
-            <div className="px-3 py-2 text-[11px] text-slate-500 border-b border-slate-100 flex items-center justify-between gap-2">
+          <div className="comm-popover absolute bottom-full left-14 right-14 z-[95] mb-2 overflow-hidden">
+            <div className="comm-muted flex items-center justify-between gap-2 border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-[11px]">
               {slashCommandState.query
                 ? `Atalho rapido: "${slashCommandState.query}"`
                 : 'Digite / e o nome da resposta rapida'}
-              <span className="text-[10px] text-slate-400">Enter/Tab aplica</span>
+              <span className="comm-subtle text-[10px]">Enter/Tab aplica</span>
             </div>
             {slashCommandState.results.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-slate-500">Nenhuma resposta rapida encontrada.</div>
+              <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rapida encontrada.</div>
             ) : (
               <div className="panel-dropdown-scrollbar max-h-56 overflow-y-auto">
                 {slashCommandState.results.map((reply, index) => {
@@ -2319,14 +2331,14 @@ function MessageInputComponent({
                     <button
                       key={`slash-reply-${reply.id}`}
                       type="button"
-                      className={`w-full text-left px-3 py-2 border-b border-slate-100 last:border-b-0 transition-colors ${
-                        isActive ? 'bg-teal-50' : 'hover:bg-slate-50'
+                      className={`comm-list-item w-full border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-left last:border-b-0 ${
+                        isActive ? 'comm-list-item-active' : ''
                       }`}
                       onMouseEnter={() => setSlashQuickReplyIndex(index)}
                       onClick={() => handleUseSlashQuickReply(reply)}
                     >
-                      <div className="text-xs font-semibold text-slate-800">/{reply.title}</div>
-                      <div className="text-[11px] text-slate-500 truncate">{resolvedPreview}</div>
+                      <div className="comm-title text-xs font-semibold">/{reply.title}</div>
+                      <div className="comm-muted truncate text-[11px]">{resolvedPreview}</div>
                     </button>
                   );
                 })}
@@ -2337,22 +2349,22 @@ function MessageInputComponent({
 
         {isRecording ? (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-full">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-red-600">
+            <div className="comm-recording-pill flex items-center gap-2 px-3 py-2">
+              <div className="comm-recording-dot h-2 w-2 rounded-full animate-pulse" />
+              <span className="text-sm font-medium">
                 {formatTime(recordingTime)}
               </span>
             </div>
             <button
               onClick={cancelRecording}
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+              className="comm-fab-neutral h-10 w-10"
               title="Cancelar"
             >
               <X className="w-5 h-5" />
             </button>
             <button
               onClick={stopRecording}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              className="comm-fab-danger h-10 w-10"
               title="Parar"
             >
               <StopCircle className="w-6 h-6" />
@@ -2362,7 +2374,7 @@ function MessageInputComponent({
           <div className="flex items-center gap-2">
             <button
               onClick={clearAudioPreview}
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+              className="comm-fab-neutral h-10 w-10 disabled:cursor-not-allowed disabled:opacity-60"
               title="Cancelar"
               disabled={isSending}
             >
@@ -2371,7 +2383,7 @@ function MessageInputComponent({
             <button
               onClick={handleSendAudioPreview}
               disabled={isSending}
-              className="p-2 text-white bg-green-500 hover:bg-green-600 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="comm-fab-primary h-10 w-10 disabled:cursor-not-allowed disabled:opacity-50"
               title="Enviar audio"
             >
               <Send className="w-5 h-5" />
@@ -2381,7 +2393,7 @@ function MessageInputComponent({
           <button
             onClick={handleSendMessage}
             disabled={isSending}
-            className="p-2 text-white bg-green-500 hover:bg-green-600 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="comm-fab-primary h-10 w-10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="w-5 h-5" />
           </button>
@@ -2389,7 +2401,7 @@ function MessageInputComponent({
           <button
             onClick={startRecording}
             disabled={isSending}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+            className="comm-fab-neutral h-10 w-10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Mic className="w-5 h-5" />
           </button>

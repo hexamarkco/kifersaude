@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
+    "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "backfill:whatsapp:global": "node scripts/backfill-whatsapp-global.mjs",
     "reconcile:whatsapp:direct": "node scripts/reconcile-whatsapp-direct-chats.mjs",

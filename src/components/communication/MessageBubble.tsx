@@ -883,19 +883,19 @@ export function MessageBubble({
               )}
             </Button>
             {transcription && (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+              <span className="comm-badge comm-badge-brand px-2.5 py-1 text-[11px] font-medium">
                 Audio transcrito
               </span>
             )}
           </div>
           {transcription && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+            <div className="comm-card comm-card-brand rounded-xl px-3 py-2">
+              <div className="comm-accent-text mb-1 text-[11px] font-semibold uppercase tracking-wide">
                 Audio transcrito
               </div>
               <WhatsAppFormattedText
                 text={transcription.text}
-                className="text-sm whitespace-pre-wrap break-words text-slate-800"
+                className="comm-text text-sm whitespace-pre-wrap break-words"
               />
             </div>
           )}

@@ -642,6 +642,60 @@ export default function WhatsAppTab() {
     return Math.max(current, incoming);
   };
 
+  const mergeMessagePayloadForDisplay = (
+    currentPayload: WhatsAppMessagePayload | null | undefined,
+    incomingPayload: WhatsAppMessagePayload | null | undefined,
+  ): WhatsAppMessagePayload | undefined => {
+    const current =
+      currentPayload && typeof currentPayload === 'object' ? currentPayload : undefined;
+    const incoming =
+      incomingPayload && typeof incomingPayload === 'object' ? incomingPayload : undefined;
+
+    if (!current) return incoming;
+    if (!incoming) return current;
+
+    return {
+      ...current,
+      ...incoming,
+      audio:
+        current.audio && incoming.audio
+          ? { ...current.audio, ...incoming.audio }
+          : incoming.audio ?? current.audio,
+      voice:
+        current.voice && incoming.voice
+          ? { ...current.voice, ...incoming.voice }
+          : incoming.voice ?? current.voice,
+      media:
+        current.media && incoming.media
+          ? { ...current.media, ...incoming.media }
+          : incoming.media ?? current.media,
+      image:
+        current.image && incoming.image
+          ? { ...current.image, ...incoming.image }
+          : incoming.image ?? current.image,
+      video:
+        current.video && incoming.video
+          ? { ...current.video, ...incoming.video }
+          : incoming.video ?? current.video,
+      document:
+        current.document && incoming.document
+          ? { ...current.document, ...incoming.document }
+          : incoming.document ?? current.document,
+      contact:
+        current.contact && incoming.contact
+          ? { ...current.contact, ...incoming.contact }
+          : incoming.contact ?? current.contact,
+      contact_list:
+        current.contact_list && incoming.contact_list
+          ? { ...current.contact_list, ...incoming.contact_list }
+          : incoming.contact_list ?? current.contact_list,
+      link_preview:
+        current.link_preview && incoming.link_preview
+          ? { ...current.link_preview, ...incoming.link_preview }
+          : incoming.link_preview ?? current.link_preview,
+    };
+  };
+
   const mergeMessageForDisplay = (left: WhatsAppMessage, right: WhatsAppMessage): WhatsAppMessage => {
     const leftScore = getMessageMergeScore(left);
     const rightScore = getMessageMergeScore(right);
@@ -659,7 +713,7 @@ export default function WhatsAppTab() {
       ack_status: mergeAckStatusForDisplay(fallback.ack_status, preferred.ack_status),
       body: preferred.body ?? fallback.body,
       timestamp: preferred.timestamp ?? fallback.timestamp,
-      payload: preferred.payload ?? fallback.payload,
+      payload: mergeMessagePayloadForDisplay(fallback.payload, preferred.payload),
       created_at: preferred.created_at || fallback.created_at,
     };
   };

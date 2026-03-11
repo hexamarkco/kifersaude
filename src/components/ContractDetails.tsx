@@ -13,6 +13,13 @@ import { formatDateOnly } from '../lib/dateUtils';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
+const detailPanelClass = 'rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)]';
+const detailHeadingTextClass = 'font-semibold text-[var(--panel-text,#1a120d)]';
+  const detailBodyTextClass = 'text-sm text-[var(--panel-text-soft,#5b4635)]';
+  const detailBodyStrongClass = 'text-sm font-medium text-[var(--panel-text-soft,#5b4635)]';
+const detailMutedTextClass = 'text-xs text-[var(--panel-text-muted,#876f5c)]';
+const detailAccentLinkClass =
+  'text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]';
 
 type ContractDetailsProps = {
   contract: Contract;
@@ -133,12 +140,12 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
     const formattedDate = date.toLocaleDateString('pt-BR');
     const tone = remaining < 0
-      ? 'bg-slate-100 text-slate-700 border-slate-200'
+      ? 'comm-badge-neutral'
       : remaining <= 7
-        ? 'bg-red-50 text-red-700 border-red-200'
+        ? 'comm-badge-danger'
         : remaining <= 15
-          ? 'bg-amber-50 text-amber-700 border-amber-200'
-          : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          ? 'comm-badge-warning'
+          : 'comm-badge-success';
 
     const suffix = remaining === 0
       ? 'hoje'
@@ -147,7 +154,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
         : `há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? '' : 's'}`;
 
     return (
-      <div key={`${label}-${date}`} className={`px-3 py-2 rounded-full text-xs font-medium border inline-flex items-center space-x-2 ${tone}`}>
+      <div key={`${label}-${date}`} className={`comm-badge gap-2 px-3 py-2 text-xs font-medium ${tone}`}>
         <span className="font-semibold">{label}</span>
         <span>{formattedDate}</span>
         <span className="text-[11px] font-normal">{suffix}</span>
@@ -334,22 +341,22 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const renderDocumentList = (entityId: string) => {
     const docs = documentsByEntity.get(entityId) || [];
     if (docs.length === 0) {
-      return <p className="text-sm text-slate-500">Sem documentos enviados.</p>;
+      return <p className={detailBodyTextClass}>Sem documentos enviados.</p>;
     }
 
     return (
       <div className="space-y-2">
         {docs.map((doc) => (
-          <div key={doc.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+          <div key={doc.id} className={`${detailPanelClass} flex items-center justify-between px-3 py-2 text-sm`}>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-800 truncate">{doc.tipo_documento}</p>
-              <p className="text-xs text-slate-500 truncate">{doc.nome_arquivo}</p>
+              <p className={`${detailHeadingTextClass} truncate`}>{doc.tipo_documento}</p>
+              <p className={`${detailMutedTextClass} truncate`}>{doc.nome_arquivo}</p>
             </div>
             <a
               href={doc.url_arquivo}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+              className={detailAccentLinkClass}
             >
               Abrir
             </a>
@@ -557,7 +564,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
         showCloseButton={false}
         bodyClassName="flex min-h-[260px] items-center justify-center"
       >
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--panel-focus,#c86f1d)] border-t-transparent" />
       </ModalShell>
     );
   }
@@ -573,50 +580,52 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     >
       <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
-          <button
+          <Button
             onClick={() => setShowEditForm(true)}
-            className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            variant="info"
+            size="sm"
           >
             Editar
-          </button>
+          </Button>
         )}
         {canEditContracts && onDelete && (
-          <button
+          <Button
             onClick={() => onDelete(contract)}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
+            variant="danger"
+            size="sm"
             type="button"
           >
             <Trash2 className="w-4 h-4" />
             <span className="hidden sm:inline">Excluir</span>
-          </button>
+          </Button>
         )}
       </div>
 
       <div className="p-1">
-          <div className="mb-6 bg-slate-50 rounded-lg p-4">
+          <div className={`mb-6 ${detailPanelMutedClass} p-4`}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div>
-                <span className="font-medium text-slate-700">Status:</span>
-                <span className="ml-2 text-slate-900">{contract.status}</span>
+                <span className={detailLabelTextClass}>Status:</span>
+                <span className={`ml-2 ${detailHeadingTextClass}`}>{contract.status}</span>
               </div>
               <div>
-                <span className="font-medium text-slate-700">Modalidade:</span>
-                <span className="ml-2 text-slate-900">{contract.modalidade}</span>
+                <span className={detailLabelTextClass}>Modalidade:</span>
+                <span className={`ml-2 ${detailHeadingTextClass}`}>{contract.modalidade}</span>
               </div>
               <div>
                 <span className="font-medium text-slate-700">Responsável:</span>
-                <span className="ml-2 text-slate-900">{contract.responsavel}</span>
+                <span className={`ml-2 ${detailHeadingTextClass}`}>{contract.responsavel}</span>
               </div>
               {contract.mensalidade_total && (
                 <div>
-                  <span className="font-medium text-slate-700">Mensalidade:</span>
-                  <span className="ml-2 text-slate-900">R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  <span className={detailLabelTextClass}>Mensalidade:</span>
+                  <span className={`ml-2 ${detailHeadingTextClass}`}>R$ {contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className={`${detailPanelClass} p-3`}>
                 <p className="text-xs text-slate-500">Comissão prevista</p>
                 <p className="text-lg font-semibold text-slate-900">
                   {contract.comissao_prevista
@@ -629,7 +638,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   </p>
                 )}
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className={`${detailPanelClass} p-3`}>
                 <p className="text-xs text-slate-500">Bônus total</p>
                 <p className="text-lg font-semibold text-slate-900">
                   {bonusTotal
@@ -642,7 +651,7 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                   </p>
                 )}
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className={`${detailPanelClass} p-3`}>
                 <p className="text-xs text-slate-500">Reajuste anual</p>
                 <p className="text-lg font-semibold text-slate-900">
                   {getNextAdjustmentDate(contract.mes_reajuste)

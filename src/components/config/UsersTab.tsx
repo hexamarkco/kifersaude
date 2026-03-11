@@ -90,6 +90,11 @@ export default function UsersTab() {
     setShowAddUser(false);
   };
 
+  const resetEditForm = () => {
+    setEditingUser(null);
+    setEditUserPassword('');
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
@@ -309,80 +314,6 @@ export default function UsersTab() {
             </Button>
           </div>
 
-          {editingUser && (
-            <form onSubmit={handleUpdateUser} className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-6">
-              <h4 className="mb-4 text-lg font-semibold text-amber-900">Editar Usuario</h4>
-
-              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-amber-900">Usuario</label>
-                  <Input
-                    type="text"
-                    value={editUserUsername}
-                    onChange={(e) => setEditUserUsername(e.target.value)}
-                    required
-                    className="border-amber-200 focus:ring-amber-500"
-                    placeholder="nome.usuario"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-amber-900">Email</label>
-                  <Input
-                    type="email"
-                    value={editUserEmail}
-                    onChange={(e) => setEditUserEmail(e.target.value)}
-                    required
-                    className="border-amber-200 focus:ring-amber-500"
-                    placeholder="usuario@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-amber-900">Nova Senha</label>
-                  <Input
-                    type="password"
-                    value={editUserPassword}
-                    onChange={(e) => setEditUserPassword(e.target.value)}
-                    minLength={6}
-                    className="border-amber-200 focus:ring-amber-500"
-                    placeholder="Deixe em branco para manter"
-                  />
-                  <p className="mt-1 text-xs text-amber-700">Deixe em branco para manter a senha atual.</p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-amber-900">Perfil</label>
-                  <FilterSingleSelect
-                    icon={Shield}
-                    value={editUserRole}
-                    onChange={setEditUserRole}
-                    placeholder="Selecione um perfil"
-                    includePlaceholderOption={false}
-                    options={profileOptions}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Button type="submit" disabled={actionLoading} variant="warning">
-                  {actionLoading ? 'Salvando...' : 'Salvar Alteracoes'}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setEditingUser(null);
-                    setEditUserPassword('');
-                  }}
-                  variant="secondary"
-                  className="text-amber-800 hover:bg-amber-100"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          )}
-
           <div className="space-y-3">
             {users.length === 0 ? (
               <div className="py-12 text-center">
@@ -525,6 +456,72 @@ export default function UsersTab() {
                 {actionLoading ? 'Criando...' : 'Criar Usuario'}
               </Button>
               <Button type="button" onClick={resetCreateForm} variant="secondary">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </ModalShell>
+        <ModalShell
+          isOpen={Boolean(editingUser)}
+          onClose={resetEditForm}
+          title="Editar Usuario"
+          description="Atualize os dados e o perfil de acesso do usuario."
+          size="lg"
+        >
+          <form onSubmit={handleUpdateUser} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Usuario</label>
+                <Input
+                  type="text"
+                  value={editUserUsername}
+                  onChange={(e) => setEditUserUsername(e.target.value)}
+                  required
+                  placeholder="nome.usuario"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                <Input
+                  type="email"
+                  value={editUserEmail}
+                  onChange={(e) => setEditUserEmail(e.target.value)}
+                  required
+                  placeholder="usuario@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Nova Senha</label>
+                <Input
+                  type="password"
+                  value={editUserPassword}
+                  onChange={(e) => setEditUserPassword(e.target.value)}
+                  minLength={6}
+                  placeholder="Deixe em branco para manter"
+                />
+                <p className="mt-1 text-xs text-slate-500">Deixe em branco para manter a senha atual.</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Perfil</label>
+                <FilterSingleSelect
+                  icon={Shield}
+                  value={editUserRole}
+                  onChange={setEditUserRole}
+                  placeholder="Selecione um perfil"
+                  includePlaceholderOption={false}
+                  options={profileOptions}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={actionLoading} variant="warning">
+                {actionLoading ? 'Salvando...' : 'Salvar Alteracoes'}
+              </Button>
+              <Button type="button" onClick={resetEditForm} variant="secondary">
                 Cancelar
               </Button>
             </div>

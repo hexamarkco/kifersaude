@@ -19,6 +19,7 @@ import {
   Archive,
   Inbox,
   Copy,
+  SlidersHorizontal,
   RefreshCw,
   ChevronDown,
   CalendarPlus,
@@ -156,6 +157,10 @@ type ReminderQuickOpenSchedulerDefaults = {
   defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
   defaultPriority?: 'normal' | 'alta' | 'baixa';
 };
+
+type ChatLeadPresenceFilter = 'all' | 'withLead' | 'withoutLead';
+
+const EMPTY_FILTER_VALUE = '__empty__';
 
 const REMINDER_QUICK_OPEN_PERIODS: Array<{
   id: ReminderQuickOpenPeriod;
@@ -314,6 +319,10 @@ export default function WhatsAppTab() {
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
+  const [showAdvancedChatFilters, setShowAdvancedChatFilters] = useState(false);
+  const [chatLeadStatusFilter, setChatLeadStatusFilter] = useState('all');
+  const [chatLeadOwnerFilter, setChatLeadOwnerFilter] = useState('all');
+  const [chatLeadPresenceFilter, setChatLeadPresenceFilter] = useState<ChatLeadPresenceFilter>('all');
   const {
     prioritizeUnread,
     desktopNotificationsEnabled,
@@ -2657,6 +2666,8 @@ export default function WhatsAppTab() {
         typeLabel: string | null;
         typeBadgeClass: string;
         leadStatus: string | null;
+        leadResponsible: string | null;
+        hasLeadMatch: boolean;
         photo: string | null;
       }
     >();
@@ -2665,10 +2676,11 @@ export default function WhatsAppTab() {
       const chatDisplayName = getChatDisplayName(chat);
       const chatKind = getChatKind(chat);
       const chatTypeLabel = getChatTypeLabel(chat);
-      const leadStatus =
-        getLeadMatchKeysForChat(chat)
-          .map((key) => leadByPhoneMatchKey.get(key))
-          .find(Boolean)?.status ?? null;
+      const matchedLead = getLeadMatchKeysForChat(chat)
+        .map((key) => leadByPhoneMatchKey.get(key))
+        .find(Boolean);
+      const leadStatus = matchedLead?.status ?? null;
+      const leadResponsible = matchedLead?.responsavel ?? null;
 
       const chatTypeBadgeClass = getChatTypeBadgeClass(chatKind);
 
@@ -2687,12 +2699,42 @@ export default function WhatsAppTab() {
         typeLabel: chatTypeLabel,
         typeBadgeClass: chatTypeBadgeClass,
         leadStatus,
+        leadResponsible,
+        hasLeadMatch: Boolean(matchedLead),
         photo: chatPhoto,
       });
     });
 
     return map;
   }, [chats, contactPhotosById, contactsById, groupNamesById, leadByPhoneMatchKey, leadNamesByPhone, newsletterNamesById]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const chatLeadStatusOptions = useMemo(() => {
+    const options = new Set<string>();
+    leadStatuses.forEach((status) => {
+      if (status.nome?.trim()) {
+        options.add(status.nome.trim());
+      }
+    });
+    leadsList.forEach((lead) => {
+      if (lead.status?.trim()) {
+        options.add(lead.status.trim());
+      }
+    });
+    return Array.from(options).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+  }, [leadStatuses, leadsList]);
+
+  const chatLeadOwnerOptions = useMemo(() => {
+    const options = new Set<string>();
+    leadsList.forEach((lead) => {
+      if (lead.responsavel?.trim()) {
+        options.add(lead.responsavel.trim());
+      }
+    });
+    return Array.from(options).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+  }, [leadsList]);
+
+  const hasAdvancedChatFilters =
+    chatLeadStatusFilter !== 'all' || chatLeadOwnerFilter !== 'all' || chatLeadPresenceFilter !== 'all';
 
   const {
     archivedCount,
@@ -2741,13 +2783,37 @@ export default function WhatsAppTab() {
     });
 
     const filteredVisibleChats = baseChats.filter((chat) => {
-      const chatKind = chatListPresentationById.get(chat.id)?.kind ?? getChatKind(chat);
+      const chatPresentation = chatListPresentationById.get(chat.id);
+      const chatKind = chatPresentation?.kind ?? getChatKind(chat);
+      const chatLeadStatus = chatPresentation?.leadStatus ?? null;
+      const chatLeadResponsible = chatPresentation?.leadResponsible ?? null;
+      const hasLeadMatch = chatPresentation?.hasLeadMatch ?? false;
 
-      if (chatFilterMode === 'unread') return (chat.unread_count ?? 0) > 0;
-      if (chatFilterMode === 'groups') return chatKind === 'group';
-      if (chatFilterMode === 'direct') return chatKind === 'direct';
-      if (chatFilterMode === 'channels') return chatKind === 'newsletter';
-      if (chatFilterMode === 'broadcasts') return chatKind === 'broadcast';
+      if (chatFilterMode === 'unread' && (chat.unread_count ?? 0) <= 0) return false;
+      if (chatFilterMode === 'groups' && chatKind !== 'group') return false;
+      if (chatFilterMode === 'direct' && chatKind !== 'direct') return false;
+      if (chatFilterMode === 'channels' && chatKind !== 'newsletter') return false;
+      if (chatFilterMode === 'broadcasts' && chatKind !== 'broadcast') return false;
+
+      if (chatLeadPresenceFilter === 'withLead' && !hasLeadMatch) return false;
+      if (chatLeadPresenceFilter === 'withoutLead' && hasLeadMatch) return false;
+
+      if (chatLeadStatusFilter !== 'all') {
+        if (chatLeadStatusFilter === EMPTY_FILTER_VALUE) {
+          if (chatLeadStatus) return false;
+        } else if (chatLeadStatus !== chatLeadStatusFilter) {
+          return false;
+        }
+      }
+
+      if (chatLeadOwnerFilter !== 'all') {
+        if (chatLeadOwnerFilter === EMPTY_FILTER_VALUE) {
+          if (chatLeadResponsible) return false;
+        } else if (chatLeadResponsible !== chatLeadOwnerFilter) {
+          return false;
+        }
+      }
+
       return true;
     });
 
@@ -2776,7 +2842,17 @@ export default function WhatsAppTab() {
       visibleChats,
       unreadQueue,
     };
-  }, [chatFilterMode, chatListPresentationById, chats, prioritizeUnread, searchQuery, showArchived]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    chatFilterMode,
+    chatLeadOwnerFilter,
+    chatLeadPresenceFilter,
+    chatLeadStatusFilter,
+    chatListPresentationById,
+    chats,
+    prioritizeUnread,
+    searchQuery,
+    showArchived,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextUnreadChat = useMemo(
     () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
@@ -3424,7 +3500,7 @@ const getReminderTypeMeta = (type?: string | null) => {
   };
 };
 
-const getChatTypeBadgeClass = (kind?: string | null) => {
+function getChatTypeBadgeClass(kind?: string | null) {
   const normalized = (kind || 'direct').trim().toLowerCase();
 
   if (normalized === 'group') return 'comm-badge-info';
@@ -3432,7 +3508,7 @@ const getChatTypeBadgeClass = (kind?: string | null) => {
   if (normalized === 'status') return 'comm-badge-warning';
   if (normalized === 'broadcast') return 'comm-badge-brand';
   return 'comm-badge-neutral';
-};
+}
 
 const getChatAvatarClass = (kind?: string | null) => {
   const normalized = (kind || 'direct').trim().toLowerCase();
@@ -4715,9 +4791,91 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 size="sm"
                 className="h-auto rounded-full px-2.5 py-1 text-xs"
                 onClick={() => setChatFilterMode('broadcasts')}
-              >
-                Transmissoes ({broadcastInboxCount})
-              </Button>
+                >
+                  Transmissoes ({broadcastInboxCount})
+                </Button>
+            </div>
+            <div className="space-y-2 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2ea)]/60 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={showAdvancedChatFilters || hasAdvancedChatFilters ? 'warning' : 'secondary'}
+                    size="sm"
+                    className="h-auto rounded-full px-3 py-1.5 text-xs"
+                    onClick={() => setShowAdvancedChatFilters((current) => !current)}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtros CRM
+                    {hasAdvancedChatFilters ? ' ativos' : ''}
+                  </Button>
+                  <span className="text-[11px] text-slate-500">
+                    {visibleChats.length} resultado(s){hasAdvancedChatFilters ? ' com segmentacao avancada' : ''}
+                  </span>
+                </div>
+                {hasAdvancedChatFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto rounded-full px-2.5 py-1 text-xs"
+                    onClick={() => {
+                      setChatLeadStatusFilter('all');
+                      setChatLeadOwnerFilter('all');
+                      setChatLeadPresenceFilter('all');
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+              {(showAdvancedChatFilters || hasAdvancedChatFilters) && (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Status CRM</span>
+                    <select
+                      value={chatLeadStatusFilter}
+                      onChange={(event) => setChatLeadStatusFilter(event.target.value)}
+                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                    >
+                      <option value="all">Todos os status</option>
+                      <option value={EMPTY_FILTER_VALUE}>Sem status</option>
+                      {chatLeadStatusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Responsavel</span>
+                    <select
+                      value={chatLeadOwnerFilter}
+                      onChange={(event) => setChatLeadOwnerFilter(event.target.value)}
+                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                    >
+                      <option value="all">Todos os responsaveis</option>
+                      <option value={EMPTY_FILTER_VALUE}>Sem responsavel</option>
+                      {chatLeadOwnerOptions.map((owner) => (
+                        <option key={owner} value={owner}>
+                          {owner}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Vinculo CRM</span>
+                    <select
+                      value={chatLeadPresenceFilter}
+                      onChange={(event) => setChatLeadPresenceFilter(event.target.value as ChatLeadPresenceFilter)}
+                      className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="withLead">Com lead vinculado</option>
+                      <option value="withoutLead">Sem lead vinculado</option>
+                    </select>
+                  </label>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between gap-2 text-xs">
               <Button

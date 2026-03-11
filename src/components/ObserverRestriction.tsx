@@ -1,21 +1,26 @@
 import { ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfig } from '../contexts/ConfigContext';
 import { Eye, Lock } from 'lucide-react';
 
 type ObserverRestrictionProps = {
   children: ReactNode;
   action?: string;
   showMessage?: boolean;
+  moduleId?: string;
 };
 
 export default function ObserverRestriction({
   children,
-  action = 'realizar esta ação',
-  showMessage = true
+  action = 'realizar esta acao',
+  showMessage = true,
+  moduleId = 'leads',
 }: ObserverRestrictionProps) {
-  const { isObserver } = useAuth();
+  const { role } = useAuth();
+  const { getRoleModulePermission } = useConfig();
+  const canEdit = getRoleModulePermission(role, moduleId).can_edit;
 
-  if (!isObserver) {
+  if (canEdit) {
     return <>{children}</>;
   }
 
@@ -33,7 +38,7 @@ export default function ObserverRestriction({
           <Lock className="w-5 h-5 text-amber-600" />
           <div>
             <p className="text-sm font-medium text-slate-900">Acesso Restrito</p>
-            <p className="text-xs text-slate-600">Você precisa de permissão de admin para {action}</p>
+            <p className="text-xs text-slate-600">Seu perfil nao possui permissao para {action}</p>
           </div>
         </div>
       </div>
@@ -42,9 +47,11 @@ export default function ObserverRestriction({
 }
 
 export function ObserverBanner() {
-  const { isObserver } = useAuth();
+  const { role } = useAuth();
+  const { getRoleModulePermission } = useConfig();
+  const canEditLeads = getRoleModulePermission(role, 'leads').can_edit;
 
-  if (!isObserver) {
+  if (canEditLeads) {
     return null;
   }
 
@@ -53,8 +60,8 @@ export function ObserverBanner() {
       <div className="flex items-center space-x-3">
         <Eye className="w-5 h-5 text-blue-600 flex-shrink-0" />
         <div>
-          <p className="text-sm font-medium text-blue-900">Modo Observador</p>
-          <p className="text-xs text-blue-700">Você está visualizando o sistema em modo somente-leitura. Entre em contato com um administrador para obter acesso completo.</p>
+          <p className="text-sm font-medium text-blue-900">Modo somente leitura</p>
+          <p className="text-xs text-blue-700">Seu perfil pode consultar os dados, mas nao possui permissao de edicao neste modulo.</p>
         </div>
       </div>
     </div>

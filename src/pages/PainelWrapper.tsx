@@ -36,8 +36,8 @@ const TAB_ROUTE_MAP: Record<string, string> = {
 };
 
 export default function PainelWrapper() {
-  const { isObserver } = useAuth();
-  const { leadOrigins, loading: configLoading } = useConfig();
+  const { isObserver, role } = useAuth();
+  const { leadOrigins, loading: configLoading, getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadReminders, setUnreadReminders] = useState(0);
@@ -50,11 +50,33 @@ export default function PainelWrapper() {
   const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
 
+  const validTabIds = useMemo(() => {
+    const entries: Array<[string, boolean]> = [
+      ['dashboard', getRoleModulePermission(role, 'dashboard').can_view],
+      ['leads', getRoleModulePermission(role, 'leads').can_view],
+      ['contracts', getRoleModulePermission(role, 'contracts').can_view],
+      ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
+      ['financeiro-agenda', getRoleModulePermission(role, 'financeiro-agenda').can_view],
+      ['reminders', getRoleModulePermission(role, 'reminders').can_view],
+      ['whatsapp', getRoleModulePermission(role, 'whatsapp').can_view],
+      ['blog', getRoleModulePermission(role, 'blog').can_view],
+      [
+        'config',
+        ['config-system', 'config-users', 'config-automation', 'config-integrations', 'config-access'].some(
+          (moduleId) => getRoleModulePermission(role, moduleId).can_view,
+        ),
+      ],
+    ];
+
+    return new Set(entries.filter(([, allowed]) => allowed).map(([tabId]) => tabId));
+  }, [getRoleModulePermission, role]);
+
   const activeTab = useMemo(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
     const route = pathParts[1] || 'dashboard';
-    return ROUTE_TAB_MAP[route] || 'dashboard';
-  }, [location.pathname]);
+    const requestedTab = ROUTE_TAB_MAP[route] || 'dashboard';
+    return validTabIds.has(requestedTab) ? requestedTab : (Array.from(validTabIds)[0] ?? 'dashboard');
+  }, [location.pathname, validTabIds]);
 
   const useFullBleedContent = useMemo(() => location.pathname === '/painel/whatsapp', [location.pathname]);
 
@@ -110,6 +132,24 @@ export default function PainelWrapper() {
     };
   }, [configLoading, isObserver, isOriginVisibleToObserver]);
 
+  useEffect(() => {
+    if (configLoading) {
+      return;
+    }
+
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const route = pathParts[1] || 'dashboard';
+    const requestedTab = ROUTE_TAB_MAP[route] || 'dashboard';
+
+    if (validTabIds.has(requestedTab)) {
+      return;
+    }
+
+    const fallbackTab = Array.from(validTabIds)[0];
+    const fallbackRoute = fallbackTab ? TAB_ROUTE_MAP[fallbackTab] : 'dashboard';
+    navigate(`/painel/${fallbackRoute}`, { replace: true });
+  }, [configLoading, location.pathname, navigate, validTabIds]);
+
   const handleCloseNotification = (index: number) => {
     setActiveNotifications((prev) => prev.filter((_, i) => i !== index));
     if (activeNotifications.length <= 1) {
@@ -122,6 +162,10 @@ export default function PainelWrapper() {
   };
 
   const handleTabChange = (tab: string, options?: TabNavigationOptions) => {
+    if (!validTabIds.has(tab)) {
+      return;
+    }
+
     const route = TAB_ROUTE_MAP[tab];
     if (route) {
       navigate(`/painel/${route}`);

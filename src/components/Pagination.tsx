@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight, ListFilter } from 'lucide-react';
+import { cx } from '../lib/cx';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
 
 type PaginationProps = {
   currentPage: number;
@@ -56,7 +58,7 @@ export default function Pagination({
   return (
     <div className="panel-glass-panel flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-700">Itens por página:</span>
+        <span className="text-sm text-slate-700">Itens por pagina:</span>
         <div className="w-28">
           <FilterSingleSelect
             icon={ListFilter}
@@ -78,14 +80,16 @@ export default function Pagination({
       </div>
 
       <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
-        <button
+        <Button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Página anterior"
+          variant="secondary"
+          size="icon"
+          className="h-10 w-10"
+          title="Pagina anterior"
         >
-          <ChevronLeft className="w-4 h-4 text-slate-600" />
-        </button>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
 
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
           {getPageNumbers().map((page, index) => (
@@ -94,12 +98,15 @@ export default function Pagination({
                 <span className="px-3 py-1 text-slate-500">...</span>
               ) : (
                 <button
+                  type="button"
                   onClick={() => onPageChange(page as number)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  className={cx(
+                    'inline-flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
                     currentPage === page
-                      ? 'bg-teal-600 text-white'
-                      : 'text-slate-700 hover:bg-slate-100'
-                  }`}
+                      ? 'border border-amber-300/90 bg-amber-100/80 text-amber-900 shadow-sm hover:border-amber-400/90 hover:bg-amber-200/75 hover:text-amber-950'
+                      : 'border border-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900',
+                  )}
+                  aria-current={currentPage === page ? 'page' : undefined}
                 >
                   {page}
                 </button>
@@ -108,14 +115,16 @@ export default function Pagination({
           ))}
         </div>
 
-        <button
+        <Button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Próxima página"
+          variant="secondary"
+          size="icon"
+          className="h-10 w-10"
+          title="Proxima pagina"
         >
-          <ChevronRight className="w-4 h-4 text-slate-600" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

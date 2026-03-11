@@ -355,4 +355,159 @@ Content-Type: application/json</pre>
           </div>
           <p class="footer-note" id="configStatus">Preencha a base URL e o token para ativar os testes.</p>
         </section>
+        <section id="endpoints" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Endpoints</p>
+              <h2>Referencia operacional</h2>
+              <p>Os cards abaixo unem documentacao e uso pratico. Voce pode buscar por rota ou filtrar por metodo antes de abrir o playground.</p>
+            </div>
+          </div>
+          <div class="endpoint-toolbar">
+            <div class="method-filter" role="toolbar" aria-label="Filtro de metodo">
+              <button type="button" class="filter-chip active" data-method-filter="ALL">Todos</button>
+              <button type="button" class="filter-chip" data-method-filter="GET">GET</button>
+              <button type="button" class="filter-chip" data-method-filter="POST">POST</button>
+              <button type="button" class="filter-chip" data-method-filter="PUT">PUT</button>
+              <button type="button" class="filter-chip" data-method-filter="DELETE">DELETE</button>
+            </div>
+            <label class="search-shell" for="endpointSearch">
+              <span aria-hidden="true">Buscar</span>
+              <input id="endpointSearch" type="search" placeholder="Ex.: batch, health, status_id..." />
+            </label>
+          </div>
+          <div class="endpoint-list" id="endpointList"></div>
+          <div class="empty-state hidden" id="endpointEmptyState">Nenhum endpoint corresponde aos filtros atuais.</div>
+        </section>
+
+        <section id="playground" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Playground</p>
+              <h2>Monte a request e teste daqui</h2>
+              <p>Selecione um preset, ajuste rota, query string e body JSON. A resposta aparece ao lado com status HTTP e corpo formatado quando possivel.</p>
+            </div>
+          </div>
+          <div class="playground-grid">
+            <div class="playground-stack">
+              <div class="subcard">
+                <h4>Requisicao</h4>
+                <div class="field">
+                  <label for="presetSelect">Preset rapido</label>
+                  <select id="presetSelect"></select>
+                </div>
+                <div class="config-grid">
+                  <div class="field">
+                    <label for="methodSelect">Metodo</label>
+                    <select id="methodSelect">
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="pathInput">Path</label>
+                    <input id="pathInput" type="text" placeholder="/leads" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="queryInput">Query string</label>
+                  <input id="queryInput" type="text" placeholder="status=Novo&limit=25" />
+                  <p class="hint">Informe sem interrogracao. Os filtros aceitos estao listados nos cards.</p>
+                </div>
+                <div class="field">
+                  <label for="requestBodyInput">Body JSON</label>
+                  <textarea id="requestBodyInput" spellcheck="false" placeholder='{"nome_completo":"Maria"}'></textarea>
+                </div>
+                <div class="button-row">
+                  <button type="button" class="button primary" id="runRequestButton">Executar request</button>
+                  <button type="button" class="button secondary" id="copyCurlButton">Copiar curl</button>
+                  <button type="button" class="button ghost" id="formatJsonButton">Formatar JSON</button>
+                </div>
+              </div>
+              <div class="code">
+                <div class="code-head">
+                  <span>cURL gerado</span>
+                  <button type="button" data-copy-target="curlPreview">Copiar</button>
+                </div>
+                <pre id="curlPreview"></pre>
+              </div>
+            </div>
+            <div class="playground-stack">
+              <div class="subcard response-box">
+                <h4>Resposta</h4>
+                <div id="responseMeta"><span class="status-badge info">Aguardando request</span></div>
+                <div id="responseOutput" class="empty-state">Execute uma request para ver o retorno da API aqui.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="models" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Modelo de dados</p>
+              <h2>Campos mais relevantes do lead</h2>
+              <p>Os campos abaixo reunem o payload validado hoje pelo backend e os atributos mais usados na interface atual.</p>
+            </div>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr><th>Campo</th><th>Tipo</th><th>Obrigatorio</th><th>Observacao</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="mono">nome_completo</td><td>string</td><td>Sim</td><td>Nome principal do lead.</td></tr>
+                <tr><td class="mono">telefone</td><td>string</td><td>Sim</td><td>Normalizado para apenas digitos no backend.</td></tr>
+                <tr><td class="mono">email</td><td>string | null</td><td>Nao</td><td>Validado como email quando informado.</td></tr>
+                <tr><td class="mono">origem_id / origem</td><td>uuid ou string</td><td>Sim</td><td>Aceita id ou nome de uma origem valida.</td></tr>
+                <tr><td class="mono">tipo_contratacao_id / tipo_contratacao</td><td>uuid ou string</td><td>Sim</td><td>Aceita id ou label do tipo de contratacao.</td></tr>
+                <tr><td class="mono">status_id / status</td><td>uuid ou string</td><td>Sim</td><td>Se nao vier, o backend tenta usar o status padrao.</td></tr>
+                <tr><td class="mono">responsavel_id / responsavel</td><td>uuid ou string</td><td>Sim</td><td>Aceita id ou label do responsavel.</td></tr>
+                <tr><td class="mono">data_criacao</td><td>string</td><td>Nao</td><td>ISO 8601 ou YYYY-MM-DD.</td></tr>
+                <tr><td class="mono">proximo_retorno</td><td>string | null</td><td>Nao</td><td>ISO 8601 ou YYYY-MM-DD.</td></tr>
+                <tr><td class="mono">observacoes</td><td>string | null</td><td>Nao</td><td>Texto livre para contexto comercial.</td></tr>
+                <tr><td class="mono">blackout_dates</td><td>string[] | null</td><td>Nao</td><td>Usado na automacao para datas sem disparo.</td></tr>
+                <tr><td class="mono">daily_send_limit</td><td>number | null</td><td>Nao</td><td>Limite diario para fluxos automatizados.</td></tr>
+                <tr><td class="mono">skip_automation</td><td>boolean | null</td><td>Nao</td><td>Pode ser usado para impedir execucao automatica.</td></tr>
+                <tr><td class="mono">ultimo_contato</td><td>string</td><td>Gerado</td><td>Preenchido na criacao com base em <span class="mono">data_criacao</span>.</td></tr>
+                <tr><td class="mono">arquivado</td><td>boolean</td><td>Gerado</td><td>Soft delete usado na rota DELETE.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="status-codes" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Status codes</p>
+              <h2>Respostas mais comuns</h2>
+              <p>Os retornos abaixo resumem o comportamento observado no edge function atual.</p>
+            </div>
+          </div>
+          <div class="status-grid">
+            <div class="subcard">
+              <h4>Sucesso</h4>
+              <div class="kv-list">
+                <div class="kv-item"><strong>200 OK</strong><span>Healthcheck, listagens, detalhe, update, delete logico e rotas internas bem-sucedidas.</span></div>
+                <div class="kv-item"><strong>201 Created</strong><span>Criacao individual de lead.</span></div>
+              </div>
+            </div>
+            <div class="subcard">
+              <h4>Falhas</h4>
+              <div class="kv-list">
+                <div class="kv-item"><strong>400 Bad Request</strong><span>Payload invalido, filtros invalidos ou body fora do formato esperado.</span></div>
+                <div class="kv-item"><strong>401 Unauthorized</strong><span>Token ausente, invalido ou rota interna sem credencial adequada.</span></div>
+                <div class="kv-item"><strong>403 Forbidden</strong><span>Usuario autenticado sem permissao para a acao.</span></div>
+                <div class="kv-item"><strong>404 Not Found</strong><span>Lead inexistente em rotas de detalhe ou operacoes por id.</span></div>
+                <div class="kv-item"><strong>500 / 502</strong><span>Erros internos de banco ou integracoes de automacao.</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="footer-note">Dica operacional: em erros <span class="mono">400</span>, consulte o campo <span class="mono">details</span> do JSON para identificar a validacao que falhou.</p>
+        </section>
+      </main>
+    </div>
+  </div>
 </html>

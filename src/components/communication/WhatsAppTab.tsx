@@ -2253,7 +2253,7 @@ export default function WhatsAppTab() {
   };
 
   const handleMessageSent = (message?: SentMessagePayload) => {
-    if (message && selectedChat) {
+    if (message) {
       const timestamp = message.timestamp || new Date().toISOString();
       const nextMessage: WhatsAppMessage = {
         id: message.id,
@@ -2269,21 +2269,38 @@ export default function WhatsAppTab() {
         created_at: message.created_at || timestamp,
         payload: message.payload,
       };
+      const targetChat = chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id)) ?? null;
+      const targetChatId = targetChat?.id || message.chat_id;
+      const selectedChatMatchesMessage = Boolean(
+        selectedChatRef.current && getChatIdVariants(selectedChatRef.current).includes(message.chat_id),
+      );
 
-      setMessages((prev) => {
-        if (prev.some((item) => item.id === nextMessage.id)) {
-          return prev;
+      const mergeIntoMessageList = (currentMessages: WhatsAppMessage[]) => {
+        if (currentMessages.some((item) => item.id === nextMessage.id)) {
+          return currentMessages;
         }
 
-        const likelyDuplicateIndex = prev.findIndex((item) => isLikelyOutboundDuplicateMessage(item, nextMessage));
+        const likelyDuplicateIndex = currentMessages.findIndex((item) =>
+          isLikelyOutboundDuplicateMessage(item, nextMessage),
+        );
         if (likelyDuplicateIndex >= 0) {
-          const next = [...prev];
+          const next = [...currentMessages];
           next[likelyDuplicateIndex] = mergeMessageForDisplay(next[likelyDuplicateIndex], nextMessage);
           return next.sort(sortMessagesChronologically);
         }
 
-        const merged = [...prev, nextMessage];
-        return merged.sort(sortMessagesChronologically);
+        return [...currentMessages, nextMessage].sort(sortMessagesChronologically);
+      };
+
+      if (selectedChatMatchesMessage) {
+        setMessages((prev) => mergeIntoMessageList(prev));
+      }
+
+      const cachedState = messagesCacheRef.current.get(targetChatId);
+      messagesCacheRef.current.set(targetChatId, {
+        messages: mergeIntoMessageList(cachedState?.messages || []),
+        loadedCount: cachedState?.loadedCount ?? loadedMessagesCount,
+        hasOlder: cachedState?.hasOlder ?? hasOlderMessages,
       });
 
       setChats((prev) => {
@@ -2302,18 +2319,20 @@ export default function WhatsAppTab() {
         return updated.sort(sortChatsByLatest);
       });
 
-      const chatToUpdate = chatsRef.current.find((chat) => chat.id === selectedChat.id);
+      const chatToUpdate = targetChat;
       if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
         updateChatArchive(chatToUpdate.id, false);
       }
 
-      scrollToBottom();
+      if (selectedChatMatchesMessage) {
+        scrollToBottom();
+      }
       scheduleUnreadCountsRefresh();
       return;
     }
 
-    if (selectedChat) {
-      loadMessages(selectedChat);
+    if (selectedChatRef.current) {
+      loadMessages(selectedChatRef.current);
       scrollToBottom();
     }
   };
@@ -5613,6 +5632,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   <MessageHistoryPanel chatId={selectedChat.id} chatName={selectedChatDisplayName || selectedChat.id} />
 
                   <MessageInput
+                    key={selectedChat.id}
                     chatId={selectedChat.id}
                     contacts={contactsList}
                     templateVariables={templateVariablesForInput}

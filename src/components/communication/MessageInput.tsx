@@ -141,6 +141,7 @@ function MessageInputComponent({
   const analyserDataRef = useRef<Uint8Array | null>(null);
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const followUpRequestIdRef = useRef(0);
+  const activeChatIdRef = useRef(chatId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
@@ -637,11 +638,11 @@ function MessageInputComponent({
     return { normalizedChatId, messageId, persistedMessageId };
   };
 
-  const sendPlainTextMessage = async (text: string) => {
+  const sendPlainTextMessage = async (text: string, targetChatId: string = chatId) => {
     const resolvedText = applyTemplateVariables(text).trim() || text.trim();
 
     const response = await sendWhatsAppMessage({
-      chatId,
+      chatId: targetChatId,
       contentType: 'string',
       content: resolvedText,
       quotedMessageId: replyToMessage?.id,
@@ -650,7 +651,7 @@ function MessageInputComponent({
     const sentAt = new Date().toISOString();
     const { normalizedChatId, messageId } = await persistOutboundMessage({
       response,
-      chatId,
+      chatId: targetChatId,
       type: 'text',
       body: resolvedText,
       hasMedia: false,
@@ -717,6 +718,10 @@ function MessageInputComponent({
 
   useEffect(() => {
     lastTypingSignalAtRef.current = 0;
+  }, [chatId]);
+
+  useEffect(() => {
+    activeChatIdRef.current = chatId;
   }, [chatId]);
 
   const scheduleTextareaResize = () => {
@@ -791,6 +796,7 @@ function MessageInputComponent({
   const handleSendMessage = async () => {
     const rawMessage = message.trim();
     const resolvedMessage = applyTemplateVariables(rawMessage);
+    const submitChatId = chatId;
 
     if ((!rawMessage && !selectedFile) || isSending) return;
 
@@ -874,24 +880,38 @@ function MessageInputComponent({
 
         const isLinkPreview = showLinkPreviewModal && pendingLinkMessage;
         if (isLinkPreview) {
+          const draftMessage = pendingLinkMessage;
+          const draftReplyToMessage = replyToMessage;
+          const draftLinkPreview = {
+            title: linkPreviewTitle,
+            description: linkPreviewDescription,
+            canonical: linkPreviewCanonical,
+            image: linkPreviewImage,
+          };
+
+          setMessage('');
+          setShowLinkPreviewModal(false);
+          clearLinkPreviewDraft();
+          if (onCancelReply) onCancelReply();
+
           const response = await sendWhatsAppMessage({
-            chatId,
+            chatId: submitChatId,
             contentType: 'LinkPreview',
             content: {
-              body: pendingLinkMessage,
-              title: linkPreviewTitle.trim(),
-              description: linkPreviewDescription.trim() || undefined,
-              canonical: linkPreviewCanonical.trim() || undefined,
-              preview: linkPreviewImage.trim() || undefined,
+              body: draftMessage,
+              title: draftLinkPreview.title.trim(),
+              description: draftLinkPreview.description.trim() || undefined,
+              canonical: draftLinkPreview.canonical.trim() || undefined,
+              preview: draftLinkPreview.image.trim() || undefined,
             },
-            quotedMessageId: replyToMessage?.id,
+            quotedMessageId: draftReplyToMessage?.id,
           });
 
-          const bodyText = pendingLinkMessage;
+          const bodyText = draftMessage;
           const sentAt = new Date().toISOString();
           const { normalizedChatId, messageId } = await persistOutboundMessage({
             response,
-            chatId,
+            chatId: submitChatId,
             type: 'link_preview',
             body: bodyText,
             hasMedia: true,
@@ -910,19 +930,20 @@ function MessageInputComponent({
             payload: response,
           };
 
-          setMessage('');
-          setShowLinkPreviewModal(false);
-          clearLinkPreviewDraft();
-          if (onCancelReply) onCancelReply();
           if (onMessageSent) onMessageSent(textPayload);
         } else {
-          await sendPlainTextMessage(resolvedMessage || rawMessage);
           setMessage('');
           if (onCancelReply) onCancelReply();
+          await sendPlainTextMessage(resolvedMessage || rawMessage, submitChatId);
         }
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
+      if (activeChatIdRef.current === submitChatId) {
+        if (rawMessage) {
+          setMessage(rawMessage);
+        }
+      }
       const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
       alert(errorMessage || 'Erro ao enviar mensagem');
     } finally {

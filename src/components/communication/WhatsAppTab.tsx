@@ -4855,7 +4855,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           panelClassName="max-w-3xl"
         >
           <div className="space-y-4">
-            <div className="comm-card comm-card-brand p-4">
+            <div className="panel-glass-panel rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="comm-title text-sm font-semibold">Abertura rapida de conversas</p>

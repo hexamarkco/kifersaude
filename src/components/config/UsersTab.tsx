@@ -18,6 +18,12 @@ const FALLBACK_PROFILES = [
   { value: 'admin', label: 'Administrador' },
 ];
 
+const sectionShellClass =
+  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm';
+
+const insetCardClass =
+  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4';
+
 export default function UsersTab() {
   const { user, refreshProfile, role: currentRole } = useAuth();
   const { accessProfiles, getRoleModulePermission } = useConfig();
@@ -284,6 +290,34 @@ export default function UsersTab() {
       stageClassName="min-h-[420px]"
     >
       <div className="panel-page-shell space-y-6">
+        <section className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
+                <Shield className="h-3.5 w-3.5 text-amber-600" />
+                Usuarios
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-[var(--panel-text)]">Usuarios do sistema</h2>
+                  <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
+                    Associe cada usuario a um perfil dinamico de acesso, mantendo a administracao centralizada no
+                    mesmo padrao visual de configuracoes gerais.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={() => setShowAddUser(true)} variant="primary">
+              <Plus className="h-4 w-4" />
+              <span>Novo Usuario</span>
+            </Button>
+          </div>
+        </section>
+
         {message && (
           <div
             className={`rounded-lg border p-4 ${message.type === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}
@@ -299,26 +333,24 @@ export default function UsersTab() {
           </div>
         )}
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className={sectionShellClass}>
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Users className="h-6 w-6 text-amber-600" />
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">Usuarios do Sistema</h3>
-                <p className="text-sm text-slate-500">Associe cada usuario a um perfil dinamico de acesso.</p>
+                <h3 className="text-xl font-semibold text-[var(--panel-text)]">Carteira de usuarios</h3>
+                <p className="text-sm text-[var(--panel-text-muted)]">
+                  Revise perfis, dados de acesso e manutencao da equipe em um unico lugar.
+                </p>
               </div>
             </div>
-            <Button onClick={() => setShowAddUser(true)} variant="primary">
-              <Plus className="h-4 w-4" />
-              <span>Novo Usuario</span>
-            </Button>
           </div>
 
           <div className="space-y-3">
             {users.length === 0 ? (
-              <div className="py-12 text-center">
-                <Users className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-                <p className="text-slate-600">Nenhum usuario cadastrado</p>
+              <div className={`${insetCardClass} py-12 text-center`}>
+                <Users className="mx-auto mb-4 h-12 w-12 text-[var(--panel-text-muted)]/40" />
+                <p className="text-[var(--panel-text-muted)]">Nenhum usuario cadastrado</p>
               </div>
             ) : (
               users.map((userProfile) => {
@@ -329,18 +361,20 @@ export default function UsersTab() {
                 return (
                   <div
                     key={userProfile.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4"
+                    className={`${insetCardClass} flex items-center justify-between gap-4`}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-yellow-600">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600">
                         <UserIcon className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">@{userProfile.username}</p>
-                        <p className="text-sm text-slate-600">{userProfile.email}</p>
+                        <p className="font-medium text-[var(--panel-text)]">@{userProfile.username}</p>
+                        <p className="text-sm text-[var(--panel-text-muted)]">{userProfile.email}</p>
                         <div className="mt-1 flex items-center space-x-2">
-                          <Shield className={`h-4 w-4 ${isAdminProfile ? 'text-amber-600' : 'text-blue-600'}`} />
-                          <span className={`text-sm ${isAdminProfile ? 'text-amber-700' : 'text-blue-700'}`}>
+                          <Shield className={`h-4 w-4 ${isAdminProfile ? 'text-amber-600' : 'text-[var(--panel-accent)]'}`} />
+                          <span
+                            className={`text-sm ${isAdminProfile ? 'text-amber-700 dark:text-amber-300' : 'text-[var(--panel-accent)]'}`}
+                          >
                             {profileLabel || userProfile.role}
                           </span>
                         </div>
@@ -354,7 +388,7 @@ export default function UsersTab() {
                         disabled={actionLoading}
                         variant="icon"
                         size="icon"
-                        className="h-8 w-8 text-slate-600 hover:bg-slate-200"
+                        className="h-8 w-8 text-[var(--panel-text-muted)] hover:bg-[var(--panel-surface)]"
                         title="Editar usuario"
                       >
                         <Pencil className="h-4 w-4" />
@@ -365,13 +399,13 @@ export default function UsersTab() {
                           disabled={actionLoading}
                           variant="icon"
                           size="icon"
-                          className="h-8 w-8 text-red-600 hover:bg-red-50"
+                          className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                           title="Excluir usuario"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <span className="text-sm italic text-slate-500">Voce</span>
+                        <span className="text-sm italic text-[var(--panel-text-muted)]">Voce</span>
                       )}
                     </div>
                   </div>
@@ -379,21 +413,21 @@ export default function UsersTab() {
               })
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+        <section className={sectionShellClass}>
           <div className="flex items-start space-x-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
             <div>
-              <h4 className="mb-2 font-semibold text-blue-900">Como funciona agora</h4>
-              <ul className="space-y-2 text-sm text-blue-800">
+              <h4 className="mb-2 font-semibold text-[var(--panel-text)]">Como funciona agora</h4>
+              <ul className="space-y-2 text-sm text-[var(--panel-text-muted)]">
                 <li>Os perfis disponiveis aqui sao dinamicos e podem ser criados na area "Perfis e Acessos".</li>
                 <li>Perfis marcados como administrativos recebem acesso total ao sistema automaticamente.</li>
                 <li>Perfis comuns nascem sem acesso e voce libera cada modulo de forma granular.</li>
               </ul>
             </div>
           </div>
-        </div>
+        </section>
 
         <ModalShell
           isOpen={showAddUser}

@@ -138,7 +138,7 @@ const DAY_SEPARATOR_LABEL_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
   year: 'numeric',
 });
 
-type ChatFilterMode = 'all' | 'unread' | 'groups' | 'direct' | 'channels' | 'broadcasts';
+type ChatKindFilter = 'groups' | 'direct' | 'channels' | 'broadcasts';
 
 type FirstResponseSLA =
   | { kind: 'no-inbound' }
@@ -328,7 +328,9 @@ export default function WhatsAppTab() {
   );
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
-  const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
+  const [showChatSegmentsMenu, setShowChatSegmentsMenu] = useState(false);
+  const [chatOnlyUnread, setChatOnlyUnread] = useState(false);
+  const [chatKindFilters, setChatKindFilters] = useState<ChatKindFilter[]>([]);
   const [showAdvancedChatFilters, setShowAdvancedChatFilters] = useState(false);
   const [chatLeadStatusFilter, setChatLeadStatusFilter] = useState('all');
   const [chatLeadOwnerFilter, setChatLeadOwnerFilter] = useState('all');
@@ -378,6 +380,7 @@ export default function WhatsAppTab() {
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const chatSegmentsMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedChatFiltersRef = useRef<HTMLDivElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
@@ -1344,6 +1347,21 @@ export default function WhatsAppTab() {
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [showAdvancedChatFilters]);
+
+  useEffect(() => {
+    if (!showChatSegmentsMenu) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!chatSegmentsMenuRef.current?.contains(event.target as Node)) {
+        setShowChatSegmentsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [showChatSegmentsMenu]);
 
   useEffect(() => {
     const loadSavedContacts = async () => {
@@ -2815,6 +2833,18 @@ export default function WhatsAppTab() {
 
   const hasAdvancedChatFilters =
     chatLeadStatusFilter !== 'all' || chatLeadOwnerFilter !== 'all' || chatLeadPresenceFilter !== 'all';
+  const hasSegmentFilters = chatOnlyUnread || chatKindFilters.length > 0;
+  const activeSegmentFiltersLabel = [
+    chatOnlyUnread ? 'Nao lidas' : null,
+    ...chatKindFilters.map((filter) => {
+      if (filter === 'direct') return 'Diretas';
+      if (filter === 'groups') return 'Grupos';
+      if (filter === 'channels') return 'Canais';
+      return 'Transmissoes';
+    }),
+  ]
+    .filter(Boolean)
+    .join(' • ');
   const activeAdvancedChatFiltersCount = [
     chatLeadStatusFilter !== 'all',
     chatLeadOwnerFilter !== 'all',
@@ -2887,11 +2917,17 @@ export default function WhatsAppTab() {
       const chatLeadResponsible = chatPresentation?.leadResponsible ?? null;
       const hasLeadMatch = chatPresentation?.hasLeadMatch ?? false;
 
-      if (chatFilterMode === 'unread' && (chat.unread_count ?? 0) <= 0) return false;
-      if (chatFilterMode === 'groups' && chatKind !== 'group') return false;
-      if (chatFilterMode === 'direct' && chatKind !== 'direct') return false;
-      if (chatFilterMode === 'channels' && chatKind !== 'newsletter') return false;
-      if (chatFilterMode === 'broadcasts' && chatKind !== 'broadcast') return false;
+      if (chatOnlyUnread && (chat.unread_count ?? 0) <= 0) return false;
+
+      if (chatKindFilters.length > 0) {
+        const matchesKind =
+          (chatKindFilters.includes('groups') && chatKind === 'group') ||
+          (chatKindFilters.includes('direct') && chatKind === 'direct') ||
+          (chatKindFilters.includes('channels') && chatKind === 'newsletter') ||
+          (chatKindFilters.includes('broadcasts') && chatKind === 'broadcast');
+
+        if (!matchesKind) return false;
+      }
 
       if (chatLeadPresenceFilter === 'withLead' && !hasLeadMatch) return false;
       if (chatLeadPresenceFilter === 'withoutLead' && hasLeadMatch) return false;
@@ -2941,10 +2977,11 @@ export default function WhatsAppTab() {
       unreadQueue,
     };
   }, [
-    chatFilterMode,
+    chatKindFilters,
     chatLeadOwnerFilter,
     chatLeadPresenceFilter,
     chatLeadStatusFilter,
+    chatOnlyUnread,
     chatListPresentationById,
     chats,
     prioritizeUnread,
@@ -3527,7 +3564,8 @@ export default function WhatsAppTab() {
         return [nextChat, ...prev];
       });
       setSelectedChat(nextChat);
-      setChatFilterMode('all');
+      setChatOnlyUnread(false);
+      setChatKindFilters([]);
       setShowNewChatModal(false);
       setNewChatSearch('');
       setNewChatPhone('');
@@ -4833,55 +4871,96 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Button
-                variant={chatFilterMode === 'all' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('all')}
-              >
-                Todas ({inboxCount})
-              </Button>
-              <Button
-                variant={chatFilterMode === 'unread' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('unread')}
-              >
-                Nao lidas ({unreadInboxCount})
-              </Button>
-              <Button
-                variant={chatFilterMode === 'direct' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('direct')}
-              >
-                Diretas ({directInboxCount})
-              </Button>
-              <Button
-                variant={chatFilterMode === 'groups' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('groups')}
-              >
-                Grupos ({groupInboxCount})
-              </Button>
-              <Button
-                variant={chatFilterMode === 'channels' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('channels')}
-              >
-                Canais ({channelInboxCount})
-              </Button>
-              <Button
-                variant={chatFilterMode === 'broadcasts' ? 'warning' : 'secondary'}
-                size="sm"
-                className="h-auto rounded-full px-2.5 py-1 text-xs"
-                onClick={() => setChatFilterMode('broadcasts')}
+            <div ref={chatSegmentsMenuRef} className="relative">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={showChatSegmentsMenu || hasSegmentFilters ? 'warning' : 'secondary'}
+                  size="sm"
+                  className="h-auto rounded-full px-3 py-1.5 text-xs"
+                  onClick={() => setShowChatSegmentsMenu((current) => !current)}
                 >
-                  Transmissoes ({broadcastInboxCount})
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Segmentos
+                  {hasSegmentFilters && (
+                    <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] leading-none">
+                      {(chatOnlyUnread ? 1 : 0) + chatKindFilters.length}
+                    </span>
+                  )}
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showChatSegmentsMenu ? 'rotate-180' : ''}`} />
                 </Button>
+                <span className="text-[11px] text-slate-500">
+                  {hasSegmentFilters ? activeSegmentFiltersLabel : `Todas (${inboxCount})`}
+                </span>
+              </div>
+              {showChatSegmentsMenu && (
+                <div className="absolute left-0 top-full z-20 mt-2 w-full max-w-sm rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur">
+                  <button
+                    type="button"
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
+                      !hasSegmentFilters
+                        ? 'bg-[var(--panel-surface-soft,#f8f2ea)] text-slate-900'
+                        : 'text-slate-700 hover:bg-[var(--panel-surface-soft,#f8f2ea)]'
+                    }`}
+                    onClick={() => {
+                      setChatOnlyUnread(false);
+                      setChatKindFilters([]);
+                      setShowChatSegmentsMenu(false);
+                    }}
+                  >
+                    <span>Todas</span>
+                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                      {inboxCount}
+                      {!hasSegmentFilters && <Check className="h-3.5 w-3.5" />}
+                    </span>
+                  </button>
+                  {[
+                    { id: 'unread', label: 'Nao lidas', count: unreadInboxCount },
+                    { id: 'direct', label: 'Diretas', count: directInboxCount },
+                    { id: 'groups', label: 'Grupos', count: groupInboxCount },
+                    { id: 'channels', label: 'Canais', count: channelInboxCount },
+                    { id: 'broadcasts', label: 'Transmissoes', count: broadcastInboxCount },
+                  ].map((item) => {
+                    const checked = item.id === 'unread' ? chatOnlyUnread : chatKindFilters.includes(item.id as ChatKindFilter);
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
+                          checked
+                            ? 'bg-[var(--panel-surface-soft,#f8f2ea)] text-slate-900'
+                            : 'text-slate-700 hover:bg-[var(--panel-surface-soft,#f8f2ea)]'
+                        }`}
+                        onClick={() => {
+                          if (item.id === 'unread') {
+                            setChatOnlyUnread((current) => !current);
+                            return;
+                          }
+
+                          const nextId = item.id as ChatKindFilter;
+                          setChatKindFilters((current) =>
+                            current.includes(nextId) ? current.filter((value) => value !== nextId) : [...current, nextId],
+                          );
+                        }}
+                      >
+                        <span>{item.label}</span>
+                        <span className="flex items-center gap-2 text-xs text-slate-500">
+                          {item.count}
+                          <span
+                            className={`flex h-4 w-4 items-center justify-center rounded border ${
+                              checked
+                                ? 'border-amber-500 bg-amber-100 text-amber-700'
+                                : 'border-[var(--panel-border-subtle,#d8c5ae)] bg-white text-transparent'
+                            }`}
+                          >
+                            <Check className="h-3 w-3" />
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div ref={advancedChatFiltersRef} className="relative">
               <div className="flex flex-wrap items-center gap-2">

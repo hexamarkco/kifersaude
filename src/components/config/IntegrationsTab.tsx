@@ -301,6 +301,12 @@ const normalizeFollowUpInstructions = (integration: IntegrationSetting | null) =
   return typeof settings.instructions === 'string' ? settings.instructions : '';
 };
 
+const sectionShellClass =
+  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-5 shadow-sm';
+
+const sectionInsetClass =
+  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4';
+
 export default function IntegrationsTab() {
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<Record<AiProvider, IntegrationSetting | null>>({
     openai: null,
@@ -716,10 +722,33 @@ export default function IntegrationsTab() {
       stageClassName="min-h-[460px]"
     >
       <div className="panel-page-shell space-y-8">
-        <div>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">Integracoes de IA</h2>
-            <p className="text-sm text-slate-500 mt-1">
+        <section className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
+                <Plug className="h-3.5 w-3.5 text-amber-600" />
+                Integracoes
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-[var(--panel-text)]">Integracoes e conectores</h2>
+                  <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
+                    Conecte IA, WhatsApp e rastreamento em uma estrutura visual compativel com as configuracoes
+                    gerais, com menos contraste solto entre secoes.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-[var(--panel-text)]">Integracoes de IA</h2>
+            <p className="text-sm text-[var(--panel-text-muted)]">
               Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo cada funcionalidade deve usar.
             </p>
           </div>
@@ -755,13 +784,13 @@ export default function IntegrationsTab() {
                       : 'Nenhum modelo retornado pela API do provedor.';
 
               return (
-                <div key={provider} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div key={provider} className={sectionShellClass}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">{providerMeta.name}</h3>
-                      <p className="text-sm text-slate-500">{providerMeta.description}</p>
+                      <h3 className="text-lg font-semibold text-[var(--panel-text)]">{providerMeta.name}</h3>
+                      <p className="text-sm text-[var(--panel-text-muted)]">{providerMeta.description}</p>
                     </div>
-                    <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                    <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-2 text-sm text-[var(--panel-text-muted)]">
                       <input
                         type="checkbox"
                         checked={formState.enabled}
@@ -781,9 +810,9 @@ export default function IntegrationsTab() {
                   </div>
 
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">API Key</label>
+                    <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">API Key</label>
                     <div className="relative">
-                      <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--panel-text-muted)]" />
                       <input
                         type={showProviderApiKey[provider] ? 'text' : 'password'}
                         value={formState.apiKey}
@@ -796,7 +825,7 @@ export default function IntegrationsTab() {
                             },
                           }))
                         }
-                        className="w-full pl-10 pr-12 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full rounded-lg border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] py-2 pl-10 pr-12 text-[var(--panel-text)] placeholder:text-[var(--panel-text-muted)]/70 focus:border-[var(--panel-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-accent)]/20"
                         placeholder="Informe a API key"
                         autoComplete="off"
                       />
@@ -808,15 +837,15 @@ export default function IntegrationsTab() {
                             [provider]: !prev[provider],
                           }))
                         }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-muted)] hover:text-[var(--panel-text)]"
                       >
                         {showProviderApiKey[provider] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">{providerModelsHint}</p>
+                    <p className="mt-2 text-xs text-[var(--panel-text-muted)]">{providerModelsHint}</p>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
+                  <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
                     <Button
                       onClick={() => handleSaveProvider(provider)}
                       loading={savingAiProvider[provider]}
@@ -829,10 +858,10 @@ export default function IntegrationsTab() {
               );
             })}
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className={sectionShellClass}>
               <div className="mb-3">
-                <h3 className="text-lg font-semibold text-slate-900">Roteamento por funcionalidade</h3>
-                <p className="text-sm text-slate-500">
+                <h3 className="text-lg font-semibold text-[var(--panel-text)]">Roteamento por funcionalidade</h3>
+                <p className="text-sm text-[var(--panel-text-muted)]">
                   Escolha qual provedor/modelo cada funcionalidade de IA deve usar. Se falhar, pode cair para OpenAI automaticamente.
                 </p>
               </div>
@@ -863,15 +892,15 @@ export default function IntegrationsTab() {
                         : 'Nenhum modelo disponivel';
 
                   return (
-                    <div key={task.key} className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                    <div key={task.key} className={`${sectionInsetClass} space-y-3`}>
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">{task.label}</p>
-                        <p className="text-xs text-slate-500">{task.description}</p>
+                        <p className="text-sm font-semibold text-[var(--panel-text)]">{task.label}</p>
+                        <p className="text-xs text-[var(--panel-text-muted)]">{task.description}</p>
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">Provedor</label>
+                          <label className="mb-1 block text-xs font-medium text-[var(--panel-text-muted)]">Provedor</label>
                           <FilterSingleSelect
                             icon={Plug}
                             value={routeState.provider}
@@ -910,7 +939,7 @@ export default function IntegrationsTab() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">Modelo</label>
+                          <label className="mb-1 block text-xs font-medium text-[var(--panel-text-muted)]">Modelo</label>
                           <FilterSingleSelect
                             icon={Tag}
                             value={routeState.model}
@@ -929,7 +958,7 @@ export default function IntegrationsTab() {
                             size="compact"
                             disabled={providerModelsState.loading || modelOptions.length === 0}
                           />
-                          <p className="mt-1 text-[11px] text-slate-500">
+                          <p className="mt-1 text-[11px] text-[var(--panel-text-muted)]">
                             {providerModelsState.loading
                               ? 'Consultando modelos na API do provedor...'
                               : !providerApiKey
@@ -943,7 +972,7 @@ export default function IntegrationsTab() {
                         </div>
                       </div>
 
-                      <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                      <label className="inline-flex items-center gap-2 text-xs text-[var(--panel-text-muted)]">
                         <input
                           type="checkbox"
                           checked={routeState.fallbackToOpenAi}
@@ -965,7 +994,7 @@ export default function IntegrationsTab() {
                 })}
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
+              <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
                 <Button
                   onClick={handleSaveRouting}
                   loading={savingAiRouting}
@@ -976,17 +1005,17 @@ export default function IntegrationsTab() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className={sectionShellClass}>
               <div className="mb-3">
-                <h3 className="text-lg font-semibold text-slate-900">Follow-up no WhatsApp</h3>
-                <p className="text-sm text-slate-500">
+                <h3 className="text-lg font-semibold text-[var(--panel-text)]">Follow-up no WhatsApp</h3>
+                <p className="text-sm text-[var(--panel-text-muted)]">
                   Defina instrucoes extras para a IA ao gerar follow-ups direto do chat. O sistema continua enviando uma mensagem por linha.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Instrucoes adicionais</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">Instrucoes adicionais</label>
                   <VariableAutocompleteTextarea
                     value={aiFollowUpInstructions}
                     onChange={setAiFollowUpInstructions}
@@ -1002,16 +1031,16 @@ export default function IntegrationsTab() {
                       '- Quando fizer sentido, termine com uma CTA simples.'
                     }
                   />
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
                     Use este campo para orientar tom, abordagem comercial, limites e preferencias da sua operacao. Variaveis disponiveis: {'{{nome}}'}, {'{{primeiro_nome}}'}, {'{{data_hoje}}'}, {'{{hora_agora}}'} e {'{{data_hora_atual_brasilia}}'}.
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--panel-text-muted)]">
                     As datas e horas sao resolvidas no fuso de Brasilia. Nao precisa repetir regras basicas do sistema.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-slate-200 pt-4">
+              <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
                 <Button
                   onClick={handleSaveFollowUpPrompt}
                   loading={savingAiFollowUpPrompt}
@@ -1022,37 +1051,37 @@ export default function IntegrationsTab() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">WhatsApp (Whapi)</h2>
-            <p className="text-sm text-slate-500 mt-1">
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-[var(--panel-text)]">WhatsApp (Whapi)</h2>
+            <p className="text-sm text-[var(--panel-text-muted)]">
               Conecte o canal de WhatsApp para uso em fluxos e conversas.
             </p>
           </div>
-          <div className="space-y-6">
+          <div className={sectionShellClass}>
             <WhatsAppApiSettings />
           </div>
-        </div>
+        </section>
 
-        <div className="border-t border-slate-200 pt-8">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Rastreamento - Landing Page</h2>
-            <p className="text-sm text-slate-500 mt-1">
+        <section className="border-t border-[color:var(--panel-border-subtle)] pt-8">
+          <div className="mb-6 space-y-1">
+            <h2 className="text-xl font-semibold text-[var(--panel-text)]">Rastreamento - Landing Page</h2>
+            <p className="text-sm text-[var(--panel-text-muted)] mt-1">
               Configure os codigos de rastreamento para a pagina de conversao (/lp)
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className={sectionShellClass}>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 rounded-full bg-blue-100 text-blue-700">
+                <div className="rounded-full bg-amber-50 p-2 text-amber-700">
                   <Facebook className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Meta Pixel</h3>
-                  <p className="text-sm text-slate-500">Codigo de rastreamento do Facebook/Instagram</p>
+                  <h3 className="text-lg font-semibold text-[var(--panel-text)]">Meta Pixel</h3>
+                  <p className="text-sm text-[var(--panel-text-muted)]">Codigo de rastreamento do Facebook/Instagram</p>
                 </div>
               </div>
 
@@ -1069,7 +1098,7 @@ export default function IntegrationsTab() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Pixel ID</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">Pixel ID</label>
                 <Input
                   type="text"
                   value={metaPixelId}
@@ -1077,7 +1106,7 @@ export default function IntegrationsTab() {
                   className="focus:ring-orange-500"
                   placeholder="1234567890"
                 />
-                <p className="text-xs text-slate-500 mt-2">Ex: 1234567890 (somente numeros)</p>
+                <p className="mt-2 text-xs text-[var(--panel-text-muted)]">Ex: 1234567890 (somente numeros)</p>
               </div>
 
               <Button
@@ -1091,14 +1120,14 @@ export default function IntegrationsTab() {
               </Button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className={sectionShellClass}>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 rounded-full bg-green-100 text-green-700">
+                <div className="rounded-full bg-amber-50 p-2 text-amber-700">
                   <Tag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Google Tag Manager</h3>
-                  <p className="text-sm text-slate-500">Container do GTM para a landing page</p>
+                  <h3 className="text-lg font-semibold text-[var(--panel-text)]">Google Tag Manager</h3>
+                  <p className="text-sm text-[var(--panel-text-muted)]">Container do GTM para a landing page</p>
                 </div>
               </div>
 
@@ -1115,7 +1144,7 @@ export default function IntegrationsTab() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">GTM ID</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">GTM ID</label>
                 <Input
                   type="text"
                   value={gtmId}
@@ -1123,7 +1152,7 @@ export default function IntegrationsTab() {
                   className="focus:ring-orange-500"
                   placeholder="GTM-XXXXXXX"
                 />
-                <p className="text-xs text-slate-500 mt-2">Ex: GTM-ABC123D</p>
+                <p className="mt-2 text-xs text-[var(--panel-text-muted)]">Ex: GTM-ABC123D</p>
               </div>
 
               <Button
@@ -1138,11 +1167,11 @@ export default function IntegrationsTab() {
             </div>
           </div>
 
-          <div className="mt-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div className={`${sectionInsetClass} mt-6`}>
             <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-slate-500 mt-0.5" />
-              <div className="text-sm text-slate-600">
-                <p className="font-semibold">Como usar:</p>
+              <Info className="mt-0.5 h-5 w-5 text-amber-600" />
+              <div className="text-sm text-[var(--panel-text-muted)]">
+                <p className="font-semibold text-[var(--panel-text)]">Como usar:</p>
                 <p>
                   Essas configuracoes serao aplicadas automaticamente na landing page de conversao (/lp). Meta Pixel e GTM
                   ajudam a rastrear conversoes e otimizar campanhas.
@@ -1150,7 +1179,7 @@ export default function IntegrationsTab() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </PanelAdaptiveLoadingFrame>
   );

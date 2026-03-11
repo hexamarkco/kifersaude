@@ -4906,6 +4906,81 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     }
   };
 
+  const updateChatPinned = async (chatId: string, pinned: number) => {
+    const previousPinned = chatsRef.current.find((chat) => chat.id === chatId)?.pinned ?? 0;
+
+    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, pinned } : chat)).sort(sortChatsByLatest));
+    patchSelectedChat(chatId, { pinned });
+
+    const { data, error } = await supabase
+      .from('whatsapp_chats')
+      .update({ pinned, updated_at: new Date().toISOString() })
+      .eq('id', chatId)
+      .select('id')
+      .maybeSingle();
+
+    if (error || !data) {
+      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, pinned: previousPinned } : chat)).sort(sortChatsByLatest));
+      patchSelectedChat(chatId, { pinned: previousPinned });
+      console.error('Erro ao atualizar fixacao do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
+    }
+  };
+
+  const markChatAsUnread = async (chat: WhatsAppChat) => {
+    const activeUser = userRef.current;
+    if (!activeUser) return;
+
+    const chatIds = getChatIdVariants(chat);
+    if (chatIds.length === 0) return;
+
+    try {
+      const cachedMessages = messagesCacheRef.current.get(chat.id)?.messages ?? [];
+      let targetInbound = [...cachedMessages]
+        .filter((message) => chatIds.includes(message.chat_id) && message.direction === 'inbound')
+        .sort(sortMessagesChronologically)
+        .at(-1) ?? null;
+
+      if (!targetInbound) {
+        const { data, error } = await supabase
+          .from('whatsapp_messages')
+          .select('id, chat_id, direction, timestamp, created_at')
+          .in('chat_id', chatIds)
+          .eq('direction', 'inbound')
+          .order('timestamp', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        targetInbound = (data as WhatsAppMessage | null) ?? null;
+      }
+
+      if (targetInbound) {
+        const { error } = await supabase
+          .from('whatsapp_message_reads')
+          .delete()
+          .eq('message_id', targetInbound.id)
+          .eq('user_id', activeUser.id);
+
+        if (error) throw error;
+      }
+
+      setChats((prev) =>
+        prev.map((item) =>
+          item.id === chat.id
+            ? {
+                ...item,
+                unread_count: Math.max(1, item.unread_count ?? 0),
+              }
+            : item,
+        ),
+      );
+      scheduleUnreadCountsRefresh(50);
+    } catch (error) {
+      console.error('Erro ao marcar chat como nao lido:', error);
+    }
+  };
+
   const openReminderScheduler = (
     lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>,
     promptMessage?: string,
@@ -5700,7 +5775,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     onClick={() => selectChat(chat)}
                     onContextMenu={(event) => {
                       event.preventDefault();
-                      openChatContextMenu(chat.id, event.clientX, event.clientY);
+                      openChatContextMenu(chat.id, event.currentTarget.getBoundingClientRect(), 'row');
                     }}
                     className={`h-auto justify-start rounded-none border-b border-[var(--panel-border-subtle,#e7dac8)] p-4 text-left font-normal shadow-none transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] ${
                       selectedChat?.id === chat.id ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
@@ -5757,6 +5832,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         <p className="text-sm text-slate-600 truncate">
                           {formatChatListPreview(chat)}
                         </p>
+                        {(chat.pinned ?? 0) > 0 && (
+                          <span className="text-[10px] text-amber-700 whitespace-nowrap">Fixado</span>
+                        )}
                         {unreadWaitingLabel && (
                           <span className="text-[10px] text-rose-600 whitespace-nowrap">Aguardando {unreadWaitingLabel}</span>
                         )}

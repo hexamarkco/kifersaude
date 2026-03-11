@@ -6198,7 +6198,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
               <div
                 ref={messagesViewportRef}
-                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4"
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-1"
                 onScroll={handleMessagesViewportScroll}
               >
                 {hasOlderMessages && (

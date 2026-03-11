@@ -1114,7 +1114,7 @@ function MessageInputComponent({
             clearLinkPreviewDraft();
             setLinkPreviewDismissedUrl(null);
             if (onCancelReply) onCancelReply();
-            await sendLinkPreviewMessage(resolvedMessage || rawMessage, submitChatId, replyToMessage, {
+            await sendLinkPreviewMessage(resolvedMessage || rawMessage, submitChatId, replyToMessage ?? null, {
               title: previewTitle,
               description: linkPreviewDescription,
               canonical: previewCanonical,
@@ -2296,6 +2296,45 @@ function MessageInputComponent({
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {shouldShowInlineLinkPreview && (
+        <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+          <div className="comm-card overflow-hidden bg-[var(--panel-surface,#fffdfa)]">
+            {linkPreviewImage && (
+              <img
+                src={linkPreviewImage}
+                alt={linkPreviewTitle || 'Link preview'}
+                className="h-24 w-full object-cover bg-[var(--panel-surface-soft,#f4ede3)]"
+              />
+            )}
+            <div className="flex items-start justify-between gap-3 px-3 py-2">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="comm-muted truncate text-[11px]">
+                  {linkPreviewSiteName || getUrlHostname(linkPreviewCanonical || linkPreviewUrl || '')}
+                </div>
+                <div className="comm-title line-clamp-2 text-sm">
+                  {linkPreviewTitle || getUrlHostname(linkPreviewCanonical || linkPreviewUrl || '')}
+                </div>
+                {linkPreviewDescription && <div className="comm-text line-clamp-2 text-xs">{linkPreviewDescription}</div>}
+                {linkPreviewLoading && <div className="comm-muted text-[11px]">Carregando preview do link...</div>}
+                {!linkPreviewLoading && linkPreviewError && <div className="comm-muted text-[11px]">{linkPreviewError}</div>}
+              </div>
+              <button
+                type="button"
+                className="comm-icon-button p-1"
+                onClick={() => {
+                  setLinkPreviewDismissedUrl(linkPreviewUrl);
+                  clearLinkPreviewDraft();
+                }}
+                aria-label="Remover preview do link"
+                title="Remover preview do link"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

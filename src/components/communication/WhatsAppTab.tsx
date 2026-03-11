@@ -1984,7 +1984,13 @@ const sortChatsByLatest = (
   }, [selectedChat?.id, syncingChatId, isSyncingAllChats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const lastRenderedMessageId = renderedMessages[renderedMessages.length - 1]?.id ?? null;
+    const visibleMessages = messages.filter(
+      (message) =>
+        !isReactionOnlyMessage(message) &&
+        !isEditActionMessage(message) &&
+        !isTechnicalCiphertextMessage(message),
+    );
+    const lastRenderedMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
 
     if (shouldScrollOnChatChangeRef.current) {
       shouldScrollOnChatChangeRef.current = false;
@@ -2006,7 +2012,7 @@ const sortChatsByLatest = (
     }
 
     lastRenderedMessageIdRef.current = lastRenderedMessageId;
-  }, [renderedMessages, selectedChat]);
+  }, [messages, selectedChat]);
 
   useEffect(() => {
     const indexedMessages = new Map<string, WhatsAppMessage>();
@@ -2971,15 +2977,11 @@ const sortChatsByLatest = (
           const nextPreview = previewByChatId.get(chat.id);
           if (!nextPreview) return chat;
 
-          const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
-          const incomingTime = nextPreview.timestamp ? new Date(nextPreview.timestamp).getTime() : 0;
-          const shouldUpdateTime = incomingTime > 0 && (!currentTime || incomingTime >= currentTime);
-
           return {
             ...chat,
             last_message: nextPreview.preview,
             last_message_direction: nextPreview.direction,
-            last_message_at: shouldUpdateTime ? nextPreview.timestamp : chat.last_message_at,
+            last_message_at: nextPreview.timestamp || chat.last_message_at,
           };
         });
 
@@ -4935,10 +4937,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
     try {
       const cachedMessages = messagesCacheRef.current.get(chat.id)?.messages ?? [];
-      let targetInbound = [...cachedMessages]
+      let targetInbound: WhatsAppMessage | null = [...cachedMessages]
         .filter((message) => chatIds.includes(message.chat_id) && message.direction === 'inbound')
         .sort(sortMessagesChronologically)
-        .at(-1) ?? null;
+        .slice(-1)[0] ?? null;
 
       if (!targetInbound) {
         const { data, error } = await supabase

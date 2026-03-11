@@ -28,6 +28,7 @@ import ModalShell from '../ui/ModalShell';
 
 export type SentMessagePayload = {
   id: string;
+  local_ref?: string | null;
   chat_id: string;
   body: string | null;
   type: string | null;
@@ -35,8 +36,28 @@ export type SentMessagePayload = {
   timestamp: string;
   direction: 'outbound';
   created_at: string;
+  ack_status?: number | null;
+  send_state?: 'pending' | 'failed' | null;
+  error_message?: string | null;
+  retry_payload?: OutboundRetryPayload | null;
   payload?: Record<string, unknown> | null;
 };
+
+export type OutboundRetryPayload =
+  | {
+      kind: 'text';
+      content: string;
+      quotedMessageId?: string | null;
+    }
+  | {
+      kind: 'link_preview';
+      body: string;
+      title: string;
+      description?: string;
+      canonical?: string;
+      preview?: string;
+      quotedMessageId?: string | null;
+    };
 
 type FollowUpGenerationContext = {
   leadName?: string;
@@ -82,6 +103,7 @@ function MessageInputComponent({
   onCancelEdit,
   followUpContext,
 }: MessageInputProps) {
+  const createClientMessageId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
@@ -640,38 +662,90 @@ function MessageInputComponent({
 
   const sendPlainTextMessage = async (text: string, targetChatId: string = chatId) => {
     const resolvedText = applyTemplateVariables(text).trim() || text.trim();
-
-    const response = await sendWhatsAppMessage({
-      chatId: targetChatId,
-      contentType: 'string',
-      content: resolvedText,
-      quotedMessageId: replyToMessage?.id,
-    });
-
+    const localRef = createClientMessageId();
     const sentAt = new Date().toISOString();
-    const { normalizedChatId, messageId } = await persistOutboundMessage({
-      response,
-      chatId: targetChatId,
-      type: 'text',
-      body: resolvedText,
-      hasMedia: false,
-      sentAt,
-    });
-
-    const textPayload: SentMessagePayload = {
-      id: messageId,
-      chat_id: normalizedChatId,
-      body: resolvedText,
-      type: 'text',
-      has_media: false,
-      timestamp: sentAt,
-      direction: 'outbound',
-      created_at: sentAt,
-      payload: response,
+    const normalizedChatId = normalizeChatId(targetChatId);
+    const retryPayload: OutboundRetryPayload = {
+      kind: 'text',
+      content: resolvedText,
+      quotedMessageId: replyToMessage?.id ?? null,
     };
 
-    if (onMessageSent) onMessageSent(textPayload);
-    return textPayload;
+    if (onMessageSent) {
+      onMessageSent({
+        id: localRef,
+        local_ref: localRef,
+        chat_id: normalizedChatId,
+        body: resolvedText,
+        type: 'text',
+        has_media: false,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        ack_status: 1,
+        send_state: 'pending',
+        error_message: null,
+        retry_payload: retryPayload,
+      });
+    }
+
+    try {
+      const response = await sendWhatsAppMessage({
+        chatId: targetChatId,
+        contentType: 'string',
+        content: resolvedText,
+        quotedMessageId: replyToMessage?.id,
+      });
+
+      const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+        response,
+        chatId: targetChatId,
+        type: 'text',
+        body: resolvedText,
+        hasMedia: false,
+        sentAt,
+      });
+
+      const textPayload: SentMessagePayload = {
+        id: messageId,
+        local_ref: localRef,
+        chat_id: persistedChatId,
+        body: resolvedText,
+        type: 'text',
+        has_media: false,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        ack_status: 2,
+        send_state: null,
+        error_message: null,
+        retry_payload: null,
+        payload: response,
+      };
+
+      if (onMessageSent) onMessageSent(textPayload);
+      return textPayload;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+      if (onMessageSent) {
+        onMessageSent({
+          id: localRef,
+          local_ref: localRef,
+          chat_id: normalizedChatId,
+          body: resolvedText,
+          type: 'text',
+          has_media: false,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          ack_status: 0,
+          send_state: 'failed',
+          error_message: errorMessage,
+          retry_payload: retryPayload,
+        });
+      }
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -894,43 +968,116 @@ function MessageInputComponent({
           clearLinkPreviewDraft();
           if (onCancelReply) onCancelReply();
 
-          const response = await sendWhatsAppMessage({
-            chatId: submitChatId,
-            contentType: 'LinkPreview',
-            content: {
-              body: draftMessage,
-              title: draftLinkPreview.title.trim(),
-              description: draftLinkPreview.description.trim() || undefined,
-              canonical: draftLinkPreview.canonical.trim() || undefined,
-              preview: draftLinkPreview.image.trim() || undefined,
-            },
-            quotedMessageId: draftReplyToMessage?.id,
-          });
-
           const bodyText = draftMessage;
           const sentAt = new Date().toISOString();
-          const { normalizedChatId, messageId } = await persistOutboundMessage({
-            response,
-            chatId: submitChatId,
-            type: 'link_preview',
+          const localRef = createClientMessageId();
+          const normalizedChatId = normalizeChatId(submitChatId);
+          const retryPayload: OutboundRetryPayload = {
+            kind: 'link_preview',
             body: bodyText,
-            hasMedia: true,
-            sentAt,
-          });
-
-          const textPayload: SentMessagePayload = {
-            id: messageId,
-            chat_id: normalizedChatId,
-            body: bodyText,
-            type: 'link_preview',
-            has_media: true,
-            timestamp: sentAt,
-            direction: 'outbound',
-            created_at: sentAt,
-            payload: response,
+            title: draftLinkPreview.title.trim(),
+            description: draftLinkPreview.description.trim() || undefined,
+            canonical: draftLinkPreview.canonical.trim() || undefined,
+            preview: draftLinkPreview.image.trim() || undefined,
+            quotedMessageId: draftReplyToMessage?.id ?? null,
           };
 
-          if (onMessageSent) onMessageSent(textPayload);
+          if (onMessageSent) {
+            onMessageSent({
+              id: localRef,
+              local_ref: localRef,
+              chat_id: normalizedChatId,
+              body: bodyText,
+              type: 'link_preview',
+              has_media: true,
+              timestamp: sentAt,
+              direction: 'outbound',
+              created_at: sentAt,
+              ack_status: 1,
+              send_state: 'pending',
+              error_message: null,
+              retry_payload: retryPayload,
+              payload: {
+                link_preview: {
+                  title: retryPayload.title,
+                  description: retryPayload.description,
+                  canonical: retryPayload.canonical,
+                  preview: retryPayload.preview,
+                },
+              },
+            });
+          }
+
+          try {
+            const response = await sendWhatsAppMessage({
+              chatId: submitChatId,
+              contentType: 'LinkPreview',
+              content: {
+                body: bodyText,
+                title: retryPayload.title,
+                description: retryPayload.description,
+                canonical: retryPayload.canonical,
+                preview: retryPayload.preview,
+              },
+              quotedMessageId: draftReplyToMessage?.id,
+            });
+
+            const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+              response,
+              chatId: submitChatId,
+              type: 'link_preview',
+              body: bodyText,
+              hasMedia: true,
+              sentAt,
+            });
+
+            const textPayload: SentMessagePayload = {
+              id: messageId,
+              local_ref: localRef,
+              chat_id: persistedChatId,
+              body: bodyText,
+              type: 'link_preview',
+              has_media: true,
+              timestamp: sentAt,
+              direction: 'outbound',
+              created_at: sentAt,
+              ack_status: 2,
+              send_state: null,
+              error_message: null,
+              retry_payload: null,
+              payload: response,
+            };
+
+            if (onMessageSent) onMessageSent(textPayload);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+            if (onMessageSent) {
+              onMessageSent({
+                id: localRef,
+                local_ref: localRef,
+                chat_id: normalizedChatId,
+                body: bodyText,
+                type: 'link_preview',
+                has_media: true,
+                timestamp: sentAt,
+                direction: 'outbound',
+                created_at: sentAt,
+                ack_status: 0,
+                send_state: 'failed',
+                error_message: errorMessage,
+                retry_payload: retryPayload,
+                payload: {
+                  link_preview: {
+                    title: retryPayload.title,
+                    description: retryPayload.description,
+                    canonical: retryPayload.canonical,
+                    preview: retryPayload.preview,
+                  },
+                },
+              });
+            }
+            throw error;
+          }
         } else {
           setMessage('');
           if (onCancelReply) onCancelReply();
@@ -939,13 +1086,6 @@ function MessageInputComponent({
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      if (activeChatIdRef.current === submitChatId) {
-        if (rawMessage) {
-          setMessage(rawMessage);
-        }
-      }
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-      alert(errorMessage || 'Erro ao enviar mensagem');
     } finally {
       setIsSending(false);
     }
@@ -2288,7 +2428,7 @@ function MessageInputComponent({
                   {isDirectChat && (
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         setShowComposerActionsMenu(false);
                         handleOpenFollowUp();
@@ -2301,7 +2441,7 @@ function MessageInputComponent({
                   )}
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       setShowComposerActionsMenu(false);
                       handleOpenRewrite();
@@ -2313,7 +2453,7 @@ function MessageInputComponent({
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--panel-surface-soft,#f8f2ea)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleOpenQuickRepliesMenu}
                     disabled={isSending}
                   >

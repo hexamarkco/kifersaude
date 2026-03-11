@@ -25,7 +25,7 @@ import {
   CalendarPlus,
   Loader2,
 } from 'lucide-react';
-import { MessageInput, type SentMessagePayload } from './MessageInput';
+import { MessageInput, type OutboundRetryPayload, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -59,6 +59,7 @@ import {
   normalizeChatId,
   reactToMessage,
   removeReactionFromMessage,
+  sendWhatsAppMessage,
   type WhapiChat,
   type WhapiGroup,
 } from '../../lib/whatsappApiService';
@@ -91,6 +92,7 @@ type WhatsAppChat = {
 
 type WhatsAppMessage = {
   id: string;
+  local_ref?: string | null;
   chat_id: string;
   from_number: string | null;
   to_number: string | null;
@@ -100,6 +102,9 @@ type WhatsAppMessage = {
   timestamp: string | null;
   direction: 'inbound' | 'outbound' | null;
   ack_status: number | null;
+  send_state?: 'pending' | 'failed' | null;
+  error_message?: string | null;
+  retry_payload?: OutboundRetryPayload | null;
   created_at: string;
   payload?: WhatsAppMessagePayload | null;
   is_deleted?: boolean;
@@ -588,16 +593,25 @@ export default function WhatsAppTab() {
 
   const isClientGeneratedMessageId = (id: string) => id.startsWith('local-') || id.startsWith('msg-');
 
+  const extractResponseMessageId = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+  };
+
   const normalizeMessageBodyForMatch = (value: string | null | undefined) =>
     (value || '')
       .replace(/\s+/g, ' ')
       .trim();
 
   const isLikelyOutboundDuplicateMessage = (
-    left: Pick<WhatsAppMessage, 'id' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
-    right: Pick<WhatsAppMessage, 'id' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
+    left: Pick<WhatsAppMessage, 'id' | 'local_ref' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
+    right: Pick<WhatsAppMessage, 'id' | 'local_ref' | 'direction' | 'body' | 'type' | 'has_media' | 'timestamp' | 'created_at'>,
   ) => {
     if (left.id === right.id) return true;
+    if (left.local_ref && right.local_ref && left.local_ref === right.local_ref) return true;
+    if (left.local_ref && left.local_ref === right.id) return true;
+    if (right.local_ref && right.local_ref === left.id) return true;
     if (left.direction !== 'outbound' || right.direction !== 'outbound') return false;
     if (!isClientGeneratedMessageId(left.id) && !isClientGeneratedMessageId(right.id)) return false;
 
@@ -615,11 +629,12 @@ export default function WhatsAppTab() {
   };
 
   const getMessageMergeScore = (
-    message: Pick<WhatsAppMessage, 'id' | 'ack_status' | 'timestamp' | 'payload' | 'created_at'>,
+    message: Pick<WhatsAppMessage, 'id' | 'ack_status' | 'timestamp' | 'payload' | 'created_at' | 'send_state'>,
   ) => {
     let score = 0;
     if (!isClientGeneratedMessageId(message.id)) score += 4;
     if (typeof message.ack_status === 'number') score += 2;
+    if (message.send_state === 'failed') score -= 1;
     if (message.timestamp) score += 1;
     if (message.payload && typeof message.payload === 'object') score += 1;
     if (message.created_at) score += 1;
@@ -715,10 +730,14 @@ export default function WhatsAppTab() {
       ...fallback,
       ...preferred,
       id: preferred.id,
+      local_ref: preferred.local_ref ?? fallback.local_ref ?? null,
       ack_status: mergeAckStatusForDisplay(fallback.ack_status, preferred.ack_status),
       body: preferred.body ?? fallback.body,
       timestamp: preferred.timestamp ?? fallback.timestamp,
       payload: mergeMessagePayloadForDisplay(fallback.payload, preferred.payload),
+      send_state: preferred.send_state ?? fallback.send_state ?? null,
+      error_message: preferred.error_message ?? fallback.error_message ?? null,
+      retry_payload: preferred.retry_payload ?? fallback.retry_payload ?? null,
       created_at: preferred.created_at || fallback.created_at,
     };
   };
@@ -2252,6 +2271,174 @@ export default function WhatsAppTab() {
     setEditMessage(null);
   };
 
+  const persistRetriedOutboundMessage = async (params: {
+    response: unknown;
+    chatId: string;
+    type: string;
+    body: string;
+    hasMedia: boolean;
+    sentAt: string;
+  }) => {
+    const { response, chatId: rawChatId, type, body, hasMedia, sentAt } = params;
+    const normalizedChatId = normalizeChatId(rawChatId);
+    const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : null;
+
+    const nestedMessageId =
+      responsePayload?.message && typeof responsePayload.message === 'object'
+        ? extractResponseMessageId((responsePayload.message as Record<string, unknown>).id)
+        : null;
+    const firstArrayMessageId =
+      Array.isArray(responsePayload?.messages) &&
+      responsePayload.messages.length > 0 &&
+      responsePayload.messages[0] &&
+      typeof responsePayload.messages[0] === 'object'
+        ? extractResponseMessageId((responsePayload.messages[0] as Record<string, unknown>).id)
+        : null;
+    const persistedMessageId =
+      extractResponseMessageId(responsePayload?.id) || nestedMessageId || firstArrayMessageId;
+    const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    if (persistedMessageId) {
+      const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
+        id: persistedMessageId,
+        chat_id: normalizedChatId,
+        from_number: null,
+        to_number: normalizedChatId,
+        type,
+        body,
+        has_media: hasMedia,
+        timestamp: sentAt,
+        direction: 'outbound',
+        payload: responsePayload,
+      });
+
+      if (insertError) {
+        console.warn('Erro ao salvar mensagem reenviada no banco:', insertError);
+      }
+    }
+
+    return { normalizedChatId, messageId, payload: responsePayload };
+  };
+
+  const patchMessageById = (
+    chatId: string,
+    messageId: string,
+    updater: (message: WhatsAppMessage) => WhatsAppMessage | null,
+  ) => {
+    const apply = (items: WhatsAppMessage[]) =>
+      items
+        .flatMap((message) => {
+          if (message.id !== messageId) return [message];
+          const next = updater(message);
+          return next ? [next] : [];
+        })
+        .sort(sortMessagesChronologically);
+
+    if (selectedChatRef.current && getChatIdVariants(selectedChatRef.current).includes(chatId)) {
+      setMessages((prev) => apply(prev));
+    }
+
+    const targetChat = chatsRef.current.find((chat) => getChatIdVariants(chat).includes(chatId));
+    const cacheKey = targetChat?.id || chatId;
+    const cachedState = messagesCacheRef.current.get(cacheKey);
+    if (cachedState) {
+      messagesCacheRef.current.set(cacheKey, {
+        ...cachedState,
+        messages: apply(cachedState.messages),
+      });
+    }
+  };
+
+  const removeFailedMessage = (chatId: string, messageId: string) => {
+    patchMessageById(chatId, messageId, () => null);
+  };
+
+  const retryFailedMessage = async (message: WhatsAppMessage) => {
+    if (!message.retry_payload) return;
+
+    patchMessageById(message.chat_id, message.id, (current) => ({
+      ...current,
+      ack_status: 1,
+      send_state: 'pending',
+      error_message: null,
+    }));
+
+    try {
+      let response: unknown;
+      let body = message.body || '';
+      let type = message.type || 'text';
+      let hasMedia = message.has_media;
+
+      switch (message.retry_payload.kind) {
+        case 'text':
+          response = await sendWhatsAppMessage({
+            chatId: message.chat_id,
+            contentType: 'string',
+            content: message.retry_payload.content,
+            quotedMessageId: message.retry_payload.quotedMessageId || undefined,
+          });
+          body = message.retry_payload.content;
+          type = 'text';
+          hasMedia = false;
+          break;
+        case 'link_preview':
+          response = await sendWhatsAppMessage({
+            chatId: message.chat_id,
+            contentType: 'LinkPreview',
+            content: {
+              body: message.retry_payload.body,
+              title: message.retry_payload.title,
+              description: message.retry_payload.description,
+              canonical: message.retry_payload.canonical,
+              preview: message.retry_payload.preview,
+            },
+            quotedMessageId: message.retry_payload.quotedMessageId || undefined,
+          });
+          body = message.retry_payload.body;
+          type = 'link_preview';
+          hasMedia = true;
+          break;
+        default:
+          return;
+      }
+
+      const sentAt = new Date().toISOString();
+      const persisted = await persistRetriedOutboundMessage({
+        response,
+        chatId: message.chat_id,
+        type,
+        body,
+        hasMedia,
+        sentAt,
+      });
+
+      handleMessageSent({
+        id: persisted.messageId,
+        local_ref: message.local_ref || message.id,
+        chat_id: persisted.normalizedChatId,
+        body,
+        type,
+        has_media: hasMedia,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        ack_status: 2,
+        send_state: null,
+        error_message: null,
+        retry_payload: null,
+        payload: persisted.payload,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao reenviar mensagem';
+      patchMessageById(message.chat_id, message.id, (current) => ({
+        ...current,
+        ack_status: 0,
+        send_state: 'failed',
+        error_message: errorMessage,
+      }));
+    }
+  };
+
   const handleMessageSent = (message?: SentMessagePayload) => {
     if (message) {
       const timestamp = message.timestamp || new Date().toISOString();
@@ -2268,6 +2455,10 @@ export default function WhatsAppTab() {
         ack_status: null,
         created_at: message.created_at || timestamp,
         payload: message.payload,
+        local_ref: message.local_ref,
+        send_state: message.send_state,
+        error_message: message.error_message,
+        retry_payload: message.retry_payload,
       };
       const targetChat = chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id)) ?? null;
       const targetChatId = targetChat?.id || message.chat_id;
@@ -5606,6 +5797,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           direction={message.direction || 'inbound'}
                           timestamp={getMessageDisplayTimestamp(message)}
                           ackStatus={message.ack_status}
+                          sendState={message.send_state}
+                          errorMessage={message.error_message}
                           hasMedia={message.has_media}
                           payload={message.payload}
                           reactions={reactions}
@@ -5618,6 +5811,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           onReact={isSelectedStatusChat ? undefined : handleReact}
                           onReply={isSelectedStatusChat ? undefined : handleReply}
                           onEdit={isSelectedStatusChat ? undefined : handleEdit}
+                          onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
+                          onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
                         />
                       </div>

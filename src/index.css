@@ -1863,6 +1863,23 @@
   background: rgba(246, 228, 199, 0.72);
 }
 
+.comm-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  color: var(--panel-text-soft, #5b4635);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.comm-menu-item:hover {
+  background: var(--panel-surface-soft, #f4ede3);
+  color: var(--panel-text, #1a120d);
+}
+
 .comm-banner {
   border-bottom: 1px solid var(--panel-border-subtle, #e7dac8);
   background: var(--panel-surface-muted, #f7f0e7);

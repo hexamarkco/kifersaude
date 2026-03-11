@@ -19,6 +19,8 @@ interface MessageBubbleProps {
   direction: 'inbound' | 'outbound';
   timestamp: string | null;
   ackStatus: number | null;
+  sendState?: 'pending' | 'failed' | null;
+  errorMessage?: string | null;
   hasMedia: boolean;
   payload?: MessagePayload | null;
   reactions?: Array<{ emoji: string; count: number }>;
@@ -31,6 +33,8 @@ interface MessageBubbleProps {
   onReply?: (messageId: string, body: string, from: string) => void;
   onEdit?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
+  onRetryFailed?: () => void;
+  onDismissFailed?: () => void;
   onTranscriptionSaved?: (messageId: string, payload: MessagePayload) => void;
 }
 
@@ -136,6 +140,8 @@ export function MessageBubble({
   direction,
   timestamp,
   ackStatus,
+  sendState,
+  errorMessage,
   hasMedia,
   payload,
   reactions,
@@ -146,6 +152,8 @@ export function MessageBubble({
   onReply,
   onEdit,
   onReact,
+  onRetryFailed,
+  onDismissFailed,
   onTranscriptionSaved,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
@@ -186,6 +194,8 @@ export function MessageBubble({
     setShowActionMenu(false);
     setShowReactionPicker(false);
   }, []);
+
+  const showFailedActions = isOutbound && sendState === 'failed' && (onRetryFailed || onDismissFailed);
 
   const repositionActionMenu = useCallback(() => {
     const menu = actionMenuRef.current;
@@ -1128,6 +1138,32 @@ export function MessageBubble({
               )}
             </div>
           </div>
+
+          {showFailedActions && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-red-200/80 pt-2">
+              <span className="text-xs text-red-700">
+                {errorMessage?.trim() || 'Nao foi possivel enviar.'}
+              </span>
+              {onRetryFailed && (
+                <button
+                  type="button"
+                  onClick={onRetryFailed}
+                  className="text-xs font-medium text-red-700 underline-offset-2 hover:text-red-800 hover:underline"
+                >
+                  Tentar novamente
+                </button>
+              )}
+              {onDismissFailed && (
+                <button
+                  type="button"
+                  onClick={onDismissFailed}
+                  className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                >
+                  Ignorar
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {hasActionMenu && (

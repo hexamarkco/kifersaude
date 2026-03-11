@@ -699,13 +699,16 @@ const resolveStoredChatPreview = (message: {
   return null;
 };
 
+const normalizeChatPreviewDirection = (value: string | null | undefined): 'inbound' | 'outbound' | null =>
+  value === 'inbound' || value === 'outbound' ? value : null;
+
 const refreshChatLastMessageState = async (chatId: string) => {
   const normalizedChatId = toCleanText(chatId);
   if (!normalizedChatId) return;
 
   const { data: recentMessages, error: recentMessagesError } = await supabase
     .from('whatsapp_messages')
-    .select('timestamp, created_at, body, type, payload, has_media, is_deleted')
+    .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
     .eq('chat_id', normalizedChatId)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
@@ -717,21 +720,27 @@ const refreshChatLastMessageState = async (chatId: string) => {
 
   const latestMessage = (recentMessages || [])[0];
   const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
-  const nextLastMessage =
-    (recentMessages || [])
-      .map((message) => resolveStoredChatPreview(message as {
+  const latestMeaningfulMessage = (recentMessages || []).find((message) =>
+    Boolean(
+      resolveStoredChatPreview(message as {
         body?: string | null;
         type?: string | null;
         payload?: unknown;
         has_media?: boolean | null;
         is_deleted?: boolean | null;
-      }))
-      .find((preview): preview is string => Boolean(preview)) ?? null;
+      }),
+    ),
+  ) as { body?: string | null; type?: string | null; payload?: unknown; has_media?: boolean | null; is_deleted?: boolean | null; direction?: string | null } | undefined;
+  const nextLastMessage = latestMeaningfulMessage
+    ? resolveStoredChatPreview(latestMeaningfulMessage)
+    : null;
+  const nextLastMessageDirection = normalizeChatPreviewDirection(latestMeaningfulMessage?.direction ?? null);
 
   const { error: updateError } = await supabase
     .from('whatsapp_chats')
     .update({
       last_message: nextLastMessage,
+      last_message_direction: nextLastMessageDirection,
       last_message_at: nextLastMessageAt,
       updated_at: new Date().toISOString(),
     })
@@ -883,7 +892,7 @@ Deno.serve(async (req) => {
     const messageChatName = messageChatNameRaw && messageChatNameRaw !== resolvedRequestedChatId ? messageChatNameRaw : null;
     const { data: existingChat } = await supabase
       .from('whatsapp_chats')
-      .select('name, last_message_at, last_message, phone_number, lid')
+      .select('name, last_message_at, last_message, last_message_direction, phone_number, lid')
       .eq('id', resolvedRequestedChatId)
       .maybeSingle();
 
@@ -920,6 +929,7 @@ Deno.serve(async (req) => {
           chatKind === 'direct' ? extractChatPhoneNumber(resolvedRequestedChatId) ?? existingChat?.phone_number ?? null : null,
         lid: chatKind === 'direct' ? extractChatLid(resolvedRequestedChatId) ?? existingChat?.lid ?? null : null,
         last_message: existingChat?.last_message ?? null,
+        last_message_direction: existingChat?.last_message_direction ?? null,
         last_message_at: nextLastMessageAt,
         updated_at: nowIso,
       },

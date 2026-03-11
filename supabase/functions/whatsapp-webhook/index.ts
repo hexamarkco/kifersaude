@@ -1261,6 +1261,35 @@ function mergeChatPreview(
   return toCleanText(existingPreview) || null;
 }
 
+function mergeChatPreviewDirection(
+  existingDirection: string | null | undefined,
+  incomingDirection: 'inbound' | 'outbound' | null | undefined,
+  existingLastMessageAt: string | null | undefined,
+  incomingLastMessageAt: string | null | undefined,
+  incomingPreview: string | null,
+): 'inbound' | 'outbound' | null {
+  const normalizedExisting =
+    existingDirection === 'inbound' || existingDirection === 'outbound' ? existingDirection : null;
+  const normalizedIncoming =
+    incomingDirection === 'inbound' || incomingDirection === 'outbound' ? incomingDirection : null;
+
+  if (!incomingPreview || !normalizedIncoming) {
+    return normalizedExisting;
+  }
+
+  const incomingMillis = toEpochMillis(incomingLastMessageAt);
+  const existingMillis = toEpochMillis(existingLastMessageAt);
+  if (Number.isNaN(incomingMillis)) {
+    return normalizedIncoming;
+  }
+
+  if (Number.isNaN(existingMillis) || incomingMillis >= existingMillis) {
+    return normalizedIncoming;
+  }
+
+  return normalizedExisting;
+}
+
 function shouldReplaceProvisionalMessageWithFetched(original: WhapiMessage, fetched: WhapiMessage): boolean {
   if (toCleanText(original.id) !== toCleanText(fetched.id)) {
     return false;
@@ -2087,7 +2116,7 @@ async function ensureStatusResolvedChatExists(
   const nowIso = new Date().toISOString();
   const { data: existingChat, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, name, is_group, phone_number, lid, last_message_at, last_message')
+    .select('id, name, is_group, phone_number, lid, last_message_at, last_message, last_message_direction')
     .eq('id', targetChatId)
     .maybeSingle();
 
@@ -2130,6 +2159,7 @@ async function ensureStatusResolvedChatExists(
       phone_number: isDirect ? phoneNumber : null,
       lid: isDirect ? lid : null,
       last_message: existingChat?.last_message ?? null,
+      last_message_direction: existingChat?.last_message_direction ?? null,
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
     },
@@ -2150,7 +2180,7 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
 
   const { data: recentMessages, error: latestMessageError } = await supabase
     .from('whatsapp_messages')
-    .select('timestamp, created_at, body, type, payload, has_media, is_deleted')
+    .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
     .eq('chat_id', normalizedChatId)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
@@ -2176,10 +2206,26 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
         is_deleted?: boolean | null;
       }))
       .find((preview): preview is string => Boolean(preview)) ?? null;
+  const nextLastMessageDirection =
+    ((recentMessages || []).find((message) =>
+      Boolean(
+        resolveStoredChatPreview(message as {
+          body?: string | null;
+          type?: string | null;
+          payload?: unknown;
+          has_media?: boolean | null;
+          is_deleted?: boolean | null;
+        }),
+      ),
+    ) as { direction?: string | null } | undefined)?.direction ?? null;
   const { error: updateError } = await supabase
     .from('whatsapp_chats')
     .update({
       last_message: nextLastMessage,
+      last_message_direction:
+        nextLastMessageDirection === 'inbound' || nextLastMessageDirection === 'outbound'
+          ? nextLastMessageDirection
+          : null,
       last_message_at: nextLastMessageAt,
       updated_at: new Date().toISOString(),
     })
@@ -2694,7 +2740,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
   const { data: existingChatById, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, lid, phone_number, last_message_at, last_message')
+    .select('id, lid, phone_number, last_message_at, last_message, last_message_direction')
     .eq('id', message.chatId)
     .maybeSingle();
 
@@ -2720,7 +2766,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
 
       const { data: existingChat } = await supabase
         .from('whatsapp_chats')
-        .select('lid, last_message_at, last_message')
+        .select('lid, last_message_at, last_message, last_message_direction')
         .eq('id', preferredChatId)
         .maybeSingle();
 
@@ -2738,6 +2784,13 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
           incomingPreview,
           existingChat?.last_message_at,
           incomingActivityAt,
+        ),
+        last_message_direction: mergeChatPreviewDirection(
+          existingChat?.last_message_direction,
+          message.direction,
+          existingChat?.last_message_at,
+          incomingActivityAt,
+          incomingPreview,
         ),
         updated_at: nowIso,
       };
@@ -2784,6 +2837,13 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
         incomingPreview,
         existingChatById?.last_message_at,
         incomingActivityAt,
+      ),
+      last_message_direction: mergeChatPreviewDirection(
+        existingChatById?.last_message_direction,
+        message.direction,
+        existingChatById?.last_message_at,
+        incomingActivityAt,
+        incomingPreview,
       ),
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
@@ -3419,7 +3479,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
 
   const { data: existingChat, error: existingChatError } = await supabase
     .from('whatsapp_chats')
-    .select('id, name, is_group, phone_number, lid, last_message_at, last_message')
+    .select('id, name, is_group, phone_number, lid, last_message_at, last_message, last_message_direction')
     .eq('id', chatId)
     .maybeSingle();
 
@@ -3442,6 +3502,15 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
     existingChat?.last_message_at,
     referenceTimestamp,
   );
+  const nextLastMessageDirection = mergeChatPreviewDirection(
+    existingChat?.last_message_direction,
+    rawCandidate && typeof rawCandidate === 'object'
+      ? (((rawCandidate as { from_me?: boolean }).from_me ? 'outbound' : 'inbound') as 'inbound' | 'outbound')
+      : null,
+    existingChat?.last_message_at,
+    referenceTimestamp,
+    resolveWhapiChatPreview(toWhapiMessageFromChatUpdate(update)),
+  );
 
   const fallbackName =
     chatType === 'status'
@@ -3460,6 +3529,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
       phone_number: isDirectChat ? phoneNumber ?? existingChat?.phone_number ?? null : null,
       lid: chatType === 'lid' ? lid : existingChat?.lid ?? null,
       last_message: nextLastMessage,
+      last_message_direction: nextLastMessageDirection,
       last_message_at: nextLastMessageAt,
       updated_at: nowIso,
     },

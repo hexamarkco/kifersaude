@@ -24,11 +24,14 @@ import {
   ChevronDown,
   CalendarPlus,
   Loader2,
+  Pin,
+  Circle,
+  ExternalLink,
 } from 'lucide-react';
 import { MessageInput, type OutboundRetryPayload, type SentMessagePayload } from './MessageInput';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../lib/supabase';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import StatusDropdown from '../StatusDropdown';
 import ModalShell from '../ui/ModalShell';
 import Button from '../ui/Button';
@@ -86,6 +89,7 @@ type WhatsAppChat = {
   last_message_direction?: 'inbound' | 'outbound' | null;
   unread_count?: number;
   archived?: boolean | null;
+  pinned?: number | null;
   mute_until?: string | null;
 };
 
@@ -174,6 +178,21 @@ type ReminderQuickOpenSchedulerDefaults = {
 };
 
 type ChatLeadPresenceFilter = 'all' | 'withLead' | 'withoutLead';
+
+type ChatMenuSource = 'row' | 'header-button';
+
+type ChatMenuState = {
+  chatId: string;
+  anchorRect: {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+  };
+  source: ChatMenuSource;
+};
 
 const EMPTY_FILTER_VALUE = '__empty__';
 
@@ -307,6 +326,7 @@ const resolveInternationalPhoneParts = (digits: string): { countryCode: string; 
 
 
 export default function WhatsAppTab() {
+  const { handleTabChange } = useOutletContext<{ handleTabChange: (tab: string, options?: { leadIdFilter?: string }) => void }>();
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<WhatsAppChat | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
@@ -345,8 +365,9 @@ export default function WhatsAppTab() {
     desktopNotificationsEnabled,
     notificationPermission,
   } = useWhatsAppInboxPreferences();
-  const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
+  const [chatMenu, setChatMenu] = useState<ChatMenuState | null>(null);
   const [chatMenuMuteOpen, setChatMenuMuteOpen] = useState(false);
+  const [chatMenuStatusOpen, setChatMenuStatusOpen] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
@@ -361,6 +382,7 @@ export default function WhatsAppTab() {
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
   const [isCopyingChat, setIsCopyingChat] = useState(false);
+  const [pendingMessagesBelow, setPendingMessagesBelow] = useState(0);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
@@ -384,9 +406,11 @@ export default function WhatsAppTab() {
     defaults?: ReminderQuickOpenSchedulerDefaults;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatSegmentsMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedChatFiltersRef = useRef<HTMLDivElement | null>(null);
+  const chatMenuRef = useRef<HTMLDivElement | null>(null);
   const chatsRef = useRef<WhatsAppChat[]>([]);
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
@@ -403,7 +427,9 @@ export default function WhatsAppTab() {
   const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
   const autoSyncSelectedChatInFlightRef = useRef(false);
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
-  const skipNextAutoScrollRef = useRef(false);
+  const statusMenuCloseTimeoutRef = useRef<number | null>(null);
+  const shouldScrollOnChatChangeRef = useRef(false);
+  const lastRenderedMessageIdRef = useRef<string | null>(null);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
   const lastGroupNamesSyncAtRef = useRef(0);
@@ -455,6 +481,61 @@ export default function WhatsAppTab() {
 
     return digits;
   }
+
+  const normalizeSearchText = (value: string | null | undefined) =>
+    (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const getPayloadSearchTerms = (payload: WhatsAppMessagePayload | null | undefined): string[] => {
+    if (!payload || typeof payload !== 'object') return [];
+
+    const payloadCandidates = [
+      payload,
+      payload.media,
+      payload.audio,
+      payload.voice,
+      payload.image,
+      payload.video,
+      payload.document,
+      payload.link_preview,
+      payload.contact,
+      payload.contact_list,
+    ].filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'));
+
+    return payloadCandidates.flatMap((item) => {
+      const filename = typeof item.filename === 'string' ? item.filename : '';
+      const name = typeof item.name === 'string' ? item.name : '';
+      const title = typeof item.title === 'string' ? item.title : '';
+      const description = typeof item.description === 'string' ? item.description : '';
+      const caption = typeof item.caption === 'string' ? item.caption : '';
+      const body = typeof item.body === 'string' ? item.body : '';
+      const url = typeof item.url === 'string' ? item.url : '';
+      const link = typeof item.link === 'string' ? item.link : '';
+      const canonical = typeof item.canonical === 'string' ? item.canonical : '';
+
+      return [filename, name, title, description, caption, body, url, link, canonical].filter(Boolean);
+    });
+  };
+
+  const getMessageSearchHaystack = (message: WhatsAppMessage) =>
+    normalizeSearchText(
+      [
+        resolveWhatsAppMessageBody({
+          body: message.body,
+          type: message.type,
+          payload: message.payload,
+        }),
+        message.body,
+        message.type,
+        ...getPayloadSearchTerms(message.payload),
+      ]
+        .filter(Boolean)
+        .join(' '),
+    );
 
   const collectPhoneMatchKeys = (value: string | null | undefined): string[] => {
     const digitsOnly = (value || '').replace(/\D/g, '');
@@ -585,10 +666,19 @@ export default function WhatsAppTab() {
     return Number.isNaN(fallback) ? 0 : fallback;
   };
 
-  const sortChatsByLatest = (
-    left: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
-    right: Pick<WhatsAppChat, 'last_message_at' | 'created_at'>,
-  ) => getChatTimeValue(right) - getChatTimeValue(left);
+const getPinnedSortValue = (chat: Pick<WhatsAppChat, 'pinned'>) => {
+  const pinnedValue = typeof chat.pinned === 'number' ? chat.pinned : 0;
+  return pinnedValue > 0 ? pinnedValue : 0;
+};
+
+const sortChatsByLatest = (
+  left: Pick<WhatsAppChat, 'last_message_at' | 'created_at' | 'pinned'>,
+  right: Pick<WhatsAppChat, 'last_message_at' | 'created_at' | 'pinned'>,
+) => {
+  const pinnedDelta = getPinnedSortValue(right) - getPinnedSortValue(left);
+  if (pinnedDelta !== 0) return pinnedDelta;
+  return getChatTimeValue(right) - getChatTimeValue(left);
+};
 
   const isClientGeneratedMessageId = (id: string) => id.startsWith('local-') || id.startsWith('msg-');
 
@@ -1582,7 +1672,7 @@ export default function WhatsAppTab() {
           created_at: row.created_at ?? new Date().toISOString(),
           updated_at: row.updated_at ?? new Date().toISOString(),
           last_message: sanitizeTechnicalCiphertextPreview(row.last_message) || null,
-          last_message_direction: null,
+          last_message_direction: row.last_message_direction ?? null,
           unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
           archived: row.archived ?? false,
           mute_until: row.mute_until ?? null,
@@ -1613,7 +1703,7 @@ export default function WhatsAppTab() {
             ...existingChat,
             ...incomingChat,
             last_message: incomingChat.last_message ?? existingChat.last_message,
-            last_message_direction: existingChat.last_message_direction ?? incomingChat.last_message_direction ?? null,
+            last_message_direction: incomingChat.last_message_direction ?? existingChat.last_message_direction ?? null,
             unread_count:
               typeof incomingChat.unread_count === 'number'
                 ? incomingChat.unread_count
@@ -1922,7 +2012,7 @@ export default function WhatsAppTab() {
         return {
           ...incoming,
           last_message: sanitizeTechnicalCiphertextPreview(incoming.last_message ?? previous?.last_message ?? null) || null,
-          last_message_direction: previous?.last_message_direction ?? null,
+          last_message_direction: incoming.last_message_direction ?? previous?.last_message_direction ?? null,
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count
@@ -3189,17 +3279,26 @@ export default function WhatsAppTab() {
     visibleChats,
     unreadQueue,
   } = useMemo(() => {
-    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+    const normalizedSearchQuery = normalizeSearchText(searchQuery);
     const workspaceChats = chats.filter((chat) => !isStatusChat(chat));
     const chatsMatchingSearch = workspaceChats.filter((chat) => {
       if (!normalizedSearchQuery) return true;
 
-      const displayName = (chatListPresentationById.get(chat.id)?.displayName || chat.id).toLowerCase();
-      const preview = sanitizeTechnicalCiphertextPreview(chat.last_message).toLowerCase();
+      const displayName = normalizeSearchText(chatListPresentationById.get(chat.id)?.displayName || chat.id);
+      const preview = normalizeSearchText(sanitizeTechnicalCiphertextPreview(chat.last_message));
+      const chatId = normalizeSearchText(chat.id);
+      const phone = normalizeSearchText(chat.phone_number || extractPhoneFromChatId(chat.id));
+      const cachedState = messagesCacheRef.current.get(chat.id);
+      const messageMatches = cachedState?.messages.some((message) =>
+        getMessageSearchHaystack(message).includes(normalizedSearchQuery),
+      );
+
       return (
         displayName.includes(normalizedSearchQuery) ||
-        chat.id.toLowerCase().includes(normalizedSearchQuery) ||
-        preview.includes(normalizedSearchQuery)
+        chatId.includes(normalizedSearchQuery) ||
+        phone.includes(normalizedSearchQuery) ||
+        preview.includes(normalizedSearchQuery) ||
+        Boolean(messageMatches)
       );
     });
 
@@ -3563,22 +3662,57 @@ export default function WhatsAppTab() {
     setChatMenuMuteOpen(false);
   };
 
+  const clearStatusMenuCloseTimeout = () => {
+    if (statusMenuCloseTimeoutRef.current !== null) {
+      window.clearTimeout(statusMenuCloseTimeoutRef.current);
+      statusMenuCloseTimeoutRef.current = null;
+    }
+  };
+
+  const openStatusSubmenu = () => {
+    clearStatusMenuCloseTimeout();
+    setChatMenuStatusOpen(true);
+  };
+
+  const closeStatusSubmenuSoon = () => {
+    clearStatusMenuCloseTimeout();
+    statusMenuCloseTimeoutRef.current = window.setTimeout(() => {
+      statusMenuCloseTimeoutRef.current = null;
+      setChatMenuStatusOpen(false);
+    }, 140);
+  };
+
+  const closeStatusSubmenuNow = () => {
+    clearStatusMenuCloseTimeout();
+    setChatMenuStatusOpen(false);
+  };
+
   useEffect(() => {
     return () => {
       if (muteMenuCloseTimeoutRef.current !== null) {
         window.clearTimeout(muteMenuCloseTimeoutRef.current);
       }
+      if (statusMenuCloseTimeoutRef.current !== null) {
+        window.clearTimeout(statusMenuCloseTimeoutRef.current);
+      }
     };
   }, []);
 
-  const openChatContextMenu = (chatId: string, x: number, y: number) => {
-    const menuWidth = 224;
-    const menuHeight = 260;
-    const safeX = Math.min(Math.max(8, x), Math.max(8, window.innerWidth - menuWidth - 8));
-    const safeY = Math.min(Math.max(8, y), Math.max(8, window.innerHeight - menuHeight - 8));
-
+  const openChatContextMenu = (chatId: string, anchorRect: DOMRect, source: ChatMenuSource) => {
     closeMuteSubmenuNow();
-    setChatMenu({ chatId, x: safeX, y: safeY });
+    closeStatusSubmenuNow();
+    setChatMenu({
+      chatId,
+      source,
+      anchorRect: {
+        left: anchorRect.left,
+        right: anchorRect.right,
+        top: anchorRect.top,
+        bottom: anchorRect.bottom,
+        width: anchorRect.width,
+        height: anchorRect.height,
+      },
+    });
   };
 
   const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;

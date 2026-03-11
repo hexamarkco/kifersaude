@@ -8,6 +8,7 @@ import { formatProfileLabel } from '../../lib/accessControl';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 import { UsersSkeleton } from '../ui/panelSkeletons';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
@@ -302,74 +303,11 @@ export default function UsersTab() {
                 <p className="text-sm text-slate-500">Associe cada usuario a um perfil dinamico de acesso.</p>
               </div>
             </div>
-            <Button onClick={() => setShowAddUser(!showAddUser)} variant="primary">
+            <Button onClick={() => setShowAddUser(true)} variant="primary">
               <Plus className="h-4 w-4" />
               <span>Novo Usuario</span>
             </Button>
           </div>
-
-          {showAddUser && (
-            <form onSubmit={handleCreateUser} className="mb-6 rounded-lg bg-slate-50 p-6">
-              <h4 className="mb-4 text-lg font-semibold text-slate-900">Adicionar Novo Usuario</h4>
-
-              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Usuario</label>
-                  <Input
-                    type="text"
-                    value={newUserUsername}
-                    onChange={(e) => setNewUserUsername(e.target.value)}
-                    required
-                    placeholder="nome.usuario"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
-                  <Input
-                    type="email"
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                    required
-                    placeholder="usuario@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Senha</label>
-                  <Input
-                    type="password"
-                    value={newUserPassword}
-                    onChange={(e) => setNewUserPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Perfil</label>
-                  <FilterSingleSelect
-                    icon={Shield}
-                    value={newUserRole}
-                    onChange={setNewUserRole}
-                    placeholder="Selecione um perfil"
-                    includePlaceholderOption={false}
-                    options={profileOptions}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Button type="submit" disabled={actionLoading}>
-                  {actionLoading ? 'Criando...' : 'Criar Usuario'}
-                </Button>
-                <Button type="button" onClick={resetCreateForm} variant="secondary">
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          )}
 
           {editingUser && (
             <form onSubmit={handleUpdateUser} className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-6">
@@ -525,6 +463,73 @@ export default function UsersTab() {
             </div>
           </div>
         </div>
+
+        <ModalShell
+          isOpen={showAddUser}
+          onClose={resetCreateForm}
+          title="Novo Usuario"
+          description="Crie um novo usuario e associe a um perfil dinamico de acesso."
+          size="lg"
+        >
+          <form onSubmit={handleCreateUser} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Usuario</label>
+                <Input
+                  type="text"
+                  value={newUserUsername}
+                  onChange={(e) => setNewUserUsername(e.target.value)}
+                  required
+                  placeholder="nome.usuario"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                <Input
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  required
+                  placeholder="usuario@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Senha</label>
+                <Input
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="Digite uma senha temporaria"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Perfil</label>
+                <FilterSingleSelect
+                  icon={Shield}
+                  value={newUserRole}
+                  onChange={setNewUserRole}
+                  placeholder="Selecione um perfil"
+                  includePlaceholderOption={false}
+                  options={profileOptions}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={actionLoading}>
+                {actionLoading ? 'Criando...' : 'Criar Usuario'}
+              </Button>
+              <Button type="button" onClick={resetCreateForm} variant="secondary">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </ModalShell>
         {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>

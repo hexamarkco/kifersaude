@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -7,8 +7,6 @@ import {
   Plus,
   Save,
   Trash2,
-  TrendingUp,
-  X,
 } from 'lucide-react';
 import { configService } from '../../lib/configService';
 import { type Operadora } from '../../lib/supabase';
@@ -16,6 +14,7 @@ import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 import Textarea from '../ui/Textarea';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { OperadorasSkeleton } from '../ui/panelSkeletons';
@@ -44,13 +43,10 @@ const DEFAULT_FORM_DATA: OperadoraFormState = {
   ativo: true,
 };
 
-const metricCardClass =
-  'rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-4 shadow-sm';
-
 export default function OperadorasTab({ embedded = false }: OperadorasTabProps) {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<OperadoraFormState>(DEFAULT_FORM_DATA);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -60,19 +56,6 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
   useEffect(() => {
     void loadOperadoras();
   }, []);
-
-  const activeOperadoras = useMemo(() => operadoras.filter((operadora) => operadora.ativo), [operadoras]);
-  const bonusEnabledOperadoras = useMemo(
-    () => operadoras.filter((operadora) => operadora.bonus_por_vida),
-    [operadoras],
-  );
-  const averageCommission = useMemo(() => {
-    if (operadoras.length === 0) {
-      return 0;
-    }
-
-    return operadoras.reduce((sum, operadora) => sum + operadora.comissao_padrao, 0) / operadoras.length;
-  }, [operadoras]);
 
   const loadOperadoras = async () => {
     setLoading(true);
@@ -92,13 +75,13 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
   const resetForm = () => {
     setFormData(DEFAULT_FORM_DATA);
     setEditingId(null);
-    setShowForm(false);
+    setIsModalOpen(false);
   };
 
   const handleCreateClick = () => {
     setEditingId(null);
     setFormData(DEFAULT_FORM_DATA);
-    setShowForm(true);
+    setIsModalOpen(true);
   };
 
   const handleEdit = (operadora: Operadora) => {
@@ -112,7 +95,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
       ativo: operadora.ativo,
     });
     setEditingId(operadora.id);
-    setShowForm(true);
+    setIsModalOpen(true);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -212,202 +195,19 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               </p>
             </div>
 
-            <Button onClick={showForm ? resetForm : handleCreateClick} variant={showForm ? 'secondary' : 'primary'}>
-              {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              <span>{showForm ? 'Fechar editor' : 'Nova operadora'}</span>
+            <Button onClick={handleCreateClick}>
+              <Plus className="h-4 w-4" />
+              <span>Nova operadora</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className={metricCardClass}>
-            <p className="text-sm font-medium text-[color:var(--panel-text-soft)]">Operadoras ativas</p>
-            <p className="mt-3 text-3xl font-semibold text-[color:var(--panel-text)]">{activeOperadoras.length}</p>
-            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">de {operadoras.length || 0} cadastradas</p>
-          </div>
-
-          <div className={metricCardClass}>
-            <p className="text-sm font-medium text-[color:var(--panel-text-soft)]">Media de comissao</p>
-            <div className="mt-3 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-[var(--panel-accent-emerald-text)]" />
-              <p className="text-3xl font-semibold text-[color:var(--panel-text)]">{averageCommission.toFixed(1)}%</p>
-            </div>
-            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">visao rapida do padrao atual</p>
-          </div>
-
-          <div className={metricCardClass}>
-            <p className="text-sm font-medium text-[color:var(--panel-text-soft)]">Com bonus por vida</p>
-            <p className="mt-3 text-3xl font-semibold text-[color:var(--panel-text)]">{bonusEnabledOperadoras.length}</p>
-            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">operadoras com receita adicional recorrente</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h4 className="text-lg font-semibold text-[color:var(--panel-text)]">
-                  {editingId ? 'Editar operadora' : 'Nova operadora'}
-                </h4>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">
-                  Defina regras padrao para comissao, prazo e eventuais bonus.
-                </p>
-              </div>
-              {showForm && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--panel-border-subtle)] text-[color:var(--panel-text-soft)] transition-colors hover:bg-[var(--panel-surface-soft)]"
-                  aria-label="Fechar formulario"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {!showForm ? (
-              <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] p-6 text-center">
-                <Building2 className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted)]" />
-                <p className="mt-4 text-sm font-medium text-[color:var(--panel-text)]">Selecione uma operadora para editar</p>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">ou crie uma nova com regras comerciais padrao.</p>
-                <div className="mt-5">
-                  <Button onClick={handleCreateClick}>
-                    <Plus className="h-4 w-4" />
-                    <span>Comecar cadastro</span>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da operadora *</label>
-                    <Input
-                      type="text"
-                      value={formData.nome}
-                      onChange={(event) => setFormData({ ...formData, nome: event.target.value })}
-                      required
-                      placeholder="Ex: Unimed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Comissao padrao (%)</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="500"
-                      value={formData.comissao_padrao}
-                      onChange={(event) =>
-                        setFormData({
-                          ...formData,
-                          comissao_padrao: Number.parseFloat(event.target.value) || 0,
-                        })
-                      }
-                    />
-                    <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Pode exceder 100% para contratos PJ.</p>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Prazo de recebimento (dias)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={formData.prazo_recebimento_dias}
-                      onChange={(event) =>
-                        setFormData({
-                          ...formData,
-                          prazo_recebimento_dias: Number.parseInt(event.target.value, 10) || 30,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-accent-emerald-border)]">
-                    <input
-                      type="checkbox"
-                      checked={formData.bonus_por_vida}
-                      onChange={(event) => setFormData({ ...formData, bonus_por_vida: event.target.checked })}
-                      className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-[color:var(--panel-text)]">Bonus por vida</p>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ative se a operadora tiver bonus recorrente adicional.</p>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-border)]">
-                    <input
-                      type="checkbox"
-                      checked={formData.ativo}
-                      onChange={(event) => setFormData({ ...formData, ativo: event.target.checked })}
-                      className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-[color:var(--panel-text)]">Operadora ativa</p>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Mantem a operadora disponivel para novos contratos.</p>
-                    </div>
-                  </label>
-                </div>
-
-                {formData.bonus_por_vida && (
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Bonus padrao (R$)</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.bonus_padrao}
-                      onChange={(event) =>
-                        setFormData({
-                          ...formData,
-                          bonus_padrao: Number.parseFloat(event.target.value) || 0,
-                        })
-                      }
-                      placeholder="Valor em reais"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Observacoes</label>
-                  <Textarea
-                    value={formData.observacoes}
-                    onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })}
-                    rows={4}
-                    className="min-h-[104px]"
-                    placeholder="Notas comerciais, regras especificas ou excecoes..."
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit">
-                    <Save className="h-4 w-4" />
-                    <span>{editingId ? 'Salvar alteracoes' : 'Criar operadora'}</span>
-                  </Button>
-                  <Button type="button" onClick={resetForm} variant="secondary">
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+        <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h4 className="text-lg font-semibold text-[color:var(--panel-text)]">Carteira de operadoras</h4>
                 <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Revise regras rapidamente e abra a edicao certa sem trocar de aba.</p>
               </div>
-              {!showForm && operadoras.length > 0 && (
-                <Button onClick={handleCreateClick} variant="secondary">
-                  <Plus className="h-4 w-4" />
-                  <span>Adicionar</span>
-                </Button>
-              )}
             </div>
 
             {operadoras.length === 0 ? (
@@ -417,7 +217,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                 <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Crie a primeira operadora para liberar configuracoes comerciais.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-2">
                 {operadoras.map((operadora) => {
                   const isEditing = operadora.id === editingId;
 
@@ -493,8 +293,130 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                 })}
               </div>
             )}
-          </div>
         </div>
+        <ModalShell
+          isOpen={isModalOpen}
+          onClose={resetForm}
+          title={editingId ? 'Editar operadora' : 'Nova operadora'}
+          description="Defina regras padrao para comissao, prazo e eventuais bonus."
+          size="md"
+        >
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da operadora *</label>
+                <Input
+                  type="text"
+                  value={formData.nome}
+                  onChange={(event) => setFormData({ ...formData, nome: event.target.value })}
+                  required
+                  placeholder="Ex: Unimed"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Comissao padrao (%)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="500"
+                  value={formData.comissao_padrao}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      comissao_padrao: Number.parseFloat(event.target.value) || 0,
+                    })
+                  }
+                />
+                <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Pode exceder 100% para contratos PJ.</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Prazo de recebimento (dias)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.prazo_recebimento_dias}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      prazo_recebimento_dias: Number.parseInt(event.target.value, 10) || 30,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-accent-emerald-border)]">
+                <input
+                  type="checkbox"
+                  checked={formData.bonus_por_vida}
+                  onChange={(event) => setFormData({ ...formData, bonus_por_vida: event.target.checked })}
+                  className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Bonus por vida</p>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ative se a operadora tiver bonus recorrente adicional.</p>
+                </div>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-border)]">
+                <input
+                  type="checkbox"
+                  checked={formData.ativo}
+                  onChange={(event) => setFormData({ ...formData, ativo: event.target.checked })}
+                  className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Operadora ativa</p>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Mantem a operadora disponivel para novos contratos.</p>
+                </div>
+              </label>
+            </div>
+
+            {formData.bonus_por_vida && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Bonus padrao (R$)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.bonus_padrao}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      bonus_padrao: Number.parseFloat(event.target.value) || 0,
+                    })
+                  }
+                  placeholder="Valor em reais"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Observacoes</label>
+              <Textarea
+                value={formData.observacoes}
+                onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })}
+                rows={4}
+                className="min-h-[104px]"
+                placeholder="Notas comerciais, regras especificas ou excecoes..."
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit">
+                <Save className="h-4 w-4" />
+                <span>{editingId ? 'Salvar alteracoes' : 'Criar operadora'}</span>
+              </Button>
+              <Button type="button" onClick={resetForm} variant="secondary">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </ModalShell>
         {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>

@@ -6,6 +6,7 @@ import { getBadgeStyle } from '../../lib/colorUtils';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 
 type Message = { type: 'success' | 'error'; text: string };
 type StatusDraft = { nome: string; ordem: string };
@@ -17,6 +18,7 @@ export default function LeadStatusManager() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, StatusDraft>>({});
   const [message, setMessage] = useState<Message | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function LeadStatusManager() {
       showMessage('error', 'Erro ao criar status.');
     } else {
       setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 2 });
+      setIsCreateModalOpen(false);
       await refreshLeadStatuses();
       showMessage('success', 'Status criado com sucesso.');
     }
@@ -197,28 +200,10 @@ export default function LeadStatusManager() {
           </p>
         </div>
 
-        <div className="grid w-full gap-3 md:grid-cols-[minmax(0,1fr)_120px_110px_auto] lg:max-w-3xl">
-          <Input
-            type="text"
-            value={newStatus.nome}
-            onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
-            placeholder="Novo status"
-          />
-          <Input
-            type="color"
-            value={newStatus.cor}
-            onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
-          />
-          <Input
-            type="number"
-            value={newStatus.ordem}
-            onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
-          />
-          <Button onClick={() => void handleCreate()} disabled={saving}>
-            <Plus className="h-4 w-4" />
-            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-          </Button>
-        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+          <Plus className="h-4 w-4" />
+          <span>Novo status</span>
+        </Button>
       </div>
 
       {message && (
@@ -297,6 +282,64 @@ export default function LeadStatusManager() {
           );
         })}
       </div>
+      <ModalShell
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
+        }}
+        title="Novo status"
+        description="Crie uma nova etapa para o funil de leads."
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome do status</label>
+            <Input
+              type="text"
+              value={newStatus.nome}
+              onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
+              placeholder="Ex: Em negociacao"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Cor</label>
+              <Input
+                type="color"
+                value={newStatus.cor}
+                onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Ordem</label>
+              <Input
+                type="number"
+                value={newStatus.ordem}
+                onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={() => void handleCreate()} disabled={saving}>
+              <Plus className="h-4 w-4" />
+              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </ModalShell>
       {ConfirmationDialog}
     </div>
   );

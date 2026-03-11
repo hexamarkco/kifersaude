@@ -5,6 +5,7 @@ import { configService, type ConfigCategory } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -28,6 +29,7 @@ export default function ConfigOptionManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OptionDraft>>({});
   const [message, setMessage] = useState<Message | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const items = useMemo(() => options[category] || [], [category, options]);
@@ -84,6 +86,7 @@ export default function ConfigOptionManager({
       showMessage('error', 'Erro ao adicionar opcao.');
     } else {
       setNewLabel('');
+      setIsCreateModalOpen(false);
       await refreshCategory(category);
       showMessage('success', 'Opcao adicionada com sucesso.');
     }
@@ -176,18 +179,10 @@ export default function ConfigOptionManager({
           {description && <p className="text-sm text-[color:var(--panel-text-soft)]">{description}</p>}
         </div>
 
-        <div className="flex w-full gap-3 lg:max-w-xl">
-          <Input
-            type="text"
-            value={newLabel}
-            onChange={(event) => setNewLabel(event.target.value)}
-            placeholder={placeholder || 'Nova opcao'}
-          />
-          <Button onClick={() => void handleCreate()} disabled={saving}>
-            <Plus className="h-4 w-4" />
-            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-          </Button>
-        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+          <Plus className="h-4 w-4" />
+          <span>Nova opcao</span>
+        </Button>
       </div>
 
       {message && (
@@ -265,6 +260,44 @@ export default function ConfigOptionManager({
           );
         })}
       </div>
+      <ModalShell
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setNewLabel('');
+        }}
+        title={`Nova opcao${title ? ` - ${title}` : ''}`}
+        description="Adicione um novo item a esta lista."
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da opcao</label>
+            <Input
+              type="text"
+              value={newLabel}
+              onChange={(event) => setNewLabel(event.target.value)}
+              placeholder={placeholder || 'Nova opcao'}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={() => void handleCreate()} disabled={saving}>
+              <Plus className="h-4 w-4" />
+              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setNewLabel('');
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </ModalShell>
       {ConfirmationDialog}
     </div>
   );

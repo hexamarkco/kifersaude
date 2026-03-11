@@ -5,6 +5,7 @@ import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ModalShell from '../ui/ModalShell';
 
 type Message = { type: 'success' | 'error'; text: string };
 
@@ -16,6 +17,7 @@ export default function LeadOriginsManager() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function LeadOriginsManager() {
       showMessage('error', 'Erro ao adicionar origem.');
     } else {
       setNewOrigin('');
+      setIsCreateModalOpen(false);
       await refreshLeadOrigins();
       showMessage('success', 'Origem adicionada com sucesso.');
     }
@@ -140,18 +143,10 @@ export default function LeadOriginsManager() {
           <p className="text-sm text-[color:var(--panel-text-soft)]">Gerencie todos os canais de entrada de leads.</p>
         </div>
 
-        <div className="flex w-full gap-3 lg:max-w-xl">
-          <Input
-            type="text"
-            value={newOrigin}
-            onChange={(event) => setNewOrigin(event.target.value)}
-            placeholder="Nova origem"
-          />
-          <Button onClick={() => void handleCreate()} disabled={saving}>
-            <Plus className="h-4 w-4" />
-            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-          </Button>
-        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+          <Plus className="h-4 w-4" />
+          <span>Nova origem</span>
+        </Button>
       </div>
 
       {message && (
@@ -243,6 +238,44 @@ export default function LeadOriginsManager() {
           );
         })}
       </div>
+      <ModalShell
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setNewOrigin('');
+        }}
+        title="Nova origem"
+        description="Cadastre um novo canal de entrada de leads."
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da origem</label>
+            <Input
+              type="text"
+              value={newOrigin}
+              onChange={(event) => setNewOrigin(event.target.value)}
+              placeholder="Ex: Indicacao"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={() => void handleCreate()} disabled={saving}>
+              <Plus className="h-4 w-4" />
+              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setNewOrigin('');
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </ModalShell>
       {ConfirmationDialog}
     </div>
   );

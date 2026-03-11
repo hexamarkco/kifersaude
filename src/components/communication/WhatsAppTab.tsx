@@ -1473,6 +1473,23 @@ const sortChatsByLatest = (
   }, [showChatSegmentsMenu]);
 
   useEffect(() => {
+    if (!chatMenu) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!chatMenuRef.current?.contains(event.target as Node)) {
+        closeMuteSubmenuNow();
+        closeStatusSubmenuNow();
+        setChatMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [chatMenu]);
+
+  useEffect(() => {
     const loadSavedContacts = async () => {
       try {
         const pageSize = 500;
@@ -1825,7 +1842,6 @@ const sortChatsByLatest = (
               if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
                 updateChatArchive(chatToUpdate.id, false);
               }
-              scrollToBottom();
               if (message.direction === 'inbound' && userRef.current) {
                 void markMessagesRead([message]);
               }
@@ -1879,6 +1895,9 @@ const sortChatsByLatest = (
       setShowGroupInfo(false);
       setReplyToMessage(null);
       setEditMessage(null);
+      setPendingMessagesBelow(0);
+      shouldScrollOnChatChangeRef.current = true;
+      lastRenderedMessageIdRef.current = null;
 
       const cachedState = messagesCacheRef.current.get(selectedChat.id);
       if (cachedState) {
@@ -1899,6 +1918,8 @@ const sortChatsByLatest = (
     setMessages([]);
     setHasOlderMessages(false);
     setLoadedMessagesCount(0);
+    setPendingMessagesBelow(0);
+    lastRenderedMessageIdRef.current = null;
     setReplyToMessage(null);
     setEditMessage(null);
   }, [selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1963,12 +1984,29 @@ const sortChatsByLatest = (
   }, [selectedChat?.id, syncingChatId, isSyncingAllChats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (skipNextAutoScrollRef.current) {
-      skipNextAutoScrollRef.current = false;
+    const lastRenderedMessageId = renderedMessages[renderedMessages.length - 1]?.id ?? null;
+
+    if (shouldScrollOnChatChangeRef.current) {
+      shouldScrollOnChatChangeRef.current = false;
+      lastRenderedMessageIdRef.current = lastRenderedMessageId;
+      requestAnimationFrame(() => {
+        scrollToBottom('auto');
+      });
       return;
     }
-    scrollToBottom();
-  }, [messages]);
+
+    if (!selectedChat) {
+      lastRenderedMessageIdRef.current = null;
+      setPendingMessagesBelow(0);
+      return;
+    }
+
+    if (lastRenderedMessageId && lastRenderedMessageIdRef.current && lastRenderedMessageId !== lastRenderedMessageIdRef.current) {
+      setPendingMessagesBelow((current) => current + 1);
+    }
+
+    lastRenderedMessageIdRef.current = lastRenderedMessageId;
+  }, [renderedMessages, selectedChat]);
 
   useEffect(() => {
     const indexedMessages = new Map<string, WhatsAppMessage>();
@@ -1987,8 +2025,17 @@ const sortChatsByLatest = (
     });
   }, [messages, loadedMessagesCount, hasOlderMessages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
+  const handleMessagesViewportScroll = () => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    if (distanceFromBottom <= 40) {
+      setPendingMessagesBelow(0);
+    }
   };
 
   const scheduleUnreadCountsRefresh = (delayMs: number = 250) => {
@@ -2020,6 +2067,7 @@ const sortChatsByLatest = (
                 ? previous.unread_count
                 : 0,
           archived: incoming.archived ?? previous?.archived ?? false,
+          pinned: incoming.pinned ?? previous?.pinned ?? 0,
           mute_until: incoming.mute_until ?? previous?.mute_until ?? null,
         };
       })
@@ -2060,6 +2108,7 @@ const sortChatsByLatest = (
             last_message_direction: null,
             unread_count: chat.unread_count ?? 0,
             archived: chat.archived ?? false,
+            pinned: chat.pinned ?? 0,
             mute_until: muteUntil,
           };
         });
@@ -2209,7 +2258,6 @@ const sortChatsByLatest = (
         return;
       }
 
-      skipNextAutoScrollRef.current = true;
       const nextHasOlder = (data || []).length === MESSAGES_PAGE_SIZE;
       const nextLoadedCount = loadedMessagesCount + (data || []).length;
 
@@ -2604,16 +2652,12 @@ const sortChatsByLatest = (
         updateChatArchive(chatToUpdate.id, false);
       }
 
-      if (selectedChatMatchesMessage) {
-        scrollToBottom();
-      }
       scheduleUnreadCountsRefresh();
       return;
     }
 
     if (selectedChatRef.current) {
       loadMessages(selectedChatRef.current);
-      scrollToBottom();
     }
   };
 
@@ -2967,6 +3011,9 @@ const sortChatsByLatest = (
   const maybeNotifyInboundMessage = (message: WhatsAppMessage, matchedChat?: WhatsAppChat) => {
     if (message.direction !== 'inbound') return;
 
+    const resolvedChat = matchedChat ?? chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id));
+    if (resolvedChat && isChatMuted(resolvedChat)) return;
+
     const activeChat = selectedChatRef.current;
     const messageBelongsToActiveChat = activeChat
       ? getChatIdVariants(activeChat).includes(message.chat_id)
@@ -2982,7 +3029,6 @@ const sortChatsByLatest = (
 
     if (notificationPermissionRef.current !== 'granted' || typeof window === 'undefined') return;
 
-    const resolvedChat = matchedChat ?? chatsRef.current.find((chat) => getChatIdVariants(chat).includes(message.chat_id));
     const title = (() => {
       const preferredName = resolvedChat ? getChatDisplayName(resolvedChat) : '';
       if (preferredName && !isPhoneLikeLabel(preferredName)) {
@@ -3467,6 +3513,17 @@ const sortChatsByLatest = (
 
     return null;
   }, [leadByPhoneMatchKey, selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
+  const resolveLeadForChat = (chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null) => {
+    const matchKeys = getLeadMatchKeysForChat(chat);
+    for (const key of matchKeys) {
+      const matchedLead = leadByPhoneMatchKey.get(key);
+      if (matchedLead) {
+        return matchedLead;
+      }
+    }
+
+    return null;
+  };
   const firstResponseSla = useMemo<FirstResponseSLA>(() => {
     const timeline = [...messages]
       .filter((message) => {
@@ -3826,8 +3883,61 @@ const sortChatsByLatest = (
       const photo = contactPhotosById.get(variant);
       if (photo) return photo;
     }
-    return null;
+      return null;
   })();
+  const getResolvedDirectChatPhone = (chat: WhatsAppChat | null) => {
+    if (!chat || !isDirectChat(chat)) return '';
+
+    const matchedLead = resolveLeadForChat(chat);
+    const candidates = [
+      matchedLead?.phone || '',
+      normalizePhoneNumber(chat.phone_number || ''),
+      extractPhoneFromChatId(chat.id),
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = normalizePhoneNumber(candidate);
+      if (normalized) return normalized;
+    }
+
+    return '';
+  };
+  const chatMenuTarget = useMemo(() => {
+    if (!chatMenu) return null;
+    const targetChat = chats.find((item) => item.id === chatMenu.chatId) ?? null;
+    const targetLead = resolveLeadForChat(targetChat);
+    const targetPhone = getResolvedDirectChatPhone(targetChat);
+    return {
+      chat: targetChat,
+      lead: targetLead,
+      phone: targetPhone,
+      isMuted: targetChat ? isChatMuted(targetChat) : false,
+      isPinned: Boolean(targetChat && getPinnedSortValue(targetChat) > 0),
+      canOpenLead: Boolean(targetLead?.id),
+      canUpdateStatus: Boolean(targetLead?.id && leadStatuses.length > 0),
+    };
+  }, [chatMenu, chats, leadStatuses, leadsList]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chatMenuLayout = useMemo(() => {
+    if (!chatMenu) return null;
+
+    const viewportPadding = 12;
+    const menuWidth = 248;
+    const menuHeight = 320;
+    const submenuWidth = 196;
+    const requestedLeft = chatMenu.anchorRect.left;
+    const requestedTop = chatMenu.source === 'header-button' ? chatMenu.anchorRect.bottom + 6 : chatMenu.anchorRect.top + 6;
+    const left = Math.min(
+      Math.max(viewportPadding, requestedLeft),
+      Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding),
+    );
+    const top = Math.min(
+      Math.max(viewportPadding, requestedTop),
+      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding),
+    );
+    const submenuOpensLeft = left + menuWidth + submenuWidth + viewportPadding > window.innerWidth;
+
+    return { left, top, submenuOpensLeft };
+  }, [chatMenu]);
   const effectiveFirstResponseSlaBadge =
     selectedChatIsDirect && isLoadingMessages && messages.length === 0
       ? {
@@ -3848,6 +3958,28 @@ const sortChatsByLatest = (
     } catch (error) {
       console.error('Erro ao copiar telefone:', error);
     }
+  };
+
+  const handleCopyChatPhone = async (chat: WhatsAppChat | null, phone: string) => {
+    if (!chat || !phone) return;
+
+    try {
+      await navigator.clipboard.writeText(phone);
+      setCopiedPhone(phone);
+      window.setTimeout(() => {
+        setCopiedPhone((current) => (current === phone ? null : current));
+      }, 1800);
+    } catch (error) {
+      console.error('Erro ao copiar telefone do chat:', error);
+    }
+  };
+
+  const handleOpenLeadFromChat = (leadId: string | null | undefined) => {
+    if (!leadId) return;
+    handleTabChange('leads', { leadIdFilter: leadId });
+    closeMuteSubmenuNow();
+    closeStatusSubmenuNow();
+    setChatMenu(null);
   };
 
   const handleAudioTranscriptionSaved = (messageId: string, nextPayload: WhatsAppMessagePayload) => {

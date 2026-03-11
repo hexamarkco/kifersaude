@@ -2301,15 +2301,21 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
         <div className="mt-4 space-y-6">
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: 'var(--panel-border)',
+                background: 'linear-gradient(180deg, var(--panel-surface-muted) 0%, var(--panel-surface) 100%)',
+              }}
+            >
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
                   <TrendingUp className="h-4 w-4 text-teal-600" />
                   <span>Ultimo mes</span>
                 </div>
-                <span className="text-xs text-slate-500">{latestMonthlyPoint?.label || "Sem dados"}</span>
+                <span className="text-xs" style={{ color: 'var(--panel-text-muted)' }}>{latestMonthlyPoint?.label || "Sem dados"}</span>
               </div>
-              <p className="mt-3 text-2xl font-bold text-slate-900">
+              <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
                 {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : "Sem dados"}
               </p>
               <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
@@ -2321,28 +2327,40 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: 'var(--panel-border-subtle)',
+                background: 'var(--panel-surface)',
+              }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
                 <BadgePercent className="h-4 w-4 text-teal-600" />
                 <span>Media do periodo</span>
               </div>
-              <p className="mt-3 text-2xl font-bold text-slate-900">
+              <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
                 {displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : "Sem dados"}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
                 Baseado nos ultimos {displayedMonthlySeries.length} meses exibidos
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: 'var(--panel-border-subtle)',
+                background: 'var(--panel-surface)',
+              }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
                 <Calendar className="h-4 w-4 text-teal-600" />
                 <span>Pico do periodo</span>
               </div>
-              <p className="mt-3 text-2xl font-bold text-slate-900">
+              <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
                 {highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : "Sem dados"}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
                 {highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes do recorte` : "Aguardando historico suficiente"}
               </p>
             </div>
@@ -2355,7 +2373,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             }))}
             color={metricColorMap[selectedMetric]}
             formatValue={formatSelectedMetricValue}
-            height={280}
+            height={210}
           />
         </div>
       </div>

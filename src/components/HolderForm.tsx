@@ -13,7 +13,8 @@ import {
 import { supabase, type ContractHolder } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
 import { BRAZIL_STATE_OPTIONS, fetchCitiesByState } from '../lib/brasilLocations';
-import { consultarCep, formatCep } from '../lib/cepService';
+import { consultarCep } from '../lib/cepService';
+import { formatCep } from '../lib/inputFormatters';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
@@ -396,6 +397,7 @@ export default function HolderForm({
                       type="text"
                       required
                       leftIcon={WalletCards}
+                      autoFormat="cpf"
                       value={formData.cpf}
                       onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                       className="pr-11"
@@ -487,6 +489,7 @@ export default function HolderForm({
                     type="tel"
                     required
                     leftIcon={HeartPulse}
+                    autoFormat="phone"
                     value={formData.telefone}
                     onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                   />
@@ -505,6 +508,7 @@ export default function HolderForm({
                   <Input
                     type="text"
                     leftIcon={WalletCards}
+                    autoFormat="cns"
                     value={formData.cns}
                     onChange={(e) => setFormData({ ...formData, cns: e.target.value })}
                   />
@@ -520,6 +524,7 @@ export default function HolderForm({
                     <Input
                       type="text"
                       leftIcon={MapPin}
+                      autoFormat="cep"
                       value={formData.cep}
                       onChange={(e) => handleCepChange(e.target.value)}
                       maxLength={9}
@@ -622,6 +627,7 @@ export default function HolderForm({
                       <Input
                         type="text"
                         leftIcon={Building2}
+                        autoFormat="cnpj"
                         value={formData.cnpj}
                         onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
                       />

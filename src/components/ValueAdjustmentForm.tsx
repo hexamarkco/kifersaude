@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase, ContractValueAdjustment } from '../lib/supabase';
+import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { DollarSign } from 'lucide-react';
 import ModalShell from './ui/ModalShell';
 
@@ -20,7 +21,7 @@ export default function ValueAdjustmentForm({
 }: ValueAdjustmentFormProps) {
   const [formData, setFormData] = useState({
     tipo: adjustment?.tipo || 'acrescimo',
-    valor: adjustment?.valor.toString() || '',
+    valor: formatCurrencyFromNumber(adjustment?.valor),
     motivo: adjustment?.motivo || '',
   });
   const [saving, setSaving] = useState(false);
@@ -34,7 +35,7 @@ export default function ValueAdjustmentForm({
       return;
     }
 
-    if (!formData.valor || parseFloat(formData.valor) <= 0) {
+    if (!formData.valor || parseFormattedNumber(formData.valor) <= 0) {
       setError('O valor deve ser maior que zero');
       return;
     }
@@ -46,7 +47,7 @@ export default function ValueAdjustmentForm({
       const dataToSave = {
         contract_id: contractId,
         tipo: formData.tipo as 'desconto' | 'acrescimo',
-        valor: parseFloat(formData.valor),
+        valor: parseFormattedNumber(formData.valor),
         motivo: formData.motivo.trim(),
         created_by: responsavel,
       };
@@ -133,13 +134,13 @@ export default function ValueAdjustmentForm({
                 Valor (R$) *
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
                 required
                 value={formData.valor}
-                onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, valor: formatCurrencyInput(e.target.value) })}
                 placeholder="0,00"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                inputMode="numeric"
               />
             </div>
 

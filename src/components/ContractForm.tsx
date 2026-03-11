@@ -12,6 +12,12 @@ import ModalShell from './ui/ModalShell';
 import { configService } from '../lib/configService';
 import { useConfig } from '../contexts/ConfigContext';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
+import {
+  formatCnpj,
+  formatCurrencyFromNumber,
+  formatCurrencyInput,
+  parseFormattedNumber,
+} from '../lib/inputFormatters';
 import { consultarEmpresaPorCNPJ } from '../lib/receitaService';
 
 type CommissionInstallment = {
@@ -43,8 +49,8 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     data_renovacao: contract?.data_renovacao ? contract.data_renovacao.substring(0, 7) : '',
     mes_reajuste: contract?.mes_reajuste ? contract.mes_reajuste.toString().padStart(2, '0') : '',
     carencia: contract?.carencia || '',
-    mensalidade_total: contract?.mensalidade_total?.toString() || '',
-    comissao_prevista: contract?.comissao_prevista?.toString() || '',
+    mensalidade_total: formatCurrencyFromNumber(contract?.mensalidade_total),
+    comissao_prevista: formatCurrencyFromNumber(contract?.comissao_prevista),
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
     comissao_recebimento_adiantado:
       contract?.comissao_recebimento_adiantado ?? true,
@@ -52,11 +58,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     previsao_pagamento_bonificacao: contract?.previsao_pagamento_bonificacao || '',
     vidas: contract?.vidas?.toString() || '1',
     vidas_elegiveis_bonus: contract?.vidas_elegiveis_bonus?.toString() || '',
-    bonus_por_vida_valor: contract?.bonus_por_vida_valor?.toString() || '',
+    bonus_por_vida_valor: formatCurrencyFromNumber(contract?.bonus_por_vida_valor),
     bonus_por_vida_aplicado: contract?.bonus_por_vida_aplicado || false,
     responsavel: contract?.responsavel || leadToConvert?.responsavel || '',
     observacoes_internas: contract?.observacoes_internas || '',
-    cnpj: contract?.cnpj || '',
+    cnpj: formatCnpj(contract?.cnpj || ''),
     razao_social: contract?.razao_social || '',
     nome_fantasia: contract?.nome_fantasia || '',
     endereco_empresa: contract?.endereco_empresa || '',
@@ -178,7 +184,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     void handleConsultarCNPJ();
   }, [formData.cnpj, modalidadeRequerCNPJ]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
+  const baseMensalidade = parseFormattedNumber(formData.mensalidade_total || '');
 
   const adjustedMensalidade = useMemo(() => {
     let total = baseMensalidade;
@@ -214,7 +220,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
       if (!isNaN(effectivePercentual)) {
         const comissao = adjustedMensalidade * effectivePercentual;
-        setFormData(prev => ({ ...prev, comissao_prevista: comissao.toFixed(2) }));
+        setFormData(prev => ({ ...prev, comissao_prevista: formatCurrencyFromNumber(comissao) }));
       }
     }
   }, [
@@ -259,7 +265,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         ...prev,
         operadora: operadoraNome,
         bonus_por_vida_aplicado: operadora.bonus_por_vida,
-        bonus_por_vida_valor: operadora.bonus_padrao > 0 ? operadora.bonus_padrao.toString() : prev.bonus_por_vida_valor,
+        bonus_por_vida_valor:
+          operadora.bonus_padrao > 0
+            ? formatCurrencyFromNumber(operadora.bonus_padrao)
+            : prev.bonus_por_vida_valor,
       }));
     } else {
       setFormData(prev => ({ ...prev, operadora: operadoraNome }));
@@ -321,7 +330,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const eligibleLivesNumber = formData.vidas_elegiveis_bonus
     ? Math.max(0, parseFloat(formData.vidas_elegiveis_bonus || '0') || 0)
     : vidasNumber;
-  const bonusPorVidaValor = parseFloat(formData.bonus_por_vida_valor || '0') || 0;
+  const bonusPorVidaValor = parseFormattedNumber(formData.bonus_por_vida_valor || '');
   const bonusTotal = bonusPorVidaValor * eligibleLivesNumber;
 
   const handleAddInstallment = () => {
@@ -435,8 +444,8 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         data_renovacao: formData.data_renovacao ? `${formData.data_renovacao}-01` : null,
         mes_reajuste: formData.mes_reajuste ? parseInt(formData.mes_reajuste, 10) : null,
         carencia: formData.carencia || null,
-        mensalidade_total: formData.mensalidade_total ? parseFloat(formData.mensalidade_total) : null,
-        comissao_prevista: formData.comissao_prevista ? parseFloat(formData.comissao_prevista) : null,
+        mensalidade_total: formData.mensalidade_total ? parseFormattedNumber(formData.mensalidade_total) : null,
+        comissao_prevista: formData.comissao_prevista ? parseFormattedNumber(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
         comissao_recebimento_adiantado: formData.comissao_recebimento_adiantado,
         comissao_parcelas: formData.comissao_recebimento_adiantado ? [] : installmentsPayload,
@@ -446,7 +455,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         vidas_elegiveis_bonus: formData.vidas_elegiveis_bonus
           ? parseInt(formData.vidas_elegiveis_bonus, 10)
           : null,
-        bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFloat(formData.bonus_por_vida_valor) : null,
+        bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFormattedNumber(formData.bonus_por_vida_valor) : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
         observacoes_internas: formData.observacoes_internas || null,
@@ -640,8 +649,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       <input
                         type="text"
                         value={formData.cnpj}
-                        onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, cnpj: formatCnpj(e.target.value) })}
                         className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        inputMode="numeric"
+                        maxLength={18}
                       />
                       <button
                         type="button"
@@ -870,11 +881,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Mensalidade Base (R$)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   value={formData.mensalidade_total}
-                  onChange={(e) => setFormData({ ...formData, mensalidade_total: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mensalidade_total: formatCurrencyInput(e.target.value) })
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  inputMode="numeric"
+                  placeholder="0,00"
                 />
               </div>
 
@@ -947,10 +961,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   )}
 
                   {formData.mensalidade_total && (
-                    <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-medium text-slate-700">Mensalidade Final:</span>
-                        <span className="font-bold text-teal-700 text-lg">
+                          <span className="text-lg font-bold text-amber-700">
                           R${' '}
                           {adjustedMensalidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
@@ -964,11 +978,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-3">
                   Multiplicador de Comissão
                 </label>
-                <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-4 border border-teal-200">
+                <div className="rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm text-slate-600">Valor do multiplicador:</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-teal-700">
+                      <span className="text-2xl font-bold text-amber-700">
                         {formData.comissao_multiplicador}x
                       </span>
                       {parseFloat(formData.comissao_multiplicador) !== 2.8 && (
@@ -985,7 +999,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     onChange={(e) =>
                       setFormData({ ...formData, comissao_multiplicador: e.target.value })
                     }
-                    className="w-full h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                    className="w-full h-2 appearance-none cursor-pointer rounded-lg bg-amber-200 accent-amber-600"
                   />
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-xs text-slate-500">Digite o multiplicador</span>
@@ -999,7 +1013,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       onChange={(e) =>
                         setFormData({ ...formData, comissao_multiplicador: e.target.value })
                       }
-                      className="w-full sm:w-28 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-transparent focus:ring-2 focus:ring-amber-500 sm:w-28"
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -1015,11 +1029,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Comissão Prevista (R$)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   value={formData.comissao_prevista}
-                  onChange={(e) => setFormData({ ...formData, comissao_prevista: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, comissao_prevista: formatCurrencyInput(e.target.value) })
+                  }
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-slate-50"
+                  inputMode="numeric"
+                  placeholder="0,00"
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Calculada automaticamente com base no multiplicador
@@ -1043,8 +1060,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Forma de recebimento da comissão
                 </span>
                 <label className="flex items-start space-x-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={formData.comissao_recebimento_adiantado}
                     onChange={(e) =>
                       setFormData({
@@ -1052,7 +1068,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                         comissao_recebimento_adiantado: e.target.checked,
                       })
                     }
-                    className="mt-1 w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
+                    className="mt-1"
                   />
                     <div>
                       <p className="text-sm font-semibold text-slate-800">
@@ -1075,14 +1091,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                           pagamento de cada mês.
                         </p>
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={handleAddInstallment}
-                        className="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-sm"
+                        size="sm"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Adicionar parcela</span>
-                      </button>
+                      </Button>
                     </div>
 
                     {commissionInstallments.length === 0 ? (
@@ -1142,12 +1158,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                                   />
                                   <p className="text-[11px] text-slate-500 mt-1">Defina o dia previsto para esta parcela.</p>
                                 </div>
-                                <div className="bg-teal-50 border border-teal-100 rounded-lg p-3 flex flex-col justify-center">
-                                  <span className="text-[11px] text-teal-700">Total acumulado</span>
-                                  <span className="text-lg font-bold text-teal-800">
+                                <div className="flex flex-col justify-center rounded-lg border border-amber-100 bg-amber-50 p-3">
+                                  <span className="text-[11px] text-amber-700">Total acumulado</span>
+                                  <span className="text-lg font-bold text-amber-800">
                                     {totalInstallmentPercent.toFixed(2)}%
                                   </span>
-                                  <span className="text-xs text-teal-700">Limite: {MAX_COMMISSION_PERCENT}%</span>
+                                  <span className="text-xs text-amber-700">Limite: {MAX_COMMISSION_PERCENT}%</span>
                                 </div>
                               </div>
                             </div>
@@ -1204,12 +1220,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
               <div>
                 <label className="flex items-center space-x-2 cursor-pointer pt-6">
-                  <input
-                    type="checkbox"
-                    checked={formData.bonus_por_vida_aplicado}
-                    onChange={(e) => setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })}
-                    className="w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
-                  />
+                    <Checkbox
+                      checked={formData.bonus_por_vida_aplicado}
+                      onChange={(e) => setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })}
+                    />
                   <span className="text-sm font-medium text-slate-700">Aplicar Bônus por Vida</span>
                 </label>
                 <p className="text-xs text-slate-500 mt-1">
@@ -1243,16 +1257,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       Bônus por Vida (R$)
                     </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type="text"
                       value={formData.bonus_por_vida_valor}
-                      onChange={(e) => setFormData({ ...formData, bonus_por_vida_valor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bonus_por_vida_valor: formatCurrencyInput(e.target.value) })
+                      }
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      placeholder="0.00"
+                      placeholder="0,00"
+                      inputMode="numeric"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Total: R$ {bonusTotal.toFixed(2)}
+                      Total: R$ {bonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -1322,20 +1337,19 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
           </div>
 
           <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-200">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              loading={saving}
             >
               {saving ? 'Salvando...' : contract ? 'Salvar' : 'Continuar para Titular'}
-            </button>
+            </Button>
           </div>
         </form>
       </ModalShell>

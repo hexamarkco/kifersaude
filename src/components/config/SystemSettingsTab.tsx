@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  Building2,
   Calendar,
   CheckCircle,
   ChevronDown,
@@ -15,29 +16,39 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { type SystemSettings } from '../../lib/supabase';
-import { configService, type ConfigCategory } from '../../lib/configService';
 import { useConfig } from '../../contexts/ConfigContext';
-import LeadStatusManager from './LeadStatusManager';
-import LeadOriginsManager from './LeadOriginsManager';
-import ConfigOptionManager from './ConfigOptionManager';
+import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
+import { configService, type ConfigCategory } from '../../lib/configService';
+import { type SystemSettings } from '../../lib/supabase';
 import AccessControlManager from './AccessControlManager';
+import ConfigOptionManager from './ConfigOptionManager';
+import LeadOriginsManager from './LeadOriginsManager';
+import LeadStatusManager from './LeadStatusManager';
+import OperadorasTab from './OperadorasTab';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { Skeleton } from '../ui/Skeleton';
 import { SystemSettingsSkeleton } from '../ui/panelSkeletons';
-import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
-import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 
 type SettingsMessage = { type: 'success' | 'error'; text: string };
-type SectionId = 'general' | 'access' | 'leads' | 'contracts';
+type SectionId = 'general' | 'operadoras' | 'access' | 'leads' | 'contracts';
 
 type ConfigManagerDefinition = {
   category: ConfigCategory;
   title: string;
   description: string;
   placeholder: string;
+  searchTerms: string[];
+};
+
+type SectionOverview = {
+  id: SectionId;
+  title: string;
+  description: string;
+  icon: typeof Settings;
+  accentClassName: string;
   searchTerms: string[];
 };
 
@@ -52,15 +63,15 @@ const DEFAULT_GENERAL_PREFERENCES = {
 const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
   {
     category: 'lead_tipo_contratacao',
-    title: 'Tipos de Contratação',
-    description: 'Defina as opções disponíveis ao cadastrar leads e contratos.',
-    placeholder: 'Ex: Pessoa Física',
+    title: 'Tipos de Contratacao',
+    description: 'Defina as opcoes disponiveis ao cadastrar leads e contratos.',
+    placeholder: 'Ex: Pessoa Fisica',
     searchTerms: ['lead', 'tipos', 'contratacao', 'cadastro'],
   },
   {
     category: 'lead_responsavel',
-    title: 'Responsáveis pelos Leads',
-    description: 'Configure a lista de responsáveis disponíveis para atribuição.',
+    title: 'Responsaveis pelos Leads',
+    description: 'Configure a lista de responsaveis disponiveis para atribuicao.',
     placeholder: 'Ex: Maria',
     searchTerms: ['lead', 'responsavel', 'atendimento', 'time'],
   },
@@ -83,24 +94,67 @@ const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
   },
   {
     category: 'contract_abrangencia',
-    title: 'Abrangências',
-    description: 'Lista de coberturas disponíveis para os contratos.',
+    title: 'Abrangencias',
+    description: 'Lista de coberturas disponiveis para os contratos.',
     placeholder: 'Ex: Nacional',
     searchTerms: ['contrato', 'abrangencia', 'cobertura'],
   },
   {
     category: 'contract_acomodacao',
-    title: 'Tipos de Acomodação',
-    description: 'Defina as opções de acomodação para os planos.',
+    title: 'Tipos de Acomodacao',
+    description: 'Defina as opcoes de acomodacao para os planos.',
     placeholder: 'Ex: Enfermaria',
     searchTerms: ['contrato', 'acomodacao', 'plano'],
   },
   {
     category: 'contract_carencia',
-    title: 'Tipos de Carência',
-    description: 'Configure as opções de carência disponíveis.',
-    placeholder: 'Ex: Padrão',
+    title: 'Tipos de Carencia',
+    description: 'Configure as opcoes de carencia disponiveis.',
+    placeholder: 'Ex: Padrao',
     searchTerms: ['contrato', 'carencia', 'prazo'],
+  },
+];
+
+const SECTION_OVERVIEW: SectionOverview[] = [
+  {
+    id: 'general',
+    title: 'Preferencias do sistema',
+    description: 'Sessao, formato de data e notificacoes.',
+    icon: Settings,
+    accentClassName: 'bg-amber-50 text-amber-700 ring-amber-100',
+    searchTerms: ['preferencias', 'sistema', 'notificacao', 'sessao', 'data'],
+  },
+  {
+    id: 'operadoras',
+    title: 'Operadoras',
+    description: 'Comissao, prazo e regras comerciais.',
+    icon: Building2,
+    accentClassName: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    searchTerms: ['operadoras', 'operadora', 'bonus', 'comissao', 'prazo'],
+  },
+  {
+    id: 'access',
+    title: 'Perfis e acessos',
+    description: 'Permissoes por tipo de usuario.',
+    icon: ShieldCheck,
+    accentClassName: 'bg-sky-50 text-sky-700 ring-sky-100',
+    searchTerms: ['acesso', 'perfil', 'permissoes', 'admin', 'observer'],
+  },
+  {
+    id: 'leads',
+    title: 'Leads',
+    description: 'Funil, origens e cadastros auxiliares.',
+    icon: ListTree,
+    accentClassName: 'bg-orange-50 text-orange-700 ring-orange-100',
+    searchTerms: ['lead', 'status', 'origens', 'responsavel'],
+  },
+  {
+    id: 'contracts',
+    title: 'Contratos',
+    description: 'Estados e parametros do cadastro.',
+    icon: FileText,
+    accentClassName: 'bg-teal-50 text-teal-700 ring-teal-100',
+    searchTerms: ['contratos', 'status', 'modalidade', 'abrangencia', 'carencia'],
   },
 ];
 
@@ -130,9 +184,9 @@ const arePreferencesEqual = (a: SystemSettings | null, b: SystemSettings | null)
 };
 
 const sectionCardClass =
-  'flex w-full items-start justify-between rounded-xl border border-amber-200/70 bg-white/95 p-4 text-left shadow-sm transition-colors hover:border-amber-300/80 hover:bg-white';
+  'flex w-full items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm transition-colors hover:border-slate-300 hover:bg-white';
 
-const sectionBodyClass = 'rounded-xl border border-amber-200/60 bg-white/95 p-6 shadow-sm';
+const sectionBodyClass = 'rounded-2xl border border-slate-200 bg-slate-50/70 p-6 shadow-sm';
 
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -143,6 +197,7 @@ export default function SystemSettingsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Record<SectionId, boolean>>({
     general: false,
+    operadoras: false,
     access: false,
     leads: false,
     contracts: false,
@@ -189,10 +244,10 @@ export default function SystemSettingsTab() {
     const { error } = await configService.updateSystemSettings(settings);
 
     if (error) {
-      showMessage('error', 'Erro ao salvar configurações do sistema.');
+      showMessage('error', 'Erro ao salvar configuracoes do sistema.');
     } else {
       setSavedSettings(settings);
-      showMessage('success', 'Preferências do sistema salvas com sucesso.');
+      showMessage('success', 'Preferencias do sistema salvas com sucesso.');
     }
 
     setSaving(false);
@@ -207,7 +262,7 @@ export default function SystemSettingsTab() {
       ...settings,
       ...DEFAULT_GENERAL_PREFERENCES,
     });
-    showMessage('success', 'Padrões aplicados. Clique em salvar para confirmar.');
+    showMessage('success', 'Padroes aplicados. Clique em salvar para confirmar.');
   };
 
   const toggleSection = (sectionId: SectionId) => {
@@ -215,6 +270,20 @@ export default function SystemSettingsTab() {
       ...previous,
       [sectionId]: !previous[sectionId],
     }));
+  };
+
+  const revealSection = (sectionId: SectionId) => {
+    setCollapsedSections((previous) => ({
+      ...previous,
+      [sectionId]: false,
+    }));
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(`settings-section-${sectionId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   };
 
   const normalizedSearchTerm = useMemo(() => normalizeSearchText(searchTerm), [searchTerm]);
@@ -235,24 +304,9 @@ export default function SystemSettingsTab() {
     [normalizedSearchTerm],
   );
 
-  const showGeneralSection = matchesSearch(normalizedSearchTerm, [
-    'preferencias',
-    'sistema',
-    'notificacao',
-    'volume',
-    'intervalo',
-    'sessao',
-    'data',
-  ]);
-
-  const showAccessSection = matchesSearch(normalizedSearchTerm, [
-    'permissoes',
-    'perfil',
-    'modulos',
-    'acesso',
-    'admin',
-    'observer',
-  ]);
+  const showGeneralSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[0].searchTerms);
+  const showOperadorasSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[1].searchTerms);
+  const showAccessSection = matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[2].searchTerms);
 
   const showLeadStatusManager = matchesSearch(normalizedSearchTerm, [
     'status dos leads',
@@ -271,12 +325,33 @@ export default function SystemSettingsTab() {
   ]);
 
   const showLeadsSection =
-    showLeadStatusManager || showLeadOriginsManager || visibleLeadManagers.length > 0;
+    matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[3].searchTerms)
+    || showLeadStatusManager
+    || showLeadOriginsManager
+    || visibleLeadManagers.length > 0;
 
-  const showContractsSection = visibleContractManagers.length > 0;
+  const showContractsSection =
+    matchesSearch(normalizedSearchTerm, SECTION_OVERVIEW[4].searchTerms)
+    || visibleContractManagers.length > 0;
 
-  const hasVisibleSections =
-    showGeneralSection || showAccessSection || showLeadsSection || showContractsSection;
+  const visibleSections = SECTION_OVERVIEW.filter((section) => {
+    switch (section.id) {
+      case 'general':
+        return showGeneralSection;
+      case 'operadoras':
+        return showOperadorasSection;
+      case 'access':
+        return showAccessSection;
+      case 'leads':
+        return showLeadsSection;
+      case 'contracts':
+        return showContractsSection;
+      default:
+        return false;
+    }
+  });
+
+  const hasVisibleSections = visibleSections.length > 0;
 
   const hasPendingGeneralChanges = useMemo(
     () => !arePreferencesEqual(settings, savedSettings),
@@ -310,7 +385,7 @@ export default function SystemSettingsTab() {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center">
         <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
-        <p className="text-red-700">Erro ao carregar configurações do sistema.</p>
+        <p className="text-red-700">Erro ao carregar configuracoes do sistema.</p>
       </div>
     );
   }
@@ -328,7 +403,7 @@ export default function SystemSettingsTab() {
       <div className="panel-page-shell space-y-6">
         {message && (
           <div
-            className={`flex items-center space-x-3 rounded-lg border p-4 ${
+            className={`flex items-center space-x-3 rounded-xl border p-4 ${
               message.type === 'success'
                 ? 'border-green-200 bg-green-50 text-green-800'
                 : 'border-red-200 bg-red-50 text-red-800'
@@ -343,44 +418,72 @@ export default function SystemSettingsTab() {
           </div>
         )}
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">Reorganização de Sistema</h3>
-              <p className="text-sm text-slate-600">Filtre configurações e gerencie os blocos por área.</p>
+        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-sm">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">
+                <Settings className="h-3.5 w-3.5" />
+                Central de configuracoes
+              </div>
+              <h2 className="text-2xl font-semibold text-slate-900">Sistema e operadoras agora vivem no mesmo fluxo</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Organize preferencias, acessos, operadoras, leads e contratos em uma experiencia unica, com busca e atalhos por area.
+              </p>
             </div>
-            <div className="w-full lg:max-w-md">
+
+            <div className="w-full xl:max-w-md">
               <Input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por permissões, leads, contratos..."
+                placeholder="Buscar por operadoras, permissoes, leads, contratos..."
                 leftIcon={Search}
               />
             </div>
           </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {visibleSections.map((section) => {
+              const Icon = section.icon;
+              const expanded = shouldExpandSection(section.id);
+
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => revealSection(section.id)}
+                  className="rounded-2xl border border-white/80 bg-white/85 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                >
+                  <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${section.accentClassName}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold text-slate-900">{section.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{section.description}</p>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                    {expanded ? 'Visivel' : 'Fechada'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {!hasVisibleSections && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
             <p className="text-sm text-slate-600">Nenhum bloco encontrado para "{searchTerm}".</p>
           </div>
         )}
 
         {showGeneralSection && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => toggleSection('general')}
-              className={sectionCardClass}
-            >
+          <div id="settings-section-general" className="space-y-4">
+            <button type="button" onClick={() => toggleSection('general')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
                   <Settings className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Preferências do Sistema</h3>
-                  <p className="text-sm text-slate-600">Notificações, formato de data e sessão.</p>
+                  <h3 className="text-base font-semibold text-slate-900">Preferencias do sistema</h3>
+                  <p className="text-sm text-slate-600">Notificacoes, formato de data e tempo de sessao.</p>
                 </div>
               </div>
               <ChevronDown
@@ -401,22 +504,22 @@ export default function SystemSettingsTab() {
                     }`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                    {hasPendingGeneralChanges ? 'Alterações pendentes' : 'Sem alterações pendentes'}
+                    {hasPendingGeneralChanges ? 'Alteracoes pendentes' : 'Sem alteracoes pendentes'}
                   </div>
 
                   <button
                     type="button"
                     onClick={handleRestoreGeneralDefaults}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    Restaurar padrões
+                    Restaurar padroes
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">Formato de Data</label>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Formato de data</label>
                     <FilterSingleSelect
                       icon={Calendar}
                       value={settings.date_format}
@@ -432,7 +535,7 @@ export default function SystemSettingsTab() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">Tempo de Sessão (minutos)</label>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Tempo de sessao (minutos)</label>
                     <Input
                       type="number"
                       min="30"
@@ -445,7 +548,7 @@ export default function SystemSettingsTab() {
                         })
                       }
                     />
-                    <p className="mt-1 text-xs text-slate-500">Padrão recomendado: 480 minutos (8 horas).</p>
+                    <p className="mt-1 text-xs text-slate-500">Padrao recomendado: 480 minutos (8 horas).</p>
                   </div>
 
                   <div className="lg:col-span-2">
@@ -467,7 +570,7 @@ export default function SystemSettingsTab() {
                         ) : (
                           <VolumeX className="h-5 w-5 text-slate-400" />
                         )}
-                        <span className="text-sm font-medium text-slate-700">Ativar sons de notificação</span>
+                        <span className="text-sm font-medium text-slate-700">Ativar sons de notificacao</span>
                       </div>
                     </label>
                   </div>
@@ -475,7 +578,7 @@ export default function SystemSettingsTab() {
                   {settings.notification_sound_enabled && (
                     <div className="lg:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-slate-700">
-                        Volume das notificações: {Math.round(settings.notification_volume * 100)}%
+                        Volume das notificacoes: {Math.round(settings.notification_volume * 100)}%
                       </label>
                       <input
                         type="range"
@@ -497,7 +600,7 @@ export default function SystemSettingsTab() {
                   <div className="lg:col-span-2">
                     <label className="mb-2 flex items-center space-x-2 text-sm font-medium text-slate-700">
                       <Clock className="h-4 w-4" />
-                      <span>Intervalo de verificação de notificações (segundos)</span>
+                      <span>Intervalo de verificacao de notificacoes (segundos)</span>
                     </label>
                     <Input
                       type="number"
@@ -518,7 +621,7 @@ export default function SystemSettingsTab() {
                 <div className="mt-6 flex justify-end">
                   <Button onClick={handleSave} disabled={saving || !hasPendingGeneralChanges}>
                     <Save className="h-4 w-4" />
-                    <span>{saving ? 'Salvando...' : 'Salvar preferências'}</span>
+                    <span>{saving ? 'Salvando...' : 'Salvar preferencias'}</span>
                   </Button>
                 </div>
               </div>
@@ -526,20 +629,43 @@ export default function SystemSettingsTab() {
           </div>
         )}
 
-        {showAccessSection && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => toggleSection('access')}
-              className={sectionCardClass}
-            >
+        {showOperadorasSection && (
+          <div id="settings-section-operadoras" className="space-y-4">
+            <button type="button" onClick={() => toggleSection('operadoras')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Operadoras</h3>
+                  <p className="text-sm text-slate-600">Comissao, prazo, bonus e manutencao da carteira comercial.</p>
+                </div>
+              </div>
+              <ChevronDown
+                className={`h-5 w-5 text-slate-500 transition-transform ${
+                  shouldExpandSection('operadoras') ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {shouldExpandSection('operadoras') && (
+              <div className={sectionBodyClass}>
+                <OperadorasTab embedded />
+              </div>
+            )}
+          </div>
+        )}
+
+        {showAccessSection && (
+          <div id="settings-section-access" className="space-y-4">
+            <button type="button" onClick={() => toggleSection('access')} className={sectionCardClass}>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Permissões por Perfil</h3>
-                  <p className="text-sm text-slate-600">Controle de acesso aos módulos para cada tipo de usuário.</p>
+                  <h3 className="text-base font-semibold text-slate-900">Permissoes por perfil</h3>
+                  <p className="text-sm text-slate-600">Controle de acesso aos modulos para cada tipo de usuario.</p>
                 </div>
               </div>
               <ChevronDown
@@ -569,14 +695,10 @@ export default function SystemSettingsTab() {
         )}
 
         {showLeadsSection && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => toggleSection('leads')}
-              className={sectionCardClass}
-            >
+          <div id="settings-section-leads" className="space-y-4">
+            <button type="button" onClick={() => toggleSection('leads')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-700">
                   <ListTree className="h-5 w-5" />
                 </div>
                 <div>
@@ -628,19 +750,15 @@ export default function SystemSettingsTab() {
         )}
 
         {showContractsSection && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => toggleSection('contracts')}
-              className={sectionCardClass}
-            >
+          <div id="settings-section-contracts" className="space-y-4">
+            <button type="button" onClick={() => toggleSection('contracts')} className={sectionCardClass}>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
                   <FileText className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Contratos</h3>
-                  <p className="text-sm text-slate-600">Estados e parâmetros auxiliares usados no cadastro de contratos.</p>
+                  <p className="text-sm text-slate-600">Estados e parametros auxiliares usados no cadastro de contratos.</p>
                 </div>
               </div>
               <ChevronDown

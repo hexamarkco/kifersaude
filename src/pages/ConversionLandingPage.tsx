@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { formatPhoneInput } from '../lib/inputFormatters';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 import { 
@@ -610,7 +611,7 @@ export default function ConversionLandingPage() {
                         type="tel" 
                         required 
                         value={formData.whatsapp} 
-                        onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} 
+                        onChange={(e) => setFormData({...formData, whatsapp: formatPhoneInput(e.target.value)})} 
                         className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-all pl-12" 
                         placeholder="(21) 99999-9999" 
                       />
@@ -927,14 +928,14 @@ export default function ConversionLandingPage() {
                     <Users className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   </div>
                   <div className="relative">
-                    <input 
-                      type="tel" 
-                      required 
-                      value={formData.whatsapp} 
-                      onChange={(e) => setFormData({...formData, whatsapp: e.target.value})} 
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-all pl-12" 
-                      placeholder="WhatsApp" 
-                    />
+                      <input 
+                        type="tel" 
+                        required 
+                        value={formData.whatsapp} 
+                        onChange={(e) => setFormData({...formData, whatsapp: formatPhoneInput(e.target.value)})} 
+                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-all pl-12" 
+                        placeholder="WhatsApp" 
+                      />
                     <MessageCircle className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
@@ -1051,7 +1052,7 @@ export default function ConversionLandingPage() {
                 type="tel" 
                 required 
                 value={exitFormData.whatsapp} 
-                onChange={(e) => setExitFormData({...exitFormData, whatsapp: e.target.value})} 
+                onChange={(e) => setExitFormData({...exitFormData, whatsapp: formatPhoneInput(e.target.value)})} 
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-all" 
                 placeholder="WhatsApp" 
               />

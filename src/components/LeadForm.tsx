@@ -19,7 +19,8 @@ import {
   formatDateTimeForInput,
 } from '../lib/dateUtils';
 import { BRAZIL_STATE_OPTIONS, fetchCitiesByState } from '../lib/brasilLocations';
-import { consultarCep, formatCep } from '../lib/cepService';
+import { consultarCep } from '../lib/cepService';
+import { formatCep } from '../lib/inputFormatters';
 import { useConfig } from '../contexts/ConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
@@ -538,6 +539,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
               type="tel"
               required
               leftIcon={Phone}
+              autoFormat="phone"
               value={formData.telefone}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, telefone: e.target.value }))
@@ -563,6 +565,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
                 id="lead-cep"
                 type="text"
                 leftIcon={MapPin}
+                autoFormat="cep"
                 value={formData.cep}
                 onChange={(e) => handleCepChange(e.target.value)}
                 placeholder="00000-000"

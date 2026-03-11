@@ -38,10 +38,10 @@ import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../lib/colorU
 import { MessageBubble } from './MessageBubble';
 import { MessageHistoryPanel } from './MessageHistoryPanel';
 import { GroupInfoPanel } from './GroupInfoPanel';
-import WhatsAppSettingsModal from './WhatsAppSettingsModal';
 import ReminderSchedulerModal from '../ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { useWhatsAppInboxPreferences } from '../../hooks/useWhatsAppInboxPreferences';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../lib/leadReminderUtils';
 import { addBusinessDaysSkippingWeekends } from '../../lib/reminderUtils';
 import { resolveWhatsAppMessageBody } from '../../lib/whatsappMessageBody';
@@ -155,14 +155,6 @@ type ReminderQuickOpenSchedulerDefaults = {
   defaultDescription?: string;
   defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
   defaultPriority?: 'normal' | 'alta' | 'baixa';
-};
-
-type SyncAllChatsProgress = {
-  total: number;
-  completed: number;
-  failed: number;
-  currentChatId: string | null;
-  currentChatName: string | null;
 };
 
 const REMINDER_QUICK_OPEN_PERIODS: Array<{
@@ -322,30 +314,24 @@ export default function WhatsAppTab() {
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [chatFilterMode, setChatFilterMode] = useState<ChatFilterMode>('all');
-  const [prioritizeUnread, setPrioritizeUnread] = useState(false);
+  const {
+    prioritizeUnread,
+    desktopNotificationsEnabled,
+    notificationPermission,
+  } = useWhatsAppInboxPreferences();
   const [chatMenu, setChatMenu] = useState<{ chatId: string; x: number; y: number } | null>(null);
   const [chatMenuMuteOpen, setChatMenuMuteOpen] = useState(false);
-  const [isListSettingsOpen, setIsListSettingsOpen] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
   const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
-  const [isSyncingAllChats, setIsSyncingAllChats] = useState(false);
-  const [syncAllChatsProgress, setSyncAllChatsProgress] = useState<SyncAllChatsProgress>({
-    total: 0,
-    completed: 0,
-    failed: 0,
-    currentChatId: null,
-    currentChatName: null,
-  });
+  const [isSyncingAllChats] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
   const [slaTick, setSlaTick] = useState(0);
-  const [desktopNotificationsEnabled, setDesktopNotificationsEnabled] = useState(true);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
   const [isCopyingChat, setIsCopyingChat] = useState(false);
@@ -1154,15 +1140,6 @@ export default function WhatsAppTab() {
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      setNotificationPermission('unsupported');
-      return;
-    }
-
-    setNotificationPermission(Notification.permission);
-  }, []);
-
-  useEffect(() => {
     const syncFocusState = () => {
       if (typeof document === 'undefined') {
         isWindowFocusedRef.current = true;
@@ -1255,11 +1232,6 @@ export default function WhatsAppTab() {
 
       if (event.key !== 'Escape') return;
 
-      if (isListSettingsOpen) {
-        setIsListSettingsOpen(false);
-        return;
-      }
-
       if (chatMenu) {
         setChatMenu(null);
         return;
@@ -1282,7 +1254,7 @@ export default function WhatsAppTab() {
 
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [chatMenu, isListSettingsOpen, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatMenu, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const loadSavedContacts = async () => {
@@ -2304,80 +2276,6 @@ export default function WhatsAppTab() {
     }
   };
 
-  const handleSyncAllChatsFromListSettings = async () => {
-    if (isSyncingAllChats || syncingChatId) return;
-
-    const chatIds = Array.from(new Set(chatsRef.current.map((chat) => chat.id).filter(Boolean)));
-    if (chatIds.length === 0) {
-      return;
-    }
-
-    setIsSyncingAllChats(true);
-    setSyncAllChatsProgress({
-      total: chatIds.length,
-      completed: 0,
-      failed: 0,
-      currentChatId: null,
-      currentChatName: null,
-    });
-
-    let failed = 0;
-    const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-
-    try {
-      for (let index = 0; index < chatIds.length; index += 1) {
-        const chatId = chatIds[index];
-        const currentChat = chatsRef.current.find((chat) => chat.id === chatId);
-        const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
-
-        setSyncAllChatsProgress((prev) => ({
-          ...prev,
-          total: chatIds.length,
-          currentChatId: chatId,
-          currentChatName,
-        }));
-        await yieldProgressFrame();
-
-        const { error } = await supabase.functions.invoke('whatsapp-sync', {
-          body: { chatId, count: 200 },
-        });
-
-        if (error) {
-          failed += 1;
-          console.error('Erro ao sincronizar chat:', chatId, error);
-        }
-
-        setSyncAllChatsProgress((prev) => ({
-          ...prev,
-          total: chatIds.length,
-          completed: index + 1,
-          failed,
-          currentChatId: chatId,
-          currentChatName,
-        }));
-        await yieldProgressFrame();
-      }
-
-      await loadChats();
-
-      const currentSelectedChat = selectedChatRef.current;
-      if (currentSelectedChat) {
-        await loadMessages(currentSelectedChat, { silent: true });
-      }
-
-      scheduleUnreadCountsRefresh();
-    } catch (error) {
-      console.error('Erro ao sincronizar todos os chats:', error);
-    } finally {
-      setIsSyncingAllChats(false);
-      setSyncAllChatsProgress((prev) => ({
-        ...prev,
-        currentChatId: null,
-        currentChatName: null,
-      }));
-    }
-  };
-
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -2668,25 +2566,6 @@ export default function WhatsAppTab() {
     };
   };
 
-  const handleToggleDesktopNotifications = async () => {
-    if (notificationPermission === 'unsupported' || typeof window === 'undefined') return;
-
-    if (notificationPermission === 'denied') {
-      alert('Permissao de notificacao negada no navegador. Libere para receber alertas desktop.');
-      return;
-    }
-
-    if (notificationPermission === 'default') {
-      const nextPermission = await Notification.requestPermission();
-      setNotificationPermission(nextPermission);
-      if (nextPermission !== 'granted') return;
-      setDesktopNotificationsEnabled(true);
-      return;
-    }
-
-    setDesktopNotificationsEnabled((prev) => !prev);
-  };
-
   const leadByPhoneMatchKey = useMemo(() => {
     const map = new Map<string, { id: string; name: string; phone: string; status?: string | null; responsavel?: string | null }>();
 
@@ -2912,16 +2791,6 @@ export default function WhatsAppTab() {
     () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
     [unreadQueue, selectedChat?.id],
   );
-  const notificationsActive = notificationPermission === 'granted' && desktopNotificationsEnabled;
-  const notificationsLabel =
-    notificationPermission === 'unsupported'
-      ? 'Sem suporte'
-      : notificationPermission === 'denied'
-        ? 'Permissao bloqueada'
-        : notificationsActive
-          ? 'Notificacoes ligadas'
-          : 'Notificacoes desligadas';
-
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
 
@@ -3830,7 +3699,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
 
   const handleOpenRemindersModal = () => {
     setShowRemindersModal(true);
-    setIsListSettingsOpen(false);
 
     const hasFreshSnapshot =
       hasLoadedReminderQuickOpen &&
@@ -4345,29 +4213,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         onClick={() => {
           closeMuteSubmenuNow();
           setChatMenu(null);
-          setIsListSettingsOpen(false);
         }}
       >
-      <WhatsAppSettingsModal
-        isOpen={isListSettingsOpen}
-        onClose={() => setIsListSettingsOpen(false)}
-        isSyncingAllChats={isSyncingAllChats}
-        syncingChatId={syncingChatId}
-        chatsCount={chats.length}
-        syncAllChatsProgress={syncAllChatsProgress}
-        onSyncAllChats={() => {
-          void handleSyncAllChatsFromListSettings();
-        }}
-        archivedCount={archivedCount}
-        prioritizeUnread={prioritizeUnread}
-        onTogglePrioritizeUnread={setPrioritizeUnread}
-        notificationPermission={notificationPermission}
-        notificationsActive={notificationsActive}
-        notificationsLabel={notificationsLabel}
-        onToggleDesktopNotifications={() => {
-          void handleToggleDesktopNotifications();
-        }}
-      />
       {showNewChatModal && (
         <ModalShell
           isOpen
@@ -4753,21 +4600,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               </div>
               <div className="relative flex items-center gap-2">
                 <Button
-                  variant={showArchived ? 'warning' : 'secondary'}
-                  size="icon"
-                  className="relative h-9 w-9"
-                  onClick={() => setShowArchived((prev) => !prev)}
-                  title={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
-                  aria-label={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
-                >
-                  {showArchived ? <Inbox className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                  {!showArchived && archivedCount > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                      {archivedCount}
-                    </span>
-                  )}
-                </Button>
-                <Button
                   variant="primary"
                   size="icon"
                   className="h-9 w-9"
@@ -4777,7 +4609,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     if (leadsList.length === 0) {
                       void loadLeadNames();
                     }
-                    setIsListSettingsOpen(false);
                   }}
                   title="Novo chat"
                   aria-label="Novo chat"
@@ -4800,14 +4631,29 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                   )}
                 </Button>
                 <Button
+                  variant={showArchived ? 'warning' : 'secondary'}
+                  size="icon"
+                  className="relative h-9 w-9"
+                  onClick={() => setShowArchived((prev) => !prev)}
+                  title={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
+                  aria-label={showArchived ? 'Ver conversas ativas' : 'Ver conversas arquivadas'}
+                >
+                  {showArchived ? <Inbox className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  {!showArchived && archivedCount > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                      {archivedCount}
+                    </span>
+                  )}
+                </Button>
+                <Button
                   title="Configuracoes do WhatsApp"
                   aria-label="Configuracoes do WhatsApp"
-                  variant={isListSettingsOpen ? 'warning' : 'secondary'}
+                  variant="secondary"
                   size="icon"
                   className="h-9 w-9"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setIsListSettingsOpen((prev) => !prev);
+                    navigate('/painel/config/whatsapp');
                   }}
                 >
                   <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />

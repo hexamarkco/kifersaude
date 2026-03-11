@@ -1,6 +1,7 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cx } from '../../lib/cx';
+import { formatInputValue, type InputAutoFormat } from '../../lib/inputFormatters';
 import {
   panelInputBaseClass,
   panelInputIconSizeClasses,
@@ -16,6 +17,7 @@ type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
   invalid?: boolean;
   leftIcon?: LucideIcon;
   rightSlot?: ReactNode;
+  autoFormat?: InputAutoFormat;
 };
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
@@ -24,12 +26,30 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     invalid = false,
     leftIcon: LeftIcon,
     rightSlot,
+    autoFormat,
     className,
     disabled,
+    onChange,
     ...props
   },
   ref,
 ) {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (!autoFormat) {
+      onChange?.(event);
+      return;
+    }
+
+    const formattedValue = formatInputValue(event.target.value, autoFormat);
+    const formattedEvent = {
+      ...event,
+      target: { ...event.target, value: formattedValue },
+      currentTarget: { ...event.currentTarget, value: formattedValue },
+    } as ChangeEvent<HTMLInputElement>;
+
+    onChange?.(formattedEvent);
+  };
+
   return (
     <div className="relative w-full">
       {LeftIcon && (
@@ -44,6 +64,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         disabled={disabled}
+        onChange={handleChange}
         className={cx(
           panelInputBaseClass,
           panelInputSizeClasses[size],

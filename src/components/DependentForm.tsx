@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
 import { supabase, type ContractHolder, type Dependent } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
+import { formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
@@ -45,7 +46,10 @@ export default function DependentForm({
     data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
     relacao: dependent?.relacao || 'Filho(a)',
     elegibilidade: dependent?.elegibilidade || '',
-    valor_individual: dependent?.valor_individual?.toString() || '',
+    valor_individual:
+      typeof dependent?.valor_individual === 'number'
+        ? formatCurrencyInput(String(Math.round(dependent.valor_individual * 100)))
+        : '',
     carencia_individual: dependent?.carencia_individual || '',
     bonus_por_vida_aplicado:
       dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
@@ -63,7 +67,10 @@ export default function DependentForm({
       data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
       relacao: dependent?.relacao || 'Filho(a)',
       elegibilidade: dependent?.elegibilidade || '',
-      valor_individual: dependent?.valor_individual?.toString() || '',
+      valor_individual:
+        typeof dependent?.valor_individual === 'number'
+          ? formatCurrencyInput(String(Math.round(dependent.valor_individual * 100)))
+          : '',
       carencia_individual: dependent?.carencia_individual || '',
       bonus_por_vida_aplicado:
         dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
@@ -119,7 +126,7 @@ export default function DependentForm({
         relacao: formData.relacao,
         elegibilidade: formData.elegibilidade || null,
         valor_individual: formData.valor_individual
-          ? parseFloat(formData.valor_individual)
+          ? parseFormattedNumber(formData.valor_individual)
           : null,
         carencia_individual: formData.carencia_individual || null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
@@ -184,12 +191,13 @@ export default function DependentForm({
 
           <Field label="CPF" errorText={cpfLookupError || undefined}>
             <div className="relative">
-              <Input
-                type="text"
-                leftIcon={WalletCards}
-                value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                className="pr-11"
+            <Input
+              type="text"
+              leftIcon={WalletCards}
+              autoFormat="cpf"
+              value={formData.cpf}
+              onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+              className="pr-11"
               />
               <button
                 type="button"
@@ -251,11 +259,12 @@ export default function DependentForm({
 
           <Field label="Valor Individual (R$)">
             <Input
-              type="number"
-              step="0.01"
+              type="text"
               leftIcon={HeartPulse}
+              autoFormat="currency"
               value={formData.valor_individual}
               onChange={(e) => setFormData({ ...formData, valor_individual: e.target.value })}
+              inputMode="numeric"
             />
           </Field>
 

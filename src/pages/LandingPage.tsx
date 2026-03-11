@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { configService } from '../lib/configService';
+import { formatPhoneInput } from '../lib/inputFormatters';
 import { supabase, type ConfigOption, type LeadOrigem, type LeadStatusConfig } from '../lib/supabase';
 
 type ProfileSlug = 'pf' | 'pme' | 'adesao';
@@ -125,24 +126,6 @@ const normalizeText = (value: string) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
-
-const formatPhone = (rawValue: string) => {
-  const digits = rawValue.replace(/\D/g, '').slice(0, 11);
-
-  if (digits.length <= 2) {
-    return digits;
-  }
-
-  if (digits.length <= 6) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  }
-
-  if (digits.length <= 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  }
-
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-};
 
 const findOriginId = (origins: LeadOrigem[]) => {
   const priorities = ['lp', 'landing', 'site'];
@@ -505,7 +488,7 @@ export default function LandingPage() {
                     onChange={(event) =>
                       setFormData((current) => ({
                         ...current,
-                        whatsapp: formatPhone(event.target.value),
+                        whatsapp: formatPhoneInput(event.target.value),
                       }))
                     }
                     className="ks-input-field w-full rounded-xl px-4 py-3 text-sm text-slate-900 outline-none"

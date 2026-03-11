@@ -61,7 +61,7 @@ export default function WhatsAppSettingsPage() {
     setSummaryError(null);
 
     try {
-      const rows = await fetchAllPages<ChatSummaryRow>((from, to) =>
+      const rows = await fetchAllPages<ChatSummaryRow>(async (from, to) =>
         supabase.from('whatsapp_chats').select('id, name, phone_number, archived').range(from, to),
       );
 

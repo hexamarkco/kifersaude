@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Settings, Users, Building2, AlertCircle, Plug, GitBranch } from 'lucide-react';
+import { Settings, Users, AlertCircle, Plug, GitBranch } from 'lucide-react';
 import SystemSettingsTab from '../components/config/SystemSettingsTab';
-import OperadorasTab from '../components/config/OperadorasTab';
 import UsersTab from '../components/config/UsersTab';
 import IntegrationsTab from '../components/config/IntegrationsTab';
 import AutomationFlowsTab from '../components/config/AutomationFlowsTab';
 import Card from '../components/ui/Card';
 import Tabs, { type TabItem } from '../components/ui/Tabs';
+import { useAuth } from '../contexts/AuthContext';
 
-type TabType = 'system' | 'operadoras' | 'users' | 'integrations' | 'automation';
+type TabType = 'system' | 'users' | 'integrations' | 'automation';
 
 export default function ConfigPage() {
   const { isAdmin } = useAuth();
@@ -19,35 +18,39 @@ export default function ConfigPage() {
     return (
       <div className="w-full">
         <Card variant="glass" className="border-red-200 bg-red-50 p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-red-900 mb-2">Acesso Negado</h2>
-          <p className="text-red-700">Você não tem permissão para acessar esta página.</p>
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
+          <h2 className="mb-2 text-2xl font-bold text-red-900">Acesso Negado</h2>
+          <p className="text-red-700">Voce nao tem permissao para acessar esta pagina.</p>
         </Card>
       </div>
     );
   }
 
   const tabs: TabItem<TabType>[] = [
-    { id: 'system' as TabType, label: 'Sistema', icon: Settings },
-    { id: 'operadoras' as TabType, label: 'Operadoras', icon: Building2 },
-    { id: 'users' as TabType, label: 'Usuários', icon: Users },
-    { id: 'automation' as TabType, label: 'Automações', icon: GitBranch },
-    { id: 'integrations' as TabType, label: 'Integrações', icon: Plug },
+    { id: 'system', label: 'Geral', icon: Settings },
+    { id: 'users', label: 'Usuarios', icon: Users },
+    { id: 'automation', label: 'Automacoes', icon: GitBranch },
+    { id: 'integrations', label: 'Integracoes', icon: Plug },
   ];
 
   return (
     <div className="config-transparent-buttons panel-page-shell w-full">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Configurações</h1>
-        <p className="text-slate-600">Gerencie as configurações do sistema</p>
+        <h1 className="mb-2 text-3xl font-bold text-slate-900">Configuracoes</h1>
+        <p className="text-slate-600">Centralize regras do sistema, operadoras, acessos e integracoes</p>
       </div>
 
       <Card variant="glass" padding="none" className="mb-6 overflow-hidden">
-        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" listClassName="rounded-none border-x-0 border-t-0" />
+        <Tabs
+          items={tabs}
+          value={activeTab}
+          onChange={setActiveTab}
+          variant="panel"
+          listClassName="rounded-none border-x-0 border-t-0"
+        />
 
         <div className="p-6">
           {activeTab === 'system' && <SystemSettingsTab />}
-          {activeTab === 'operadoras' && <OperadorasTab />}
           {activeTab === 'users' && <UsersTab />}
           {activeTab === 'automation' && <AutomationFlowsTab />}
           {activeTab === 'integrations' && <IntegrationsTab />}

@@ -1,4 +1,4 @@
-import { startTransition, useState, useEffect, useRef, useMemo } from 'react';
+import { startTransition, useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase, fetchAllPages, type Lead } from '../../lib/supabase';
 import {
   Search,
@@ -389,6 +389,7 @@ export default function WhatsAppTab() {
   const [groupNamesById, setGroupNamesById] = useState<Map<string, string>>(new Map());
   const [newsletterNamesById, setNewsletterNamesById] = useState<Map<string, string>>(new Map());
   const [showRemindersModal, setShowRemindersModal] = useState(false);
+  const [renderRemindersModalContent, setRenderRemindersModalContent] = useState(false);
   const [reminderQuickOpenItems, setReminderQuickOpenItems] = useState<ReminderQuickOpenItem[]>([]);
   const [isLoadingReminderQuickOpen, setIsLoadingReminderQuickOpen] = useState(false);
   const [hasLoadedReminderQuickOpen, setHasLoadedReminderQuickOpen] = useState(false);
@@ -4629,7 +4630,9 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   };
 
   const handleOpenRemindersModal = () => {
-    setShowRemindersModal(true);
+    startTransition(() => {
+      setShowRemindersModal(true);
+    });
 
     const hasFreshSnapshot =
       hasLoadedReminderQuickOpen &&
@@ -4651,6 +4654,27 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       window.clearInterval(refreshIntervalId);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!showRemindersModal) {
+      setRenderRemindersModalContent(false);
+      return;
+    }
+
+    let cancelled = false;
+    const frameId = window.requestAnimationFrame(() => {
+      if (!cancelled) {
+        startTransition(() => {
+          setRenderRemindersModalContent(true);
+        });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [showRemindersModal]);
 
   const openReminderLeadInWhatsApp = (item: ReminderQuickOpenItem) => {
     if (!item.leadPhone) return;
@@ -4749,10 +4773,8 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
     }
   };
 
-  const handleQuickScheduleReminder = async (item: ReminderQuickOpenItem, daysAhead: 1 | 2 | 3) => {
+  const runQuickScheduleReminder = async (item: ReminderQuickOpenItem, daysAhead: 1 | 2 | 3) => {
     if (quickSchedulingReminderAction?.reminderId === item.id) return;
-
-    setQuickSchedulingReminderAction({ reminderId: item.id, daysAhead });
 
     try {
       await markReminderQuickOpenItemAsRead(item, { syncLeadNextReturn: false });
@@ -4794,17 +4816,33 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
           leadStatus: item.leadStatus ?? null,
         };
 
-        setReminderQuickOpenItems((current) =>
-          [...current, nextItem].sort(compareReminderQuickOpenItems),
-        );
+        startTransition(() => {
+          setReminderQuickOpenItems((current) =>
+            [...current, nextItem].sort(compareReminderQuickOpenItems),
+          );
+        });
       }
     } catch (error) {
       console.error('Erro ao criar lembrete rÃ¡pido no WhatsApp:', error);
       alert('NÃ£o foi possÃ­vel criar o novo lembrete rÃ¡pido.');
       void loadReminderQuickOpen({ preserveExistingItems: true });
     } finally {
-      setQuickSchedulingReminderAction((current) => (current?.reminderId === item.id ? null : current));
+      startTransition(() => {
+        setQuickSchedulingReminderAction((current) => (current?.reminderId === item.id ? null : current));
+      });
     }
+  };
+
+  const handleQuickScheduleReminder = (item: ReminderQuickOpenItem, daysAhead: 1 | 2 | 3) => {
+    if (quickSchedulingReminderAction?.reminderId === item.id) return;
+
+    startTransition(() => {
+      setQuickSchedulingReminderAction({ reminderId: item.id, daysAhead });
+    });
+
+    window.requestAnimationFrame(() => {
+      void runQuickScheduleReminder(item, daysAhead);
+    });
   };
 
   const handleMarkReminderAsReadAndSchedule = async (item: ReminderQuickOpenItem) => {
@@ -5184,9 +5222,16 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
   const showMessageArea = !isMobileView || selectedChat;
 
   const hasChatSnapshot = chats.length > 0;
+  const deferredReminderQuickOpenItems = useDeferredValue(reminderQuickOpenItems);
   const groupedReminderQuickOpenItems = useMemo(
-    () => groupReminderQuickOpenItems(reminderQuickOpenItems),
-    [reminderQuickOpenItems],
+    () => (renderRemindersModalContent ? groupReminderQuickOpenItems(deferredReminderQuickOpenItems) : {
+      overdue: [],
+      today: [],
+      thisWeek: [],
+      thisMonth: [],
+      later: [],
+    }),
+    [deferredReminderQuickOpenItems, renderRemindersModalContent],
   );
   const overdueReminderQuickOpenCount = groupedReminderQuickOpenItems.overdue.length;
   const toggleReminderQuickOpenPeriod = (periodId: ReminderQuickOpenPeriod) => {
@@ -5372,7 +5417,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               </div>
             </div>
 
-            {(isLoadingReminderQuickOpen || !hasLoadedReminderQuickOpen) &&
+            {!renderRemindersModalContent ? (
+              <div className="comm-card px-3 py-4 text-sm comm-text">
+                Preparando lembretes...
+              </div>
+            ) : (isLoadingReminderQuickOpen || !hasLoadedReminderQuickOpen) &&
             reminderQuickOpenItems.length === 0 &&
             !reminderQuickOpenError ? (
               <div className="comm-card px-3 py-4 text-sm comm-text">

@@ -25,6 +25,8 @@ import {
 import { supabase } from '../../lib/supabase';
 import FilterSingleSelect from '../FilterSingleSelect';
 import ModalShell from '../ui/ModalShell';
+import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
+import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS, type TemplateVariableSuggestion } from '../../lib/templateVariableSuggestions';
 
 export type SentMessagePayload = {
   id: string;
@@ -150,6 +152,7 @@ function MessageInputComponent({
   const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiCategoryId>('recent');
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
+  const [renderComposerActionsMenu, setRenderComposerActionsMenu] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -229,6 +232,36 @@ function MessageInputComponent({
     });
     return normalized;
   }, [templateVariables]);
+
+  const quickReplyVariableSuggestions = useMemo<TemplateVariableSuggestion[]>(() => {
+    const suggestions = new Map<string, TemplateVariableSuggestion>();
+
+    WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS.forEach((item) => {
+      suggestions.set(item.key, item);
+    });
+
+    templateVariableShortcuts.forEach((shortcut) => {
+      if (!suggestions.has(shortcut.key)) {
+        suggestions.set(shortcut.key, {
+          key: shortcut.key,
+          label: shortcut.label,
+          description: `Insere a variavel ${shortcut.label.toLowerCase()} no texto.`,
+        });
+      }
+    });
+
+    normalizedTemplateVariables.forEach((value, key) => {
+      if (!suggestions.has(key)) {
+        suggestions.set(key, {
+          key,
+          label: key.replace(/_/g, ' '),
+          description: `Usa o valor atual de ${value}.`,
+        });
+      }
+    });
+
+    return Array.from(suggestions.values());
+  }, [normalizedTemplateVariables, templateVariableShortcuts]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -939,8 +972,18 @@ function MessageInputComponent({
 
   useEffect(() => {
     if (!showComposerActionsMenu) {
+      setRenderComposerActionsMenu(false);
       return;
     }
+
+    let cancelled = false;
+    const frameId = requestAnimationFrame(() => {
+      if (!cancelled) {
+        startTransition(() => {
+          setRenderComposerActionsMenu(true);
+        });
+      }
+    });
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!composerActionsMenuRef.current?.contains(event.target as Node)) {
@@ -949,7 +992,11 @@ function MessageInputComponent({
     };
 
     document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
   }, [showComposerActionsMenu]);
 
   const handleTyping = () => {
@@ -2009,14 +2056,14 @@ function MessageInputComponent({
             </div>
 
             {templateVariableShortcuts.length > 0 && (
-              <div className="comm-card comm-card-success px-2 py-2">
-                <div className="text-[11px] font-semibold text-emerald-700">Variaveis de template</div>
+              <div className="comm-card border-[var(--panel-accent-border,#a96428)] bg-[var(--panel-surface-muted,#f7f0e7)] px-2 py-2">
+                <div className="comm-accent-text text-[11px] font-semibold">Variaveis de template</div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {templateVariableShortcuts.map((shortcut) => (
                     <button
                       key={`qr-variable-${shortcut.key}`}
                       type="button"
-                      className="comm-badge comm-badge-success bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[11px]"
+                      className="comm-chip-button rounded-full border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[11px] text-[var(--panel-text-soft,#5b4635)]"
                       onClick={() => insertTemplateTokenOnQuickReply(shortcut.key)}
                     >
                       {shortcut.label}
@@ -2045,7 +2092,7 @@ function MessageInputComponent({
                         </button>
                         <button
                           type="button"
-                          className="comm-badge comm-badge-danger disabled:cursor-not-allowed disabled:opacity-60"
+                          className="comm-button-secondary rounded-full px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => handleRemoveQuickReply(reply.id)}
                           disabled={quickRepliesLoading}
                         >
@@ -2054,7 +2101,7 @@ function MessageInputComponent({
                       </div>
                       <div className="comm-muted mt-1 whitespace-pre-wrap text-xs">{reply.message}</div>
                       {reply.hasDynamicPreview && (
-                        <div className="comm-badge comm-badge-success mt-1 whitespace-pre-wrap text-[11px]">
+                        <div className="comm-card mt-1 whitespace-pre-wrap px-2 py-1 text-[11px] text-[var(--panel-text-soft,#5b4635)]">
                           Preview: {reply.resolvedPreview}
                         </div>
                       )}
@@ -2082,11 +2129,14 @@ function MessageInputComponent({
                 placeholder="Título"
                 className="comm-input px-3 py-2 text-sm"
               />
-              <textarea
+              <VariableAutocompleteTextarea
                 value={quickReplyMessage}
-                onChange={(e) => setQuickReplyMessage(e.target.value)}
+                onChange={setQuickReplyMessage}
                 placeholder="Mensagem (use {{nome}}, {{telefone}}, etc.)"
-                className="comm-textarea h-20 px-3 py-2 text-sm"
+                className="h-24 px-3 py-2 text-sm"
+                rows={4}
+                size="compact"
+                suggestions={quickReplyVariableSuggestions}
               />
               <button
                 type="button"
@@ -2606,7 +2656,7 @@ function MessageInputComponent({
 
             {showComposerActionsMenu && (
               <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 min-w-64 p-2">
-                <div className="space-y-1">
+                {renderComposerActionsMenu ? <div className="space-y-1">
                   {isDirectChat && (
                     <button
                       type="button"
@@ -2642,7 +2692,7 @@ function MessageInputComponent({
                     <MessageSquare className="h-4 w-4" />
                     <span>Mensagens rápidas</span>
                   </button>
-                </div>
+                </div> : <div className="comm-muted px-2 py-2 text-xs">Abrindo ações...</div>}
               </div>
             )}
           </div>

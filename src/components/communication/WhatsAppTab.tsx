@@ -5853,10 +5853,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
               })
             )}
           </div>
-          {chatMenu && (
+          {chatMenu && chatMenuLayout && chatMenuTarget?.chat && (
             <div
-              className="fixed z-50 w-52 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl text-sm"
-              style={{ left: chatMenu.x, top: chatMenu.y }}
+              ref={chatMenuRef}
+              className="fixed z-50 w-64 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl text-sm"
+              style={{ left: chatMenuLayout.left, top: chatMenuLayout.top }}
               onClick={(event) => event.stopPropagation()}
             >
               <Button
@@ -5865,20 +5866,47 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 fullWidth
                 className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                 onClick={() => {
-                  const target = chats.find((item) => item.id === chatMenu.chatId);
-                  if (target) {
-                    updateChatArchive(target.id, !target.archived);
-                  }
+                  void updateChatArchive(chatMenuTarget.chat!.id, !chatMenuTarget.chat!.archived);
                   closeMuteSubmenuNow();
+                  closeStatusSubmenuNow();
                   setChatMenu(null);
                 }}
               >
-                {chats.find((item) => item.id === chatMenu.chatId)?.archived ? 'Desarquivar' : 'Arquivar'}
+                <Archive className="h-4 w-4" />
+                {chatMenuTarget.chat.archived ? 'Desarquivar' : 'Arquivar'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                onClick={() => {
+                  void markChatAsUnread(chatMenuTarget.chat!);
+                  closeMuteSubmenuNow();
+                  closeStatusSubmenuNow();
+                  setChatMenu(null);
+                }}
+              >
+                <Circle className="h-4 w-4" />
+                Marcar como nao lida
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                onClick={() => {
+                  void updateChatPinned(chatMenuTarget.chat!.id, chatMenuTarget.isPinned ? 0 : Date.now());
+                  closeMuteSubmenuNow();
+                  closeStatusSubmenuNow();
+                  setChatMenu(null);
+                }}
+              >
+                <Pin className="h-4 w-4" />
+                {chatMenuTarget.isPinned ? 'Desafixar' : 'Fixar'}
               </Button>
               <div className="border-t border-slate-800" />
               {(() => {
-                const target = chats.find((item) => item.id === chatMenu.chatId);
-                const muted = target ? isChatMuted(target) : false;
                 const muteOptions = [
                   { label: '1 hora', ms: 60 * 60 * 1000 },
                   { label: '1 dia', ms: 24 * 60 * 60 * 1000 },
@@ -5888,18 +5916,20 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 ];
                 return (
                   <div className="py-1">
-                    {muted ? (
+                    {chatMenuTarget.isMuted ? (
                       <Button
                         variant="ghost"
                         size="sm"
                         fullWidth
                         className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                         onClick={() => {
-                          if (target) updateChatMute(target.id, null);
+                          void updateChatMute(chatMenuTarget.chat!.id, null);
                           closeMuteSubmenuNow();
+                          closeStatusSubmenuNow();
                           setChatMenu(null);
                         }}
                       >
+                        <Bell className="h-4 w-4" />
                         Desmutar
                       </Button>
                     ) : (
@@ -5919,7 +5949,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                           <span className="text-xs text-slate-500">›</span>
                         </Button>
                         {chatMenuMuteOpen && (
-                          <div className="absolute left-full top-0 z-10 pl-1">
+                          <div className={`absolute top-0 z-10 ${chatMenuLayout.submenuOpensLeft ? 'right-full pr-1' : 'left-full pl-1'}`}>
                             <div className="min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
                               {muteOptions.map((option) => (
                                 <Button
@@ -5929,11 +5959,10 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                                   fullWidth
                                   className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
                                   onClick={() => {
-                                    if (target) {
-                                      const until = new Date(Date.now() + option.ms).toISOString();
-                                      updateChatMute(target.id, until);
-                                    }
+                                    const until = new Date(Date.now() + option.ms).toISOString();
+                                    void updateChatMute(chatMenuTarget.chat!.id, until);
                                     closeMuteSubmenuNow();
+                                    closeStatusSubmenuNow();
                                     setChatMenu(null);
                                   }}
                                 >
@@ -5945,6 +5974,79 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                         )}
                       </div>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      fullWidth
+                      className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => {
+                        void handleCopyChatPhone(chatMenuTarget.chat!, chatMenuTarget.phone);
+                        closeMuteSubmenuNow();
+                        closeStatusSubmenuNow();
+                        setChatMenu(null);
+                      }}
+                      disabled={!chatMenuTarget.phone}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copiar numero
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      fullWidth
+                      className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleOpenLeadFromChat(chatMenuTarget.lead?.id)}
+                      disabled={!chatMenuTarget.canOpenLead}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Abrir lead/CRM
+                    </Button>
+                    <div className="relative" onMouseEnter={() => chatMenuTarget.canUpdateStatus && openStatusSubmenu()} onMouseLeave={closeStatusSubmenuSoon}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        fullWidth
+                        className="h-auto justify-between rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          if (chatMenuTarget.canUpdateStatus) {
+                            openStatusSubmenu();
+                          }
+                        }}
+                        disabled={!chatMenuTarget.canUpdateStatus}
+                      >
+                        <span className="flex items-center gap-2">
+                          <SlidersHorizontal className="h-4 w-4" />
+                          <span>Status</span>
+                        </span>
+                        <span className="text-xs text-slate-500">{chatMenuLayout.submenuOpensLeft ? '<' : '>'}</span>
+                      </Button>
+                      {chatMenuStatusOpen && chatMenuTarget.lead && (
+                        <div className={`absolute top-0 z-10 ${chatMenuLayout.submenuOpensLeft ? 'right-full pr-1' : 'left-full pl-1'}`}>
+                          <div className="min-w-[220px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+                            <div className="border-b border-slate-800 px-3 py-2 text-[11px] uppercase tracking-[0.08em] text-slate-400">
+                              Atualizar status
+                            </div>
+                            {leadStatuses.map((status) => (
+                              <Button
+                                key={status.id}
+                                variant="ghost"
+                                size="sm"
+                                fullWidth
+                                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                                onClick={() => {
+                                  void handleUpdateLeadStatus(status.nome, chatMenuTarget.lead?.id);
+                                  closeMuteSubmenuNow();
+                                  closeStatusSubmenuNow();
+                                  setChatMenu(null);
+                                }}
+                              >
+                                {status.nome}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -6084,8 +6186,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     title="Ações da conversa"
                     onClick={(event) => {
                       event.stopPropagation();
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      openChatContextMenu(selectedChat.id, rect.left, rect.bottom + 6);
+                      openChatContextMenu(selectedChat.id, event.currentTarget.getBoundingClientRect(), 'header-button');
                     }}
                   >
                     <MoreVertical className="w-5 h-5 text-slate-600" />
@@ -6093,7 +6194,11 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4">
+              <div
+                ref={messagesViewportRef}
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4"
+                onScroll={handleMessagesViewportScroll}
+              >
                 {hasOlderMessages && (
                   <div className="mb-4 flex justify-center">
                     <Button
@@ -6164,6 +6269,22 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+              {pendingMessagesBelow > 0 && (
+                <div className="pointer-events-none absolute bottom-24 right-6 z-20">
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    className="pointer-events-auto h-auto rounded-full px-3 py-1.5 text-xs shadow-lg"
+                    onClick={() => {
+                      scrollToBottom();
+                      setPendingMessagesBelow(0);
+                    }}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {pendingMessagesBelow === 1 ? '1 nova mensagem' : `${pendingMessagesBelow} novas mensagens`}
+                  </Button>
+                </div>
+              )}
 
               {!isSelectedStatusChat ? (
                 <>

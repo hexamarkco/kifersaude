@@ -137,7 +137,8 @@ function MessageInputComponent({
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [followUpProvider, setFollowUpProvider] = useState('');
   const [followUpModel, setFollowUpModel] = useState('');
-  const [showLinkPreviewModal, setShowLinkPreviewModal] = useState(false);
+  const [linkPreviewUrl, setLinkPreviewUrl] = useState<string | null>(null);
+  const [linkPreviewDismissedUrl, setLinkPreviewDismissedUrl] = useState<string | null>(null);
   const [linkPreviewTitle, setLinkPreviewTitle] = useState('');
   const [linkPreviewDescription, setLinkPreviewDescription] = useState('');
   const [linkPreviewCanonical, setLinkPreviewCanonical] = useState('');
@@ -145,7 +146,6 @@ function MessageInputComponent({
   const [linkPreviewSiteName, setLinkPreviewSiteName] = useState('');
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
   const [linkPreviewError, setLinkPreviewError] = useState<string | null>(null);
-  const [pendingLinkMessage, setPendingLinkMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -163,6 +163,7 @@ function MessageInputComponent({
   const analyserDataRef = useRef<Uint8Array | null>(null);
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const followUpRequestIdRef = useRef(0);
+  const linkPreviewRequestIdRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
@@ -232,7 +233,7 @@ function MessageInputComponent({
   };
 
   const clearLinkPreviewDraft = () => {
-    setPendingLinkMessage(null);
+    setLinkPreviewUrl(null);
     setLinkPreviewTitle('');
     setLinkPreviewDescription('');
     setLinkPreviewCanonical('');
@@ -246,6 +247,9 @@ function MessageInputComponent({
     const normalizedUrl = normalizePreviewUrl(rawUrl);
     if (!normalizedUrl) return;
 
+    const requestId = Date.now();
+    linkPreviewRequestIdRef.current = requestId;
+    setLinkPreviewUrl(normalizedUrl);
     setLinkPreviewLoading(true);
     setLinkPreviewError(null);
 
@@ -270,7 +274,9 @@ function MessageInputComponent({
       const resolvedUrl = normalizePreviewUrl(metadata.canonical || metadata.url || normalizedUrl);
       const hostname = getUrlHostname(resolvedUrl);
       const resolvedTitle = (metadata.title || '').trim() || hostname;
+      if (linkPreviewRequestIdRef.current !== requestId) return;
 
+      setLinkPreviewUrl(normalizedUrl);
       setLinkPreviewCanonical(resolvedUrl);
       setLinkPreviewTitle(resolvedTitle);
       setLinkPreviewDescription((metadata.description || '').trim());
@@ -280,25 +286,29 @@ function MessageInputComponent({
       console.error('Erro ao buscar metadados do link:', error);
       const normalizedUrlForFallback = normalizePreviewUrl(rawUrl);
       const hostname = getUrlHostname(normalizedUrlForFallback);
+      if (linkPreviewRequestIdRef.current !== requestId) return;
+
+      setLinkPreviewUrl(normalizedUrlForFallback);
       setLinkPreviewCanonical(normalizedUrlForFallback);
       setLinkPreviewTitle((prev) => prev.trim() || hostname);
-      setLinkPreviewError('Nao foi possivel carregar metadados automaticamente. Voce pode ajustar manualmente.');
+      setLinkPreviewError('Preview nao disponivel para este link.');
     } finally {
-      setLinkPreviewLoading(false);
+      if (linkPreviewRequestIdRef.current === requestId) {
+        setLinkPreviewLoading(false);
+      }
     }
   };
 
-  const openLinkPreviewComposer = async (rawMessage: string, rawUrl: string) => {
-    const normalizedUrl = normalizePreviewUrl(rawUrl);
-    setPendingLinkMessage(rawMessage);
-    setLinkPreviewCanonical(normalizedUrl);
-    setLinkPreviewTitle(getUrlHostname(normalizedUrl));
-    setLinkPreviewDescription('');
-    setLinkPreviewImage('');
-    setLinkPreviewSiteName('');
-    setShowLinkPreviewModal(true);
-    await fetchLinkPreviewMetadata(normalizedUrl);
-  };
+  const detectedPreviewUrl = useMemo(() => {
+    if (selectedFile) return null;
+    const resolvedMessage = applyTemplateVariables(message.trim());
+    const firstUrl = extractFirstUrl(resolvedMessage);
+    return firstUrl ? normalizePreviewUrl(firstUrl) : null;
+  }, [message, selectedFile, templateVariables]);
+
+  const shouldShowInlineLinkPreview = Boolean(
+    detectedPreviewUrl && linkPreviewDismissedUrl !== detectedPreviewUrl && (linkPreviewCanonical || linkPreviewLoading || linkPreviewError),
+  );
 
   const applyInlineFormat = (opening: string, closing: string = opening) => {
     const textarea = textareaRef.current;
@@ -393,6 +403,35 @@ function MessageInputComponent({
       results,
     };
   }, [message, quickReplies]);
+
+  useEffect(() => {
+    if (!detectedPreviewUrl) {
+      linkPreviewRequestIdRef.current = 0;
+      clearLinkPreviewDraft();
+      setLinkPreviewDismissedUrl(null);
+      return;
+    }
+
+    if (linkPreviewDismissedUrl === detectedPreviewUrl) {
+      return;
+    }
+
+    if (linkPreviewUrl === detectedPreviewUrl) {
+      return;
+    }
+
+    setLinkPreviewCanonical(detectedPreviewUrl);
+    setLinkPreviewTitle(getUrlHostname(detectedPreviewUrl));
+    setLinkPreviewDescription('');
+    setLinkPreviewImage('');
+    setLinkPreviewSiteName('');
+    void fetchLinkPreviewMetadata(detectedPreviewUrl);
+  }, [detectedPreviewUrl, linkPreviewDismissedUrl, linkPreviewUrl]);
+
+  useEffect(() => {
+    clearLinkPreviewDraft();
+    setLinkPreviewDismissedUrl(null);
+  }, [chatId]);
 
   const selectedSlashQuickReply = slashCommandState.results[slashQuickReplyIndex] ?? null;
   const isDirectChat = getWhatsAppChatKind(chatId) === 'direct';
@@ -862,6 +901,134 @@ function MessageInputComponent({
     setShowEmojiPicker(false);
   };
 
+  const waitForLinkPreviewResolution = async (targetUrl: string, timeoutMs: number = 1200) => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      if (!linkPreviewLoading || linkPreviewUrl !== targetUrl) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+  };
+
+  const sendLinkPreviewMessage = async (
+    bodyText: string,
+    submitChatId: string,
+    draftReplyToMessage: { id: string; body: string; from: string } | null,
+    draftLinkPreview: { title: string; description?: string; canonical?: string; image?: string },
+  ) => {
+    const sentAt = new Date().toISOString();
+    const localRef = createClientMessageId();
+    const normalizedChatId = normalizeChatId(submitChatId);
+    const retryPayload: OutboundRetryPayload = {
+      kind: 'link_preview',
+      body: bodyText,
+      title: draftLinkPreview.title.trim(),
+      description: draftLinkPreview.description?.trim() || undefined,
+      canonical: draftLinkPreview.canonical?.trim() || undefined,
+      preview: draftLinkPreview.image?.trim() || undefined,
+      quotedMessageId: draftReplyToMessage?.id ?? null,
+    };
+
+    if (onMessageSent) {
+      onMessageSent({
+        id: localRef,
+        local_ref: localRef,
+        chat_id: normalizedChatId,
+        body: bodyText,
+        type: 'link_preview',
+        has_media: true,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        ack_status: 1,
+        send_state: 'pending',
+        error_message: null,
+        retry_payload: retryPayload,
+        payload: {
+          link_preview: {
+            title: retryPayload.title,
+            description: retryPayload.description,
+            canonical: retryPayload.canonical,
+            preview: retryPayload.preview,
+          },
+        },
+      });
+    }
+
+    try {
+      const response = await sendWhatsAppMessage({
+        chatId: submitChatId,
+        contentType: 'LinkPreview',
+        content: {
+          body: bodyText,
+          title: retryPayload.title,
+          description: retryPayload.description,
+          canonical: retryPayload.canonical,
+          preview: retryPayload.preview,
+        },
+        quotedMessageId: draftReplyToMessage?.id,
+      });
+
+      const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+        response,
+        chatId: submitChatId,
+        type: 'link_preview',
+        body: bodyText,
+        hasMedia: true,
+        sentAt,
+      });
+
+      if (onMessageSent) {
+        onMessageSent({
+          id: messageId,
+          local_ref: localRef,
+          chat_id: persistedChatId,
+          body: bodyText,
+          type: 'link_preview',
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          ack_status: 2,
+          send_state: null,
+          error_message: null,
+          retry_payload: null,
+          payload: response,
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+      if (onMessageSent) {
+        onMessageSent({
+          id: localRef,
+          local_ref: localRef,
+          chat_id: normalizedChatId,
+          body: bodyText,
+          type: 'link_preview',
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          ack_status: 0,
+          send_state: 'failed',
+          error_message: errorMessage,
+          retry_payload: retryPayload,
+          payload: {
+            link_preview: {
+              title: retryPayload.title,
+              description: retryPayload.description,
+              canonical: retryPayload.canonical,
+              preview: retryPayload.preview,
+            },
+          },
+        });
+      }
+      throw error;
+    }
+  };
+
   const handleSendMessage = async () => {
     const rawMessage = message.trim();
     const resolvedMessage = applyTemplateVariables(rawMessage);
@@ -872,14 +1039,6 @@ function MessageInputComponent({
     if (!editMessage && !selectedFile && slashCommandState.active && slashCommandState.results.length > 0) {
       handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
       return;
-    }
-
-    if (!editMessage && !selectedFile) {
-      const firstUrl = extractFirstUrl(resolvedMessage);
-      if (firstUrl && !showLinkPreviewModal) {
-        await openLinkPreviewComposer(resolvedMessage, firstUrl);
-        return;
-      }
     }
 
     setIsSending(true);
@@ -939,145 +1098,37 @@ function MessageInputComponent({
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(mediaPayload);
       } else if (rawMessage) {
-        if (showLinkPreviewModal && pendingLinkMessage) {
-          if (!linkPreviewTitle.trim()) {
-            alert('Informe um titulo para o preview do link.');
-            setIsSending(false);
+        const currentDetectedUrl = detectedPreviewUrl;
+
+        if (currentDetectedUrl && linkPreviewDismissedUrl !== currentDetectedUrl) {
+          if (linkPreviewLoading && linkPreviewUrl === currentDetectedUrl) {
+            await waitForLinkPreviewResolution(currentDetectedUrl);
+          }
+
+          const previewTitle = linkPreviewTitle.trim();
+          const previewCanonical = (linkPreviewCanonical || currentDetectedUrl).trim();
+          const canSendPreview = linkPreviewUrl === currentDetectedUrl && !linkPreviewError && Boolean(previewTitle);
+
+          if (canSendPreview) {
+            setMessage('');
+            clearLinkPreviewDraft();
+            setLinkPreviewDismissedUrl(null);
+            if (onCancelReply) onCancelReply();
+            await sendLinkPreviewMessage(resolvedMessage || rawMessage, submitChatId, replyToMessage, {
+              title: previewTitle,
+              description: linkPreviewDescription,
+              canonical: previewCanonical,
+              image: linkPreviewImage,
+            });
             return;
           }
         }
 
-        const isLinkPreview = showLinkPreviewModal && pendingLinkMessage;
-        if (isLinkPreview) {
-          const draftMessage = pendingLinkMessage;
-          const draftReplyToMessage = replyToMessage;
-          const draftLinkPreview = {
-            title: linkPreviewTitle,
-            description: linkPreviewDescription,
-            canonical: linkPreviewCanonical,
-            image: linkPreviewImage,
-          };
-
-          setMessage('');
-          setShowLinkPreviewModal(false);
-          clearLinkPreviewDraft();
-          if (onCancelReply) onCancelReply();
-
-          const bodyText = draftMessage;
-          const sentAt = new Date().toISOString();
-          const localRef = createClientMessageId();
-          const normalizedChatId = normalizeChatId(submitChatId);
-          const retryPayload: OutboundRetryPayload = {
-            kind: 'link_preview',
-            body: bodyText,
-            title: draftLinkPreview.title.trim(),
-            description: draftLinkPreview.description.trim() || undefined,
-            canonical: draftLinkPreview.canonical.trim() || undefined,
-            preview: draftLinkPreview.image.trim() || undefined,
-            quotedMessageId: draftReplyToMessage?.id ?? null,
-          };
-
-          if (onMessageSent) {
-            onMessageSent({
-              id: localRef,
-              local_ref: localRef,
-              chat_id: normalizedChatId,
-              body: bodyText,
-              type: 'link_preview',
-              has_media: true,
-              timestamp: sentAt,
-              direction: 'outbound',
-              created_at: sentAt,
-              ack_status: 1,
-              send_state: 'pending',
-              error_message: null,
-              retry_payload: retryPayload,
-              payload: {
-                link_preview: {
-                  title: retryPayload.title,
-                  description: retryPayload.description,
-                  canonical: retryPayload.canonical,
-                  preview: retryPayload.preview,
-                },
-              },
-            });
-          }
-
-          try {
-            const response = await sendWhatsAppMessage({
-              chatId: submitChatId,
-              contentType: 'LinkPreview',
-              content: {
-                body: bodyText,
-                title: retryPayload.title,
-                description: retryPayload.description,
-                canonical: retryPayload.canonical,
-                preview: retryPayload.preview,
-              },
-              quotedMessageId: draftReplyToMessage?.id,
-            });
-
-            const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
-              response,
-              chatId: submitChatId,
-              type: 'link_preview',
-              body: bodyText,
-              hasMedia: true,
-              sentAt,
-            });
-
-            const textPayload: SentMessagePayload = {
-              id: messageId,
-              local_ref: localRef,
-              chat_id: persistedChatId,
-              body: bodyText,
-              type: 'link_preview',
-              has_media: true,
-              timestamp: sentAt,
-              direction: 'outbound',
-              created_at: sentAt,
-              ack_status: 2,
-              send_state: null,
-              error_message: null,
-              retry_payload: null,
-              payload: response,
-            };
-
-            if (onMessageSent) onMessageSent(textPayload);
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-            if (onMessageSent) {
-              onMessageSent({
-                id: localRef,
-                local_ref: localRef,
-                chat_id: normalizedChatId,
-                body: bodyText,
-                type: 'link_preview',
-                has_media: true,
-                timestamp: sentAt,
-                direction: 'outbound',
-                created_at: sentAt,
-                ack_status: 0,
-                send_state: 'failed',
-                error_message: errorMessage,
-                retry_payload: retryPayload,
-                payload: {
-                  link_preview: {
-                    title: retryPayload.title,
-                    description: retryPayload.description,
-                    canonical: retryPayload.canonical,
-                    preview: retryPayload.preview,
-                  },
-                },
-              });
-            }
-            throw error;
-          }
-        } else {
-          setMessage('');
-          if (onCancelReply) onCancelReply();
-          await sendPlainTextMessage(resolvedMessage || rawMessage, submitChatId);
-        }
+        setMessage('');
+        clearLinkPreviewDraft();
+        setLinkPreviewDismissedUrl(null);
+        if (onCancelReply) onCancelReply();
+        await sendPlainTextMessage(resolvedMessage || rawMessage, submitChatId);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -2129,112 +2180,6 @@ function MessageInputComponent({
           </div>
         </ModalShell>
       )}
-      {showLinkPreviewModal && pendingLinkMessage && (
-        <ModalShell
-          isOpen
-          onClose={() => {
-            setShowLinkPreviewModal(false);
-            clearLinkPreviewDraft();
-          }}
-          title="Enviar preview de link"
-          size="sm"
-          bodyClassName="space-y-2"
-        >
-          <div className="comm-card px-2.5 py-2">
-            <div className="comm-muted text-[11px]">Mensagem</div>
-            <div className="comm-text mt-0.5 whitespace-pre-wrap break-words text-xs">{pendingLinkMessage}</div>
-          </div>
-
-          <div>
-            <label className="comm-muted text-xs">Titulo (obrigatorio)</label>
-            <input
-              type="text"
-              value={linkPreviewTitle}
-              onChange={(e) => setLinkPreviewTitle(e.target.value)}
-              className="comm-input mt-1 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="comm-muted text-xs">Descricao</label>
-            <input
-              type="text"
-              value={linkPreviewDescription}
-              onChange={(e) => setLinkPreviewDescription(e.target.value)}
-              className="comm-input mt-1 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="comm-muted text-xs">URL canonica</label>
-            <input
-              type="text"
-              value={linkPreviewCanonical}
-              onChange={(e) => setLinkPreviewCanonical(e.target.value)}
-              className="comm-input mt-1 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="comm-muted text-xs">Imagem (URL)</label>
-            <input
-              type="text"
-              value={linkPreviewImage}
-              onChange={(e) => setLinkPreviewImage(e.target.value)}
-              className="comm-input mt-1 px-3 py-2 text-sm"
-            />
-          </div>
-          {linkPreviewLoading && <div className="comm-muted text-xs">Carregando metadados do link...</div>}
-          {linkPreviewError && <div className="comm-card comm-card-danger px-3 py-2 text-xs">{linkPreviewError}</div>}
-
-          {(linkPreviewTitle || linkPreviewDescription || linkPreviewImage) && (
-            <div className="comm-card overflow-hidden bg-[var(--panel-surface,#fffdfa)]">
-              {linkPreviewImage && (
-                <img
-                  src={linkPreviewImage}
-                  alt={linkPreviewTitle || 'Link preview'}
-                  className="h-28 w-full object-cover bg-[var(--panel-surface-soft,#f4ede3)]"
-                />
-              )}
-              <div className="space-y-1 px-3 py-2">
-                <div className="comm-muted truncate text-[11px]">
-                  {linkPreviewSiteName || getUrlHostname(linkPreviewCanonical)}
-                </div>
-                <div className="comm-title line-clamp-2 text-sm">
-                  {linkPreviewTitle || getUrlHostname(linkPreviewCanonical)}
-                </div>
-                {linkPreviewDescription && <div className="comm-text line-clamp-3 text-xs">{linkPreviewDescription}</div>}
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
-            <button
-              type="button"
-              className="comm-button-secondary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => fetchLinkPreviewMetadata(linkPreviewCanonical)}
-              disabled={isSending || linkPreviewLoading || !linkPreviewCanonical.trim()}
-            >
-              {linkPreviewLoading ? 'Atualizando...' : 'Atualizar dados'}
-            </button>
-            <button
-              type="button"
-              className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-              onClick={() => {
-                setShowLinkPreviewModal(false);
-                clearLinkPreviewDraft();
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="comm-button-primary rounded-md px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleSendMessage}
-              disabled={isSending}
-            >
-              Enviar
-            </button>
-          </div>
-        </ModalShell>
-      )}
       {showContactPicker && (
         <div className="comm-popover absolute bottom-full left-4 z-20 mb-2 w-80 overflow-hidden">
           <div className="comm-popover-header">
@@ -2488,7 +2433,7 @@ function MessageInputComponent({
                         setShowComposerActionsMenu(false);
                         handleOpenFollowUp();
                       }}
-                      disabled={isSending || isRecording || followUpLoading || showLinkPreviewModal}
+                      disabled={isSending || isRecording || followUpLoading}
                     >
                       <Sparkles className="h-4 w-4" />
                       <span>{followUpLoading ? 'Gerando follow-up...' : 'Gerar follow-up com IA'}</span>
@@ -2501,7 +2446,7 @@ function MessageInputComponent({
                       setShowComposerActionsMenu(false);
                       handleOpenRewrite();
                     }}
-                    disabled={isSending || isRecording || showLinkPreviewModal}
+                    disabled={isSending || isRecording}
                   >
                     <Scissors className="h-4 w-4" />
                     <span>Reescrever mensagem</span>

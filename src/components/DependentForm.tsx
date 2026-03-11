@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
-import { supabase, Dependent, ContractHolder } from '../lib/supabase';
-import { Search, Users } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
+import { supabase, type ContractHolder, type Dependent } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
+import Checkbox from './ui/Checkbox';
 import DateTimePicker from './ui/DateTimePicker';
+import Field from './ui/Field';
+import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
 
 type DependentFormProps = {
@@ -26,8 +30,14 @@ export default function DependentForm({
   onClose,
   onSave,
 }: DependentFormProps) {
-  const holderOptions = useMemo(() => holders.map(holder => ({ value: holder.id, label: holder.nome_completo })), [holders]);
-  const defaultHolderId = dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '';
+  const holderOptions = useMemo(
+    () => holders.map((holder) => ({ value: holder.id, label: holder.nome_completo })),
+    [holders],
+  );
+
+  const defaultHolderId =
+    dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '';
+
   const [formData, setFormData] = useState({
     holder_id: defaultHolderId,
     nome_completo: dependent?.nome_completo || '',
@@ -37,8 +47,13 @@ export default function DependentForm({
     elegibilidade: dependent?.elegibilidade || '',
     valor_individual: dependent?.valor_individual?.toString() || '',
     carencia_individual: dependent?.carencia_individual || '',
-    bonus_por_vida_aplicado: dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
+    bonus_por_vida_aplicado:
+      dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
   });
+  const [saving, setSaving] = useState(false);
+  const [cpfLoading, setCpfLoading] = useState(false);
+  const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
+
   useEffect(() => {
     setFormData((current) => ({
       ...current,
@@ -50,12 +65,10 @@ export default function DependentForm({
       elegibilidade: dependent?.elegibilidade || '',
       valor_individual: dependent?.valor_individual?.toString() || '',
       carencia_individual: dependent?.carencia_individual || '',
-      bonus_por_vida_aplicado: dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
+      bonus_por_vida_aplicado:
+        dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
     }));
-  }, [dependent, holderOptions, selectedHolderId, bonusPorVidaDefault]);
-  const [saving, setSaving] = useState(false);
-  const [cpfLoading, setCpfLoading] = useState(false);
-  const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
+  }, [bonusPorVidaDefault, dependent, holderOptions, selectedHolderId]);
 
   const handleConsultarCPF = async () => {
     if (!formData.cpf || !formData.data_nascimento) {
@@ -69,14 +82,16 @@ export default function DependentForm({
     try {
       const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento);
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         nome_completo: pessoa.nome || prev.nome_completo,
         data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
       }));
     } catch (error) {
       console.error('Erro ao consultar CPF do dependente:', error);
-      setCpfLookupError(error instanceof Error ? error.message : 'Não foi possível consultar CPF');
+      setCpfLookupError(
+        error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
+      );
     } finally {
       setCpfLoading(false);
     }
@@ -103,7 +118,9 @@ export default function DependentForm({
         data_nascimento: formData.data_nascimento,
         relacao: formData.relacao,
         elegibilidade: formData.elegibilidade || null,
-        valor_individual: formData.valor_individual ? parseFloat(formData.valor_individual) : null,
+        valor_individual: formData.valor_individual
+          ? parseFloat(formData.valor_individual)
+          : null,
         carencia_individual: formData.carencia_individual || null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
       };
@@ -116,9 +133,7 @@ export default function DependentForm({
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('dependents')
-          .insert([dataToSave]);
+        const { error } = await supabase.from('dependents').insert([dataToSave]);
 
         if (error) throw error;
       }
@@ -141,178 +156,146 @@ export default function DependentForm({
       panelClassName="max-w-2xl"
       bodyClassName="p-0"
     >
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Titular *
-              </label>
-              <FilterSingleSelect
-                icon={Users}
-                value={formData.holder_id}
-                onChange={(value) => setFormData({ ...formData, holder_id: value })}
-                placeholder="Selecione um titular"
-                includePlaceholderOption={false}
-                options={[
-                  { value: '', label: 'Selecione um titular' },
-                  ...holderOptions.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
-              />
-            </div>
+      <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field label="Titular" required className="md:col-span-2">
+            <FilterSingleSelect
+              icon={Users}
+              value={formData.holder_id}
+              onChange={(value) => setFormData({ ...formData, holder_id: value })}
+              placeholder="Selecione um titular"
+              includePlaceholderOption={false}
+              options={[
+                { value: '', label: 'Selecione um titular' },
+                ...holderOptions,
+              ]}
+            />
+          </Field>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Nome Completo *
-              </label>
-              <input
+          <Field label="Nome Completo" required className="md:col-span-2">
+            <Input
+              type="text"
+              required
+              leftIcon={UserCircle}
+              value={formData.nome_completo}
+              onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+            />
+          </Field>
+
+          <Field label="CPF" errorText={cpfLookupError || undefined}>
+            <div className="relative">
+              <Input
                 type="text"
-                required
-                value={formData.nome_completo}
-                onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                leftIcon={WalletCards}
+                value={formData.cpf}
+                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                className="pr-11"
               />
+              <button
+                type="button"
+                onClick={() => void handleConsultarCPF()}
+                disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
+                aria-label="Buscar CPF"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-amber-600 disabled:opacity-50"
+              >
+                <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
+              </button>
             </div>
+          </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                CPF
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-                <button
-                  type="button"
-                  onClick={handleConsultarCPF}
-                  disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
-                  aria-label="Buscar na Receita"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-teal-600 transition-colors disabled:opacity-50"
-                >
-                  <Search className={`w-4 h-4 ${cpfLoading ? 'animate-pulse' : ''}`} />
-                </button>
-              </div>
-              {cpfLookupError && <p className="text-xs text-red-600 mt-1">{cpfLookupError}</p>}
-            </div>
+          <Field label="Data de Nascimento" required>
+            <DateTimePicker
+              type="date"
+              value={formData.data_nascimento}
+              onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
+              placeholder="Selecionar data"
+            />
+          </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Data de Nascimento *
-              </label>
-              <DateTimePicker
-                type="date"
-                value={formData.data_nascimento}
-                onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
-                placeholder="Selecionar data"
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <label className="flex items-start gap-3">
+              <Checkbox
+                size="md"
+                checked={formData.bonus_por_vida_aplicado}
+                onChange={(e) =>
+                  setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })
+                }
               />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.bonus_por_vida_aplicado}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })
-                  }
-                  className="w-5 h-5 text-teal-600 border-slate-300 rounded focus:ring-2 focus:ring-teal-500"
-                />
-                <span className="text-sm font-medium text-slate-700">Aplicar bônus por vida</span>
-              </label>
-              <p className="text-xs text-slate-500 mt-1">
-                Marque se este dependente é elegível ao bônus por vida deste contrato.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Relação com Titular *
-              </label>
-              <FilterSingleSelect
-                icon={Users}
-                value={formData.relacao}
-                onChange={(value) => setFormData({ ...formData, relacao: value })}
-                placeholder="Relação com titular"
-                includePlaceholderOption={false}
-                options={[
-                  { value: 'Cônjuge', label: 'Cônjuge' },
-                  { value: 'Filho(a)', label: 'Filho(a)' },
-                  { value: 'Enteado(a)', label: 'Enteado(a)' },
-                  { value: 'Pai/Mãe', label: 'Pai/Mãe' },
-                  { value: 'Outro', label: 'Outro' },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Valor Individual (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.valor_individual}
-                onChange={(e) => setFormData({ ...formData, valor_individual: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Carência Individual
-              </label>
-              <FilterSingleSelect
-                icon={Users}
-                value={formData.carencia_individual}
-                onChange={(value) => setFormData({ ...formData, carencia_individual: value })}
-                placeholder="Carência individual"
-                includePlaceholderOption={false}
-                options={[
-                  { value: '', label: 'Mesma do titular' },
-                  { value: 'padrão', label: 'Padrão' },
-                  { value: 'reduzida', label: 'Reduzida' },
-                  { value: 'portabilidade', label: 'Portabilidade' },
-                  { value: 'zero', label: 'Zero' },
-                ]}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Elegibilidade
-              </label>
-              <input
-                type="text"
-                value={formData.elegibilidade}
-                onChange={(e) => setFormData({ ...formData, elegibilidade: e.target.value })}
-                placeholder="Ex: Filho menor de 21 anos"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
+              <span>
+                <span className="block text-sm font-medium text-slate-800">
+                  Aplicar bonus por vida
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  Marque se este dependente e elegivel ao bonus por vida deste contrato.
+                </span>
+              </span>
+            </label>
           </div>
 
-          <div className="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Salvando...' : 'Salvar Dependente'}
-            </button>
-          </div>
-        </form>
+          <Field label="Relacao com Titular" required>
+            <FilterSingleSelect
+              icon={Users}
+              value={formData.relacao}
+              onChange={(value) => setFormData({ ...formData, relacao: value })}
+              placeholder="Relacao com titular"
+              includePlaceholderOption={false}
+              options={[
+                { value: 'Conjuge', label: 'Conjuge' },
+                { value: 'Filho(a)', label: 'Filho(a)' },
+                { value: 'Enteado(a)', label: 'Enteado(a)' },
+                { value: 'Pai/Mae', label: 'Pai/Mae' },
+                { value: 'Outro', label: 'Outro' },
+              ]}
+            />
+          </Field>
+
+          <Field label="Valor Individual (R$)">
+            <Input
+              type="number"
+              step="0.01"
+              leftIcon={HeartPulse}
+              value={formData.valor_individual}
+              onChange={(e) => setFormData({ ...formData, valor_individual: e.target.value })}
+            />
+          </Field>
+
+          <Field label="Carencia Individual">
+            <FilterSingleSelect
+              icon={Users}
+              value={formData.carencia_individual}
+              onChange={(value) => setFormData({ ...formData, carencia_individual: value })}
+              placeholder="Carencia individual"
+              includePlaceholderOption={false}
+              options={[
+                { value: '', label: 'Mesma do titular' },
+                { value: 'padrao', label: 'Padrao' },
+                { value: 'reduzida', label: 'Reduzida' },
+                { value: 'portabilidade', label: 'Portabilidade' },
+                { value: 'zero', label: 'Zero' },
+              ]}
+            />
+          </Field>
+
+          <Field label="Elegibilidade" className="md:col-span-2">
+            <Input
+              type="text"
+              leftIcon={Users}
+              value={formData.elegibilidade}
+              onChange={(e) => setFormData({ ...formData, elegibilidade: e.target.value })}
+              placeholder="Ex: Filho menor de 21 anos"
+            />
+          </Field>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" loading={saving}>
+            {saving ? 'Salvando...' : 'Salvar Dependente'}
+          </Button>
+        </div>
+      </form>
     </ModalShell>
   );
 }

@@ -129,6 +129,11 @@ const arePreferencesEqual = (a: SystemSettings | null, b: SystemSettings | null)
   );
 };
 
+const sectionCardClass =
+  'flex w-full items-start justify-between rounded-xl border border-amber-200/70 bg-white/95 p-4 text-left shadow-sm transition-colors hover:border-amber-300/80 hover:bg-white';
+
+const sectionBodyClass = 'rounded-xl border border-amber-200/60 bg-white/95 p-6 shadow-sm';
+
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [savedSettings, setSavedSettings] = useState<SystemSettings | null>(null);
@@ -367,10 +372,10 @@ export default function SystemSettingsTab() {
             <button
               type="button"
               onClick={() => toggleSection('general')}
-              className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-slate-300"
+              className={sectionCardClass}
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
                   <Settings className="h-5 w-5" />
                 </div>
                 <div>
@@ -386,7 +391,7 @@ export default function SystemSettingsTab() {
             </button>
 
             {shouldExpandSection('general') && (
-              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className={sectionBodyClass}>
                 <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div
                     className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -526,10 +531,10 @@ export default function SystemSettingsTab() {
             <button
               type="button"
               onClick={() => toggleSection('access')}
-              className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-slate-300"
+              className={sectionCardClass}
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
@@ -547,7 +552,7 @@ export default function SystemSettingsTab() {
             {shouldExpandSection('access') && (
               <div className="space-y-4">
                 {configLoading ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className={sectionBodyClass}>
                     <Skeleton className="h-6 w-56" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />
@@ -568,7 +573,7 @@ export default function SystemSettingsTab() {
             <button
               type="button"
               onClick={() => toggleSection('leads')}
-              className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-slate-300"
+              className={sectionCardClass}
             >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
@@ -589,7 +594,7 @@ export default function SystemSettingsTab() {
             {shouldExpandSection('leads') && (
               <div className="space-y-6">
                 {configLoading ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className={sectionBodyClass}>
                     <Skeleton className="h-6 w-48" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />
@@ -627,7 +632,7 @@ export default function SystemSettingsTab() {
             <button
               type="button"
               onClick={() => toggleSection('contracts')}
-              className="flex w-full items-start justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-slate-300"
+              className={sectionCardClass}
             >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -648,7 +653,7 @@ export default function SystemSettingsTab() {
             {shouldExpandSection('contracts') && (
               <div className="space-y-6">
                 {configLoading ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className={sectionBodyClass}>
                     <Skeleton className="h-6 w-56" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />

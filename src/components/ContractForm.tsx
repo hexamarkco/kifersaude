@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
-import { User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar } from 'lucide-react';
+import { User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar, Building2 } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
 import FilterSingleSelect from './FilterSingleSelect';
+import Button from './ui/Button';
+import Checkbox from './ui/Checkbox';
 import DateTimePicker from './ui/DateTimePicker';
 import ModalShell from './ui/ModalShell';
 import { configService } from '../lib/configService';
@@ -76,6 +78,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const lastFetchedCnpjRef = useRef('');
   const contractStatusOptions = useMemo(
     () => (options.contract_status || []).filter(option => option.ativo),
     [options.contract_status]
@@ -157,6 +160,23 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
       loadAdjustments(contract.id);
     }
   }, [contract?.id, convertibleLeadStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const normalizedCnpj = formData.cnpj.replace(/\D/g, '');
+
+    if (!modalidadeRequerCNPJ || normalizedCnpj.length !== 14) {
+      if (normalizedCnpj.length < 14) {
+        lastFetchedCnpjRef.current = '';
+      }
+      return;
+    }
+
+    if (lastFetchedCnpjRef.current === normalizedCnpj) {
+      return;
+    }
+
+    void handleConsultarCNPJ();
+  }, [formData.cnpj, modalidadeRequerCNPJ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const baseMensalidade = parseFloat(formData.mensalidade_total || '0') || 0;
 
@@ -247,6 +267,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   };
 
   const handleConsultarCNPJ = async () => {
+    const normalizedCnpj = formData.cnpj.replace(/\D/g, '');
+    if (normalizedCnpj.length !== 14) {
+      return;
+    }
+
     setCnpjLookupError(null);
     setCnpjLoading(true);
 
@@ -268,6 +293,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         nome_fantasia: empresa.nome_fantasia || prev.nome_fantasia,
         endereco_empresa: enderecoCompleto || prev.endereco_empresa,
       }));
+      lastFetchedCnpjRef.current = normalizedCnpj;
     } catch (error) {
       console.error('Erro ao consultar CNPJ do contrato:', error);
       setCnpjLookupError(error instanceof Error ? error.message : 'Não foi possível consultar CNPJ');
@@ -508,9 +534,9 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         bodyClassName="p-0"
       >
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="mb-6 bg-teal-50 rounded-lg p-4">
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
             <h4 className="font-semibold text-slate-900 mb-3 flex items-center">
-              <User className="w-5 h-5 mr-2" />
+              <Building2 className="w-5 h-5 mr-2 text-amber-600" />
               Informações do Contrato
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -621,7 +647,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                         type="button"
                         onClick={handleConsultarCNPJ}
                         disabled={cnpjLoading}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
                         title={cnpjLoading ? 'Buscando...' : 'Buscar na Receita'}
                       >
                         <Search className={`w-5 h-5 ${cnpjLoading ? 'animate-pulse' : ''}`} />
@@ -854,22 +880,23 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
               {contract?.id && (
                 <div className="md:col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                      Ajustes de Valor
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingAdjustment(null);
-                        setShowAdjustmentForm(true);
-                      }}
-                      className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Adicionar Ajuste</span>
-                    </button>
-                  </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Ajustes de Valor
+                      </label>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setEditingAdjustment(null);
+                          setShowAdjustmentForm(true);
+                        }}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Adicionar Ajuste</span>
+                      </Button>
+                    </div>
 
                   {adjustments.length > 0 ? (
                     <div className="space-y-2 mb-3">

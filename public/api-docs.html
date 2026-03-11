@@ -244,7 +244,7 @@
         </div>
       </div>
       <div class="stats">
-        <div class="mini-card"><strong>8 rotas principais</strong><span>Healthcheck, listagem, detalhe, criacao, atualizacao, arquivamento, lote e acoes internas.</span></div>
+        <div class="mini-card"><strong>8 rotas principais</strong><span>Healthcheck, listagem, criacao, atualizacao, lote e acoes internas de automacao.</span></div>
         <div class="mini-card"><strong>Lookup por id ou label</strong><span>Filtros e payloads aceitam ids dedicados ou nomes para origem, status, tipo e responsavel.</span></div>
         <div class="mini-card"><strong>Playground persistente</strong><span>URL base, token, endpoint e body ficam salvos localmente para homologacao e suporte.</span></div>
       </div>
@@ -282,8 +282,8 @@
             <div class="subcard">
               <h4>Regras de acesso</h4>
               <div class="kv-list">
-                <div class="kv-item"><strong>GET /leads e GET /leads/:id</strong><span>Permitido para perfis <span class="mono">admin</span> e <span class="mono">observer</span>.</span></div>
-                <div class="kv-item"><strong>POST, PUT, DELETE e batch</strong><span>Restrito a <span class="mono">admin</span>.</span></div>
+                <div class="kv-item"><strong>GET /leads</strong><span>Permitido para perfis <span class="mono">admin</span> e <span class="mono">observer</span>.</span></div>
+                <div class="kv-item"><strong>POST /leads, PUT /leads/:id e POST /leads/batch</strong><span>Restrito a <span class="mono">admin</span>.</span></div>
                 <div class="kv-item"><strong>Rotas internas</strong><span>Algumas acoes aceitam somente service role.</span></div>
               </div>
             </div>
@@ -362,6 +362,9 @@ Content-Type: application/json</pre>
               <h2>Referencia operacional</h2>
               <p>Os cards abaixo unem documentacao e uso pratico. Voce pode buscar por rota ou filtrar por metodo antes de abrir o playground.</p>
             </div>
+          </div>
+          <div class="callout" style="margin-top: 0; margin-bottom: 18px;">
+            <p>A API atual nao expõe <span class="mono">GET /leads/:id</span> nem <span class="mono">DELETE /leads/:id</span>. Esta pagina foi alinhada ao contrato real do edge function em vigor.</p>
           </div>
           <div class="endpoint-toolbar">
             <div class="method-filter" role="toolbar" aria-label="Filtro de metodo">
@@ -472,7 +475,7 @@ Content-Type: application/json</pre>
                 <tr><td class="mono">daily_send_limit</td><td>number | null</td><td>Nao</td><td>Limite diario para fluxos automatizados.</td></tr>
                 <tr><td class="mono">skip_automation</td><td>boolean | null</td><td>Nao</td><td>Pode ser usado para impedir execucao automatica.</td></tr>
                 <tr><td class="mono">ultimo_contato</td><td>string</td><td>Gerado</td><td>Preenchido na criacao com base em <span class="mono">data_criacao</span>.</td></tr>
-                <tr><td class="mono">arquivado</td><td>boolean</td><td>Gerado</td><td>Soft delete usado na rota DELETE.</td></tr>
+                <tr><td class="mono">arquivado</td><td>boolean</td><td>Gerado</td><td>Flag interna de soft archive usada pela aplicacao e automacoes.</td></tr>
               </tbody>
             </table>
           </div>
@@ -490,7 +493,7 @@ Content-Type: application/json</pre>
             <div class="subcard">
               <h4>Sucesso</h4>
               <div class="kv-list">
-                <div class="kv-item"><strong>200 OK</strong><span>Healthcheck, listagens, detalhe, update, delete logico e rotas internas bem-sucedidas.</span></div>
+                <div class="kv-item"><strong>200 OK</strong><span>Healthcheck, listagens, update, batch e rotas internas bem-sucedidas.</span></div>
                 <div class="kv-item"><strong>201 Created</strong><span>Criacao individual de lead.</span></div>
               </div>
             </div>
@@ -500,7 +503,7 @@ Content-Type: application/json</pre>
                 <div class="kv-item"><strong>400 Bad Request</strong><span>Payload invalido, filtros invalidos ou body fora do formato esperado.</span></div>
                 <div class="kv-item"><strong>401 Unauthorized</strong><span>Token ausente, invalido ou rota interna sem credencial adequada.</span></div>
                 <div class="kv-item"><strong>403 Forbidden</strong><span>Usuario autenticado sem permissao para a acao.</span></div>
-                <div class="kv-item"><strong>404 Not Found</strong><span>Lead inexistente em rotas de detalhe ou operacoes por id.</span></div>
+                <div class="kv-item"><strong>404 Not Found</strong><span>Endpoint inexistente ou lead nao encontrado em fluxos internos com <span class="mono">lead_id</span>.</span></div>
                 <div class="kv-item"><strong>500 / 502</strong><span>Erros internos de banco ou integracoes de automacao.</span></div>
               </div>
             </div>
@@ -510,4 +513,196 @@ Content-Type: application/json</pre>
       </main>
     </div>
   </div>
+  <script>
+    const STORAGE_KEY = "kiferApiDocsConfigV2";
+    const PLAYGROUND_KEY = "kiferApiDocsPlaygroundV2";
+
+    const endpointCatalog = [
+      { id: "health", method: "GET", path: "/health", title: "Healthcheck", scope: "public monitoramento", audience: "Sem payload; util para smoke test e uptime.", description: "Retorna status do servico, timestamp e identificador da function.", queryFields: [], bodyFields: [], notes: ["Bom para validacao de deploy e conectividade.", "Nao lista dados de leads."], sampleBody: "", sampleResponse: { status: "ok", timestamp: "2026-03-10T15:30:00.000Z", service: "leads-api" } },
+      { id: "list-leads", method: "GET", path: "/leads", title: "Listar leads", scope: "admin, observer", audience: "Le os leads nao arquivados, com filtros opcionais.", description: "Aplica filtros por status, responsavel, origem, tipo de contratacao, telefone, email e limit.", queryFields: ["status_id ou status", "responsavel_id ou responsavel", "origem_id ou origem", "tipo_contratacao_id ou tipo_contratacao", "telefone", "email", "limit"], bodyFields: [], notes: ["Lista somente leads com arquivado = false.", "Os filtros de lookup aceitam id ou texto normalizado.", "Telefone e comparado no formato so com digitos."], sampleQuery: "status=Novo&limit=25", sampleBody: "", sampleResponse: { success: true, count: 1, data: [{ id: "lead-uuid", nome_completo: "Maria Santos", telefone: "21999998888", email: "maria@exemplo.com", origem: "Instagram", tipo_contratacao: "Pessoa Fisica", status: "Novo", responsavel: "Luiza", arquivado: false }] } },
+      { id: "create-lead", method: "POST", path: "/leads", title: "Criar lead", scope: "admin", audience: "Cria um lead unico com validacao de lookup e datas.", description: "Aceita ids ou labels para origem, tipo, status e responsavel. Em caso de duplicidade por telefone ou email, pode setar status Duplicado automaticamente.", queryFields: [], bodyFields: ["nome_completo", "telefone", "email", "origem_id ou origem", "tipo_contratacao_id ou tipo_contratacao", "status_id ou status", "responsavel_id ou responsavel", "data_criacao", "proximo_retorno", "observacoes", "blackout_dates", "daily_send_limit", "skip_automation"], notes: ["Se status nao vier, o backend tenta usar o status padrao.", "ultimo_contato e derivado da data de criacao.", "Campos opcionais invalidos geram 400 com details."], sampleBody: JSON.stringify({ nome_completo: "Maria Santos", telefone: "21999998888", email: "maria@exemplo.com", origem: "Instagram", tipo_contratacao: "Pessoa Fisica", status: "Novo", responsavel: "Luiza", data_criacao: "2026-03-10", proximo_retorno: "2026-03-12T10:00:00-03:00", observacoes: "Interessada em plano familiar", blackout_dates: ["2026-03-11"], daily_send_limit: 2, skip_automation: false }, null, 2), sampleResponse: { success: true, message: "Lead criado com sucesso", data: { id: "novo-uuid", nome_completo: "Maria Santos", telefone: "21999998888", origem: "Instagram", tipo_contratacao: "Pessoa Fisica", status: "Novo", responsavel: "Luiza" } } },
+      { id: "update-lead", method: "PUT", path: "/leads/{id}", title: "Atualizar lead", scope: "admin", audience: "Atualiza parcialmente um lead existente.", description: "Aceita os mesmos lookups principais da criacao e valida datas em proximo_retorno.", queryFields: [], bodyFields: ["status_id ou status", "origem_id ou origem", "tipo_contratacao_id ou tipo_contratacao", "responsavel_id ou responsavel", "nome_completo", "telefone", "email", "proximo_retorno", "observacoes", "skip_automation"], notes: ["Substitua {id} por um UUID valido.", "Retorna o registro atualizado."], sampleBody: JSON.stringify({ status: "Em contato", observacoes: "Cliente solicitou comparativo atualizado", proximo_retorno: "2026-03-13" }, null, 2), sampleResponse: { success: true, message: "Lead atualizado com sucesso", data: { id: "lead-uuid", status: "Em contato", observacoes: "Cliente solicitou comparativo atualizado" } } },
+      { id: "batch-create", method: "POST", path: "/leads/batch", title: "Criacao em lote", scope: "admin", audience: "Cria varios leads em uma unica request.", description: "O body precisa conter um array em leads. O retorno separa success e failed por indice.", queryFields: [], bodyFields: ["leads[]"], notes: ["Cada item passa pela mesma validacao da criacao individual.", "Itens invalidos nao impedem o processamento dos demais."], sampleBody: JSON.stringify({ leads: [{ nome_completo: "Ana Ribeiro", telefone: "21990001111", origem: "Indicacao", tipo_contratacao: "Pessoa Fisica", status: "Novo", responsavel: "Luiza" }, { nome_completo: "Carlos Souza", telefone: "21990002222", origem: "Instagram", tipo_contratacao: "MEI", status: "Novo", responsavel: "Luiza" }] }, null, 2), sampleResponse: { success: [{ index: 0, data: { nome_completo: "Ana Ribeiro" } }], failed: [{ index: 1, errors: ["Campo \"tipo_contratacao\" e obrigatorio e deve corresponder a um tipo de contratacao valido"] }] } },
+      { id: "auto-contact", method: "POST", path: "/auto-contact", title: "Trigger interno de auto contact", scope: "service role", audience: "Referencia para jobs e triggers internos.", description: "Executa o motor de automacao com base em payload de trigger, record e old_record.", queryFields: [], bodyFields: ["type", "record", "old_record", "is_status_change"], notes: ["Nao usar como endpoint publico.", "Exige service role valida."], sampleBody: JSON.stringify({ type: "lead_created", record: { id: "lead-uuid", status: "Novo", telefone: "21999998888" } }, null, 2), sampleResponse: { success: true } },
+      { id: "process-flow-jobs", method: "POST", path: "/process-flow-jobs", title: "Processar fila de fluxos", scope: "service role", audience: "Referencia operacional interna.", description: "Processa jobs pendentes do auto contact flow engine.", queryFields: [], bodyFields: [], notes: ["Uso interno.", "Exige service role valida."], sampleBody: "", sampleResponse: { success: true } },
+      { id: "check-status-duration", method: "POST", path: "/check-status-duration", title: "Verificar duracao de status", scope: "service role", audience: "Referencia operacional interna.", description: "Agenda ou executa fluxos de status_duration com base em lead_id e flow_id.", queryFields: [], bodyFields: ["lead_id", "flow_id"], notes: ["Uso interno.", "Exige service role valida."], sampleBody: JSON.stringify({ lead_id: "lead-uuid", flow_id: "flow-uuid" }, null, 2), sampleResponse: { success: true, leadId: "lead-uuid", flowId: "flow-uuid" } },
+      { id: "manual-automation", method: "POST", path: "/manual-automation", title: "Disparo manual de automacao", scope: "admin", audience: "Referencia operacional interna.", description: "Recebe chatId e um array de messages. Requer integracao configurada e perfil admin.", queryFields: [], bodyFields: ["chatId", "messages[]"], notes: ["Nao e uma rota publica para captacao de leads.", "Pode retornar 502 em falhas do provedor externo."], sampleBody: JSON.stringify({ chatId: "5521999998888@s.whatsapp.net", messages: ["Ola! Recebemos seu contato.", "Em breve envio o comparativo."] }, null, 2), sampleResponse: { success: true } }
+    ];
+
+    const configStatus = document.getElementById("configStatus");
+    const endpointList = document.getElementById("endpointList");
+    const endpointEmptyState = document.getElementById("endpointEmptyState");
+    const endpointSearch = document.getElementById("endpointSearch");
+    const filterButtons = Array.from(document.querySelectorAll("[data-method-filter]"));
+    const navLinks = Array.from(document.querySelectorAll(".nav-list a"));
+    const baseUrlInput = document.getElementById("baseUrlInput");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const saveConfigButton = document.getElementById("saveConfigButton");
+    const toggleKeyButton = document.getElementById("toggleKeyButton");
+    const clearConfigButton = document.getElementById("clearConfigButton");
+    const presetSelect = document.getElementById("presetSelect");
+    const methodSelect = document.getElementById("methodSelect");
+    const pathInput = document.getElementById("pathInput");
+    const queryInput = document.getElementById("queryInput");
+    const requestBodyInput = document.getElementById("requestBodyInput");
+    const runRequestButton = document.getElementById("runRequestButton");
+    const copyCurlButton = document.getElementById("copyCurlButton");
+    const formatJsonButton = document.getElementById("formatJsonButton");
+    const curlPreview = document.getElementById("curlPreview");
+    const responseMeta = document.getElementById("responseMeta");
+    const responseOutput = document.getElementById("responseOutput");
+    let activeMethodFilter = "ALL";
+
+    function normalizeBaseUrl(url) { return url.trim().replace(/\/+$/, ""); }
+    function escapeHtml(value) { return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+    function getSavedConfig() { try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); return { baseUrl: typeof parsed.baseUrl === "string" ? parsed.baseUrl : "", apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "" }; } catch (error) { return { baseUrl: "", apiKey: "" }; } }
+    function showConfigMessage(message, tone) { const toneMap = { success: "var(--ok)", error: "var(--danger)", info: "var(--muted)" }; configStatus.textContent = message; configStatus.style.color = toneMap[tone] || toneMap.info; }
+    function saveConfig() { const baseUrl = normalizeBaseUrl(baseUrlInput.value); const apiKey = apiKeyInput.value.trim(); if (!baseUrl || !apiKey) { showConfigMessage("Preencha a base URL e o token antes de salvar.", "error"); return; } localStorage.setItem(STORAGE_KEY, JSON.stringify({ baseUrl: baseUrl, apiKey: apiKey })); baseUrlInput.value = baseUrl; showConfigMessage("Configuracao salva no navegador e pronta para o playground.", "success"); updateCurlPreview(); }
+    function loadConfig() { const saved = getSavedConfig(); if (saved.baseUrl) baseUrlInput.value = saved.baseUrl; if (saved.apiKey) apiKeyInput.value = saved.apiKey; showConfigMessage(saved.baseUrl && saved.apiKey ? "Configuracao carregada com sucesso." : "Preencha a base URL e o token para habilitar os testes.", saved.baseUrl && saved.apiKey ? "success" : "info"); }
+    function clearConfig() { localStorage.removeItem(STORAGE_KEY); baseUrlInput.value = ""; apiKeyInput.value = ""; showConfigMessage("Configuracao local removida.", "info"); updateCurlPreview(); }
+    function getPlaygroundState() { return { method: methodSelect.value, path: pathInput.value.trim(), query: queryInput.value.trim(), body: requestBodyInput.value }; }
+    function savePlaygroundState() { localStorage.setItem(PLAYGROUND_KEY, JSON.stringify(getPlaygroundState())); updateCurlPreview(); }
+    function loadPlaygroundState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PLAYGROUND_KEY) || "{}");
+        if (typeof parsed.method === "string") methodSelect.value = parsed.method;
+        if (typeof parsed.path === "string") pathInput.value = parsed.path;
+        if (typeof parsed.query === "string") queryInput.value = parsed.query;
+        if (typeof parsed.body === "string") requestBodyInput.value = parsed.body;
+      } catch (error) {}
+    }
+    function buildRequestUrl() {
+      const baseUrl = normalizeBaseUrl(baseUrlInput.value);
+      const path = pathInput.value.trim() || "/";
+      const normalizedPath = path.startsWith("/") ? path : "/" + path;
+      const query = queryInput.value.trim();
+      if (!baseUrl) return normalizedPath + (query ? "?" + query : "");
+      return baseUrl + normalizedPath + (query ? "?" + query : "");
+    }
+    function generateCurl() {
+      const method = methodSelect.value;
+      const apiKey = apiKeyInput.value.trim();
+      const url = buildRequestUrl();
+      const body = requestBodyInput.value.trim();
+      const lines = ["curl -X " + method + " \"" + url + "\""];
+      if (apiKey) {
+        lines.push("  -H \"Authorization: Bearer " + apiKey + "\"");
+        lines.push("  -H \"apikey: " + apiKey + "\"");
+      }
+      if (method !== "GET" && method !== "DELETE") lines.push("  -H \"Content-Type: application/json\"");
+      if (body && method !== "GET" && method !== "DELETE") lines.push("  -d '" + body.replace(/'/g, "'\\''") + "'");
+      return lines.join(" \\\n");
+    }
+    function updateCurlPreview() { curlPreview.textContent = generateCurl(); }
+    function createMethodBadge(method) { return "<span class=\"method-badge pill method-" + method.toLowerCase() + "\">" + method + "</span>"; }
+    function renderEndpointCard(endpoint) {
+      const queryMarkup = endpoint.queryFields.length ? endpoint.queryFields.map(function (item) { return "<div class=\"kv-item\"><strong>" + escapeHtml(item) + "</strong><span>Filtro ou parametro reconhecido pelo backend.</span></div>"; }).join("") : "<div class=\"kv-item\"><strong>Sem query string</strong><span>Esta rota nao espera parametros de consulta.</span></div>";
+      const bodyMarkup = endpoint.bodyFields.length ? endpoint.bodyFields.map(function (item) { return "<div class=\"kv-item\"><strong>" + escapeHtml(item) + "</strong><span>Campo util no payload desta operacao.</span></div>"; }).join("") : "<div class=\"kv-item\"><strong>Sem body</strong><span>Use somente metodo, path e headers.</span></div>";
+      const notesMarkup = endpoint.notes.map(function (note) { return "<span class=\"tiny-tag\">" + escapeHtml(note) + "</span>"; }).join("");
+      const sampleRequestBlock = endpoint.sampleBody ? "<div class=\"code\"><div class=\"code-head\"><span>Body de exemplo</span><button type=\"button\" data-copy-inline=\"" + endpoint.id + "-body\">Copiar</button></div><pre id=\"" + endpoint.id + "-body\">" + escapeHtml(endpoint.sampleBody) + "</pre></div>" : "";
+      const sampleResponseBlock = "<div class=\"code\"><div class=\"code-head\"><span>Resposta esperada</span><button type=\"button\" data-copy-inline=\"" + endpoint.id + "-response\">Copiar</button></div><pre id=\"" + endpoint.id + "-response\">" + escapeHtml(JSON.stringify(endpoint.sampleResponse, null, 2)) + "</pre></div>";
+      return "<article class=\"endpoint-card\"><div class=\"endpoint-head\"><div class=\"endpoint-meta\">" + createMethodBadge(endpoint.method) + "<div><div class=\"endpoint-path\">" + escapeHtml(endpoint.path) + "</div><p style=\"margin: 8px 0 0; color: var(--muted);\">" + escapeHtml(endpoint.title) + "</p></div></div><button type=\"button\" class=\"button secondary\" data-load-endpoint=\"" + endpoint.id + "\">Usar no playground</button></div><p style=\"color: var(--muted);\">" + escapeHtml(endpoint.description) + "</p><div class=\"meta-row\"><span class=\"tiny-tag\">Escopo: " + escapeHtml(endpoint.scope) + "</span><span class=\"tiny-tag\">" + escapeHtml(endpoint.audience) + "</span>" + (endpoint.sampleQuery ? "<span class=\"tiny-tag\">Query sugerida: " + escapeHtml(endpoint.sampleQuery) + "</span>" : "") + "</div><div class=\"tag-row\">" + notesMarkup + "</div><div class=\"endpoint-layout\"><div class=\"subcard\"><h4>Query e parametros</h4><div class=\"kv-list\">" + queryMarkup + "</div></div><div class=\"subcard\"><h4>Body util</h4><div class=\"kv-list\">" + bodyMarkup + "</div></div></div><div class=\"playground-stack\" style=\"margin-top: 18px;\">" + sampleRequestBlock + sampleResponseBlock + "</div></article>";
+    }
+    function renderEndpoints() {
+      const searchTerm = endpointSearch.value.trim().toLowerCase();
+      const filtered = endpointCatalog.filter(function (endpoint) {
+        const matchesMethod = activeMethodFilter === "ALL" || endpoint.method === activeMethodFilter;
+        const haystack = (endpoint.title + " " + endpoint.path + " " + endpoint.description + " " + endpoint.notes.join(" ") + " " + endpoint.queryFields.join(" ")).toLowerCase();
+        return matchesMethod && (!searchTerm || haystack.indexOf(searchTerm) !== -1);
+      });
+      endpointList.innerHTML = filtered.map(renderEndpointCard).join("");
+      endpointEmptyState.classList.toggle("hidden", filtered.length > 0);
+      bindDynamicButtons();
+    }
+    function setMethodFilter(method) { activeMethodFilter = method; filterButtons.forEach(function (button) { button.classList.toggle("active", button.dataset.methodFilter === method); }); renderEndpoints(); }
+    function applyPreset(endpointId) {
+      const endpoint = endpointCatalog.find(function (item) { return item.id === endpointId; });
+      if (!endpoint) return;
+      presetSelect.value = endpoint.id;
+      methodSelect.value = endpoint.method;
+      pathInput.value = endpoint.path.replace("{id}", "SEU-UUID-AQUI");
+      queryInput.value = endpoint.sampleQuery || "";
+      requestBodyInput.value = endpoint.sampleBody || "";
+      savePlaygroundState();
+    }
+    function populatePresets() { presetSelect.innerHTML = endpointCatalog.map(function (endpoint) { return "<option value=\"" + endpoint.id + "\">" + endpoint.method + " " + endpoint.path + " - " + endpoint.title + "</option>"; }).join(""); }
+    function formatJsonBody() {
+      const raw = requestBodyInput.value.trim();
+      if (!raw) { requestBodyInput.value = ""; savePlaygroundState(); return; }
+      try { requestBodyInput.value = JSON.stringify(JSON.parse(raw), null, 2); savePlaygroundState(); } catch (error) { renderResponse({ ok: false, status: "JSON invalido", statusText: "Formatacao local", bodyText: "Nao foi possivel formatar o body: " + (error && error.message ? error.message : String(error)), durationMs: 0 }); }
+    }
+    function renderResponse(result) {
+      const badgeTone = result.ok ? "success" : "error";
+      responseMeta.innerHTML = "<span class=\"status-badge " + badgeTone + "\">" + escapeHtml(String(result.status)) + " " + escapeHtml(String(result.statusText || "")) + "</span>" + (result.durationMs ? "<span class=\"tiny-tag\">Tempo: " + result.durationMs + "ms</span>" : "");
+      responseOutput.className = "code";
+      responseOutput.innerHTML = "<div class=\"code-head\"><span>Response body</span><button type=\"button\" data-copy-inline=\"responseOutputPre\">Copiar</button></div><pre id=\"responseOutputPre\">" + escapeHtml(result.bodyText || "") + "</pre>";
+      bindDynamicButtons();
+    }
+    async function runRequest() {
+      const baseUrl = normalizeBaseUrl(baseUrlInput.value);
+      const apiKey = apiKeyInput.value.trim();
+      const method = methodSelect.value;
+      const path = pathInput.value.trim();
+      if (!baseUrl || !apiKey) { showConfigMessage("Base URL e token sao obrigatorios para testar.", "error"); renderResponse({ ok: false, status: "Configuracao pendente", statusText: "", bodyText: "Preencha a base URL e o token antes de executar a request.", durationMs: 0 }); return; }
+      if (!path) { renderResponse({ ok: false, status: "Path obrigatorio", statusText: "", bodyText: "Informe um path valido como /leads ou /health.", durationMs: 0 }); return; }
+      const url = buildRequestUrl();
+      const headers = { Authorization: "Bearer " + apiKey, apikey: apiKey };
+      const options = { method: method, headers: headers };
+      const rawBody = requestBodyInput.value.trim();
+      if (method !== "GET" && method !== "DELETE") {
+        headers["Content-Type"] = "application/json";
+        if (rawBody) {
+          try { options.body = JSON.stringify(JSON.parse(rawBody)); } catch (error) { renderResponse({ ok: false, status: "JSON invalido", statusText: "", bodyText: "O body informado nao e um JSON valido: " + (error && error.message ? error.message : String(error)), durationMs: 0 }); return; }
+        }
+      }
+      responseMeta.innerHTML = "<span class=\"status-badge info\">Executando...</span>";
+      responseOutput.className = "empty-state";
+      responseOutput.textContent = "Aguardando resposta da API...";
+      const start = performance.now();
+      try {
+        const response = await fetch(url, options);
+        const text = await response.text();
+        let pretty = text;
+        try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (error) { pretty = text || "(sem corpo)"; }
+        renderResponse({ ok: response.ok, status: response.status, statusText: response.statusText, bodyText: pretty, durationMs: Math.round(performance.now() - start) });
+      } catch (error) {
+        renderResponse({ ok: false, status: "Erro de rede", statusText: "", bodyText: error && error.message ? error.message : String(error), durationMs: Math.round(performance.now() - start) });
+      }
+    }
+    async function copyText(value) { try { await navigator.clipboard.writeText(value); } catch (error) { window.prompt("Copie manualmente:", value); } }
+    function bindDynamicButtons() {
+      document.querySelectorAll("[data-load-endpoint]").forEach(function (button) { button.onclick = function () { applyPreset(button.dataset.loadEndpoint); document.getElementById("playground").scrollIntoView({ behavior: "smooth", block: "start" }); }; });
+      document.querySelectorAll("[data-copy-inline]").forEach(function (button) { button.onclick = function () { const target = document.getElementById(button.dataset.copyInline); if (target) copyText(target.textContent || ""); }; });
+      document.querySelectorAll("[data-copy-target]").forEach(function (button) { button.onclick = function () { const target = document.getElementById(button.dataset.copyTarget); if (target) copyText(target.textContent || ""); }; });
+    }
+    function updateActiveSection() {
+      const sections = navLinks.map(function (link) { const target = document.querySelector(link.getAttribute("href")); return { link: link, target: target }; }).filter(function (item) { return item.target; });
+      const offset = 120;
+      let active = sections[0];
+      sections.forEach(function (item) { if (item.target.getBoundingClientRect().top - offset <= 0) active = item; });
+      sections.forEach(function (item) { item.link.classList.toggle("active", item === active); });
+    }
+
+    saveConfigButton.addEventListener("click", saveConfig);
+    toggleKeyButton.addEventListener("click", function () { apiKeyInput.type = apiKeyInput.type === "password" ? "text" : "password"; });
+    clearConfigButton.addEventListener("click", clearConfig);
+    endpointSearch.addEventListener("input", renderEndpoints);
+    filterButtons.forEach(function (button) { button.addEventListener("click", function () { setMethodFilter(button.dataset.methodFilter); }); });
+    presetSelect.addEventListener("change", function () { applyPreset(presetSelect.value); });
+    [methodSelect, pathInput, queryInput, requestBodyInput].forEach(function (element) { element.addEventListener("input", savePlaygroundState); element.addEventListener("change", savePlaygroundState); });
+    runRequestButton.addEventListener("click", runRequest);
+    copyCurlButton.addEventListener("click", function () { copyText(generateCurl()); });
+    formatJsonButton.addEventListener("click", formatJsonBody);
+    [baseUrlInput, apiKeyInput].forEach(function (element) { element.addEventListener("input", updateCurlPreview); });
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+
+    loadConfig();
+    populatePresets();
+    renderEndpoints();
+    loadPlaygroundState();
+    if (!pathInput.value) applyPreset("list-leads"); else updateCurlPreview();
+    bindDynamicButtons();
+    updateActiveSection();
+  </script>
+  </body>
 </html>

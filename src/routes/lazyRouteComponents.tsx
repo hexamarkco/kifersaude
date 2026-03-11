@@ -12,6 +12,7 @@ export const ContractsManagerWrapper = lazy(() => import('../pages/routes/Contra
 export const RemindersManagerEnhanced = lazy(() => import('../components/RemindersManagerEnhanced'));
 export const BlogTab = lazy(() => import('../components/config/BlogTab'));
 export const WhatsAppTab = lazy(() => import('../components/communication/WhatsAppTab'));
+export const WhatsAppSettingsPage = lazy(() => import('../components/communication/WhatsAppSettingsPage'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));
 export const FinanceiroComissoesTab = lazy(() => import('../components/finance/FinanceiroComissoesTab'));
 export const FinanceiroAgendaTab = lazy(() => import('../components/finance/FinanceiroAgendaTab'));

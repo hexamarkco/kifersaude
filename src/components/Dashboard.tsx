@@ -2174,6 +2174,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           gradient="from-blue-500 to-blue-600"
           iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
           subtitle="Em negociação / Total"
+          contextLabel="Base"
+          contextValue={`${totalLeads} leads`}
+          footerLabel="Abrir carteira de leads"
           onClick={() => onNavigateToTab?.('leads')}
         />
         {!isObserver && (
@@ -2184,6 +2187,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             gradient="from-teal-500 to-cyan-600"
             iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
             subtitle="Vigentes"
+            contextLabel="Status"
+            contextValue="Em operacao"
+            footerLabel="Abrir contratos ativos"
             onClick={() => onNavigateToTab?.('contracts')}
           />
         )}
@@ -2196,6 +2202,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
             prefix="R$"
             subtitle="Mensal"
+            contextLabel="Recorte"
+            contextValue="Previsao"
+            footerLabel="Abrir painel de comissoes"
             onClick={() => onNavigateToTab?.('financeiro-comissoes')}
           />
         )}
@@ -2215,6 +2224,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
           suffix="%"
           subtitle="Leads com status Convertido"
+          contextLabel="Leitura"
+          contextValue="Eficiencia"
+          footerLabel="Acompanhe a performance comercial"
         />
         {!isObserver && (
           <AnimatedStatCard
@@ -2225,6 +2237,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             iconBg="bg-gradient-to-br from-orange-500 to-red-600"
             prefix="R$"
             subtitle="Por contrato"
+            contextLabel="Base"
+            contextValue={`${contratosAtivos.length} ativos`}
+            footerLabel="Valor medio por contrato vigente"
           />
         )}
       </div>

@@ -12,6 +12,9 @@ type AnimatedStatCardProps = {
   prefix?: string;
   suffix?: string;
   subtitle?: string;
+  contextLabel?: string;
+  contextValue?: string;
+  footerLabel?: string;
   trend?: {
     value: number;
     isPositive: boolean;
@@ -28,6 +31,9 @@ export default function AnimatedStatCard({
   prefix = '',
   suffix = '',
   subtitle,
+  contextLabel,
+  contextValue,
+  footerLabel,
   trend,
   onClick,
 }: AnimatedStatCardProps) {
@@ -51,7 +57,10 @@ export default function AnimatedStatCard({
     const counter = counterRef.current;
     const animation = gsap.to(counter, {
       current: value,
-      duration: prefix === 'R$' ? Math.max(0.45, microDuration + 0.48) : Math.max(0.38, microDuration + 0.36),
+      duration:
+        prefix === 'R$'
+          ? Math.max(0.45, microDuration + 0.48)
+          : Math.max(0.38, microDuration + 0.36),
       ease: 'power2.out',
       overwrite: 'auto',
       onUpdate: () => {
@@ -87,46 +96,77 @@ export default function AnimatedStatCard({
 
   const cardContent = (
     <>
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 transition-opacity group-hover:opacity-20`} />
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-[0.08] transition-opacity duration-300 group-hover:opacity-[0.14]`}
+      />
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/70 to-transparent" />
+      <div className="absolute right-[-34px] top-[-34px] h-28 w-28 rounded-full bg-white/45 blur-2xl" />
 
-      <div className="relative p-4 sm:p-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 sm:text-sm sm:normal-case sm:tracking-normal">
-              {label}
-            </p>
-            <div className="flex items-baseline gap-1">
-                {prefix && <span className="text-xl font-bold text-slate-900 sm:text-2xl">{prefix}</span>}
-                <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                  {formattedValue}
-                </p>
-                {suffix && <span className="text-base font-semibold text-slate-600 sm:text-lg">{suffix}</span>}
-              </div>
-            {subtitle && (
-              <p className="mt-1 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
-            )}
+      <div className="relative p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Panorama
+              </p>
+              {contextLabel && contextValue && (
+                <div className="rounded-full border border-white/70 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">
+                  <span className="text-slate-400">{contextLabel}</span>{' '}
+                  <span className="text-slate-800">{contextValue}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="mb-2 text-sm font-semibold text-slate-700 sm:text-base">{label}</p>
+
+            <div className="flex items-end gap-2">
+              {prefix && <span className="pb-1 text-lg font-bold text-slate-700 sm:text-xl">{prefix}</span>}
+              <p className="text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+                {formattedValue}
+              </p>
+              {suffix && <span className="pb-1 text-base font-semibold text-slate-500 sm:text-lg">{suffix}</span>}
+            </div>
+
+            {subtitle && <p className="mt-2 text-sm text-slate-500">{subtitle}</p>}
+
             {trend && (
-              <div className="mt-2 flex items-center gap-1 text-xs sm:text-sm">
+              <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm">
                 <span
-                  className={`text-sm font-semibold ${
-                    trend.isPositive ? 'text-green-600' : 'text-red-600'
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    trend.isPositive
+                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                      : 'bg-red-50 text-red-700 ring-1 ring-red-100'
                   }`}
                 >
                   {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value).toFixed(1)}%
                 </span>
-                <span className="text-xs text-slate-500">vs mês anterior</span>
+                <span className="text-xs text-slate-500">vs mes anterior</span>
               </div>
             )}
           </div>
+
           <div
-            className={`${iconBg} rounded-xl p-3 shadow-sm transition-transform duration-300 group-hover:scale-110 sm:p-4`}
+            className={`${iconBg} relative flex h-14 w-14 items-center justify-center rounded-2xl shadow-[0_18px_30px_-18px_rgba(15,23,42,0.45)] transition-transform duration-300 group-hover:scale-[1.04] sm:h-16 sm:w-16`}
           >
-            <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
+            <div className="absolute inset-1 rounded-[14px] border border-white/20" />
+            <Icon className="relative h-6 w-6 text-white sm:h-7 sm:w-7" />
           </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200/80 pt-4">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className={`h-2.5 w-2.5 rounded-full bg-gradient-to-br ${gradient}`} />
+            <span>{footerLabel || 'Toque para abrir detalhes'}</span>
+          </div>
+          {onClick && (
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors duration-300 group-hover:text-slate-700">
+              Abrir
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className={`absolute inset-x-5 bottom-0 h-1 rounded-full bg-gradient-to-r ${gradient} opacity-70`} />
     </>
   );
 
@@ -135,8 +175,8 @@ export default function AnimatedStatCard({
       <button
         type="button"
         onClick={onClick}
-        className={`panel-glass-panel panel-interactive-glass relative w-full overflow-hidden rounded-2xl border border-slate-200 text-left shadow-lg
-        hover:shadow-xl hover:scale-105 transition-all duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500`}
+        className={`panel-glass-panel panel-interactive-glass group relative w-full overflow-hidden rounded-[28px] border border-slate-200 text-left shadow-[0_24px_46px_-34px_rgba(15,23,42,0.34)]
+        transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_56px_-34px_rgba(15,23,42,0.42)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500`}
       >
         {cardContent}
       </button>
@@ -145,8 +185,8 @@ export default function AnimatedStatCard({
 
   return (
     <div
-      className={`panel-glass-panel panel-interactive-glass relative overflow-hidden rounded-2xl border border-slate-200 shadow-lg
-        hover:shadow-xl hover:scale-105 transition-all duration-300 group`}
+      className={`panel-glass-panel panel-interactive-glass group relative overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_24px_46px_-34px_rgba(15,23,42,0.34)]
+        transition-all duration-300`}
     >
       {cardContent}
     </div>

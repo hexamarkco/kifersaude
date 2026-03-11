@@ -379,7 +379,13 @@ export const expandFlowGraphToFlows = (flow: AutoContactFlow): AutoContactFlow[]
     ? (conditionNode.data.conditions as AutoContactFlowCondition[])
     : [];
   const branchConditionLogic = conditionNode.data.conditionLogic ?? 'all';
-  const yesPath = yesEdge ? collectPathFromEdge(graph, yesEdge) : { steps: [], conditions: [], conditionLogic: 'all' };
+  const yesPath = yesEdge
+    ? collectPathFromEdge(graph, yesEdge)
+    : ({ steps: [], conditions: [], conditionLogic: 'all' } as {
+        steps: AutoContactFlowStep[];
+        conditions: AutoContactFlowCondition[];
+        conditionLogic: AutoContactFlow['conditionLogic'];
+      });
   const yesSteps = [...prefixPath.steps, ...yesPath.steps].map((step, index) => ({
     ...step,
     id: step.id?.trim() ? step.id : `${flow.id}-step-${index}`,

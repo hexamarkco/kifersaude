@@ -251,24 +251,35 @@ const buildPaths = (graph: AutoContactFlowGraph): GraphPath[] => {
 };
 
 const getPathConditionGroups = (path: GraphPath, nodeById: Map<string, AutoContactFlowGraphNode>): ConditionGroup[] =>
-  path.nodeIds
-    .map((nodeId) => nodeById.get(nodeId) ?? null)
-    .filter((node): node is AutoContactFlowGraphNode => Boolean(node) && node.type === 'condition')
-    .map((node) => ({
+  path.nodeIds.reduce<ConditionGroup[]>((groups, nodeId) => {
+    const node = nodeById.get(nodeId);
+    if (!node || node.type !== 'condition') return groups;
+
+    const conditions = Array.isArray(node.data.conditions) ? node.data.conditions : [];
+    if (conditions.length === 0) return groups;
+
+    groups.push({
       nodeId: node.id,
       logic: node.data.conditionLogic ?? 'all',
-      conditions: Array.isArray(node.data.conditions) ? node.data.conditions : [],
-    }))
-    .filter((group) => group.conditions.length > 0);
+      conditions,
+    });
+    return groups;
+  }, []);
 
-const getPathSteps = (path: GraphPath, nodeById: Map<string, AutoContactFlowGraphNode>): Array<{ nodeId: string; step: AutoContactFlowStep }> =>
-  path.nodeIds
-    .map((nodeId) => nodeById.get(nodeId) ?? null)
-    .filter((node): node is AutoContactFlowGraphNode => Boolean(node) && node.type === 'action' && Boolean(node.data.step))
-    .map((node) => ({
+const getPathSteps = (
+  path: GraphPath,
+  nodeById: Map<string, AutoContactFlowGraphNode>,
+): Array<{ nodeId: string; step: AutoContactFlowStep }> =>
+  path.nodeIds.reduce<Array<{ nodeId: string; step: AutoContactFlowStep }>>((steps, nodeId) => {
+    const node = nodeById.get(nodeId);
+    if (!node || node.type !== 'action' || !node.data.step) return steps;
+
+    steps.push({
       nodeId: node.id,
       step: node.data.step as AutoContactFlowStep,
-    }));
+    });
+    return steps;
+  }, []);
 
 const formatPathName = (path: GraphPath, index: number): string => {
   if (path.branchLabels.length === 0) return `PATH ${index + 1} - PRINCIPAL`;

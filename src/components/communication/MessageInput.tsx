@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useMemo } from 'react';
+import { memo, startTransition, useDeferredValue, useState, useRef, useEffect, useMemo } from 'react';
 import {
   Send,
   Paperclip,
@@ -89,6 +89,11 @@ type QuickReplyItem = {
   id: string;
   title: string;
   message: string;
+};
+
+type IndexedQuickReplyItem = QuickReplyItem & {
+  normalizedTitle: string;
+  normalizedMessage: string;
 };
 
 type EmojiCategoryId = 'recent' | 'faces' | 'gestures' | 'objects' | 'symbols';
@@ -352,12 +357,15 @@ function MessageInputComponent({
     }
   };
 
+  const deferredMessage = useDeferredValue(message);
+  const deferredQuickReplySearch = useDeferredValue(quickReplySearch);
+
   const detectedPreviewUrl = useMemo(() => {
     if (selectedFile) return null;
-    const resolvedMessage = applyTemplateVariables(message.trim());
+    const resolvedMessage = applyTemplateVariables(deferredMessage.trim());
     const firstUrl = extractFirstUrl(resolvedMessage);
     return firstUrl ? normalizePreviewUrl(firstUrl) : null;
-  }, [message, selectedFile, templateVariables]);
+  }, [deferredMessage, selectedFile, templateVariables]);
 
   const shouldShowInlineLinkPreview = Boolean(
     detectedPreviewUrl && linkPreviewDismissedUrl !== detectedPreviewUrl && (linkPreviewCanonical || linkPreviewLoading || linkPreviewError),
@@ -413,18 +421,40 @@ function MessageInputComponent({
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
 
+  const indexedQuickReplies = useMemo<IndexedQuickReplyItem[]>(
+    () => quickReplies.map((reply) => ({
+      ...reply,
+      normalizedTitle: normalizeQuickReplySearch(reply.title),
+      normalizedMessage: normalizeQuickReplySearch(reply.message),
+    })),
+    [quickReplies],
+  );
+
   const filteredQuickReplies = useMemo(() => {
-    const query = normalizeQuickReplySearch(quickReplySearch.trim());
+    const query = normalizeQuickReplySearch(deferredQuickReplySearch.trim());
     if (!query) return quickReplies;
-    return quickReplies.filter(
-      (reply) =>
-        normalizeQuickReplySearch(reply.title).includes(query) ||
-        normalizeQuickReplySearch(reply.message).includes(query),
-    );
-  }, [quickReplies, quickReplySearch]);
+    return indexedQuickReplies
+      .filter((reply) => reply.normalizedTitle.includes(query) || reply.normalizedMessage.includes(query))
+      .map(({ normalizedTitle: _normalizedTitle, normalizedMessage: _normalizedMessage, ...reply }) => reply);
+  }, [deferredQuickReplySearch, indexedQuickReplies, quickReplies]);
+
+  const quickReplyPreviewItems = useMemo(() => {
+    if (!showQuickReplies) {
+      return [] as Array<QuickReplyItem & { resolvedPreview: string; hasDynamicPreview: boolean }>;
+    }
+
+    return filteredQuickReplies.map((reply) => {
+      const resolvedPreview = applyTemplateVariables(reply.message);
+      return {
+        ...reply,
+        resolvedPreview,
+        hasDynamicPreview: resolvedPreview !== reply.message,
+      };
+    });
+  }, [applyTemplateVariables, filteredQuickReplies, showQuickReplies]);
 
   const slashCommandState = useMemo(() => {
-    const draft = message.trimStart();
+    const draft = deferredMessage.trimStart();
     if (!draft.startsWith('/')) {
       return {
         active: false,
@@ -443,11 +473,12 @@ function MessageInputComponent({
 
     const query = draft.slice(1).trim();
     const normalizedQuery = normalizeQuickReplySearch(query);
-    const results = quickReplies
+    const results = indexedQuickReplies
       .filter((reply) => {
         if (!normalizedQuery) return true;
-        return normalizeQuickReplySearch(reply.title).includes(normalizedQuery);
+        return reply.normalizedTitle.includes(normalizedQuery);
       })
+      .map(({ normalizedTitle: _normalizedTitle, normalizedMessage: _normalizedMessage, ...reply }) => reply)
       .slice(0, 8);
 
     return {
@@ -455,7 +486,7 @@ function MessageInputComponent({
       query,
       results,
     };
-  }, [message, quickReplies]);
+  }, [deferredMessage, indexedQuickReplies]);
 
   useEffect(() => {
     if (!detectedPreviewUrl) {
@@ -961,13 +992,17 @@ function MessageInputComponent({
   };
 
   const toggleComposerActionsMenu = () => {
-    setShowComposerActionsMenu((prev) => !prev);
+    startTransition(() => {
+      setShowComposerActionsMenu((prev) => !prev);
+    });
     setShowEmojiPicker(false);
     setShowAttachMenu(false);
   };
 
   const handleOpenQuickRepliesMenu = () => {
-    setShowQuickReplies((prev) => !prev);
+    startTransition(() => {
+      setShowQuickReplies((prev) => !prev);
+    });
     setShowComposerActionsMenu(false);
     setShowEmojiPicker(false);
   };
@@ -1994,13 +2029,10 @@ function MessageInputComponent({
             <div className="comm-list panel-dropdown-scrollbar max-h-40 overflow-y-auto">
               {quickRepliesLoading ? (
                 <div className="comm-muted px-3 py-2 text-xs">Carregando respostas rápidas...</div>
-              ) : filteredQuickReplies.length === 0 ? (
+              ) : quickReplyPreviewItems.length === 0 ? (
                 <div className="comm-muted px-3 py-2 text-xs">Nenhuma resposta rápida encontrada.</div>
               ) : (
-                filteredQuickReplies.map((reply) => {
-                  const resolvedPreview = applyTemplateVariables(reply.message);
-                  const hasDynamicPreview = resolvedPreview !== reply.message;
-
+                quickReplyPreviewItems.map((reply) => {
                   return (
                     <div key={reply.id} className="border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 last:border-b-0">
                       <div className="flex items-center justify-between">
@@ -2021,9 +2053,9 @@ function MessageInputComponent({
                         </button>
                       </div>
                       <div className="comm-muted mt-1 whitespace-pre-wrap text-xs">{reply.message}</div>
-                      {hasDynamicPreview && (
+                      {reply.hasDynamicPreview && (
                         <div className="comm-badge comm-badge-success mt-1 whitespace-pre-wrap text-[11px]">
-                          Preview: {resolvedPreview}
+                          Preview: {reply.resolvedPreview}
                         </div>
                       )}
                     </div>
@@ -2525,20 +2557,50 @@ function MessageInputComponent({
             </button>
 
             {showEmojiPicker && (
-              <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 grid w-56 grid-cols-8 gap-1 p-2">
-                {emojiList.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="comm-icon-button flex h-6 w-6 items-center justify-center"
-                    onClick={() => {
-                      insertEmoji(emoji);
-                      setShowEmojiPicker(false);
-                    }}
-                  >
-                    <span className="text-base">{emoji}</span>
-                  </button>
-                ))}
+              <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 w-[22rem] overflow-hidden p-0">
+                <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2">
+                  <div className="comm-title text-sm font-medium">Emojis</div>
+                  <div className="comm-muted text-[11px]">Escolha rapido, com aba para os mais usados.</div>
+                </div>
+                <div className="flex gap-1 overflow-x-auto border-b border-[var(--panel-border-subtle,#e7dac8)] px-2 py-2">
+                  {emojiTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${
+                        activeEmojiCategory === tab.id
+                          ? 'bg-[var(--panel-focus,#c86f1d)] text-white'
+                          : 'bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text-soft,#6b4f3a)] hover:bg-[var(--panel-surface-muted,#efe3d2)]'
+                      }`}
+                      onClick={() => setActiveEmojiCategory(tab.id)}
+                    >
+                      {tab.id === 'recent' ? `Mais usados${recentEmojis.length ? ` (${recentEmojis.length})` : ''}` : tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="panel-dropdown-scrollbar max-h-64 overflow-y-auto px-2 py-2">
+                  {activeEmojiTab.emojis.length === 0 ? (
+                    <div className="comm-muted px-2 py-6 text-center text-xs">
+                      Seus emojis mais usados vao aparecer aqui conforme voce enviar.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-8 gap-1">
+                      {activeEmojiTab.emojis.map((emoji) => (
+                        <button
+                          key={`${activeEmojiTab.id}-${emoji}`}
+                          type="button"
+                          className="comm-icon-button flex h-9 w-9 items-center justify-center rounded-xl"
+                          onClick={() => {
+                            insertEmoji(emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                        >
+                          <span className="text-lg">{emoji}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

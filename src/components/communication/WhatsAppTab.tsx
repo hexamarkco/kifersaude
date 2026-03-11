@@ -195,6 +195,7 @@ type ChatMenuState = {
 };
 
 const EMPTY_FILTER_VALUE = '__empty__';
+const CHAT_PREVIEW_VARIANTS_BATCH_SIZE = 40;
 
 const REMINDER_QUICK_OPEN_PERIODS: Array<{
   id: ReminderQuickOpenPeriod;
@@ -431,6 +432,7 @@ export default function WhatsAppTab() {
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const statusMenuCloseTimeoutRef = useRef<number | null>(null);
   const shouldScrollOnChatChangeRef = useRef(false);
+  const pendingInitialScrollMessageIdRef = useRef<string | null>(null);
   const lastRenderedMessageIdRef = useRef<string | null>(null);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
@@ -2051,6 +2053,11 @@ const sortChatsByLatest = (
       shouldScrollOnChatChangeRef.current = false;
       lastRenderedMessageIdRef.current = lastRenderedMessageId;
       requestAnimationFrame(() => {
+        const targetMessageId = pendingInitialScrollMessageIdRef.current;
+        pendingInitialScrollMessageIdRef.current = null;
+        if (targetMessageId && scrollMessageIntoView(targetMessageId, 'auto')) {
+          return;
+        }
         scrollToBottom('auto');
       });
       return;
@@ -2108,6 +2115,57 @@ const sortChatsByLatest = (
       unreadCountsRefreshTimeoutRef.current = null;
       void loadUnreadCounts();
     }, delayMs);
+  };
+
+  const scrollMessageIntoView = (messageId: string, behavior: ScrollBehavior = 'auto') => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return false;
+
+    const target = viewport.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+    if (!target) return false;
+
+    const offsetTop = target.offsetTop;
+    const targetScrollTop = Math.max(0, offsetTop - Math.max(24, viewport.clientHeight * 0.18));
+    viewport.scrollTo({ top: targetScrollTop, behavior });
+    return true;
+  };
+
+  const resolveInitialScrollMessageId = async (
+    chat: WhatsAppChat,
+    loadedMessages: WhatsAppMessage[],
+  ): Promise<string | null> => {
+    const activeUser = userRef.current;
+    if (!activeUser || (chat.unread_count ?? 0) <= 0) return null;
+
+    const visibleMessages = loadedMessages.filter(
+      (message) =>
+        !isReactionOnlyMessage(message) &&
+        !isEditActionMessage(message) &&
+        !isTechnicalCiphertextMessage(message),
+    );
+    if (visibleMessages.length === 0) return null;
+
+    const inboundMessageIds = visibleMessages
+      .filter((message) => message.direction === 'inbound')
+      .map((message) => message.id);
+    if (inboundMessageIds.length === 0) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_message_reads')
+        .select('message_id')
+        .eq('user_id', activeUser.id)
+        .in('message_id', inboundMessageIds);
+
+      if (error) throw error;
+
+      const readIds = new Set((data || []).map((row) => row.message_id as string));
+      const firstUnread = visibleMessages.find((message) => message.direction === 'inbound' && !readIds.has(message.id));
+      return firstUnread?.id ?? null;
+    } catch (error) {
+      console.error('Erro ao resolver ponto de leitura inicial do chat:', error);
+      return null;
+    }
   };
 
   const mergeChatsWithCurrentState = (incomingChats: WhatsAppChat[]) => {
@@ -2248,6 +2306,7 @@ const sortChatsByLatest = (
       );
       const fetchedCount = fetchedMessages.length;
       const baseMessages = dedupeMessagesForDisplay(fetchedMessages as WhatsAppMessage[]);
+      const initialScrollMessageId = await resolveInitialScrollMessageId(chat, baseMessages);
       const latestPreview = getLatestMeaningfulPreview(baseMessages);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
@@ -2260,6 +2319,7 @@ const sortChatsByLatest = (
       });
       setLoadedMessagesCount(fetchedCount);
       setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
+      pendingInitialScrollMessageIdRef.current = initialScrollMessageId;
 
       if (latestPreview) {
         setChats((prev) => {
@@ -3002,19 +3062,33 @@ const sortChatsByLatest = (
       });
     });
 
-    const variants = Array.from(variantToBaseChatIds.keys());
+    const variants = Array.from(variantToBaseChatIds.keys()).filter(Boolean);
     if (variants.length === 0) return;
 
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('id, chat_id, body, type, has_media, payload, is_deleted, direction, timestamp, created_at')
-        .in('chat_id', variants)
-        .order('timestamp', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(Math.min(Math.max(variants.length * 6, 300), 4000));
+      const allRows: WhatsAppMessage[] = [];
+      const previewLimitPerBatch = Math.min(Math.max(CHAT_PREVIEW_VARIANTS_BATCH_SIZE * 6, 300), 900);
 
-      if (error) throw error;
+      for (let index = 0; index < variants.length; index += CHAT_PREVIEW_VARIANTS_BATCH_SIZE) {
+        const batch = variants.slice(index, index + CHAT_PREVIEW_VARIANTS_BATCH_SIZE);
+        const { data, error } = await supabase
+          .from('whatsapp_messages')
+          .select('id, chat_id, body, type, has_media, payload, is_deleted, direction, timestamp, created_at')
+          .in('chat_id', batch)
+          .order('timestamp', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(previewLimitPerBatch);
+
+        if (error) {
+          console.error('Erro ao recalcular previews do lote de chats:', {
+            message: error.message,
+            batchSize: batch.length,
+          });
+          continue;
+        }
+        allRows.push(...((data || []) as WhatsAppMessage[]));
+      }
+
       if (currentLoadId && activeChatsLoadIdRef.current !== currentLoadId) return;
 
       const previewByChatId = new Map<
@@ -3022,7 +3096,7 @@ const sortChatsByLatest = (
         { preview: string; direction: 'inbound' | 'outbound' | null; timestamp: string | null }
       >();
 
-      ((data || []) as WhatsAppMessage[]).forEach((message) => {
+      dedupeMessagesForDisplay(allRows).forEach((message) => {
         const preview = getMessagePreview(message);
         if (!preview) return;
 
@@ -3583,7 +3657,7 @@ const sortChatsByLatest = (
 
     return null;
   }, [leadByPhoneMatchKey, selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
-  const resolveLeadForChat = (chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null) => {
+  function resolveLeadForChat(chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null) {
     const matchKeys = getLeadMatchKeysForChat(chat);
     for (const key of matchKeys) {
       const matchedLead = leadByPhoneMatchKey.get(key);
@@ -3593,7 +3667,7 @@ const sortChatsByLatest = (
     }
 
     return null;
-  };
+  }
   const firstResponseSla = useMemo<FirstResponseSLA>(() => {
     const timeline = [...messages]
       .filter((message) => {
@@ -3763,6 +3837,10 @@ const sortChatsByLatest = (
     const waitingMinutes = Math.max(1, Math.round((Date.now() - messageTime) / 60000));
     return formatMinutesDuration(waitingMinutes);
   };
+
+  function isChatMuted(chat: WhatsAppChat) {
+    return chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
+  }
 
   const clearMuteMenuCloseTimeout = () => {
     if (muteMenuCloseTimeoutRef.current !== null) {
@@ -3955,7 +4033,7 @@ const sortChatsByLatest = (
     }
       return null;
   })();
-  const getResolvedDirectChatPhone = (chat: WhatsAppChat | null) => {
+  function getResolvedDirectChatPhone(chat: WhatsAppChat | null) {
     if (!chat || !isDirectChat(chat)) return '';
 
     const matchedLead = resolveLeadForChat(chat);
@@ -3971,7 +4049,7 @@ const sortChatsByLatest = (
     }
 
     return '';
-  };
+  }
   const chatMenuTarget = useMemo(() => {
     if (!chatMenu) return null;
     const targetChat = chats.find((item) => item.id === chatMenu.chatId) ?? null;
@@ -4928,9 +5006,6 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
       { replace: true },
     );
   }, [location.pathname, location.search, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isChatMuted = (chat: WhatsAppChat) =>
-    chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
 
   const patchSelectedChat = (chatId: string, patch: Partial<WhatsAppChat>) => {
     setSelectedChat((current) => (current && current.id === chatId ? { ...current, ...patch } : current));
@@ -6299,7 +6374,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     const reactions = reactionsByTargetId.get(message.id);
 
                     return (
-                      <div key={message.id}>
+                      <div key={message.id} data-message-id={message.id}>
                         {shouldShowDaySeparator && daySeparatorLabel && (
                           <div className="my-4 flex justify-center">
                             <span className="message-day-separator rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">

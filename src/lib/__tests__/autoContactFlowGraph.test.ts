@@ -143,6 +143,9 @@ test('expandFlowGraphToFlows preserves prefix conditions and steps for every bra
 
   assert.ok(yesFlow);
   assert.ok(noFlow);
+  if (!yesFlow || !noFlow) {
+    return;
+  }
 
   assert.deepEqual(
     yesFlow.steps.map((step) => step.id),
@@ -154,14 +157,14 @@ test('expandFlowGraphToFlows preserves prefix conditions and steps for every bra
   );
 
   assert.deepEqual(
-    yesFlow.conditions.map((condition) => [condition.field, condition.operator, condition.value]),
+    (yesFlow.conditions ?? []).map((condition) => [condition.field, condition.operator, condition.value]),
     [
       ['status', 'equals', 'Novo'],
       ['whatsapp_valid', 'equals', 'true'],
     ],
   );
   assert.deepEqual(
-    noFlow.conditions.map((condition) => [condition.field, condition.operator, condition.value]),
+    (noFlow.conditions ?? []).map((condition) => [condition.field, condition.operator, condition.value]),
     [
       ['status', 'equals', 'Novo'],
       ['whatsapp_valid', 'not_equals', 'true'],

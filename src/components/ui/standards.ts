@@ -14,7 +14,7 @@ export type PanelButtonVariant =
 export type PanelButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 export const panelButtonBaseClass =
-  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary:

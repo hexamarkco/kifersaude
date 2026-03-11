@@ -42,8 +42,8 @@ const navLinkClassName = (isActive: boolean) =>
   [
     'rounded-full px-4 py-2 text-sm font-semibold transition-all',
     isActive
-      ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 shadow-sm'
-      : 'text-slate-600 hover:bg-white hover:text-slate-900',
+      ? 'bg-gradient-to-r from-[var(--public-surface-strong)] to-[var(--public-accent-soft)] text-[var(--public-accent-ink)] shadow-sm'
+      : 'text-[var(--public-ink-soft)] hover:bg-[color:rgba(255,251,245,0.92)] hover:text-[var(--public-ink)]',
   ].join(' ');
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
@@ -235,22 +235,22 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   }, [isMenuOpen, microDuration, motionEnabled]);
 
   return (
-    <div className="public-theme min-h-screen text-slate-900">
+    <div className="public-theme kifer-ds min-h-screen text-slate-900">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="public-orb absolute -left-24 top-4 h-72 w-72 rounded-full bg-amber-200/45 blur-3xl" />
-        <div className="public-orb absolute -right-28 top-12 h-80 w-80 rounded-full bg-sky-200/35 blur-3xl" />
+        <div className="public-orb absolute -right-28 top-12 h-80 w-80 rounded-full bg-stone-300/30 blur-3xl" />
         <div className="public-orb absolute bottom-[-12rem] left-[22%] h-96 w-96 rounded-full bg-orange-200/35 blur-3xl" />
       </div>
 
       <header ref={headerRef} className="fixed inset-x-0 top-0 z-50">
-        <div className="hidden border-b border-amber-900/10 bg-white/55 backdrop-blur md:block">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 sm:px-6 lg:px-8">
+        <div className="hidden border-b border-[color:rgba(111,63,22,0.1)] bg-[color:rgba(255,251,245,0.62)] backdrop-blur md:block">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--public-ink-soft)] sm:px-6 lg:px-8">
             <p>Consultoria premium em saude suplementar no RJ</p>
             <div className="flex items-center gap-5">
-              <a href="tel:+5521979302389" className="hover:text-slate-900">
+              <a href="tel:+5521979302389" className="hover:text-[var(--public-ink)]">
                 (21) 97930-2389
               </a>
-              <a href="mailto:contato@kifersaude.com.br" className="hover:text-slate-900">
+              <a href="mailto:contato@kifersaude.com.br" className="hover:text-[var(--public-ink)]">
                 contato@kifersaude.com.br
               </a>
             </div>
@@ -258,14 +258,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-[1.35rem] border border-white/80 bg-white/78 px-4 py-3 shadow-[0_18px_45px_-32px_rgba(18,28,42,0.75)] backdrop-blur-xl">
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-[1.35rem] border border-[color:rgba(111,63,22,0.12)] bg-[color:rgba(255,251,245,0.82)] px-4 py-3 shadow-[0_18px_45px_-32px_rgba(42,24,12,0.35)] backdrop-blur-xl">
             <NavLink to="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-700 via-orange-600 to-amber-500 shadow-lg shadow-amber-900/25">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7a3e16] via-[#c86f1d] to-[#df8b2f] shadow-lg shadow-[#7a3e16]/25">
                 <Heart className="h-6 w-6 text-white" />
               </span>
               <span>
-                <span className="public-display block text-[1.5rem] font-semibold leading-none text-slate-900">Kifer Saude</span>
-                <span className="block text-[11px] font-bold uppercase tracking-[0.22em] text-amber-800">Concierge de planos</span>
+                <span className="public-display block text-[1.5rem] font-semibold leading-none text-[var(--public-ink)]">Kifer Saude</span>
+                <span className="block text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--public-accent-ink)]">Concierge de planos</span>
               </span>
             </NavLink>
 
@@ -280,14 +280,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <div className="hidden items-center gap-2 md:flex">
               <a
                 href="tel:+5521979302389"
-                className="inline-flex items-center gap-2 rounded-full border border-amber-900/20 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-700/35 hover:text-slate-900"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:rgba(255,251,245,0.84)] px-4 py-2 text-sm font-semibold text-[var(--public-ink-soft)] transition hover:border-[color:rgba(111,63,22,0.34)] hover:text-[var(--public-ink)]"
               >
-                <Phone className="h-4 w-4 text-amber-700" />
+                <Phone className="h-4 w-4 text-[var(--public-accent-ink)]" />
                 (21) 97930-2389
               </a>
               <NavLink
                 to="/cotacao"
-                className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-700 to-orange-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-amber-900/20 transition hover:from-amber-800 hover:to-orange-700"
+                className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#7a3e16] to-[#c86f1d] px-5 py-2 text-sm font-bold text-white shadow-lg shadow-[#7a3e16]/20 transition hover:from-[#683312] hover:to-[#af5e18]"
               >
                 Falar com especialista
                 <ArrowUpRight className="h-4 w-4" />
@@ -297,7 +297,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <button
               type="button"
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              className="inline-flex rounded-xl border border-amber-900/20 bg-white p-2 text-slate-700 md:hidden"
+              className="inline-flex rounded-xl border border-[color:rgba(111,63,22,0.18)] bg-[color:rgba(255,251,245,0.92)] p-2 text-[var(--public-ink-soft)] md:hidden"
               aria-label="Abrir menu"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -305,7 +305,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
 
           {isMenuOpen && (
-            <div ref={mobileMenuRef} className="mt-2 rounded-2xl border border-amber-900/20 bg-white/95 p-4 shadow-2xl backdrop-blur md:hidden">
+            <div ref={mobileMenuRef} className="mt-2 rounded-2xl border border-[color:rgba(111,63,22,0.18)] bg-[color:rgba(255,251,245,0.96)] p-4 shadow-2xl backdrop-blur md:hidden">
               <nav className="flex flex-col gap-1">
                 {navigationItems.map((item) => (
                   <NavLink

@@ -517,18 +517,18 @@ export default function ConversionLandingPage() {
         {renderGTM()}
       </Helmet>
 
-      <div ref={pageRootRef}>
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white'}`}>
+      <div ref={pageRootRef} className="marketing-theme kifer-ds kifer-landing-theme min-h-screen text-slate-900">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-[color:rgba(255,251,245,0.96)] shadow-lg shadow-[#2a180c]/10' : 'bg-[color:rgba(255,251,245,0.92)]'}`}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md hover:scale-110 transition-transform duration-300">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7a3e16] to-[#c86f1d] shadow-md transition-transform duration-300 hover:scale-110">
               <span className="text-white font-bold text-xl">K</span>
             </div>
             <span className="text-xl font-bold text-slate-800">Kifer Saúde</span>
           </div>
           <a 
             href="https://wa.me/5521979302389" 
-            className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#7a3e16] to-[#c86f1d] px-5 py-2.5 font-semibold text-white transition-all shadow-md hover:-translate-y-0.5 hover:shadow-lg hover:from-[#683312] hover:to-[#af5e18]"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="hidden sm:inline">Falar no WhatsApp</span>
@@ -967,7 +967,7 @@ export default function ConversionLandingPage() {
         </section>
       </main>
 
-      <footer className="bg-slate-900 text-white py-8 px-4">
+      <footer className="bg-[#1c120d] px-4 py-8 text-white">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
@@ -975,10 +975,10 @@ export default function ConversionLandingPage() {
             </div>
             <span className="text-lg font-bold">Kifer Saúde</span>
           </div>
-          <p className="text-slate-400 text-sm mb-4">CNPJ: 00.000.000/0001-00 | Regulamentado pela ANS</p>
+          <p className="mb-4 text-sm text-[#c7b19a]">CNPJ: 00.000.000/0001-00 | Regulamentado pela ANS</p>
           <div className="flex justify-center gap-6">
             <a href="/politica-de-privacidade" className="text-slate-400 hover:text-white text-sm transition-colors">Política de Privacidade</a>
-            <a href="https://wa.me/5521979302389" className="text-green-400 hover:text-green-300 text-sm transition-colors flex items-center gap-1">
+            <a href="https://wa.me/5521979302389" className="flex items-center gap-1 text-sm text-[#efb36c] transition-colors hover:text-[#f7c48a]">
               <MessageCircle className="w-4 h-4" /> Falar no WhatsApp
             </a>
           </div>
@@ -987,15 +987,15 @@ export default function ConversionLandingPage() {
 
       <a 
         href="https://wa.me/5521979302389" 
-        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-xl z-50 transition-all hover:scale-110 hover:shadow-2xl"
+        className="fixed bottom-6 right-6 z-50 rounded-full bg-gradient-to-br from-[#7a3e16] to-[#c86f1d] p-4 text-white shadow-xl transition-all hover:scale-110 hover:shadow-2xl hover:from-[#683312] hover:to-[#af5e18]"
       >
         <MessageCircle className="w-8 h-8" />
       </a>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 z-50">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[color:rgba(111,63,22,0.14)] bg-[color:rgba(255,251,245,0.96)] p-3 md:hidden">
         <a 
           href="https://wa.me/5521979302389" 
-          className="block bg-green-500 hover:bg-green-600 text-white text-center py-3 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+          className="block rounded-xl bg-gradient-to-r from-[#7a3e16] to-[#c86f1d] py-3 text-center font-semibold text-white transition-all hover:scale-[1.02] hover:from-[#683312] hover:to-[#af5e18]"
         >
           💬 Falar com especialista
         </a>

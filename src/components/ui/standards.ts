@@ -14,27 +14,27 @@ export type PanelButtonVariant =
 export type PanelButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 export const panelButtonBaseClass =
-  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold backdrop-blur-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary:
-    'border-amber-300/90 bg-amber-100/80 text-amber-900 shadow-sm hover:border-amber-400/90 hover:bg-amber-200/75 hover:text-amber-950 focus-visible:ring-amber-500 disabled:hover:bg-amber-100/80',
+    'border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm hover:border-[var(--panel-accent-strong,#b85c1f)] hover:bg-[color:var(--panel-accent-hover,#efcf9f)] hover:text-[var(--panel-accent-ink-strong,#4a2411)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-[color:var(--panel-accent-soft,#f6e4c7)]',
   secondary:
-    'border-slate-300/90 bg-white/85 text-slate-800 shadow-sm hover:border-slate-400/75 hover:bg-white hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-white/85',
+    'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-[color:var(--panel-surface,#fffdfa)]',
   ghost:
-    'border-transparent bg-transparent text-slate-700 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
+    'border-transparent bg-transparent text-[var(--panel-text-soft,#5b4635)] hover:border-[color:rgba(157,127,90,0.35)] hover:bg-[color:rgba(255,253,250,0.82)] hover:text-[var(--panel-text,#1a120d)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-transparent',
   danger:
     'border-red-300/90 bg-red-100/80 text-red-900 shadow-sm hover:border-red-400/90 hover:bg-red-200/75 hover:text-red-950 focus-visible:ring-red-500 disabled:hover:bg-red-100/80',
   icon:
-    'border-transparent bg-transparent text-slate-600 hover:border-slate-300/70 hover:bg-white/70 hover:text-slate-900 focus-visible:ring-amber-500 disabled:hover:bg-transparent',
+    'border-transparent bg-transparent text-[var(--panel-text-muted,#876f5c)] hover:border-[color:rgba(157,127,90,0.32)] hover:bg-[color:rgba(255,253,250,0.78)] hover:text-[var(--panel-text,#1a120d)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-transparent',
   info:
     'border-blue-300/90 bg-blue-100/80 text-blue-900 shadow-sm hover:border-blue-400/90 hover:bg-blue-200/75 hover:text-blue-950 focus-visible:ring-blue-500 disabled:hover:bg-blue-100/80',
   success:
     'border-emerald-300/90 bg-emerald-100/80 text-emerald-900 shadow-sm hover:border-emerald-400/90 hover:bg-emerald-200/75 hover:text-emerald-950 focus-visible:ring-emerald-500 disabled:hover:bg-emerald-100/80',
   warning:
-    'border-amber-400/90 bg-amber-200/80 text-amber-950 shadow-sm hover:border-amber-500/85 hover:bg-amber-300/75 focus-visible:ring-amber-500 disabled:hover:bg-amber-200/80',
+    'border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-warm,#f1d19d)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm hover:border-[var(--panel-accent-strong,#b85c1f)] hover:bg-[color:var(--panel-accent-hover,#efcf9f)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-[color:var(--panel-accent-warm,#f1d19d)]',
   soft:
-    'border-amber-300/88 bg-amber-50/95 text-amber-800 shadow-sm hover:border-amber-400/85 hover:bg-amber-100/85 hover:text-amber-900 focus-visible:ring-amber-500 disabled:hover:bg-amber-50/95',
+    'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-muted,#f7f0e7)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:var(--panel-accent-soft,#f6e4c7)] hover:text-[var(--panel-accent-ink-strong,#4a2411)] focus-visible:ring-[color:var(--panel-focus,#c86f1d)] disabled:hover:bg-[color:var(--panel-surface-muted,#f7f0e7)]',
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
@@ -79,10 +79,11 @@ export type PanelCardPadding = 'none' | 'sm' | 'md' | 'lg';
 export const panelCardBaseClass = 'rounded-xl';
 
 export const panelCardVariantClasses: Record<PanelCardVariant, string> = {
-  default: 'bg-white border border-slate-200 shadow-sm',
-  glass: 'panel-glass-panel border border-slate-200 bg-white',
-  strong: 'panel-glass-strong border border-slate-200 bg-white',
-  interactive: 'panel-glass-panel panel-interactive-glass border border-slate-200 bg-white hover:-translate-y-0.5',
+  default: 'bg-[color:var(--panel-surface,#fffdfa)] border border-[var(--panel-border-subtle,#e7dac8)] shadow-sm',
+  glass: 'panel-glass-panel border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)]',
+  strong: 'panel-glass-strong border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]',
+  interactive:
+    'panel-glass-panel panel-interactive-glass border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] hover:-translate-y-0.5',
 };
 
 export const panelCardPaddingClasses: Record<PanelCardPadding, string> = {
@@ -95,10 +96,10 @@ export const panelCardPaddingClasses: Record<PanelCardPadding, string> = {
 export type PanelInputSize = 'default' | 'compact';
 
 export const panelInputBaseClass =
-  'panel-ui-input w-full rounded-lg border bg-white px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-input w-full rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelInputStateClasses = {
-  valid: 'border-slate-300 text-[var(--panel-input-text,var(--panel-text-soft))] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]',
+  valid: 'border-[var(--panel-border,#d4c0a7)] text-[var(--panel-input-text,var(--panel-text-soft))] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]',
   invalid: 'border-red-400 text-red-700 placeholder:text-red-400',
 };
 
@@ -117,26 +118,31 @@ export type PanelTabsVariant = 'underline' | 'pill' | 'panel';
 const tabsListBaseClass = 'flex w-full flex-wrap';
 
 const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
-  underline: 'gap-0 border-b border-slate-200 px-2 sm:px-4',
-  pill: 'gap-2 rounded-xl bg-slate-100 p-1',
-  panel: 'panel-glass-panel gap-1 rounded-xl border border-slate-200 p-[3px]',
+  underline: 'gap-0 border-b border-[var(--panel-border-subtle,#e7dac8)] px-2 sm:px-4',
+  pill: 'gap-2 rounded-xl bg-[color:var(--panel-surface-soft,#f4ede3)] p-1',
+  panel: 'panel-glass-panel gap-1 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] p-[3px]',
 };
 
 const tabsTriggerBaseClass =
-  'panel-ui-tab inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'panel-ui-tab inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {
-    active: 'panel-ui-tab-underline rounded-none border-b-2 border-amber-600 bg-amber-50/70 px-3 py-4 text-amber-700',
-    idle: 'panel-ui-tab-underline rounded-none border-b-2 border-transparent px-3 py-4 text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+    active:
+      'panel-ui-tab-underline rounded-none border-b-2 border-[var(--panel-accent-strong,#b85c1f)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-3 py-4 text-[var(--panel-accent-ink,#6f3f16)]',
+    idle:
+      'panel-ui-tab-underline rounded-none border-b-2 border-transparent px-3 py-4 text-[var(--panel-text-muted,#876f5c)] hover:bg-[color:var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)]',
   },
   pill: {
-    active: 'panel-ui-tab-pill bg-white text-slate-900 shadow-sm',
-    idle: 'panel-ui-tab-pill text-slate-600 hover:bg-white/70 hover:text-slate-900',
+    active: 'panel-ui-tab-pill bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text,#1a120d)] shadow-sm',
+    idle:
+      'panel-ui-tab-pill text-[var(--panel-text-muted,#876f5c)] hover:bg-[color:rgba(255,253,250,0.72)] hover:text-[var(--panel-text,#1a120d)]',
   },
   panel: {
-    active: 'panel-ui-tab-panel h-9 bg-slate-100 px-3 py-0 text-amber-700 shadow-sm',
-    idle: 'panel-ui-tab-panel h-9 px-3 py-0 text-slate-500 hover:bg-white/70 hover:text-slate-900',
+    active:
+      'panel-ui-tab-panel h-9 bg-[color:var(--panel-surface-soft,#f4ede3)] px-3 py-0 text-[var(--panel-accent-ink,#6f3f16)] shadow-sm',
+    idle:
+      'panel-ui-tab-panel h-9 px-3 py-0 text-[var(--panel-text-muted,#876f5c)] hover:bg-[color:rgba(255,253,250,0.72)] hover:text-[var(--panel-text,#1a120d)]',
   },
 };
 
@@ -153,4 +159,4 @@ export const getPanelTabsTriggerClass = ({ variant, isActive, className }: Panel
   cx(tabsTriggerBaseClass, tabsTriggerVariantClasses[variant][isActive ? 'active' : 'idle'], className);
 
 export const panelTabsBadgeClass =
-  'inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-700';
+  'inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[color:var(--panel-accent-soft,#f6e4c7)] px-1.5 text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)]';

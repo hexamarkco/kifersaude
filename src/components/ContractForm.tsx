@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages, ContractBonusConfiguration } from '../lib/supabase';
 import { getContractBonusSummary, normalizeBonusConfigurations } from '../lib/contractBonus';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
+import { normalizeLeadStatusLabel } from '../lib/leadReminderUtils';
+import { resolveStatusIdByName } from '../lib/leadRelations';
 import { User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar, Building2 } from 'lucide-react';
 import HolderForm from './HolderForm';
 import ValueAdjustmentForm from './ValueAdjustmentForm';
@@ -141,6 +143,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   }, [formData.modalidade]);
   const convertibleLeadStatuses = useMemo(
     () => leadStatuses.filter(status => status.ativo).map(status => status.nome),
+    [leadStatuses]
+  );
+  const convertedLeadStatus = useMemo(
+    () =>
+      leadStatuses.find((status) => {
+        const normalizedStatus = normalizeLeadStatusLabel(status.nome);
+        return normalizedStatus === 'convertido' || normalizedStatus === 'fechado';
+      }) ?? null,
     [leadStatuses]
   );
 
@@ -599,10 +609,67 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         if (error) throw error;
 
         if (leadToConvert) {
-          await supabase
+          const conversionTimestamp = new Date().toISOString();
+          const previousLeadStatus = leadToConvert.status ?? '';
+          const nextLeadStatus = convertedLeadStatus?.nome ?? previousLeadStatus;
+          const nextLeadStatusId = convertedLeadStatus?.id
+            ?? resolveStatusIdByName(leadStatuses, nextLeadStatus);
+          const leadUpdatePayload: {
+            ultimo_contato: string;
+            proximo_retorno: null;
+            status?: string;
+            status_id?: string | null;
+          } = {
+            ultimo_contato: conversionTimestamp,
+            proximo_retorno: null,
+          };
+
+          if (nextLeadStatus) {
+            leadUpdatePayload.status = nextLeadStatus;
+            leadUpdatePayload.status_id = nextLeadStatusId;
+          }
+
+          const { error: leadUpdateError } = await supabase
             .from('leads')
-            .update({ status: 'Fechado' })
+            .update(leadUpdatePayload)
             .eq('id', leadToConvert.id);
+
+          if (leadUpdateError) throw leadUpdateError;
+
+          const { error: deleteRemindersError } = await supabase
+            .from('reminders')
+            .delete()
+            .eq('lead_id', leadToConvert.id);
+
+          if (deleteRemindersError) throw deleteRemindersError;
+
+          if (nextLeadStatus && nextLeadStatus !== previousLeadStatus) {
+            const interactionPayload = {
+              lead_id: leadToConvert.id,
+              tipo: 'Observacao',
+              descricao: `Status alterado de "${previousLeadStatus}" para "${nextLeadStatus}" (via conversao em contrato)`,
+              responsavel: leadToConvert.responsavel,
+            };
+
+            const { error: interactionError } = await supabase
+              .from('interactions')
+              .insert([interactionPayload]);
+
+            if (interactionError) throw interactionError;
+
+            const { error: statusHistoryError } = await supabase
+              .from('lead_status_history')
+              .insert([
+                {
+                  lead_id: leadToConvert.id,
+                  status_anterior: previousLeadStatus,
+                  status_novo: nextLeadStatus,
+                  responsavel: leadToConvert.responsavel,
+                },
+              ]);
+
+            if (statusHistoryError) throw statusHistoryError;
+          }
         }
 
         setContractId(data.id);

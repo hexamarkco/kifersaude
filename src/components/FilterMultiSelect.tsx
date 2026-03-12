@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cx } from '../lib/cx';
+import { calculateFloatingPanelPosition } from '../lib/floatingPosition';
 import Checkbox from './ui/Checkbox';
 import {
   getDropdownActionClass,
@@ -24,7 +25,7 @@ type FilterMultiSelectProps = {
   onChange: (next: string[]) => void;
 };
 
-type DropdownPos = { top: number; left: number; width: number };
+type DropdownPos = { top: number; left: number; width: number; maxHeight: number };
 
 export default function FilterMultiSelect({
   icon: Icon,
@@ -42,7 +43,13 @@ export default function FilterMultiSelect({
   const calcPos = () => {
     if (!buttonRef.current) return;
     const r = buttonRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    setPos(
+      calculateFloatingPanelPosition({
+        triggerRect: r,
+        panelWidth: Math.max(r.width, 280),
+        panelHeight: 320,
+      }),
+    );
   };
 
   const open = () => {
@@ -143,7 +150,7 @@ export default function FilterMultiSelect({
             isDark: isDarkTheme,
             className: 'max-h-60',
           })}
-          style={{ top: pos.top, left: pos.left, width: pos.width }}
+          style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
         >
           <button
             type="button"

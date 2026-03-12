@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
+import { calculateFloatingPanelPosition, type FloatingPanelPosition } from '../lib/floatingPosition';
 import DateTimePicker from './ui/DateTimePicker';
 import { getDropdownMenuClass, getDropdownTriggerClass, isPanelDarkTheme } from './ui/dropdownStyles';
 
@@ -25,7 +27,9 @@ export default function FilterDateRange({
   type = 'date',
 }: FilterDateRangeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<FloatingPanelPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,6 +53,30 @@ export default function FilterDateRange({
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || !triggerRef.current) return;
+
+    const updatePosition = () => {
+      if (!triggerRef.current) return;
+      setPosition(
+        calculateFloatingPanelPosition({
+          triggerRect: triggerRef.current.getBoundingClientRect(),
+          panelWidth: 420,
+          panelHeight: 320,
+        }),
+      );
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen]);
 
   const formatValue = (value: string) => {
     if (!value) return '';
@@ -96,6 +124,7 @@ export default function FilterDateRange({
   return (
     <div className="relative" ref={containerRef}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((current) => !current)}
         className={getDropdownTriggerClass({
@@ -144,13 +173,20 @@ export default function FilterDateRange({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && position && typeof document !== 'undefined'
+        ? createPortal(
         <div
           className={getDropdownMenuClass({
             isDark: isDarkTheme,
-            position: 'absolute',
-            className: 'left-0 right-0 mt-2 z-30 p-4 space-y-3',
+            position: 'fixed',
+            className: 'z-[120] p-4 space-y-3',
           })}
+          style={{
+            top: position.top,
+            left: position.left,
+            width: position.width,
+            maxHeight: position.maxHeight,
+          }}
           role="dialog"
           aria-label={`Selecionar intervalo de ${label}`}
         >
@@ -202,8 +238,10 @@ export default function FilterDateRange({
               Concluído
             </button>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+        : null}
     </div>
   );
 }

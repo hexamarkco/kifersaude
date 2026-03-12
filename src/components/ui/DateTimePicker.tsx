@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { cx } from '../../lib/cx';
+import { calculateFloatingPanelPosition, type FloatingPanelPosition } from '../../lib/floatingPosition';
 import Button from './Button';
 import Input from './Input';
 
@@ -34,6 +36,7 @@ const parseValue = (value: string, type: PickerType): Date | null => {
       : type === 'month'
         ? new Date(`${value}-01T00:00:00`)
         : new Date(value);
+
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
@@ -42,6 +45,8 @@ const formatDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMon
 const formatDateTimeLocalValue = (date: Date) => `${formatDateValue(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
 const formatMonthValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+
+const formatDateDisplay = (date: Date) => `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 
 const clampNumber = (value: number, min: number, max: number) => {
   if (Number.isNaN(value)) return min;
@@ -79,7 +84,10 @@ export default function DateTimePicker({
   triggerClassName,
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<FloatingPanelPosition | null>(null);
+  const [manualInputValue, setManualInputValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedDate = useMemo(() => parseValue(value, type), [type, value]);
   const minDate = useMemo(() => parseValue(min ?? '', type), [min, type]);
@@ -96,9 +104,23 @@ export default function DateTimePicker({
   }, [selectedDate]);
 
   useEffect(() => {
+    if (type === 'date') {
+      setManualInputValue(selectedDate ? formatDateDisplay(selectedDate) : '');
+      return;
+    }
+
+    if (type === 'month') {
+      setManualInputValue(selectedDate ? formatMonthValue(selectedDate) : '');
+      return;
+    }
+
+    setManualInputValue('');
+  }, [selectedDate, type]);
+
+  useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -117,6 +139,31 @@ export default function DateTimePicker({
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+
+    setPosition(
+      calculateFloatingPanelPosition({
+        triggerRect: triggerRef.current.getBoundingClientRect(),
+        panelWidth: type === 'month' ? 288 : 384,
+        panelHeight: type === 'datetime-local' ? 440 : 400,
+      }),
+    );
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen, type, viewDate]);
 
   const monthLabel = useMemo(
     () =>
@@ -156,12 +203,8 @@ export default function DateTimePicker({
 
   const isDayDisabled = (day: Date) => {
     const dayStamp = toDateOnlyStamp(day);
-    if (minDate && dayStamp < toDateOnlyStamp(minDate)) {
-      return true;
-    }
-    if (maxDate && dayStamp > toDateOnlyStamp(maxDate)) {
-      return true;
-    }
+    if (minDate && dayStamp < toDateOnlyStamp(minDate)) return true;
+    if (maxDate && dayStamp > toDateOnlyStamp(maxDate)) return true;
     return false;
   };
 
@@ -205,12 +248,8 @@ export default function DateTimePicker({
 
   const isMonthDisabled = (monthIndex: number) => {
     const candidate = new Date(viewDate.getFullYear(), monthIndex, 1).getTime();
-    if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime()) {
-      return true;
-    }
-    if (maxDate && candidate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).getTime()) {
-      return true;
-    }
+    if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime()) return true;
+    if (maxDate && candidate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).getTime()) return true;
     return false;
   };
 
@@ -225,6 +264,14 @@ export default function DateTimePicker({
     setIsOpen(false);
   };
 
+  const handleViewYearChange = (rawValue: string) => {
+    const parsed = Number(rawValue);
+    if (Number.isNaN(parsed)) return;
+
+    const safeYear = Math.max(1900, Math.min(2100, parsed));
+    setViewDate(new Date(safeYear, viewDate.getMonth(), 1));
+  };
+
   const ensureDateForTime = () => {
     const baseDate = selectedDate ? new Date(selectedDate) : new Date();
 
@@ -236,14 +283,10 @@ export default function DateTimePicker({
   };
 
   const handleTimeChange = (part: 'hours' | 'minutes', rawValue: string) => {
-    if (rawValue.trim() === '') {
-      return;
-    }
+    if (rawValue.trim() === '') return;
 
     const parsed = Number(rawValue);
-    if (Number.isNaN(parsed)) {
-      return;
-    }
+    if (Number.isNaN(parsed)) return;
 
     const nextDate = ensureDateForTime();
     if (part === 'hours') {
@@ -253,6 +296,53 @@ export default function DateTimePicker({
     }
 
     applyDate(nextDate);
+  };
+
+  const handleManualApply = () => {
+    const nextValue = manualInputValue.trim();
+    if (!nextValue) {
+      applyDate(null);
+      return;
+    }
+
+    if (type === 'month') {
+      const match = nextValue.match(/^(\d{4})-(\d{2})$/);
+      if (!match) return;
+
+      const [, yearText, monthText] = match;
+      const year = Number(yearText);
+      const month = Number(monthText);
+      if (month < 1 || month > 12) return;
+
+      const nextDate = new Date(year, month - 1, 1);
+      applyDate(nextDate);
+      setViewDate(new Date(year, month - 1, 1));
+      return;
+    }
+
+    if (type === 'date') {
+      const match = nextValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) return;
+
+      const [, dayText, monthText, yearText] = match;
+      const day = Number(dayText);
+      const month = Number(monthText);
+      const year = Number(yearText);
+      const nextDate = new Date(year, month - 1, day);
+
+      if (
+        Number.isNaN(nextDate.getTime()) ||
+        nextDate.getFullYear() !== year ||
+        nextDate.getMonth() !== month - 1 ||
+        nextDate.getDate() !== day ||
+        isDayDisabled(nextDate)
+      ) {
+        return;
+      }
+
+      applyDate(nextDate);
+      setViewDate(new Date(year, month - 1, 1));
+    }
   };
 
   const selectedHours = selectedDate?.getHours() ?? 9;
@@ -265,24 +355,24 @@ export default function DateTimePicker({
   return (
     <div className={cx('relative', className)} ref={containerRef}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         className={cx(
-          'panel-ui-input panel-interactive-glass relative flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 text-left shadow-sm transition-all',
+          'panel-ui-input panel-interactive-glass relative flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 text-left shadow-sm transition-all',
           'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500',
           'disabled:cursor-not-allowed disabled:opacity-60',
-          type === 'date' ? 'h-11' : 'h-11',
           triggerClassName,
         )}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
         <span className="flex min-w-0 items-center gap-2">
-          {type === 'date' ? (
-            <CalendarDays className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
-          ) : (
+          {type === 'datetime-local' ? (
             <Clock className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
+          ) : (
+            <CalendarDays className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
           )}
           <span className={cx('truncate text-sm', selectedDate ? 'font-medium text-slate-700' : 'text-slate-500')}>
             {displayValue}
@@ -291,168 +381,216 @@ export default function DateTimePicker({
         <ChevronDown className={cx('h-4 w-4 flex-shrink-0 text-slate-400 transition-transform', isOpen && 'rotate-180')} />
       </button>
 
-      {isOpen && (
-        <div
-          className={cx(
-            'panel-glass-panel absolute left-0 z-40 mt-2 rounded-xl border border-[color:rgba(191,113,33,0.35)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(255,247,237,0.98))] p-3 shadow-xl shadow-[rgba(56,28,12,0.18)]',
-            'w-[min(24rem,calc(100vw-2rem))]',
-            type === 'month' && 'w-[min(18rem,calc(100vw-2rem))]',
-          )}
-          role="dialog"
-          aria-label="Selecionar data"
-        >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 rounded-lg p-0"
-              onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, -1) : addMonths(current, -1)))}
-              aria-label={type === 'month' ? 'Ano anterior' : 'Mes anterior'}
+      {isOpen && position && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="panel-glass-panel fixed z-[130] rounded-xl border border-[color:rgba(191,113,33,0.35)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(255,247,237,0.98))] p-3 shadow-xl shadow-[rgba(56,28,12,0.18)]"
+              style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
+              role="dialog"
+              aria-label="Selecionar data"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 rounded-lg p-0"
+                  onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, -1) : addMonths(current, -1)))}
+                  aria-label={type === 'month' ? 'Ano anterior' : 'Mês anterior'}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
 
-            <p className="text-sm font-semibold capitalize text-slate-700">{monthLabel}</p>
+                <p className="text-sm font-semibold capitalize text-slate-700">{monthLabel}</p>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 rounded-lg p-0"
-              onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, 1) : addMonths(current, 1)))}
-              aria-label={type === 'month' ? 'Proximo ano' : 'Proximo mes'}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 rounded-lg p-0"
+                  onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, 1) : addMonths(current, 1)))}
+                  aria-label={type === 'month' ? 'Próximo ano' : 'Próximo mês'}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
 
-          {type === 'month' ? (
-            <div className="grid grid-cols-3 gap-2">
-              {MONTH_LABELS.map((label, monthIndex) => {
-                const monthKey = `${viewDate.getFullYear()}-${monthIndex}`;
-                const isSelected = selectedMonthKey === monthKey;
-                const isCurrentMonth = currentMonthKey === monthKey;
-                const disabledMonth = isMonthDisabled(monthIndex);
-
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => handleSelectMonth(monthIndex)}
-                    disabled={disabledMonth}
-                    className={cx(
-                      'h-11 rounded-xl border text-sm font-semibold transition-all',
-                      'focus:outline-none focus:ring-2 focus:ring-amber-500',
-                      isSelected && 'border-orange-500 bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-900/20',
-                      !isSelected && isCurrentMonth && 'border-amber-200 bg-amber-50 text-amber-900',
-                      !isSelected && !isCurrentMonth && 'border-[color:rgba(191,113,33,0.18)] bg-white/90 text-slate-700 hover:border-amber-300 hover:bg-amber-50/80',
-                      disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[color:rgba(191,113,33,0.18)] hover:bg-white/90',
-                    )}
+              <div className={cx('mb-3 grid gap-2', type === 'month' ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_5.5rem]')}>
+                {type !== 'month' ? (
+                  <select
+                    value={viewDate.getMonth()}
+                    onChange={(event) => setViewDate(new Date(viewDate.getFullYear(), Number(event.target.value), 1))}
+                    className="panel-ui-input h-9 rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 text-sm text-[var(--panel-input-text,var(--panel-text-soft))] outline-none focus:ring-2 focus:ring-amber-500"
                   >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <div className="mb-2 grid grid-cols-7 gap-1 text-center">
-                {WEEKDAY_LABELS.map((label) => (
-                  <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    {label}
-                  </span>
-                ))}
-              </div>
+                    {MONTH_LABELS.map((label, index) => (
+                      <option key={label} value={index}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="rounded-lg border border-[color:rgba(191,113,33,0.18)] bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Escolha o mês
+                  </div>
+                )}
 
-              <div className="grid grid-cols-7 gap-1">
-                {calendarDays.map((day) => {
-                  const isSameMonth = day.getMonth() === viewDate.getMonth();
-                  const dayStamp = toDateOnlyStamp(day);
-                  const isSelected = selectedDayStamp === dayStamp;
-                  const isToday = dayStamp === todayStamp;
-                  const isDisabledDay = isDayDisabled(day);
-
-                  return (
-                    <button
-                      key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-                      type="button"
-                      onClick={() => handleSelectDay(day)}
-                      disabled={isDisabledDay}
-                      className={cx(
-                        'h-9 rounded-lg text-sm font-medium transition-colors',
-                        'focus:outline-none focus:ring-2 focus:ring-amber-500',
-                        isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
-                        !isSelected && isToday && 'bg-slate-100 text-slate-800',
-                        !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
-                        !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',
-                        isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
-                      )}
-                    >
-                      {day.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {type === 'datetime-local' && (
-            <div className="mt-3 border-t border-slate-200 pt-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Horario</p>
-              <div className="grid grid-cols-2 gap-2">
                 <Input
                   size="compact"
-                  value={String(selectedHours)}
-                  onChange={(event) => handleTimeChange('hours', event.target.value)}
+                  value={String(viewDate.getFullYear())}
+                  onChange={(event) => handleViewYearChange(event.target.value)}
                   inputMode="numeric"
-                  placeholder="HH"
-                  aria-label="Hora"
-                />
-                <Input
-                  size="compact"
-                  value={String(selectedMinutes)}
-                  onChange={(event) => handleTimeChange('minutes', event.target.value)}
-                  inputMode="numeric"
-                  placeholder="MM"
-                  aria-label="Minutos"
+                  placeholder="Ano"
+                  aria-label="Ano"
                 />
               </div>
-            </div>
-          )}
 
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => applyDate(null)}
-              disabled={!value}
-              className="px-2"
-            >
-              Limpar
-            </Button>
+              {type === 'month' ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {MONTH_LABELS.map((label, monthIndex) => {
+                    const monthKey = `${viewDate.getFullYear()}-${monthIndex}`;
+                    const isSelected = selectedMonthKey === monthKey;
+                    const isCurrentMonth = currentMonthKey === monthKey;
+                    const disabledMonth = isMonthDisabled(monthIndex);
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const now = new Date();
-                  applyDate(now);
-                  setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
-                  if (type !== 'datetime-local') {
-                    setIsOpen(false);
-                  }
-                }}
-              >
-                {type === 'month' ? 'Este mês' : 'Hoje'}
-              </Button>
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => handleSelectMonth(monthIndex)}
+                        disabled={disabledMonth}
+                        className={cx(
+                          'h-11 rounded-xl border text-sm font-semibold transition-all',
+                          'focus:outline-none focus:ring-2 focus:ring-amber-500',
+                          isSelected && 'border-orange-500 bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-900/20',
+                          !isSelected && isCurrentMonth && 'border-amber-200 bg-amber-50 text-amber-900',
+                          !isSelected && !isCurrentMonth && 'border-[color:rgba(191,113,33,0.18)] bg-white/90 text-slate-700 hover:border-amber-300 hover:bg-amber-50/80',
+                          disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[color:rgba(191,113,33,0.18)] hover:bg-white/90',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <div className="mb-2 grid grid-cols-7 gap-1 text-center">
+                    {WEEKDAY_LABELS.map((label) => (
+                      <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
 
-              <Button variant="primary" size="sm" onClick={() => setIsOpen(false)}>
-                Concluído
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                  <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((day) => {
+                      const isSameMonth = day.getMonth() === viewDate.getMonth();
+                      const dayStamp = toDateOnlyStamp(day);
+                      const isSelected = selectedDayStamp === dayStamp;
+                      const isToday = dayStamp === todayStamp;
+                      const isDisabledDay = isDayDisabled(day);
+
+                      return (
+                        <button
+                          key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                          type="button"
+                          onClick={() => handleSelectDay(day)}
+                          disabled={isDisabledDay}
+                          className={cx(
+                            'h-9 rounded-lg text-sm font-medium transition-colors',
+                            'focus:outline-none focus:ring-2 focus:ring-amber-500',
+                            isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
+                            !isSelected && isToday && 'bg-slate-100 text-slate-800',
+                            !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
+                            !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',
+                            isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+                          )}
+                        >
+                          {day.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {type === 'datetime-local' ? (
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Horário</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      size="compact"
+                      value={String(selectedHours)}
+                      onChange={(event) => handleTimeChange('hours', event.target.value)}
+                      inputMode="numeric"
+                      placeholder="HH"
+                      aria-label="Hora"
+                    />
+                    <Input
+                      size="compact"
+                      value={String(selectedMinutes)}
+                      onChange={(event) => handleTimeChange('minutes', event.target.value)}
+                      inputMode="numeric"
+                      placeholder="MM"
+                      aria-label="Minutos"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {type === 'month' ? 'Digitar mês' : 'Digitar data'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      size="compact"
+                      value={manualInputValue}
+                      onChange={(event) => setManualInputValue(event.target.value)}
+                      onBlur={handleManualApply}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleManualApply();
+                        }
+                      }}
+                      placeholder={type === 'month' ? 'AAAA-MM' : 'DD/MM/AAAA'}
+                      aria-label={type === 'month' ? 'Digitar mês' : 'Digitar data'}
+                    />
+                    <Button variant="secondary" size="sm" onClick={handleManualApply}>
+                      Aplicar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+                <Button variant="ghost" size="sm" onClick={() => applyDate(null)} disabled={!value} className="px-2">
+                  Limpar
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      applyDate(now);
+                      setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
+                      if (type !== 'datetime-local') {
+                        setIsOpen(false);
+                      }
+                    }}
+                  >
+                    {type === 'month' ? 'Este mês' : 'Hoje'}
+                  </Button>
+
+                  <Button variant="primary" size="sm" onClick={() => setIsOpen(false)}>
+                    Concluído
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

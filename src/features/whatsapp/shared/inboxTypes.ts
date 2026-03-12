@@ -53,6 +53,7 @@ export type WhatsAppMessage = {
   retry_payload?: OutboundRetryPayload | null;
   created_at: string;
   payload?: WhatsAppMessagePayload | null;
+  transcription_text?: string | null;
   is_deleted?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;

@@ -58,6 +58,7 @@ export interface MessageInputProps {
   } | null;
   onCancelEdit?: () => void;
   followUpContext?: FollowUpGenerationContext | null;
+  onPrepareFollowUpContext?: () => Promise<FollowUpGenerationContext | null>;
 }
 
 export type QuickReplyItem = {

@@ -480,6 +480,18 @@ async function ensureTargetChat(targetChatId, sourceChat, phoneDigits, nowIso) {
 async function moveMessagesToTarget(sourceChatId, targetChatId) {
   if (dryRun) return;
 
+  const { error: outboundUpdateError } = await supabase
+    .from('whatsapp_messages')
+    .update({ to_number: targetChatId })
+    .eq('chat_id', sourceChatId)
+    .eq('direction', 'outbound');
+
+  if (outboundUpdateError) {
+    throw new Error(
+      `Erro ao atualizar destino das mensagens outbound de ${sourceChatId} para ${targetChatId}: ${outboundUpdateError.message}`,
+    );
+  }
+
   const { error } = await supabase
     .from('whatsapp_messages')
     .update({ chat_id: targetChatId })
@@ -487,6 +499,19 @@ async function moveMessagesToTarget(sourceChatId, targetChatId) {
 
   if (error) {
     throw new Error(`Erro ao mover mensagens de ${sourceChatId} para ${targetChatId}: ${error.message}`);
+  }
+}
+
+async function moveMessageHistoryToTarget(sourceChatId, targetChatId) {
+  if (dryRun) return;
+
+  const { error } = await supabase
+    .from('whatsapp_message_history')
+    .update({ chat_id: targetChatId })
+    .eq('chat_id', sourceChatId);
+
+  if (error) {
+    throw new Error(`Erro ao mover historico de ${sourceChatId} para ${targetChatId}: ${error.message}`);
   }
 }
 
@@ -573,6 +598,7 @@ async function reconcileDirectChats() {
 
     await ensureTargetChat(normalizedTargetId, sourceChat, resolvedPhone, nowIso);
     await moveMessagesToTarget(sourceChat.id, normalizedTargetId);
+    await moveMessageHistoryToTarget(sourceChat.id, normalizedTargetId);
     if (!dryRun) {
       await refreshChatLastMessage(normalizedTargetId);
     }

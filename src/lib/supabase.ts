@@ -386,6 +386,7 @@ export type WhatsAppMessage = {
   timestamp: string | null;
   direction: 'inbound' | 'outbound' | null;
   payload: Record<string, unknown>;
+  transcription_text?: string | null;
   created_at: string;
 };
 

@@ -1718,6 +1718,43 @@ function choosePreferredDirectChatId(primaryChatId: string, secondaryChatId: str
   return primaryChatId;
 }
 
+function resolveLegacyInboundLidChatId(message: NormalizedMessage): string | null {
+  if (message.direction !== 'inbound') {
+    return null;
+  }
+
+  if (getChatIdType(message.chatId) !== 'phone') {
+    return null;
+  }
+
+  const payloadChatId = normalizeMaybeDirectId(toCleanText(message.payload.chat_id as string | null | undefined));
+  if (!payloadChatId || payloadChatId === message.chatId) {
+    return null;
+  }
+
+  if (getChatIdType(payloadChatId) !== 'lid') {
+    return null;
+  }
+
+  return payloadChatId;
+}
+
+async function reconcileLegacyInboundLidChat(message: NormalizedMessage): Promise<void> {
+  const legacyLidChatId = resolveLegacyInboundLidChatId(message);
+  if (!legacyLidChatId) {
+    return;
+  }
+
+  await mergeChatMessages(legacyLidChatId, message.chatId);
+  await refreshChatLastMessageTimestamp(message.chatId);
+
+  console.log('whatsapp-webhook: mensagens herdadas de chat legado @lid reconciliadas', {
+    legacyChatId: legacyLidChatId,
+    targetChatId: message.chatId,
+    messageId: message.messageId,
+  });
+}
+
 async function findExistingChatByPhone(phoneNumber: string, currentChatId: string): Promise<string | null> {
   const phoneVariants = buildPhoneLookupVariants(phoneNumber);
   if (phoneVariants.length === 0) {
@@ -2973,6 +3010,7 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
       }
 
       message.chatId = preferredChatId;
+      await reconcileLegacyInboundLidChat(message);
       return;
     }
   }
@@ -3015,6 +3053,8 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
   if (error) {
     throw new Error(`Erro ao salvar chat: ${error.message}`);
   }
+
+  await reconcileLegacyInboundLidChat(message);
 
   if (chatIdType === 'group' && chatName && chatName !== message.chatId) {
     await upsertCanonicalGroupName(message.chatId, chatName, nowIso);
@@ -3079,7 +3119,7 @@ function mergeMessageTimestamp(
 async function upsertMessage(message: NormalizedMessage) {
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('id, body, timestamp, created_at, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status, payload')
+    .select('id, body, timestamp, created_at, original_body, is_deleted, deleted_at, deleted_by, edit_count, edited_at, ack_status, payload, transcription_text')
     .eq('id', message.messageId)
     .maybeSingle();
 
@@ -3106,6 +3146,7 @@ async function upsertMessage(message: NormalizedMessage) {
         has_media: message.hasMedia,
         timestamp: mergeMessageTimestamp(existingMessage.timestamp, message.timestamp, existingMessage.created_at),
         payload: mergedPayload,
+        transcription_text: existingMessage.transcription_text ?? null,
         direction: message.direction,
         author: message.author,
         ack_status: mergedAckStatus,
@@ -3135,6 +3176,7 @@ async function upsertMessage(message: NormalizedMessage) {
     has_media: message.hasMedia,
     timestamp: message.timestamp,
     payload: mergedPayload,
+    transcription_text: null,
     direction: message.direction,
     author: message.author,
     ack_status: mergedAckStatus,

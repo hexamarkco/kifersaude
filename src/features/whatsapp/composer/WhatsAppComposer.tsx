@@ -85,6 +85,7 @@ function WhatsAppComposerComponent({
   editMessage,
   onCancelEdit,
   followUpContext,
+  onPrepareFollowUpContext,
 }: MessageInputProps) {
   const createClientMessageId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const [message, setMessage] = useState('');
@@ -1668,11 +1669,15 @@ function WhatsAppComposerComponent({
     setFollowUpError(null);
 
     try {
+      const preparedFollowUpContext = onPrepareFollowUpContext
+        ? await onPrepareFollowUpContext()
+        : followUpContext;
+
       const { data, error } = await supabase.functions.invoke('generate-follow-up', {
         body: {
-          leadName: followUpContext?.leadName || templateVariables.nome || '',
-          conversationHistory: followUpContext?.conversationHistory || '',
-          leadContext: followUpContext?.leadContext ?? null,
+          leadName: preparedFollowUpContext?.leadName || followUpContext?.leadName || templateVariables.nome || '',
+          conversationHistory: preparedFollowUpContext?.conversationHistory || followUpContext?.conversationHistory || '',
+          leadContext: preparedFollowUpContext?.leadContext ?? followUpContext?.leadContext ?? null,
         },
       });
 
@@ -2770,7 +2775,8 @@ const areMessageInputPropsEqual = (prev: MessageInputProps, next: MessageInputPr
   prev.templateVariableShortcuts === next.templateVariableShortcuts &&
   prev.replyToMessage === next.replyToMessage &&
   prev.editMessage === next.editMessage &&
-  prev.followUpContext === next.followUpContext
+  prev.followUpContext === next.followUpContext &&
+  prev.onPrepareFollowUpContext === next.onPrepareFollowUpContext
 );
 
 export const MessageInput = memo(WhatsAppComposerComponent, areMessageInputPropsEqual);

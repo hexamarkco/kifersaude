@@ -939,8 +939,23 @@ Deno.serve(async (req) => {
     if (resolvedRequestedChatId !== requestedChatId) {
       await supabase
         .from('whatsapp_messages')
+        .update({ to_number: resolvedRequestedChatId })
+        .eq('chat_id', requestedChatId)
+        .eq('direction', 'outbound');
+
+      await supabase
+        .from('whatsapp_messages')
         .update({ chat_id: resolvedRequestedChatId })
         .eq('chat_id', requestedChatId);
+
+      const { error: historyUpdateError } = await supabase
+        .from('whatsapp_message_history')
+        .update({ chat_id: resolvedRequestedChatId })
+        .eq('chat_id', requestedChatId);
+
+      if (historyUpdateError) {
+        console.warn('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
+      }
 
       await supabase
         .from('whatsapp_chats')
@@ -1028,11 +1043,13 @@ Deno.serve(async (req) => {
       edited_at: string | null;
       original_body: string | null;
       ack_status: number | null;
+      payload: Record<string, unknown> | null;
+      transcription_text: string | null;
     };
 
     const { data: existingMessages, error: existingMessagesError } = await supabase
       .from('whatsapp_messages')
-      .select('id, timestamp, created_at, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status')
+      .select('id, timestamp, created_at, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status, payload, transcription_text')
       .in('id', messageIds);
 
     if (existingMessagesError) {
@@ -1052,6 +1069,14 @@ Deno.serve(async (req) => {
       const mergedIsDeleted = Boolean(existing.is_deleted) || Boolean(message.is_deleted);
       return {
         ...message,
+        payload:
+          existing.payload && typeof existing.payload === 'object'
+            ? {
+                ...existing.payload,
+                ...message.payload,
+              }
+            : message.payload,
+        transcription_text: existing.transcription_text ?? null,
         is_deleted: mergedIsDeleted,
         deleted_at: mergedIsDeleted ? existing.deleted_at ?? message.timestamp ?? nowIso : null,
         deleted_by: mergedIsDeleted ? existing.deleted_by ?? 'unknown' : null,

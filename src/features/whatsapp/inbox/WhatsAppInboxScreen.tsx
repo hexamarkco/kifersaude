@@ -54,7 +54,7 @@ import { useWhatsAppInboxPreferences } from '../../../hooks/useWhatsAppInboxPref
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../../lib/leadReminderUtils';
 import { addBusinessDaysSkippingWeekends } from '../../../lib/reminderUtils';
 import { resolveWhatsAppMessageBody } from '../../../lib/whatsappMessageBody';
-import { formatWhatsAppAudioTranscriptionLabel } from '../../../lib/whatsappAudioTranscription';
+import { formatWhatsAppAudioTranscriptionLabel, getWhatsAppAudioTranscription } from '../../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../../lib/dateUtils';
 import {
   CHAT_PREVIEW_VARIANTS_BATCH_SIZE,
@@ -548,6 +548,37 @@ export default function WhatsAppInboxScreen() {
     };
   };
 
+  const applyPersistedAudioTranscription = (
+    payload: WhatsAppMessagePayload | null | undefined,
+    transcriptionText: string | null | undefined,
+  ): WhatsAppMessagePayload | undefined => {
+    const text = typeof transcriptionText === 'string' ? transcriptionText.trim() : '';
+    const current = payload && typeof payload === 'object' ? payload : undefined;
+
+    if (!text || getWhatsAppAudioTranscription(current)?.text) {
+      return current;
+    }
+
+    return {
+      ...(current || {}),
+      transcription: {
+        text,
+      },
+    };
+  };
+
+  const hydrateMessageAudioTranscription = (message: WhatsAppMessage): WhatsAppMessage => {
+    const nextPayload = applyPersistedAudioTranscription(message.payload, message.transcription_text);
+    if (nextPayload === message.payload) {
+      return message;
+    }
+
+    return {
+      ...message,
+      payload: nextPayload,
+    };
+  };
+
   const mergeMessageForDisplay = (left: WhatsAppMessage, right: WhatsAppMessage): WhatsAppMessage => {
     const leftScore = getMessageMergeScore(left);
     const rightScore = getMessageMergeScore(right);
@@ -567,6 +598,7 @@ export default function WhatsAppInboxScreen() {
       body: preferred.body ?? fallback.body,
       timestamp: preferred.timestamp ?? fallback.timestamp,
       payload: mergeMessagePayloadForDisplay(fallback.payload, preferred.payload),
+      transcription_text: preferred.transcription_text ?? fallback.transcription_text ?? null,
       send_state: preferred.send_state !== undefined ? preferred.send_state : fallback.send_state ?? null,
       error_message: preferred.error_message !== undefined ? preferred.error_message : fallback.error_message ?? null,
       retry_payload: preferred.retry_payload !== undefined ? preferred.retry_payload : fallback.retry_payload ?? null,
@@ -1616,7 +1648,8 @@ export default function WhatsAppInboxScreen() {
       .channel('whatsapp_messages_global')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_messages' }, (payload) => {
         const eventType = payload.eventType;
-        const incomingMessage = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
+        const incomingMessageRaw = (eventType === 'DELETE' ? payload.old : payload.new) as WhatsAppMessage | null;
+        const incomingMessage = incomingMessageRaw ? hydrateMessageAudioTranscription(incomingMessageRaw) : null;
         if (!incomingMessage?.id || !incomingMessage.chat_id) return;
 
         const reactionTargetChatId = eventType === 'DELETE' ? null : resolveReactionTargetChatId(incomingMessage);
@@ -2037,44 +2070,6 @@ export default function WhatsAppInboxScreen() {
     return true;
   };
 
-  const resolveInitialScrollMessageId = async (
-    chat: WhatsAppChat,
-    loadedMessages: WhatsAppMessage[],
-  ): Promise<string | null> => {
-    const activeUser = userRef.current;
-    if (!activeUser || (chat.unread_count ?? 0) <= 0) return null;
-
-    const visibleMessages = loadedMessages.filter(
-      (message) =>
-        !isReactionOnlyMessage(message) &&
-        !isEditActionMessage(message) &&
-        !isTechnicalCiphertextMessage(message),
-    );
-    if (visibleMessages.length === 0) return null;
-
-    const inboundMessageIds = visibleMessages
-      .filter((message) => message.direction === 'inbound')
-      .map((message) => message.id);
-    if (inboundMessageIds.length === 0) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_message_reads')
-        .select('message_id')
-        .eq('user_id', activeUser.id)
-        .in('message_id', inboundMessageIds);
-
-      if (error) throw error;
-
-      const readIds = new Set((data || []).map((row) => row.message_id as string));
-      const firstUnread = visibleMessages.find((message) => message.direction === 'inbound' && !readIds.has(message.id));
-      return firstUnread?.id ?? null;
-    } catch (error) {
-      console.error('Erro ao resolver ponto de leitura inicial do chat:', error);
-      return null;
-    }
-  };
-
   const mergeChatsWithCurrentState = (incomingChats: WhatsAppChat[]) => {
     const previousById = new Map(chatsRef.current.map((chat) => [chat.id, chat]));
 
@@ -2205,12 +2200,11 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const fetchedMessages = (data || []).filter(
-        (item) => !isTechnicalCiphertextMessage(item as WhatsAppMessage),
-      );
+      const fetchedMessages = ((data || []) as WhatsAppMessage[])
+        .map(hydrateMessageAudioTranscription)
+        .filter((item) => !isTechnicalCiphertextMessage(item));
       const fetchedCount = fetchedMessages.length;
       const baseMessages = dedupeMessagesForDisplay(fetchedMessages as WhatsAppMessage[]);
-      const initialScrollMessageId = await resolveInitialScrollMessageId(chat, baseMessages);
       const latestPreview = getLatestMeaningfulPreview(baseMessages);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
@@ -2223,7 +2217,7 @@ export default function WhatsAppInboxScreen() {
       });
       setLoadedMessagesCount(fetchedCount);
       setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
-      pendingInitialScrollMessageIdRef.current = initialScrollMessageId;
+      pendingInitialScrollMessageIdRef.current = null;
 
       if (latestPreview) {
         setChats((prev) => {
@@ -2291,7 +2285,9 @@ export default function WhatsAppInboxScreen() {
       }
 
       const olderMessages = dedupeMessagesForDisplay(
-        ((data || []).filter((item) => !isTechnicalCiphertextMessage(item as WhatsAppMessage)) as WhatsAppMessage[]),
+        ((data || []) as WhatsAppMessage[])
+          .map(hydrateMessageAudioTranscription)
+          .filter((item) => !isTechnicalCiphertextMessage(item)),
       );
       if (olderMessages.length === 0) {
         setHasOlderMessages(false);
@@ -4015,6 +4011,7 @@ export default function WhatsAppInboxScreen() {
           ? {
               ...message,
               payload: nextPayload,
+              transcription_text: getWhatsAppAudioTranscription(nextPayload)?.text ?? message.transcription_text ?? null,
             }
           : message,
       );
@@ -4033,19 +4030,105 @@ export default function WhatsAppInboxScreen() {
     });
   };
 
+  const ensureAudioMessagesHaveTranscription = async (items: WhatsAppMessage[]) => {
+    const audioMessagesWithoutTranscription = items.filter((message) => {
+      const normalizedType = (message.type || '').toLowerCase();
+      if (!['audio', 'voice', 'ptt'].includes(normalizedType)) return false;
+      return !formatWhatsAppAudioTranscriptionLabel(message.payload) && !(message.transcription_text || '').trim();
+    });
+
+    if (audioMessagesWithoutTranscription.length === 0) {
+      return items;
+    }
+
+    const payloadsByMessageId = new Map<string, WhatsAppMessagePayload>();
+
+    for (const message of audioMessagesWithoutTranscription) {
+      try {
+        const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
+          body: { messageId: message.id },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.payload && typeof data.payload === 'object') {
+          payloadsByMessageId.set(message.id, data.payload as WhatsAppMessagePayload);
+        }
+      } catch (error) {
+        console.error(`Erro ao transcrever audio ${message.id}:`, error);
+      }
+    }
+
+    if (payloadsByMessageId.size === 0) {
+      return items;
+    }
+
+    const applyPayloadUpdates = (source: WhatsAppMessage[]) =>
+      source.map((message) =>
+        payloadsByMessageId.has(message.id)
+          ? {
+              ...message,
+              payload: payloadsByMessageId.get(message.id) ?? message.payload,
+              transcription_text:
+                getWhatsAppAudioTranscription(payloadsByMessageId.get(message.id))?.text ?? message.transcription_text ?? null,
+            }
+          : message,
+      );
+
+    const nextItems = applyPayloadUpdates(items);
+
+    setMessages((prev) => {
+      const nextMessages = applyPayloadUpdates(prev);
+
+      if (selectedChat) {
+        const cachedState = messagesCacheRef.current.get(selectedChat.id);
+        if (cachedState) {
+          messagesCacheRef.current.set(selectedChat.id, {
+            ...cachedState,
+            messages: nextMessages,
+          });
+        }
+      }
+
+      return nextMessages;
+    });
+
+    return nextItems;
+  };
+
+  const prepareFollowUpContext = async () => {
+    if (!selectedChat || !selectedChatIsDirect) {
+      return null;
+    }
+
+    const messagesWithTranscription = await ensureAudioMessagesHaveTranscription(messages);
+    const leadName =
+      (selectedLead?.name || selectedChatDisplayName || selectedChatPhoneFormatted || selectedChat.id || '').trim();
+
+    return {
+      leadName,
+      conversationHistory: buildConversationHistoryForCopy(messagesWithTranscription),
+      leadContext: {
+        leadId: selectedLead?.id ?? null,
+        leadStatus: selectedLead?.status ?? null,
+        responsavel: selectedLead?.responsavel ?? null,
+        phone: selectedChatPhone || selectedLead?.phone || null,
+        chatId: selectedChat.id,
+        chatName: selectedChatDisplayName || null,
+      },
+    };
+  };
+
   const handleCopyFullChat = async () => {
     if (!selectedChat || messages.length === 0 || isCopyingChat) return;
 
     try {
       setIsCopyingChat(true);
 
-      const audioMessagesWithoutTranscription = messages.filter((message) => {
-        const normalizedType = (message.type || '').toLowerCase();
-        if (!['audio', 'voice', 'ptt'].includes(normalizedType)) return false;
-        return !formatWhatsAppAudioTranscriptionLabel(message.payload);
-      });
-
-      let messagesForCopy = messages;
+      const audioMessagesWithoutTranscription: WhatsAppMessage[] = [];
+      let messagesForCopy = await ensureAudioMessagesHaveTranscription(messages);
 
       if (audioMessagesWithoutTranscription.length > 0) {
         const payloadsByMessageId = new Map<string, WhatsAppMessagePayload>();
@@ -6213,6 +6296,7 @@ export default function WhatsAppInboxScreen() {
                       templateVariables={templateVariablesForInput}
                       templateVariableShortcuts={TEMPLATE_VARIABLE_SHORTCUTS}
                       followUpContext={followUpContextForInput}
+                      onPrepareFollowUpContext={prepareFollowUpContext}
                       onMessageSent={handleMessageSent}
                       replyToMessage={replyToMessage}
                       onCancelReply={handleCancelReply}

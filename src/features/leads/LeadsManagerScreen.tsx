@@ -9,7 +9,6 @@ import {
 import { gsap } from "gsap";
 import { supabase, Lead, fetchAllPages } from "../../lib/supabase";
 import {
-  Plus,
   Search,
   Filter,
   MessageCircle,
@@ -17,7 +16,6 @@ import {
   FileText,
   Calendar,
   Users,
-  BookOpen,
   Mail,
   Bell,
   MapPin,
@@ -33,7 +31,6 @@ import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
 import StatusDropdown from "../../components/StatusDropdown";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
-import LeadKanban from "../../components/LeadKanban";
 import Pagination from "../../components/Pagination";
 import { ObserverBanner } from "../../components/ObserverRestriction";
 import { useAuth } from "../../contexts/AuthContext";
@@ -48,8 +45,6 @@ import Checkbox from "../../components/ui/Checkbox";
 import DateTimePicker from "../../components/ui/DateTimePicker";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
-import Tabs from "../../components/ui/Tabs";
-import { getPanelButtonClass } from "../../components/ui/standards";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { getBadgeStyle } from "../../lib/colorUtils";
@@ -62,11 +57,18 @@ import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { LeadsPageSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
+import LeadKanbanBoard from "./components/LeadKanbanBoard";
+import { LeadsHeader } from "./components/LeadsHeader";
+import { LeadsHeroCard } from "./components/LeadsHeroCard";
+import { LeadsSummaryCards } from "./components/LeadsSummaryCards";
 import {
-  SORT_OPTIONS,
-  STATUS_REMINDER_RULES,
-  VIEW_MODE_TABS,
-} from "./shared/leadsManagerConfig";
+  LEADS_EMPTY_STATE_STYLE,
+  LEADS_INSET_STYLE,
+  LEADS_MUTED_INSET_STYLE,
+  LEADS_PILL_STYLE,
+  LEADS_SECTION_STYLE,
+} from "./shared/leadsManagerStyles";
 import {
   getLeadFirstName,
   getWhatsappLink,
@@ -92,6 +94,7 @@ export default function LeadsManager({
     Map<string, string>
   >(new Map());
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? "");
   const [filterStatus, setFilterStatus] = useState<string[]>(
     initialStatusFilter ?? [],
@@ -402,6 +405,7 @@ export default function LeadsManager({
         });
         setNextReminderByLeadId(nextMap);
       }
+      setLastUpdated(new Date());
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
     } finally {
@@ -742,6 +746,115 @@ export default function LeadsManager({
     [paginatedLeadIds, selectedLeadIdsSet],
   );
   const canSelectLeads = canEditLeads && viewMode === "list";
+  const visibleBaseLeads = useMemo(
+    () => leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado)),
+    [leads, showArchived],
+  );
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+
+    if (searchTerm.trim()) count += 1;
+    if (filterStatus.length > 0) count += 1;
+    if (filterResponsavel.length > 0) count += 1;
+    if (filterOrigem.length > 0) count += 1;
+    if (filterTipoContratacao.length > 0) count += 1;
+    if (filterTags.length > 0) count += 1;
+    if (filterCanais.length > 0) count += 1;
+    if (filterCreatedFrom || filterCreatedTo) count += 1;
+    if (filterUltimoContatoFrom || filterUltimoContatoTo) count += 1;
+    if (filterProximoRetornoFrom || filterProximoRetornoTo) count += 1;
+
+    return count;
+  }, [
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOrigem,
+    filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+  ]);
+  const scheduledLeadCount = useMemo(() => {
+    const now = Date.now();
+
+    return filteredLeads.filter((lead) => {
+      const nextDateValue = nextReminderByLeadId.get(lead.id) ?? lead.proximo_retorno;
+      if (!nextDateValue) return false;
+
+      const parsedTime = new Date(nextDateValue).getTime();
+      return !Number.isNaN(parsedTime) && parsedTime >= now;
+    }).length;
+  }, [filteredLeads, nextReminderByLeadId]);
+  const recentContactCount = useMemo(() => {
+    const threshold = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    return filteredLeads.filter((lead) => {
+      if (!lead.ultimo_contato) return false;
+
+      const parsedTime = new Date(lead.ultimo_contato).getTime();
+      return !Number.isNaN(parsedTime) && parsedTime >= threshold;
+    }).length;
+  }, [filteredLeads]);
+  const recentContactRate = useMemo(
+    () =>
+      filteredLeads.length > 0
+        ? Math.round((recentContactCount / filteredLeads.length) * 100)
+        : 0,
+    [filteredLeads.length, recentContactCount],
+  );
+  const ownerCount = useMemo(
+    () =>
+      new Set(
+        filteredLeads
+          .map((lead) => lead.responsavel?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ).size,
+    [filteredLeads],
+  );
+  const originCount = useMemo(
+    () =>
+      new Set(
+        filteredLeads
+          .map((lead) => lead.origem?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ).size,
+    [filteredLeads],
+  );
+  const viewModeLabel =
+    viewMode === "kanban" ? "Kanban estrategico" : "Lista detalhada";
+  const lastUpdatedLabel = useMemo(() => {
+    if (!lastUpdated) return "";
+
+    const date = lastUpdated.toLocaleDateString("pt-BR");
+    const time = lastUpdated.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return `${date} as ${time}`;
+  }, [lastUpdated]);
+  const contentSectionTitle = showArchived
+    ? "Leads arquivados"
+    : viewMode === "kanban"
+      ? "Pipeline comercial"
+      : "Leads em acompanhamento";
+  const contentSectionDescription = showArchived
+    ? "Revise historicos, acompanhe reativacoes e recupere oportunidades com contexto completo."
+    : viewMode === "kanban"
+      ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
+      : "Analise cada lead com contexto, proximos retornos e acoes rapidas no mesmo fluxo.";
+  const searchExamples = [
+    "status:novo",
+    "origem:indicacao",
+    "responsavel:maria",
+    "tag:urgente",
+  ];
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -1342,6 +1455,15 @@ export default function LeadsManager({
     }
   };
 
+  const handleCreateLead = useCallback(() => {
+    setEditingLead(null);
+    setShowForm(true);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    void loadLeads();
+  }, [loadLeads]);
+
   useEffect(() => {
     loadLeads();
 
@@ -1474,82 +1596,50 @@ export default function LeadsManager({
     >
       <div
         ref={leadsRootRef}
-        className="panel-dashboard-immersive panel-page-shell"
+        className="panel-dashboard-immersive panel-page-shell space-y-6"
       >
         <ObserverBanner />
+        <LeadsHeader
+          showArchived={showArchived}
+          viewMode={viewMode}
+          loading={loading}
+          lastUpdatedLabel={lastUpdatedLabel}
+          filteredLeadCount={filteredLeads.length}
+          activeFilterCount={activeFilterCount}
+          canEditLeads={canEditLeads}
+          onViewModeChange={setViewMode}
+          onRefresh={handleRefresh}
+          onToggleArchived={() => setShowArchived((current) => !current)}
+          onCreateLead={handleCreateLead}
+        />
+        <LeadsHeroCard
+          showArchived={showArchived}
+          filteredLeadCount={filteredLeads.length}
+          baseLeadCount={visibleBaseLeads.length}
+          activeFilterCount={activeFilterCount}
+          scheduledCount={scheduledLeadCount}
+          viewModeLabel={viewModeLabel}
+        />
+        <LeadsSummaryCards
+          showArchived={showArchived}
+          filteredLeadCount={filteredLeads.length}
+          baseLeadCount={visibleBaseLeads.length}
+          scheduledCount={scheduledLeadCount}
+          recentContactCount={recentContactCount}
+          recentContactRate={recentContactRate}
+          ownerCount={ownerCount}
+          originCount={originCount}
+          viewModeLabel={viewModeLabel}
+        />
         <div
-          className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"
+          style={LEADS_SECTION_STYLE}
           data-panel-animate
         >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <h2 className="text-2xl font-bold text-slate-900">
-              Gestão de Leads
-            </h2>
-            {showArchived && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                Arquivados
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Tabs
-              items={VIEW_MODE_TABS}
-              value={viewMode}
-              onChange={setViewMode}
-              variant="panel"
-              listClassName="w-full sm:w-auto"
-              triggerClassName="flex-1 sm:flex-initial"
-            />
-            <a
-              href="/api-docs.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={getPanelButtonClass({
-                variant: "info",
-                size: "md",
-                className: "w-full sm:w-auto",
-              })}
-              title="Documentação da API"
-            >
-              <BookOpen className="h-5 w-5" />
-              <span>API Docs</span>
-            </a>
-            <Button
-              onClick={() => setShowArchived((current) => !current)}
-              variant={showArchived ? "warning" : "secondary"}
-              className="w-full sm:w-auto"
-              aria-pressed={showArchived}
-              type="button"
-            >
-              <Archive className="h-5 w-5" />
-              <span>
-                {showArchived ? "Ver Leads Ativos" : "Ver Leads Arquivados"}
-              </span>
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingLead(null);
-                setShowForm(true);
-              }}
-              disabled={!canEditLeads}
-              className="w-full sm:w-auto"
-              title={
-                !canEditLeads
-                  ? "Voce nao tem permissao para criar leads"
-                  : "Criar novo lead"
-              }
-            >
-              <Plus className="h-5 w-5" />
-              <span>Novo Lead</span>
-            </Button>
-          </div>
-        </div>
-
-        <div
-          className="panel-glass-panel mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          data-panel-animate
-        >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
+            style={LEADS_INSET_STYLE}
+          >
             <div className="relative w-full lg:max-w-2xl">
               <Input
                 type="text"
@@ -1572,7 +1662,7 @@ export default function LeadsManager({
               <Button
                 type="button"
                 onClick={handleExportFilteredLeads}
-                variant="success"
+                variant="secondary"
                 className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />
@@ -1587,8 +1677,17 @@ export default function LeadsManager({
                 <Download className="h-4 w-4" />
                 Página
               </Button>
-              <div className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
-                <span className="font-semibold text-teal-700">
+              <div
+                className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-sm"
+                style={{
+                  ...LEADS_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--panel-text,#1c1917)" }}
+                >
                   {filteredLeads.length}
                 </span>
                 <span>leads</span>
@@ -1770,12 +1869,43 @@ export default function LeadsManager({
                 </div>
               </div>
             </div>
+            <div
+              className="rounded-[1.5rem] border p-4"
+              style={LEADS_MUTED_INSET_STYLE}
+            >
+              <p
+                className="text-[11px] font-black uppercase tracking-[0.24em]"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+              >
+                Busca inteligente
+              </p>
+              <p
+                className="mt-2 text-sm"
+                style={{ color: "var(--panel-text-soft,#5b4635)" }}
+              >
+                Combine texto livre com tokens para refinar o funil rapidamente.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {searchExamples.map((example) => (
+                  <span
+                    key={example}
+                    className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold"
+                    style={{
+                      ...LEADS_PILL_STYLE,
+                      color: "var(--panel-accent-ink,#6f3f16)",
+                    }}
+                  >
+                    {example}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {viewMode === "kanban" ? (
           <div data-panel-animate>
-            <LeadKanban
+            <LeadKanbanBoard
               leads={filteredLeads}
               onLeadClick={setSelectedLead}
               onConvertToContract={handleConvertToContract}
@@ -1783,12 +1913,73 @@ export default function LeadsManager({
           </div>
         ) : (
           <div
-            className="panel-glass-panel rounded-xl border border-slate-200 bg-white shadow-sm"
+            className="panel-glass-panel rounded-[2rem] border p-5 sm:p-6"
+            style={LEADS_SECTION_STYLE}
             data-panel-animate
           >
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p
+                  className="text-[11px] font-black uppercase tracking-[0.24em]"
+                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                >
+                  Carteira em foco
+                </p>
+                <h3
+                  className="mt-2 text-xl font-semibold"
+                  style={{ color: "var(--panel-text,#1c1917)" }}
+                >
+                  {contentSectionTitle}
+                </h3>
+                <p
+                  className="mt-1 max-w-3xl text-sm"
+                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                >
+                  {contentSectionDescription}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                  style={{
+                    ...LEADS_PILL_STYLE,
+                    color: "var(--panel-text-soft,#5b4635)",
+                  }}
+                >
+                  <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                    {filteredLeads.length}
+                  </span>
+                  <span>resultados</span>
+                </span>
+                <span
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                  style={{
+                    ...LEADS_PILL_STYLE,
+                    color: "var(--panel-text-soft,#5b4635)",
+                  }}
+                >
+                  <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                    {currentPage}/{totalPages}
+                  </span>
+                  <span>paginas</span>
+                </span>
+              </div>
+            </div>
+
+            <div
+              className="rounded-[1.75rem] border"
+              style={LEADS_MUTED_INSET_STYLE}
+            >
             {canEditLeads && paginatedLeads.length > 0 && (
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 py-3 border-b border-slate-200">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+              <div
+                className="flex flex-col gap-3 border-b px-4 py-4 lg:flex-row lg:items-center lg:justify-between sm:px-5"
+                style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
+              >
+                <label
+                  className="inline-flex items-center gap-2 text-sm"
+                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                >
                   <Checkbox
                     checked={areAllPageLeadsSelected}
                     onChange={toggleSelectAllCurrentPage}
@@ -1798,7 +1989,10 @@ export default function LeadsManager({
 
                 {selectedLeadIds.length > 0 && (
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-                    <span className="text-sm font-medium text-teal-700">
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                    >
                       {selectedLeadIds.length} lead(s) selecionado(s)
                     </span>
                     <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
@@ -1841,7 +2035,7 @@ export default function LeadsManager({
                         value={bulkProximoRetorno}
                         onChange={setBulkProximoRetorno}
                         className="w-full xl:w-56"
-                        triggerClassName="h-10 border-teal-200"
+                        triggerClassName="h-10 border-[var(--panel-border,#d4c0a7)]"
                         disabled={isBulkUpdating}
                         placeholder="Proximo retorno"
                       />
@@ -1891,7 +2085,7 @@ export default function LeadsManager({
                               !bulkProximoRetorno &&
                               bulkArchiveAction === "none")
                           }
-                          variant="info"
+                          variant="soft"
                         >
                           {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
                         </Button>
@@ -1899,7 +2093,7 @@ export default function LeadsManager({
                           type="button"
                           onClick={handleExportSelectedLeads}
                           disabled={isBulkUpdating}
-                          variant="success"
+                          variant="secondary"
                         >
                           <Download className="h-4 w-4" />
                           <span>Exportar XLSX</span>
@@ -1918,11 +2112,12 @@ export default function LeadsManager({
                 )}
               </div>
             )}
-            <div className="grid grid-cols-1 gap-4 p-4">
+            <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
               {paginatedLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="panel-glass-lite panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
+                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] border p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
+                  style={LEADS_INSET_STYLE}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
@@ -1974,7 +2169,7 @@ export default function LeadsManager({
                                   }
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center justify-center rounded-full bg-emerald-50 p-1 text-emerald-600 transition-colors hover:bg-emerald-100"
+                                  className="comm-icon-chip comm-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
                                   aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
                                 >
                                   <MessageCircle className="w-4 h-4" />
@@ -1989,7 +2184,7 @@ export default function LeadsManager({
                                   onClick={() => handleEmailContact(lead)}
                                   variant="icon"
                                   size="icon"
-                                  className="h-7 w-7 rounded-full"
+                                  className="comm-icon-chip comm-icon-chip-brand h-8 w-8 rounded-full"
                                   title="Enviar e-mail"
                                   aria-label={`Enviar e-mail para ${lead.nome_completo}`}
                                 >
@@ -2014,9 +2209,12 @@ export default function LeadsManager({
                             </div>
                           )}
                           {nextReminderByLeadId.get(lead.id) && (
-                            <div className="mt-2 flex items-center space-x-2 text-sm">
-                              <Calendar className="w-4 h-4 text-orange-500" />
-                              <span className="text-orange-600 font-medium">
+                            <div
+                              className="mt-2 flex items-center space-x-2 text-sm"
+                              style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                            >
+                              <Calendar className="h-4 w-4" />
+                              <span className="font-medium">
                                 Retorno:{" "}
                                 {formatDateTimeFullBR(
                                   nextReminderByLeadId.get(lead.id) ?? "",
@@ -2042,7 +2240,10 @@ export default function LeadsManager({
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
+                  <div
+                    className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4"
+                    style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
+                  >
                     <Button
                       onClick={() => setSelectedLead(lead)}
                       variant="secondary"
@@ -2063,7 +2264,7 @@ export default function LeadsManager({
                       <>
                         <Button
                           onClick={() => handleConvertToContract(lead)}
-                          variant="info"
+                          variant="soft"
                           size="sm"
                           className="hidden md:inline-flex space-x-2"
                         >
@@ -2108,7 +2309,7 @@ export default function LeadsManager({
                         ) : (
                           <Button
                             onClick={() => handleUnarchive(lead.id)}
-                            variant="success"
+                            variant="secondary"
                             size="sm"
                             className="space-x-0 sm:space-x-2 sm:ml-auto"
                             aria-label="Reativar lead"
@@ -2125,14 +2326,21 @@ export default function LeadsManager({
 
               {filteredLeads.length === 0 && (
                 <div
-                  className="panel-glass-panel rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm"
+                  className="panel-glass-panel rounded-[1.7rem] border py-12 text-center shadow-sm"
+                  style={LEADS_EMPTY_STATE_STYLE}
                   data-panel-animate
                 >
-                  <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  <Users
+                    className="mx-auto mb-4 h-16 w-16"
+                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  />
+                  <h3
+                    className="mb-2 text-lg font-medium"
+                    style={{ color: "var(--panel-text,#1c1917)" }}
+                  >
                     Nenhum lead encontrado
                   </h3>
-                  <p className="text-slate-600">
+                  <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
                     Tente ajustar os filtros ou adicione um novo lead.
                   </p>
                 </div>
@@ -2149,6 +2357,7 @@ export default function LeadsManager({
                 onItemsPerPageChange={handleItemsPerPageChange}
               />
             )}
+            </div>
           </div>
         )}
 

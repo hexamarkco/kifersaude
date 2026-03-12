@@ -19,6 +19,26 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
 
 const readTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+const extractPersistedTranscription = (payload: unknown, fallbackText?: string) => {
+  const payloadRecord = asRecord(payload);
+  const transcriptionRecord = asRecord(payloadRecord?.transcription);
+  const text =
+    readTrimmedString(fallbackText) ||
+    readTrimmedString(transcriptionRecord?.text) ||
+    readTrimmedString(transcriptionRecord?.transcript) ||
+    readTrimmedString(transcriptionRecord?.body);
+
+  if (!text) return null;
+
+  return {
+    text,
+    provider: readTrimmedString(transcriptionRecord?.provider),
+    model: readTrimmedString(transcriptionRecord?.model),
+    createdAt: readTrimmedString(transcriptionRecord?.createdAt) || readTrimmedString(transcriptionRecord?.created_at),
+    updatedAt: readTrimmedString(transcriptionRecord?.updatedAt) || readTrimmedString(transcriptionRecord?.updated_at),
+  };
+};
+
 const extractMediaPayload = (payload: unknown): Record<string, unknown> | null => {
   const payloadRecord = asRecord(payload);
   if (!payloadRecord) return null;
@@ -114,7 +134,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     const { data: message, error: messageError } = await supabaseAdmin
       .from('whatsapp_messages')
-      .select('id, type, payload')
+      .select('id, type, payload, transcription_text')
       .eq('id', messageId)
       .maybeSingle();
 
@@ -138,6 +158,33 @@ Deno.serve(async (req) => {
     }
 
     const currentPayload = asRecord(message.payload) ?? {};
+    const persistedTranscription = extractPersistedTranscription(message.payload, message.transcription_text);
+    if (persistedTranscription) {
+      const existingPayload = {
+        ...currentPayload,
+        transcription: {
+          text: persistedTranscription.text,
+          provider: persistedTranscription.provider || undefined,
+          model: persistedTranscription.model || undefined,
+          createdAt: persistedTranscription.createdAt || undefined,
+          updatedAt: persistedTranscription.updatedAt || persistedTranscription.createdAt || undefined,
+        },
+      };
+
+      return new Response(
+        JSON.stringify({
+          transcript: persistedTranscription.text,
+          provider: persistedTranscription.provider || null,
+          model: persistedTranscription.model || null,
+          payload: existingPayload,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     const mediaPayload = extractMediaPayload(currentPayload);
     const mediaId = readTrimmedString(payload.mediaId) || resolveMediaIdFromPayload(currentPayload);
 
@@ -179,20 +226,24 @@ Deno.serve(async (req) => {
     });
 
     const now = new Date().toISOString();
+    const existingTranscription = extractPersistedTranscription(currentPayload);
     const nextPayload = {
       ...currentPayload,
       transcription: {
         text: transcriptionResult.text,
         provider: transcriptionResult.provider,
         model: transcriptionResult.model,
-        createdAt: now,
+        createdAt: existingTranscription?.createdAt || now,
         updatedAt: now,
       },
     };
 
     const { error: updateError } = await supabaseAdmin
       .from('whatsapp_messages')
-      .update({ payload: nextPayload })
+      .update({
+        payload: nextPayload,
+        transcription_text: transcriptionResult.text,
+      })
       .eq('id', messageId);
 
     if (updateError) {

@@ -225,7 +225,9 @@ export default function FilterDateRange({
               onClick={handleClear}
               className={cx(
                 'text-sm font-medium',
-                isDarkTheme ? 'text-teal-300 hover:text-teal-200' : 'text-teal-600 hover:text-teal-700',
+                isDarkTheme
+                  ? 'text-[var(--panel-accent-foreground,#f7d7b4)] hover:text-[var(--panel-text,#fff7ed)]'
+                  : 'text-[var(--panel-accent-ink,#6f3f16)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]',
               )}
             >
               Limpar
@@ -233,7 +235,7 @@ export default function FilterDateRange({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700"
+              className="rounded-lg border border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-3 py-1.5 text-sm font-semibold text-[var(--panel-accent-ink,#6f3f16)] transition-colors hover:border-[var(--panel-accent-strong,#b85c1f)] hover:bg-[color:var(--panel-accent-hover,#efcf9f)]"
             >
               Concluído
             </button>

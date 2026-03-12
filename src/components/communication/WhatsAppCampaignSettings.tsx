@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  Download,
   FileText,
   Image as ImageIcon,
   Loader2,
@@ -10,6 +11,8 @@ import {
   Play,
   Plus,
   RefreshCw,
+  RotateCcw,
+  Search,
   Send,
   Square,
   Trash2,
@@ -19,17 +22,44 @@ import {
 import ReactFlow, { Background, Controls, MarkerType, MiniMap, Position, type Edge, type Node } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
+import Checkbox from '../ui/Checkbox';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { fetchAllPages, getUserManagementId, supabase } from '../../lib/supabase';
+import {
+  resolveOrigemIdByName,
+  resolveResponsavelIdByLabel,
+  resolveStatusIdByName,
+  resolveTipoContratacaoIdByLabel,
+} from '../../lib/leadRelations';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
-import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../lib/templateVariableSuggestions';
+import {
+  analyzeCsvAudience,
+  buildCampaignVariableSuggestions,
+  buildChatIdFromPhoneDigits,
+  canRequeueCampaignTarget,
+  collectUnknownCampaignFlowVariableKeys,
+  formatCsvSummaryLabel,
+  normalizeCampaignAudienceSource,
+  normalizeCampaignSourcePayload,
+  normalizeCsvHeader,
+  normalizePhoneForCampaign,
+  parseCampaignCsvText,
+  resolveCampaignTemplateText,
+  splitIntoBatches,
+  type CsvAudienceAnalysis,
+  type ExistingCampaignLeadMatch,
+  type ParsedCampaignCsv,
+} from '../../lib/whatsappCampaignUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
+  WhatsAppCampaignAudienceSource,
   WhatsAppCampaign,
   WhatsAppCampaignFlowStep,
   WhatsAppCampaignFlowStepType,
   WhatsAppCampaignStatus,
+  WhatsAppCampaignTarget,
+  WhatsAppCampaignTargetStatus,
 } from '../../types/whatsappCampaigns';
 
 type CampaignFilters = {
@@ -56,6 +86,33 @@ type FlowNodeData = {
   description: string;
 };
 
+type CsvImportState = {
+  fileName: string;
+  rawText: string;
+  parsed: ParsedCampaignCsv | null;
+  phoneColumnKey: string;
+  nameColumnKey: string;
+};
+
+type CsvCrmDefaultsState = {
+  origemId: string;
+  statusId: string;
+  tipoContratacaoId: string;
+  responsavelId: string;
+  confirmNewLeadDefaults: boolean;
+};
+
+type CampaignTargetsFilters = {
+  status: string;
+  sentState: 'all' | 'sent' | 'not_sent';
+  attemptState: 'all' | 'attempted' | 'not_attempted';
+  errorSearch: string;
+};
+
+type CampaignTargetHistoryRow = WhatsAppCampaignTarget & {
+  lead: Pick<LeadPreviewRow, 'nome_completo' | 'telefone'> | null;
+};
+
 type SelectOption = {
   id: string;
   label: string;
@@ -67,6 +124,33 @@ const DEFAULT_FILTERS: CampaignFilters = {
   origemId: '',
   canal: '',
 };
+
+const DEFAULT_CSV_IMPORT_STATE: CsvImportState = {
+  fileName: '',
+  rawText: '',
+  parsed: null,
+  phoneColumnKey: '',
+  nameColumnKey: '',
+};
+
+const DEFAULT_CSV_CRM_DEFAULTS: CsvCrmDefaultsState = {
+  origemId: '',
+  statusId: '',
+  tipoContratacaoId: '',
+  responsavelId: '',
+  confirmNewLeadDefaults: false,
+};
+
+const DEFAULT_TARGET_FILTERS: CampaignTargetsFilters = {
+  status: '',
+  sentState: 'all',
+  attemptState: 'all',
+  errorSearch: '',
+};
+
+const TARGETS_PAGE_SIZE = 25;
+const CSV_PHONE_KEY_CANDIDATES = ['telefone', 'phone', 'celular', 'whatsapp', 'numero', 'numero_telefone'];
+const CSV_NAME_KEY_CANDIDATES = ['nome', 'nome_completo', 'cliente', 'contato', 'name'];
 
 const STATUS_LABELS: Record<WhatsAppCampaignStatus, string> = {
   draft: 'Rascunho',
@@ -118,23 +202,6 @@ const createFlowStep = (type: WhatsAppCampaignFlowStepType = 'text'): WhatsAppCa
   caption: type === 'text' ? undefined : '',
   filename: type === 'document' ? '' : undefined,
 });
-
-const normalizePhoneForCampaign = (value: string | null | undefined): string => {
-  const digitsOnly = (value || '').replace(/\D/g, '');
-  if (!digitsOnly) return '';
-
-  if (digitsOnly.startsWith('55') && (digitsOnly.length === 12 || digitsOnly.length === 13)) {
-    return digitsOnly;
-  }
-
-  if (!digitsOnly.startsWith('55') && (digitsOnly.length === 10 || digitsOnly.length === 11)) {
-    return `55${digitsOnly}`;
-  }
-
-  return digitsOnly;
-};
-
-const buildChatIdFromPhoneDigits = (digits: string): string => `${digits}@s.whatsapp.net`;
 
 const formatDateTime = (value: string | null): string => {
   if (!value) return '-';
@@ -289,6 +356,67 @@ const isMissingLeadsCanalColumnError = (error: unknown): boolean => {
   return code === '42703' && message.includes('leads.canal');
 };
 
+const inferCsvColumnKey = (headers: string[], candidates: string[]): string => {
+  const normalizedCandidates = candidates.map((candidate) => normalizeCsvHeader(candidate));
+  return headers.find((header) => normalizedCandidates.includes(header)) ?? '';
+};
+
+const formatAudienceSourceLabel = (value: WhatsAppCampaignAudienceSource): string =>
+  value === 'csv' ? 'CSV importado' : 'Leads filtrados';
+
+const formatTargetSourceKindLabel = (value: WhatsAppCampaignTarget['source_kind']): string =>
+  value === 'csv_import' ? 'CSV' : 'Lead';
+
+const buildLeadStoragePhone = (value: string): string => {
+  if (value.startsWith('55') && (value.length === 12 || value.length === 13)) {
+    return value.slice(2);
+  }
+
+  return value;
+};
+
+const toIsoFromDateTimeInput = (value: string): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
+};
+
+const slugifyFileName = (value: string): string =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'campanha';
+
+const escapeCsvCell = (value: unknown): string => {
+  const stringValue = String(value ?? '');
+  if (/[",;\n\r]/.test(stringValue)) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+
+  return stringValue;
+};
+
+const downloadTextFile = (fileName: string, content: string, contentType: string) => {
+  const blob = new Blob([content], { type: contentType });
+  const objectUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(objectUrl);
+};
+
 export default function WhatsAppCampaignSettings() {
   const { user } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
@@ -297,9 +425,14 @@ export default function WhatsAppCampaignSettings() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   const [campaignName, setCampaignName] = useState('');
+  const [audienceSource, setAudienceSource] = useState<WhatsAppCampaignAudienceSource>('filters');
+  const [scheduledAtInput, setScheduledAtInput] = useState('');
   const [filters, setFilters] = useState<CampaignFilters>(DEFAULT_FILTERS);
   const [canalOptions, setCanalOptions] = useState<string[]>([]);
   const [hasCanalColumn, setHasCanalColumn] = useState(true);
+  const [csvImport, setCsvImport] = useState<CsvImportState>(DEFAULT_CSV_IMPORT_STATE);
+  const [csvAnalysis, setCsvAnalysis] = useState<CsvAudienceAnalysis | null>(null);
+  const [csvCrmDefaults, setCsvCrmDefaults] = useState<CsvCrmDefaultsState>(DEFAULT_CSV_CRM_DEFAULTS);
 
   const [flowSteps, setFlowSteps] = useState<WhatsAppCampaignFlowStep[]>(() => [createFlowStep('text')]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -312,6 +445,14 @@ export default function WhatsAppCampaignSettings() {
   const [uploadingStepId, setUploadingStepId] = useState<string | null>(null);
   const [processingCampaignId, setProcessingCampaignId] = useState<string | null>(null);
   const [actionCampaignId, setActionCampaignId] = useState<string | null>(null);
+  const [loadingTargets, setLoadingTargets] = useState(false);
+  const [campaignTargets, setCampaignTargets] = useState<CampaignTargetHistoryRow[]>([]);
+  const [campaignTargetsTotalCount, setCampaignTargetsTotalCount] = useState(0);
+  const [campaignTargetsPage, setCampaignTargetsPage] = useState(0);
+  const [campaignTargetsFilters, setCampaignTargetsFilters] = useState<CampaignTargetsFilters>(DEFAULT_TARGET_FILTERS);
+  const [requeueingTargetId, setRequeueingTargetId] = useState<string | null>(null);
+  const [requeueingFailures, setRequeueingFailures] = useState(false);
+  const [exportingFailures, setExportingFailures] = useState(false);
   const [messageState, setMessageState] = useState<MessageState>(null);
 
   const selectedCampaign = useMemo(
@@ -356,6 +497,15 @@ export default function WhatsAppCampaignSettings() {
     [leadOrigins],
   );
 
+  const tipoContratacaoOptions = useMemo<SelectOption[]>(
+    () =>
+      options.lead_tipo_contratacao
+        .filter((option) => option.ativo)
+        .map((option) => ({ id: option.id, label: option.label }))
+        .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR', { sensitivity: 'base' })),
+    [options.lead_tipo_contratacao],
+  );
+
   const statusNameById = useMemo(() => {
     return new Map(statusOptions.map((option) => [option.id, option.label]));
   }, [statusOptions]);
@@ -367,6 +517,44 @@ export default function WhatsAppCampaignSettings() {
   const origemNameById = useMemo(() => {
     return new Map(origemOptions.map((option) => [option.id, option.label]));
   }, [origemOptions]);
+
+  const tipoContratacaoNameById = useMemo(() => {
+    return new Map(tipoContratacaoOptions.map((option) => [option.id, option.label]));
+  }, [tipoContratacaoOptions]);
+
+  const defaultStatusOption = useMemo(() => {
+    const byPadrao = leadStatuses.find((status) => status.ativo && status.padrao);
+    if (byPadrao) {
+      return { id: byPadrao.id, label: byPadrao.nome };
+    }
+
+    const novoStatus = leadStatuses.find((status) => status.ativo && status.nome.toLowerCase() === 'novo');
+    if (novoStatus) {
+      return { id: novoStatus.id, label: novoStatus.nome };
+    }
+
+    return statusOptions[0] ?? null;
+  }, [leadStatuses, statusOptions]);
+
+  const defaultOriginOption = useMemo(() => {
+    const massOrigin = origemOptions.find((option) => option.label.toLowerCase() === 'disparo em massa');
+    return massOrigin ?? origemOptions[0] ?? null;
+  }, [origemOptions]);
+
+  const campaignVariableSuggestions = useMemo(
+    () => buildCampaignVariableSuggestions(audienceSource === 'csv' ? csvImport.parsed?.normalizedHeaders ?? [] : []),
+    [audienceSource, csvImport.parsed],
+  );
+
+  const allowedVariableKeys = useMemo(
+    () => campaignVariableSuggestions.map((suggestion) => suggestion.key),
+    [campaignVariableSuggestions],
+  );
+
+  const unknownFlowVariables = useMemo(
+    () => collectUnknownCampaignFlowVariableKeys(flowSteps, allowedVariableKeys),
+    [allowedVariableKeys, flowSteps],
+  );
 
   const flowNodes = useMemo<Node<FlowNodeData>[]>(() => buildFlowNodes(flowSteps, selectedStep?.id ?? null), [flowSteps, selectedStep?.id]);
   const flowEdges = useMemo<Edge[]>(() => buildFlowEdges(flowSteps), [flowSteps]);
@@ -389,6 +577,9 @@ export default function WhatsAppCampaignSettings() {
 
       const nextCampaigns = ((data ?? []) as WhatsAppCampaign[]).map((campaign) => ({
         ...campaign,
+        audience_source: normalizeCampaignAudienceSource((campaign as WhatsAppCampaign & { audience_source?: unknown }).audience_source),
+        audience_config:
+          (campaign as WhatsAppCampaign & { audience_config?: Record<string, unknown> | null }).audience_config ?? {},
         flow_steps: normalizeFlowSteps((campaign as WhatsAppCampaign & { flow_steps?: unknown }).flow_steps, campaign.message),
       }));
 
@@ -502,6 +693,32 @@ export default function WhatsAppCampaignSettings() {
       window.clearInterval(intervalId);
     };
   }, [hasRunningCampaign, loadCampaigns]);
+
+  useEffect(() => {
+    setCsvCrmDefaults((current) => ({
+      ...current,
+      origemId: current.origemId || defaultOriginOption?.id || '',
+      statusId: current.statusId || defaultStatusOption?.id || '',
+    }));
+  }, [defaultOriginOption, defaultStatusOption]);
+
+  useEffect(() => {
+    setCampaignTargetsPage(0);
+  }, [selectedCampaignId, campaignTargetsFilters.status, campaignTargetsFilters.sentState, campaignTargetsFilters.attemptState, campaignTargetsFilters.errorSearch]);
+
+  useEffect(() => {
+    setPreviewLeads([]);
+    setCsvAnalysis(null);
+  }, [
+    audienceSource,
+    filters.statusId,
+    filters.responsavelId,
+    filters.origemId,
+    filters.canal,
+    csvImport.rawText,
+    csvImport.phoneColumnKey,
+    csvImport.nameColumnKey,
+  ]);
 
   const addFlowStep = (type: WhatsAppCampaignFlowStepType) => {
     const newStep = createFlowStep(type);
@@ -620,11 +837,141 @@ export default function WhatsAppCampaignSettings() {
     return null;
   };
 
+  const buildAudienceFilterSnapshot = useCallback(
+    () => ({
+      status_id: filters.statusId || null,
+      status_label: statusNameById.get(filters.statusId) ?? null,
+      responsavel_id: filters.responsavelId || null,
+      responsavel_label: responsavelNameById.get(filters.responsavelId) ?? null,
+      origem_id: filters.origemId || null,
+      origem_label: origemNameById.get(filters.origemId) ?? null,
+      canal: hasCanalColumn ? filters.canal || null : null,
+    }),
+    [filters, hasCanalColumn, origemNameById, responsavelNameById, statusNameById],
+  );
+
+  const fetchExistingLeadsByPhones = useCallback(async (normalizedPhones: string[]): Promise<ExistingCampaignLeadMatch[]> => {
+    const candidatePhones = new Set<string>();
+
+    normalizedPhones.forEach((phone) => {
+      if (!phone) {
+        return;
+      }
+
+      candidatePhones.add(phone);
+
+      if (phone.startsWith('55') && (phone.length === 12 || phone.length === 13)) {
+        candidatePhones.add(phone.slice(2));
+      }
+    });
+
+    const results: ExistingCampaignLeadMatch[] = [];
+    const batches = splitIntoBatches(Array.from(candidatePhones), 200);
+
+    for (const batch of batches) {
+      if (batch.length === 0) {
+        continue;
+      }
+
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal')
+        .in('telefone', batch);
+
+      if (error) {
+        throw error;
+      }
+
+      results.push(...((data ?? []) as ExistingCampaignLeadMatch[]));
+    }
+
+    return results;
+  }, []);
+
+  const resetBuilderState = useCallback(() => {
+    const firstStep = createFlowStep('text');
+    setCampaignName('');
+    setAudienceSource('filters');
+    setScheduledAtInput('');
+    setFilters(DEFAULT_FILTERS);
+    setCsvImport(DEFAULT_CSV_IMPORT_STATE);
+    setCsvAnalysis(null);
+    setCsvCrmDefaults((current) => ({
+      ...DEFAULT_CSV_CRM_DEFAULTS,
+      origemId: current.origemId,
+      statusId: current.statusId,
+    }));
+    setPreviewLeads([]);
+    setFlowSteps([firstStep]);
+    setSelectedStepId(firstStep.id);
+  }, []);
+
+  const handleCsvFileUpload = useCallback(async (file: File) => {
+    setMessageState(null);
+
+    try {
+      const rawText = await file.text();
+      const parsed = parseCampaignCsvText(rawText);
+
+      if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+        setMessageState({ type: 'error', text: 'O CSV precisa ter cabecalho e ao menos uma linha de dados.' });
+        return;
+      }
+
+      const inferredPhoneColumnKey = inferCsvColumnKey(parsed.normalizedHeaders, CSV_PHONE_KEY_CANDIDATES);
+      const inferredNameColumnKey = inferCsvColumnKey(parsed.normalizedHeaders, CSV_NAME_KEY_CANDIDATES);
+
+      setCsvImport({
+        fileName: file.name,
+        rawText,
+        parsed,
+        phoneColumnKey: inferredPhoneColumnKey,
+        nameColumnKey: inferredNameColumnKey,
+      });
+
+      setMessageState({
+        type: 'success',
+        text: `CSV carregado: ${file.name} com ${parsed.rows.length} linha(s) e delimitador "${parsed.delimiter}".`,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar CSV da campanha:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel ler o arquivo CSV.' });
+    }
+  }, []);
+
   const handlePreviewAudience = async () => {
     setLoadingPreview(true);
     setMessageState(null);
 
     try {
+      if (audienceSource === 'csv') {
+        if (!csvImport.parsed || csvImport.parsed.rows.length === 0) {
+          setMessageState({ type: 'error', text: 'Importe um CSV antes de gerar o preview.' });
+          return;
+        }
+
+        if (!csvImport.phoneColumnKey) {
+          setMessageState({ type: 'error', text: 'Mapeie a coluna de telefone para continuar.' });
+          return;
+        }
+
+        const normalizedPhones = csvImport.parsed.rows
+          .map((row) => normalizePhoneForCampaign(row.values[csvImport.phoneColumnKey]))
+          .filter(Boolean);
+
+        const existingLeads = await fetchExistingLeadsByPhones(normalizedPhones);
+        const analysis = analyzeCsvAudience({
+          rows: csvImport.parsed.rows,
+          phoneColumnKey: csvImport.phoneColumnKey,
+          nameColumnKey: csvImport.nameColumnKey || null,
+          existingLeads,
+        });
+
+        setCsvAnalysis(analysis);
+        setPreviewLeads([]);
+        return;
+      }
+
       const queryWithoutCanal = async (): Promise<LeadPreviewRow[]> => {
         let fallbackQuery = supabase
           .from('leads')
@@ -657,6 +1004,7 @@ export default function WhatsAppCampaignSettings() {
 
       if (!hasCanalColumn) {
         setPreviewLeads(await queryWithoutCanal());
+        setCsvAnalysis(null);
         return;
       }
 
@@ -689,6 +1037,7 @@ export default function WhatsAppCampaignSettings() {
           setCanalOptions([]);
           setFilters((current) => ({ ...current, canal: '' }));
           setPreviewLeads(await queryWithoutCanal());
+          setCsvAnalysis(null);
           return;
         }
 
@@ -696,6 +1045,7 @@ export default function WhatsAppCampaignSettings() {
       }
 
       setPreviewLeads((data ?? []) as LeadPreviewRow[]);
+      setCsvAnalysis(null);
     } catch (error) {
       console.error('Erro ao gerar preview de publico da campanha:', error);
       setMessageState({ type: 'error', text: 'Não foi possível gerar o preview do público.' });
@@ -711,7 +1061,52 @@ export default function WhatsAppCampaignSettings() {
       return;
     }
 
-    if (previewLeads.length === 0) {
+    if (unknownFlowVariables.length > 0) {
+      setMessageState({
+        type: 'error',
+        text: `Existem variaveis desconhecidas no fluxo: ${unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}`,
+      });
+      return;
+    }
+
+    if (audienceSource === 'csv') {
+      if (!csvImport.parsed || !csvAnalysis) {
+        setMessageState({ type: 'error', text: 'Gere o preview do CSV antes de criar a campanha.' });
+        return;
+      }
+
+      if (csvAnalysis.validItems.length === 0) {
+        setMessageState({ type: 'error', text: 'Nenhuma linha valida encontrada no CSV.' });
+        return;
+      }
+
+      if (csvAnalysis.summary.newLeadRows > 0) {
+        const missingDefaults = [
+          { value: csvCrmDefaults.origemId, label: 'origem' },
+          { value: csvCrmDefaults.statusId, label: 'status' },
+          { value: csvCrmDefaults.tipoContratacaoId, label: 'tipo de contratacao' },
+          { value: csvCrmDefaults.responsavelId, label: 'responsavel' },
+        ].find((item) => !item.value);
+
+        if (missingDefaults) {
+          setMessageState({
+            type: 'error',
+            text: `Defina o default de ${missingDefaults.label} para criar novos leads a partir do CSV.`,
+          });
+          return;
+        }
+
+        if (!csvCrmDefaults.confirmNewLeadDefaults) {
+          setMessageState({
+            type: 'error',
+            text: 'Confirme os defaults do CRM antes de criar novos leads pelo CSV.',
+          });
+          return;
+        }
+      }
+    }
+
+    if (audienceSource === 'filters' && previewLeads.length === 0) {
       setMessageState({ type: 'error', text: 'Gere o preview de publico antes de criar a campanha.' });
       return;
     }
@@ -720,6 +1115,140 @@ export default function WhatsAppCampaignSettings() {
     setMessageState(null);
 
     try {
+      const campaignTitle = campaignName.trim() || `Campanha ${new Date().toLocaleDateString('pt-BR')}`;
+      const createdBy = getUserManagementId(user);
+      const normalizedSteps = flowSteps.map((step, index) => ({ ...step, order: index }));
+      const scheduledAtIso = toIsoFromDateTimeInput(scheduledAtInput);
+
+      if (audienceSource === 'csv' && csvImport.parsed && csvAnalysis) {
+        const origemLabel = origemNameById.get(csvCrmDefaults.origemId) ?? '';
+        const statusLabel = statusNameById.get(csvCrmDefaults.statusId) ?? '';
+        const tipoContratacaoLabel = tipoContratacaoNameById.get(csvCrmDefaults.tipoContratacaoId) ?? '';
+        const responsavelLabel = responsavelNameById.get(csvCrmDefaults.responsavelId) ?? '';
+
+        const { data: createdCampaign, error: campaignError } = await supabase
+          .from('whatsapp_campaigns')
+          .insert({
+            name: campaignTitle,
+            message: composeFallbackMessage(normalizedSteps),
+            flow_steps: normalizedSteps,
+            status: 'draft',
+            audience_source: 'csv',
+            audience_filter: {},
+            audience_config: {
+              csv_file_name: csvImport.fileName,
+              csv_delimiter: csvImport.parsed.delimiter,
+              csv_headers: csvImport.parsed.headers,
+              csv_normalized_headers: csvImport.parsed.normalizedHeaders,
+              mapping: {
+                phone_column_key: csvImport.phoneColumnKey,
+                name_column_key: csvImport.nameColumnKey || null,
+              },
+              crm_defaults: {
+                origem_id: csvCrmDefaults.origemId || null,
+                origem_label: origemLabel || null,
+                status_id: csvCrmDefaults.statusId || null,
+                status_label: statusLabel || null,
+                tipo_contratacao_id: csvCrmDefaults.tipoContratacaoId || null,
+                tipo_contratacao_label: tipoContratacaoLabel || null,
+                responsavel_id: csvCrmDefaults.responsavelId || null,
+                responsavel_label: responsavelLabel || null,
+              },
+              summary: csvAnalysis.summary,
+            },
+            total_targets: csvAnalysis.validItems.length,
+            pending_targets: csvAnalysis.validItems.length,
+            sent_targets: 0,
+            failed_targets: 0,
+            invalid_targets: 0,
+            scheduled_at: scheduledAtIso,
+            created_by: createdBy,
+          })
+          .select('*')
+          .single();
+
+        if (campaignError || !createdCampaign) {
+          throw campaignError || new Error('Erro ao criar campanha CSV.');
+        }
+
+        const nowIso = new Date().toISOString();
+        const createdLeadsByPhone = new Map<string, ExistingCampaignLeadMatch>();
+        const itemsToCreate = csvAnalysis.validItems.filter((item) => item.needsLeadCreation);
+
+        for (const batch of splitIntoBatches(itemsToCreate, 100)) {
+          if (batch.length === 0) {
+            continue;
+          }
+
+          const rows = batch.map((item) => ({
+            nome_completo: item.displayName,
+            telefone: buildLeadStoragePhone(item.normalizedPhone),
+            origem: origemLabel,
+            origem_id: resolveOrigemIdByName(leadOrigins, origemLabel),
+            tipo_contratacao: tipoContratacaoLabel,
+            tipo_contratacao_id: resolveTipoContratacaoIdByLabel(options.lead_tipo_contratacao, tipoContratacaoLabel),
+            status: statusLabel,
+            status_id: resolveStatusIdByName(leadStatuses, statusLabel),
+            responsavel: responsavelLabel,
+            responsavel_id: resolveResponsavelIdByLabel(options.lead_responsavel, responsavelLabel),
+            data_criacao: nowIso,
+            ultimo_contato: nowIso,
+            canal: 'whatsapp_campaign',
+          }));
+
+          const { data: insertedLeads, error: leadInsertError } = await supabase
+            .from('leads')
+            .insert(rows)
+            .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal');
+
+          if (leadInsertError) {
+            throw leadInsertError;
+          }
+
+          ((insertedLeads ?? []) as ExistingCampaignLeadMatch[]).forEach((lead) => {
+            const normalizedPhone = normalizePhoneForCampaign(lead.telefone ?? '');
+            if (normalizedPhone) {
+              createdLeadsByPhone.set(normalizedPhone, lead);
+            }
+          });
+        }
+
+        const targetRows = csvAnalysis.validItems.map((item) => {
+          const leadMatch = item.existingLead ?? createdLeadsByPhone.get(item.normalizedPhone) ?? null;
+
+          if (!leadMatch?.id) {
+            throw new Error(`Nao foi possivel vincular o lead do telefone ${item.rawPhone || item.normalizedPhone}.`);
+          }
+
+          return {
+            campaign_id: createdCampaign.id,
+            lead_id: leadMatch.id,
+            phone: item.normalizedPhone,
+            raw_phone: item.rawPhone || null,
+            display_name: item.displayName || null,
+            chat_id: item.chatId,
+            source_kind: 'csv_import',
+            source_payload: normalizeCampaignSourcePayload(item.payload),
+            status: 'pending',
+          };
+        });
+
+        const { error: targetError } = await supabase
+          .from('whatsapp_campaign_targets')
+          .upsert(targetRows, { onConflict: 'campaign_id,phone' });
+
+        if (targetError) {
+          throw targetError;
+        }
+
+        await recomputeCampaignCounters(createdCampaign.id);
+        await loadCampaigns();
+        setSelectedCampaignId(createdCampaign.id);
+        resetBuilderState();
+        setMessageState({ type: 'success', text: 'Campanha CSV criada com sucesso.' });
+        return;
+      }
+
       const uniqueTargets = new Map<string, LeadPreviewRow>();
 
       previewLeads.forEach((lead) => {
@@ -738,10 +1267,6 @@ export default function WhatsAppCampaignSettings() {
         return;
       }
 
-      const campaignTitle = campaignName.trim() || `Campanha ${new Date().toLocaleDateString('pt-BR')}`;
-      const createdBy = getUserManagementId(user);
-      const normalizedSteps = flowSteps.map((step, index) => ({ ...step, order: index }));
-
       const { data: createdCampaign, error: campaignError } = await supabase
         .from('whatsapp_campaigns')
         .insert({
@@ -749,20 +1274,19 @@ export default function WhatsAppCampaignSettings() {
           message: composeFallbackMessage(normalizedSteps),
           flow_steps: normalizedSteps,
           status: 'draft',
-          audience_filter: {
-            status_id: filters.statusId || null,
-            status_label: statusNameById.get(filters.statusId) ?? null,
-            responsavel_id: filters.responsavelId || null,
-            responsavel_label: responsavelNameById.get(filters.responsavelId) ?? null,
-            origem_id: filters.origemId || null,
-            origem_label: origemNameById.get(filters.origemId) ?? null,
-            canal: hasCanalColumn ? filters.canal || null : null,
+          audience_source: 'filters',
+          audience_filter: buildAudienceFilterSnapshot(),
+          audience_config: {
+            source: 'filters',
+            preview_count: uniqueTargets.size,
+            filters: buildAudienceFilterSnapshot(),
           },
           total_targets: uniqueTargets.size,
           pending_targets: uniqueTargets.size,
           sent_targets: 0,
           failed_targets: 0,
           invalid_targets: 0,
+          scheduled_at: scheduledAtIso,
           created_by: createdBy,
         })
         .select('*')
@@ -776,7 +1300,18 @@ export default function WhatsAppCampaignSettings() {
         campaign_id: createdCampaign.id,
         lead_id: lead.id,
         phone,
+        raw_phone: lead.telefone,
+        display_name: lead.nome_completo,
         chat_id: buildChatIdFromPhoneDigits(phone),
+        source_kind: 'lead_filter',
+        source_payload: normalizeCampaignSourcePayload({
+          nome: lead.nome_completo,
+          telefone: lead.telefone,
+          status: statusNameById.get(lead.status_id || '') ?? '',
+          origem: origemNameById.get(lead.origem_id || '') ?? '',
+          responsavel: responsavelNameById.get(lead.responsavel_id || '') ?? '',
+          canal: lead.canal ?? '',
+        }),
         status: 'pending',
       }));
 
@@ -792,9 +1327,7 @@ export default function WhatsAppCampaignSettings() {
       await loadCampaigns();
 
       setSelectedCampaignId(createdCampaign.id);
-      setFlowSteps([createFlowStep('text')]);
-      setSelectedStepId(null);
-      setCampaignName('');
+      resetBuilderState();
       setMessageState({ type: 'success', text: 'Campanha criada com sucesso.' });
     } catch (error) {
       console.error('Erro ao criar campanha do WhatsApp:', error);
@@ -819,6 +1352,7 @@ export default function WhatsAppCampaignSettings() {
       if (status === 'running') {
         payload.started_at = campaign.started_at ?? nowIso;
         payload.last_error = null;
+        payload.scheduled_at = campaign.scheduled_at;
       }
 
       if (options?.clearCompletedAt) {
@@ -839,6 +1373,9 @@ export default function WhatsAppCampaignSettings() {
       }
 
       await loadCampaigns();
+      if (selectedCampaignId === campaign.id) {
+        await loadCampaignTargets();
+      }
     } catch (error) {
       console.error('Erro ao atualizar status da campanha:', error);
       setMessageState({ type: 'error', text: 'Não foi possível atualizar o status da campanha.' });
@@ -915,6 +1452,9 @@ export default function WhatsAppCampaignSettings() {
       }
 
       await loadCampaigns();
+      if (selectedCampaignId) {
+        await loadCampaignTargets();
+      }
 
       const processedCount = typeof responseData?.processed === 'number' ? responseData.processed : 0;
       setMessageState({
@@ -931,6 +1471,290 @@ export default function WhatsAppCampaignSettings() {
       setProcessingCampaignId(null);
     }
   };
+
+  const loadCampaignTargets = useCallback(async () => {
+    if (!selectedCampaignId) {
+      setCampaignTargets([]);
+      setCampaignTargetsTotalCount(0);
+      return;
+    }
+
+    setLoadingTargets(true);
+
+    try {
+      let query = supabase
+        .from('whatsapp_campaign_targets')
+        .select(
+          'id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_kind, source_payload, status, attempts, error_message, sent_at, last_attempt_at, created_at, updated_at, lead:leads(nome_completo, telefone)',
+          { count: 'exact' },
+        )
+        .eq('campaign_id', selectedCampaignId)
+        .order('created_at', { ascending: false });
+
+      if (campaignTargetsFilters.status) {
+        query = query.eq('status', campaignTargetsFilters.status as WhatsAppCampaignTargetStatus);
+      }
+
+      if (campaignTargetsFilters.sentState === 'sent') {
+        query = query.not('sent_at', 'is', null);
+      } else if (campaignTargetsFilters.sentState === 'not_sent') {
+        query = query.is('sent_at', null);
+      }
+
+      if (campaignTargetsFilters.attemptState === 'attempted') {
+        query = query.not('last_attempt_at', 'is', null);
+      } else if (campaignTargetsFilters.attemptState === 'not_attempted') {
+        query = query.is('last_attempt_at', null);
+      }
+
+      if (campaignTargetsFilters.errorSearch.trim()) {
+        query = query.ilike('error_message', `%${campaignTargetsFilters.errorSearch.trim()}%`);
+      }
+
+      const from = campaignTargetsPage * TARGETS_PAGE_SIZE;
+      const to = from + TARGETS_PAGE_SIZE - 1;
+      const { data, error, count } = await query.range(from, to);
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = ((data ?? []) as unknown as Array<
+        Omit<CampaignTargetHistoryRow, 'lead'> & {
+          lead?: Array<Pick<LeadPreviewRow, 'nome_completo' | 'telefone'>> | Pick<LeadPreviewRow, 'nome_completo' | 'telefone'> | null;
+        }
+      >).map((item) => ({
+        ...item,
+        source_payload: normalizeCampaignSourcePayload(item.source_payload),
+        lead: Array.isArray(item.lead) ? item.lead[0] ?? null : item.lead ?? null,
+      }));
+
+      setCampaignTargets(rows);
+      setCampaignTargetsTotalCount(count ?? 0);
+    } catch (error) {
+      console.error('Erro ao carregar alvos da campanha:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel carregar o historico de alvos.' });
+    } finally {
+      setLoadingTargets(false);
+    }
+  }, [campaignTargetsFilters, campaignTargetsPage, selectedCampaignId]);
+
+  useEffect(() => {
+    void loadCampaignTargets();
+  }, [loadCampaignTargets]);
+
+  const ensureCampaignRunningForRetry = useCallback(async (campaign: WhatsAppCampaign) => {
+    if (campaign.status === 'cancelled' || campaign.status === 'running') {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('whatsapp_campaigns')
+      .update({
+        status: 'running',
+        started_at: campaign.started_at ?? nowIso,
+        completed_at: null,
+        last_error: null,
+      })
+      .eq('id', campaign.id);
+
+    if (error) {
+      throw error;
+    }
+  }, []);
+
+  const handleRequeueFailedTargets = async () => {
+    if (!selectedCampaign) {
+      return;
+    }
+
+    if (selectedCampaign.status === 'cancelled') {
+      setMessageState({ type: 'error', text: 'Campanhas canceladas nao podem ser reenfileiradas.' });
+      return;
+    }
+
+    setRequeueingFailures(true);
+    setMessageState(null);
+
+    try {
+      await ensureCampaignRunningForRetry(selectedCampaign);
+
+      const { error } = await supabase
+        .from('whatsapp_campaign_targets')
+        .update({
+          status: 'pending',
+          error_message: null,
+        })
+        .eq('campaign_id', selectedCampaign.id)
+        .eq('status', 'failed');
+
+      if (error) {
+        throw error;
+      }
+
+      await recomputeCampaignCounters(selectedCampaign.id);
+      await loadCampaigns(true);
+      await loadCampaignTargets();
+      setMessageState({ type: 'success', text: 'Falhas reenfileiradas com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao reenfileirar falhas da campanha:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel reenfileirar as falhas.' });
+    } finally {
+      setRequeueingFailures(false);
+    }
+  };
+
+  const handleRequeueSingleTarget = async (target: CampaignTargetHistoryRow) => {
+    if (!selectedCampaign) {
+      return;
+    }
+
+    if (selectedCampaign.status === 'cancelled') {
+      setMessageState({ type: 'error', text: 'Campanhas canceladas nao podem ser reenfileiradas.' });
+      return;
+    }
+
+    setRequeueingTargetId(target.id);
+    setMessageState(null);
+
+    try {
+      await ensureCampaignRunningForRetry(selectedCampaign);
+
+      const { error } = await supabase
+        .from('whatsapp_campaign_targets')
+        .update({
+          status: 'pending',
+          error_message: null,
+        })
+        .eq('id', target.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await recomputeCampaignCounters(selectedCampaign.id);
+      await loadCampaigns(true);
+      await loadCampaignTargets();
+      setMessageState({ type: 'success', text: 'Alvo reenfileirado com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao reenfileirar alvo:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel reenfileirar este alvo.' });
+    } finally {
+      setRequeueingTargetId(null);
+    }
+  };
+
+  const handleExportFailedTargets = async () => {
+    if (!selectedCampaign) {
+      return;
+    }
+
+    setExportingFailures(true);
+    setMessageState(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_campaign_targets')
+        .select('display_name, raw_phone, phone, source_kind, source_payload, status, error_message, last_attempt_at, sent_at')
+        .eq('campaign_id', selectedCampaign.id)
+        .eq('status', 'failed')
+        .order('last_attempt_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = ((data ?? []) as Array<Pick<
+        CampaignTargetHistoryRow,
+        'display_name' | 'raw_phone' | 'phone' | 'source_kind' | 'source_payload' | 'status' | 'error_message' | 'last_attempt_at' | 'sent_at'
+      >>).map((item) => ({
+        ...item,
+        source_payload: normalizeCampaignSourcePayload(item.source_payload),
+      }));
+
+      if (rows.length === 0) {
+        setMessageState({ type: 'error', text: 'Nao ha falhas para exportar nesta campanha.' });
+        return;
+      }
+
+      const payloadKeys = Array.from(
+        new Set(rows.flatMap((row) => Object.keys(row.source_payload ?? {}))),
+      ).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+
+      const headers = ['display_name', 'raw_phone', 'phone', ...payloadKeys, 'erro', 'status', 'ultima_tentativa', 'enviado_em', 'origem_alvo'];
+      const lines = rows.map((row) =>
+        [
+          row.display_name ?? '',
+          row.raw_phone ?? '',
+          row.phone,
+          ...payloadKeys.map((key) => row.source_payload?.[key] ?? ''),
+          row.error_message ?? '',
+          row.status,
+          row.last_attempt_at ?? '',
+          row.sent_at ?? '',
+          formatTargetSourceKindLabel(row.source_kind),
+        ]
+          .map(escapeCsvCell)
+          .join(';'),
+      );
+
+      downloadTextFile(
+        `${slugifyFileName(selectedCampaign.name)}-falhas.csv`,
+        `\uFEFF${headers.map(escapeCsvCell).join(';')}\n${lines.join('\n')}`,
+        'text/csv;charset=utf-8;',
+      );
+      setMessageState({ type: 'success', text: 'CSV de falhas exportado com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao exportar falhas da campanha:', error);
+      setMessageState({ type: 'error', text: 'Nao foi possivel exportar as falhas.' });
+    } finally {
+      setExportingFailures(false);
+    }
+  };
+
+  const firstRenderableTemplate = useMemo(
+    () =>
+      flowSteps.find((step) => step.type === 'text' && step.text?.trim())?.text ??
+      flowSteps.find((step) => step.caption?.trim())?.caption ??
+      '',
+    [flowSteps],
+  );
+
+  const previewSampleMessage = useMemo(() => {
+    if (!firstRenderableTemplate) {
+      return '';
+    }
+
+    if (audienceSource === 'csv') {
+      const sampleItem = csvAnalysis?.validItems[0];
+      if (!sampleItem) {
+        return '';
+      }
+
+      return resolveCampaignTemplateText(firstRenderableTemplate, {
+        lead: sampleItem.existingLead ?? null,
+        payload: sampleItem.payload,
+      });
+    }
+
+    const sampleLead = previewLeads[0];
+    if (!sampleLead) {
+      return '';
+    }
+
+    return resolveCampaignTemplateText(firstRenderableTemplate, {
+      payload: {
+        nome: sampleLead.nome_completo,
+        telefone: sampleLead.telefone,
+        status: statusNameById.get(sampleLead.status_id || '') ?? '',
+        origem: origemNameById.get(sampleLead.origem_id || '') ?? '',
+        responsavel: responsavelNameById.get(sampleLead.responsavel_id || '') ?? '',
+      },
+    });
+  }, [audienceSource, csvAnalysis, firstRenderableTemplate, origemNameById, previewLeads, responsavelNameById, statusNameById]);
+
+  const campaignTargetsPageCount = Math.max(1, Math.ceil(campaignTargetsTotalCount / TARGETS_PAGE_SIZE));
 
   return (
     <div className="space-y-5">
@@ -953,7 +1777,7 @@ export default function WhatsAppCampaignSettings() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Nova campanha</h3>
-            <p className="text-xs text-slate-500">Monte o fluxo de mensagens com React Flow e dispare em lote para leads filtrados.</p>
+            <p className="text-xs text-slate-500">Monte o fluxo de mensagens, escolha a fonte do publico e agende o disparo quando fizer sentido.</p>
           </div>
           <Button
             variant="secondary"
@@ -968,8 +1792,8 @@ export default function WhatsAppCampaignSettings() {
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="text-xs font-medium text-slate-600 md:col-span-2">
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <label className="text-xs font-medium text-slate-600">
             Nome da campanha
             <input
               type="text"
@@ -979,9 +1803,44 @@ export default function WhatsAppCampaignSettings() {
                     placeholder="Ex: Reengajamento de cotação"
             />
           </label>
+
+          <label className="text-xs font-medium text-slate-600">
+            Agendamento unico (opcional)
+            <input
+              type="datetime-local"
+              value={scheduledAtInput}
+              onChange={(event) => setScheduledAtInput(event.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </label>
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fonte do publico</p>
+              <p className="text-xs text-slate-500">Uma campanha pode usar leads filtrados ou um CSV importado.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(['filters', 'csv'] as WhatsAppCampaignAudienceSource[]).map((source) => (
+                <button
+                  key={source}
+                  type="button"
+                  onClick={() => setAudienceSource(source)}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    audienceSource === source
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  {formatAudienceSourceLabel(source)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className={`mt-4 grid gap-3 md:grid-cols-2 ${hasCanalColumn ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+        {audienceSource === 'filters' && (
+          <div className={`mt-4 grid gap-3 md:grid-cols-2 ${hasCanalColumn ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
           <label className="text-xs font-medium text-slate-600">
             Status
             <select
@@ -1052,10 +1911,215 @@ export default function WhatsAppCampaignSettings() {
             </label>
           )}
         </div>
+        )}
+
+        {audienceSource === 'csv' && (
+          <div className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <label className="text-xs font-medium text-slate-600">
+                Arquivo CSV
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = '';
+                    if (!file) {
+                      return;
+                    }
+
+                    void handleCsvFileUpload(file);
+                  }}
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </label>
+
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                {csvImport.parsed ? (
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-800">{csvImport.fileName}</p>
+                    <p>{csvImport.parsed.rows.length} linha(s) com delimitador "{csvImport.parsed.delimiter}".</p>
+                    <p>Variaveis: {csvImport.parsed.normalizedHeaders.map((header) => `{{${header}}}`).join(', ')}</p>
+                  </div>
+                ) : (
+                  <p>Importe um CSV com colunas como nome, plano e telefone.</p>
+                )}
+              </div>
+            </div>
+
+            {csvImport.parsed && (
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="text-xs font-medium text-slate-600">
+                    Coluna do telefone
+                    <select
+                      value={csvImport.phoneColumnKey}
+                      onChange={(event) =>
+                        setCsvImport((current) => ({
+                          ...current,
+                          phoneColumnKey: event.target.value,
+                        }))
+                      }
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="">Selecione a coluna obrigatoria</option>
+                      {csvImport.parsed.normalizedHeaders.map((header, index) => (
+                        <option key={header} value={header}>
+                          {(csvImport.parsed?.headers[index] || header).trim() || header} ({`{{${header}}}`})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-xs font-medium text-slate-600">
+                    Coluna do nome (opcional)
+                    <select
+                      value={csvImport.nameColumnKey}
+                      onChange={(event) =>
+                        setCsvImport((current) => ({
+                          ...current,
+                          nameColumnKey: event.target.value,
+                        }))
+                      }
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="">Usar nome do lead existente</option>
+                      {csvImport.parsed.normalizedHeaders.map((header, index) => (
+                        <option key={header} value={header}>
+                          {(csvImport.parsed?.headers[index] || header).trim() || header} ({`{{${header}}}`})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Defaults do CRM</p>
+                      <p className="text-xs text-slate-500">Aplicados apenas nas linhas do CSV que virarem novos leads.</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                      Novos leads no preview: {csvAnalysis?.summary.newLeadRows ?? 0}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <label className="text-xs font-medium text-slate-600">
+                      Origem
+                      <select
+                        value={csvCrmDefaults.origemId}
+                        onChange={(event) =>
+                          setCsvCrmDefaults((current) => ({
+                            ...current,
+                            origemId: event.target.value,
+                            confirmNewLeadDefaults: false,
+                          }))
+                        }
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="">Selecione</option>
+                        {origemOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="text-xs font-medium text-slate-600">
+                      Status
+                      <select
+                        value={csvCrmDefaults.statusId}
+                        onChange={(event) =>
+                          setCsvCrmDefaults((current) => ({
+                            ...current,
+                            statusId: event.target.value,
+                            confirmNewLeadDefaults: false,
+                          }))
+                        }
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="">Selecione</option>
+                        {statusOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="text-xs font-medium text-slate-600">
+                      Tipo de contratacao
+                      <select
+                        value={csvCrmDefaults.tipoContratacaoId}
+                        onChange={(event) =>
+                          setCsvCrmDefaults((current) => ({
+                            ...current,
+                            tipoContratacaoId: event.target.value,
+                            confirmNewLeadDefaults: false,
+                          }))
+                        }
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="">Selecione</option>
+                        {tipoContratacaoOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="text-xs font-medium text-slate-600">
+                      Responsavel
+                      <select
+                        value={csvCrmDefaults.responsavelId}
+                        onChange={(event) =>
+                          setCsvCrmDefaults((current) => ({
+                            ...current,
+                            responsavelId: event.target.value,
+                            confirmNewLeadDefaults: false,
+                          }))
+                        }
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="">Selecione</option>
+                        {responsavelOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="mt-3 flex items-start gap-2 text-xs text-slate-600">
+                    <Checkbox
+                      checked={csvCrmDefaults.confirmNewLeadDefaults}
+                      onChange={(event) =>
+                        setCsvCrmDefaults((current) => ({
+                          ...current,
+                          confirmNewLeadDefaults: event.target.checked,
+                        }))
+                      }
+                    />
+                    <span>Confirmo os defaults acima para os leads novos criados pelo CSV.</span>
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fluxo da campanha</p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fluxo da campanha</p>
+              <p className="text-xs text-slate-500">
+                Variaveis disponiveis: {campaignVariableSuggestions.map((item) => `{{${item.key}}}`).join(', ')}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {(['text', 'image', 'document', 'video', 'audio'] as WhatsAppCampaignFlowStepType[]).map((type) => {
                 const Icon = FLOW_STEP_ICONS[type];
@@ -1122,7 +2186,7 @@ export default function WhatsAppCampaignSettings() {
                         onChange={(value) => updateSelectedStep({ text: value })}
                         rows={6}
                         className="mt-1 text-sm"
-                        suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
+                        suggestions={campaignVariableSuggestions}
                         placeholder="Digite a mensagem desta etapa"
                       />
                     </label>
@@ -1169,7 +2233,7 @@ export default function WhatsAppCampaignSettings() {
                           onChange={(value) => updateSelectedStep({ caption: value })}
                           rows={3}
                           className="mt-1 text-sm"
-                          suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
+                          suggestions={campaignVariableSuggestions}
                           placeholder="Legenda para acompanhar a midia"
                         />
                       </label>
@@ -1196,6 +2260,12 @@ export default function WhatsAppCampaignSettings() {
           </div>
         </div>
 
+        {unknownFlowVariables.length > 0 && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Variaveis desconhecidas detectadas: {unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}.
+          </div>
+        )}
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={() => void handlePreviewAudience()} loading={loadingPreview}>
             <Send className="h-4 w-4" />
@@ -1205,11 +2275,61 @@ export default function WhatsAppCampaignSettings() {
             Criar campanha
           </Button>
           <span className="text-xs text-slate-500">
-            Preview: <strong>{previewLeads.length}</strong> lead(s)
+            Preview:{' '}
+            <strong>
+              {audienceSource === 'csv'
+                ? csvAnalysis
+                  ? formatCsvSummaryLabel(csvAnalysis.summary)
+                  : 'CSV ainda nao validado'
+                : `${previewLeads.length} lead(s)`}
+            </strong>
           </span>
         </div>
 
-        {previewLeads.length > 0 && (
+        {previewSampleMessage && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sample resolvido</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{previewSampleMessage}</p>
+          </div>
+        )}
+
+        {audienceSource === 'csv' && csvAnalysis && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Validos: {csvAnalysis.summary.validRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Sem telefone: {csvAnalysis.summary.missingPhoneRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Duplicados: {csvAnalysis.summary.duplicateRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Existentes: {csvAnalysis.summary.existingLeadRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Novos: {csvAnalysis.summary.newLeadRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Sem nome: {csvAnalysis.summary.missingNameRows}</div>
+            </div>
+
+            <ul className="mt-3 max-h-56 space-y-1 overflow-y-auto text-xs text-slate-700">
+              {csvAnalysis.items.slice(0, 80).map((item) => (
+                <li
+                  key={`${item.rowNumber}-${item.normalizedPhone || item.rawPhone}`}
+                  className={`rounded-md border px-2 py-2 ${
+                    item.invalidReason ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      Linha {item.rowNumber}: {item.displayName || 'Sem nome'} - {item.rawPhone || 'Sem telefone'}
+                    </span>
+                    <span className="text-slate-500">
+                      {item.invalidReason === 'missing_phone' && 'Sem telefone'}
+                      {item.invalidReason === 'duplicate_phone' && `Duplicado da linha ${item.duplicateOfRowNumber}`}
+                      {item.invalidReason === 'missing_name' && 'Nome obrigatorio para novo lead'}
+                      {!item.invalidReason && (item.existingLead ? 'Lead existente' : 'Novo lead')}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {audienceSource === 'filters' && previewLeads.length > 0 && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leads no preview (max. 400)</p>
             <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-xs text-slate-700">
@@ -1268,7 +2388,12 @@ export default function WhatsAppCampaignSettings() {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{campaign.name}</p>
-                        <p className="text-xs text-slate-500">Criada em {formatDateTime(campaign.created_at)}</p>
+                        <p className="text-xs text-slate-500">
+                          Criada em {formatDateTime(campaign.created_at)} - {formatAudienceSourceLabel(campaign.audience_source)}
+                        </p>
+                        {campaign.scheduled_at && (
+                          <p className="text-xs text-slate-500">Agendada para {formatDateTime(campaign.scheduled_at)}</p>
+                        )}
                       </div>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -1356,9 +2481,200 @@ export default function WhatsAppCampaignSettings() {
           <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>Selecionada: {selectedCampaign.name}</span>
+              <span>Fonte: {formatAudienceSourceLabel(selectedCampaign.audience_source)}</span>
+              <span>Agendada: {formatDateTime(selectedCampaign.scheduled_at)}</span>
               <span>Inicio: {formatDateTime(selectedCampaign.started_at)}</span>
               <span>Fim: {formatDateTime(selectedCampaign.completed_at)}</span>
               <span>Etapas: {selectedCampaign.flow_steps.length}</span>
+            </div>
+          </div>
+        )}
+
+        {selectedCampaign && (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">Historico de alvos</h4>
+                <p className="text-xs text-slate-500">Filtros, reenfileiramento de falhas e exportacao de erros por campanha.</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={() => void loadCampaignTargets()} loading={loadingTargets}>
+                  <RefreshCw className="h-4 w-4" />
+                  Atualizar alvos
+                </Button>
+                <Button size="sm" variant="warning" onClick={() => void handleRequeueFailedTargets()} loading={requeueingFailures}>
+                  <RotateCcw className="h-4 w-4" />
+                  Reenfileirar falhas
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => void handleExportFailedTargets()} loading={exportingFailures}>
+                  <Download className="h-4 w-4" />
+                  Exportar falhas
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <label className="text-xs font-medium text-slate-600">
+                Status
+                <select
+                  value={campaignTargetsFilters.status}
+                  onChange={(event) =>
+                    setCampaignTargetsFilters((current) => ({
+                      ...current,
+                      status: event.target.value,
+                    }))
+                  }
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">Todos</option>
+                  {(['pending', 'processing', 'sent', 'failed', 'invalid', 'cancelled'] as WhatsAppCampaignTargetStatus[]).map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-xs font-medium text-slate-600">
+                Sent at
+                <select
+                  value={campaignTargetsFilters.sentState}
+                  onChange={(event) =>
+                    setCampaignTargetsFilters((current) => ({
+                      ...current,
+                      sentState: event.target.value as CampaignTargetsFilters['sentState'],
+                    }))
+                  }
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="all">Todos</option>
+                  <option value="sent">Enviados</option>
+                  <option value="not_sent">Nao enviados</option>
+                </select>
+              </label>
+
+              <label className="text-xs font-medium text-slate-600">
+                Last attempt
+                <select
+                  value={campaignTargetsFilters.attemptState}
+                  onChange={(event) =>
+                    setCampaignTargetsFilters((current) => ({
+                      ...current,
+                      attemptState: event.target.value as CampaignTargetsFilters['attemptState'],
+                    }))
+                  }
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="all">Todos</option>
+                  <option value="attempted">Tentados</option>
+                  <option value="not_attempted">Sem tentativa</option>
+                </select>
+              </label>
+
+              <label className="text-xs font-medium text-slate-600">
+                Buscar erro
+                <div className="mt-1 flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3">
+                  <Search className="h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={campaignTargetsFilters.errorSearch}
+                    onChange={(event) =>
+                      setCampaignTargetsFilters((current) => ({
+                        ...current,
+                        errorSearch: event.target.value,
+                      }))
+                    }
+                    className="h-10 w-full border-0 bg-transparent text-sm focus:outline-none"
+                    placeholder="Ex: numero invalido"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-200 text-xs">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">Alvo</th>
+                    <th className="px-3 py-2 text-left font-semibold">Fonte</th>
+                    <th className="px-3 py-2 text-left font-semibold">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold">Sent at</th>
+                    <th className="px-3 py-2 text-left font-semibold">Last attempt</th>
+                    <th className="px-3 py-2 text-left font-semibold">Erro</th>
+                    <th className="px-3 py-2 text-left font-semibold">Acao</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {loadingTargets ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-4 text-center text-slate-500">
+                        Carregando alvos...
+                      </td>
+                    </tr>
+                  ) : campaignTargets.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-4 text-center text-slate-500">
+                        Nenhum alvo encontrado para os filtros atuais.
+                      </td>
+                    </tr>
+                  ) : (
+                    campaignTargets.map((target) => (
+                      <tr key={target.id}>
+                        <td className="px-3 py-2 align-top">
+                          <div className="font-medium text-slate-800">
+                            {target.display_name || target.lead?.nome_completo || 'Sem nome'}
+                          </div>
+                          <div className="text-slate-500">{target.raw_phone || target.phone || target.lead?.telefone || '-'}</div>
+                        </td>
+                        <td className="px-3 py-2 align-top">{formatTargetSourceKindLabel(target.source_kind)}</td>
+                        <td className="px-3 py-2 align-top">{target.status}</td>
+                        <td className="px-3 py-2 align-top">{formatDateTime(target.sent_at)}</td>
+                        <td className="px-3 py-2 align-top">{formatDateTime(target.last_attempt_at)}</td>
+                        <td className="px-3 py-2 align-top text-slate-500">{target.error_message || '-'}</td>
+                        <td className="px-3 py-2 align-top">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void handleRequeueSingleTarget(target)}
+                            disabled={!canRequeueCampaignTarget(target.status) || requeueingTargetId === target.id}
+                            loading={requeueingTargetId === target.id}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Reenfileirar
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span>
+                Pagina {campaignTargetsPage + 1} de {campaignTargetsPageCount} • {campaignTargetsTotalCount} alvo(s)
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCampaignTargetsPage((current) => Math.max(0, current - 1))}
+                  disabled={campaignTargetsPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setCampaignTargetsPage((current) => Math.min(campaignTargetsPageCount - 1, current + 1))
+                  }
+                  disabled={campaignTargetsPage + 1 >= campaignTargetsPageCount}
+                >
+                  Proxima
+                </Button>
+              </div>
             </div>
           </div>
         )}

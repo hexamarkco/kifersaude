@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages, ContractBonusConfiguration } from '../lib/supabase';
+import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages, ContractBonusConfiguration, ContractCommissionInstallment } from '../lib/supabase';
 import { getContractBonusSummary, normalizeBonusConfigurations } from '../lib/contractBonus';
+import { getCommissionInstallmentSummary } from '../lib/contractCommission';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { normalizeLeadStatusLabel } from '../lib/leadReminderUtils';
 import { resolveStatusIdByName } from '../lib/leadRelations';
@@ -25,7 +26,7 @@ import {
 import { consultarEmpresaPorCNPJ } from '../lib/receitaService';
 
 type CommissionInstallment = {
-  percentual: string;
+  valor: string;
   data_pagamento: string;
 };
 
@@ -106,14 +107,18 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     nome_fantasia: contract?.nome_fantasia || '',
     endereco_empresa: contract?.endereco_empresa || '',
   });
-  const [commissionInstallments, setCommissionInstallments] = useState<CommissionInstallment[]>(() =>
-    Array.isArray(contract?.comissao_parcelas)
-      ? (contract?.comissao_parcelas || []).map(parcel => ({
-          percentual: parcel.percentual?.toString() ?? '',
-          data_pagamento: parcel.data_pagamento ?? '',
-        }))
-      : []
-  );
+  const [commissionInstallments, setCommissionInstallments] = useState<CommissionInstallment[]>(() => {
+    const summary = getCommissionInstallmentSummary({
+      comissao_prevista: contract?.comissao_prevista,
+      comissao_parcelas: contract?.comissao_parcelas,
+      mensalidade_total: contract?.mensalidade_total,
+    });
+
+    return summary.installments.map((parcel) => ({
+      valor: formatCurrencyFromNumber(parcel.resolvedValue),
+      data_pagamento: parcel.data_pagamento ?? '',
+    }));
+  });
   const [bonusDistribution, setBonusDistribution] = useState<BonusDistributionRow[]>(() => getInitialBonusRows());
   const [saving, setSaving] = useState(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
@@ -154,16 +159,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     [leadStatuses]
   );
 
-  const totalInstallmentPercent = useMemo(
+  const totalInstallmentValue = useMemo(
     () =>
       commissionInstallments.reduce((sum, parcel) => {
-        const percentual = parseFloat(parcel.percentual || '0');
-        return sum + (isNaN(percentual) ? 0 : percentual);
+        const valor = parseFormattedNumber(parcel.valor || '');
+        return sum + (Number.isFinite(valor) ? valor : 0);
       }, 0),
     [commissionInstallments]
   );
-
-  const MAX_COMMISSION_PERCENT = 280;
 
   useEffect(() => {
     if (!contract && !formData.status && contractStatusOptions.length > 0) {
@@ -247,24 +250,16 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   }, [baseMensalidade, adjustments]);
 
   const totalCommissionFromInstallments = useMemo(
-    () =>
-      commissionInstallments.reduce((sum, parcel) => {
-        const percentual = parseFloat(parcel.percentual || '0');
-        if (isNaN(percentual)) {
-          return sum;
-        }
-        return sum + (adjustedMensalidade * percentual) / 100;
-      }, 0),
-    [adjustedMensalidade, commissionInstallments]
+    () => totalInstallmentValue,
+    [totalInstallmentValue]
   );
+  const commissionExpectedValue = parseFormattedNumber(formData.comissao_prevista || '');
+  const remainingCommissionValue = Math.max(0, commissionExpectedValue - totalInstallmentValue);
 
   useEffect(() => {
     if (adjustedMensalidade > 0) {
       const multiplicador = parseFloat(formData.comissao_multiplicador || '0');
-      const effectivePercentual =
-        !formData.comissao_recebimento_adiantado && totalInstallmentPercent > 0
-          ? Math.min(totalInstallmentPercent, MAX_COMMISSION_PERCENT) / 100
-          : multiplicador;
+      const effectivePercentual = multiplicador;
 
       if (!isNaN(effectivePercentual)) {
         const comissao = adjustedMensalidade * effectivePercentual;
@@ -275,7 +270,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     adjustedMensalidade,
     formData.comissao_multiplicador,
     formData.comissao_recebimento_adiantado,
-    totalInstallmentPercent,
+    totalInstallmentValue,
     adjustments,
   ]);
 
@@ -428,7 +423,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   const handleAddInstallment = () => {
     setCommissionInstallments([
       ...commissionInstallments,
-      { percentual: '', data_pagamento: '' },
+      { valor: '', data_pagamento: '' },
     ]);
   };
 
@@ -438,7 +433,10 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
   const handleInstallmentChange = (index: number, field: keyof CommissionInstallment, value: string) => {
     const updated = [...commissionInstallments];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = {
+      ...updated[index],
+      [field]: field === 'valor' ? formatCurrencyInput(value) : value,
+    };
     setCommissionInstallments(updated);
   };
 
@@ -495,12 +493,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         return;
       }
 
-      const installmentsPayload = commissionInstallments
+      const installmentsPayload: ContractCommissionInstallment[] = commissionInstallments
         .map(parcel => ({
-          percentual: parseFloat(parcel.percentual || '0'),
+          valor: parseFormattedNumber(parcel.valor || ''),
           data_pagamento: parcel.data_pagamento || null,
         }))
-        .filter(parcel => !isNaN(parcel.percentual) && parcel.percentual > 0);
+        .filter(parcel => (parcel.valor || 0) > 0);
 
       if (!formData.comissao_recebimento_adiantado) {
         if (installmentsPayload.length === 0) {
@@ -516,8 +514,14 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
           return;
         }
 
-        if (totalInstallmentPercent > MAX_COMMISSION_PERCENT) {
-          toast.warning(`O total das parcelas não pode ultrapassar ${MAX_COMMISSION_PERCENT}% da mensalidade.`);
+        if (commissionExpectedValue <= 0) {
+          toast.warning('Informe a comissão prevista antes de distribuir em parcelas.');
+          setSaving(false);
+          return;
+        }
+
+        if (totalInstallmentValue > commissionExpectedValue) {
+          toast.warning('O total das parcelas não pode ultrapassar o valor total da comissão.');
           setSaving(false);
           return;
         }
@@ -1281,8 +1285,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       <div>
                         <p className="text-sm font-semibold text-slate-800">Parcelas personalizadas</p>
                         <p className="text-xs text-slate-600">
-                          Distribua até {MAX_COMMISSION_PERCENT}% da mensalidade em parcelas, definindo o percentual e a data de
-                          pagamento de cada mês.
+                          Divida a comissão em 2 ou mais pagamentos, iguais ou não, sempre respeitando o total da comissão prevista.
                         </p>
                       </div>
                       <Button
@@ -1302,10 +1305,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     ) : (
                       <div className="space-y-3">
                         {commissionInstallments.map((parcel, index) => {
-                          const percentual = parseFloat(parcel.percentual || '0');
-                          const value = !isNaN(percentual)
-                            ? (adjustedMensalidade * percentual) / 100
-                            : 0;
+                          const value = parseFormattedNumber(parcel.valor || '');
 
                           return (
                             <div
@@ -1324,22 +1324,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                               </div>
                               <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Percentual</label>
-                                  <div className="flex items-center space-x-2">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max={MAX_COMMISSION_PERCENT}
-                                      step="0.01"
-                                      value={parcel.percentual}
-                                      onChange={(e) => handleInstallmentChange(index, 'percentual', e.target.value)}
-                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                      placeholder="0.00"
-                                    />
-                                    <span className="text-sm text-slate-500">%</span>
-                                  </div>
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Valor da parcela</label>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={parcel.valor}
+                                    onChange={(e) => handleInstallmentChange(index, 'valor', e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    placeholder="0,00"
+                                  />
                                   <p className="text-[11px] text-slate-500 mt-1">
-                                    Valor estimado: R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    Valor informado: R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </p>
                                 </div>
                                 <div>
@@ -1355,9 +1350,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                                 <div className="flex flex-col justify-center rounded-lg border border-amber-100 bg-amber-50 p-3">
                                   <span className="text-[11px] text-amber-700">Total acumulado</span>
                                   <span className="text-lg font-bold text-amber-800">
-                                    {totalInstallmentPercent.toFixed(2)}%
+                                    R$ {totalInstallmentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </span>
-                                  <span className="text-xs text-amber-700">Limite: {MAX_COMMISSION_PERCENT}%</span>
+                                  <span className="text-xs text-amber-700">
+                                    Comissão total: R$ {commissionExpectedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1370,20 +1367,23 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       <div>
                         <p className="font-medium text-slate-700">Total das parcelas</p>
                         <p className="text-xs text-slate-500">
-                          {totalInstallmentPercent.toFixed(2)}% ({totalCommissionFromInstallments.toLocaleString('pt-BR', {
+                          {totalCommissionFromInstallments.toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
-                          })})
+                          })}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Restante disponível: {Math.max(0, MAX_COMMISSION_PERCENT - totalInstallmentPercent).toFixed(2)}%
+                          Restante disponível: {remainingCommissionValue.toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          })}
                         </p>
                       </div>
-                      {totalInstallmentPercent > MAX_COMMISSION_PERCENT && (
+                      {totalInstallmentValue > commissionExpectedValue && (
                         <div className="flex items-center space-x-2 text-amber-600 mt-2 sm:mt-0">
                           <AlertCircle className="w-4 h-4" />
                           <span className="text-xs font-medium">
-                            O total excede o limite permitido de {MAX_COMMISSION_PERCENT}%.
+                            O total excede o valor total da comissão.
                           </span>
                         </div>
                       )}

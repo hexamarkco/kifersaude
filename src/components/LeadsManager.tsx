@@ -1791,10 +1791,10 @@ export default function LeadsManager({
                       <h3 className="text-lg font-semibold text-slate-900">{lead.nome_completo}</h3>
                       {leadContractIds.has(lead.id) && (
                         <span
-                          className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                          className="comm-badge comm-badge-contract inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold"
                           title="Contrato cadastrado para este lead"
                         >
-                          <FileText className="h-3 w-3" />
+                          <FileText className="h-3.5 w-3.5" />
                           Contrato
                         </span>
                       )}

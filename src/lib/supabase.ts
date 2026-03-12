@@ -122,7 +122,7 @@ export type Contract = {
   comissao_prevista?: number;
   comissao_multiplicador?: number;
   comissao_recebimento_adiantado?: boolean;
-  comissao_parcelas?: { percentual: number; data_pagamento: string | null }[] | null;
+  comissao_parcelas?: ContractCommissionInstallment[] | null;
   previsao_recebimento_comissao?: string;
   previsao_pagamento_bonificacao?: string;
   vidas?: number;
@@ -262,6 +262,12 @@ export type ContractBonusConfiguration = {
   id: string;
   quantidade: number;
   valor: number;
+};
+
+export type ContractCommissionInstallment = {
+  percentual?: number;
+  valor?: number;
+  data_pagamento: string | null;
 };
 
 export type SystemSettings = {

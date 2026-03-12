@@ -2006,6 +2006,26 @@
   background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 84%, var(--panel-surface-soft, #2a1c15));
 }
 
+.painel-theme.theme-dark .comm-card-success {
+  border-color: color-mix(in srgb, var(--panel-accent-green-border, #95c4a1) 78%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-green-bg, #1f3425) 38%, var(--panel-surface-soft, #2a1c15));
+}
+
+.painel-theme.theme-dark .comm-card-warning {
+  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 82%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 42%, var(--panel-surface-soft, #2a1c15));
+}
+
+.painel-theme.theme-dark .comm-card-info {
+  border-color: color-mix(in srgb, var(--panel-accent-blue-border, #7c9fc1) 78%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-blue-bg, #203248) 34%, var(--panel-surface-soft, #2a1c15));
+}
+
+.painel-theme.theme-dark .comm-card-danger {
+  border-color: color-mix(in srgb, var(--panel-accent-red-border, #b7776a) 78%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-red-bg, #3a1f1a) 32%, var(--panel-surface-soft, #2a1c15));
+}
+
 .comm-badge {
   display: inline-flex;
   align-items: center;

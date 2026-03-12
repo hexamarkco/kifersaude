@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
 import { supabase, type ContractHolder, type Dependent } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
@@ -58,6 +58,7 @@ export default function DependentForm({
   const [saving, setSaving] = useState(false);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
+  const lastFetchedCpfKeyRef = useRef('');
 
   useEffect(() => {
     setFormData((current) => ({
@@ -78,9 +79,17 @@ export default function DependentForm({
     }));
   }, [bonusPorVidaDefault, dependent, holderOptions, selectedHolderId]);
 
-  const handleConsultarCPF = async () => {
-    if (!formData.cpf || !formData.data_nascimento) {
-      setCpfLookupError('Informe CPF e data de nascimento para buscar.');
+  const handleConsultarCPF = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) {
+      if (!silent) {
+        setCpfLookupError('Informe um CPF válido para buscar.');
+      }
+      return;
+    }
+
+    const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
+    if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
       return;
     }
 
@@ -88,22 +97,36 @@ export default function DependentForm({
     setCpfLoading(true);
 
     try {
-      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento);
+      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
 
       setFormData((prev) => ({
         ...prev,
         nome_completo: pessoa.nome || prev.nome_completo,
         data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
       }));
+      lastFetchedCpfKeyRef.current = fetchKey;
     } catch (error) {
       console.error('Erro ao consultar CPF do dependente:', error);
-      setCpfLookupError(
-        error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
-      );
+      if (!silent) {
+        setCpfLookupError(
+          error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
+        );
+      }
     } finally {
       setCpfLoading(false);
     }
   };
+
+  useEffect(() => {
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+
+    if (cleanCpf.length !== 11) {
+      lastFetchedCpfKeyRef.current = '';
+      return;
+    }
+
+    void handleConsultarCPF({ silent: true });
+  }, [formData.cpf, formData.data_nascimento]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,16 +203,6 @@ export default function DependentForm({
             />
           </Field>
 
-          <Field label="Nome Completo" required className="md:col-span-2">
-            <Input
-              type="text"
-              required
-              leftIcon={UserCircle}
-              value={formData.nome_completo}
-              onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-            />
-          </Field>
-
           <Field label="CPF" errorText={cpfLookupError || undefined}>
             <div className="relative">
             <Input
@@ -202,14 +215,24 @@ export default function DependentForm({
               />
               <button
                 type="button"
-                onClick={() => void handleConsultarCPF()}
-                disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
+                onClick={() => void handleConsultarCPF({ force: true })}
+                disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
                 aria-label="Buscar CPF"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-amber-600 disabled:opacity-50"
               >
                 <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
               </button>
             </div>
+          </Field>
+
+          <Field label="Nome Completo" required>
+            <Input
+              type="text"
+              required
+              leftIcon={UserCircle}
+              value={formData.nome_completo}
+              onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+            />
           </Field>
 
           <Field label="Data de Nascimento" required>

@@ -1392,11 +1392,18 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 )}
               </div>
               {false && formData.bonus_por_vida_aplicado && (
-                <div className="rounded-2xl border border-[var(--panel-border-subtle,#e8d9ca)] bg-[linear-gradient(135deg,rgba(255,247,237,0.96),rgba(255,251,245,0.92))] p-4 shadow-sm xl:col-span-2">
+                <div
+                  className="rounded-2xl border p-4 shadow-sm xl:col-span-2"
+                  style={{
+                    borderColor: 'var(--panel-border,#d4c0a7)',
+                    background:
+                      'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 74%, var(--panel-surface,#fffdfa) 26%) 100%)',
+                  }}
+                >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Distribuição do bônus</p>
-                      <p className="mt-1 text-xs text-slate-600">
+                      <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Distribuição do bônus</p>
+                      <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
                         Cadastre uma faixa por valor. Exemplo: 1 vida com R$ 200,00 e outra com R$ 120,00.
                       </p>
                     </div>
@@ -1413,7 +1420,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
 
                   <div className="mt-4 space-y-3">
                     {bonusDistribution.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-5 text-sm text-slate-600">
+                      <div className="rounded-xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-5 text-sm text-[var(--panel-text-muted,#876f5c)]">
                         Nenhuma faixa criada ainda. Adicione uma linha para informar quantas vidas recebem cada valor.
                       </div>
                     ) : (
@@ -1421,9 +1428,9 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                         const subtotal = (parseInt(row.quantidade || '0', 10) || 0) * parseFormattedNumber(row.valor || '');
 
                         return (
-                          <div key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-white/80 bg-white/80 p-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]">
+                          <div key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]">
                             <div>
-                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
                                 Vidas
                               </label>
                               <input
@@ -1437,7 +1444,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
                                 Bônus por vida
                               </label>
                               <input
@@ -1450,11 +1457,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                               />
                             </div>
 
-                            <div className="flex flex-col justify-center rounded-lg bg-[rgba(120,53,15,0.05)] px-4 py-2">
-                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                            <div className="flex flex-col justify-center rounded-lg px-4 py-2" style={{ background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 70%, transparent)' }}>
+                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
                                 Subtotal da faixa {index + 1}
                               </span>
-                              <span className="text-base font-semibold text-slate-900">
+                              <span className="text-base font-semibold text-[var(--panel-text,#1c1917)]">
                                 R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
                             </div>
@@ -1477,17 +1484,17 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas com bônus</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-900">{distributedBonusLives}</p>
+                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">Vidas com bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">{distributedBonusLives}</p>
                     </div>
-                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas sem bônus</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-900">{livesWithoutBonus}</p>
+                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">Vidas sem bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">{livesWithoutBonus}</p>
                     </div>
-                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Total previsto</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">Total previsto</p>
+                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">
                         R$ {distributedBonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>

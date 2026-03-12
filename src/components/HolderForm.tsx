@@ -96,6 +96,7 @@ export default function HolderForm({
     [modalidade],
   );
   const lastFetchedCepRef = useRef('');
+  const lastFetchedCpfKeyRef = useRef('');
 
   useEffect(() => {
     const stateUf = formData.estado.trim().toUpperCase();
@@ -198,9 +199,17 @@ export default function HolderForm({
     }));
   };
 
-  const handleConsultarCPF = async () => {
-    if (!formData.cpf || !formData.data_nascimento) {
-      setCpfLookupError('Informe CPF e data de nascimento para buscar.');
+  const handleConsultarCPF = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) {
+      if (!silent) {
+        setCpfLookupError('Informe um CPF válido para buscar.');
+      }
+      return;
+    }
+
+    const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
+    if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
       return;
     }
 
@@ -208,7 +217,7 @@ export default function HolderForm({
     setCpfLoading(true);
 
     try {
-      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento);
+      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
 
       setFormData((prev) => ({
         ...prev,
@@ -223,19 +232,33 @@ export default function HolderForm({
         cidade: pessoa.cidade || prev.cidade,
         estado: pessoa.estado || prev.estado,
       }));
+      lastFetchedCpfKeyRef.current = fetchKey;
 
       if (pessoa.cep) {
         lastFetchedCepRef.current = pessoa.cep.replace(/\D/g, '');
       }
     } catch (error) {
       console.error('Erro ao consultar CPF:', error);
-      setCpfLookupError(
-        error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
-      );
+      if (!silent) {
+        setCpfLookupError(
+          error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
+        );
+      }
     } finally {
       setCpfLoading(false);
     }
   };
+
+  useEffect(() => {
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+
+    if (cleanCpf.length !== 11) {
+      lastFetchedCpfKeyRef.current = '';
+      return;
+    }
+
+    void handleConsultarCPF({ silent: true });
+  }, [formData.cpf, formData.data_nascimento]);
 
   const handleConsultarCNPJ = async () => {
     if (!formData.cnpj) {
@@ -382,16 +405,6 @@ export default function HolderForm({
             <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
               <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">Informacoes Pessoais</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Field label="Nome Completo" required className="md:col-span-3">
-                  <Input
-                    type="text"
-                    required
-                    leftIcon={UserCircle}
-                    value={formData.nome_completo}
-                    onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-                  />
-                </Field>
-
                 <Field label="CPF" required errorText={cpfLookupError || undefined}>
                   <div className="relative">
                     <Input
@@ -405,14 +418,24 @@ export default function HolderForm({
                     />
                     <button
                       type="button"
-                      onClick={() => void handleConsultarCPF()}
-                      disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
+                      onClick={() => void handleConsultarCPF({ force: true })}
+                      disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
                       aria-label="Buscar CPF"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)] transition-colors hover:text-[var(--panel-accent-strong,#b85c1f)] disabled:opacity-50"
                     >
                       <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
                     </button>
                   </div>
+                </Field>
+
+                <Field label="Nome Completo" required className="md:col-span-2">
+                  <Input
+                    type="text"
+                    required
+                    leftIcon={UserCircle}
+                    value={formData.nome_completo}
+                    onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+                  />
                 </Field>
 
                 <Field label="RG">

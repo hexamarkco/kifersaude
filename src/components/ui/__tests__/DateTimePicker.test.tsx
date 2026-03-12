@@ -106,18 +106,36 @@ test('lets users type a full date directly into the main input', () => {
   unmount();
 });
 
-test('lets users type a month directly into the main input', () => {
+test('lets users type a month directly into the main input with MM/AAAA', () => {
   const { container, getValue, unmount } = renderControlledPicker('2026-03', 'month');
 
   const triggerInput = container.querySelector('input[aria-haspopup="dialog"]');
   assert.ok(triggerInput instanceof HTMLInputElement);
 
   focusInput(triggerInput);
-  setInputValue(triggerInput, '201005');
+  setInputValue(triggerInput, '052010');
+  assert.equal(triggerInput.value, '05/2010');
+
+  blurInput(triggerInput);
+  assert.equal(getValue(), '2010-05');
+  assert.equal(triggerInput.value, '05/2010');
+
+  unmount();
+});
+
+test('keeps accepting legacy AAAA-MM month input', () => {
+  const { container, getValue, unmount } = renderControlledPicker('2026-03', 'month');
+
+  const triggerInput = container.querySelector('input[aria-haspopup="dialog"]');
+  assert.ok(triggerInput instanceof HTMLInputElement);
+
+  focusInput(triggerInput);
+  setInputValue(triggerInput, '2010-05');
   assert.equal(triggerInput.value, '2010-05');
 
   blurInput(triggerInput);
   assert.equal(getValue(), '2010-05');
+  assert.equal(triggerInput.value, '05/2010');
 
   unmount();
 });

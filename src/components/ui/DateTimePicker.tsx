@@ -63,9 +63,23 @@ const formatDateDraftInput = (value: string) => {
 
 const formatMonthDraftInput = (value: string) => {
   const digits = onlyDigits(value).slice(0, 6);
+  const normalizedValue = value.trim();
 
-  if (digits.length <= 4) return digits;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`;
+  if (!digits) return '';
+
+  const slashParts = normalizedValue.split('/');
+  const prefersYearFirst =
+    normalizedValue.includes('-') ||
+    (normalizedValue.includes('/') && slashParts[0]?.length > (slashParts[1]?.length ?? 0)) ||
+    (!normalizedValue.includes('/') && digits.length >= 3 && Number(digits.slice(0, 2)) > 12);
+
+  if (prefersYearFirst) {
+    if (digits.length <= 4) return digits;
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`;
+  }
+
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 6)}`;
 };
 
 const formatDateTimeDraftInput = (value: string) => {
@@ -85,13 +99,13 @@ const formatPickerDraftInput = (value: string, type: PickerType) => {
 };
 
 const formatPickerInputValue = (date: Date, type: PickerType) => {
-  if (type === 'month') return formatMonthValue(date);
+  if (type === 'month') return `${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
   if (type === 'datetime-local') return formatDateTimeDisplay(date);
   return formatDateDisplay(date);
 };
 
 const getPickerInputPlaceholder = (type: PickerType) => {
-  if (type === 'month') return 'AAAA-MM';
+  if (type === 'month') return 'MM/AAAA';
   if (type === 'datetime-local') return 'DD/MM/AAAA HH:MM';
   return 'DD/MM/AAAA';
 };
@@ -413,13 +427,16 @@ export default function DateTimePicker({
     }
 
     if (type === 'month') {
-      const match = nextValue.match(/^(\d{4})-(\d{2})$/);
-      if (!match) {
+      const monthYearMatch = nextValue.match(/^(\d{2})\/(\d{4})$/);
+      const yearMonthMatch = nextValue.match(/^(\d{4})[-/](\d{2})$/);
+
+      if (!monthYearMatch && !yearMonthMatch) {
         resetManualInputValue();
         return;
       }
 
-      const [, yearText, monthText] = match;
+      const monthText = monthYearMatch?.[1] ?? yearMonthMatch?.[2] ?? '';
+      const yearText = monthYearMatch?.[2] ?? yearMonthMatch?.[1] ?? '';
       const year = Number(yearText);
       const month = Number(monthText);
       const nextDate = new Date(year, month - 1, 1);

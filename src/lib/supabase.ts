@@ -121,6 +121,9 @@ export type Contract = {
   mensalidade_total?: number;
   comissao_prevista?: number;
   comissao_multiplicador?: number;
+  taxa_adesao_tipo?: 'nao_cobrar' | 'percentual_mensalidade' | 'valor_fixo' | null;
+  taxa_adesao_percentual?: number | null;
+  taxa_adesao_valor?: number | null;
   comissao_recebimento_adiantado?: boolean;
   comissao_parcelas?: ContractCommissionInstallment[] | null;
   previsao_recebimento_comissao?: string;

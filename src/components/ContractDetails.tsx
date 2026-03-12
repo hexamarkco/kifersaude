@@ -13,6 +13,7 @@ import { panelInputBaseClass, panelInputStateClasses } from './ui/standards';
 import { formatDateOnly } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
 import { getCommissionInstallmentSummary } from '../lib/contractCommission';
+import { getContractSignupFeeValue, isAdesaoContract } from '../lib/contractSignupFee';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { toast } from '../lib/toast';
 
@@ -336,6 +337,10 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const bonusSummary = getContractBonusSummary(contract, defaultBonusLives);
   const bonusEligibleLives = bonusSummary.eligibleLives;
   const bonusTotal = bonusSummary.total || null;
+  const signupFeeValue = getContractSignupFeeValue(contract);
+  const hasSignupFeeConfig = isAdesaoContract(contract.modalidade) && (
+    contract.taxa_adesao_tipo === 'percentual_mensalidade' || contract.taxa_adesao_tipo === 'valor_fixo'
+  );
 
   const documentsByEntity = useMemo(() => {
     const map = new Map<string, ContractDocument[]>();
@@ -840,6 +845,24 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     <span>Recebimento adiantado previsto (pagamento unico).</span>
                   </div>
                 ) : null}
+              </div>
+            )}
+
+            {hasSignupFeeConfig && (
+              <div className={detailDividerClass}>
+                <div className="comm-card comm-card-warning p-4">
+                  <div className="flex items-center justify-between">
+                    <span className={detailBodyStrongClass}>Taxa de adesao:</span>
+                    <span className={detailMetricValueClass}>
+                      R$ {signupFeeValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+                    {contract.taxa_adesao_tipo === 'percentual_mensalidade'
+                      ? `Cobrada como ${contract.taxa_adesao_percentual || 0}% da mensalidade.`
+                      : 'Cobrada como valor fixo.'}
+                  </div>
+                </div>
               </div>
             )}
 

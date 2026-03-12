@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages, ContractBonusConfiguration, ContractCommissionInstallment } from '../lib/supabase';
 import { getContractBonusSummary, normalizeBonusConfigurations } from '../lib/contractBonus';
 import { getCommissionInstallmentSummary } from '../lib/contractCommission';
+import { getContractSignupFeeValue, isAdesaoContract } from '../lib/contractSignupFee';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { normalizeLeadStatusLabel } from '../lib/leadReminderUtils';
 import { resolveStatusIdByName } from '../lib/leadRelations';
@@ -92,6 +93,9 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     mensalidade_total: formatCurrencyFromNumber(contract?.mensalidade_total),
     comissao_prevista: formatCurrencyFromNumber(contract?.comissao_prevista),
     comissao_multiplicador: contract?.comissao_multiplicador?.toString() || '2.8',
+    taxa_adesao_tipo: contract?.taxa_adesao_tipo || 'nao_cobrar',
+    taxa_adesao_percentual: contract?.taxa_adesao_percentual?.toString() || '100',
+    taxa_adesao_valor: formatCurrencyFromNumber(contract?.taxa_adesao_valor),
     comissao_recebimento_adiantado:
       contract?.comissao_recebimento_adiantado ?? true,
     previsao_recebimento_comissao: contract?.previsao_recebimento_comissao || '',
@@ -146,6 +150,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     const normalized = (formData.modalidade || '').toLowerCase();
     return ['pme', 'empresarial', 'cnpj'].some(keyword => normalized.includes(keyword));
   }, [formData.modalidade]);
+  const isAdesaoModalidade = useMemo(() => isAdesaoContract(formData.modalidade), [formData.modalidade]);
   const convertibleLeadStatuses = useMemo(
     () => leadStatuses.filter(status => status.ativo).map(status => status.nome),
     [leadStatuses]
@@ -236,7 +241,6 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   }, [formData.cnpj, modalidadeRequerCNPJ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const baseMensalidade = parseFormattedNumber(formData.mensalidade_total || '');
-
   const adjustedMensalidade = useMemo(() => {
     let total = baseMensalidade;
     adjustments.forEach(adj => {
@@ -248,6 +252,26 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
     });
     return total;
   }, [baseMensalidade, adjustments]);
+  const signupFeePreview = useMemo(
+    () =>
+      getContractSignupFeeValue({
+        mensalidade_total: adjustedMensalidade || baseMensalidade,
+        taxa_adesao_tipo: formData.taxa_adesao_tipo as Contract['taxa_adesao_tipo'],
+        taxa_adesao_percentual: formData.taxa_adesao_percentual
+          ? parseFloat(formData.taxa_adesao_percentual)
+          : null,
+        taxa_adesao_valor: formData.taxa_adesao_valor
+          ? parseFormattedNumber(formData.taxa_adesao_valor)
+          : null,
+      }),
+    [
+      adjustedMensalidade,
+      baseMensalidade,
+      formData.taxa_adesao_percentual,
+      formData.taxa_adesao_tipo,
+      formData.taxa_adesao_valor,
+    ]
+  );
 
   const totalCommissionFromInstallments = useMemo(
     () => totalInstallmentValue,
@@ -564,6 +588,13 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         mensalidade_total: formData.mensalidade_total ? parseFormattedNumber(formData.mensalidade_total) : null,
         comissao_prevista: formData.comissao_prevista ? parseFormattedNumber(formData.comissao_prevista) : null,
         comissao_multiplicador: formData.comissao_multiplicador ? parseFloat(formData.comissao_multiplicador) : 2.8,
+        taxa_adesao_tipo: isAdesaoModalidade ? formData.taxa_adesao_tipo : 'nao_cobrar',
+        taxa_adesao_percentual: isAdesaoModalidade && formData.taxa_adesao_tipo === 'percentual_mensalidade'
+          ? parseFloat(formData.taxa_adesao_percentual || '0')
+          : null,
+        taxa_adesao_valor: isAdesaoModalidade && formData.taxa_adesao_tipo === 'valor_fixo'
+          ? parseFormattedNumber(formData.taxa_adesao_valor || '')
+          : null,
         comissao_recebimento_adiantado: formData.comissao_recebimento_adiantado,
         comissao_parcelas: formData.comissao_recebimento_adiantado ? [] : installmentsPayload,
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
@@ -1240,6 +1271,87 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   Calculada automaticamente com base no multiplicador
                 </p>
               </div>
+
+              {isAdesaoModalidade && (
+                <div className="md:col-span-2 rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f8f2e8)] p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Taxa de adesão</p>
+                      <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
+                        Nos contratos coletivos por adesão, os 100% iniciais podem ser tratados à parte da mensalidade.
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white/70 px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">Prévia</p>
+                      <p className="text-lg font-semibold text-[var(--panel-accent-strong,#b85c1f)]">
+                        R$ {signupFeePreview.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Como cobrar
+                      </label>
+                      <FilterSingleSelect
+                        icon={WalletCards}
+                        value={formData.taxa_adesao_tipo}
+                        onChange={(value) => setFormData({ ...formData, taxa_adesao_tipo: value })}
+                        placeholder="Selecione"
+                        includePlaceholderOption={false}
+                        options={[
+                          { value: 'nao_cobrar', label: 'Não cobrar' },
+                          { value: 'percentual_mensalidade', label: '% da mensalidade' },
+                          { value: 'valor_fixo', label: 'Valor fixo' },
+                        ]}
+                      />
+                    </div>
+
+                    {formData.taxa_adesao_tipo === 'percentual_mensalidade' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Percentual da mensalidade
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.taxa_adesao_percentual}
+                            onChange={(e) => setFormData({ ...formData, taxa_adesao_percentual: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            placeholder="100"
+                          />
+                          <span className="text-sm text-slate-500">%</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Use `0%`, `100%` ou qualquer outro percentual que fizer sentido.
+                        </p>
+                      </div>
+                    )}
+
+                    {formData.taxa_adesao_tipo === 'valor_fixo' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Valor fixo
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.taxa_adesao_valor}
+                          onChange={(e) => setFormData({ ...formData, taxa_adesao_valor: formatCurrencyInput(e.target.value) })}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder="0,00"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                          Ex.: R$ 50,00, R$ 100,00 ou R$ 200,00.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
